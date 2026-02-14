@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InkFlow - Guide Visuel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .section { min-height: 100vh; }
+    </style>
+</head>
+<body class="bg-neutral-50">
+    <!-- Header -->
+    <header class="sticky top-0 bg-white border-b border-neutral-200 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-neutral-900 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-bold text-lg">I</span>
+                </div>
+                <span class="text-xl font-bold">InkFlow - Guide Complet</span>
+            </div>
+            <a href="/" class="bg-neutral-900 text-white px-6 py-2 rounded-lg hover:bg-neutral-800 transition-colors">
+                Voir l'Application
+            </a>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="section flex items-center justify-center bg-gradient-to-br from-neutral-900 to-neutral-800 text-white">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <h1 class="text-6xl font-bold mb-6">🎨 InkFlow</h1>
+            <p class="text-2xl mb-8 text-neutral-300">Plateforme Complète pour Tatoueurs</p>
+            <div class="grid md:grid-cols-3 gap-6 text-left">
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+                    <div class="text-4xl mb-3">🏠</div>
+                    <h3 class="font-bold mb-2">Landing Page</h3>
+                    <p class="text-sm text-neutral-300">Page d'accueil avec toutes les sections marketing</p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+                    <div class="text-4xl mb-3">🔐</div>
+                    <h3 class="font-bold mb-2">Authentification</h3>
+                    <p class="text-sm text-neutral-300">Login & Signup complets avec gestion de session</p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+                    <div class="text-4xl mb-3">📊</div>
+                    <h3 class="font-bold mb-2">Dashboard</h3>
+                    <p class="text-sm text-neutral-300">Interface complète de gestion avec Bento Grid</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Structure -->
+    <section class="section py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-4xl font-bold mb-12 text-center">📁 Structure du Projet</h2>
+            
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- File tree -->
+                <div class="bg-white rounded-2xl p-8 shadow-lg">
+                    <h3 class="text-xl font-bold mb-6">Arborescence des Fichiers</h3>
+                    <pre class="text-sm bg-neutral-50 p-4 rounded-lg overflow-auto">
+inkflow/
+├── 📁 components/
+│   ├── Navbar.tsx
+│   ├── HeroSection.tsx
+│   ├── SocialProof.tsx
+│   ├── FeaturesBento.tsx
+│   ├── PricingSection.tsx
+│   ├── ProcessSection.tsx
+│   ├── CTAFinal.tsx
+│   ├── Footer.tsx
+│   └── Dashboard.tsx
+│
+├── 📁 pages/
+│   ├── LoginPage.tsx
+│   ├── SignupPage.tsx
+│   └── DashboardPage.tsx
+│
+├── 📁 contexts/
+│   └── AuthContext.tsx
+│
+├── 📁 types/
+│   └── index.ts
+│
+├── App.tsx
+├── index.tsx
+├── index.html
+└── package.json
+                    </pre>
+                </div>
+
+                <!-- Features -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-2xl p-6 shadow-lg">
+                        <h3 class="text-xl font-bold mb-4">✨ Fonctionnalités Principales</h3>
+                        <ul class="space-y-3">
+                            <li class="flex items-start gap-3">
+                                <span class="text-green-600 font-bold">✓</span>
+                                <div>
+                                    <strong>Routing Client-Side</strong>
+                                    <p class="text-sm text-neutral-600">Navigation fluide sans rechargement</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-green-600 font-bold">✓</span>
+                                <div>
+                                    <strong>Authentification Complète</strong>
+                                    <p class="text-sm text-neutral-600">Login, Signup, et gestion de session</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-green-600 font-bold">✓</span>
+                                <div>
+                                    <strong>Design Moderne</strong>
+                                    <p class="text-sm text-neutral-600">Tailwind CSS avec composants réutilisables</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-green-600 font-bold">✓</span>
+                                <div>
+                                    <strong>TypeScript</strong>
+                                    <p class="text-sm text-neutral-600">Typage complet pour la sécurité</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-green-600 font-bold">✓</span>
+                                <div>
+                                    <strong>Responsive</strong>
+                                    <p class="text-sm text-neutral-600">Fonctionne sur tous les appareils</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6">
+                        <h3 class="text-xl font-bold mb-4">🎯 Pages Disponibles</h3>
+                        <div class="space-y-2">
+                            <div class="bg-white rounded-lg p-3">
+                                <strong>/</strong> - Landing page complète
+                            </div>
+                            <div class="bg-white rounded-lg p-3">
+                                <strong>/login</strong> - Page de connexion
+                            </div>
+                            <div class="bg-white rounded-lg p-3">
+                                <strong>/signup</strong> - Page d'inscription
+                            </div>
+                            <div class="bg-white rounded-lg p-3">
+                                <strong>/dashboard</strong> - Dashboard (protégé)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Components Overview -->
+    <section class="section py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-4xl font-bold mb-12 text-center">🧩 Composants Landing Page</h2>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="border-2 border-neutral-200 rounded-2xl p-6 hover:border-neutral-900 transition-all">
+                    <div class="w-12 h-12 bg-neutral-900 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-white text-2xl">🎯</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">HeroSection</h3>
+                    <p class="text-sm text-neutral-600 mb-3">Section principale avec CTA, benefits, et preview du dashboard</p>
+                    <div class="text-xs text-neutral-500">Ligne 1 de la page</div>
+                </div>
+
+                <div class="border-2 border-neutral-200 rounded-2xl p-6 hover:border-neutral-900 transition-all">
+                    <div class="w-12 h-12 bg-neutral-900 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-white text-2xl">⭐</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">SocialProof</h3>
+                    <p class="text-sm text-neutral-600 mb-3">3 témoignages + statistiques (500+ tatoueurs, 10k+ RDV/mois)</p>
+                    <div class="text-xs text-neutral-500">Section 2</div>
+                </div>
+
+                <div class="border-2 border-neutral-200 rounded-2xl p-6 hover:border-neutral-900 transition-all">
+                    <div class="w-12 h-12 bg-neutral-900 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-white text-2xl">📦</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">FeaturesBento</h3>
+                    <p class="text-sm text-neutral-600 mb-3">Grille Bento avec 6 fonctionnalités principales (Réservations, Paiements, Flash, CRM...)</p>
+                    <div class="text-xs text-neutral-500">Section 3</div>
+                </div>
+
+                <div class="border-2 border-neutral-200 rounded-2xl p-6 hover:border-neutral-900 transition-all">
+                    <div class="w-12 h-12 bg-neutral-900 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-white text-2xl">💰</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">PricingSection</h3>
+                    <p class="text-sm text-neutral-600 mb-3">3 plans (Solo €29, Studio €79, Enterprise) avec toggle mensuel/annuel</p>
+                    <div class="text-xs text-neutral-500">Section 4</div>
+                </div>
+
+                <div class="border-2 border-neutral-200 rounded-2xl p-6 hover:border-neutral-900 transition-all">
+                    <div class="w-12 h-12 bg-neutral-900 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-white text-2xl">🚀</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">ProcessSection</h3>
+                    <p class="text-sm text-neutral-600 mb-3">4 étapes pour démarrer (Compte, Config, Partage, Réservations)</p>
+                    <div class="text-xs text-neutral-500">Section 5</div>
+                </div>
+
+                <div class="border-2 border-neutral-200 rounded-2xl p-6 hover:border-neutral-900 transition-all">
+                    <div class="w-12 h-12 bg-neutral-900 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-white text-2xl">📢</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">CTAFinal</h3>
+                    <p class="text-sm text-neutral-600 mb-3">Appel à l'action final avec garanties et social proof</p>
+                    <div class="text-xs text-neutral-500">Section 6</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start -->
+    <section class="section py-20 bg-gradient-to-br from-green-50 to-emerald-50">
+        <div class="max-w-4xl mx-auto px-4">
+            <h2 class="text-4xl font-bold mb-12 text-center">🚀 Démarrage Rapide</h2>
+            
+            <div class="space-y-6">
+                <div class="bg-white rounded-2xl p-8 shadow-lg">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-neutral-900 rounded-full flex items-center justify-center text-white font-bold text-xl">1</div>
+                        <h3 class="text-2xl font-bold">Installation</h3>
+                    </div>
+                    <pre class="bg-neutral-900 text-green-400 p-4 rounded-lg overflow-auto">npm install</pre>
+                </div>
+
+                <div class="bg-white rounded-2xl p-8 shadow-lg">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-neutral-900 rounded-full flex items-center justify-center text-white font-bold text-xl">2</div>
+                        <h3 class="text-2xl font-bold">Démarrage</h3>
+                    </div>
+                    <pre class="bg-neutral-900 text-green-400 p-4 rounded-lg overflow-auto">npm run dev</pre>
+                </div>
+
+                <div class="bg-white rounded-2xl p-8 shadow-lg">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-neutral-900 rounded-full flex items-center justify-center text-white font-bold text-xl">3</div>
+                        <h3 class="text-2xl font-bold">Tester</h3>
+                    </div>
+                    <p class="text-neutral-700 mb-4">Utilisez le compte démo pour tester rapidement :</p>
+                    <div class="bg-neutral-50 p-4 rounded-lg space-y-2">
+                        <div><strong>Email:</strong> demo@inkflow.com</div>
+                        <div><strong>Mot de passe:</strong> demo123</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-neutral-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <div class="flex items-center justify-center gap-3 mb-4">
+                <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+                    <span class="text-neutral-900 font-bold text-lg">I</span>
+                </div>
+                <span class="text-2xl font-bold">InkFlow</span>
+            </div>
+            <p class="text-neutral-400 mb-4">Plateforme complète pour tatoueurs professionnels</p>
+            <p class="text-sm text-neutral-500">© 2025 InkFlow - Fait avec ❤️ pour les artistes</p>
+        </div>
+    </footer>
+</body>
+</html>
