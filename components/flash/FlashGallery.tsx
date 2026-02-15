@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Search, Filter, Clock, DollarSign, CheckCircle, X, Plus, Grid3X3, List, Edit, Trash2 } from 'lucide-react';
 import { FlashDesign } from '../../types';
 import { Modal } from '../ui/Modal';
+import { ImageUploadField } from '../ui/ImageUploadField';
 
 const STYLE_OPTIONS = ['Minimaliste', 'Traditional', 'Géométrique', 'Japonais', 'Réalisme', 'Blackwork', 'Autre'];
 
@@ -285,11 +286,12 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               <textarea value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
                 className="w-full px-4 py-3 border border-neutral-200 rounded-xl min-h-[80px]" placeholder="Description du design" />
             </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2">URL image</label>
-              <input type="text" value={form.imageUrl} onChange={(e) => setForm(f => ({ ...f, imageUrl: e.target.value }))}
-                className="w-full px-4 py-3 border border-neutral-200 rounded-xl" placeholder="https://..." />
-            </div>
+            <ImageUploadField
+              label="Image du flash"
+              value={form.imageUrl}
+              onChange={(v) => setForm(f => ({ ...f, imageUrl: v }))}
+              previewSize="md"
+            />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-semibold mb-2">Prix (€)</label>

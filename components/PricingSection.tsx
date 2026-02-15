@@ -60,22 +60,22 @@ export const PricingSection: React.FC = () => {
   ];
 
   return (
-    <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-neutral-50">
+    <section id="pricing" className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl font-bold mb-4">
+        <div className="text-center mb-12 sm:mb-20">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 px-2 tracking-tight">
             Un tarif simple et transparent
           </h2>
-          <p className="text-xl text-neutral-600 mb-8">
+          <p className="text-base sm:text-lg md:text-xl text-neutral-600 mb-8 sm:mb-10 px-2 max-w-2xl mx-auto">
             Choisissez le plan qui correspond à votre activité
           </p>
 
-          <div className="inline-flex items-center gap-4 bg-white p-2 rounded-xl border border-neutral-200">
+          <div className="inline-flex items-center gap-1 p-1.5 rounded-2xl bg-neutral-100 border border-neutral-200/80">
             <button
               onClick={() => setIsAnnual(false)}
-              className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+              className={`px-5 sm:px-6 py-2.5 rounded-xl font-semibold text-sm sm:text-base transition-all duration-200 ${
                 !isAnnual
-                  ? 'bg-neutral-900 text-white'
+                  ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200/80'
                   : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
@@ -83,33 +83,33 @@ export const PricingSection: React.FC = () => {
             </button>
             <button
               onClick={() => setIsAnnual(true)}
-              className={`px-6 py-2 rounded-lg font-semibold transition-all relative ${
+              className={`px-5 sm:px-6 py-2.5 rounded-xl font-semibold text-sm sm:text-base transition-all duration-200 relative ${
                 isAnnual
-                  ? 'bg-neutral-900 text-white'
+                  ? 'bg-neutral-900 text-white shadow-sm'
                   : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
               Annuel
-              <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+              <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
                 -20%
               </span>
             </button>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-10 sm:mb-12">
           {plans.map((plan, index) => (
             <div
               key={index}
-              className={`relative rounded-3xl p-8 ${
+              className={`relative rounded-2xl sm:rounded-3xl p-6 sm:p-8 ${
                 plan.popular
-                  ? 'bg-neutral-900 text-white shadow-2xl scale-105 border-2 border-neutral-800'
-                  : 'bg-white border-2 border-neutral-200 hover:border-neutral-900 transition-all'
+                  ? 'bg-neutral-900 text-white shadow-2xl shadow-neutral-900/20 md:scale-[1.02] border border-neutral-800 order-first md:order-none'
+                  : 'bg-white border border-neutral-200/80 hover:border-neutral-300 hover:shadow-xl hover:shadow-neutral-900/5 transition-all duration-300'
               }`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                  <div className="bg-white/10 backdrop-blur-sm text-white px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-1.5 border border-white/20">
                     <Zap className="w-4 h-4" />
                     Plus populaire
                   </div>
@@ -162,7 +162,7 @@ export const PricingSection: React.FC = () => {
                 {plan.features.map((feature, featureIndex) => (
                   <div key={featureIndex} className="flex items-start gap-3">
                     <Check className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                      plan.popular ? 'text-green-400' : 'text-green-600'
+                      plan.popular ? 'text-emerald-400' : 'text-emerald-500'
                     }`} />
                     <span className={`text-sm ${plan.popular ? 'text-neutral-200' : 'text-neutral-700'}`}>
                       {feature}
@@ -175,17 +175,17 @@ export const PricingSection: React.FC = () => {
         </div>
 
         <div className="text-center space-y-4">
-          <div className="flex justify-center items-center gap-6 flex-wrap text-sm text-neutral-600">
+            <div className="flex justify-center items-center gap-6 flex-wrap text-sm text-neutral-600">
             <div className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-green-600" />
+              <Check className="w-5 h-5 text-emerald-500" />
               <span>14 jours d'essai gratuit</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-green-600" />
+              <Check className="w-5 h-5 text-emerald-500" />
               <span>Annulation à tout moment</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-green-600" />
+              <Check className="w-5 h-5 text-emerald-500" />
               <span>Pas d'engagement</span>
             </div>
           </div>

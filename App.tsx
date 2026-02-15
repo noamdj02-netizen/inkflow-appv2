@@ -6,6 +6,7 @@ import { SocialProof } from './components/SocialProof';
 import { FeaturesBento } from './components/FeaturesBento';
 import { PricingSection } from './components/PricingSection';
 import { ProcessSection } from './components/ProcessSection';
+import { FAQ } from './components/FAQ';
 import { CTAFinal } from './components/CTAFinal';
 import { Footer } from './components/Footer';
 import { LoginPage } from './pages/LoginPage';
@@ -13,8 +14,8 @@ import { SignupPage } from './pages/SignupPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
-import { PublicStudioPage } from './pages/public/PublicStudioPage';
-import { PublicBookingPage } from './pages/public/PublicBookingPage';
+import { PublicStudioPagePro } from './pages/public/PublicStudioPagePro';
+import { PublicBookingPagePro } from './pages/public/PublicBookingPagePro';
 
 interface Route {
   path: string | RegExp;
@@ -57,8 +58,8 @@ const Router: React.FC = () => {
     { path: '/dashboard', component: DashboardPage, requiresAuth: true },
     { path: '/auth/callback', component: AuthCallbackPage },
     { path: '/auth/update-password', component: UpdatePasswordPage },
-    { path: /^\/studio\/([a-z0-9-]+)$/, component: PublicStudioPage, getProps: (m) => ({ studioSlug: m[1] }) },
-    { path: /^\/book\/([a-z0-9-]+)$/, component: PublicBookingPage, getProps: (m) => ({ studioSlug: m[1] }) }
+    { path: /^\/studio\/([a-z0-9-]+)$/, component: PublicStudioPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
+    { path: /^\/book\/([a-z0-9-]+)$/, component: PublicBookingPagePro, getProps: (m) => ({ studioSlug: m[1] }) }
   ];
 
   const matchRoute = () => {
@@ -116,7 +117,7 @@ const LandingPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden bg-white text-neutral-900 selection:bg-neutral-900 selection:text-white">
+    <div className="min-h-screen relative overflow-x-hidden bg-[#fafafa] text-neutral-900 selection:bg-neutral-900 selection:text-white">
       <Navbar scrolled={scrolled} />
 
       <main className="relative z-10">
@@ -125,6 +126,7 @@ const LandingPage: React.FC = () => {
         <FeaturesBento />
         <PricingSection />
         <ProcessSection />
+        <FAQ />
         <CTAFinal />
       </main>
 

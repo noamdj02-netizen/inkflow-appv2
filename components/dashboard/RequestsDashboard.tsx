@@ -29,14 +29,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({ appointmen
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Demandes</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Demandes</h1>
           <p className="text-neutral-600 mt-1">
             {activeTab === 'pending' ? `${pendingAppointments.length} en attente` : 'Historique des demandes'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto">
           <button onClick={() => setActiveTab('pending')}
             className={`px-4 py-2 rounded-xl text-sm font-medium ${activeTab === 'pending' ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:bg-neutral-50'}`}>
             <MessageSquare className="w-4 h-4 inline mr-2" />
@@ -60,7 +60,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({ appointmen
         ) : (
           <div className="divide-y divide-neutral-200">
             {list.map(apt => (
-              <div key={apt.id} className="p-6 hover:bg-neutral-50 transition-colors">
+              <div key={apt.id} className="p-4 sm:p-6 hover:bg-neutral-50 transition-colors">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex-1">
                     <div className="font-semibold text-lg">{apt.clientName}</div>

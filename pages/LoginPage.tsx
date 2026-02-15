@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Logo } from '../components/Logo';
 import { useAuth } from '../contexts/AuthContext';
 
 export const LoginPage: React.FC = () => {
@@ -25,8 +26,8 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex flex-col">
-      <header className="p-6">
+    <div className="min-h-screen min-h-[100dvh] bg-neutral-50 flex flex-col">
+      <header className="p-4 sm:p-6 safe-top">
         <a
           href="/"
           className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors"
@@ -36,20 +37,18 @@ export const LoginPage: React.FC = () => {
         </a>
       </header>
 
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-6 safe-bottom">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-neutral-900 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">I</span>
-              </div>
+              <Logo />
               <span className="text-2xl font-bold text-neutral-900">InkFlow</span>
             </div>
             <h1 className="text-3xl font-bold mb-2">Bon retour !</h1>
             <p className="text-neutral-600">Connectez-vous à votre compte</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
@@ -94,12 +93,12 @@ export const LoginPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" className="rounded border-neutral-300" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" className="rounded border-neutral-300 w-4 h-4" />
                   <span className="text-sm text-neutral-600">Se souvenir de moi</span>
                 </label>
-                <a href="#" className="text-sm font-semibold text-neutral-900 hover:text-neutral-700">
+                <a href="#" className="text-sm font-semibold text-neutral-900 hover:text-neutral-700 py-2 sm:py-0">
                   Mot de passe oublié ?
                 </a>
               </div>

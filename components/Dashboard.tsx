@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MoreVertical, TrendingUp, DollarSign, Calendar, ChevronRight, Image as ImageIcon, Camera, Clock } from 'lucide-react';
+import { Logo } from './Logo';
 
 export const Dashboard: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(13);
@@ -49,11 +50,9 @@ export const Dashboard: React.FC = () => {
       {/* Header */}
       <header className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center font-black text-xl tracking-tighter shadow-lg shadow-black/20">
-            IF.
-          </div>
+          <Logo />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight leading-none">Inkflow</h1>
+            <h1 className="text-2xl font-bold tracking-tight leading-none">InkFlow</h1>
             <p className="text-xs text-neutral-500 font-semibold uppercase tracking-wider mt-1">Artist Dashboard</p>
           </div>
         </div>

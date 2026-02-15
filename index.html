@@ -2,18 +2,44 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="InkFlow - La plateforme tout-en-un pour tatoueurs. Réservations, acomptes Stripe, galerie Flash, CRM. Gagnez 5 heures par semaine." />
+    <meta name="theme-color" content="#171717" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="InkFlow" />
     <title>InkFlow - Plateforme de gestion pour tatoueurs et studios</title>
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/icon.svg" sizes="any" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --color-bg: #fafafa;
+        --color-surface: #ffffff;
+        --color-text: #0a0a0a;
+        --color-muted: #737373;
+        --color-border: #e5e5e5;
+        --color-accent: #0a0a0a;
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 24px;
+        --radius-2xl: 32px;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+        --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
+        --shadow-xl: 0 24px 64px rgba(0,0,0,0.1);
+      }
       body {
-        font-family: 'Inter', sans-serif;
-        background-color: #f5f5f5;
-        color: #171717;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background-color: var(--color-bg);
+        color: var(--color-text);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
       /* Custom scrollbar for webkit */
       ::-webkit-scrollbar {
@@ -29,6 +55,26 @@
       ::-webkit-scrollbar-thumb:hover {
         background: #a3a3a3;
       }
+      .splash-screen {
+        position: fixed; inset: 0; z-index: 9999;
+        background: #fafafa; display: flex; align-items: center; justify-content: center;
+        transition: opacity 0.3s ease;
+      }
+      .splash-screen.hidden { opacity: 0; pointer-events: none; }
+      .splash-content { text-align: center; }
+      .splash-logo {
+        width: 80px; height: 80px; margin: 0 auto 12px;
+        display: block; object-fit: contain;
+      }
+      .splash-name { font-size: 24px; font-weight: 700; color: #171717; display: block; margin-bottom: 24px; }
+      .splash-loader {
+        width: 32px; height: 4px; margin: 0 auto; background: #e5e5e5; border-radius: 2px; overflow: hidden;
+      }
+      .splash-loader::after {
+        content: ''; display: block; width: 40%; height: 100%; background: #171717; border-radius: 2px;
+        animation: splash-load 0.8s ease-in-out infinite;
+      }
+      @keyframes splash-load { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
     </style>
   <script type="importmap">
 {
@@ -44,6 +90,13 @@
 <link rel="stylesheet" href="/index.css">
 </head>
   <body>
+    <div id="splash" class="splash-screen">
+      <div class="splash-content">
+        <img src="/icon.svg" alt="InkFlow" class="splash-logo" />
+        <span class="splash-name">InkFlow</span>
+        <div class="splash-loader"></div>
+      </div>
+    </div>
     <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

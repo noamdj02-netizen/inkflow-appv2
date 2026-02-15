@@ -46,22 +46,22 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain">
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-start sm:items-center justify-center p-4 sm:p-6 safe-top safe-bottom">
         <div
-          className={`relative bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} transform transition-all`}
+          className={`relative bg-white rounded-2xl shadow-2xl w-full max-h-[90dvh] sm:max-h-[85vh] flex flex-col ${sizeClasses[size]} transform transition-all`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between p-6 border-b border-neutral-200">
-            <h2 className="text-2xl font-bold text-neutral-900">{title}</h2>
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-neutral-200 flex-shrink-0">
+            <h2 className="text-lg sm:text-2xl font-bold text-neutral-900 pr-2 truncate">{title}</h2>
             {showClose && (
-              <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
+              <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg transition-colors flex-shrink-0" aria-label="Fermer">
                 <X className="w-5 h-5" />
               </button>
             )}
           </div>
-          <div className="p-6">{children}</div>
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">{children}</div>
         </div>
       </div>
     </div>

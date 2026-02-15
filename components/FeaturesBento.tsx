@@ -3,19 +3,19 @@ import { Calendar, CreditCard, Image, Users, Zap, Shield, Clock, TrendingUp } fr
 
 export const FeaturesBento: React.FC = () => {
   return (
-    <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+    <section id="features" className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-neutral-50/50">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl font-bold mb-4">
+        <div className="text-center mb-12 sm:mb-20">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 px-2 tracking-tight">
             Tout ce dont vous avez besoin
           </h2>
-          <p className="text-xl text-neutral-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto px-2">
             Une plateforme complète pour gérer votre activité de tatoueur professionnel
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-3xl p-8 relative overflow-hidden group hover:shadow-xl transition-shadow">
+        <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
+          <div className="md:col-span-2 bg-gradient-to-br from-indigo-50 to-indigo-100/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl hover:shadow-indigo-900/5 transition-all duration-300 border border-indigo-100/50">
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-200 rounded-full blur-3xl opacity-30" />
             <div className="relative z-10">
               <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center mb-6">
@@ -35,7 +35,7 @@ export const FeaturesBento: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-neutral-900 rounded-3xl p-8 text-white relative overflow-hidden group hover:shadow-xl transition-shadow">
+          <div className="bg-neutral-900 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden group hover:shadow-xl hover:shadow-neutral-900/20 transition-all duration-300">
             <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
             <div className="relative z-10">
               <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mb-6 backdrop-blur-sm">
@@ -50,7 +50,7 @@ export const FeaturesBento: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-8 relative overflow-hidden group hover:shadow-xl transition-shadow">
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl transition-all duration-300 border border-purple-100/50">
             <div className="w-14 h-14 bg-purple-600 rounded-2xl flex items-center justify-center mb-6">
               <Image className="w-7 h-7 text-white" />
             </div>
@@ -74,7 +74,7 @@ export const FeaturesBento: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white border-2 border-neutral-200 rounded-3xl p-8 relative overflow-hidden group hover:border-neutral-900 hover:shadow-xl transition-all">
+          <div className="bg-white border border-neutral-200/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:border-neutral-300 hover:shadow-xl hover:shadow-neutral-900/5 transition-all duration-300">
             <div className="w-14 h-14 bg-neutral-100 rounded-2xl flex items-center justify-center mb-6">
               <Users className="w-7 h-7 text-neutral-900" />
             </div>
@@ -88,7 +88,7 @@ export const FeaturesBento: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl p-8 relative overflow-hidden group hover:shadow-xl transition-shadow">
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl transition-all duration-300 border border-green-100/50">
             <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center mb-6">
               <Zap className="w-7 h-7 text-white" />
             </div>
@@ -102,8 +102,8 @@ export const FeaturesBento: React.FC = () => {
             </div>
           </div>
 
-          <div className="md:col-span-2 bg-gradient-to-r from-orange-50 to-red-50 rounded-3xl p-8 relative overflow-hidden group hover:shadow-xl transition-shadow">
-            <div className="grid md:grid-cols-2 gap-8 items-center">
+          <div className="md:col-span-2 bg-gradient-to-r from-orange-50 to-red-50/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl transition-all duration-300 border border-orange-100/50">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-center">
               <div>
                 <div className="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center mb-6">
                   <Shield className="w-7 h-7 text-white" />

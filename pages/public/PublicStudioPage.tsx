@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   MapPin, Phone, Mail, Clock, Instagram, ChevronRight, CheckCircle, Star
 } from 'lucide-react';
+import { Logo } from '../../components/Logo';
 import { FlashDesign } from '../../types';
 
 interface PublicStudioPageProps {
@@ -55,9 +56,7 @@ export const PublicStudioPage: React.FC<PublicStudioPageProps> = ({ studioSlug }
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-lg">I</span>
-              </div>
+              <Logo />
               <span className="text-lg font-bold">InkFlow</span>
             </div>
             <a href={`/book/${studioSlug}`} className="bg-neutral-900 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-neutral-800 transition-colors">
@@ -72,10 +71,10 @@ export const PublicStudioPage: React.FC<PublicStudioPageProps> = ({ studioSlug }
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-8">
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-end gap-6">
-              <img src={studio.avatar} alt={studio.name} className="w-24 h-24 md:w-32 md:h-32 rounded-2xl border-4 border-white shadow-xl object-cover" />
-              <div className="flex-1 text-white pb-2">
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">{studio.name}</h1>
+            <div className="flex items-end gap-4 sm:gap-6">
+              <img src={studio.avatar} alt={studio.name} className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-xl sm:rounded-2xl border-2 sm:border-4 border-white shadow-xl object-cover flex-shrink-0" />
+              <div className="flex-1 text-white pb-2 min-w-0">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 truncate">{studio.name}</h1>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="flex items-center gap-1">
                     <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
@@ -93,8 +92,8 @@ export const PublicStudioPage: React.FC<PublicStudioPageProps> = ({ studioSlug }
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
           <div className="lg:col-span-2 space-y-8">
             <section className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-neutral-200">
               <h2 className="text-2xl font-bold mb-4">À propos</h2>
@@ -158,7 +157,7 @@ export const PublicStudioPage: React.FC<PublicStudioPageProps> = ({ studioSlug }
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200 sticky top-24">
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200 lg:sticky lg:top-24">
               <h3 className="text-xl font-bold mb-4">Prendre rendez-vous</h3>
               <a href={`/book/${studioSlug}`} className="block w-full bg-neutral-900 text-white text-center py-4 rounded-xl font-semibold hover:bg-neutral-800 transition-colors mb-4">
                 Réserver maintenant

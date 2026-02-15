@@ -92,7 +92,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900" />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 flex-nowrap">
             {(['all', 'active', 'vip', 'inactive'] as const).map(status => (
               <button key={status} onClick={() => setFilterStatus(status)}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${

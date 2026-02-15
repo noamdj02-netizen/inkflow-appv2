@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid } from 'lucide-react';
+import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMockData } from '../../hooks/useMockData';
 import { Modal } from '../ui/Modal';
@@ -12,7 +13,10 @@ import { FinanceDashboard } from './FinanceDashboard';
 import { CareSheetsSettings } from './CareSheetsSettings';
 import { PaymentsSettings } from './PaymentsSettings';
 import { AvailabilitySettings } from '../settings/AvailabilitySettings';
+import { VitrineSettings } from '../settings/VitrineSettings';
 import { AnalyticsDashboard } from '../analytics/AnalyticsDashboard';
+import { VitrineLinkButton } from './VitrineLinkButton';
+import { DashboardWidgets, AddWidgetModal, useDashboardWidgets } from './DashboardWidgets';
 import { Appointment, FlashDesign, BookingFormData } from '../../types';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -36,7 +40,10 @@ export const DashboardPro: React.FC = () => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
   const [appointmentView, setAppointmentView] = useState<'list' | 'calendar'>('list');
-  const [settingsTab, setSettingsTab] = useState<'general' | 'payments' | 'care' | 'availability'>('general');
+  const [settingsTab, setSettingsTab] = useState<'general' | 'payments' | 'care' | 'availability' | 'vitrine'>('general');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showWidgetModal, setShowWidgetModal] = useState(false);
+  const [customWidgets, setCustomWidgets] = useDashboardWidgets();
 
   const handleNewBooking = (data: BookingFormData) => {
     const newAppointment: Appointment = {
@@ -119,22 +126,31 @@ export const DashboardPro: React.FC = () => {
   }, [clients]);
 
   return (
-    <div className="flex min-h-screen bg-neutral-100">
-      <aside className="w-64 bg-white border-r border-neutral-200 flex flex-col">
-        <div className="p-6 border-b border-neutral-200">
+    <div className="flex min-h-screen min-h-[100dvh] bg-neutral-100">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
+      )}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 max-w-[85vw] bg-white border-r border-neutral-200 flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 safe-top safe-bottom ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
+        <div className="p-4 sm:p-6 border-b border-neutral-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-neutral-900 text-white rounded-xl flex items-center justify-center font-black text-xl">IF.</div>
+            <Logo />
             <div>
-              <h1 className="text-lg font-bold">Inkflow</h1>
-              <p className="text-xs text-neutral-500">{user?.studioName}</p>
+              <h1 className="text-lg font-bold">InkFlow</h1>
+              <p className="text-xs text-neutral-500 truncate max-w-[140px]">{user?.studioName}</p>
             </div>
           </div>
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-neutral-100">
+            <X className="w-5 h-5" />
+          </button>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {tabs.map(tab => {
             const pendingCount = tab.badge === 'pending' ? appointments.filter(a => a.status === 'pending').length : 0;
             return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
                   activeTab === tab.id ? 'bg-neutral-900 text-white' : 'text-neutral-600 hover:bg-neutral-100'
                 }`}>
@@ -156,9 +172,23 @@ export const DashboardPro: React.FC = () => {
       </aside>
 
       <main className="flex-1 overflow-auto">
-        <header className="bg-white border-b border-neutral-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
-          <h2 className="text-xl font-bold">{tabs.find(t => t.id === activeTab)?.label}</h2>
-          <div className="flex items-center gap-4">
+        <header className="bg-white border-b border-neutral-200 px-4 sm:px-6 md:px-8 py-3 sm:py-4 flex items-center justify-between gap-4 sticky top-0 z-30 safe-top">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-neutral-100 flex-shrink-0">
+              <Menu className="w-6 h-6 text-neutral-600" />
+            </button>
+            <h2 className="text-lg sm:text-xl font-bold truncate">{tabs.find(t => t.id === activeTab)?.label}</h2>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-4">
+            {activeTab === 'overview' && (
+              <button
+                onClick={() => setShowWidgetModal(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-neutral-900 text-white text-sm font-semibold hover:bg-neutral-800 transition-colors"
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span className="hidden sm:inline">Ajouter un widget</span>
+              </button>
+            )}
             <button className="relative p-2 rounded-lg hover:bg-neutral-100">
               <Bell className="w-5 h-5 text-neutral-600" />
               {notifications.filter(n => !n.read).length > 0 && (
@@ -178,28 +208,36 @@ export const DashboardPro: React.FC = () => {
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 md:p-8">
           {activeTab === 'overview' && (
             <div className="space-y-6">
               {visibleAlerts.length > 0 && (
                 <div className="space-y-2">
                   {visibleAlerts.map(alert => (
-                    <div key={alert.id} className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
+                    <div key={alert.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 rounded-xl border ${
                       alert.type === 'warning' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'
                     }`}>
-                      {alert.type === 'warning' ? <CreditCard className="w-5 h-5 text-amber-600" /> : <AlertTriangle className="w-5 h-5 text-blue-600" />}
-                      <span className={`text-sm font-medium flex-1 ${alert.type === 'warning' ? 'text-amber-800' : 'text-blue-800'}`}>{alert.msg}</span>
-                      <button onClick={() => setActiveTab(alert.id === 'unpaid' ? 'appointments' : 'appointments')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${alert.type === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {alert.cta}
-                      </button>
-                      <button onClick={() => setDismissedAlerts(prev => new Set(prev).add(alert.id))} className="p-1 rounded hover:bg-black/5">
-                        <X className="w-4 h-4 text-neutral-500" />
-                      </button>
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {alert.type === 'warning' ? <CreditCard className="w-5 h-5 text-amber-600 flex-shrink-0" /> : <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0" />}
+                        <span className={`text-sm font-medium flex-1 min-w-0 ${alert.type === 'warning' ? 'text-amber-800' : 'text-blue-800'}`}>{alert.msg}</span>
+                      </div>
+                      <div className="flex items-center gap-2 sm:gap-1">
+                        <button onClick={() => setActiveTab(alert.id === 'unpaid' ? 'appointments' : 'appointments')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex-1 sm:flex-none ${alert.type === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {alert.cta}
+                        </button>
+                        <button onClick={() => setDismissedAlerts(prev => new Set(prev).add(alert.id))} className="p-1.5 rounded hover:bg-black/5">
+                          <X className="w-4 h-4 text-neutral-500" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
+              {user?.studioName && (
+                <VitrineLinkButton studioName={user.studioName} />
+              )}
+              <DashboardWidgets widgets={customWidgets} onWidgetsChange={setCustomWidgets} />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white rounded-2xl p-6 border border-neutral-200">
                   <div className="text-sm text-neutral-600 mb-1">RDV aujourd'hui</div>
@@ -319,9 +357,9 @@ export const DashboardPro: React.FC = () => {
             <RequestsDashboard appointments={appointments} onUpdateAppointment={updateAppointment} />
           )}
 
-          {activeTab === 'appointments' && (
+              {activeTab === 'appointments' && (
             <div className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-4">
                 <div className="flex gap-2">
                   <button onClick={() => setAppointmentView('list')}
                     className={`px-4 py-2 rounded-xl text-sm font-medium ${appointmentView === 'list' ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>
@@ -333,7 +371,7 @@ export const DashboardPro: React.FC = () => {
                   </button>
                 </div>
                 <button onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-                  className="flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800">
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 w-full sm:w-auto">
                   <Plus className="w-5 h-5" /> Nouveau RDV
                 </button>
               </div>
@@ -341,29 +379,32 @@ export const DashboardPro: React.FC = () => {
                 <AppointmentCalendar appointments={appointments} onSlotClick={() => { setSelectedFlash(null); setShowBookingModal(true); }} />
               ) : (
               <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="overflow-x-auto -mx-4 sm:mx-0">
+                  <table className="w-full min-w-[600px]">
                     <thead className="bg-neutral-50 border-b border-neutral-200">
                       <tr>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Client</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Date / Heure</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Service</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Prix</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Statut</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900"></th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-sm font-semibold text-neutral-900">Client</th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-sm font-semibold text-neutral-900">Date / Heure</th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-sm font-semibold text-neutral-900 hidden sm:table-cell">Service</th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-sm font-semibold text-neutral-900">Prix</th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-sm font-semibold text-neutral-900">Statut</th>
+                        <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-sm font-semibold text-neutral-900 w-10"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-200">
                       {appointments.map(apt => (
                         <tr key={apt.id} className="hover:bg-neutral-50">
-                          <td className="px-6 py-4">
+                          <td className="px-4 sm:px-6 py-3 sm:py-4">
                             <div className="font-semibold">{apt.clientName}</div>
                             <div className="text-sm text-neutral-600">{apt.clientEmail}</div>
                           </td>
-                          <td className="px-6 py-4">{apt.date} • {apt.time}</td>
-                          <td className="px-6 py-4">{apt.service}</td>
-                          <td className="px-6 py-4 font-semibold">{apt.price}€</td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 sm:px-6 py-3 sm:py-4">
+                            <span className="sm:hidden">{apt.date}</span>
+                            <span className="hidden sm:inline">{apt.date} • {apt.time}</span>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">{apt.service}</td>
+                          <td className="px-4 sm:px-6 py-3 sm:py-4 font-semibold">{apt.price}€</td>
+                          <td className="px-4 sm:px-6 py-3 sm:py-4">
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                               apt.status === 'confirmed' ? 'bg-green-100 text-green-700' :
                               apt.status === 'pending' ? 'bg-amber-100 text-amber-700' :
@@ -372,8 +413,8 @@ export const DashboardPro: React.FC = () => {
                               {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'pending' ? 'En attente' : apt.status === 'completed' ? 'Terminé' : apt.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4">
-                            <button className="text-neutral-600 hover:text-neutral-900"><ChevronRight className="w-5 h-5" /></button>
+                          <td className="px-4 sm:px-6 py-3 sm:py-4">
+                            <button className="text-neutral-600 hover:text-neutral-900 p-1"><ChevronRight className="w-5 h-5" /></button>
                           </td>
                         </tr>
                       ))}
@@ -399,7 +440,7 @@ export const DashboardPro: React.FC = () => {
 
           {activeTab === 'settings' && (
             <div className="space-y-6">
-              <div className="flex gap-2 border-b border-neutral-200 pb-4">
+              <div className="flex gap-2 border-b border-neutral-200 pb-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide flex-nowrap">
                 <button onClick={() => setSettingsTab('general')}
                   className={`px-4 py-2 rounded-xl text-sm font-medium ${settingsTab === 'general' ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:bg-neutral-50'}`}>
                   Général
@@ -416,9 +457,17 @@ export const DashboardPro: React.FC = () => {
                   className={`px-4 py-2 rounded-xl text-sm font-medium ${settingsTab === 'availability' ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:bg-neutral-50'}`}>
                   Disponibilités
                 </button>
+                <button onClick={() => setSettingsTab('vitrine')}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium ${settingsTab === 'vitrine' ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:bg-neutral-50'}`}>
+                  Page vitrine
+                </button>
               </div>
               {settingsTab === 'general' && (
-                <div className="bg-white rounded-2xl p-8 border border-neutral-200 max-w-2xl">
+                <div className="space-y-6 max-w-2xl w-full overflow-hidden">
+                  {user?.studioName && (
+                    <VitrineLinkButton studioName={user.studioName} />
+                  )}
+                  <div className="bg-white rounded-2xl p-6 sm:p-8 border border-neutral-200">
                   <h3 className="font-bold text-lg mb-6">Paramètres du studio</h3>
                   <div className="space-y-4">
                     <div>
@@ -433,16 +482,25 @@ export const DashboardPro: React.FC = () => {
                       Enregistrer
                     </button>
                   </div>
+                  </div>
                 </div>
               )}
               {settingsTab === 'payments' && <PaymentsSettings />}
               {settingsTab === 'care' && <CareSheetsSettings />}
               {settingsTab === 'availability' && <AvailabilitySettings />}
+              {settingsTab === 'vitrine' && user?.studioName && <VitrineSettings studioName={user.studioName} />}
             </div>
           )}
         </div>
       </main>
 
+      {showWidgetModal && (
+        <AddWidgetModal
+          isOpen={showWidgetModal}
+          onClose={() => setShowWidgetModal(false)}
+          onAdd={(w) => setCustomWidgets(prev => [...prev, w])}
+        />
+      )}
       {showBookingModal && (
         <Modal isOpen={showBookingModal} onClose={() => { setShowBookingModal(false); setSelectedFlash(null); }} title="Nouvelle réservation" size="lg">
           <BookingForm

@@ -1,0 +1,820 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  MapPin, Phone, Mail, Clock, Instagram, ChevronRight, CheckCircle, Star,
+  MessageCircle, Share2, Heart, Award, Shield, Users, Camera, X,
+  Facebook, ExternalLink, Calendar, ArrowRight, Menu,
+  ChevronDown, Send, AlertCircle, Sparkles
+} from 'lucide-react';
+import { Logo } from '../../components/Logo';
+import { getVitrineData } from '../../lib/vitrineStorage';
+
+const ICON_MAP = { sparkles: Sparkles, award: Award, star: Star, camera: Camera, shield: Shield, heart: Heart, users: Users };
+
+interface PublicStudioPageProProps {
+  studioSlug: string;
+}
+
+export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studioSlug }) => {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedFlash, setSelectedFlash] = useState<any>(null);
+  const [activeSection, setActiveSection] = useState('about');
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setHeaderScrolled(window.scrollY > 100);
+      const sections = ['about', 'services', 'artists', 'portfolio', 'flash', 'testimonials', 'faq'];
+      for (const section of sections) {
+        const element = document.getElementById(section);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          if (rect.top <= 150 && rect.bottom >= 150) {
+            setActiveSection(section);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const studio = useMemo(() => {
+    const data = getVitrineData(studioSlug);
+    return {
+      ...data,
+      services: data.services.map(s => ({ ...s, icon: ICON_MAP[s.icon] || Sparkles })),
+      whyChooseUs: data.whyChooseUs.map(w => ({ ...w, icon: ICON_MAP[w.icon] || Award }))
+    };
+  }, [studioSlug]);
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      const offset = 100;
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+      window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+      setActiveSection(sectionId);
+      setShowMobileMenu(false);
+    }
+  };
+
+  const shareStudio = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: studio.name, text: studio.tagline, url: window.location.href });
+      } catch { /* cancelled */ }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Lien copié dans le presse-papier !');
+    }
+  };
+
+  const getCurrentDay = () => {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return days[new Date().getDay()];
+  };
+
+  const isOpen = () => {
+    const currentDay = getCurrentDay();
+    const hours = studio.openingHours[currentDay as keyof typeof studio.openingHours];
+    if (hours.closed) return false;
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const [openH, openM] = hours.open.split(':').map(Number);
+    const [closeH, closeM] = hours.close.split(':').map(Number);
+    const openTime = openH * 60 + openM;
+    const closeTime = closeH * 60 + closeM;
+    return currentTime >= openTime && currentTime <= closeTime;
+  };
+
+  const dayLabels: Record<string, string> = {
+    monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi',
+    friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche'
+  };
+
+  return (
+    <div className="min-h-screen min-h-[100dvh] bg-neutral-50">
+      {/* Sticky Header */}
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 safe-top ${headerScrolled ? 'bg-white/98 backdrop-blur-lg shadow-lg' : 'bg-white/80 backdrop-blur-sm'}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 sm:h-20">
+            <div className="flex items-center gap-3">
+              <Logo />
+              <div className="hidden sm:block">
+                <div className="font-bold text-lg">{studio.name}</div>
+                <div className="text-xs text-neutral-500">{studio.tagline}</div>
+              </div>
+            </div>
+            <nav className="hidden lg:flex items-center gap-8">
+              {[
+                { id: 'about', label: 'À propos' },
+                { id: 'services', label: 'Services' },
+                { id: 'artists', label: 'Artistes' },
+                { id: 'portfolio', label: 'Portfolio' },
+                { id: 'flash', label: 'Flash' },
+                { id: 'testimonials', label: 'Avis' }
+              ].map(section => (
+                <button key={section.id} onClick={() => scrollToSection(section.id)}
+                  className={`text-sm font-medium transition-all relative group ${activeSection === section.id ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'}`}>
+                  {section.label}
+                  <span className={`absolute -bottom-1 left-0 right-0 h-0.5 bg-neutral-900 transition-transform ${activeSection === section.id ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`} />
+                </button>
+              ))}
+            </nav>
+            <div className="flex items-center gap-3">
+              <button onClick={shareStudio} className="hidden md:flex items-center gap-2 px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors">
+                <Share2 className="w-5 h-5" />
+              </button>
+              <button onClick={() => setShowContactForm(true)} className="hidden md:flex items-center gap-2 px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors">
+                <MessageCircle className="w-5 h-5" />
+                <span className="text-sm font-medium">Contact</span>
+              </button>
+              <a href={`/book/${studioSlug}`} className="bg-neutral-900 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-semibold hover:bg-neutral-800 transition-all shadow-lg flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <span>Réserver</span>
+              </a>
+              <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="lg:hidden p-2 text-neutral-700 hover:bg-neutral-100 rounded-lg">
+                {showMobileMenu ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
+          </div>
+          {showMobileMenu && (
+            <div className="lg:hidden py-4 border-t border-neutral-200">
+              <nav className="space-y-1">
+                {[{ id: 'about', label: 'À propos' }, { id: 'services', label: 'Services' }, { id: 'artists', label: 'Artistes' }, { id: 'portfolio', label: 'Portfolio' }, { id: 'flash', label: 'Flash' }, { id: 'testimonials', label: 'Avis' }].map(section => (
+                  <button key={section.id} onClick={() => scrollToSection(section.id)}
+                    className={`w-full text-left px-4 py-3 rounded-lg font-medium min-h-[44px] flex items-center ${activeSection === section.id ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-100'}`}>
+                    {section.label}
+                  </button>
+                ))}
+                <div className="border-t border-neutral-200 mt-2 pt-2 flex gap-2">
+                  <button onClick={() => { shareStudio(); setShowMobileMenu(false); }} className="flex-1 px-4 py-3 rounded-lg font-medium text-neutral-700 hover:bg-neutral-100 flex items-center justify-center gap-2 min-h-[44px]">
+                    <Share2 className="w-5 h-5" /> Partager
+                  </button>
+                  <button onClick={() => { setShowContactForm(true); setShowMobileMenu(false); }} className="flex-1 px-4 py-3 rounded-lg font-medium text-neutral-700 hover:bg-neutral-100 flex items-center justify-center gap-2 min-h-[44px]">
+                    <MessageCircle className="w-5 h-5" /> Contact
+                  </button>
+                </div>
+              </nav>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Hero Cover */}
+      <div className="relative h-[65vh] sm:h-[70vh] md:h-[80vh] overflow-hidden mt-16 sm:mt-20">
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${studio.coverImage})` }} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-12 safe-bottom">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col md:flex-row md:items-end gap-4 sm:gap-8">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6 min-w-0">
+                <img src={studio.avatar} alt={studio.name} className="w-20 h-20 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white shadow-2xl object-cover flex-shrink-0" />
+                <div className="flex-1 text-white pb-0 sm:pb-2 min-w-0">
+                  <div className="inline-flex items-center gap-2 bg-green-500/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse" />
+                    {isOpen() ? 'Ouvert maintenant' : 'Fermé'}
+                  </div>
+                  <h1 className="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-2 sm:mb-3 drop-shadow-lg leading-tight">{studio.name}</h1>
+                  <p className="text-base sm:text-xl md:text-2xl opacity-95 mb-4 sm:mb-6 drop-shadow">{studio.tagline}</p>
+                  <div className="flex flex-wrap gap-2 sm:gap-3">
+                    <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 text-sm sm:text-base">
+                      <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-yellow-400 text-yellow-400 flex-shrink-0" />
+                      <span className="font-bold">{studio.rating}</span>
+                      <span className="opacity-90">• {studio.reviewCount} avis</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 text-sm sm:text-base">
+                      <MapPin className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                      <span className="truncate max-w-[140px] sm:max-w-none">{studio.address || 'Paris 11e'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 text-sm sm:text-base">
+                      <Award className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                      <span>{studio.yearsExperience} ans d'expertise</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 sm:gap-3 md:pb-2 flex-shrink-0">
+                <button onClick={shareStudio} className="p-3 sm:p-4 bg-white/20 backdrop-blur-md rounded-xl hover:bg-white/30 transition-all border border-white/30 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                  <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </button>
+                <button className="p-3 sm:p-4 bg-white/20 backdrop-blur-md rounded-xl hover:bg-white/30 transition-all border border-white/30 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                  <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Banner */}
+      <div className="bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white py-8 sm:py-12 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+            <div className="text-center">
+              <div className="text-3xl sm:text-5xl md:text-6xl font-bold mb-1 sm:mb-2">{studio.totalTattoos}+</div>
+              <div className="text-xs sm:text-sm md:text-base text-neutral-300">Tatouages réalisés</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl sm:text-5xl md:text-6xl font-bold mb-1 sm:mb-2">{studio.satisfactionRate}%</div>
+              <div className="text-xs sm:text-sm md:text-base text-neutral-300">Satisfaction</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl sm:text-5xl md:text-6xl font-bold mb-1 sm:mb-2">{studio.repeatClients}%</div>
+              <div className="text-xs sm:text-sm md:text-base text-neutral-300">Clients fidèles</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl sm:text-5xl md:text-6xl font-bold mb-1 sm:mb-2">{studio.artists.length}</div>
+              <div className="text-xs sm:text-sm md:text-base text-neutral-300">Artistes experts</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 safe-bottom">
+        <div className="grid lg:grid-cols-3 gap-8 sm:gap-12">
+          <div className="lg:col-span-2 space-y-10 sm:space-y-16">
+            {/* About */}
+            <section id="about" className="scroll-mt-24 sm:scroll-mt-32">
+              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
+                <h2 className="text-2xl sm:text-4xl font-bold mb-6 sm:mb-8 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                  À propos du studio
+                </h2>
+                <p className="text-neutral-700 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8">{studio.description}</p>
+                <div className="aspect-video rounded-xl sm:rounded-2xl overflow-hidden mb-6 sm:mb-8 bg-neutral-100">
+                  <img src={studio.coverImage} alt="Video preview" className="w-full h-full object-cover" />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 pt-6 sm:pt-8 border-t border-neutral-200">
+                  {studio.whyChooseUs.map((item, idx) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={idx} className="flex items-start gap-3 sm:gap-4 p-4 sm:p-6 bg-gradient-to-br from-neutral-50 to-white rounded-xl sm:rounded-2xl border border-neutral-200 hover:border-neutral-900 hover:shadow-lg transition-all group">
+                        <div className="w-14 h-14 bg-neutral-900 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                          <Icon className="w-7 h-7 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg mb-2">{item.title}</h3>
+                          <p className="text-sm text-neutral-600 leading-relaxed">{item.description}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+            {/* Services */}
+            <section id="services" className="scroll-mt-24 sm:scroll-mt-32">
+              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
+                <h2 className="text-2xl sm:text-4xl font-bold mb-6 sm:mb-10 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                    <Award className="w-6 h-6 text-white" />
+                  </div>
+                  Nos services
+                </h2>
+                <div className="space-y-6">
+                  {studio.services.map((service, idx) => {
+                    const Icon = service.icon;
+                    return (
+                      <div key={idx} className="group relative bg-gradient-to-r from-neutral-50 to-white rounded-2xl border-2 border-neutral-200 hover:border-neutral-900 transition-all overflow-hidden">
+                        <div className="p-4 sm:p-6 md:p-8 flex flex-col md:flex-row gap-4 sm:gap-6">
+                          <div className="flex-shrink-0">
+                            <div className="w-16 h-16 bg-neutral-900 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                              <Icon className="w-8 h-8 text-white" />
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">{service.name}</h3>
+                            <p className="text-neutral-600 mb-4 leading-relaxed">{service.description}</p>
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              {service.features.map((feature, i) => (
+                                <span key={i} className="px-3 py-1.5 bg-green-100 text-green-700 text-sm rounded-full font-medium flex items-center gap-1">
+                                  <CheckCircle className="w-4 h-4" />
+                                  {feature}
+                                </span>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-neutral-500">
+                              <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{service.duration}</span>
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 text-right md:text-center">
+                            <div className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">{service.price}</div>
+                            <a href={`/book/${studioSlug}`} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-all text-sm sm:text-base w-full md:w-auto">
+                              Réserver
+                              <ArrowRight className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+            {/* Artists */}
+            <section id="artists" className="scroll-mt-24 sm:scroll-mt-32">
+              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
+                <h2 className="text-2xl sm:text-4xl font-bold mb-6 sm:mb-10 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                    <Users className="w-6 h-6 text-white" />
+                  </div>
+                  Notre équipe d'artistes
+                </h2>
+                <div className="space-y-8">
+                  {studio.artists.map((artist, idx) => (
+                    <div key={idx} className="group bg-gradient-to-br from-neutral-50 to-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border-2 border-neutral-200 hover:border-neutral-900 hover:shadow-xl transition-all">
+                      <div className="flex flex-col md:flex-row gap-4 sm:gap-8">
+                        <img src={artist.avatar} alt={artist.name} className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl object-cover shadow-lg flex-shrink-0 mx-auto md:mx-0" />
+                        <div className="flex-1">
+                          <h3 className="text-xl sm:text-3xl font-bold mb-2 text-center md:text-left">{artist.name}</h3>
+                          <p className="text-neutral-600 text-sm font-medium mb-4">{artist.role}</p>
+                          <p className="text-neutral-700 mb-6 leading-relaxed">{artist.bio}</p>
+                          <div className="flex flex-wrap gap-2 mb-6">
+                            {artist.specialties.map((spec, i) => (
+                              <span key={i} className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-xl font-semibold">{spec}</span>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-6 text-sm">
+                            <div className="flex items-center gap-2 text-neutral-600">
+                              <Award className="w-5 h-5" />
+                              <span className="font-semibold">{artist.experience} d'expérience</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-neutral-600">
+                              <Camera className="w-5 h-5" />
+                              <span className="font-semibold">{artist.portfolio}+ tatouages</span>
+                            </div>
+                            <a href={`https://instagram.com/${artist.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-neutral-900 hover:text-neutral-700 font-semibold">
+                              <Instagram className="w-5 h-5" />
+                              {artist.instagram}
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* Portfolio */}
+            <section id="portfolio" className="scroll-mt-24 sm:scroll-mt-32">
+              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
+                <h2 className="text-2xl sm:text-4xl font-bold mb-6 sm:mb-10 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                  Notre portfolio
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                  {studio.portfolio.map((item, idx) => (
+                    <div key={idx} className="group relative aspect-square rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl transition-all" onClick={() => setSelectedImage(item.url)}>
+                      <img src={item.url} alt={item.description} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                          <div className="text-xs font-semibold mb-2 opacity-90">{item.category}</div>
+                          <div className="font-bold mb-1">{item.description}</div>
+                          <div className="text-sm opacity-90">By {item.artist}</div>
+                          <div className="flex items-center gap-2 mt-3 text-sm">
+                            <Heart className="w-4 h-4" />
+                            <span>{item.likes}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-8 text-center">
+                  <a href={`https://instagram.com/${studio.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg">
+                    <Instagram className="w-5 h-5" />
+                    Voir plus sur Instagram
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+            </section>
+
+            {/* Flash */}
+            <section id="flash" className="scroll-mt-24 sm:scroll-mt-32">
+              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-10">
+                  <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3">
+                    <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    Flash disponibles
+                  </h2>
+                  <span className="text-sm px-4 py-2 bg-green-100 text-green-700 rounded-full font-semibold">
+                    {studio.flashDesigns.filter(f => f.available).length} disponibles
+                  </span>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
+                  {studio.flashDesigns.map((flash) => (
+                    <div key={flash.id} className={`group relative rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all ${!flash.available ? 'opacity-75' : ''}`}>
+                      <div className="aspect-square relative cursor-pointer" onClick={() => setSelectedFlash(flash)}>
+                        <img src={flash.imageUrl} alt={flash.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-8 text-white">
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">{flash.style}</span>
+                              <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">{flash.size}</span>
+                            </div>
+                            <h3 className="text-lg sm:text-2xl font-bold mb-2">{flash.title}</h3>
+                            <p className="text-sm opacity-90 mb-4">{flash.description}</p>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-2xl sm:text-3xl font-bold">{flash.price}€</div>
+                                <div className="text-sm opacity-80">~{flash.duration}min</div>
+                              </div>
+                              {flash.available ? (
+                                <a href={`/book/${studioSlug}?flash=${flash.id}`} className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-neutral-900 rounded-xl font-semibold hover:bg-neutral-100 transition-colors text-sm sm:text-base">
+                                  Réserver
+                                </a>
+                              ) : (
+                                <div className="px-6 py-3 bg-red-500 text-white rounded-xl font-semibold">Réservé</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {!flash.available && (
+                          <div className="absolute top-6 right-6 bg-red-500 text-white px-4 py-2 rounded-full font-bold shadow-xl">Réservé</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* Testimonials */}
+            <section id="testimonials" className="scroll-mt-24 sm:scroll-mt-32">
+              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
+                <h2 className="text-2xl sm:text-4xl font-bold mb-4 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                    <Star className="w-6 h-6 text-white" />
+                  </div>
+                  Avis clients
+                </h2>
+                <p className="text-neutral-600 mb-6 sm:mb-10">Ce que disent nos clients sur leur expérience</p>
+                <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+                  {studio.testimonials.map((testimonial, idx) => (
+                    <div key={idx} className="bg-gradient-to-br from-neutral-50 to-white p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl border-2 border-neutral-200 hover:border-neutral-900 hover:shadow-lg transition-all">
+                      <div className="flex gap-1 mb-4">
+                        {[...Array(testimonial.rating)].map((_, i) => (
+                          <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                        ))}
+                      </div>
+                      <p className="text-neutral-700 mb-6 leading-relaxed">"{testimonial.text}"</p>
+                      <div className="flex items-center gap-4 pt-6 border-t border-neutral-200">
+                        <img src={testimonial.avatar} alt={testimonial.name} className="w-14 h-14 rounded-full object-cover" />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <div className="font-bold">{testimonial.name}</div>
+                            {testimonial.verified && <CheckCircle className="w-4 h-4 text-green-600" />}
+                          </div>
+                          <div className="text-sm text-neutral-600">{testimonial.tattoo}</div>
+                          <div className="text-xs text-neutral-500">{testimonial.date}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-6 sm:mt-10 text-center bg-gradient-to-r from-neutral-900 to-neutral-800 rounded-xl sm:rounded-2xl p-6 sm:p-8 text-white">
+                  <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">Rejoignez nos clients satisfaits</h3>
+                  <p className="mb-4 sm:mb-6 opacity-90">Plus de {studio.satisfactionRate}% de satisfaction</p>
+                  <a href={`/book/${studioSlug}`} className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-neutral-900 rounded-xl font-semibold hover:bg-neutral-100 transition-all w-full sm:w-auto min-h-[44px]">
+                    Réserver maintenant
+                    <ArrowRight className="w-5 h-5" />
+                  </a>
+                </div>
+              </div>
+            </section>
+
+            {/* FAQ */}
+            <section id="faq" className="scroll-mt-24 sm:scroll-mt-32">
+              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
+                <h2 className="text-2xl sm:text-4xl font-bold mb-4 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                    <AlertCircle className="w-6 h-6 text-white" />
+                  </div>
+                  Questions fréquentes
+                </h2>
+                <p className="text-neutral-600 mb-6 sm:mb-10">Tout ce que vous devez savoir avant votre premier tatouage</p>
+                <div className="space-y-3 sm:space-y-4">
+                  {studio.faqs.map((faq, idx) => (
+                    <div key={idx} className="border-2 border-neutral-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-neutral-900 transition-colors">
+                      <button onClick={() => setExpandedFaq(expandedFaq === idx ? null : idx)} className="w-full px-4 sm:px-6 md:px-8 py-4 sm:py-6 flex items-center justify-between text-left hover:bg-neutral-50 transition-colors">
+                        <span className="font-bold text-base sm:text-lg pr-4">{faq.q}</span>
+                        <ChevronDown className={`w-6 h-6 flex-shrink-0 transition-transform ${expandedFaq === idx ? 'rotate-180' : ''}`} />
+                      </button>
+                      {expandedFaq === idx && (
+                        <div className="px-4 sm:px-6 md:px-8 pb-4 sm:pb-6 text-neutral-700 leading-relaxed text-sm sm:text-base">{faq.a}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6 lg:space-y-6">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border-2 border-neutral-200 lg:sticky lg:top-32">
+              <div className="mb-4 sm:mb-6">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <h3 className="text-xl sm:text-2xl font-bold">Réserver</h3>
+                  {isOpen() ? (
+                    <span className="flex items-center gap-2 text-green-600 text-sm font-semibold">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      Ouvert
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2 text-red-600 text-sm font-semibold">
+                      <div className="w-2 h-2 bg-red-500 rounded-full" />
+                      Fermé
+                    </span>
+                  )}
+                </div>
+                <p className="text-neutral-600 text-sm">Réservez votre session en quelques clics</p>
+              </div>
+              <a href={`/book/${studioSlug}`} className="block w-full bg-gradient-to-r from-neutral-900 to-neutral-800 text-white text-center py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all mb-6">
+                Prendre rendez-vous
+              </a>
+              <div className="space-y-4 mb-6">
+                {[
+                  { icon: CheckCircle, text: "Confirmation instantanée", color: "text-green-600" },
+                  { icon: Shield, text: "Paiement 100% sécurisé", color: "text-blue-600" },
+                  { icon: Calendar, text: "Rappels automatiques", color: "text-purple-600" },
+                  { icon: Award, text: "Retouche gratuite incluse", color: "text-amber-600" }
+                ].map((item, idx) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={idx} className="flex items-center gap-3">
+                      <Icon className={`w-5 h-5 ${item.color} flex-shrink-0`} />
+                      <span className="text-sm text-neutral-700 font-medium">{item.text}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="pt-6 border-t border-neutral-200 text-center text-sm text-neutral-600">
+                <p>Besoin d'aide ?</p>
+                <button onClick={() => setShowContactForm(true)} className="text-neutral-900 font-semibold hover:underline">
+                  Contactez-nous
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-8 shadow-xl border-2 border-neutral-200">
+              <h3 className="text-xl font-bold mb-6">Coordonnées</h3>
+              <div className="space-y-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-5 h-5 text-neutral-700" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-sm mb-1">Adresse</div>
+                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(studio.address)}`} target="_blank" rel="noopener noreferrer" className="text-neutral-700 hover:text-neutral-900 text-sm">
+                      {studio.address}
+                    </a>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Phone className="w-5 h-5 text-neutral-700" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm mb-1">Téléphone</div>
+                    <a href={`tel:${studio.phone}`} className="text-neutral-700 hover:text-neutral-900 text-sm font-medium">{studio.phone}</a>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Mail className="w-5 h-5 text-neutral-700" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm mb-1">Email</div>
+                    <a href={`mailto:${studio.email}`} className="text-neutral-700 hover:text-neutral-900 text-sm">{studio.email}</a>
+                  </div>
+                </div>
+              </div>
+              <div className="pt-6 mt-6 border-t border-neutral-200">
+                <div className="font-semibold text-sm mb-4">Réseaux sociaux</div>
+                <div className="flex gap-3">
+                  <a href={`https://instagram.com/${studio.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="w-11 h-11 bg-gradient-to-br from-purple-600 to-pink-600 text-white rounded-xl flex items-center justify-center hover:shadow-lg transition-all">
+                    <Instagram className="w-5 h-5" />
+                  </a>
+                  <a href={`https://facebook.com/${studio.facebook}`} target="_blank" rel="noopener noreferrer" className="w-11 h-11 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:shadow-lg transition-all">
+                    <Facebook className="w-5 h-5" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-8 shadow-xl border-2 border-neutral-200">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                <Clock className="w-6 h-6" />
+                Horaires
+              </h3>
+              <div className="space-y-3">
+                {Object.entries(studio.openingHours).map(([day, hours]) => {
+                  const isToday = getCurrentDay() === day;
+                  return (
+                    <div key={day} className={`flex justify-between items-center py-2 rounded-lg transition-colors ${isToday ? 'bg-neutral-900 text-white px-4 font-bold' : 'text-neutral-700'}`}>
+                      <span className="capitalize text-sm">{dayLabels[day] || day}</span>
+                      <span className={`text-sm ${isToday ? 'font-bold' : 'font-semibold'}`}>
+                        {hours.closed ? 'Fermé' : `${hours.open} - ${hours.close}`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-neutral-900 text-white mt-24 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-4 gap-12 mb-12">
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
+                  <span className="text-neutral-900 font-bold text-xl">I</span>
+                </div>
+                <div>
+                  <div className="font-bold text-xl">{studio.name}</div>
+                  <div className="text-sm text-neutral-400">{studio.tagline}</div>
+                </div>
+              </div>
+              <p className="text-neutral-300 leading-relaxed mb-6">
+                Studio professionnel de tatouage à Paris. Créations uniques et travail de qualité depuis 2015.
+              </p>
+              <div className="flex gap-3">
+                <a href={`https://instagram.com/${studio.instagram.replace('@', '')}`} className="w-11 h-11 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition-colors">
+                  <Instagram className="w-5 h-5" />
+                </a>
+                <a href={`https://facebook.com/${studio.facebook}`} className="w-11 h-11 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition-colors">
+                  <Facebook className="w-5 h-5" />
+                </a>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-bold text-lg mb-4">Navigation</h4>
+              <ul className="space-y-3 text-neutral-300">
+                <li><button onClick={() => scrollToSection('about')} className="hover:text-white transition-colors">À propos</button></li>
+                <li><button onClick={() => scrollToSection('services')} className="hover:text-white transition-colors">Services</button></li>
+                <li><button onClick={() => scrollToSection('portfolio')} className="hover:text-white transition-colors">Portfolio</button></li>
+                <li><button onClick={() => scrollToSection('testimonials')} className="hover:text-white transition-colors">Avis</button></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-lg mb-4">Contact</h4>
+              <ul className="space-y-3 text-neutral-300 text-sm">
+                <li>{studio.address}</li>
+                <li><a href={`tel:${studio.phone}`} className="hover:text-white transition-colors">{studio.phone}</a></li>
+                <li><a href={`mailto:${studio.email}`} className="hover:text-white transition-colors">{studio.email}</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="pt-8 border-t border-white/10 text-center text-sm text-neutral-400">
+            <p>© 2025 {studio.name}. Tous droits réservés.</p>
+            <p className="mt-2">Propulsé par <span className="font-semibold text-white">InkFlow</span></p>
+          </div>
+        </div>
+      </footer>
+
+      {/* Image Lightbox */}
+      {selectedImage && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4" onClick={() => setSelectedImage(null)}>
+          <button onClick={() => setSelectedImage(null)} className="absolute top-6 right-6 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
+            <X className="w-6 h-6 text-white" />
+          </button>
+          <img src={selectedImage} alt="Portfolio" className="max-w-full max-h-full object-contain rounded-2xl" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
+
+      {/* Flash Detail Modal */}
+      {selectedFlash && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setSelectedFlash(null)}>
+          <div className="bg-white rounded-3xl max-w-4xl w-full my-8" onClick={(e) => e.stopPropagation()}>
+            <div className="grid md:grid-cols-2 gap-8 p-8">
+              <div className="relative aspect-square rounded-2xl overflow-hidden">
+                <img src={selectedFlash.imageUrl} alt={selectedFlash.title} className="w-full h-full object-cover" />
+                {!selectedFlash.available && (
+                  <div className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-full font-bold shadow-xl">Réservé</div>
+                )}
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="px-3 py-1 bg-neutral-100 rounded-full text-xs font-semibold">{selectedFlash.style}</span>
+                      <span className="px-3 py-1 bg-neutral-100 rounded-full text-xs font-semibold">{selectedFlash.size}</span>
+                    </div>
+                    <h3 className="text-3xl font-bold mb-2">{selectedFlash.title}</h3>
+                  </div>
+                  <button onClick={() => setSelectedFlash(null)} className="w-10 h-10 hover:bg-neutral-100 rounded-full flex items-center justify-center transition-colors">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <p className="text-neutral-700 mb-6 leading-relaxed">{selectedFlash.description}</p>
+                <div className="grid grid-cols-2 gap-4 py-6 mb-6 border-y border-neutral-200">
+                  <div>
+                    <div className="text-sm text-neutral-600 mb-1">Prix</div>
+                    <div className="text-3xl font-bold">{selectedFlash.price}€</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-neutral-600 mb-1">Durée estimée</div>
+                    <div className="text-3xl font-bold">{selectedFlash.duration}<span className="text-lg">min</span></div>
+                  </div>
+                </div>
+                <div className="mb-6">
+                  <div className="text-sm font-semibold text-neutral-900 mb-3">Emplacements suggérés</div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedFlash.placement.map((place: string) => (
+                      <span key={place} className="px-4 py-2 bg-neutral-100 rounded-lg text-sm font-medium">{place}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-auto">
+                  {selectedFlash.available ? (
+                    <a href={`/book/${studioSlug}?flash=${selectedFlash.id}`} className="block w-full bg-neutral-900 text-white text-center py-4 rounded-xl font-bold text-lg hover:bg-neutral-800 transition-all">
+                      Réserver ce flash - {selectedFlash.price}€
+                    </a>
+                  ) : (
+                    <div className="w-full bg-neutral-200 text-neutral-500 text-center py-4 rounded-xl font-bold text-lg cursor-not-allowed">Flash déjà réservé</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Form Modal */}
+      {showContactForm && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowContactForm(false)}>
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-8 my-8" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-3xl font-bold">Nous contacter</h3>
+              <button onClick={() => setShowContactForm(false)} className="w-10 h-10 hover:bg-neutral-100 rounded-full flex items-center justify-center transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); alert('Message envoyé ! Nous vous répondrons sous 24h.'); setShowContactForm(false); }}>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Nom *</label>
+                  <input type="text" required className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent" placeholder="Votre nom" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Email *</label>
+                  <input type="email" required className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent" placeholder="votre@email.com" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Téléphone</label>
+                <input type="tel" className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent" placeholder="+33 6 12 34 56 78" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Sujet *</label>
+                <select required className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent">
+                  <option value="">Sélectionnez un sujet</option>
+                  <option value="quote">Demande de devis</option>
+                  <option value="appointment">Prise de rendez-vous</option>
+                  <option value="info">Demande d'information</option>
+                  <option value="other">Autre</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Message *</label>
+                <textarea required rows={6} className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none" placeholder="Décrivez votre projet ou posez vos questions..." />
+              </div>
+              <button type="submit" className="w-full bg-neutral-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-neutral-800 transition-all flex items-center justify-center gap-2">
+                <Send className="w-5 h-5" />
+                Envoyer le message
+              </button>
+              <p className="text-sm text-neutral-600 text-center">Nous vous répondrons sous <strong>24 heures</strong></p>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

@@ -30,13 +30,13 @@ export const ProcessSection: React.FC = () => {
   ];
 
   return (
-    <section id="process" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+    <section id="process" className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-neutral-50/50">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl font-bold mb-4">
+        <div className="text-center mb-12 sm:mb-20">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 px-2 tracking-tight">
             Prêt en moins de 15 minutes
           </h2>
-          <p className="text-xl text-neutral-600 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto px-2">
             De l'inscription à votre première réservation, tout est simple et rapide
           </p>
         </div>
@@ -44,13 +44,13 @@ export const ProcessSection: React.FC = () => {
         <div className="relative">
           <div className="hidden md:block absolute top-24 left-0 right-0 h-0.5 bg-neutral-200" style={{ width: 'calc(100% - 8rem)', marginLeft: '4rem' }} />
 
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-6">
             {steps.map((step, index) => {
               const Icon = step.icon;
               return (
                 <div key={index} className="relative">
                   <div className="flex flex-col items-center text-center">
-                    <div className="relative z-10 w-24 h-24 bg-neutral-900 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                    <div className="relative z-10 w-20 h-20 sm:w-24 sm:h-24 bg-neutral-900 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-neutral-900/20">
                       <Icon className="w-10 h-10 text-white" />
                       <div className="absolute -top-2 -right-2 w-8 h-8 bg-white border-2 border-neutral-900 rounded-full flex items-center justify-center">
                         <span className="text-sm font-bold">{index + 1}</span>
@@ -73,10 +73,10 @@ export const ProcessSection: React.FC = () => {
           </div>
         </div>
 
-        <div className="text-center mt-16">
+        <div className="text-center mt-16 sm:mt-20">
           <a
             href="/signup"
-            className="inline-flex items-center gap-2 bg-neutral-900 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-neutral-800 transition-all shadow-lg hover:shadow-xl"
+            className="inline-flex items-center gap-2 bg-neutral-900 text-white px-8 py-4 rounded-2xl font-semibold text-base hover:bg-neutral-800 transition-all duration-300 shadow-lg shadow-neutral-900/20 hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5"
           >
             Commencer maintenant
           </a>

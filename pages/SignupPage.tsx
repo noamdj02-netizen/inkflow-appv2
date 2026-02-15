@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Logo } from '../components/Logo';
 import { ArrowLeft, Mail, Lock, User, Building2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -48,14 +49,14 @@ export const SignupPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col relative overflow-hidden">
       {/* Fond coloré */}
       <div className="absolute inset-0 bg-gradient-to-br from-violet-50 via-white to-indigo-50 -z-10" />
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-violet-200/30 rounded-full blur-3xl -z-10" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-200/30 rounded-full blur-3xl -z-10" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-100/20 rounded-full blur-3xl -z-10" />
 
-      <header className="p-6">
+      <header className="p-4 sm:p-6 safe-top">
         <a
           href="/"
           className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors"
@@ -65,20 +66,18 @@ export const SignupPage: React.FC = () => {
         </a>
       </header>
 
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 sm:py-12 safe-bottom">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-neutral-900 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">I</span>
-              </div>
+              <Logo />
               <span className="text-2xl font-bold text-neutral-900">InkFlow</span>
             </div>
             <h1 className="text-3xl font-bold mb-2">Créez votre compte</h1>
             <p className="text-neutral-600">Commencez votre essai gratuit de 14 jours</p>
           </div>
 
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-neutral-200/80 p-8">
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-neutral-200/80 p-6 sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">

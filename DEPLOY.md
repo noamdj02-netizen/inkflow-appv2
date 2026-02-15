@@ -1,56 +1,105 @@
 # Déploiement InkFlow - GitHub & Vercel
 
+## URL de production
+
+**Vercel :** https://inkflow-hlag75vyx-noam-brochets-projects-2ea9c979.vercel.app
+
+---
+
 ## 1. Créer le dépôt GitHub
 
 1. Va sur [github.com/new](https://github.com/new)
-2. Nom du dépôt : **ink-flow**
+2. Nom du dépôt : **inkflow** ou **ink-flow**
 3. Description : `Plateforme SaaS pour tatoueurs - réservations, galerie Flash, CRM`
 4. **Ne coche pas** "Add a README" (le projet en a déjà un)
 5. Clique sur **Create repository**
 
+---
+
 ## 2. Pousser le code sur GitHub
 
-Remplace `TON_USERNAME` par ton nom d'utilisateur GitHub :
+Remplace `TON_USERNAME` par ton nom d'utilisateur GitHub et `REPO_NAME` par le nom du dépôt :
 
-```bash
+```powershell
 cd "c:\Users\lanie\OneDrive\.limpc\Bureau\inkdlow"
 
-# Ajouter le remote (remplace TON_USERNAME)
-git remote add origin https://github.com/TON_USERNAME/ink-flow.git
+# Ajouter tous les fichiers
+git add .
+git commit -m "feat: InkFlow - vitrine, dashboard, responsive mobile"
 
-# Renommer la branche en main (optionnel, GitHub utilise main par défaut)
+# Ajouter le remote (remplace TON_USERNAME et REPO_NAME)
+git remote add origin https://github.com/TON_USERNAME/REPO_NAME.git
+
+# Renommer la branche en main
 git branch -M main
 
 # Pousser
 git push -u origin main
 ```
 
+---
+
 ## 3. Déployer sur Vercel
 
-### Option A : Via le site Vercel (recommandé)
+### Option A : Importer depuis GitHub (recommandé)
 
 1. Va sur [vercel.com](https://vercel.com) et connecte-toi
 2. Clique sur **Add New** → **Project**
-3. Importe le dépôt **ink-flow** depuis GitHub
-4. Vercel détecte automatiquement Vite
+3. Importe le dépôt depuis GitHub
+4. Vercel détecte automatiquement **Vite**
 5. Clique sur **Deploy**
 
-### Option B : Via la CLI (déploiement direct)
+Chaque `git push` sur `main` déclenchera un déploiement automatique.
 
-```bash
+### Option B : Via la CLI
+
+```powershell
 cd "c:\Users\lanie\OneDrive\.limpc\Bureau\inkdlow"
-vercel
+npx vercel
 ```
 
-Suis les instructions (login si nécessaire, confirme le projet).
+Suis les instructions (login si nécessaire). Pour déployer en production :
 
-### Option C : Lier à GitHub pour déploiements automatiques
+```powershell
+npx vercel --prod
+```
 
-Une fois le projet importé depuis GitHub sur Vercel, chaque `git push` déclenchera un nouveau déploiement automatiquement.
+---
 
-## Variables d'environnement (si besoin plus tard)
+## 4. Domains (Vercel)
+
+### Domaine par défaut
+
+Ton projet a déjà un domaine Vercel :
+- `inkflow-hlag75vyx-noam-brochets-projects-2ea9c979.vercel.app`
+
+### Ajouter un domaine personnalisé
+
+1. Vercel Dashboard → Ton projet → **Settings** → **Domains**
+2. Clique sur **Add**
+3. Saisis ton domaine (ex: `inkflow.fr`, `app.inkflow.com`)
+4. Suis les instructions DNS (enregistrement A ou CNAME)
+
+### Sous-domaines
+
+- `www.inkflow.fr` → redirige vers `inkflow.fr`
+- `app.inkflow.fr` → sous-domaine pour l'app
+
+---
+
+## 5. Variables d'environnement
 
 Si tu ajoutes Supabase, Stripe, etc. :
 
 1. Vercel Dashboard → Ton projet → **Settings** → **Environment Variables**
 2. Ajoute `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, etc.
+3. Redéploie pour appliquer les changements
+
+---
+
+## Configuration technique
+
+- **Framework :** Vite (détecté automatiquement)
+- **Build command :** `npm run build`
+- **Output directory :** `dist`
+- **SPA routing :** `vercel.json` configure les rewrites pour le routing client-side
