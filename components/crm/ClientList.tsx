@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, User, Phone, Mail, Eye, Tag, UserPlus, ChevronDown, ChevronUp, StickyNote } from 'lucide-react';
 import { Client } from '../../types';
 import { Modal } from '../ui/Modal';
+import { useToast } from '../../contexts/ToastContext';
 
 const NOTES_KEY = (clientId: string) => `inkflow-notes-${clientId}`;
 
@@ -9,9 +10,13 @@ interface ClientListProps {
   clients: Client[];
   onSelectClient?: (client: Client) => void;
   onAddClient?: (client: Omit<Client, 'id'>) => string | void;
+  loadClientNotes?: (clientId: string) => Promise<string>;
+  saveClientNotes?: (clientId: string, notes: string) => Promise<void>;
+  useSupabase?: boolean;
 }
 
-export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient, onAddClient }) => {
+export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient, onAddClient, loadClientNotes, saveClientNotes, useSupabase }) => {
+  const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'vip' | 'inactive'>('all');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -19,6 +24,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ name: '', email: '', phone: '', notes: '' });
   const [notes, setNotes] = useState('');
+  const notesSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -49,15 +55,35 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
   };
 
   useEffect(() => {
-    if (selectedClient) {
+    if (!selectedClient) return;
+    if (useSupabase && loadClientNotes) {
+      loadClientNotes(selectedClient.id).then(setNotes);
+    } else {
       setNotes(localStorage.getItem(NOTES_KEY(selectedClient.id)) || '');
     }
-  }, [selectedClient]);
+  }, [selectedClient, useSupabase, loadClientNotes]);
 
   const saveNotes = () => {
-    if (selectedClient) {
+    if (!selectedClient) return;
+    if (useSupabase && saveClientNotes) {
+      saveClientNotes(selectedClient.id, notes).catch(console.error);
+    } else {
       localStorage.setItem(NOTES_KEY(selectedClient.id), notes);
     }
+  };
+
+  const handleNotesChange = (value: string) => {
+    setNotes(value);
+    if (!selectedClient) return;
+    if (notesSaveRef.current) clearTimeout(notesSaveRef.current);
+    notesSaveRef.current = setTimeout(() => {
+      if (useSupabase && saveClientNotes) {
+        saveClientNotes(selectedClient.id, value).catch(console.error);
+      } else {
+        localStorage.setItem(NOTES_KEY(selectedClient.id), value);
+      }
+      notesSaveRef.current = null;
+    }, 500);
   };
 
   const handleAddClient = () => {
@@ -76,10 +102,15 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
     };
     const newId = onAddClient(newClient);
     if (typeof newId === 'string' && addForm.notes.trim()) {
-      localStorage.setItem(NOTES_KEY(newId), addForm.notes.trim());
+      if (useSupabase && saveClientNotes) {
+        saveClientNotes(newId, addForm.notes.trim()).catch(console.error);
+      } else {
+        localStorage.setItem(NOTES_KEY(newId), addForm.notes.trim());
+      }
     }
     setShowAddModal(false);
     setAddForm({ name: '', email: '', phone: '', notes: '' });
+    toast.success('Client ajoute avec succes');
   };
 
   return (
@@ -129,7 +160,37 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
+      {/* Mobile: Client Cards */}
+      <div className="space-y-3 md:hidden">
+        {sortedClients.map(client => (
+          <button key={client.id} onClick={() => setSelectedClient(client)} className="mobile-card w-full text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 bg-neutral-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <User className="w-5 h-5 text-neutral-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold truncate">{client.name}</span>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0 ${getStatusColor(client.status)}`}>
+                    {getStatusIcon(client.status)}
+                    {client.status === 'vip' ? 'VIP' : client.status.charAt(0).toUpperCase() + client.status.slice(1)}
+                  </span>
+                </div>
+                <div className="text-sm text-neutral-500 truncate mt-0.5">{client.email}</div>
+              </div>
+              <Eye className="w-5 h-5 text-neutral-400 flex-shrink-0" />
+            </div>
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-100 text-sm">
+              <span className="text-neutral-500">{client.appointmentsCount} RDV</span>
+              <span className="font-bold text-green-600">{client.totalSpent}€</span>
+              <span className="text-neutral-400 text-xs">{client.lastVisit ? new Date(client.lastVisit).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : 'Jamais'}</span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Desktop: Table */}
+      <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-neutral-50 border-b border-neutral-200">
@@ -151,7 +212,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                   <React.Fragment key={client.id}>
                     <tr className="hover:bg-neutral-50 transition-colors">
                       <td className="px-2 py-2">
-                        <button onClick={() => setExpandedClient(isExpanded ? null : client.id)} className="p-1 rounded hover:bg-neutral-200">
+                        <button onClick={() => setExpandedClient(isExpanded ? null : client.id)} className="p-2 rounded hover:bg-neutral-200 touch-target">
                           {isExpanded ? <ChevronUp className="w-4 h-4 text-neutral-500" /> : <ChevronDown className="w-4 h-4 text-neutral-500" />}
                         </button>
                       </td>
@@ -193,7 +254,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                       </td>
                       <td className="px-6 py-4">
                         <button onClick={() => setSelectedClient(client)}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors">
+                          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors touch-target">
                           <Eye className="w-4 h-4" /> Voir
                         </button>
                       </td>
@@ -230,10 +291,19 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
       </div>
 
       {sortedClients.length === 0 && (
-        <div className="text-center py-12">
-          <User className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
+        <div className="text-center py-12 bg-white rounded-2xl border border-neutral-200">
+          <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-neutral-400" />
+          </div>
           <h3 className="text-xl font-bold mb-2">Aucun client trouvé</h3>
-          <p className="text-neutral-600">Essayez de modifier vos critères de recherche</p>
+          <p className="text-neutral-500 text-sm max-w-sm mx-auto">
+            {searchTerm ? 'Essayez de modifier vos critères de recherche' : 'Vos clients apparaitront ici lorsqu\'ils prendront rendez-vous via votre page vitrine.'}
+          </p>
+          {onAddClient && !searchTerm && (
+            <button onClick={() => setShowAddModal(true)} className="mt-5 px-5 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold hover:bg-neutral-800 touch-target">
+              Ajouter un client
+            </button>
+          )}
         </div>
       )}
 
@@ -269,10 +339,10 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
             )}
             <div>
               <h3 className="text-sm font-semibold text-neutral-600 mb-3 flex items-center gap-2"><StickyNote className="w-4 h-4" /> Notes privées</h3>
-              <textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={saveNotes}
+              <textarea rows={4} value={notes} onChange={(e) => handleNotesChange(e.target.value)} onBlur={saveNotes}
                 placeholder="Ajoutez vos notes sur ce client…"
                 className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-neutral-900" />
-              <p className="text-xs text-neutral-500 mt-1">Sauvegardées localement dans votre navigateur.</p>
+              <p className="text-xs text-neutral-500 mt-1">{useSupabase ? 'Sauvegardées automatiquement.' : 'Sauvegardées localement dans votre navigateur.'}</p>
             </div>
             {selectedClient.notes && (
               <div>

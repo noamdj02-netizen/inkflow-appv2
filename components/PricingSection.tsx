@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, Zap } from 'lucide-react';
+import { Check, Zap, Loader2 } from 'lucide-react';
 
 export const PricingSection: React.FC = () => {
   const [isAnnual, setIsAnnual] = useState(false);

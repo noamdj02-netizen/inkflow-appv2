@@ -127,6 +127,34 @@ export interface BookingFormData {
   agreedToDeposit: boolean;
 }
 
+export type ProjectRequestStatus = 'PENDING' | 'APPROVED' | 'DEPOSIT_PAID' | 'REJECTED' | 'COMPLETED';
+
+export interface ProjectRequest {
+  id: string;
+  studioId: string;
+  clientName: string;
+  clientEmail: string;
+  clientInstagram?: string;
+  description: string;
+  placement?: string;
+  size?: string;
+  budget?: string;
+  status: ProjectRequestStatus;
+  referenceImages: string[];
+  createdAt: string;
+}
+
+export interface ProjectRequestFormData {
+  clientName: string;
+  clientEmail: string;
+  clientInstagram?: string;
+  description: string;
+  placement?: string;
+  size?: string;
+  budget?: string;
+  referenceImages?: string[];
+}
+
 export interface StudioSettings {
   businessName: string;
   email: string;
@@ -139,4 +167,116 @@ export interface StudioSettings {
   requireDeposit: boolean;
   bookingLeadTime: number;
   cancellationPolicy: string;
+}
+
+// Payments
+export interface Payment {
+  id: string;
+  studioId: string;
+  appointmentId?: string;
+  stripeSessionId?: string;
+  stripePaymentIntent?: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  type: 'deposit' | 'full_payment';
+  clientName?: string;
+  clientEmail?: string;
+  createdAt: string;
+}
+
+// Subscriptions
+export type SubscriptionPlan = 'solo' | 'studio' | 'enterprise';
+export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'cancelled' | 'incomplete';
+
+export interface Subscription {
+  id: string;
+  studioId: string;
+  stripeSubscriptionId?: string;
+  stripeCustomerId?: string;
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+  cancelAtPeriodEnd: boolean;
+  createdAt: string;
+}
+
+// Consent Forms
+export interface ConsentForm {
+  id: string;
+  studioId: string;
+  appointmentId?: string;
+  clientName: string;
+  clientEmail: string;
+  template: string;
+  signatureData?: string;
+  signedAt?: string;
+  clientIp?: string;
+  createdAt: string;
+}
+
+// Messages
+export interface Message {
+  id: string;
+  studioId: string;
+  threadId: string;
+  senderType: 'artist' | 'client';
+  senderName: string;
+  content: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface MessageThread {
+  threadId: string;
+  clientName: string;
+  clientEmail: string;
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCount: number;
+  projectRequestId?: string;
+}
+
+// Waitlist
+export interface WaitlistEntry {
+  id: string;
+  studioId: string;
+  clientName: string;
+  clientEmail: string;
+  desiredService?: string;
+  preferredDates?: string;
+  notes?: string;
+  status: 'waiting' | 'notified' | 'booked' | 'cancelled';
+  notifiedAt?: string;
+  createdAt: string;
+}
+
+// Artist Accounts
+export interface ArtistAccount {
+  id: string;
+  studioId: string;
+  name: string;
+  email: string;
+  role: string;
+  avatar?: string;
+  specialties: string[];
+  permissions: Record<string, boolean>;
+  active: boolean;
+  createdAt: string;
+}
+
+// Loyalty
+export type LoyaltyTier = 'bronze' | 'silver' | 'gold' | 'platinum';
+
+export interface LoyaltyEntry {
+  id: string;
+  studioId: string;
+  clientId: string;
+  points: number;
+  tier: LoyaltyTier;
+  referralCode?: string;
+  totalEarned: number;
+  totalRedeemed: number;
+  createdAt: string;
 }

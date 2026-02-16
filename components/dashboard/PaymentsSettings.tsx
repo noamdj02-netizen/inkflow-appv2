@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CreditCard, Percent, Shield, ExternalLink } from 'lucide-react';
+import { getStudioId } from '../../lib/supabase';
+import { getPaymentSettingsFromSupabase, savePaymentSettingsToSupabase } from '../../lib/supabaseDashboard';
+import { useToast } from '../../contexts/ToastContext';
 
 const STORAGE_KEY = 'inkflow-payment-settings';
 
@@ -9,20 +12,69 @@ interface PaymentSettings {
   requireDeposit: boolean;
 }
 
-export const PaymentsSettings: React.FC = () => {
+const defaultSettings: PaymentSettings = { depositPercentage: 30, stripeConnected: false, requireDeposit: true };
+
+interface PaymentsSettingsProps {
+  userEmail?: string;
+  studioName?: string;
+}
+
+export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({ userEmail, studioName }) => {
+  const toast = useToast();
   const [settings, setSettings] = useState<PaymentSettings>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) return JSON.parse(stored);
+      if (stored) return { ...defaultSettings, ...JSON.parse(stored) };
     } catch {}
-    return { depositPercentage: 30, stripeConnected: false, requireDeposit: true };
+    return defaultSettings;
   });
   const [saved, setSaved] = useState(false);
+  const useSupabase = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && userEmail && studioName);
+  const studioId = userEmail && studioName ? getStudioId(userEmail, studioName) : null;
 
-  const save = () => {
+  useEffect(() => {
+    if (!studioId || !useSupabase) return;
+    getPaymentSettingsFromSupabase(studioId).then((fromDb) => {
+      if (Object.keys(fromDb).length > 0) {
+        const merged = { ...defaultSettings, ...fromDb } as PaymentSettings;
+        setSettings(merged);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      }
+    }).catch(() => {});
+  }, [studioId, useSupabase]);
+
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (!studioId || !useSupabase) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      savePaymentSettingsToSupabase(studioId, settings as unknown as Record<string, unknown>).catch(console.error);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+      saveTimeoutRef.current = null;
+    }, 500);
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
+  }, [settings, studioId, useSupabase]);
+
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+      if (studioId && useSupabase) {
+        await savePaymentSettingsToSupabase(studioId, settings as unknown as Record<string, unknown>);
+      }
+      setSaved(true);
+      toast.success('Parametres de paiement enregistres');
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('Erreur sauvegarde paiements:', err);
+      toast.error('Erreur lors de la sauvegarde');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -53,10 +105,15 @@ export const PaymentsSettings: React.FC = () => {
             )}
           </div>
           <button
-            onClick={() => setSettings(s => ({ ...s, stripeConnected: !s.stripeConnected }))}
-            className={`shrink-0 px-4 py-2 rounded-lg font-medium text-sm ${settings.stripeConnected ? 'bg-green-100 text-green-700' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+            onClick={() => {
+              if (!settings.stripeConnected) {
+                window.open('https://dashboard.stripe.com/connect/accounts/overview', '_blank');
+              }
+              setSettings(s => ({ ...s, stripeConnected: !s.stripeConnected }));
+            }}
+            className={`shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${settings.stripeConnected ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
           >
-            {settings.stripeConnected ? 'Connecté' : 'Connecter'}
+            {settings.stripeConnected ? 'Connecté ✓' : 'Connecter'}
           </button>
         </div>
 
@@ -95,9 +152,9 @@ export const PaymentsSettings: React.FC = () => {
           </button>
         </div>
 
-        <button onClick={save}
-          className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800">
-          {saved ? 'Enregistré ✓' : 'Enregistrer'}
+        <button onClick={save} disabled={saving}
+          className={`px-6 py-3 rounded-xl font-semibold transition-colors touch-target disabled:opacity-50 ${saved ? 'bg-green-600 text-white' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}>
+          {saving ? 'Enregistrement...' : saved ? 'Enregistre !' : 'Enregistrer'}
         </button>
       </div>
     </div>

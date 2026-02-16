@@ -29,7 +29,7 @@ export const AuthCallbackPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
+    <div className="landing-scroll bg-neutral-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-2xl p-8 border border-neutral-200 shadow-sm">
         <div className="text-center">
           {status === 'loading' && <Loader2 className="animate-spin text-neutral-900 mx-auto mb-4" size={40} />}

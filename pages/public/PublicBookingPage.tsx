@@ -6,7 +6,7 @@ interface PublicBookingPageProps {
 
 export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug }) => {
   return (
-    <div className="min-h-screen bg-neutral-50 py-12">
+    <div className="landing-scroll bg-neutral-50 py-12">
       <div className="max-w-4xl mx-auto px-4">
         <div className="bg-white rounded-2xl shadow-lg border border-neutral-200 p-8">
           <h1 className="text-3xl font-bold mb-2">Réserver un rendez-vous</h1>

@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Save, Trash2, FileText } from 'lucide-react';
+import { getStudioId } from '../../lib/supabase';
+import { getCareTemplatesFromSupabase, saveCareTemplatesToSupabase } from '../../lib/supabaseDashboard';
+import { useToast } from '../../contexts/ToastContext';
 
 const STORAGE_KEY = 'inkflow-care-templates';
 
@@ -10,24 +13,43 @@ interface CareTemplate {
   updatedAt: string;
 }
 
-export const CareSheetsSettings: React.FC = () => {
+interface CareSheetsSettingsProps {
+  userEmail?: string;
+  studioName?: string;
+}
+
+export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmail, studioName }) => {
+  const toast = useToast();
   const [templates, setTemplates] = useState<CareTemplate[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
   const [saving, setSaving] = useState(false);
+  const useSupabase = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && userEmail && studioName);
+  const studioId = userEmail && studioName ? getStudioId(userEmail, studioName) : null;
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const parsed = stored ? JSON.parse(stored) : [];
-      const list = Array.isArray(parsed) ? parsed : [];
-      setTemplates(list);
-      if (list.length > 0) setSelectedId(list[0].id);
-    } catch {
-      setTemplates([]);
+    if (studioId && useSupabase) {
+      getCareTemplatesFromSupabase(studioId).then((fromDb) => {
+        const list = (fromDb || []) as CareTemplate[];
+        setTemplates(list);
+        if (list.length > 0) {
+          setSelectedId(list[0].id);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        }
+      }).catch(() => {});
+    } else {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const parsed = stored ? JSON.parse(stored) : [];
+        const list = Array.isArray(parsed) ? parsed : [];
+        setTemplates(list);
+        if (list.length > 0) setSelectedId(list[0].id);
+      } catch {
+        setTemplates([]);
+      }
     }
-  }, []);
+  }, [studioId, useSupabase]);
 
   const selected = templates.find(t => t.id === selectedId);
 
@@ -41,10 +63,20 @@ export const CareSheetsSettings: React.FC = () => {
     }
   }, [selectedId, selected]);
 
-  const saveToStorage = (list: CareTemplate[]) => {
+  const saveToStorage = useCallback((list: CareTemplate[], showToast = false) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
     setTemplates(list);
-  };
+    if (studioId && useSupabase) {
+      saveCareTemplatesToSupabase(studioId, list).then(() => {
+        if (showToast) toast.success('Template de soins sauvegarde');
+      }).catch((err) => {
+        console.error('Erreur sauvegarde care templates:', err);
+        if (showToast) toast.error('Erreur lors de la sauvegarde');
+      });
+    } else if (showToast) {
+      toast.success('Template sauvegarde localement');
+    }
+  }, [studioId, useSupabase, toast]);
 
   const createTemplate = () => {
     const newTemplate: CareTemplate = {
@@ -59,8 +91,11 @@ export const CareSheetsSettings: React.FC = () => {
   };
 
   const saveTemplate = () => {
-    if (!selected) return;
-    if (!draftTitle.trim() || !draftContent.trim()) return;
+    if (!selected || saving) return;
+    if (!draftTitle.trim() || !draftContent.trim()) {
+      toast.warning('Le titre et le contenu sont requis');
+      return;
+    }
 
     setSaving(true);
     const updated = templates.map(t =>
@@ -68,7 +103,7 @@ export const CareSheetsSettings: React.FC = () => {
         ? { ...t, title: draftTitle.trim(), content: draftContent.trim(), updatedAt: new Date().toISOString() }
         : t
     );
-    saveToStorage(updated);
+    saveToStorage(updated, true);
     setSaving(false);
   };
 

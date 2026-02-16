@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LayoutGrid, StickyNote, Link2, BarChart2, Trash2 } from 'lucide-react';
+import { getWidgetsFromSupabase, saveWidgetsToSupabase } from '../../lib/supabaseDashboard';
 
 const STORAGE_KEY = 'inkflow-dashboard-widgets';
 
@@ -221,7 +222,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
   );
 };
 
-export function useDashboardWidgets() {
+export function useDashboardWidgets(studioId: string | null, useSupabase: boolean) {
   const [widgets, setWidgets] = useState<DashboardWidget[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -229,10 +230,30 @@ export function useDashboardWidgets() {
     } catch {}
     return [];
   });
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(widgets));
-  }, [widgets]);
+    if (!studioId || !useSupabase) {
+      setLoaded(true);
+      return;
+    }
+    getWidgetsFromSupabase(studioId).then((fromDb) => {
+      if (fromDb.length > 0) {
+        setWidgets(fromDb);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(fromDb));
+      }
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, [studioId, useSupabase]);
 
-  return [widgets, setWidgets] as const;
+  const setWidgetsAndSave = useCallback((next: DashboardWidget[] | ((prev: DashboardWidget[]) => DashboardWidget[])) => {
+    setWidgets(prev => {
+      const nextVal = typeof next === 'function' ? next(prev) : next;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextVal));
+      if (studioId && useSupabase) saveWidgetsToSupabase(studioId, nextVal).catch(console.error);
+      return nextVal;
+    });
+  }, [studioId, useSupabase]);
+
+  return [widgets, setWidgetsAndSave] as const;
 }

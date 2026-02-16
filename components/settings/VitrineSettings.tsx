@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Store, ChevronRight, ExternalLink, Plus, Trash2, Save, Check } from 'lucide-react';
 import { VitrineLinkButton } from '../dashboard/VitrineLinkButton';
 import { ImageUploadField } from '../ui/ImageUploadField';
+import { useToast } from '../../contexts/ToastContext';
 import type { VitrineData, VitrineService, VitrineArtist, VitrineTestimonial, VitrinePortfolioItem, VitrineFlashDesign, VitrineFaq, VitrineWhyChooseUs } from '../../types/vitrine';
-import { getVitrineData, setVitrineData, getVitrineSlug } from '../../lib/vitrineStorage';
+import { getVitrineData, setVitrineData, getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
 
 const ICON_OPTIONS = [
   { value: 'sparkles', label: 'Étincelles' },
@@ -23,27 +24,74 @@ const DAY_LABELS: Record<string, string> = {
 
 interface VitrineSettingsProps {
   studioName: string;
+  userEmail?: string;
 }
 
-export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName }) => {
+export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, userEmail }) => {
+  const toast = useToast();
   const slug = getVitrineSlug(studioName);
   const [data, setData] = useState<VitrineData>(() => getVitrineData(slug));
   const [saved, setSaved] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('identity');
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirtyRef = useRef(false);
+  const initialLoadRef = useRef(true);
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
   useEffect(() => {
-    setData(getVitrineData(slug));
-  }, [slug]);
+    initialLoadRef.current = true;
+    dirtyRef.current = false;
+    if (userEmail && studioName) {
+      getVitrineDataAsync(slug, userEmail, studioName).then((fromDb) => {
+        if (!dirtyRef.current) setData(fromDb);
+        initialLoadRef.current = false;
+      });
+    } else {
+      setData(getVitrineData(slug));
+      initialLoadRef.current = false;
+    }
+  }, [slug, userEmail, studioName]);
 
-  const save = () => {
-    setVitrineData(slug, data);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  const persistData = useCallback((d: VitrineData, showToast = false) => {
+    setVitrineData(slug, d, userEmail, studioName);
+    if (userEmail && studioName) {
+      saveVitrineDataAsync(slug, d, userEmail, studioName).then(() => {
+        setSaved(true);
+        if (showToast) toast.success('Page vitrine sauvegardee');
+        setTimeout(() => setSaved(false), 1500);
+      }).catch((e) => {
+        console.error('Erreur sauvegarde vitrine:', e);
+        toast.error('Erreur lors de la sauvegarde vitrine');
+      });
+    } else {
+      setSaved(true);
+      if (showToast) toast.success('Sauvegarde locale effectuee');
+      setTimeout(() => setSaved(false), 1500);
+    }
+  }, [slug, userEmail, studioName, toast]);
 
   const update = <K extends keyof VitrineData>(key: K, value: VitrineData[K]) => {
-    setData(prev => ({ ...prev, [key]: value }));
+    dirtyRef.current = true;
+    setData(prev => {
+      const next = { ...prev, [key]: value };
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => persistData(next), 500);
+      return next;
+    });
   };
+
+  const save = () => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    persistData(data, true);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (dirtyRef.current && dataRef.current) persistData(dataRef.current);
+    };
+  }, [persistData]);
 
   const sections = [
     { id: 'identity', label: 'Identité & Présentation', icon: Store },
@@ -61,7 +109,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName }) 
 
   return (
     <div className="space-y-6 max-w-4xl w-full overflow-hidden">
-      <VitrineLinkButton studioName={studioName} />
+      <VitrineLinkButton studioName={studioName} userEmail={userEmail} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-lg sm:text-xl font-bold">Personnaliser votre page vitrine</h2>
         <button onClick={save} className="flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 w-full sm:w-auto">

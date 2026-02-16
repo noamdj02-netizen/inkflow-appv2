@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Copy, Check, ExternalLink, Store, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
+import { getStudioId } from '../../lib/supabase';
+import { getVitrineLinkSettingsFromSupabase, saveVitrineLinkSettingsToSupabase } from '../../lib/supabaseDashboard';
 
 const STORAGE_KEY = 'inkflow-vitrine-settings';
 
@@ -46,13 +48,21 @@ function isLightColor(hex: string): boolean {
 
 interface VitrineLinkButtonProps {
   studioName: string;
+  userEmail?: string;
   variant?: 'default' | 'compact';
   showLabel?: boolean;
   editable?: boolean;
 }
 
+function useSupabaseEnabled(): boolean {
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  return !!(url && key && url.length > 10);
+}
+
 export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
   studioName,
+  userEmail,
   variant = 'default',
   showLabel = true,
   editable = true
@@ -66,14 +76,35 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     } catch {}
     return defaultSettings;
   });
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const useSupabase = useSupabaseEnabled() && !!userEmail && !!studioName;
+  const studioId = userEmail && studioName ? getStudioId(userEmail, studioName) : null;
 
   const slug = getStudioSlug(studioName);
   const vitrineUrl = `${window.location.origin}/studio/${slug}`;
   const textOnPrimary = isLightColor(settings.primaryColor) ? '#171717' : '#ffffff';
 
   useEffect(() => {
+    if (!studioId || !useSupabase) return;
+    getVitrineLinkSettingsFromSupabase(studioId).then((fromDb) => {
+      if (Object.keys(fromDb).length > 0) {
+        const merged = { ...defaultSettings, ...fromDb } as VitrineSettings;
+        setSettings(merged);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      }
+    }).catch(() => {});
+  }, [studioId, useSupabase]);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  }, [settings]);
+    if (!studioId || !useSupabase) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveVitrineLinkSettingsToSupabase(studioId, settings as unknown as Record<string, unknown>).catch(console.error);
+      saveTimeoutRef.current = null;
+    }, 500);
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
+  }, [settings, studioId, useSupabase]);
 
   const handleCopy = async () => {
     try {

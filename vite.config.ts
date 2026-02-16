@@ -16,23 +16,49 @@ export default defineConfig(({ mode }) => {
           registerType: 'autoUpdate',
           includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon-180x180.png'],
           manifest: {
-            name: 'InkFlow - Gestion pour tatoueurs',
+            name: 'InkFlow - Assistant Tatoueur',
             short_name: 'InkFlow',
-            description: 'Plateforme tout-en-un : réservations, paiements Stripe, galerie Flash, CRM.',
-            theme_color: '#171717',
-            background_color: '#fafafa',
+            description: 'La plateforme tout-en-un pour tatoueurs. Réservations, paiements, galerie Flash, CRM, messagerie, IA.',
+            theme_color: '#000000',
+            background_color: '#000000',
             display: 'standalone',
             orientation: 'portrait',
             scope: '/',
             start_url: '/',
+            id: '/',
+            categories: ['business', 'productivity'],
+            lang: 'fr-FR',
+            dir: 'ltr',
             icons: [
+              { src: '/pwa-64x64.png', sizes: '64x64', type: 'image/png' },
               { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
               { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
               { src: '/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
             ]
           },
           workbox: {
-            globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
+            globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+            runtimeCaching: [
+              {
+                urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'google-fonts-cache',
+                  expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                  cacheableResponse: { statuses: [0, 200] }
+                }
+              },
+              {
+                urlPattern: /^https:\/\/.*supabase\.co\/.*/i,
+                handler: 'NetworkFirst',
+                options: {
+                  cacheName: 'supabase-api-cache',
+                  expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
+                  networkTimeoutSeconds: 10,
+                  cacheableResponse: { statuses: [0, 200] }
+                }
+              }
+            ]
           }
         })
       ],
@@ -43,7 +69,16 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
+          tslib: path.resolve(__dirname, 'node_modules/tslib/tslib.es6.mjs'),
         }
+      },
+      build: {
+        commonjsOptions: {
+          transformMixedEsModules: true,
+        },
+      },
+      optimizeDeps: {
+        include: ['tslib', '@supabase/supabase-js'],
       }
     };
 });

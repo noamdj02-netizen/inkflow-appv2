@@ -26,7 +26,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen min-h-[100dvh] bg-neutral-50 flex flex-col">
+    <div className="landing-scroll bg-neutral-50 flex flex-col">
       <header className="p-4 sm:p-6 safe-top">
         <a
           href="/"

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -6,6 +6,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string, studioName: string) => Promise<void>;
   logout: () => void;
+  updateUser: (updates: Partial<User>) => void;
   isAuthenticated: boolean;
 }
 
@@ -28,13 +29,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string) => {
     await new Promise(resolve => setTimeout(resolve, 500));
 
+    const savedAvatar = localStorage.getItem('inkflow_avatar');
     const mockUser: User = {
       id: '1',
       email,
       name: email === 'demo@inkflow.com' ? 'Demo Artist' : 'Alexandre Martin',
       studioName: email === 'demo@inkflow.com' ? 'Studio Demo' : 'Ink & Art Studio',
       role: 'studio_owner',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop'
+      avatar: savedAvatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop'
     };
 
     setUser(mockUser);
@@ -61,12 +63,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem('inkflow_user');
   };
 
+  const updateUser = useCallback((updates: Partial<User>) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...updates };
+      localStorage.setItem('inkflow_user', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       user,
       login,
       signup,
       logout,
+      updateUser,
       isAuthenticated: !!user
     }}>
       {children}

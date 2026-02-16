@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { SocialProof } from './components/SocialProof';
@@ -16,6 +17,8 @@ import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 import { PublicStudioPagePro } from './pages/public/PublicStudioPagePro';
 import { PublicBookingPagePro } from './pages/public/PublicBookingPagePro';
+import { ConsentPage } from './pages/public/ConsentPage';
+import { PublicMessagePage } from './pages/public/PublicMessagePage';
 
 interface Route {
   path: string | RegExp;
@@ -40,7 +43,9 @@ const Router: React.FC = () => {
         const url = new URL(anchor.href);
         window.history.pushState({}, '', url.pathname);
         setCurrentPath(url.pathname);
-        window.scrollTo(0, 0);
+        // Scroll to top: target internal scroll containers (app-shell or landing-scroll)
+        document.querySelector('.app-shell-content')?.scrollTo(0, 0);
+        document.querySelector('.landing-scroll')?.scrollTo(0, 0);
       }
     };
 
@@ -59,7 +64,9 @@ const Router: React.FC = () => {
     { path: '/auth/callback', component: AuthCallbackPage },
     { path: '/auth/update-password', component: UpdatePasswordPage },
     { path: /^\/studio\/([a-z0-9-]+)$/, component: PublicStudioPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
-    { path: /^\/book\/([a-z0-9-]+)$/, component: PublicBookingPagePro, getProps: (m) => ({ studioSlug: m[1] }) }
+    { path: /^\/book\/([a-z0-9-]+)$/, component: PublicBookingPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
+    { path: /^\/consent\/([a-z0-9_-]+)$/, component: ConsentPage, getProps: (m) => ({ consentId: m[1] }) },
+    { path: /^\/messages\/([a-z0-9_-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) }
   ];
 
   const matchRoute = () => {
@@ -94,7 +101,7 @@ const Router: React.FC = () => {
 };
 
 const NotFoundPage: React.FC = () => (
-  <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+  <div className="landing-scroll bg-neutral-50 flex items-center justify-center px-4">
     <div className="text-center">
       <h1 className="text-6xl font-bold mb-4">404</h1>
       <p className="text-xl text-neutral-600 mb-8">Page non trouvée</p>
@@ -107,17 +114,20 @@ const NotFoundPage: React.FC = () => (
 
 const LandingPage: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
     const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
+      setScrolled(el.scrollTop > 50);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden bg-[#fafafa] text-neutral-900 selection:bg-neutral-900 selection:text-white">
+    <div ref={scrollRef} className="landing-scroll text-neutral-900 selection:bg-neutral-900 selection:text-white">
       <Navbar scrolled={scrolled} />
 
       <main className="relative z-10">
@@ -138,7 +148,9 @@ const LandingPage: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <Router />
+      <ToastProvider>
+        <Router />
+      </ToastProvider>
     </AuthProvider>
   );
 };

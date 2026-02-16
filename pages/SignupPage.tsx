@@ -49,7 +49,7 @@ export const SignupPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen min-h-[100dvh] flex flex-col relative overflow-hidden">
+    <div className="landing-scroll flex flex-col relative">
       {/* Fond coloré */}
       <div className="absolute inset-0 bg-gradient-to-br from-violet-50 via-white to-indigo-50 -z-10" />
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-violet-200/30 rounded-full blur-3xl -z-10" />
