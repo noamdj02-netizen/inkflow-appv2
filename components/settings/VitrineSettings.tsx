@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Store, ChevronRight, ExternalLink, Plus, Trash2, Save, Check } from 'lucide-react';
 import { VitrineLinkButton } from '../dashboard/VitrineLinkButton';
 import { ImageUploadField } from '../ui/ImageUploadField';
 import { useToast } from '../../contexts/ToastContext';
+import { useAutoSave } from '../../hooks/useAutoSave';
 import type { VitrineData, VitrineService, VitrineArtist, VitrineTestimonial, VitrinePortfolioItem, VitrineFlashDesign, VitrineFaq, VitrineWhyChooseUs } from '../../types/vitrine';
-import { getVitrineData, setVitrineData, getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
+import { getVitrineData, getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
 
 const ICON_OPTIONS = [
   { value: 'sparkles', label: 'Étincelles' },
@@ -31,11 +32,10 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
   const toast = useToast();
   const slug = getVitrineSlug(studioName);
   const [data, setData] = useState<VitrineData>(() => getVitrineData(slug));
-  const [saved, setSaved] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('identity');
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dirtyRef = useRef(false);
+  const [manualSaving, setManualSaving] = useState(false);
   const initialLoadRef = useRef(true);
+  const dirtyRef = useRef(false);
   const dataRef = useRef(data);
   dataRef.current = data;
 
@@ -53,45 +53,50 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
     }
   }, [slug, userEmail, studioName]);
 
-  const persistData = useCallback((d: VitrineData, showToast = false) => {
-    setVitrineData(slug, d, userEmail, studioName);
-    if (userEmail && studioName) {
-      saveVitrineDataAsync(slug, d, userEmail, studioName).then(() => {
-        setSaved(true);
-        if (showToast) toast.success('Page vitrine sauvegardee');
-        setTimeout(() => setSaved(false), 1500);
-      }).catch((e) => {
-        console.error('Erreur sauvegarde vitrine:', e);
-        toast.error('Erreur lors de la sauvegarde vitrine');
-      });
-    } else {
-      setSaved(true);
-      if (showToast) toast.success('Sauvegarde locale effectuee');
-      setTimeout(() => setSaved(false), 1500);
+  // Silent auto-save: dedicated wrapper with its own try/catch. No toasts, no UI on error.
+  const silentAutoSave = async (d: VitrineData) => {
+    const key = `inkflow-vitrine-${slug}`;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(key, JSON.stringify({ ...d, slug }));
     }
-  }, [slug, userEmail, studioName, toast]);
+    if (userEmail && studioName) {
+      try {
+        await saveVitrineDataAsync(slug, d, userEmail, studioName);
+      } catch (err) {
+        console.warn('[VitrineSettings] auto-save failed (silent):', err);
+      }
+    }
+  };
+
+  const { saving, saved, saveNow } = useAutoSave(data, silentAutoSave, { debounceMs: 800 });
 
   const update = <K extends keyof VitrineData>(key: K, value: VitrineData[K]) => {
     dirtyRef.current = true;
-    setData(prev => {
-      const next = { ...prev, [key]: value };
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => persistData(next), 500);
-      return next;
-    });
+    setData(prev => ({ ...prev, [key]: value }));
   };
 
-  const save = () => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    persistData(data, true);
+  // Explicit manual save: use dataRef so we always save the latest state (avoids stale closure when user changes photo then clicks Save quickly).
+  const handleManualSave = async () => {
+    setManualSaving(true);
+    const latestData = dataRef.current;
+    const key = `inkflow-vitrine-${slug}`;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(key, JSON.stringify({ ...latestData, slug }));
+    }
+    try {
+      if (userEmail && studioName) {
+        await saveVitrineDataAsync(slug, latestData, userEmail, studioName);
+        toast.success('Sauvegardé !');
+      } else {
+        toast.success('Sauvegardé !');
+      }
+    } catch (err) {
+      console.error('[VitrineSettings] save failed:', err);
+      toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
+    } finally {
+      setManualSaving(false);
+    }
   };
-
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (dirtyRef.current && dataRef.current) persistData(dataRef.current);
-    };
-  }, [persistData]);
 
   const sections = [
     { id: 'identity', label: 'Identité & Présentation', icon: Store },
@@ -112,8 +117,8 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
       <VitrineLinkButton studioName={studioName} userEmail={userEmail} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-lg sm:text-xl font-bold">Personnaliser votre page vitrine</h2>
-        <button onClick={save} className="flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 w-full sm:w-auto">
-          {saved ? <><Check className="w-5 h-5" /> Enregistré</> : <><Save className="w-5 h-5" /> Enregistrer</>}
+        <button onClick={handleManualSave} disabled={saving || manualSaving} className="flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed">
+          {manualSaving || saving ? 'Enregistrement...' : saved ? <><Check className="w-5 h-5" /> Enregistré</> : <><Save className="w-5 h-5" /> Enregistrer</>}
         </button>
       </div>
 
@@ -571,7 +576,8 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
       </div>
 
       <a href={`/studio/${slug}`} target="_blank" rel="noopener noreferrer"
-        className="flex items-center gap-2 px-6 py-3 bg-neutral-100 hover:bg-neutral-200 rounded-xl font-semibold text-neutral-700 transition-colors">
+        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-colors ${manualSaving || saving ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed pointer-events-none' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'}`}
+        title={manualSaving || saving ? 'Attendez la fin de l\'enregistrement' : 'Ouvrir la page vitrine dans un nouvel onglet'}>
         <ExternalLink className="w-5 h-5" />
         Prévisualiser la vitrine
       </a>

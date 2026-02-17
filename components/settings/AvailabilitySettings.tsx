@@ -92,7 +92,7 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ onSa
         </div>
         <button
           onClick={handleSave}
-          className="flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800 transition-colors"
+          className="flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save className="w-5 h-5" />
           Enregistrer

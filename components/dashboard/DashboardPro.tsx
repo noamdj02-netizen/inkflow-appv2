@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, Sparkles, Clock, Award, UserPlus, ImageIcon, Inbox, User, Camera, Trash2 } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
-import { useSupabaseDashboard } from '../../hooks/useSupabaseDashboard';
+import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
 import { useProjectRequests } from '../../hooks/useProjectRequests';
+import { useIncomingBookings } from '../../hooks/useIncomingBookings';
 import { Modal } from '../ui/Modal';
 import { BookingForm } from '../booking/BookingForm';
 import { FlashGallery } from '../flash/FlashGallery';
@@ -31,6 +32,9 @@ import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
+import { ThemeToggle } from '../ThemeToggle';
+import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
+import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
 type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'ai' | 'settings';
 
@@ -52,8 +56,9 @@ export const DashboardPro: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
   const toast = useToast();
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
-  const { studioId, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, markNotificationAsRead, loadClientNotes, saveClientNotes, loading } = useSupabaseDashboard();
+  const { studioId, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, retry } = useSupabaseSync();
   const { projectRequests, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
+  const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
@@ -63,12 +68,12 @@ export const DashboardPro: React.FC = () => {
   const [showWidgetModal, setShowWidgetModal] = useState(false);
   const [customWidgets, setCustomWidgets] = useDashboardWidgets(studioId, useSupabase ?? false);
 
-  // New feature states
+  // New feature states — portfolio synced with vitrine (single source of truth)
+  const [vitrineData, setVitrineData] = useState<VitrineData | null>(null);
   const [messageThreads] = useState<MessageThread[]>([]);
-  const [portfolioItems, setPortfolioItems] = useState<{ id: string; url: string; category: string; artist: string; description: string; tags: string[]; beforeUrl?: string; likes: number; createdAt: string }[]>([]);
   const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>([]);
   const [artistAccounts, setArtistAccounts] = useState<ArtistAccount[]>([]);
-  const [loyaltyEntries] = useState<LoyaltyEntry[]>([]);
+  const [loyaltyEntries, setLoyaltyEntries] = useState<LoyaltyEntry[]>([]);
   const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettingsType>({
     enabled: true, pointsPerEuro: 1, referralBonus: 50,
     tierThresholds: { silver: 200, gold: 500, platinum: 1000 },
@@ -81,6 +86,88 @@ export const DashboardPro: React.FC = () => {
   const [generalSaved, setGeneralSaved] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+
+  // Sync general settings form when user changes (e.g. from Supabase session or localStorage)
+  useEffect(() => {
+    if (user?.studioName != null) setGeneralStudioName(user.studioName);
+    if (user?.email != null) setGeneralEmail(user.email);
+  }, [user?.studioName, user?.email]);
+
+  // Persist consent/waitlist/artists/loyalty in localStorage so they survive refresh (until Supabase load/save is wired)
+  const storageKey = (prefix: string) => `${prefix}_${studioId || user?.email || 'default'}`;
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const c = localStorage.getItem(storageKey('inkflow_consent'));
+      if (c) setConsentTemplates(JSON.parse(c));
+      const w = localStorage.getItem(storageKey('inkflow_waitlist'));
+      if (w) setWaitlistEntries(JSON.parse(w));
+      const a = localStorage.getItem(storageKey('inkflow_artists'));
+      if (a) setArtistAccounts(JSON.parse(a));
+      const ly = localStorage.getItem(storageKey('inkflow_loyalty_settings'));
+      if (ly) setLoyaltySettings(JSON.parse(ly));
+      const le = localStorage.getItem(storageKey('inkflow_loyalty_entries'));
+      if (le) setLoyaltyEntries(JSON.parse(le));
+    } catch (_) { /* ignore */ }
+  }, [user?.email, studioId]);
+
+  useEffect(() => {
+    if (!user) return;
+    try {
+      localStorage.setItem(storageKey('inkflow_consent'), JSON.stringify(consentTemplates));
+    } catch (_) { /* ignore */ }
+  }, [consentTemplates, user?.email, studioId]);
+  useEffect(() => {
+    if (!user) return;
+    try {
+      localStorage.setItem(storageKey('inkflow_waitlist'), JSON.stringify(waitlistEntries));
+    } catch (_) { /* ignore */ }
+  }, [waitlistEntries, user?.email, studioId]);
+  useEffect(() => {
+    if (!user) return;
+    try {
+      localStorage.setItem(storageKey('inkflow_artists'), JSON.stringify(artistAccounts));
+    } catch (_) { /* ignore */ }
+  }, [artistAccounts, user?.email, studioId]);
+  useEffect(() => {
+    if (!user) return;
+    try {
+      localStorage.setItem(storageKey('inkflow_loyalty_settings'), JSON.stringify(loyaltySettings));
+    } catch (_) { /* ignore */ }
+  }, [loyaltySettings, user?.email, studioId]);
+  useEffect(() => {
+    if (!user) return;
+    try {
+      localStorage.setItem(storageKey('inkflow_loyalty_entries'), JSON.stringify(loyaltyEntries));
+    } catch (_) { /* ignore */ }
+  }, [loyaltyEntries, user?.email, studioId]);
+
+  // Load vitrine data so Portfolio tab and Paramètres > Vitrine share the same portfolio
+  useEffect(() => {
+    if (!user?.email || !user?.studioName || activeTab !== 'portfolio') return;
+    const slug = getVitrineSlug(user.studioName);
+    getVitrineDataAsync(slug, user.email, user.studioName).then(setVitrineData);
+  }, [user?.email, user?.studioName, activeTab]);
+
+  // Portfolio items for PortfolioManager: derived from vitrine (single source of truth for page vitrine)
+  const portfolioItemsFromVitrine = useMemo(() => {
+    const list = vitrineData?.portfolio ?? [];
+    return list.map((p: VitrinePortfolioItem, i: number) => ({
+      id: `p_${i}`,
+      url: p.url,
+      category: p.category,
+      artist: p.artist,
+      description: p.description,
+      tags: [],
+      likes: p.likes,
+      createdAt: '',
+    }));
+  }, [vitrineData?.portfolio]);
+
+  const portfolioArtistNames = useMemo(() => {
+    const fromVitrine = vitrineData?.artists?.map(a => a.name) ?? [];
+    return Array.from(new Set([user?.name || 'Artiste', ...fromVitrine].filter(Boolean)));
+  }, [user?.name, vitrineData?.artists]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -265,7 +352,7 @@ export const DashboardPro: React.FC = () => {
   }, [clients]);
 
   return (
-    <div className="app-shell bg-neutral-100">
+    <div className="app-shell bg-[var(--bg-primary)]">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
@@ -273,19 +360,19 @@ export const DashboardPro: React.FC = () => {
 
       <div className="app-shell-row">
         {/* ====== SIDEBAR (Desktop only, slide-in on tablet) ====== */}
-        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 max-w-[85vw] bg-white border-r border-neutral-200 flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
+        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 max-w-[85vw] bg-[var(--bg-sidebar)] border-r border-[var(--border)] flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}>
-          <div className="p-4 sm:p-6 border-b border-neutral-200 flex items-center justify-between safe-top">
+          <div className="p-4 sm:p-6 border-b border-[var(--border)] flex items-center justify-between safe-top">
             <div className="flex items-center gap-3">
               <Logo />
               <div>
-                <h1 className="text-lg font-bold">InkFlow</h1>
-                <p className="text-xs text-neutral-500 truncate max-w-[140px]">{user?.studioName}</p>
+                <h1 className="text-lg font-bold text-[var(--text-primary)]">InkFlow</h1>
+                <p className="text-xs text-[var(--text-secondary)] truncate max-w-[140px]">{user?.studioName}</p>
               </div>
             </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-neutral-100">
-              <X className="w-5 h-5" />
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-[var(--bg-hover)]">
+              <X className="w-5 h-5 text-[var(--text-secondary)]" />
             </button>
           </div>
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto overscroll-contain">
@@ -296,7 +383,7 @@ export const DashboardPro: React.FC = () => {
               return (
                 <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                    activeTab === tab.id ? 'bg-neutral-900 text-white' : 'text-neutral-600 hover:bg-neutral-100'
+                    activeTab === tab.id ? 'bg-[var(--text-primary)] text-[var(--text-on-dark)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                   }`}>
                   {tab.icon}
                   {tab.label}
@@ -307,8 +394,8 @@ export const DashboardPro: React.FC = () => {
               );
             })}
           </nav>
-          <div className="p-4 border-t border-neutral-200 safe-bottom">
-            <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-neutral-600 hover:bg-neutral-100 font-medium">
+          <div className="p-4 border-t border-[var(--border)] safe-bottom">
+            <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] font-medium">
               <LogOut className="w-5 h-5" />
               Déconnexion
             </button>
@@ -317,13 +404,26 @@ export const DashboardPro: React.FC = () => {
 
         {/* ====== MAIN COLUMN ====== */}
         <div className="app-shell-main">
+          {/* Bandeau hors-ligne / erreur de connexion */}
+          {useSupabase && (!isOnline || connectionError) && (
+            <div className="bg-amber-500/90 text-amber-950 px-4 py-2 flex items-center justify-between gap-4 text-sm font-medium">
+              <span className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                {!isOnline ? 'Vous êtes hors ligne.' : 'Erreur de connexion.'}
+                {connectionError?.message && <span className="opacity-90 truncate">{connectionError.message}</span>}
+              </span>
+              <button onClick={retry} className="px-3 py-1.5 rounded-lg bg-amber-950/20 hover:bg-amber-950/30 font-semibold">
+                Réessayer
+              </button>
+            </div>
+          )}
           {/* Fixed header */}
-          <header className="app-shell-header bg-white border-b border-neutral-200 px-4 sm:px-6 md:px-8 py-3 sm:py-4 flex items-center justify-between gap-4">
+          <header className="app-shell-header safe-top bg-[var(--bg-secondary)] border-b border-[var(--border)] px-4 sm:px-6 md:px-8 py-3 sm:py-4 flex items-center justify-between gap-4 transition-colors duration-300">
           <div className="flex items-center gap-3 min-w-0">
-            <button onClick={() => setSidebarOpen(true)} className="hidden md:block lg:hidden p-2 -ml-2 rounded-lg hover:bg-neutral-100 flex-shrink-0">
-              <Menu className="w-6 h-6 text-neutral-600" />
+            <button onClick={() => setSidebarOpen(true)} className="hidden md:block lg:hidden p-2 -ml-2 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0">
+              <Menu className="w-6 h-6 text-[var(--text-secondary)]" />
             </button>
-            <h2 className="text-lg sm:text-xl font-bold truncate">{tabs.find(t => t.id === activeTab)?.label}</h2>
+            <h2 className="text-lg sm:text-xl font-bold truncate text-[var(--text-primary)]">{tabs.find(t => t.id === activeTab)?.label}</h2>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             {activeTab === 'overview' && (
@@ -335,17 +435,18 @@ export const DashboardPro: React.FC = () => {
                 <span className="hidden sm:inline">Ajouter un widget</span>
               </button>
             )}
+            <ThemeToggle />
             <div className="relative">
-              <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-2 rounded-lg hover:bg-neutral-100">
-                <Bell className="w-5 h-5 text-neutral-600" />
+              <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-2 rounded-lg hover:bg-[var(--bg-hover)]">
+                <Bell className="w-5 h-5 text-[var(--text-secondary)]" />
                 {notifications.filter(n => !n.read).length > 0 && (
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
                 )}
               </button>
               {showNotifications && (
-                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-auto bg-white border border-neutral-200 rounded-2xl shadow-xl z-50">
-                  <div className="p-4 border-b border-neutral-200 flex items-center justify-between">
-                    <h4 className="font-bold text-sm">Notifications</h4>
+                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-auto bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-xl z-50">
+                  <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
+                    <h4 className="font-bold text-sm text-[var(--text-primary)]">Notifications</h4>
                     {notifications.filter(n => !n.read).length > 0 && (
                       <button
                         onClick={() => { notifications.filter(n => !n.read).forEach(n => markNotificationAsRead(n.id)); }}
@@ -560,6 +661,9 @@ export const DashboardPro: React.FC = () => {
               onUpdateAppointment={updateAppointment}
               projectRequests={projectRequests}
               onUpdateProjectRequest={updateProjectRequestStatus}
+              bookings={bookings}
+              onUpdateBookingStatus={updateBookingStatus}
+              bookingsLoading={bookingsLoading}
             />
           )}
 
@@ -686,10 +790,32 @@ export const DashboardPro: React.FC = () => {
 
           {activeTab === 'portfolio' && (
             <PortfolioManager
-              items={portfolioItems}
-              onAddItem={(item) => setPortfolioItems(prev => [item, ...prev])}
-              onDeleteItem={(id) => setPortfolioItems(prev => prev.filter(p => p.id !== id))}
-              artists={[user?.name || 'Artiste']}
+              items={portfolioItemsFromVitrine}
+              onAddItem={(item) => {
+                if (!vitrineData || !user?.email || !user?.studioName) return;
+                const v: VitrinePortfolioItem = { url: item.url, category: item.category, artist: item.artist, likes: item.likes, description: item.description };
+                const newData: VitrineData = { ...vitrineData, portfolio: [...(vitrineData.portfolio ?? []), v] };
+                setVitrineData(newData);
+                const slug = getVitrineSlug(user.studioName);
+                saveVitrineDataAsync(slug, newData, user.email, user.studioName).catch((err) => {
+                  console.warn('Portfolio save failed:', err);
+                  toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
+                });
+              }}
+              onDeleteItem={(id) => {
+                if (!vitrineData || !user?.email || !user?.studioName) return;
+                const idx = parseInt(id.replace('p_', ''), 10);
+                if (Number.isNaN(idx)) return;
+                const newPortfolio = (vitrineData.portfolio ?? []).filter((_, i) => i !== idx);
+                const newData: VitrineData = { ...vitrineData, portfolio: newPortfolio };
+                setVitrineData(newData);
+                const slug = getVitrineSlug(user.studioName);
+                saveVitrineDataAsync(slug, newData, user.email, user.studioName).catch((err) => {
+                  console.warn('Portfolio save failed:', err);
+                  toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
+                });
+              }}
+              artists={portfolioArtistNames}
             />
           )}
 

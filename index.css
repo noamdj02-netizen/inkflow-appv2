@@ -3,6 +3,213 @@
    Objectif : zero rubber-band, zero bounce, native feel
    ========================================================== */
 
+/* ========================================
+   INKFLOW THEME SYSTEM - Variables CSS
+   ======================================== */
+
+/* Default + Mode Clair (Light) */
+:root,
+:root[data-theme="light"] {
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-secondary: #f8f9fa;
+  --bg-card-dark: #1a1a1a;
+  --bg-hover: #f5f5f5;
+  --text-primary: #1a1a1a;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --text-on-dark: #ffffff;
+  --orange: #ff8c00;
+  --orange-hover: #ff7700;
+  --orange-light: #fff4e6;
+  --green: #10b981;
+  --green-bg: #d1fae5;
+  --blue: #6366f1;
+  --blue-hover: #4f46e5;
+  --magenta: #d946ef;
+  --magenta-hover: #c026d3;
+  --border: #e5e7eb;
+  --border-light: #f3f4f6;
+  --shadow-sm: rgba(0, 0, 0, 0.05);
+  --shadow-md: rgba(0, 0, 0, 0.1);
+  --shadow-lg: rgba(0, 0, 0, 0.15);
+  --chart-grid: #e5e7eb;
+  --chart-text: #6b7280;
+  --chart-bg: #ffffff;
+}
+
+/* Mode Sombre (Dark) — Amélioré (moins de contraste, tons gris harmonieux) */
+:root[data-theme="dark"] {
+  --bg-primary: #18181b;
+  --bg-secondary: #1f1f23;
+  --bg-sidebar: #1f1f23;
+  --bg-card: #27272a;
+  --bg-card-secondary: #2d2d31;
+  --bg-card-dark: #2d2d31;
+  --bg-hover: #3a3a3f;
+  --text-primary: #fafafa;
+  --text-secondary: #d4d4d8;
+  --text-tertiary: #a1a1aa;
+  --text-on-dark: #fafafa;
+  --orange: #fb923c;
+  --orange-hover: #f97316;
+  --orange-light: rgba(251, 146, 60, 0.1);
+  --green: #22c55e;
+  --green-bg: rgba(34, 197, 94, 0.15);
+  --blue: #818cf8;
+  --blue-hover: #6366f1;
+  --magenta: #e879f9;
+  --magenta-hover: #d946ef;
+  --border: #3a3a3f;
+  --border-light: #313135;
+  --shadow-sm: rgba(0, 0, 0, 0.4);
+  --shadow-md: rgba(0, 0, 0, 0.5);
+  --shadow-lg: rgba(0, 0, 0, 0.6);
+  --chart-grid: #3a3a3f;
+  --chart-text: #a1a1aa;
+  --chart-bg: #27272a;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  position: relative;
+  width: 56px;
+  height: 28px;
+  background: var(--border);
+  border-radius: 100px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: inset 0 2px 4px var(--shadow-sm);
+}
+.theme-toggle:hover {
+  background: var(--border-light);
+  transform: scale(1.05);
+}
+.theme-toggle:active {
+  transform: scale(0.98);
+}
+.toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 24px;
+  height: 24px;
+  background: var(--orange);
+  border-radius: 50%;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(255, 140, 0, 0.4);
+}
+.theme-toggle[data-theme="dark"] .toggle-slider {
+  transform: translateX(28px);
+  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.5);
+}
+.toggle-icon {
+  width: 14px;
+  height: 14px;
+  color: white;
+  transition: all 0.3s ease;
+}
+.toggle-icon.sun {
+  opacity: 1;
+  transform: rotate(0deg);
+}
+.toggle-icon.moon {
+  position: absolute;
+  opacity: 0;
+  transform: rotate(180deg);
+}
+.theme-toggle[data-theme="dark"] .toggle-icon.sun {
+  opacity: 0;
+  transform: rotate(-180deg);
+}
+.theme-toggle[data-theme="dark"] .toggle-icon.moon {
+  opacity: 1;
+  transform: rotate(0deg);
+}
+@media (max-width: 768px) {
+  .theme-toggle {
+    width: 48px;
+    height: 24px;
+  }
+  .toggle-slider {
+    width: 20px;
+    height: 20px;
+  }
+  .theme-toggle[data-theme="dark"] .toggle-slider {
+    transform: translateX(24px);
+  }
+  .toggle-icon {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+/* Scrollbar (suit le thème) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-light);
+}
+
+/* Graphiques (Recharts) en mode sombre */
+:root[data-theme="dark"] .recharts-cartesian-grid line,
+:root[data-theme="dark"] .recharts-cartesian-axis line {
+  stroke: var(--chart-grid);
+}
+:root[data-theme="dark"] .recharts-text {
+  fill: var(--chart-text);
+}
+
+/* ===== Cartes transparentes en mode sombre (style discret) ===== */
+:root[data-theme="dark"] .app-shell .bg-white {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+:root[data-theme="dark"] .app-shell .bg-white:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+/* Carte type "Revenus totaux" (fond sombre) */
+:root[data-theme="dark"] .app-shell .bg-neutral-900.text-white {
+  background: rgba(0, 0, 0, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+/* Classes optionnelles .card, .stat-card, .chart-card si utilisées */
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .stat-card,
+:root[data-theme="dark"] .chart-card,
+:root[data-theme="dark"] .customize-card {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+:root[data-theme="dark"] .card:hover,
+:root[data-theme="dark"] .stat-card:hover,
+:root[data-theme="dark"] .chart-card:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+:root[data-theme="dark"] .stat-card-dark,
+:root[data-theme="dark"] .card-dark {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
 /* 1. BODY LOCK — Verrouillage radical du scroll global */
 html, body {
   height: 100%;
@@ -17,6 +224,9 @@ html, body {
   width: 100%;
   top: 0;
   left: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Re-enable text selection in inputs/textareas */
@@ -32,7 +242,7 @@ input, textarea, select, [contenteditable="true"] {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background-color: #000;
+  background-color: var(--bg-primary);
 }
 
 /* 2. APP SHELL — Zone de scroll independante */
@@ -43,7 +253,7 @@ input, textarea, select, [contenteditable="true"] {
   height: 100%;
   overflow: hidden;
   position: relative;
-  background-color: #f5f5f5;
+  background-color: var(--bg-primary);
 }
 
 .app-shell-row {
@@ -94,7 +304,7 @@ input, textarea, select, [contenteditable="true"] {
   overflow-x: hidden;
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
-  background-color: #fafafa;
+  background-color: var(--bg-primary);
 }
 
 /* 4. SAFE AREAS — Encoche & barre du bas */
@@ -104,11 +314,8 @@ input, textarea, select, [contenteditable="true"] {
   .safe-x { padding-left: max(1rem, env(safe-area-inset-left)) !important; padding-right: max(1rem, env(safe-area-inset-right)) !important; }
 }
 
-/* PWA standalone: header under status bar */
+/* PWA standalone: landing page under status bar */
 @media all and (display-mode: standalone) {
-  .app-shell-header {
-    padding-top: env(safe-area-inset-top);
-  }
   .landing-scroll {
     padding-top: env(safe-area-inset-top);
   }
@@ -137,10 +344,10 @@ input, select, textarea {
   left: 0;
   right: 0;
   z-index: 50;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--bg-secondary);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--border);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -153,9 +360,9 @@ input, select, textarea {
 
 /* 7. MOBILE CARDS */
 .mobile-card {
-  background: white;
+  background: var(--bg-card);
   border-radius: 16px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--border);
   padding: 16px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   -webkit-user-select: none;
@@ -163,7 +370,7 @@ input, select, textarea {
 }
 .mobile-card:active {
   transform: scale(0.98);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px var(--shadow-md);
 }
 
 /* 8. SKELETON LOADING */
@@ -330,12 +537,21 @@ input, select, textarea {
   animation: scale-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Toast animation */
+/* Toast animations */
 .animate-slide-up {
   animation: toast-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes toast-slide-up {
   from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-slide-down {
+  animation: toast-slide-down 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes toast-slide-down {
+  from { opacity: 0; transform: translateY(-16px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }

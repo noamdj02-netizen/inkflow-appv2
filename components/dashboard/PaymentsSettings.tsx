@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreditCard, Percent, Shield, ExternalLink } from 'lucide-react';
 import { getStudioId } from '../../lib/supabase';
 import { getPaymentSettingsFromSupabase, savePaymentSettingsToSupabase } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
+import { useAutoSave } from '../../hooks/useAutoSave';
 
 const STORAGE_KEY = 'inkflow-payment-settings';
 
@@ -28,10 +29,10 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({ userEmail, s
     } catch {}
     return defaultSettings;
   });
-  const [saved, setSaved] = useState(false);
   const useSupabase = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && userEmail && studioName);
   const studioId = userEmail && studioName ? getStudioId(userEmail, studioName) : null;
 
+  // Load from Supabase on mount
   useEffect(() => {
     if (!studioId || !useSupabase) return;
     getPaymentSettingsFromSupabase(studioId).then((fromDb) => {
@@ -43,38 +44,17 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({ userEmail, s
     }).catch(() => {});
   }, [studioId, useSupabase]);
 
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    if (!studioId || !useSupabase) return;
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-      savePaymentSettingsToSupabase(studioId, settings as unknown as Record<string, unknown>).catch(console.error);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 1500);
-      saveTimeoutRef.current = null;
-    }, 500);
-    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
-  }, [settings, studioId, useSupabase]);
-
-  const [saving, setSaving] = useState(false);
-  const save = async () => {
-    if (saving) return;
-    setSaving(true);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-      if (studioId && useSupabase) {
-        await savePaymentSettingsToSupabase(studioId, settings as unknown as Record<string, unknown>);
-      }
-      setSaved(true);
-      toast.success('Parametres de paiement enregistres');
-      setTimeout(() => setSaved(false), 2000);
-    } catch (err) {
-      console.error('Erreur sauvegarde paiements:', err);
-      toast.error('Erreur lors de la sauvegarde');
-    } finally {
-      setSaving(false);
+  // Auto-save with debounce (replaces manual useEffect + setTimeout pattern)
+  const { saving, saved, saveNow } = useAutoSave(settings, async (s) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    if (studioId && useSupabase) {
+      await savePaymentSettingsToSupabase(studioId, s as unknown as Record<string, unknown>);
     }
+  }, { debounceMs: 500 });
+
+  const save = () => {
+    saveNow();
+    toast.success('Parametres de paiement enregistres');
   };
 
   return (

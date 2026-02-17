@@ -1,0 +1,224 @@
+/* ========================================
+   INKFLOW - 3 STYLES DE CARTES DARK MODE
+   Choisissez celui que vous préférez !
+   ======================================== */
+
+/* ────────────────────────────────────────
+   STYLE 1 : TRANSPARENT avec bordure subtile
+   LE PLUS DISCRET - Recommandé ✅
+   ──────────────────────────────────────── */
+:root[data-theme="dark"] .card-style-1,
+:root[data-theme="dark"] .stat-card-style-1 {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(0);
+}
+
+:root[data-theme="dark"] .card-style-1:hover,
+:root[data-theme="dark"] .stat-card-style-1:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+
+/* ────────────────────────────────────────
+   STYLE 2 : GLASSMORPHISM (effet verre)
+   MODERNE ET ÉLÉGANT
+   ──────────────────────────────────────── */
+:root[data-theme="dark"] .card-style-2,
+:root[data-theme="dark"] .stat-card-style-2 {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+:root[data-theme="dark"] .card-style-2:hover,
+:root[data-theme="dark"] .stat-card-style-2:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+
+/* ────────────────────────────────────────
+   STYLE 3 : CONTOUR LUMINEUX uniquement
+   MINIMALISTE EXTRÊME
+   ──────────────────────────────────────── */
+:root[data-theme="dark"] .card-style-3,
+:root[data-theme="dark"] .stat-card-style-3 {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: none;
+}
+
+:root[data-theme="dark"] .card-style-3:hover,
+:root[data-theme="dark"] .stat-card-style-3:hover {
+  border-color: var(--orange);
+  box-shadow: 0 0 20px rgba(251, 146, 60, 0.1);
+}
+
+
+/* ────────────────────────────────────────
+   APPLIQUEZ À TOUTES VOS CARTES
+   Changez juste le numéro (1, 2, ou 3)
+   ──────────────────────────────────────── */
+
+/* Pour toutes les cartes normales */
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .stat-card,
+:root[data-theme="dark"] .chart-card,
+:root[data-theme="dark"] .customize-card {
+  /* Choisissez l'un des 3 styles : */
+  
+  /* STYLE 1 - Transparent subtil (RECOMMANDÉ) */
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  
+  /* OU STYLE 2 - Glassmorphism 
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  */
+  
+  /* OU STYLE 3 - Contour uniquement
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  */
+}
+
+/* Hover state */
+:root[data-theme="dark"] .card:hover,
+:root[data-theme="dark"] .stat-card:hover,
+:root[data-theme="dark"] .chart-card:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+
+/* ────────────────────────────────────────
+   CARTE SPÉCIALE "REVENUS TOTAUX"
+   (celle avec le fond noir au milieu)
+   ──────────────────────────────────────── */
+:root[data-theme="dark"] .stat-card-dark,
+:root[data-theme="dark"] .card-dark {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .stat-card-dark:hover {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+
+/* ────────────────────────────────────────
+   GRAPHIQUES - Fond transparent aussi
+   ──────────────────────────────────────── */
+:root[data-theme="dark"] .chart-container {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Grille du graphique plus subtile */
+:root[data-theme="dark"] .recharts-cartesian-grid line {
+  stroke: rgba(255, 255, 255, 0.05);
+}
+
+/* Texte du graphique */
+:root[data-theme="dark"] .recharts-text,
+:root[data-theme="dark"] .chart-label {
+  fill: rgba(255, 255, 255, 0.5);
+}
+
+
+/* ────────────────────────────────────────
+   CARD "PERSONNALISER L'APPARENCE"
+   (en haut avec le lien)
+   ──────────────────────────────────────── */
+:root[data-theme="dark"] .customize-section,
+:root[data-theme="dark"] .studio-link-container {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .studio-link {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+
+/* ────────────────────────────────────────
+   FIX POUR LE MODE CLAIR
+   (garde les fonds blancs en mode clair)
+   ──────────────────────────────────────── */
+:root[data-theme="light"] .card,
+:root[data-theme="light"] .stat-card,
+:root[data-theme="light"] .chart-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+
+/* ────────────────────────────────────────
+   EXEMPLE D'UTILISATION COMPLÈTE
+   ──────────────────────────────────────── */
+
+/*
+// Dans votre JSX/HTML :
+
+<div className="stat-card">  // Automatiquement transparent en dark mode
+  <div className="stat-label">RDV aujourd'hui</div>
+  <div className="stat-value">0</div>
+</div>
+
+<div className="stat-card stat-card-dark">  // Celle avec fond noir
+  <div className="stat-label">Revenus totaux</div>
+  <div className="stat-value">0€</div>
+</div>
+*/
+
+
+/* ────────────────────────────────────────
+   VARIABLES GLOBALES AJUSTÉES
+   ──────────────────────────────────────── */
+:root[data-theme="dark"] {
+  --bg-primary: #18181b;
+  --bg-secondary: #1f1f23;
+  --bg-card: transparent;  /* ← Changé ! */
+  --bg-card-secondary: rgba(0, 0, 0, 0.3);
+  --bg-hover: rgba(255, 255, 255, 0.03);
+  
+  --text-primary: #fafafa;
+  --text-secondary: #d4d4d8;
+  --text-tertiary: #a1a1aa;
+  
+  --orange: #fb923c;
+  --orange-hover: #f97316;
+  --green: #22c55e;
+  --magenta: #e879f9;
+  
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow-sm: rgba(0, 0, 0, 0.4);
+  --shadow-md: rgba(0, 0, 0, 0.5);
+}
+
+
+/* ────────────────────────────────────────
+   TRANSITIONS FLUIDES
+   ──────────────────────────────────────── */
+.card, .stat-card, .chart-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+/* ────────────────────────────────────────
+   RESPONSIVE - Tout fonctionne sur mobile
+   ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root[data-theme="dark"] .card,
+  :root[data-theme="dark"] .stat-card {
+    border-width: 1px;
+  }
+}

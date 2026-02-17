@@ -119,7 +119,7 @@ export async function saveCareTemplatesToSupabase(studioId: string, templates: u
 }
 
 // Clients
-function mapClientFromDb(row: Record<string, unknown>): Client {
+export function mapClientFromDb(row: Record<string, unknown>): Client {
   return {
     id: row.id as string,
     name: row.name as string,
@@ -185,7 +185,7 @@ export async function saveClientNotesToSupabase(clientId: string, notes: string)
 }
 
 // Appointments
-function mapAppointmentFromDb(row: Record<string, unknown>): Appointment {
+export function mapAppointmentFromDb(row: Record<string, unknown>): Appointment {
   return {
     id: row.id as string,
     clientId: (row.client_id as string) || '',
@@ -249,7 +249,7 @@ export async function deleteAppointmentFromSupabase(aptId: string): Promise<void
 }
 
 // Flash designs
-function mapFlashFromDb(row: Record<string, unknown>): FlashDesign {
+export function mapFlashFromDb(row: Record<string, unknown>): FlashDesign {
   return {
     id: row.id as string,
     title: row.title as string,
@@ -302,7 +302,7 @@ export async function deleteFlashDesignFromSupabase(flashId: string): Promise<vo
 }
 
 // Notifications
-function mapNotificationFromDb(row: Record<string, unknown>): Notification {
+export function mapNotificationFromDb(row: Record<string, unknown>): Notification {
   return {
     id: row.id as string,
     type: row.type as Notification['type'],
@@ -326,7 +326,7 @@ export async function markNotificationReadInSupabase(notificationId: string): Pr
 }
 
 // Project requests (Demandes de projet)
-function mapProjectRequestFromDb(row: Record<string, unknown>): ProjectRequest {
+export function mapProjectRequestFromDb(row: Record<string, unknown>): ProjectRequest {
   return {
     id: row.id as string,
     studioId: row.studio_id as string,

@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
+import { initTheme } from './hooks/useTheme';
+
+initTheme();
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { SocialProof } from './components/SocialProof';
@@ -149,7 +153,9 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <ToastProvider>
-        <Router />
+        <SupabaseSyncProvider>
+          <Router />
+        </SupabaseSyncProvider>
       </ToastProvider>
     </AuthProvider>
   );

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { useToast } from '../contexts/ToastContext';
 import {
   ensureStudio,
   getAppointmentsFromSupabase,
@@ -15,8 +15,14 @@ import {
   deleteAppointmentFromSupabase,
   deleteClientFromSupabase,
   deleteFlashDesignFromSupabase,
-  markNotificationReadInSupabase
+  markNotificationReadInSupabase,
+  mapAppointmentFromDb,
+  mapClientFromDb,
+  mapFlashFromDb,
+  mapNotificationFromDb
 } from '../lib/supabaseDashboard';
+import { useOptimisticMutation } from './useOptimisticMutation';
+import { useRealtimeSync } from './useRealtimeSync';
 import type { Appointment, Client, FlashDesign, Notification } from '../types';
 
 const MOCK_CLIENTS: Client[] = [
@@ -51,6 +57,7 @@ function useSupabaseEnabled(): boolean {
 
 export const useSupabaseDashboard = () => {
   const { user } = useAuth();
+  const toast = useToast();
   const [studioId, setStudioId] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -58,11 +65,37 @@ export const useSupabaseDashboard = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [useSupabase, setUseSupabase] = useState(false);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [connectionError, setConnectionError] = useState<Error | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const initializedRef = useRef(false);
 
   useEffect(() => {
     setUseSupabase(useSupabaseEnabled());
   }, []);
+
+  // Écouter le mode hors-ligne (navigateur)
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Optimistic mutation helpers (with rollback on error)
+  const aptMutation = useOptimisticMutation(setAppointments, toast);
+  const clientMutation = useOptimisticMutation(setClients, toast);
+  const flashMutation = useOptimisticMutation(setFlashDesigns, toast);
+
+  // Delta-based realtime subscriptions (replace full-refetch pattern)
+  useRealtimeSync('inkflow_appointments', { column: 'studio_id', value: studioId }, setAppointments, mapAppointmentFromDb, useSupabase);
+  useRealtimeSync('inkflow_clients', { column: 'studio_id', value: studioId }, setClients, mapClientFromDb, useSupabase);
+  useRealtimeSync('inkflow_flash_designs', { column: 'studio_id', value: studioId }, setFlashDesigns, mapFlashFromDb, useSupabase);
+  useRealtimeSync('inkflow_notifications', { column: 'studio_id', value: studioId }, setNotifications, mapNotificationFromDb, useSupabase);
 
   // Load data from Supabase or use mocks
   const loadAllData = useCallback(async (sid: string) => {
@@ -98,7 +131,6 @@ export const useSupabaseDashboard = () => {
           await loadAllData(sid);
           initializedRef.current = true;
         } else {
-          // No Supabase configured: use mock data for demo
           setStudioId(null);
           setAppointments(MOCK_APPOINTMENTS);
           setClients(MOCK_CLIENTS);
@@ -106,9 +138,15 @@ export const useSupabaseDashboard = () => {
           setNotifications(MOCK_NOTIFICATIONS);
         }
       } catch (err) {
-        console.error('Supabase init error:', err);
+        const error = err instanceof Error ? err : new Error(String(err));
+        console.error('Supabase init error:', error);
+        setConnectionError(error);
+        const isNetworkError =
+          error.message?.toLowerCase().includes('fetch') ||
+          error.message?.toLowerCase().includes('network') ||
+          (error as { code?: string }).code === 'PGRST301';
+        if (isNetworkError) setIsOnline(false);
         if (!initializedRef.current) {
-          // Only use mocks on first load failure, not on reconnection
           setStudioId(null);
           setAppointments(MOCK_APPOINTMENTS);
           setClients(MOCK_CLIENTS);
@@ -120,108 +158,96 @@ export const useSupabaseDashboard = () => {
       }
     };
 
+    setConnectionError(null);
     init();
-  }, [user?.id, user?.email, user?.name, user?.studioName, useSupabase, loadAllData]);
+  }, [user?.id, user?.email, user?.name, user?.studioName, useSupabase, loadAllData, retryCount]);
 
-  // Realtime subscriptions for appointments, clients, flash, notifications
-  useEffect(() => {
-    if (!studioId || !useSupabase) return;
+  const retry = useCallback(() => {
+    setConnectionError(null);
+    setRetryCount((c) => c + 1);
+  }, []);
 
-    const channel = supabase
-      .channel('dashboard-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'inkflow_appointments', filter: `studio_id=eq.${studioId}` }, () => {
-        getAppointmentsFromSupabase(studioId).then(setAppointments).catch(console.error);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'inkflow_clients', filter: `studio_id=eq.${studioId}` }, () => {
-        getClientsFromSupabase(studioId).then(setClients).catch(console.error);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'inkflow_flash_designs', filter: `studio_id=eq.${studioId}` }, () => {
-        getFlashDesignsFromSupabase(studioId).then(setFlashDesigns).catch(console.error);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'inkflow_notifications', filter: `studio_id=eq.${studioId}` }, () => {
-        getNotificationsFromSupabase(studioId).then(setNotifications).catch(console.error);
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [studioId, useSupabase]);
-
-  const saveAppointment = useCallback(async (apt: Appointment) => {
-    if (studioId && useSupabase) {
-      try {
-        await saveAppointmentToSupabase(studioId, apt);
-      } catch (e) {
-        console.error('Save appointment error:', e);
-      }
-    }
-  }, [studioId, useSupabase]);
+  // --- CRUD operations with optimistic updates + rollback ---
 
   const addAppointment = useCallback((appointment: Appointment) => {
-    setAppointments(prev => {
-      const next = [...prev, appointment];
-      if (studioId && useSupabase) saveAppointmentToSupabase(studioId, appointment).catch(console.error);
-      return next;
-    });
-  }, [studioId, useSupabase]);
+    if (studioId && useSupabase) {
+      aptMutation.add(appointment, (apt) => saveAppointmentToSupabase(studioId, apt));
+    } else {
+      setAppointments(prev => [...prev, appointment]);
+    }
+  }, [studioId, useSupabase, aptMutation]);
 
   const updateAppointment = useCallback((id: string, updates: Partial<Appointment>) => {
-    setAppointments(prev => {
-      const next = prev.map(a => a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a);
-      const updated = next.find(a => a.id === id);
-      if (updated && studioId && useSupabase) saveAppointmentToSupabase(studioId, updated).catch(console.error);
-      return next;
-    });
-  }, [studioId, useSupabase]);
+    if (studioId && useSupabase) {
+      aptMutation.update(
+        id,
+        (apt) => ({ ...apt, ...updates, updatedAt: new Date().toISOString() }),
+        (updated) => saveAppointmentToSupabase(studioId, updated)
+      );
+    } else {
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a));
+    }
+  }, [studioId, useSupabase, aptMutation]);
 
   const deleteAppointment = useCallback((id: string) => {
-    setAppointments(prev => prev.filter(a => a.id !== id));
-    if (studioId && useSupabase) deleteAppointmentFromSupabase(id).catch(console.error);
-  }, [studioId, useSupabase]);
+    if (studioId && useSupabase) {
+      aptMutation.remove(id, (aptId) => deleteAppointmentFromSupabase(aptId));
+    } else {
+      setAppointments(prev => prev.filter(a => a.id !== id));
+    }
+  }, [studioId, useSupabase, aptMutation]);
 
   const addFlash = useCallback((flash: Omit<FlashDesign, 'id' | 'createdAt'>) => {
     const newFlash: FlashDesign = { ...flash, id: `f${Date.now()}`, createdAt: new Date().toISOString() };
-    setFlashDesigns(prev => {
-      const next = [...prev, newFlash];
-      if (studioId && useSupabase) saveFlashDesignToSupabase(studioId, newFlash).catch(console.error);
-      return next;
-    });
+    if (studioId && useSupabase) {
+      flashMutation.add(newFlash, (f) => saveFlashDesignToSupabase(studioId, f));
+    } else {
+      setFlashDesigns(prev => [...prev, newFlash]);
+    }
     return newFlash.id;
-  }, [studioId, useSupabase]);
+  }, [studioId, useSupabase, flashMutation]);
 
   const updateFlash = useCallback((id: string, updates: Partial<FlashDesign>) => {
-    setFlashDesigns(prev => {
-      const next = prev.map(f => f.id === id ? { ...f, ...updates } : f);
-      const updated = next.find(f => f.id === id);
-      if (updated && studioId && useSupabase) saveFlashDesignToSupabase(studioId, updated).catch(console.error);
-      return next;
-    });
-  }, [studioId, useSupabase]);
+    if (studioId && useSupabase) {
+      flashMutation.update(
+        id,
+        (f) => ({ ...f, ...updates }),
+        (updated) => saveFlashDesignToSupabase(studioId, updated)
+      );
+    } else {
+      setFlashDesigns(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+    }
+  }, [studioId, useSupabase, flashMutation]);
 
   const deleteFlash = useCallback((id: string) => {
-    setFlashDesigns(prev => prev.filter(f => f.id !== id));
-    if (studioId && useSupabase) deleteFlashDesignFromSupabase(id).catch(console.error);
-  }, [studioId, useSupabase]);
+    if (studioId && useSupabase) {
+      flashMutation.remove(id, (flashId) => deleteFlashDesignFromSupabase(flashId));
+    } else {
+      setFlashDesigns(prev => prev.filter(f => f.id !== id));
+    }
+  }, [studioId, useSupabase, flashMutation]);
 
   const addClient = useCallback((client: Omit<Client, 'id'>) => {
     const newClient: Client = { ...client, id: `c${Date.now()}` };
-    setClients(prev => {
-      const next = [...prev, newClient];
-      if (studioId && useSupabase) saveClientToSupabase(studioId, newClient).catch(console.error);
-      return next;
-    });
+    if (studioId && useSupabase) {
+      clientMutation.add(newClient, (c) => saveClientToSupabase(studioId, c));
+    } else {
+      setClients(prev => [...prev, newClient]);
+    }
     return newClient.id;
-  }, [studioId, useSupabase]);
+  }, [studioId, useSupabase, clientMutation]);
 
   const updateClient = useCallback((id: string, updates: Partial<Client>) => {
-    setClients(prev => {
-      const next = prev.map(c => c.id === id ? { ...c, ...updates } : c);
-      const updated = next.find(c => c.id === id);
-      if (updated && studioId && useSupabase) saveClientToSupabase(studioId, updated).catch(console.error);
-      return next;
-    });
-  }, [studioId, useSupabase]);
+    if (studioId && useSupabase) {
+      clientMutation.update(
+        id,
+        (c) => ({ ...c, ...updates }),
+        (updated) => saveClientToSupabase(studioId, updated)
+      );
+    } else {
+      setClients(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    }
+  }, [studioId, useSupabase, clientMutation]);
 
   const markNotificationAsRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
@@ -255,6 +281,9 @@ export const useSupabaseDashboard = () => {
     notifications,
     loading,
     useSupabase,
+    isOnline,
+    connectionError,
+    retry,
     addAppointment,
     updateAppointment,
     deleteAppointment,

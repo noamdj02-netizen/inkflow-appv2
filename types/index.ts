@@ -155,6 +155,30 @@ export interface ProjectRequestFormData {
   referenceImages?: string[];
 }
 
+export type BookingStatus = 'pending' | 'confirmed' | 'accepted' | 'rejected' | 'cancelled';
+
+export interface Booking {
+  id: string;
+  studioId: string;
+  clientName: string;
+  clientEmail: string;
+  description: string;
+  requestedDate: string;
+  requestedTime: string | null;
+  status: BookingStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Données du formulaire de prise de RDV (vitrine publique) */
+export interface VitrineBookingFormData {
+  clientName: string;
+  clientEmail: string;
+  description: string;
+  requestedDate: string;
+  requestedTime?: string;
+}
+
 export interface StudioSettings {
   businessName: string;
   email: string;

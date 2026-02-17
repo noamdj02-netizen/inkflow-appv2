@@ -7,9 +7,11 @@ import {
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { ProjectRequestForm } from '../../components/booking/ProjectRequestForm';
+import { VitrineBookingForm } from '../../components/booking/VitrineBookingForm';
 import { getVitrineData, getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
 import { createProjectRequest } from '../../lib/supabaseProjectRequests';
+import { useRealtimeVitrine } from '../../hooks/useRealtimeSync';
 import type { VitrineData } from '../../types/vitrine';
 import type { ProjectRequestFormData } from '../../types';
 
@@ -27,12 +29,16 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [activeSection, setActiveSection] = useState('about');
   const [showContactForm, setShowContactForm] = useState(false);
   const [showProjectRequestForm, setShowProjectRequestForm] = useState(false);
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [bookingStudioId, setBookingStudioId] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
   const [requestSuccess, setRequestSuccess] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
-  useEffect(() => {
+  const loadVitrine = React.useCallback(() => {
     setLoading(true);
     getVitrineDataBySlugAsync(studioSlug)
       .then((data) => {
@@ -43,6 +49,22 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       })
       .finally(() => setLoading(false));
   }, [studioSlug]);
+
+  // Initial load + refetch when page becomes visible (e.g. user saved in another tab)
+  useEffect(() => {
+    loadVitrine();
+  }, [loadVitrine]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') loadVitrine();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [loadVitrine]);
+
+  // Live updates: when the tatoueur edits their vitrine, the public page updates instantly
+  useRealtimeVitrine(studioSlug, setStudio);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -81,7 +103,18 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     await createProjectRequest(data, studioId);
     setRequestSuccess(true);
     setShowProjectRequestForm(false);
-    setTimeout(() => setRequestSuccess(false), 4000);
+  };
+
+  const openBookingForm = () => {
+    setBookingError(null);
+    setShowBookingForm(true);
+    getStudioIdBySlug(studioSlug).then(setBookingStudioId);
+  };
+
+  const handleBookingSuccess = () => {
+    setBookingSuccess(true);
+    setShowBookingForm(false);
+    setBookingError(null);
   };
 
   const scrollToSection = (sectionId: string) => {
@@ -259,28 +292,28 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       </div>
 
       {/* Stats Banner */}
-      <div className="bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white py-8 sm:py-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
+      <div className="bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white py-4 sm:py-6 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-0 left-1/4 w-64 h-64 bg-white rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white rounded-full blur-3xl" />
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             <div className="text-center">
-              <div className="text-3xl sm:text-5xl md:text-6xl font-bold mb-1 sm:mb-2">{studioDisplay.totalTattoos}+</div>
-              <div className="text-xs sm:text-sm md:text-base text-neutral-300">Tatouages réalisés</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-0.5 sm:mb-1">{studioDisplay.totalTattoos}+</div>
+              <div className="text-xs sm:text-sm text-neutral-300">Tatouages réalisés</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl sm:text-5xl md:text-6xl font-bold mb-1 sm:mb-2">{studioDisplay.satisfactionRate}%</div>
-              <div className="text-xs sm:text-sm md:text-base text-neutral-300">Satisfaction</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-0.5 sm:mb-1">{studioDisplay.satisfactionRate}%</div>
+              <div className="text-xs sm:text-sm text-neutral-300">Satisfaction</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl sm:text-5xl md:text-6xl font-bold mb-1 sm:mb-2">{studioDisplay.repeatClients}%</div>
-              <div className="text-xs sm:text-sm md:text-base text-neutral-300">Clients fidèles</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-0.5 sm:mb-1">{studioDisplay.repeatClients}%</div>
+              <div className="text-xs sm:text-sm text-neutral-300">Clients fidèles</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl sm:text-5xl md:text-6xl font-bold mb-1 sm:mb-2">{studioDisplay.artists.length}</div>
-              <div className="text-xs sm:text-sm md:text-base text-neutral-300">Artistes experts</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-0.5 sm:mb-1">{studioDisplay.artists.length}</div>
+              <div className="text-xs sm:text-sm text-neutral-300">Artistes experts</div>
             </div>
           </div>
         </div>
@@ -601,8 +634,11 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
               <a href={`/book/${studioSlug}`} className="block w-full bg-gradient-to-r from-neutral-900 to-neutral-800 text-white text-center py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all mb-3">
                 Prendre rendez-vous
               </a>
-              <button onClick={() => setShowProjectRequestForm(true)} className="block w-full bg-white border-2 border-neutral-900 text-neutral-900 text-center py-3 rounded-xl font-bold hover:bg-neutral-50 transition-all mb-6">
+              <button onClick={() => setShowProjectRequestForm(true)} className="block w-full bg-white border-2 border-neutral-900 text-neutral-900 text-center py-3 rounded-xl font-bold hover:bg-neutral-50 transition-all mb-3">
                 Demande de projet
+              </button>
+              <button onClick={openBookingForm} className="block w-full bg-neutral-800 text-white text-center py-3 rounded-xl font-bold hover:bg-neutral-700 transition-all mb-6">
+                Demande de RDV (créneau)
               </button>
               <div className="space-y-4 mb-6">
                 {[
@@ -816,6 +852,32 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         </div>
       )}
 
+      {/* Booking Form Modal (Demande de RDV) */}
+      {showBookingForm && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowBookingForm(false)}>
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-8 my-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold">Demande de rendez-vous</h3>
+              <button onClick={() => setShowBookingForm(false)} className="w-10 h-10 hover:bg-neutral-100 rounded-full flex items-center justify-center transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            {bookingStudioId ? (
+              <VitrineBookingForm
+                studioId={bookingStudioId}
+                onSubmitSuccess={handleBookingSuccess}
+                onError={setBookingError}
+                onCancel={() => setShowBookingForm(false)}
+                submitLabel="Envoyer ma demande"
+                submitError={bookingError}
+              />
+            ) : (
+              <p className="text-neutral-600 py-8">Chargement...</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Project Request Form Modal */}
       {showProjectRequestForm && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowProjectRequestForm(false)}>
@@ -835,10 +897,15 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         </div>
       )}
 
-      {/* Success Toast */}
+      {/* Success Toasts */}
       {requestSuccess && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-4 bg-green-600 text-white rounded-xl font-semibold shadow-lg">
           Demande envoyée ! L'artiste vous répondra bientôt.
+        </div>
+      )}
+      {bookingSuccess && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-4 bg-green-600 text-white rounded-xl font-semibold shadow-lg">
+          Demande envoyée au tatoueur !
         </div>
       )}
 

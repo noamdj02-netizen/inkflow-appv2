@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight, Star, CheckCircle2, DollarSign, TrendingUp, Calendar, Clock } from 'lucide-react';
 import { Logo } from './Logo';
 import { TrustedLogos } from './TrustedLogos';
+import { InkDropMascot, ArtistMascot } from './Mascots';
 
 export const HeroSection: React.FC = () => {
   return (
@@ -26,7 +27,12 @@ export const HeroSection: React.FC = () => {
       <div className="max-w-7xl mx-auto w-full">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 xl:gap-24 items-center">
           {/* Left content */}
-          <div className="space-y-8 sm:space-y-10 text-center lg:text-left">
+          <div className="relative space-y-8 sm:space-y-10 text-center lg:text-left">
+            {/* Mascotte 1 : machine à tatouer près du titre (image de marque InkFlow) */}
+            <div className="absolute -top-2 right-2 sm:right-8 lg:right-12 xl:right-16 top-0 opacity-0 animate-fade-in-up stagger-1 z-10" style={{ animationFillMode: 'forwards' }}>
+              <InkDropMascot size={64} className="animate-float opacity-90" />
+            </div>
+
             <div
               className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2.5 rounded-full border border-neutral-200/80 shadow-sm opacity-0 animate-fade-in-up stagger-0"
               style={{ animationFillMode: 'forwards' }}
@@ -35,7 +41,7 @@ export const HeroSection: React.FC = () => {
               <span className="text-sm font-semibold text-neutral-700">Déjà utilisé par 500+ tatoueurs</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[4.5rem] font-bold leading-[1.05] tracking-tight text-neutral-900 opacity-0 animate-fade-in-up stagger-1" style={{ animationFillMode: 'forwards' }}>
+            <h1 className="relative text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[4.5rem] font-bold leading-[1.05] tracking-tight text-neutral-900 opacity-0 animate-fade-in-up stagger-1" style={{ animationFillMode: 'forwards' }}>
               Gagnez{' '}
               <span className="relative inline-block">
                 <span className="relative z-10">5 heures</span>
@@ -94,7 +100,12 @@ export const HeroSection: React.FC = () => {
 
           {/* Right - Dashboard preview card */}
           <div className="relative mt-8 lg:mt-0 flex justify-center lg:justify-end opacity-0 animate-fade-in-up stagger-6" style={{ animationFillMode: 'forwards' }}>
-            <div className="relative w-full max-w-lg lg:max-w-xl">
+            {/* Mascotte 2 : flacon d'encre tatouage (style 3D) en bas à gauche de la carte */}
+            <div className="absolute bottom-6 left-2 sm:bottom-8 sm:left-8 lg:bottom-12 lg:left-0 z-10">
+              <ArtistMascot size={72} className="animate-float opacity-95" style={{ animationDelay: '0.2s' }} />
+            </div>
+
+            <div className="relative w-full max-w-xl sm:max-w-2xl lg:max-w-2xl xl:max-w-3xl">
               {/* Glow effect behind card */}
               <div className="absolute -inset-4 bg-neutral-200/30 rounded-[2rem] blur-2xl -z-10" />
 
@@ -102,7 +113,7 @@ export const HeroSection: React.FC = () => {
                 {/* Subtle top gradient */}
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-200 to-transparent" />
 
-                <div className="bg-gradient-to-br from-neutral-50 to-white p-6 sm:p-8">
+                <div className="bg-gradient-to-br from-neutral-50 to-white p-6 sm:p-8 lg:p-10">
                   {/* Dashboard Demo Header */}
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">

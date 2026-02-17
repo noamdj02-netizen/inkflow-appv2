@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Save, Trash2, FileText } from 'lucide-react';
 import { getStudioId } from '../../lib/supabase';
 import { getCareTemplatesFromSupabase, saveCareTemplatesToSupabase } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
+import { useAutoSave } from '../../hooks/useAutoSave';
 
 const STORAGE_KEY = 'inkflow-care-templates';
 
@@ -24,7 +25,6 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
-  const [saving, setSaving] = useState(false);
   const useSupabase = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && userEmail && studioName);
   const studioId = userEmail && studioName ? getStudioId(userEmail, studioName) : null;
 
@@ -63,20 +63,13 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
     }
   }, [selectedId, selected]);
 
-  const saveToStorage = useCallback((list: CareTemplate[], showToast = false) => {
+  // Auto-save templates list whenever it changes (debounced)
+  const { saving } = useAutoSave(templates, async (list) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    setTemplates(list);
     if (studioId && useSupabase) {
-      saveCareTemplatesToSupabase(studioId, list).then(() => {
-        if (showToast) toast.success('Template de soins sauvegarde');
-      }).catch((err) => {
-        console.error('Erreur sauvegarde care templates:', err);
-        if (showToast) toast.error('Erreur lors de la sauvegarde');
-      });
-    } else if (showToast) {
-      toast.success('Template sauvegarde localement');
+      await saveCareTemplatesToSupabase(studioId, list);
     }
-  }, [studioId, useSupabase, toast]);
+  }, { debounceMs: 500 });
 
   const createTemplate = () => {
     const newTemplate: CareTemplate = {
@@ -85,8 +78,7 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
       content: `Après votre séance :\n\n- Gardez le pansement X heures\n- Lavez doucement à l'eau tiède + savon neutre\n- Appliquez une fine couche de crème\n- Évitez soleil/piscine 2 semaines\n`,
       updatedAt: new Date().toISOString()
     };
-    const list = [newTemplate, ...templates];
-    saveToStorage(list);
+    setTemplates(prev => [newTemplate, ...prev]);
     setSelectedId(newTemplate.id);
   };
 
@@ -97,21 +89,23 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
       return;
     }
 
-    setSaving(true);
-    const updated = templates.map(t =>
-      t.id === selected.id
-        ? { ...t, title: draftTitle.trim(), content: draftContent.trim(), updatedAt: new Date().toISOString() }
-        : t
+    setTemplates(prev =>
+      prev.map(t =>
+        t.id === selected.id
+          ? { ...t, title: draftTitle.trim(), content: draftContent.trim(), updatedAt: new Date().toISOString() }
+          : t
+      )
     );
-    saveToStorage(updated, true);
-    setSaving(false);
+    toast.success('Template de soins sauvegarde');
   };
 
   const deleteTemplate = (id: string) => {
     if (!confirm('Supprimer ce template ?')) return;
-    const list = templates.filter(t => t.id !== id);
-    saveToStorage(list);
-    if (selectedId === id) setSelectedId(list[0]?.id || null);
+    setTemplates(prev => prev.filter(t => t.id !== id));
+    if (selectedId === id) {
+      const remaining = templates.filter(t => t.id !== id);
+      setSelectedId(remaining[0]?.id || null);
+    }
   };
 
   return (

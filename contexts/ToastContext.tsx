@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -40,17 +40,32 @@ const BG: Record<ToastType, string> = {
 };
 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [currentToast, setCurrentToast] = useState<Toast | null>(null);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const removeToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+  const removeToast = useCallback(() => {
+    setCurrentToast(null);
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
   }, []);
 
   const addToast = useCallback((type: ToastType, message: string) => {
+    // Clear any existing toast + timer before showing the new one
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    setToasts(prev => [...prev, { id, type, message }]);
-    setTimeout(() => removeToast(id), 4000);
-  }, [removeToast]);
+    setCurrentToast({ id, type, message });
+
+    dismissTimerRef.current = setTimeout(() => {
+      setCurrentToast(null);
+      dismissTimerRef.current = null;
+    }, 4000);
+  }, []);
 
   const value: ToastContextType = {
     toast: addToast,
@@ -63,23 +78,23 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {/* Toast container */}
-      <div className="fixed bottom-20 md:bottom-6 right-4 z-[9999] flex flex-col gap-2 pointer-events-none max-w-[min(400px,calc(100vw-2rem))]">
-        {toasts.map((t) => (
+      {/* Toast container — positioned at top, below safe area, pointer-events-none so it never blocks navigation */}
+      <div className="fixed top-0 left-0 right-0 z-[9999] flex flex-col items-center pointer-events-none safe-top pt-2 px-4">
+        {currentToast && (
           <div
-            key={t.id}
-            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg animate-slide-up ${BG[t.type]}`}
+            key={currentToast.id}
+            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg animate-slide-down max-w-[min(400px,calc(100vw-2rem))] w-full ${BG[currentToast.type]}`}
           >
-            {ICONS[t.type]}
-            <span className="text-sm font-medium text-neutral-800 flex-1">{t.message}</span>
+            {ICONS[currentToast.type]}
+            <span className="text-sm font-medium text-neutral-800 flex-1">{currentToast.message}</span>
             <button
-              onClick={() => removeToast(t.id)}
+              onClick={removeToast}
               className="p-1 rounded-lg hover:bg-black/5 shrink-0"
             >
               <X className="w-4 h-4 text-neutral-400" />
             </button>
           </div>
-        ))}
+        )}
       </div>
     </ToastContext.Provider>
   );

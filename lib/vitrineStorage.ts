@@ -67,19 +67,45 @@ export async function saveVitrineDataAsync(slug: string, data: VitrineData, user
   }
 }
 
-/** Charge les données vitrine par slug depuis Supabase (page publique sans auth) */
+/** Charge les données vitrine par slug depuis Supabase (page publique sans auth). Si le même navigateur a des données en localStorage pour ce slug, on les utilise pour afficher les dernières modifs (ex. après un échec de sync). */
 export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineData> {
   const defaultData = defaultVitrineData(slug);
-  if (!useSupabase()) return getVitrineData(slug);
+  const key = `${STORAGE_PREFIX}${slug}`;
+  const localRaw = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+  if (!useSupabase()) {
+    if (localRaw) {
+      try {
+        return { ...defaultData, ...(JSON.parse(localRaw) as object), slug } as VitrineData;
+      } catch {
+        return defaultData;
+      }
+    }
+    return defaultData;
+  }
   try {
     const fromDb = await getVitrineDataBySlugFromSupabase(slug, defaultData);
-    const key = `${STORAGE_PREFIX}${slug}`;
-    if (typeof window !== 'undefined') {
+    // Ne pas écraser le localStorage s'il contient déjà des données (draft local après échec sync)
+    if (typeof window !== 'undefined' && !localRaw) {
       localStorage.setItem(key, JSON.stringify({ ...fromDb, slug }));
+    }
+    // Préférer le draft local (même navigateur) pour que les photos modifiées s'affichent après un échec de sync
+    if (localRaw) {
+      try {
+        return { ...defaultData, ...(JSON.parse(localRaw) as object), slug } as VitrineData;
+      } catch {
+        return fromDb;
+      }
     }
     return fromDb;
   } catch (e) {
     console.error('getVitrineDataBySlugAsync:', e);
-    return getVitrineData(slug);
+    if (localRaw) {
+      try {
+        return { ...defaultData, ...(JSON.parse(localRaw) as object), slug } as VitrineData;
+      } catch {
+        return defaultData;
+      }
+    }
+    return defaultData;
   }
 }

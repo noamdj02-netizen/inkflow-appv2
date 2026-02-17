@@ -154,10 +154,10 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-neutral-200">
+    <div className="bg-white rounded-xl p-4 border border-neutral-200">
       {/* Customize panel */}
       {editable && (
-        <div className="mb-4">
+        <div className="mb-3">
           <button
             onClick={() => setShowCustomize(!showCustomize)}
             className="flex items-center gap-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
@@ -237,52 +237,40 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
         </div>
       )}
 
-      <div className="flex items-start gap-3 mb-4">
-        <div
-          className="p-2.5 rounded-xl flex-shrink-0"
-          style={{ backgroundColor: `${settings.primaryColor}20`, color: settings.primaryColor }}
-        >
-          <Store className="w-5 h-5" />
-        </div>
-        <div className="min-w-0 flex-1">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div
+            className="p-2 rounded-lg flex-shrink-0"
+            style={{ backgroundColor: `${settings.primaryColor}20`, color: settings.primaryColor }}
+          >
+            <Store className="w-4 h-4" />
+          </div>
           {showLabel && (
-            <h3 className="font-bold text-lg text-neutral-900 mb-1">{settings.title}</h3>
+            <span className="font-semibold text-sm text-neutral-900 truncate">{settings.title}</span>
           )}
-          <p className="text-sm text-neutral-600">{settings.description}</p>
+          <input
+            type="text"
+            readOnly
+            value={vitrineUrl}
+            className="flex-1 min-w-0 px-3 py-2 border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-500 text-xs truncate"
+          />
         </div>
-      </div>
-      <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          type="text"
-          readOnly
-          value={vitrineUrl}
-          className="flex-1 px-4 py-3 border border-neutral-200 rounded-xl bg-neutral-50 text-neutral-600 text-sm truncate"
-        />
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <button
             onClick={handleCopy}
-            className="flex items-center gap-2 px-5 py-3 text-white rounded-xl font-semibold transition-colors hover:opacity-90"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-semibold text-sm transition-colors hover:opacity-90"
             style={{ backgroundColor: settings.primaryColor, color: textOnPrimary }}
           >
-            {copied ? (
-              <>
-                <Check className="w-4 h-4" />
-                {settings.copiedText}
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4" />
-                {settings.copyButtonText}
-              </>
-            )}
+            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? settings.copiedText : settings.copyButtonText}
           </button>
           <a
             href={vitrineUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-3 bg-neutral-100 text-neutral-700 rounded-xl font-semibold hover:bg-neutral-200 transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-neutral-100 text-neutral-700 rounded-lg font-semibold text-sm hover:bg-neutral-200 transition-colors"
           >
-            <ExternalLink className="w-4 h-4" />
+            <ExternalLink className="w-3.5 h-3.5" />
             {settings.openButtonText}
           </a>
         </div>

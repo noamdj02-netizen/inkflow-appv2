@@ -1,5 +1,23 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { User } from '../types';
+import { supabase } from '../lib/supabase';
+
+const useSupabaseAuth = () =>
+  !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && (import.meta.env.VITE_SUPABASE_URL as string).length > 10);
+
+function appUserFromSupabase(sessionUser: { id: string; email?: string; user_metadata?: Record<string, unknown> }): User {
+  const email = sessionUser.email ?? '';
+  const meta = sessionUser.user_metadata ?? {};
+  const savedAvatar = typeof window !== 'undefined' ? localStorage.getItem('inkflow_avatar') : null;
+  return {
+    id: sessionUser.id,
+    email,
+    name: (meta.name as string) || email?.split('@')[0] || 'User',
+    studioName: (meta.studio_name as string) || 'Mon studio',
+    role: 'studio_owner',
+    avatar: savedAvatar || undefined
+  };
+}
 
 interface AuthContextType {
   user: User | null;
@@ -26,9 +44,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
-  const login = async (email: string, password: string) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
+  useEffect(() => {
+    if (!useSupabaseAuth()) return;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const appUser = appUserFromSupabase(session.user);
+        setUser(appUser);
+        localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const appUser = appUserFromSupabase(session.user);
+        setUser(appUser);
+        localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+      } else {
+        setUser(null);
+        localStorage.removeItem('inkflow_user');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
+  const login = async (email: string, password: string) => {
+    if (useSupabaseAuth()) {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error && data?.user) {
+        const appUser = appUserFromSupabase(data.user);
+        setUser(appUser);
+        localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+        return;
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
     const savedAvatar = localStorage.getItem('inkflow_avatar');
     const mockUser: User = {
       id: '1',
@@ -38,14 +86,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       role: 'studio_owner',
       avatar: savedAvatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop'
     };
-
     setUser(mockUser);
     localStorage.setItem('inkflow_user', JSON.stringify(mockUser));
   };
 
   const signup = async (email: string, password: string, name: string, studioName: string) => {
+    if (useSupabaseAuth()) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { name, studio_name: studioName } }
+      });
+      if (!error && data?.user) {
+        const appUser = appUserFromSupabase(data.user);
+        setUser(appUser);
+        localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+        return;
+      }
+    }
     await new Promise(resolve => setTimeout(resolve, 500));
-
     const newUser: User = {
       id: Date.now().toString(),
       email,
@@ -53,12 +112,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       studioName,
       role: 'studio_owner'
     };
-
     setUser(newUser);
     localStorage.setItem('inkflow_user', JSON.stringify(newUser));
   };
 
   const logout = () => {
+    if (useSupabaseAuth()) supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem('inkflow_user');
   };
