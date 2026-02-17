@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, Sparkles, Clock, Award, UserPlus, ImageIcon, Inbox, User, Camera, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, Sparkles, UserPlus, Inbox, User, Camera, Trash2 } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
 import { useProjectRequests } from '../../hooks/useProjectRequests';
 import { useIncomingBookings } from '../../hooks/useIncomingBookings';
+import { useSubscriptionPermissions } from '../../hooks/useSubscriptionPermissions';
 import { Modal } from '../ui/Modal';
 import { BookingForm } from '../booking/BookingForm';
 import { FlashGallery } from '../flash/FlashGallery';
@@ -29,8 +30,10 @@ import { MessageThreadView } from '../messaging/MessageThread';
 import { ConsentFormEditor } from '../consent/ConsentFormEditor';
 import { Appointment, FlashDesign, BookingFormData, WaitlistEntry, ArtistAccount, LoyaltyEntry, MessageThread } from '../../types';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
+import { OnboardingBanner, type OnboardingStepId } from '../OnboardingBanner';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { supabase } from '../../lib/supabase';
+import { createSubscription } from '../../lib/stripeClient';
 import { useToast } from '../../contexts/ToastContext';
 import { ThemeToggle } from '../ThemeToggle';
 import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
@@ -59,6 +62,7 @@ export const DashboardPro: React.FC = () => {
   const { studioId, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, retry } = useSupabaseSync();
   const { projectRequests, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
   const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false);
+  const { canAccessFeature, hasReachedLimit, getLimit } = useSubscriptionPermissions(studioId);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
@@ -142,6 +146,34 @@ export const DashboardPro: React.FC = () => {
     } catch (_) { /* ignore */ }
   }, [loyaltyEntries, user?.email, studioId]);
 
+  // Auto-checkout: when landing with ?subscribe=solo|studio&interval=monthly|annual, redirect to Stripe
+  const subscribeAttempted = React.useRef(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const subscribe = params.get('subscribe');
+    const interval = (params.get('interval') || 'monthly') as 'monthly' | 'annual';
+    if (
+      !subscribeAttempted.current &&
+      subscribe && ['solo', 'studio'].includes(subscribe) &&
+      studioId && user?.email
+    ) {
+      subscribeAttempted.current = true;
+      createSubscription({ studioId, email: user.email, plan: subscribe as 'solo' | 'studio', interval })
+        .then((url) => {
+          if (url) {
+            window.location.href = url;
+          } else {
+            toast.error('Impossible de créer la session Stripe. Réessayez depuis Paramètres > Facturation.');
+            window.history.replaceState({}, '', '/dashboard');
+          }
+        })
+        .catch(() => {
+          subscribeAttempted.current = false;
+          toast.error('Erreur lors de la redirection vers le paiement.');
+        });
+    }
+  }, [studioId, user?.email]);
+
   // Load vitrine data so Portfolio tab and Paramètres > Vitrine share the same portfolio
   useEffect(() => {
     if (!user?.email || !user?.studioName || activeTab !== 'portfolio') return;
@@ -174,7 +206,7 @@ export const DashboardPro: React.FC = () => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Veuillez selectionner une image (JPG, PNG, WebP)');
+      alert('Veuillez sélectionner une image (JPG, PNG, WebP)');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -376,23 +408,28 @@ export const DashboardPro: React.FC = () => {
             </button>
           </div>
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto overscroll-contain">
-            {tabs.map(tab => {
-              const pendingCount = tab.badge === 'pending'
-                ? appointments.filter(a => a.status === 'pending').length + projectRequests.filter(p => p.status === 'PENDING').length
-                : 0;
-              return (
-                <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                    activeTab === tab.id ? 'bg-[var(--text-primary)] text-[var(--text-on-dark)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
-                  }`}>
-                  {tab.icon}
-                  {tab.label}
-                  {pendingCount > 0 && (
-                    <span className="ml-auto px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded-full">{pendingCount}</span>
-                  )}
-                </button>
-              );
-            })}
+            {tabs
+              .filter(tab => tab.id !== 'analytics' || canAccessFeature('stats_avancees'))
+              .map(tab => {
+                const pendingCount = tab.badge === 'pending'
+                  ? appointments.filter(a => a.status === 'pending').length + projectRequests.filter(p => p.status === 'PENDING').length
+                  : 0;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
+                      activeTab === tab.id ? 'bg-[var(--text-primary)] text-[var(--text-on-dark)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+                    }`}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                    {pendingCount > 0 && (
+                      <span className="ml-auto px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded-full">{pendingCount}</span>
+                    )}
+                  </button>
+                );
+              })}
           </nav>
           <div className="p-4 border-t border-[var(--border)] safe-bottom">
             <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] font-medium">
@@ -450,27 +487,27 @@ export const DashboardPro: React.FC = () => {
                     {notifications.filter(n => !n.read).length > 0 && (
                       <button
                         onClick={() => { notifications.filter(n => !n.read).forEach(n => markNotificationAsRead(n.id)); }}
-                        className="text-xs text-neutral-500 hover:text-neutral-900 font-medium"
+                        className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-medium"
                       >
                         Tout marquer comme lu
                       </button>
                     )}
                   </div>
                   {notifications.length === 0 ? (
-                    <div className="p-6 text-center text-sm text-neutral-500">Aucune notification</div>
+                    <div className="p-6 text-center text-sm text-[var(--text-secondary)]">Aucune notification</div>
                   ) : (
-                    <div className="divide-y divide-neutral-100">
+                    <div className="divide-y divide-[var(--border)]">
                       {notifications.slice(0, 20).map(notif => (
                         <button
                           key={notif.id}
                           onClick={() => { markNotificationAsRead(notif.id); setShowNotifications(false); setActiveTab('requests'); }}
-                          className={`w-full text-left p-4 hover:bg-neutral-50 transition-colors ${!notif.read ? 'bg-blue-50/50' : ''}`}
+                          className={`w-full text-left p-4 hover:bg-[var(--bg-hover)] transition-colors ${!notif.read ? 'bg-blue-500/10' : ''}`}
                         >
                           <div className="flex items-start gap-3">
                             <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!notif.read ? 'bg-blue-500' : 'bg-transparent'}`} />
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-neutral-900 truncate">{notif.message}</p>
-                              <p className="text-xs text-neutral-500 mt-1">
+                              <p className="text-sm font-medium text-[var(--text-primary)] truncate">{notif.message}</p>
+                              <p className="text-xs text-[var(--text-secondary)] mt-1">
                                 {new Date(notif.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </div>
@@ -497,6 +534,18 @@ export const DashboardPro: React.FC = () => {
 
           {/* ====== SCROLLABLE CONTENT ZONE ====== */}
           <div className="app-shell-content p-4 sm:p-6 md:p-8">
+          <OnboardingBanner
+            studioId={studioId}
+            useSupabase={useSupabase ?? false}
+            hasAvatar={!!user?.avatar}
+            flashCount={flashDesigns.length}
+            bookingsEnabled={!!(vitrineData != null && ((vitrineData?.portfolio?.length ?? 0) > 0 || !!user?.studioName))}
+            onContinue={(targetStep: OnboardingStepId) => {
+              if (targetStep === 'avatar') { setActiveTab('settings'); setSettingsTab('general'); setSidebarOpen(false); }
+              else if (targetStep === 'flash') { setActiveTab('flash'); setSidebarOpen(false); }
+              else if (targetStep === 'bookings') { setActiveTab('settings'); setSettingsTab('vitrine'); setSidebarOpen(false); }
+            }}
+          />
           {loading && activeTab === 'overview' && <DashboardLoadingSkeleton />}
           {!loading && activeTab === 'overview' && (
             <div className="space-y-6">
@@ -511,8 +560,13 @@ export const DashboardPro: React.FC = () => {
                         <span className={`text-sm font-medium flex-1 min-w-0 ${alert.type === 'warning' ? 'text-amber-800' : 'text-blue-800'}`}>{alert.msg}</span>
                       </div>
                       <div className="flex items-center gap-2 sm:gap-1">
-                        <button onClick={() => setActiveTab(alert.id === 'unpaid' ? 'appointments' : 'appointments')}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex-1 sm:flex-none ${alert.type === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                        <button
+                          onClick={() => {
+                            setActiveTab('appointments');
+                            if (alert.id === '24h') setAppointmentView('calendar');
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex-1 sm:flex-none ${alert.type === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}
+                        >
                           {alert.cta}
                         </button>
                         <button onClick={() => setDismissedAlerts(prev => new Set(prev).add(alert.id))} className="p-1.5 rounded hover:bg-black/5">
@@ -777,7 +831,16 @@ export const DashboardPro: React.FC = () => {
           )}
 
           {activeTab === 'clients' && (
-            <ClientList clients={clients} onAddClient={addClient} loadClientNotes={loadClientNotes} saveClientNotes={saveClientNotes} useSupabase={useSupabase} />
+            <ClientList
+              clients={clients}
+              onAddClient={addClient}
+              loadClientNotes={loadClientNotes}
+              saveClientNotes={saveClientNotes}
+              useSupabase={useSupabase}
+              clientLimitReached={hasReachedLimit('clients_crm', clients.length)}
+              clientLimit={getLimit('clients_crm')}
+              onUpgradeClick={() => { setActiveTab('settings'); setSettingsTab('billing'); }}
+            />
           )}
 
           {activeTab === 'messaging' && user && (

@@ -8,6 +8,7 @@ initTheme();
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { SocialProof } from './components/SocialProof';
+import { FeaturesKey } from './components/FeaturesKey';
 import { FeaturesBento } from './components/FeaturesBento';
 import { PricingSection } from './components/PricingSection';
 import { ProcessSection } from './components/ProcessSection';
@@ -32,11 +33,11 @@ interface Route {
 }
 
 const Router: React.FC = () => {
-  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [currentPath, setCurrentPath] = useState(window.location.pathname + window.location.search);
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    const handleLocationChange = () => setCurrentPath(window.location.pathname);
+    const handleLocationChange = () => setCurrentPath(window.location.pathname + window.location.search);
     window.addEventListener('popstate', handleLocationChange);
 
     const handleClick = (e: MouseEvent) => {
@@ -45,8 +46,8 @@ const Router: React.FC = () => {
       if (anchor && anchor.href.startsWith(window.location.origin)) {
         e.preventDefault();
         const url = new URL(anchor.href);
-        window.history.pushState({}, '', url.pathname);
-        setCurrentPath(url.pathname);
+        window.history.pushState({}, '', url.pathname + url.search + (url.hash || ''));
+        setCurrentPath(url.pathname + url.search);
         // Scroll to top: target internal scroll containers (app-shell or landing-scroll)
         document.querySelector('.app-shell-content')?.scrollTo(0, 0);
         document.querySelector('.landing-scroll')?.scrollTo(0, 0);
@@ -74,11 +75,12 @@ const Router: React.FC = () => {
   ];
 
   const matchRoute = () => {
+    const pathname = currentPath.split('?')[0];
     for (const route of routes) {
       if (typeof route.path === 'string') {
-        if (route.path === currentPath) return { route, match: null };
+        if (route.path === pathname) return { route, match: null };
       } else {
-        const match = currentPath.match(route.path);
+        const match = pathname.match(route.path);
         if (match) return { route, match };
       }
     }
@@ -137,6 +139,7 @@ const LandingPage: React.FC = () => {
       <main className="relative z-10">
         <HeroSection />
         <SocialProof />
+        <FeaturesKey />
         <FeaturesBento />
         <PricingSection />
         <ProcessSection />

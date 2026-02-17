@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
-import { Check, Zap, Loader2 } from 'lucide-react';
+import { Check, Zap } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+
+/** Stripe Payment Links (optionnel) — configurés dans Stripe Dashboard */
+const STRIPE_LINKS = {
+  solo: {
+    monthly: import.meta.env.VITE_STRIPE_LINK_SOLO_MONTHLY as string | undefined,
+    annual: import.meta.env.VITE_STRIPE_LINK_SOLO_ANNUAL as string | undefined,
+  },
+  studio: {
+    monthly: import.meta.env.VITE_STRIPE_LINK_STUDIO_MONTHLY as string | undefined,
+    annual: import.meta.env.VITE_STRIPE_LINK_STUDIO_ANNUAL as string | undefined,
+  },
+};
 
 export const PricingSection: React.FC = () => {
   const [isAnnual, setIsAnnual] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   const plans = [
     {
+      id: 'solo' as const,
       name: 'Solo',
       description: 'Pour les tatoueurs indépendants',
       priceMonthly: 29,
@@ -22,6 +37,7 @@ export const PricingSection: React.FC = () => {
       popular: false
     },
     {
+      id: 'studio' as const,
       name: 'Studio',
       description: 'Pour les studios avec plusieurs artistes',
       priceMonthly: 79,
@@ -40,6 +56,7 @@ export const PricingSection: React.FC = () => {
       popular: true
     },
     {
+      id: 'enterprise' as const,
       name: 'Enterprise',
       description: 'Pour les grands studios et franchises',
       priceMonthly: null,
@@ -58,6 +75,21 @@ export const PricingSection: React.FC = () => {
       popular: false
     }
   ];
+
+  const getPlanHref = (plan: (typeof plans)[0]) => {
+    if (plan.id === 'enterprise') {
+      return 'mailto:contact@inkflow.app?subject=Demande%20Enterprise';
+    }
+    const interval = isAnnual ? 'annual' : 'monthly';
+    const stripeLink = plan.id !== 'enterprise' && STRIPE_LINKS[plan.id]?.[interval];
+    if (stripeLink) {
+      return stripeLink;
+    }
+    if (isAuthenticated) {
+      return `/dashboard?subscribe=${plan.id}&interval=${interval}`;
+    }
+    return `/signup?plan=${plan.id}&interval=${interval}`;
+  };
 
   return (
     <section id="pricing" className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-white">
@@ -148,7 +180,11 @@ export const PricingSection: React.FC = () => {
               </div>
 
               <a
-                href="/signup"
+                href={getPlanHref(plan)}
+                {...(getPlanHref(plan).startsWith('http') && {
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                })}
                 className={`block w-full text-center py-4 rounded-xl font-semibold mb-8 transition-all ${
                   plan.popular
                     ? 'bg-white text-neutral-900 hover:bg-neutral-100'

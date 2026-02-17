@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, CreditCard, Image, Users, Zap, Shield, Clock, TrendingUp } from 'lucide-react';
+import { Calendar, CreditCard, Users, Zap, Shield, Clock, TrendingUp, Sparkles } from 'lucide-react';
 
 export const FeaturesBento: React.FC = () => {
   return (
@@ -50,27 +50,34 @@ export const FeaturesBento: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl transition-all duration-300 border border-purple-100/50">
-            <div className="w-14 h-14 bg-purple-600 rounded-2xl flex items-center justify-center mb-6">
-              <Image className="w-7 h-7 text-white" />
-            </div>
-            <h3 className="text-xl font-bold mb-3">Galerie Flash</h3>
-            <p className="text-neutral-700 mb-4">
-              Publiez vos flashs avec prix. Vos clients réservent en 2 clics.
-            </p>
-            <div className="flex gap-2">
-              {[
-                { src: '/gallery/tattoo-1.png', alt: 'Tatouage iris - épaule et bras' },
-                { src: '/gallery/tattoo-2.png', alt: 'Tatouage léopard - bras' },
-                { src: '/gallery/tattoo-3.png', alt: 'Tatouage botanique - nuque' },
-              ].map((img, i) => (
-                <img
-                  key={i}
-                  src={img.src}
-                  alt={img.alt}
-                  className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl shadow-md border border-white/80 hover:scale-105 transition-transform"
-                />
-              ))}
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl hover:shadow-purple-900/5 transition-all duration-300 border border-purple-100/50">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-purple-200 rounded-full blur-3xl opacity-30" />
+            <div className="relative z-10">
+              <div className="w-14 h-14 bg-purple-600 rounded-2xl flex items-center justify-center mb-4">
+                <Sparkles className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Galerie Flash</h3>
+              <p className="text-neutral-700 mb-4 text-sm sm:text-base">
+                Publiez vos flashs avec prix. Vos clients réservent en 2 clics.
+              </p>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold mb-4 border border-emerald-100/80">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                Exemple de galerie
+              </div>
+              <div className="flex gap-2 sm:gap-3">
+                {[
+                  { src: '/gallery/tattoo-1.png', alt: 'Tatouage iris - épaule et bras' },
+                  { src: '/gallery/tattoo-2.png', alt: 'Tatouage léopard - bras' },
+                  { src: '/gallery/tattoo-3.png', alt: 'Tatouage botanique - nuque' },
+                ].map((img, i) => (
+                  <img
+                    key={i}
+                    src={img.src}
+                    alt={img.alt}
+                    className="w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-xl shadow-md border border-white/80 hover:scale-105 transition-transform flex-shrink-0"
+                  />
+                ))}
+              </div>
             </div>
           </div>
 

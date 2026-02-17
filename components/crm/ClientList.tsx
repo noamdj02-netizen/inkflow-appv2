@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, User, Phone, Mail, Eye, Tag, UserPlus, ChevronDown, ChevronUp, StickyNote } from 'lucide-react';
 import { Client } from '../../types';
 import { Modal } from '../ui/Modal';
 import { useToast } from '../../contexts/ToastContext';
+import { useAutoSave } from '../../hooks/useAutoSave';
 
 const NOTES_KEY = (clientId: string) => `inkflow-notes-${clientId}`;
 
@@ -13,9 +14,15 @@ interface ClientListProps {
   loadClientNotes?: (clientId: string) => Promise<string>;
   saveClientNotes?: (clientId: string, notes: string) => Promise<void>;
   useSupabase?: boolean;
+  /** Limite du plan atteinte (ex. 100 clients en Solo) : désactive l’ajout et affiche un CTA upgrade */
+  clientLimitReached?: boolean;
+  /** Limite max clients (-1 = illimité), pour afficher "X / 100" */
+  clientLimit?: number;
+  /** Callback pour rediriger vers la page tarifs / abonnement */
+  onUpgradeClick?: () => void;
 }
 
-export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient, onAddClient, loadClientNotes, saveClientNotes, useSupabase }) => {
+export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient, onAddClient, loadClientNotes, saveClientNotes, useSupabase, clientLimitReached, clientLimit, onUpgradeClick }) => {
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'vip' | 'inactive'>('all');
@@ -24,7 +31,21 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ name: '', email: '', phone: '', notes: '' });
   const [notes, setNotes] = useState('');
-  const notesSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const notesData = useMemo(
+    () => (selectedClient ? { clientId: selectedClient.id, notes } : { clientId: '', notes: '' }),
+    [selectedClient?.id, notes]
+  );
+  const saveNotesFn = useCallback(async (d: { clientId: string; notes: string }) => {
+    if (!d.clientId) return;
+    if (useSupabase && saveClientNotes) {
+      await saveClientNotes(d.clientId, d.notes);
+    } else {
+      localStorage.setItem(NOTES_KEY(d.clientId), d.notes);
+    }
+  }, [useSupabase, saveClientNotes]);
+
+  const { saveNow } = useAutoSave(notesData, saveNotesFn, { debounceMs: 800, skipInitial: true });
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -63,27 +84,9 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
     }
   }, [selectedClient, useSupabase, loadClientNotes]);
 
-  const saveNotes = () => {
-    if (!selectedClient) return;
-    if (useSupabase && saveClientNotes) {
-      saveClientNotes(selectedClient.id, notes).catch(console.error);
-    } else {
-      localStorage.setItem(NOTES_KEY(selectedClient.id), notes);
-    }
-  };
-
-  const handleNotesChange = (value: string) => {
-    setNotes(value);
-    if (!selectedClient) return;
-    if (notesSaveRef.current) clearTimeout(notesSaveRef.current);
-    notesSaveRef.current = setTimeout(() => {
-      if (useSupabase && saveClientNotes) {
-        saveClientNotes(selectedClient.id, value).catch(console.error);
-      } else {
-        localStorage.setItem(NOTES_KEY(selectedClient.id), value);
-      }
-      notesSaveRef.current = null;
-    }, 500);
+  const closeModalAndSave = () => {
+    saveNow();
+    setSelectedClient(null);
   };
 
   const handleAddClient = () => {
@@ -135,9 +138,27 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
           </div>
         </div>
         {onAddClient && (
-          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800">
-            <UserPlus className="w-5 h-5" /> Ajouter un client
-          </button>
+          <>
+            {clientLimitReached && (
+              <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm">
+                <span className="text-amber-800">
+                  Limite atteinte{typeof clientLimit === 'number' && clientLimit > 0 ? ` (${clients.length} / ${clientLimit} clients)` : ''}. Passez au plan Studio pour en ajouter plus.
+                </span>
+                {onUpgradeClick && (
+                  <button onClick={onUpgradeClick} className="px-4 py-2 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 whitespace-nowrap">
+                    Voir les offres
+                  </button>
+                )}
+              </div>
+            )}
+            <button
+              onClick={() => (clientLimitReached ? onUpgradeClick?.() : setShowAddModal(true))}
+              disabled={clientLimitReached}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold ${clientLimitReached ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+            >
+              <UserPlus className="w-5 h-5" /> Ajouter un client
+            </button>
+          </>
         )}
       </div>
 
@@ -300,15 +321,24 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
             {searchTerm ? 'Essayez de modifier vos critères de recherche' : 'Vos clients apparaitront ici lorsqu\'ils prendront rendez-vous via votre page vitrine.'}
           </p>
           {onAddClient && !searchTerm && (
-            <button onClick={() => setShowAddModal(true)} className="mt-5 px-5 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold hover:bg-neutral-800 touch-target">
-              Ajouter un client
-            </button>
+            <>
+              {clientLimitReached && onUpgradeClick && (
+                <p className="text-sm text-amber-600 mt-2 mb-2">Limite atteinte. <button type="button" onClick={onUpgradeClick} className="underline font-semibold">Passer au plan Studio</button></p>
+              )}
+              <button
+                onClick={() => (clientLimitReached ? onUpgradeClick?.() : setShowAddModal(true))}
+                disabled={clientLimitReached}
+                className={`mt-5 px-5 py-2.5 rounded-xl text-sm font-semibold touch-target ${clientLimitReached ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+              >
+                Ajouter un client
+              </button>
+            </>
           )}
         </div>
       )}
 
       {selectedClient && (
-        <Modal isOpen={!!selectedClient} onClose={() => { saveNotes(); setSelectedClient(null); }} title={selectedClient.name} size="lg">
+        <Modal isOpen={!!selectedClient} onClose={closeModalAndSave} title={selectedClient.name} size="lg">
           <div className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <div>
@@ -339,7 +369,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
             )}
             <div>
               <h3 className="text-sm font-semibold text-neutral-600 mb-3 flex items-center gap-2"><StickyNote className="w-4 h-4" /> Notes privées</h3>
-              <textarea rows={4} value={notes} onChange={(e) => handleNotesChange(e.target.value)} onBlur={saveNotes}
+              <textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={saveNow}
                 placeholder="Ajoutez vos notes sur ce client…"
                 className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-neutral-900" />
               <p className="text-xs text-neutral-500 mt-1">{useSupabase ? 'Sauvegardées automatiquement.' : 'Sauvegardées localement dans votre navigateur.'}</p>
@@ -397,10 +427,13 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
               <button onClick={() => setShowAddModal(false)} className="px-6 py-3 border-2 border-neutral-200 rounded-xl font-semibold hover:border-neutral-900">
                 Annuler
               </button>
-              <button onClick={handleAddClient} disabled={!addForm.email.trim()}
+              <button onClick={handleAddClient} disabled={!addForm.email.trim() || clientLimitReached}
                 className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed">
                 Ajouter
               </button>
+              {clientLimitReached && (
+                <p className="text-sm text-amber-600 mt-2">Limite de votre plan atteinte. Passez au plan Studio pour ajouter plus de clients.</p>
+              )}
             </div>
           </div>
         </Modal>

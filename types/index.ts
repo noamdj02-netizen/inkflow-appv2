@@ -209,8 +209,21 @@ export interface Payment {
   createdAt: string;
 }
 
-// Subscriptions
+// Subscriptions & plan-based permissions
 export type SubscriptionPlan = 'solo' | 'studio' | 'enterprise';
+
+/** Clés des fonctionnalités gérées par le plan (Stripe) */
+export type PlanFeatureKey =
+  | 'galerie_flash'
+  | 'app_mobile'
+  | 'api_access'
+  | 'stats_avancees'
+  | 'multi_calendriers'
+  | 'white_label';
+
+/** Clés des limites (artistes, clients CRM) */
+export type PlanLimitKey = 'artists' | 'clients_crm';
+
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'cancelled' | 'incomplete';
 
 export interface Subscription {

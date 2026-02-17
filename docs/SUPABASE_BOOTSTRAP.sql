@@ -304,5 +304,20 @@ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- ===== USER SETTINGS (onboarding) =====
+CREATE TABLE IF NOT EXISTS inkflow_user_settings (
+  studio_id TEXT PRIMARY KEY REFERENCES inkflow_studios(id) ON DELETE CASCADE,
+  onboarding_step INTEGER NOT NULL DEFAULT 0,
+  onboarding_dismissed BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_user_settings_studio ON inkflow_user_settings(studio_id);
+ALTER TABLE inkflow_user_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "user_settings_owner" ON inkflow_user_settings;
+CREATE POLICY "user_settings_owner" ON inkflow_user_settings
+  FOR ALL USING (
+    studio_id IN (SELECT id FROM inkflow_studios WHERE email = (current_setting('request.jwt.claims', true)::json->>'email'))
+  );
+
 -- ===== FIN =====
 -- Vérifier : Supabase Dashboard > Database > Replication > supabase_realtime doit lister les tables ci-dessus.

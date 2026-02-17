@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Mail, Lock, AlertCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -17,7 +17,14 @@ export const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
-      window.location.href = '/dashboard';
+      const redirectUrl = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) || '/dashboard';
+      try {
+        sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
+      } catch {
+        // ignore
+      }
+      window.history.pushState({}, '', redirectUrl);
+      window.dispatchEvent(new Event('inkflow-navigate'));
     } catch (err) {
       setError('Email ou mot de passe incorrect');
     } finally {

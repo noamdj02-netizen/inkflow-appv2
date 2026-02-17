@@ -137,6 +137,16 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['inkflow_bookings']['Row'], 'created_at' | 'updated_at'> & { created_at?: string; updated_at?: string };
         Update: Partial<Database['public']['Tables']['inkflow_bookings']['Insert']>;
       };
+      inkflow_user_settings: {
+        Row: {
+          studio_id: string;
+          onboarding_step: number;
+          onboarding_dismissed: boolean;
+          updated_at: string | null;
+        };
+        Insert: { studio_id: string; onboarding_step?: number; onboarding_dismissed?: boolean; updated_at?: string };
+        Update: Partial<Database['public']['Tables']['inkflow_user_settings']['Insert']>;
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

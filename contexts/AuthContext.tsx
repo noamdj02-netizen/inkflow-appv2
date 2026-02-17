@@ -21,6 +21,7 @@ function appUserFromSupabase(sessionUser: { id: string; email?: string; user_met
 
 interface AuthContextType {
   user: User | null;
+  authLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string, studioName: string) => Promise<void>;
   logout: () => void;
@@ -38,20 +39,29 @@ export const useAuth = () => {
   return context;
 };
 
+/** Clé sessionStorage pour la redirection après login (AuthGuard / LoginPage). */
+export const REDIRECT_AFTER_LOGIN_KEY = 'redirectAfterLogin';
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem('inkflow_user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    if (!useSupabaseAuth()) return;
+    if (!useSupabaseAuth()) {
+      setAuthLoading(false);
+      return;
+    }
+    setAuthLoading(true);
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         const appUser = appUserFromSupabase(session.user);
         setUser(appUser);
         localStorage.setItem('inkflow_user', JSON.stringify(appUser));
       }
+      setAuthLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
@@ -134,6 +144,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <AuthContext.Provider value={{
       user,
+      authLoading,
       login,
       signup,
       logout,

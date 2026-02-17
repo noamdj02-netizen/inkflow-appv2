@@ -40,7 +40,13 @@ export const SignupPage: React.FC = () => {
 
     try {
       await signup(formData.email, formData.password, formData.name, formData.studioName);
-      window.location.href = '/dashboard';
+      const params = new URLSearchParams(window.location.search);
+      const plan = params.get('plan');
+      const interval = params.get('interval') || 'monthly';
+      const redirect = plan && ['solo', 'studio'].includes(plan)
+        ? `/dashboard?subscribe=${plan}&interval=${interval}`
+        : '/dashboard';
+      window.location.href = redirect;
     } catch (err) {
       setError('Une erreur est survenue. Veuillez réessayer.');
     } finally {
