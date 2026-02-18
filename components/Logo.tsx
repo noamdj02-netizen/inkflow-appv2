@@ -16,7 +16,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', className = '' }) => {
     <img
       src="/icon.svg"
       alt="InkFlow"
-      className={`flex-shrink-0 object-contain ${sizeClasses[size]} ${className}`}
+      className={`flex-shrink-0 object-contain rounded-xl ${sizeClasses[size]} ${className}`}
     />
   );
 };

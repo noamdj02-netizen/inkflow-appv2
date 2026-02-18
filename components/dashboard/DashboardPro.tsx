@@ -5,6 +5,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
 import { useProjectRequests } from '../../hooks/useProjectRequests';
 import { useIncomingBookings } from '../../hooks/useIncomingBookings';
+import { useNotificationCounts } from '../../hooks/useNotificationCounts';
+import { BadgeNotification } from '../ui/BadgeNotification';
 import { useSubscriptionPermissions } from '../../hooks/useSubscriptionPermissions';
 import { Modal } from '../ui/Modal';
 import { BookingForm } from '../booking/BookingForm';
@@ -61,6 +63,7 @@ export const DashboardPro: React.FC = () => {
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
   const { studioId, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, retry } = useSupabaseSync();
   const { projectRequests, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
+  const { pendingRequestsCount } = useNotificationCounts(studioId);
   const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false);
   const { canAccessFeature, hasReachedLimit, getLimit } = useSubscriptionPermissions(studioId);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
@@ -429,7 +432,14 @@ export const DashboardPro: React.FC = () => {
                       activeTab === tab.id ? 'bg-[var(--text-primary)] text-[var(--text-on-dark)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
                     }`}
                   >
-                    {tab.icon}
+                    {tab.id === 'requests' ? (
+                      <span className="relative flex-shrink-0">
+                        {tab.icon}
+                        <BadgeNotification count={pendingRequestsCount} />
+                      </span>
+                    ) : (
+                      tab.icon
+                    )}
                     {tab.label}
                     {pendingCount > 0 && (
                       <span className="ml-auto px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded-full">{pendingCount}</span>
@@ -1120,12 +1130,10 @@ export const DashboardPro: React.FC = () => {
             onClick={() => { setActiveTab('requests'); setShowFabMenu(false); }}
             className={`relative flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center ${activeTab === 'requests' ? 'text-neutral-900' : 'text-neutral-400'}`}
           >
-            <Inbox className="w-5 h-5" />
-            {(appointments.filter(a => a.status === 'pending').length + projectRequests.filter(p => p.status === 'PENDING').length) > 0 && (
-              <span className="absolute top-0.5 right-0 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                {appointments.filter(a => a.status === 'pending').length + projectRequests.filter(p => p.status === 'PENDING').length}
-              </span>
-            )}
+            <span className="relative flex flex-col items-center">
+              <Inbox className="w-5 h-5" />
+              <BadgeNotification count={pendingRequestsCount} className="-top-0.5 right-auto left-1/2 -translate-x-1/2" />
+            </span>
             <span className="text-[9px] font-semibold">Demandes</span>
           </button>
 

@@ -2,8 +2,20 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { getBookingsFromSupabase, mapBookingFromDb } from '../lib/supabaseBookings';
 import { useToast } from '../contexts/ToastContext';
+import { DEMO_ACCOUNT_EMAIL, getDemoBookings } from '../data/demoData';
 import type { Booking, BookingStatus } from '../types';
 import { updateBookingStatus as updateBookingStatusInSupabase } from '../lib/supabaseBookings';
+
+function isDemoUser(): boolean {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('inkflow_user') : null;
+    if (!raw) return false;
+    const u = JSON.parse(raw) as { email?: string };
+    return u?.email === DEMO_ACCOUNT_EMAIL;
+  } catch {
+    return false;
+  }
+}
 
 /** Son de notification (optionnel). Placez un fichier public/notification.mp3 ou désactivez. */
 const NOTIFICATION_SOUND_URL = '/notification.mp3';
@@ -26,8 +38,13 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
 
   const load = useCallback(async () => {
     if (!studioId) {
-      setBookings([]);
+      if (isDemoUser()) {
+        setBookings(getDemoBookings());
+      } else {
+        setBookings([]);
+      }
       setLoading(false);
+      initialLoadDone.current = true;
       return;
     }
     setLoading(true);

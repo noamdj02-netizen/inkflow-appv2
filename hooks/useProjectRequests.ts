@@ -3,7 +3,19 @@ import { useToast } from '../contexts/ToastContext';
 import { getProjectRequestsFromSupabase, updateProjectRequestStatus as updateStatusInSupabase, mapProjectRequestFromDb } from '../lib/supabaseDashboard';
 import { useOptimisticMutation } from './useOptimisticMutation';
 import { useRealtimeSync } from './useRealtimeSync';
+import { DEMO_ACCOUNT_EMAIL, getDemoProjectRequests } from '../data/demoData';
 import type { ProjectRequest, ProjectRequestStatus } from '../types';
+
+function isDemoUser(): boolean {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('inkflow_user') : null;
+    if (!raw) return false;
+    const u = JSON.parse(raw) as { email?: string };
+    return u?.email === DEMO_ACCOUNT_EMAIL;
+  } catch {
+    return false;
+  }
+}
 
 export function useProjectRequests(studioId: string | null) {
   const toast = useToast();
@@ -26,7 +38,11 @@ export function useProjectRequests(studioId: string | null) {
 
   const load = useCallback(async () => {
     if (!studioId) {
-      setProjectRequests([]);
+      if (isDemoUser()) {
+        setProjectRequests(getDemoProjectRequests());
+      } else {
+        setProjectRequests([]);
+      }
       setLoading(false);
       return;
     }

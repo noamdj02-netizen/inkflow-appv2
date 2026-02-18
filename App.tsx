@@ -5,6 +5,7 @@ import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
 import { initTheme } from './hooks/useTheme';
 
 initTheme();
+import { Logo } from './components/Logo';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { SocialProof } from './components/SocialProof';
@@ -33,7 +34,8 @@ interface Route {
 }
 
 const FullScreenSpinner: React.FC = () => (
-  <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+  <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-6">
+    <Logo size="lg" className="rounded-2xl" />
     <div className="w-10 h-10 border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
   </div>
 );
@@ -53,11 +55,25 @@ const Router: React.FC = () => {
       if (anchor && anchor.href.startsWith(window.location.origin)) {
         e.preventDefault();
         const url = new URL(anchor.href);
-        window.history.pushState({}, '', url.pathname + url.search + (url.hash || ''));
+        const fullUrl = url.pathname + url.search + (url.hash || '');
+        window.history.pushState({}, '', fullUrl);
         setCurrentPath(url.pathname + url.search);
-        // Scroll to top: target internal scroll containers (app-shell or landing-scroll)
-        document.querySelector('.app-shell-content')?.scrollTo(0, 0);
-        document.querySelector('.landing-scroll')?.scrollTo(0, 0);
+
+        if (url.hash) {
+          const id = url.hash.slice(1);
+          const scrollToSection = () => {
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          };
+          if (url.pathname === window.location.pathname) {
+            scrollToSection();
+          } else {
+            setTimeout(scrollToSection, 150);
+          }
+        } else {
+          document.querySelector('.app-shell-content')?.scrollTo(0, 0);
+          document.querySelector('.landing-scroll')?.scrollTo(0, 0);
+        }
       }
     };
 
@@ -109,8 +125,9 @@ const Router: React.FC = () => {
   if (route.requiresAuth && !isAuthenticated) {
     window.location.href = '/login';
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
+          <Logo size="lg" className="rounded-2xl" />
           <div className="w-10 h-10 border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
           <p className="text-neutral-600 text-sm">Redirection...</p>
         </div>
@@ -151,7 +168,7 @@ const LandingPage: React.FC = () => {
   }, []);
 
   return (
-    <div ref={scrollRef} className="landing-scroll text-neutral-900 selection:bg-neutral-900 selection:text-white">
+    <div ref={scrollRef} className="landing-scroll !bg-white text-neutral-900 selection:bg-neutral-900 selection:text-white">
       <Navbar scrolled={scrolled} />
 
       <main className="relative z-10">

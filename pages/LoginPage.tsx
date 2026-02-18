@@ -162,12 +162,15 @@ export const LoginPage: React.FC = () => {
             <button
               onClick={() => {
                 setEmail('demo@inkflow.com');
-                setPassword('demo123');
+                setPassword('demo');
               }}
               className="w-full border-2 border-neutral-200 text-neutral-900 py-3 rounded-xl font-semibold hover:border-neutral-900 transition-colors"
             >
               Utiliser le compte démo
             </button>
+            <p className="text-center text-xs text-neutral-500 mt-2">
+              Compte démo : fausses statistiques, RDV, clients et flash pour captures d&apos;écran.
+            </p>
           </div>
 
           <p className="text-center mt-6 text-neutral-600">

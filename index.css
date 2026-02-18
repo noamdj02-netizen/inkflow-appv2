@@ -557,3 +557,32 @@ input, select, textarea {
   from { opacity: 0; transform: translateY(-16px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* Floating Navbar — entrée depuis le haut (style Framer/Figma) */
+@keyframes navbar-slide-down {
+  from { opacity: 0; transform: translate(-50%, -100px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes navbar-slide-down-y {
+  from { opacity: 0; transform: translateY(-100px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-navbar-in {
+  animation: navbar-slide-down-y 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-navbar-dropdown {
+  animation: navbar-slide-down 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Pastille de notification — scale-in au montage / changement de count */
+@keyframes badge-scale-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-badge-in {
+  animation: badge-scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

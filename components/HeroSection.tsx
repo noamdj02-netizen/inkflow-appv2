@@ -6,11 +6,11 @@ import { InkDropMascot, ArtistMascot } from './Mascots';
 
 export const HeroSection: React.FC = () => {
   return (
-    <section className="relative min-h-[90vh] sm:min-h-[85vh] flex flex-col justify-center pt-20 sm:pt-24 md:pt-28 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      {/* Background - Framer-style grid + gradient mesh */}
-      <div className="absolute inset-0 -z-10">
+    <section className="relative min-h-[90vh] sm:min-h-[85vh] flex flex-col justify-center pt-28 sm:pt-32 md:pt-36 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      {/* Background - fond blanc ; grille et mesh très discrets pour garder un peu de texture */}
+      <div className="absolute inset-0 -z-10 bg-white">
         <div
-          className="absolute inset-0 opacity-[0.015]"
+          className="absolute inset-0 opacity-[0.03]"
           style={{
             backgroundImage: `
               linear-gradient(to right, #0a0a0a 1px, transparent 1px),
@@ -19,9 +19,9 @@ export const HeroSection: React.FC = () => {
             backgroundSize: '64px 64px',
           }}
         />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-neutral-200/40 rounded-full blur-[120px] -z-10" />
-        <div className="absolute bottom-0 right-0 w-[500px] h-[400px] bg-neutral-300/30 rounded-full blur-[100px] -z-10" />
-        <div className="absolute top-1/2 left-0 w-[400px] h-[400px] bg-neutral-200/20 rounded-full blur-[80px] -z-10" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-neutral-100/50 rounded-full blur-[120px] -z-10" />
+        <div className="absolute bottom-0 right-0 w-[500px] h-[400px] bg-neutral-100/40 rounded-full blur-[100px] -z-10" />
+        <div className="absolute top-1/2 left-0 w-[400px] h-[400px] bg-neutral-100/30 rounded-full blur-[80px] -z-10" />
       </div>
 
       <div className="max-w-7xl mx-auto w-full">
@@ -48,7 +48,7 @@ export const HeroSection: React.FC = () => {
                 <span className="absolute inset-0 bg-amber-200/60 -z-0" />
               </span>
               <br className="hidden sm:block" />
-              par semaine
+              {' '}par semaine
             </h1>
 
             <p className="text-base sm:text-lg md:text-xl text-neutral-600 leading-relaxed max-w-xl mx-auto lg:mx-0 opacity-0 animate-fade-in-up stagger-2" style={{ animationFillMode: 'forwards' }}>
@@ -60,7 +60,7 @@ export const HeroSection: React.FC = () => {
               {[
                 'Réservations en ligne 24/7',
                 'Acomptes automatiques via Stripe',
-                'Galerie Flash personnalisable',
+                'Votre vitrine et mini site web',
                 'CRM client intégré'
               ].map((benefit, index) => (
                 <div key={index} className="flex items-center gap-3">
@@ -87,10 +87,6 @@ export const HeroSection: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 pt-2 text-sm text-neutral-500 opacity-0 animate-fade-in-up stagger-5" style={{ animationFillMode: 'forwards' }}>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>Pas de carte bancaire requise</span>
-              </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 <span>14 jours d'essai</span>

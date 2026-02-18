@@ -23,6 +23,13 @@ import {
 } from '../lib/supabaseDashboard';
 import { useOptimisticMutation } from './useOptimisticMutation';
 import { useRealtimeSync } from './useRealtimeSync';
+import {
+  DEMO_ACCOUNT_EMAIL,
+  getCachedDemoAppointments,
+  getDemoClients,
+  getDemoFlash,
+  getDemoNotifications,
+} from '../data/demoData';
 import type { Appointment, Client, FlashDesign, Notification } from '../types';
 
 const MOCK_CLIENTS: Client[] = [
@@ -125,6 +132,17 @@ export const useSupabaseDashboard = () => {
     const init = async () => {
       setLoading(true);
       try {
+        // Compte démo : toujours charger les fausses données (stats, RDV, clients, flash, notifs) pour captures d'écran
+        if (user.email === DEMO_ACCOUNT_EMAIL) {
+          setStudioId(null);
+          setAppointments(getCachedDemoAppointments());
+          setClients(getDemoClients());
+          setFlashDesigns(getDemoFlash());
+          setNotifications(getDemoNotifications());
+          initializedRef.current = true;
+          setLoading(false);
+          return;
+        }
         if (useSupabase) {
           const sid = await ensureStudio(user.email, user.name, user.studioName || 'Mon Studio');
           setStudioId(sid);

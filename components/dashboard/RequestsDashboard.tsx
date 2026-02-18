@@ -199,7 +199,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         {bk.requestedTime && <span>• {bk.requestedTime === 'morning' ? 'Matin' : bk.requestedTime === 'afternoon' ? 'Après-midi' : bk.requestedTime === 'evening' ? 'Soirée' : bk.requestedTime}</span>}
                       </div>
                       <div className="mt-2 text-xs text-neutral-400">
-                        {new Date(bk.createdAt).toLocaleDateString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
+                        {new Date(bk.createdAt).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
                       </div>
                       <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
                         bk.status === 'pending' ? 'bg-amber-100 text-amber-700' :
@@ -258,7 +258,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         {pr.budget && <span>• {pr.budget}</span>}
                       </div>
                       <div className="mt-2 text-xs text-neutral-400">
-                        {new Date(pr.createdAt).toLocaleDateString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
+                        {new Date(pr.createdAt).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
                       </div>
                       <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Nouvelle</span>
                     </div>

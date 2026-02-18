@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
+import { DEMO_ACCOUNT_EMAIL } from '../data/demoData';
 
 const useSupabaseAuth = () =>
   !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && (import.meta.env.VITE_SUPABASE_URL as string).length > 10);
@@ -97,6 +98,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = async (email: string, password: string) => {
+    // Compte démo : connexion immédiate sans Supabase, avec fausses données pour captures d'écran
+    if (email.toLowerCase().trim() === DEMO_ACCOUNT_EMAIL) {
+      const demoUser: User = {
+        id: 'demo-user-1',
+        email: DEMO_ACCOUNT_EMAIL,
+        name: 'Demo Artist',
+        studioName: 'Studio Demo',
+        role: 'studio_owner',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop',
+      };
+      setUser(demoUser);
+      localStorage.setItem('inkflow_user', JSON.stringify(demoUser));
+      return;
+    }
     if (useSupabaseAuth()) {
       const LOGIN_TIMEOUT_MS = 15000;
       const loginPromise = supabase.auth.signInWithPassword({ email, password });
@@ -117,8 +132,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const mockUser: User = {
       id: '1',
       email,
-      name: email === 'demo@inkflow.com' ? 'Demo Artist' : 'Alexandre Martin',
-      studioName: email === 'demo@inkflow.com' ? 'Studio Demo' : 'Ink & Art Studio',
+      name: 'Alexandre Martin',
+      studioName: 'Ink & Art Studio',
       role: 'studio_owner',
       avatar: savedAvatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop'
     };
