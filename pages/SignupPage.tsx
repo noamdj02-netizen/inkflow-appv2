@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Logo } from '../components/Logo';
 import { ArrowLeft, Mail, Lock, User, Building2, AlertCircle } from 'lucide-react';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth } from '../contexts/AuthContext';
 
 export const SignupPage: React.FC = () => {
@@ -13,7 +14,8 @@ export const SignupPage: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const { signup, loginWithGoogle, isGoogleAuthEnabled } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -43,7 +45,8 @@ export const SignupPage: React.FC = () => {
       const params = new URLSearchParams(window.location.search);
       const plan = params.get('plan');
       const interval = params.get('interval') || 'monthly';
-      const redirect = plan && ['solo', 'studio'].includes(plan)
+      const paidPlans = ['solo', 'studio', 'starter', 'pro'];
+      const redirect = plan && paidPlans.includes(plan)
         ? `/dashboard?subscribe=${plan}&interval=${interval}`
         : '/dashboard';
       window.location.href = redirect;
@@ -213,6 +216,34 @@ export const SignupPage: React.FC = () => {
               >
                 {loading ? 'Création du compte...' : 'Créer mon compte'}
               </button>
+
+              {isGoogleAuthEnabled && (
+                <>
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-neutral-200" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-4 bg-white text-neutral-500">ou</span>
+                    </div>
+                  </div>
+                  <GoogleSignInButton
+                    onClick={async () => {
+                      setError('');
+                      setGoogleLoading(true);
+                      try {
+                        await loginWithGoogle();
+                      } catch (err) {
+                        setError(err instanceof Error ? err.message : 'Inscription Google impossible.');
+                      } finally {
+                        setGoogleLoading(false);
+                      }
+                    }}
+                    disabled={loading || googleLoading}
+                    label={googleLoading ? 'Redirection…' : 'S\'inscrire avec Google'}
+                  />
+                </>
+              )}
             </form>
           </div>
 

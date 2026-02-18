@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
 
 export const AuthCallbackPage: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -18,8 +19,15 @@ export const AuthCallbackPage: React.FC = () => {
 
     setStatus('success');
     setMessage('Connexion réussie. Redirection…');
+    const redirectUrl =
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) || '/dashboard';
+    try {
+      sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
+    } catch {
+      // ignore
+    }
     const t = setTimeout(() => {
-      window.location.href = '/dashboard';
+      window.location.href = redirectUrl;
     }, 1000);
     return () => clearTimeout(t);
   }, []);

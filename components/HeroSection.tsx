@@ -123,7 +123,11 @@ export const HeroSection: React.FC = () => {
                         <div className="text-xs text-neutral-500 font-medium">Artist Dashboard</div>
                       </div>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200/80" />
+                    <img
+                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop"
+                      alt=""
+                      className="w-8 h-8 rounded-full object-cover border border-neutral-200/80"
+                    />
                   </div>
 
                   {/* Dashboard Demo Grid */}

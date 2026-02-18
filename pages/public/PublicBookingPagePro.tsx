@@ -108,7 +108,22 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
     });
   };
 
-  if (supabaseEnabled && typeof studioId === 'string' && !bookingSuccess) {
+  if (supabaseEnabled && studioId === 'loading') {
+    return (
+      <div className="landing-scroll bg-neutral-50 min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (supabaseEnabled && studioId === null) {
+    return (
+      <div className="landing-scroll bg-neutral-50 min-h-screen flex items-center justify-center">
+        <p className="text-neutral-600">Studio introuvable.</p>
+      </div>
+    );
+  }
+
+  if (supabaseEnabled && studioId && studioId !== 'loading' && !bookingSuccess) {
     return (
       <div className="landing-scroll bg-neutral-50 min-h-screen">
         <header className="bg-white border-b border-neutral-200 sticky top-0 z-40 safe-top">
@@ -137,7 +152,7 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
     );
   }
 
-  if (supabaseEnabled && typeof studioId === 'string' && bookingSuccess) {
+  if (supabaseEnabled && studioId && studioId !== 'loading' && bookingSuccess) {
     return (
       <div className="landing-scroll bg-neutral-50 min-h-screen">
         <header className="bg-white border-b border-neutral-200 sticky top-0 z-40 safe-top">
@@ -159,24 +174,6 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
           <a href={`/studio/${studioSlug}`} className="inline-block px-8 py-4 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors">
             Retour au studio
           </a>
-        </div>
-      </div>
-    );
-  }
-
-  if (supabaseEnabled && studioId === 'loading') {
-    return (
-      <div className="landing-scroll bg-neutral-50 min-h-screen flex items-center justify-center px-4">
-        <div className="text-center text-neutral-500">Chargement...</div>
-      </div>
-    );
-  }
-  if (supabaseEnabled && studioId === null) {
-    return (
-      <div className="landing-scroll bg-neutral-50 min-h-screen flex items-center justify-center px-4">
-        <div className="text-center">
-          <p className="text-neutral-600 mb-4">Ce studio n&apos;est pas encore configuré.</p>
-          <a href={`/studio/${studioSlug}`} className="text-neutral-900 font-semibold hover:underline">Retour au studio</a>
         </div>
       </div>
     );

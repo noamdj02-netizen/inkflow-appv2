@@ -43,7 +43,11 @@ export async function getOnboardingFromSupabase(studioId: string): Promise<Onboa
       .select('onboarding_step, onboarding_dismissed')
       .eq('studio_id', studioId)
       .maybeSingle();
-    if (error || !data) return null;
+    if (error) {
+      if (error.code === 'PGRST116' || (error as { status?: number }).status === 404) return null;
+      return null;
+    }
+    if (!data) return null;
     return {
       step: Math.min(4, Math.max(0, data.onboarding_step ?? 0)),
       dismissed: !!data.onboarding_dismissed,

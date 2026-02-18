@@ -138,8 +138,10 @@ export const useSupabaseDashboard = () => {
           setNotifications(MOCK_NOTIFICATIONS);
         }
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        console.error('Supabase init error:', error);
+        const error = err instanceof Error ? err : new Error(typeof err === 'object' && err !== null && 'message' in err ? String((err as { message: unknown }).message) : String(err));
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('Supabase init:', error.message);
+        }
         setConnectionError(error);
         const isNetworkError =
           error.message?.toLowerCase().includes('fetch') ||

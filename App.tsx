@@ -32,13 +32,20 @@ interface Route {
   getProps?: (match: RegExpMatchArray) => Record<string, string>;
 }
 
+const FullScreenSpinner: React.FC = () => (
+  <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+    <div className="w-10 h-10 border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
+  </div>
+);
+
 const Router: React.FC = () => {
   const [currentPath, setCurrentPath] = useState(window.location.pathname + window.location.search);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authLoading } = useAuth();
 
   useEffect(() => {
     const handleLocationChange = () => setCurrentPath(window.location.pathname + window.location.search);
     window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('inkflow-navigate', handleLocationChange);
 
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -57,6 +64,7 @@ const Router: React.FC = () => {
     document.addEventListener('click', handleClick);
     return () => {
       window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('inkflow-navigate', handleLocationChange);
       document.removeEventListener('click', handleClick);
     };
   }, []);
@@ -95,9 +103,19 @@ const Router: React.FC = () => {
 
   const { route, match } = matched;
 
+  if (route.requiresAuth && authLoading) {
+    return <FullScreenSpinner />;
+  }
   if (route.requiresAuth && !isAuthenticated) {
     window.location.href = '/login';
-    return null;
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
+          <p className="text-neutral-600 text-sm">Redirection...</p>
+        </div>
+      </div>
+    );
   }
 
   const Component = route.component;

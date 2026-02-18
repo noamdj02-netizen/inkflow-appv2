@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Mail, Lock, AlertCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
 
 export const LoginPage: React.FC = () => {
@@ -8,7 +9,8 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const { login, loginWithGoogle, isGoogleAuthEnabled } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +28,8 @@ export const LoginPage: React.FC = () => {
       window.history.pushState({}, '', redirectUrl);
       window.dispatchEvent(new Event('inkflow-navigate'));
     } catch (err) {
-      setError('Email ou mot de passe incorrect');
+      const message = err instanceof Error ? err.message : '';
+      setError(message && message.includes('réseau') ? message : 'Email ou mot de passe incorrect');
     } finally {
       setLoading(false);
     }
@@ -127,6 +130,34 @@ export const LoginPage: React.FC = () => {
                 <span className="px-4 bg-white text-neutral-500">ou</span>
               </div>
             </div>
+
+            {isGoogleAuthEnabled && (
+              <>
+                <GoogleSignInButton
+                  onClick={async () => {
+                    setError('');
+                    setGoogleLoading(true);
+                    try {
+                      await loginWithGoogle();
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Connexion Google impossible.');
+                    } finally {
+                      setGoogleLoading(false);
+                    }
+                  }}
+                  disabled={loading || googleLoading}
+                  label={googleLoading ? 'Redirection…' : 'Se connecter avec Google'}
+                />
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-neutral-200" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-white text-neutral-500">ou</span>
+                  </div>
+                </div>
+              </>
+            )}
 
             <button
               onClick={() => {

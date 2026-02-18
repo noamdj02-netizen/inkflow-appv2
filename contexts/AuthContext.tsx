@@ -23,10 +23,12 @@ interface AuthContextType {
   user: User | null;
   authLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   signup: (email: string, password: string, name: string, studioName: string) => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   isAuthenticated: boolean;
+  isGoogleAuthEnabled: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,14 +57,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
     setAuthLoading(true);
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const appUser = appUserFromSupabase(session.user);
-        setUser(appUser);
-        localStorage.setItem('inkflow_user', JSON.stringify(appUser));
-      }
+    const AUTH_SESSION_TIMEOUT_MS = 8000;
+    const timeoutId = setTimeout(() => {
       setAuthLoading(false);
-    });
+    }, AUTH_SESSION_TIMEOUT_MS);
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (session?.user) {
+          const appUser = appUserFromSupabase(session.user);
+          setUser(appUser);
+          localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+        }
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+        setAuthLoading(false);
+      });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         const appUser = appUserFromSupabase(session.user);
@@ -76,10 +86,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => subscription.unsubscribe();
   }, []);
 
+  const loginWithGoogle = async () => {
+    if (!useSupabaseAuth()) return;
+    const redirectTo = `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    });
+    if (error) throw new Error(error.message);
+  };
+
   const login = async (email: string, password: string) => {
     if (useSupabaseAuth()) {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (!error && data?.user) {
+      const LOGIN_TIMEOUT_MS = 15000;
+      const loginPromise = supabase.auth.signInWithPassword({ email, password });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Connexion expirée. Vérifiez votre réseau.')), LOGIN_TIMEOUT_MS)
+      );
+      const { data, error } = await Promise.race([loginPromise, timeoutPromise]);
+      if (error) throw new Error(error.message);
+      if (data?.user) {
         const appUser = appUserFromSupabase(data.user);
         setUser(appUser);
         localStorage.setItem('inkflow_user', JSON.stringify(appUser));
@@ -146,10 +172,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       user,
       authLoading,
       login,
+      loginWithGoogle,
       signup,
       logout,
       updateUser,
-      isAuthenticated: !!user
+      isAuthenticated: !!user,
+      isGoogleAuthEnabled: useSupabaseAuth(),
     }}>
       {children}
     </AuthContext.Provider>

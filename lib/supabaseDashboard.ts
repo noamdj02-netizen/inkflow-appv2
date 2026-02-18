@@ -20,7 +20,10 @@ async function ensureStudio(email: string, name: string, studioName: string): Pr
     { id, email, name, studio_name: studioName, slug, updated_at: new Date().toISOString() },
     { onConflict: 'id' }
   );
-  if (error) throw error;
+  if (error) {
+    const msg = error.message || (error as { code?: string }).code || 'Supabase error';
+    throw new Error(msg);
+  }
   return id;
 }
 
@@ -58,9 +61,9 @@ export async function saveVitrineDataToSupabase(studioId: string, data: VitrineD
   if (error) throw error;
 }
 
-// Widgets
+// Widgets (maybeSingle évite 406 quand aucune ligne n'existe encore)
 export async function getWidgetsFromSupabase(studioId: string): Promise<DashboardWidget[]> {
-  const { data, error } = await supabase.from('inkflow_widgets').select('widgets').eq('studio_id', studioId).single();
+  const { data, error } = await supabase.from('inkflow_widgets').select('widgets').eq('studio_id', studioId).maybeSingle();
   if (error || !data?.widgets) return [];
   return data.widgets as DashboardWidget[];
 }

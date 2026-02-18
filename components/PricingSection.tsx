@@ -1,18 +1,7 @@
 import React, { useState } from 'react';
 import { Check, Zap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-
-/** Stripe Payment Links (optionnel) — configurés dans Stripe Dashboard */
-const STRIPE_LINKS = {
-  solo: {
-    monthly: import.meta.env.VITE_STRIPE_LINK_SOLO_MONTHLY as string | undefined,
-    annual: import.meta.env.VITE_STRIPE_LINK_SOLO_ANNUAL as string | undefined,
-  },
-  studio: {
-    monthly: import.meta.env.VITE_STRIPE_LINK_STUDIO_MONTHLY as string | undefined,
-    annual: import.meta.env.VITE_STRIPE_LINK_STUDIO_ANNUAL as string | undefined,
-  },
-};
+import { STRIPE_PAYMENT_LINKS } from '../lib/stripePaymentLinks';
 
 export const PricingSection: React.FC = () => {
   const [isAnnual, setIsAnnual] = useState(false);
@@ -20,8 +9,8 @@ export const PricingSection: React.FC = () => {
 
   const plans = [
     {
-      id: 'solo' as const,
-      name: 'Solo',
+      id: 'starter' as const,
+      name: 'Starter',
       description: 'Pour les tatoueurs indépendants',
       priceMonthly: 29,
       priceAnnual: 24,
@@ -37,58 +26,48 @@ export const PricingSection: React.FC = () => {
       popular: false
     },
     {
+      id: 'pro' as const,
+      name: 'Pro',
+      description: 'Pour les artistes qui veulent aller plus loin',
+      priceMonthly: 49,
+      priceAnnual: 39,
+      features: [
+        'Tout du plan Starter',
+        '2 artistes inclus',
+        '200 clients CRM',
+        'Multi-calendriers',
+        'Statistiques avancées',
+        'Support prioritaire'
+      ],
+      cta: 'Commencer',
+      popular: true
+    },
+    {
       id: 'studio' as const,
       name: 'Studio',
       description: 'Pour les studios avec plusieurs artistes',
       priceMonthly: 79,
       priceAnnual: 65,
       features: [
-        'Tout du plan Solo',
+        'Tout du plan Pro',
         '3 artistes inclus',
         'Clients CRM illimités',
-        'Multi-calendriers',
-        'Statistiques avancées',
-        'Support prioritaire',
         'Formation personnalisée',
         'API access'
       ],
       cta: 'Commencer',
-      popular: true
-    },
-    {
-      id: 'enterprise' as const,
-      name: 'Enterprise',
-      description: 'Pour les grands studios et franchises',
-      priceMonthly: null,
-      priceAnnual: null,
-      features: [
-        'Tout du plan Studio',
-        'Artistes illimités',
-        'Multi-studios',
-        'White-label',
-        'Dédiée account manager',
-        'SLA garanti',
-        'Formation sur site',
-        'Intégrations custom'
-      ],
-      cta: 'Nous contacter',
       popular: false
     }
   ];
 
   const getPlanHref = (plan: (typeof plans)[0]) => {
-    if (plan.id === 'enterprise') {
-      return 'mailto:contact@inkflow.app?subject=Demande%20Enterprise';
-    }
-    const interval = isAnnual ? 'annual' : 'monthly';
-    const stripeLink = plan.id !== 'enterprise' && STRIPE_LINKS[plan.id]?.[interval];
-    if (stripeLink) {
-      return stripeLink;
+    if (plan.id in STRIPE_PAYMENT_LINKS) {
+      return STRIPE_PAYMENT_LINKS[plan.id as keyof typeof STRIPE_PAYMENT_LINKS];
     }
     if (isAuthenticated) {
-      return `/dashboard?subscribe=${plan.id}&interval=${interval}`;
+      return `/dashboard?subscribe=${plan.id}&interval=${isAnnual ? 'annual' : 'monthly'}`;
     }
-    return `/signup?plan=${plan.id}&interval=${interval}`;
+    return `/signup?plan=${plan.id}&interval=${isAnnual ? 'annual' : 'monthly'}`;
   };
 
   return (

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, Sparkles, UserPlus, Inbox, User, Camera, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
@@ -11,6 +11,7 @@ import { BookingForm } from '../booking/BookingForm';
 import { FlashGallery } from '../flash/FlashGallery';
 import { ClientList } from '../crm/ClientList';
 import { AppointmentCalendar } from './AppointmentCalendar';
+import { AppointmentsView } from './AppointmentsView';
 import { RequestsDashboard } from './RequestsDashboard';
 import { FinanceDashboard } from './FinanceDashboard';
 import { CareSheetsSettings } from './CareSheetsSettings';
@@ -21,7 +22,6 @@ import { VitrineSettings } from '../settings/VitrineSettings';
 import { AnalyticsDashboard } from '../analytics/AnalyticsDashboard';
 import { VitrineLinkButton } from './VitrineLinkButton';
 import { DashboardWidgets, AddWidgetModal, useDashboardWidgets } from './DashboardWidgets';
-import { AIAssistant } from './AIAssistant';
 import { WaitlistManager } from './WaitlistManager';
 import { ArtistManager } from './ArtistManager';
 import { PortfolioManager } from './PortfolioManager';
@@ -34,12 +34,13 @@ import { OnboardingBanner, type OnboardingStepId } from '../OnboardingBanner';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { supabase } from '../../lib/supabase';
 import { createSubscription } from '../../lib/stripeClient';
+import { getStripePaymentLink, STRIPE_PAYMENT_LINKS } from '../../lib/stripePaymentLinks';
 import { useToast } from '../../contexts/ToastContext';
 import { ThemeToggle } from '../ThemeToggle';
 import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
-type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'ai' | 'settings';
+type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings';
 
 const tabs: { id: TabId; label: string; icon: React.ReactNode; badge?: 'pending' }[] = [
   { id: 'overview', label: 'Vue d\'ensemble', icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -51,7 +52,6 @@ const tabs: { id: TabId; label: string; icon: React.ReactNode; badge?: 'pending'
   { id: 'messaging', label: 'Messagerie', icon: <MessageSquare className="w-5 h-5" /> },
   { id: 'portfolio', label: 'Portfolio', icon: <Image className="w-5 h-5" /> },
   { id: 'finance', label: 'Finance', icon: <Wallet className="w-5 h-5" /> },
-  { id: 'ai', label: 'Assistant IA', icon: <Sparkles className="w-5 h-5" /> },
   { id: 'settings', label: 'Paramètres', icon: <Settings className="w-5 h-5" /> }
 ];
 
@@ -66,7 +66,6 @@ export const DashboardPro: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
-  const [appointmentView, setAppointmentView] = useState<'list' | 'calendar'>('list');
   const [settingsTab, setSettingsTab] = useState<'general' | 'payments' | 'care' | 'availability' | 'vitrine' | 'billing' | 'consent' | 'artists' | 'waitlist' | 'loyalty'>('general');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showWidgetModal, setShowWidgetModal] = useState(false);
@@ -89,6 +88,7 @@ export const DashboardPro: React.FC = () => {
   const [generalSaving, setGeneralSaving] = useState(false);
   const [generalSaved, setGeneralSaved] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
   // Sync general settings form when user changes (e.g. from Supabase session or localStorage)
@@ -146,18 +146,23 @@ export const DashboardPro: React.FC = () => {
     } catch (_) { /* ignore */ }
   }, [loyaltyEntries, user?.email, studioId]);
 
-  // Auto-checkout: when landing with ?subscribe=solo|studio&interval=monthly|annual, redirect to Stripe
+  // Auto-checkout: when landing with ?subscribe=starter|pro|studio, redirect to Stripe Payment Link; solo|studio use createSubscription
   const subscribeAttempted = React.useRef(false);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const subscribe = params.get('subscribe');
     const interval = (params.get('interval') || 'monthly') as 'monthly' | 'annual';
-    if (
-      !subscribeAttempted.current &&
-      subscribe && ['solo', 'studio'].includes(subscribe) &&
-      studioId && user?.email
-    ) {
-      subscribeAttempted.current = true;
+    if (!subscribe || !user?.email || subscribeAttempted.current) return;
+
+    subscribeAttempted.current = true;
+
+    const paymentLinkPlan = subscribe as keyof typeof STRIPE_PAYMENT_LINKS;
+    if (subscribe in STRIPE_PAYMENT_LINKS) {
+      window.location.href = getStripePaymentLink(paymentLinkPlan);
+      return;
+    }
+
+    if (['solo', 'studio'].includes(subscribe) && studioId) {
       createSubscription({ studioId, email: user.email, plan: subscribe as 'solo' | 'studio', interval })
         .then((url) => {
           if (url) {
@@ -396,9 +401,11 @@ export const DashboardPro: React.FC = () => {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}>
           <div className="p-4 sm:p-6 border-b border-[var(--border)] flex items-center justify-between safe-top">
-            <div className="flex items-center gap-3">
-              <Logo />
-              <div>
+            <div className="flex items-center gap-3 min-w-0">
+              <a href="/" className="flex-shrink-0 rounded-lg hover:opacity-80 transition-opacity" aria-label="Retour à l'accueil">
+                <Logo />
+              </a>
+              <div className="min-w-0">
                 <h1 className="text-lg font-bold text-[var(--text-primary)]">InkFlow</h1>
                 <p className="text-xs text-[var(--text-secondary)] truncate max-w-[140px]">{user?.studioName}</p>
               </div>
@@ -454,15 +461,19 @@ export const DashboardPro: React.FC = () => {
               </button>
             </div>
           )}
-          {/* Fixed header */}
-          <header className="app-shell-header safe-top bg-[var(--bg-secondary)] border-b border-[var(--border)] px-4 sm:px-6 md:px-8 py-3 sm:py-4 flex items-center justify-between gap-4 transition-colors duration-300">
-          <div className="flex items-center gap-3 min-w-0">
-            <button onClick={() => setSidebarOpen(true)} className="hidden md:block lg:hidden p-2 -ml-2 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0">
-              <Menu className="w-6 h-6 text-[var(--text-secondary)]" />
-            </button>
-            <h2 className="text-lg sm:text-xl font-bold truncate text-[var(--text-primary)]">{tabs.find(t => t.id === activeTab)?.label}</h2>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4">
+          {/* Fixed header - style Apple: plus d'air, titre imposant, backdrop-blur au scroll */}
+          <header
+            className={`app-shell-header safe-top border-b border-[var(--border)] px-4 sm:px-6 md:px-8 py-4 sm:py-5 flex items-center justify-between gap-4 transition-all duration-300 ${
+              headerScrolled ? 'bg-[var(--bg-secondary)]/80 backdrop-blur-xl' : 'bg-[var(--bg-secondary)]'
+            }`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-2 rounded-xl hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Ouvrir le menu">
+                <Menu className="w-6 h-6 text-[var(--text-secondary)]" />
+              </button>
+              <h2 className="text-2xl sm:text-3xl font-bold truncate text-[var(--text-primary)]">{tabs.find(t => t.id === activeTab)?.label}</h2>
+            </div>
+            <div className="flex items-center gap-3 sm:gap-5">
             {activeTab === 'overview' && (
               <button
                 onClick={() => setShowWidgetModal(true)}
@@ -519,21 +530,26 @@ export const DashboardPro: React.FC = () => {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              {user?.avatar ? (
-                <img src={user.avatar} alt="" className="w-9 h-9 rounded-full border-2 border-neutral-200" />
-              ) : (
-                <div className="w-9 h-9 rounded-full border-2 border-neutral-200 bg-neutral-200 flex items-center justify-center font-bold text-neutral-600 text-sm">
-                  {user?.name?.charAt(0) || '?'}
-                </div>
-              )}
-              <span className="font-medium hidden sm:block">{user?.name}</span>
+            <div className="flex items-center gap-3 min-w-0">
+              <button className="relative p-1 rounded-full hover:bg-[var(--bg-hover)] min-w-[44px] min-h-[44px] flex items-center justify-center">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="" className="w-9 h-9 rounded-full border-2 border-neutral-200" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full border-2 border-neutral-200 bg-neutral-200 flex items-center justify-center font-bold text-neutral-600 text-sm">
+                    {user?.name?.charAt(0) || '?'}
+                  </div>
+                )}
+              </button>
+              <span className="font-medium text-[var(--text-primary)] hidden sm:block truncate">{user?.name}</span>
             </div>
           </div>
           </header>
 
           {/* ====== SCROLLABLE CONTENT ZONE ====== */}
-          <div className="app-shell-content p-4 sm:p-6 md:p-8">
+          <div
+            onScroll={(e) => setHeaderScrolled((e.target as HTMLDivElement).scrollTop > 8)}
+            className="app-shell-content p-4 sm:p-6 md:p-8"
+          >
           <OnboardingBanner
             studioId={studioId}
             useSupabase={useSupabase ?? false}
@@ -563,7 +579,6 @@ export const DashboardPro: React.FC = () => {
                         <button
                           onClick={() => {
                             setActiveTab('appointments');
-                            if (alert.id === '24h') setAppointmentView('calendar');
                           }}
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex-1 sm:flex-none ${alert.type === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}
                         >
@@ -581,51 +596,79 @@ export const DashboardPro: React.FC = () => {
                 <VitrineLinkButton studioName={user.studioName} userEmail={user.email} />
               )}
               <DashboardWidgets widgets={customWidgets} onWidgetsChange={setCustomWidgets} />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white rounded-2xl p-6 border border-neutral-200">
-                  <div className="text-sm text-neutral-600 mb-1">RDV aujourd'hui</div>
-                  <div className="text-3xl font-bold">{todayAppointments.length}</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                <div className="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-100 shadow-sm shadow-neutral-900/5 relative overflow-hidden min-h-[44px]">
+                  <Calendar className="absolute top-4 right-4 w-5 h-5 text-neutral-300" />
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">{todayAppointments.length}</div>
+                      <div className="text-sm text-neutral-500 mt-1">RDV aujourd'hui</div>
+                    </div>
+                    {todayAppointments.length > 0 && (
+                      <span className="shrink-0 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">À venir</span>
+                    )}
+                  </div>
                 </div>
-                <div className="bg-neutral-900 text-white rounded-2xl p-6">
-                  <div className="text-neutral-400 text-sm mb-1">Revenus totaux</div>
-                  <div className="text-3xl font-bold">{totalRevenue}€</div>
+                <div className="rounded-3xl p-5 sm:p-6 relative overflow-hidden min-h-[44px] bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-800 shadow-lg shadow-neutral-900/20">
+                  <DollarSign className="absolute top-4 right-4 w-5 h-5 text-white/20" />
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-3xl sm:text-4xl font-bold text-white">{totalRevenue}€</div>
+                      <div className="text-sm text-neutral-400 mt-1">Revenus totaux</div>
+                    </div>
+                    {totalRevenue > 0 && (
+                      <span className="shrink-0 px-2 py-0.5 rounded-full bg-white/10 text-white/90 text-xs font-semibold">RDV</span>
+                    )}
+                  </div>
                 </div>
-                <div className="bg-white rounded-2xl p-6 border border-neutral-200">
-                  <div className="text-sm text-neutral-600 mb-1">Acomptes en attente</div>
-                  <div className="text-3xl font-bold text-amber-600">{pendingDeposits}€</div>
+                <div className="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-100 shadow-sm shadow-neutral-900/5 relative overflow-hidden min-h-[44px]">
+                  <CreditCard className="absolute top-4 right-4 w-5 h-5 text-amber-200" />
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-3xl sm:text-4xl font-bold text-amber-600">{pendingDeposits}€</div>
+                      <div className="text-sm text-neutral-500 mt-1">Acomptes en attente</div>
+                    </div>
+                    {unpaidCount > 0 && (
+                      <span className="shrink-0 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">{unpaidCount} RDV</span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-2 bg-white rounded-2xl p-6 border border-neutral-200">
+                <div className="xl:col-span-2 bg-white rounded-3xl p-5 sm:p-6 border border-neutral-100 shadow-sm shadow-neutral-900/5 overflow-hidden min-h-0">
                   <h3 className="font-bold text-lg mb-4">Évolution du revenu (6 mois)</h3>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <AreaChart data={revenueChartData}>
-                      <defs>
-                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#171717" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#171717" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
-                      <XAxis dataKey="month" stroke="#737373" style={{ fontSize: 12 }} />
-                      <YAxis stroke="#737373" style={{ fontSize: 12 }} />
-                      <Tooltip formatter={(v: number) => [`${v}€`, 'Revenu']} contentStyle={{ borderRadius: 12, border: '1px solid #e5e5e5' }} />
-                      <Area type="monotone" dataKey="revenue" stroke="#171717" strokeWidth={2} fill="url(#colorRevenue)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <div className="-mx-2 sm:mx-0 h-[220px] min-h-[220px]">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <AreaChart data={Array.isArray(revenueChartData) ? revenueChartData : []} margin={{ top: 0, right: 0, left: -8, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorRevenueOverview" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#171717" stopOpacity={0.45} />
+                            <stop offset="100%" stopColor="#171717" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
+                        <XAxis dataKey="month" stroke="#737373" style={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                        <YAxis stroke="#737373" style={{ fontSize: 10 }} tickLine={false} axisLine={false} width={28} />
+                        <Tooltip formatter={(v: number) => [`${v}€`, 'Revenu']} contentStyle={{ borderRadius: 12, border: '1px solid #e5e5e5' }} />
+                        <Area type="monotone" dataKey="revenue" stroke="#171717" strokeWidth={3} fill="url(#colorRevenueOverview)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-                <div className="bg-white rounded-2xl p-6 border border-neutral-200">
+                <div className="bg-white rounded-3xl p-6 border border-neutral-100 shadow-sm shadow-neutral-900/5">
                   <h3 className="font-bold text-lg mb-4">Répartition RDV</h3>
-                  {pieData.length > 0 ? (
+                  {Array.isArray(pieData) && pieData.length > 0 ? (
                     <>
-                      <ResponsiveContainer width="100%" height={140}>
-                        <PieChart>
-                          <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={4} dataKey="value">
-                            {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                          </Pie>
-                          <Tooltip formatter={(v: number) => [v, '']} />
-                        </PieChart>
-                      </ResponsiveContainer>
+                      <div className="h-[140px] min-h-[140px]">
+                        <ResponsiveContainer width="100%" height={140}>
+                          <PieChart>
+                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={4} dataKey="value">
+                              {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                            </Pie>
+                            <Tooltip formatter={(v: number) => [v, '']} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
                       <div className="mt-3 space-y-2">
                         {pieData.map((item, i) => (
                           <div key={i} className="flex items-center justify-between text-sm">
@@ -641,7 +684,7 @@ export const DashboardPro: React.FC = () => {
                 </div>
               </div>
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-2 bg-white rounded-2xl p-6 border border-neutral-200">
+                <div className="xl:col-span-2 bg-white rounded-3xl p-5 sm:p-6 border border-neutral-100 shadow-sm shadow-neutral-900/5">
                   <h3 className="font-bold text-lg mb-4">Prochains rendez-vous</h3>
                   {appointments.length === 0 ? (
                     <div className="text-center py-10">
@@ -674,7 +717,7 @@ export const DashboardPro: React.FC = () => {
                   </div>
                   )}
                 </div>
-                <div className="bg-white rounded-2xl p-6 border border-neutral-200">
+                <div className="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-100 shadow-sm shadow-neutral-900/5">
                   <div className="flex items-center gap-2 mb-4">
                     <Trophy className="w-5 h-5 text-amber-500" />
                     <h3 className="font-bold text-lg">Top 5 clients</h3>
@@ -722,108 +765,11 @@ export const DashboardPro: React.FC = () => {
           )}
 
               {activeTab === 'appointments' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-4">
-                <div className="flex gap-2">
-                  <button onClick={() => setAppointmentView('list')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium ${appointmentView === 'list' ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>
-                    Liste
-                  </button>
-                  <button onClick={() => setAppointmentView('calendar')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium ${appointmentView === 'calendar' ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>
-                    Calendrier
-                  </button>
-                </div>
-                <button onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-                  className="flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 w-full sm:w-auto">
-                  <Plus className="w-5 h-5" /> Nouveau RDV
-                </button>
-              </div>
-              {appointmentView === 'calendar' ? (
-                <AppointmentCalendar appointments={appointments} onSlotClick={() => { setSelectedFlash(null); setShowBookingModal(true); }} />
-              ) : (
-              <>
-                {/* Mobile: Cards */}
-                <div className="space-y-3 md:hidden">
-                  {appointments.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Calendar className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                      <p className="font-semibold text-neutral-600">Aucun rendez-vous</p>
-                      <p className="text-sm text-neutral-400 mt-1">Vos RDV apparaitront ici</p>
-                    </div>
-                  ) : (
-                    appointments.map(apt => (
-                      <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="mobile-card w-full text-left">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-base truncate">{apt.clientName}</div>
-                            <div className="text-sm text-neutral-500 mt-0.5">{apt.service}</div>
-                          </div>
-                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex-shrink-0 ${
-                            apt.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                            apt.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                            apt.status === 'completed' ? 'bg-neutral-100 text-neutral-600' : 'bg-neutral-100'
-                          }`}>
-                            {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'pending' ? 'En attente' : apt.status === 'completed' ? 'Terminé' : apt.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-100">
-                          <div className="flex items-center gap-2 text-sm text-neutral-600">
-                            <Calendar className="w-3.5 h-3.5" />
-                            <span>{apt.date} • {apt.time}</span>
-                          </div>
-                          <span className="font-bold text-base">{apt.price}€</span>
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-
-                {/* Desktop: Table */}
-                <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden hidden md:block">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-neutral-50 border-b border-neutral-200">
-                        <tr>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Client</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Date / Heure</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Service</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Prix</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Statut</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900 w-10"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-neutral-200">
-                        {appointments.map(apt => (
-                          <tr key={apt.id} className="hover:bg-neutral-50">
-                            <td className="px-6 py-4">
-                              <div className="font-semibold">{apt.clientName}</div>
-                              <div className="text-sm text-neutral-600">{apt.clientEmail}</div>
-                            </td>
-                            <td className="px-6 py-4">{apt.date} • {apt.time}</td>
-                            <td className="px-6 py-4">{apt.service}</td>
-                            <td className="px-6 py-4 font-semibold">{apt.price}€</td>
-                            <td className="px-6 py-4">
-                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                apt.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                                apt.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                apt.status === 'completed' ? 'bg-neutral-100 text-neutral-600' : 'bg-neutral-100'
-                              }`}>
-                                {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'pending' ? 'En attente' : apt.status === 'completed' ? 'Terminé' : apt.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <button onClick={() => setSelectedAppointment(apt)} className="text-neutral-600 hover:text-neutral-900 p-2 touch-target"><ChevronRight className="w-5 h-5" /></button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-              )}
-            </div>
+            <AppointmentsView
+              appointments={appointments}
+              onNewAppointment={() => { setSelectedFlash(null); setShowBookingModal(true); }}
+              onSelectAppointment={setSelectedAppointment}
+            />
           )}
 
           {activeTab === 'flash' && (
@@ -884,10 +830,6 @@ export const DashboardPro: React.FC = () => {
 
           {activeTab === 'finance' && (
             <FinanceDashboard appointments={appointments} />
-          )}
-
-          {activeTab === 'ai' && (
-            <AIAssistant />
           )}
 
           {activeTab === 'settings' && (
@@ -1092,90 +1034,108 @@ export const DashboardPro: React.FC = () => {
           />
         </Modal>
       )}
-      {/* ====== MOBILE BOTTOM NAVIGATION BAR ====== */}
+      {/* ====== MOBILE: FAB DRAWER (bottom sheet) - au-dessus de l'overlay pour être cliquable ====== */}
       {showFabMenu && (
-        <div className="fixed inset-0 bg-black/40 z-[60] md:hidden" onClick={() => setShowFabMenu(false)} />
-      )}
-      <nav className="bottom-nav md:hidden" role="navigation" aria-label="Navigation principale mobile">
-        {/* FAB popup menu */}
-        {showFabMenu && (
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 flex flex-col gap-3 items-center animate-in">
-            <button
-              onClick={() => { setShowFabMenu(false); setSelectedFlash(null); setShowBookingModal(true); }}
-              className="flex items-center gap-3 bg-white rounded-2xl px-5 py-3.5 shadow-lg border border-neutral-200 font-semibold text-sm touch-target"
-            >
-              <Calendar className="w-5 h-5 text-neutral-900" />
-              Nouveau RDV
-            </button>
-            <button
-              onClick={() => { setShowFabMenu(false); setActiveTab('clients'); }}
-              className="flex items-center gap-3 bg-white rounded-2xl px-5 py-3.5 shadow-lg border border-neutral-200 font-semibold text-sm touch-target"
-            >
-              <UserPlus className="w-5 h-5 text-neutral-900" />
-              Ajouter un client
-            </button>
-            <button
-              onClick={() => { setShowFabMenu(false); setActiveTab('flash'); }}
-              className="flex items-center gap-3 bg-white rounded-2xl px-5 py-3.5 shadow-lg border border-neutral-200 font-semibold text-sm touch-target"
-            >
-              <Image className="w-5 h-5 text-neutral-900" />
-              Nouveau Flash
-            </button>
+        <>
+          <div className="fixed inset-0 bg-black/50 z-[60] md:hidden" onClick={() => setShowFabMenu(false)} aria-hidden="true" />
+          <div className="fixed bottom-0 left-0 right-0 z-[70] md:hidden rounded-t-3xl bg-white shadow-2xl border-t border-neutral-200 safe-bottom animate-in">
+            <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-neutral-100">
+              <span className="text-sm font-semibold text-neutral-500">Nouvelle action</span>
+              <button
+                onClick={() => setShowFabMenu(false)}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 font-medium"
+                aria-label="Fermer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 flex flex-col gap-2">
+              <button
+                onClick={() => { setShowFabMenu(false); setSelectedFlash(null); setShowBookingModal(true); }}
+                className="flex items-center gap-4 w-full bg-neutral-50 hover:bg-neutral-100 rounded-2xl px-5 py-4 border border-neutral-200 font-semibold text-neutral-900 min-h-[56px] text-left transition-colors"
+              >
+                <div className="w-10 h-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-5 h-5 text-neutral-700" />
+                </div>
+                Nouveau RDV
+              </button>
+              <button
+                onClick={() => { setShowFabMenu(false); setActiveTab('clients'); }}
+                className="flex items-center gap-4 w-full bg-neutral-50 hover:bg-neutral-100 rounded-2xl px-5 py-4 border border-neutral-200 font-semibold text-neutral-900 min-h-[56px] text-left transition-colors"
+              >
+                <div className="w-10 h-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center flex-shrink-0">
+                  <UserPlus className="w-5 h-5 text-neutral-700" />
+                </div>
+                Ajouter un client
+              </button>
+              <button
+                onClick={() => { setShowFabMenu(false); setActiveTab('flash'); }}
+                className="flex items-center gap-4 w-full bg-neutral-50 hover:bg-neutral-100 rounded-2xl px-5 py-4 border border-neutral-200 font-semibold text-neutral-900 min-h-[56px] text-left transition-colors"
+              >
+                <div className="w-10 h-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center flex-shrink-0">
+                  <Image className="w-5 h-5 text-neutral-700" />
+                </div>
+                Nouveau Flash
+              </button>
+            </div>
           </div>
-        )}
+        </>
+      )}
 
-        <div className="flex items-center justify-around px-2 pt-2 pb-1">
+      {/* ====== MOBILE BOTTOM NAVIGATION BAR (style Apple: FAB mis en avant, safe area) ====== */}
+      <nav className="bottom-nav md:hidden" role="navigation" aria-label="Navigation principale mobile">
+        <div className="flex items-center justify-around px-1 sm:px-2 pt-3 pb-1">
           {/* Accueil */}
           <button
             onClick={() => { setActiveTab('overview'); setShowFabMenu(false); }}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors touch-target ${activeTab === 'overview' ? 'text-neutral-900' : 'text-neutral-400'}`}
+            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center ${activeTab === 'overview' ? 'text-neutral-900' : 'text-neutral-400'}`}
           >
-            <LayoutDashboard className="w-6 h-6" />
-            <span className="text-[10px] font-semibold">Accueil</span>
+            <LayoutDashboard className="w-5 h-5" />
+            <span className="text-[9px] font-semibold">Accueil</span>
           </button>
 
           {/* Agenda */}
           <button
             onClick={() => { setActiveTab('appointments'); setShowFabMenu(false); }}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors touch-target ${activeTab === 'appointments' ? 'text-neutral-900' : 'text-neutral-400'}`}
+            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center ${activeTab === 'appointments' ? 'text-neutral-900' : 'text-neutral-400'}`}
           >
-            <Calendar className="w-6 h-6" />
-            <span className="text-[10px] font-semibold">Agenda</span>
+            <Calendar className="w-5 h-5" />
+            <span className="text-[9px] font-semibold">Agenda</span>
           </button>
 
-          {/* FAB central - Nouveau */}
+          {/* FAB central - plus grand, ombre marquée */}
           <button
             onClick={() => setShowFabMenu(!showFabMenu)}
-            className={`flex items-center justify-center w-14 h-14 -mt-6 rounded-full shadow-lg transition-all touch-target ${
+            className={`flex items-center justify-center w-16 h-16 -mt-7 rounded-full shadow-xl shadow-neutral-900/30 transition-all min-w-[56px] min-h-[56px] ${
               showFabMenu
                 ? 'bg-neutral-700 rotate-45'
                 : 'bg-neutral-900'
             }`}
           >
-            <Plus className="w-7 h-7 text-white" />
+            <Plus className="w-8 h-8 text-white" />
           </button>
 
           {/* Demandes */}
           <button
             onClick={() => { setActiveTab('requests'); setShowFabMenu(false); }}
-            className={`relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors touch-target ${activeTab === 'requests' ? 'text-neutral-900' : 'text-neutral-400'}`}
+            className={`relative flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center ${activeTab === 'requests' ? 'text-neutral-900' : 'text-neutral-400'}`}
           >
-            <Inbox className="w-6 h-6" />
+            <Inbox className="w-5 h-5" />
             {(appointments.filter(a => a.status === 'pending').length + projectRequests.filter(p => p.status === 'PENDING').length) > 0 && (
-              <span className="absolute -top-0.5 right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute top-0.5 right-0 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
                 {appointments.filter(a => a.status === 'pending').length + projectRequests.filter(p => p.status === 'PENDING').length}
               </span>
             )}
-            <span className="text-[10px] font-semibold">Demandes</span>
+            <span className="text-[9px] font-semibold">Demandes</span>
           </button>
 
           {/* Profil / Settings */}
           <button
             onClick={() => { setActiveTab('settings'); setShowFabMenu(false); }}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors touch-target ${activeTab === 'settings' ? 'text-neutral-900' : 'text-neutral-400'}`}
+            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center ${activeTab === 'settings' ? 'text-neutral-900' : 'text-neutral-400'}`}
           >
-            <User className="w-6 h-6" />
-            <span className="text-[10px] font-semibold">Profil</span>
+            <User className="w-5 h-5" />
+            <span className="text-[9px] font-semibold">Profil</span>
           </button>
         </div>
       </nav>

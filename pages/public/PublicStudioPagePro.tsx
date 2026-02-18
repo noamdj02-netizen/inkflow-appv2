@@ -28,6 +28,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [selectedFlash, setSelectedFlash] = useState<any>(null);
   const [activeSection, setActiveSection] = useState('about');
   const [showContactForm, setShowContactForm] = useState(false);
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactSubject, setContactSubject] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
   const [showProjectRequestForm, setShowProjectRequestForm] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [bookingStudioId, setBookingStudioId] = useState<string | null>(null);
@@ -105,16 +111,59 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     setShowProjectRequestForm(false);
   };
 
-  const openBookingForm = () => {
+  const openBookingForm = async () => {
     setBookingError(null);
+    setBookingStudioId(null);
     setShowBookingForm(true);
-    getStudioIdBySlug(studioSlug).then(setBookingStudioId);
+    try {
+      const id = await getStudioIdBySlug(studioSlug);
+      if (!id) {
+        setBookingError('Studio introuvable. Contactez-nous directement.');
+      }
+      setBookingStudioId(id ?? null);
+    } catch (err) {
+      console.error('Erreur chargement studio:', err);
+      setBookingError('Impossible de charger le formulaire. Réessayez.');
+    }
   };
 
   const handleBookingSuccess = () => {
     setBookingSuccess(true);
     setShowBookingForm(false);
     setBookingError(null);
+  };
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactLoading(true);
+    try {
+      const studioId = await getStudioIdBySlug(studioSlug);
+      if (!studioId) {
+        alert('Studio introuvable. Contactez-nous directement.');
+        return;
+      }
+      const descriptionParts = [contactSubject ? `Sujet: ${contactSubject}` : '', contactPhone ? `Téléphone: ${contactPhone}` : '', contactMessage].filter(Boolean);
+      await createProjectRequest(
+        {
+          clientName: contactName.trim(),
+          clientEmail: contactEmail.trim(),
+          description: descriptionParts.join('\n\n'),
+        },
+        studioId
+      );
+      setRequestSuccess(true);
+      setShowContactForm(false);
+      setContactName('');
+      setContactEmail('');
+      setContactPhone('');
+      setContactSubject('');
+      setContactMessage('');
+    } catch (err) {
+      console.error('Erreur envoi contact:', err);
+      alert('Une erreur est survenue. Réessayez.');
+    } finally {
+      setContactLoading(false);
+    }
   };
 
   const scrollToSection = (sectionId: string) => {
@@ -871,8 +920,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 submitLabel="Envoyer ma demande"
                 submitError={bookingError}
               />
+            ) : bookingError ? (
+              <p className="text-red-600 py-8">{bookingError}</p>
             ) : (
-              <p className="text-neutral-600 py-8">Chargement...</p>
+              <div className="flex justify-center py-8">
+                <div className="w-8 h-8 border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
+              </div>
             )}
           </div>
         </div>
@@ -919,24 +972,24 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); alert('Message envoyé ! Nous vous répondrons sous 24h.'); setShowContactForm(false); }}>
+            <form className="space-y-6" onSubmit={handleContactSubmit}>
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Nom *</label>
-                  <input type="text" required className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent" placeholder="Votre nom" />
+                  <input type="text" required value={contactName} onChange={(e) => setContactName(e.target.value)} className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent" placeholder="Votre nom" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-2">Email *</label>
-                  <input type="email" required className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent" placeholder="votre@email.com" />
+                  <input type="email" required value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent" placeholder="votre@email.com" />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Téléphone</label>
-                <input type="tel" className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent" placeholder="+33 6 12 34 56 78" />
+                <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent" placeholder="+33 6 12 34 56 78" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Sujet *</label>
-                <select required className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent">
+                <select required value={contactSubject} onChange={(e) => setContactSubject(e.target.value)} className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent">
                   <option value="">Sélectionnez un sujet</option>
                   <option value="quote">Demande de devis</option>
                   <option value="appointment">Prise de rendez-vous</option>
@@ -946,11 +999,17 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Message *</label>
-                <textarea required rows={6} className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none" placeholder="Décrivez votre projet ou posez vos questions..." />
+                <textarea required rows={6} value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none" placeholder="Décrivez votre projet ou posez vos questions..." />
               </div>
-              <button type="submit" className="w-full bg-neutral-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-neutral-800 transition-all flex items-center justify-center gap-2">
-                <Send className="w-5 h-5" />
-                Envoyer le message
+              <button type="submit" disabled={contactLoading} className="w-full bg-neutral-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none min-h-[44px]">
+                {contactLoading ? (
+                  <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Send className="w-5 h-5" />
+                    Envoyer le message
+                  </>
+                )}
               </button>
               <p className="text-sm text-neutral-600 text-center">Nous vous répondrons sous <strong>24 heures</strong></p>
             </form>
