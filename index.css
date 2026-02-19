@@ -560,8 +560,8 @@ input, select, textarea {
 
 /* Floating Navbar — entrée depuis le haut (style Framer/Figma) */
 @keyframes navbar-slide-down {
-  from { opacity: 0; transform: translate(-50%, -100px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 @keyframes navbar-slide-down-y {

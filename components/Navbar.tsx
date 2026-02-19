@@ -35,16 +35,17 @@ export const Navbar: React.FC<NavbarProps> = () => {
     <>
       <nav
         className={`
-          fixed top-4 left-0 right-0 z-50
-          sm:top-6
-          w-[94%] max-w-4xl sm:w-[95%] md:w-[90%] mx-auto
+          fixed z-50
+          top-4 left-4 right-4 w-[calc(100%-2rem)] mx-auto
+          md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[90%] md:max-w-4xl
           rounded-2xl md:rounded-full
-          bg-white/90 dark:bg-black/60
-          backdrop-blur-xl
-          border border-gray-200/60 dark:border-white/10
+          bg-white md:bg-white/90
+          dark:bg-white md:dark:bg-black/60
+          md:backdrop-blur-xl
+          border border-gray-200/80 md:border-gray-200/60 md:dark:border-white/10
           shadow-lg shadow-black/5
           px-4 py-3 md:px-6 md:py-3
-          safe-top
+          pt-[max(0.75rem,env(safe-area-inset-top))] md:pt-3
           animate-navbar-in
         `}
       >
@@ -112,8 +113,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
           <div
             id="nav-menu-mobile"
             ref={menuRef}
-            className="md:hidden fixed z-50 left-4 right-4 w-[calc(100%-2rem)] max-w-sm mx-auto rounded-2xl bg-white dark:bg-neutral-900 shadow-2xl border border-gray-200/80 dark:border-white/10 py-2 px-2 animate-navbar-dropdown safe-top"
-            style={{ top: 'max(4.5rem, calc(72px + env(safe-area-inset-top)))' }}
+            className="md:hidden fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[400px] max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl border border-gray-200/80 py-4 px-4 box-border animate-navbar-dropdown"
             role="dialog"
             aria-label="Menu de navigation"
           >
@@ -123,12 +123,12 @@ export const Navbar: React.FC<NavbarProps> = () => {
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsOpen(false)}
-                  className="px-4 py-3.5 text-base font-medium text-neutral-700 dark:text-neutral-200 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/10 active:bg-neutral-200/80 dark:active:bg-white/15 transition-colors touch-manipulation"
+                  className="px-4 py-3.5 text-base font-medium text-neutral-700 rounded-xl hover:bg-neutral-100 active:bg-neutral-200/80 transition-colors touch-manipulation"
                 >
                   {link.label}
                 </a>
               ))}
-              <div className="border-t border-gray-200/60 dark:border-white/10 my-2" />
+              <div className="border-t border-gray-200/60 my-2" />
               <a
                 href="/login"
                 onClick={() => setIsOpen(false)}
@@ -139,7 +139,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
               <a
                 href="/signup"
                 onClick={() => setIsOpen(false)}
-                className="mx-2 mt-2 mb-1 py-3.5 text-base font-semibold text-white bg-neutral-900 dark:bg-white dark:text-neutral-900 rounded-xl hover:bg-neutral-800 dark:hover:bg-neutral-100 active:scale-[0.98] transition-all text-center flex items-center justify-center gap-2 touch-manipulation"
+                className="mx-4 mt-2 mb-2 py-3.5 text-base font-semibold text-white bg-neutral-900 rounded-xl hover:bg-neutral-800 active:scale-[0.98] transition-all text-center flex items-center justify-center gap-2 touch-manipulation"
               >
                 Accès Anticipé
                 <ArrowRight className="w-4 h-4" />
