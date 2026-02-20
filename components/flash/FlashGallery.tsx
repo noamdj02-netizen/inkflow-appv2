@@ -100,45 +100,45 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="flex-1 relative min-w-[200px]">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--text-tertiary)]" />
             <input type="text" placeholder="Rechercher un design..." value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900" />
+              className="input-dash w-full pl-12 pr-4 py-3" />
           </div>
           <div className="flex gap-2">
             <button onClick={() => setShowFilters(!showFilters)}
-              className="px-6 py-3 border-2 border-neutral-200 rounded-xl font-semibold hover:border-neutral-900 transition-colors flex items-center gap-2">
+              className="btn-outline">
               <Filter className="w-5 h-5" /> Filtres
             </button>
-            <div className="flex rounded-xl border border-neutral-200 overflow-hidden">
-              <button onClick={() => setViewMode('grid')} className={`p-3 ${viewMode === 'grid' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50'}`}>
+            <div className="flex rounded-xl border-2 border-[var(--border)] overflow-hidden">
+              <button onClick={() => setViewMode('grid')} className={`p-3 transition-all ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-indigo-50/50'}`}>
                 <Grid3X3 className="w-5 h-5" />
               </button>
-              <button onClick={() => setViewMode('list')} className={`p-3 ${viewMode === 'list' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50'}`}>
+              <button onClick={() => setViewMode('list')} className={`p-3 transition-all ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-indigo-50/50'}`}>
                 <List className="w-5 h-5" />
               </button>
             </div>
           </div>
         </div>
         {onAddFlash && (
-          <button onClick={openAddModal} className="flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800">
+          <button onClick={openAddModal} className="btn-primary">
             <Plus className="w-5 h-5" /> Ajouter un flash
           </button>
         )}
       </div>
 
       {showFilters && (
-        <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-          <h3 className="font-semibold mb-3">Catégories</h3>
+        <div className="dashboard-widget-card p-4 animate-slide-up">
+          <h3 className="font-semibold mb-3 text-[var(--text-primary)]">Catégories</h3>
           <div className="flex flex-wrap gap-2">
             {categories.map(category => (
               <button key={category} onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  selectedCategory === category ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:border-neutral-900'
+                className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+                  selectedCategory === category ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'
                 }`}>
                 {category === 'all' ? 'Tous' : category}
               </button>
@@ -147,69 +147,80 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
         </div>
       )}
 
-      <div className="text-sm text-neutral-600">
+      <div className="text-sm text-[var(--text-secondary)]">
         {filteredDesigns.length} design{filteredDesigns.length > 1 ? 's' : ''} disponible{filteredDesigns.length > 1 ? 's' : ''}
       </div>
 
-      <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+      <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5' : 'space-y-3'}>
         {filteredDesigns.map(design => viewMode === 'grid' ? (
-          <div key={design.id} className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-200 hover:shadow-xl transition-all cursor-pointer"
+          <div key={design.id} className="group dashboard-widget-card overflow-hidden cursor-pointer rounded-2xl"
             onClick={() => setSelectedDesign(design)}>
-            <div className="relative aspect-square overflow-hidden bg-neutral-100">
+            <div className="relative aspect-[4/5] overflow-hidden bg-[var(--bg-hover)]">
               <img src={design.imageUrl} alt={design.title}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               {design.reserved ? (
-                <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">Réservé</div>
+                <div className="absolute top-3 right-3 bg-red-500/95 text-white px-3 py-1 rounded-full text-xs font-bold shadow">Réservé</div>
               ) : (
-                <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold">Disponible</div>
+                <div className="absolute top-3 right-3 bg-emerald-500/95 text-white px-3 py-1 rounded-full text-xs font-bold shadow">Disponible</div>
               )}
-              <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold">{design.category}</div>
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                <span className="bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-[var(--text-primary)]">{design.category}</span>
+                <span className="font-bold text-white text-lg drop-shadow">{design.price}€</span>
+              </div>
               {(onUpdateFlash || onDeleteFlash) && (
-                <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {onUpdateFlash && <button onClick={(e) => { e.stopPropagation(); openEditModal(design); }} className="p-2 bg-white/90 rounded-lg"><Edit className="w-4 h-4" /></button>}
-                  {onDeleteFlash && <button onClick={(e) => { e.stopPropagation(); handleDeleteFlash(design.id); }} className="p-2 bg-red-500/90 text-white rounded-lg"><Trash2 className="w-4 h-4" /></button>}
+                <div className="absolute top-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  {onUpdateFlash && <button onClick={(e) => { e.stopPropagation(); openEditModal(design); }} className="p-2 bg-white/95 backdrop-blur rounded-xl hover:bg-white shadow"><Edit className="w-4 h-4 text-[var(--text-primary)]" /></button>}
+                  {onDeleteFlash && <button onClick={(e) => { e.stopPropagation(); handleDeleteFlash(design.id); }} className="p-2 bg-red-500/95 text-white rounded-xl shadow hover:bg-red-600"><Trash2 className="w-4 h-4" /></button>}
                 </div>
               )}
             </div>
             <div className="p-4">
-              <h3 className="font-bold text-lg mb-2">{design.title}</h3>
-              <div className="flex items-center gap-4 text-sm text-neutral-600 mb-3">
-                <div className="flex items-center gap-1"><Clock className="w-4 h-4" />{design.estimatedDuration}min</div>
-                <div className="flex items-center gap-1"><DollarSign className="w-4 h-4" />{design.price}€</div>
+              <h3 className="font-bold text-lg mb-2 text-[var(--text-primary)]">{design.title}</h3>
+              <div className="flex items-center gap-4 text-sm text-[var(--text-secondary)] mb-3">
+                <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{design.estimatedDuration}min</span>
+                <span className="font-bold text-indigo-600">{design.price}€</span>
               </div>
               <div className="flex flex-wrap gap-1 mb-3">
                 {design.tags.slice(0, 3).map(tag => (
-                  <span key={tag} className="px-2 py-1 bg-neutral-100 rounded text-xs text-neutral-600">#{tag}</span>
+                  <span key={tag} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-xs text-indigo-600 dark:text-indigo-300">#{tag}</span>
                 ))}
               </div>
               <button onClick={(e) => { e.stopPropagation(); handleBookNow(design); }} disabled={design.reserved}
-                className={`w-full py-2 rounded-lg font-semibold transition-colors ${
-                  design.reserved ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'
+                className={`w-full py-2.5 rounded-xl font-semibold transition-all active:scale-[0.98] ${
+                  design.reserved ? 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] cursor-not-allowed' : 'btn-primary'
                 }`}>
                 {design.reserved ? 'Réservé' : 'Réserver maintenant'}
               </button>
             </div>
           </div>
         ) : (
-          <div key={design.id} className="flex items-center gap-6 p-4 bg-white rounded-2xl border border-neutral-200 hover:border-neutral-300">
-            <img src={design.imageUrl} alt={design.title} className="w-24 h-24 object-cover rounded-xl flex-shrink-0" />
+          <div key={design.id} className="row-clickable flex items-center gap-5 p-5 dashboard-widget-card rounded-2xl">
+            <div className="relative w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-[var(--bg-hover)]">
+              <img src={design.imageUrl} alt={design.title} className="w-full h-full object-cover" />
+              {design.reserved && (
+                <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
+                  <span className="bg-red-500 text-white px-2 py-0.5 rounded text-xs font-bold">Réservé</span>
+                </div>
+              )}
+            </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-lg">{design.title}</h3>
-              <div className="flex items-center gap-4 text-sm text-neutral-600 mt-1">
+              <h3 className="font-bold text-lg text-[var(--text-primary)]">{design.title}</h3>
+              <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)] mt-1">
                 <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{design.estimatedDuration}min</span>
-                <span className="flex items-center gap-1"><DollarSign className="w-4 h-4" />{design.price}€</span>
-                <span className="px-2 py-0.5 bg-neutral-100 rounded text-xs">{design.category}</span>
+                <span className="font-bold text-indigo-600">{design.price}€</span>
+                <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-xs">{design.category}</span>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {(onUpdateFlash || onDeleteFlash) && (
                 <>
-                  {onUpdateFlash && <button onClick={() => openEditModal(design)} className="p-2 rounded-lg hover:bg-neutral-100"><Edit className="w-4 h-4" /></button>}
-                  {onDeleteFlash && <button onClick={() => handleDeleteFlash(design.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-600"><Trash2 className="w-4 h-4" /></button>}
+                  {onUpdateFlash && <button onClick={() => openEditModal(design)} className="p-2 rounded-xl hover:bg-[var(--bg-hover)]"><Edit className="w-4 h-4 text-[var(--text-secondary)]" /></button>}
+                  {onDeleteFlash && <button onClick={() => handleDeleteFlash(design.id)} className="p-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600"><Trash2 className="w-4 h-4" /></button>}
                 </>
               )}
               <button onClick={() => handleBookNow(design)} disabled={design.reserved}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm ${design.reserved ? 'bg-neutral-200 text-neutral-400' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}>
+                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all active:scale-[0.98] ${design.reserved ? 'bg-[var(--bg-hover)] text-[var(--text-tertiary)]' : 'btn-primary'}`}>
                 {design.reserved ? 'Réservé' : 'Réserver'}
               </button>
             </div>
@@ -218,17 +229,17 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
       </div>
 
       {filteredDesigns.length === 0 && (
-        <div className="text-center py-12">
+        <div className="text-center py-16 dashboard-widget-card rounded-2xl">
           <div className="text-6xl mb-4">🔍</div>
-          <h3 className="text-xl font-bold mb-2">Aucun design trouvé</h3>
-          <p className="text-neutral-600">Essayez de modifier vos critères de recherche</p>
+          <h3 className="text-xl font-bold mb-2 text-[var(--text-primary)]">Aucun design trouvé</h3>
+          <p className="text-[var(--text-secondary)]">Essayez de modifier vos critères de recherche</p>
         </div>
       )}
 
       {selectedDesign && (
         <Modal isOpen={!!selectedDesign} onClose={() => setSelectedDesign(null)} title={selectedDesign.title} size="lg">
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="relative aspect-square rounded-xl overflow-hidden bg-neutral-100">
+            <div className="relative aspect-square rounded-2xl overflow-hidden bg-[var(--bg-hover)] ring-2 ring-[var(--border)]">
               <img src={selectedDesign.imageUrl} alt={selectedDesign.title} className="w-full h-full object-cover" />
             </div>
             <div className="space-y-4">
@@ -241,31 +252,31 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                   <CheckCircle className="w-4 h-4" /> Disponible
                 </div>
               )}
-              {selectedDesign.description && <p className="text-neutral-700">{selectedDesign.description}</p>}
-              <div className="grid grid-cols-2 gap-4 py-4 border-y border-neutral-200">
-                <div><div className="text-sm text-neutral-600 mb-1">Prix</div><div className="text-2xl font-bold">{selectedDesign.price}€</div></div>
-                <div><div className="text-sm text-neutral-600 mb-1">Acompte</div><div className="text-2xl font-bold">{selectedDesign.depositAmount}€</div></div>
-                <div><div className="text-sm text-neutral-600 mb-1">Durée</div><div className="text-lg font-semibold">{selectedDesign.estimatedDuration}min</div></div>
-                <div><div className="text-sm text-neutral-600 mb-1">Taille</div><div className="text-lg font-semibold capitalize">{selectedDesign.size}</div></div>
+              {selectedDesign.description && <p className="text-[var(--text-secondary)]">{selectedDesign.description}</p>}
+              <div className="grid grid-cols-2 gap-4 py-4 border-y border-[var(--border)]">
+                <div><div className="text-sm text-[var(--text-secondary)] mb-1">Prix</div><div className="text-2xl font-bold text-indigo-600">{selectedDesign.price}€</div></div>
+                <div><div className="text-sm text-[var(--text-secondary)] mb-1">Acompte</div><div className="text-2xl font-bold">{selectedDesign.depositAmount}€</div></div>
+                <div><div className="text-sm text-[var(--text-secondary)] mb-1">Durée</div><div className="text-lg font-semibold">{selectedDesign.estimatedDuration}min</div></div>
+                <div><div className="text-sm text-[var(--text-secondary)] mb-1">Taille</div><div className="text-lg font-semibold capitalize">{selectedDesign.size}</div></div>
               </div>
               <div>
-                <div className="text-sm font-semibold text-neutral-900 mb-2">Emplacements suggérés</div>
+                <div className="text-sm font-semibold text-[var(--text-primary)] mb-2">Emplacements suggérés</div>
                 <div className="flex flex-wrap gap-2">
                   {selectedDesign.placement.map(place => (
-                    <span key={place} className="px-3 py-1 bg-neutral-100 rounded-lg text-sm">{place}</span>
+                    <span key={place} className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-sm text-indigo-700 dark:text-indigo-200">{place}</span>
                   ))}
                 </div>
               </div>
               <button onClick={() => handleBookNow(selectedDesign)} disabled={selectedDesign.reserved}
-                className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors ${
-                  selectedDesign.reserved ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'
+                className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${
+                  selectedDesign.reserved ? 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] cursor-not-allowed' : 'btn-primary'
                 }`}>
                 {selectedDesign.reserved ? 'Ce flash est réservé' : 'Réserver ce flash'}
               </button>
               {(onUpdateFlash || onDeleteFlash) && (
-                <div className="flex gap-2 pt-4 border-t border-neutral-200">
-                  {onUpdateFlash && <button onClick={() => { setSelectedDesign(null); openEditModal(selectedDesign); }} className="flex-1 py-2 rounded-xl border-2 border-neutral-200 font-semibold hover:border-neutral-900 flex items-center justify-center gap-2"><Edit className="w-4 h-4" /> Modifier</button>}
-                  {onDeleteFlash && <button onClick={() => handleDeleteFlash(selectedDesign.id)} className="flex-1 py-2 rounded-xl bg-red-50 text-red-600 font-semibold hover:bg-red-100 flex items-center justify-center gap-2"><Trash2 className="w-4 h-4" /> Supprimer</button>}
+                <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
+                  {onUpdateFlash && <button onClick={() => { setSelectedDesign(null); openEditModal(selectedDesign); }} className="btn-outline flex-1"><Edit className="w-4 h-4" /> Modifier</button>}
+                  {onDeleteFlash && <button onClick={() => handleDeleteFlash(selectedDesign.id)} className="flex-1 py-2 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 font-semibold hover:bg-red-100 dark:hover:bg-red-950/50 flex items-center justify-center gap-2"><Trash2 className="w-4 h-4" /> Supprimer</button>}
                 </div>
               )}
             </div>

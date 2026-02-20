@@ -98,42 +98,42 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Demandes</h1>
-          <p className="text-neutral-600 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">Demandes</h1>
+          <p className="text-[var(--text-secondary)] mt-1">
             {activeTab === 'rdv' && `${pendingAppointments.length} RDV en attente`}
             {activeTab === 'bookings' && `${pendingBookings.length} demandes RDV (vitrine)`}
             {activeTab === 'projects' && `${pendingProjects.length} demandes de projet`}
             {activeTab === 'history' && 'Historique des demandes'}
           </p>
         </div>
-        <div className="flex gap-2 overflow-x-auto">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           <button onClick={() => setActiveTab('rdv')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap ${activeTab === 'rdv' ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:bg-neutral-50'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'rdv' ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'}`}>
             <Calendar className="w-4 h-4 inline mr-2" />
             RDV ({pendingAppointments.length})
           </button>
           <button onClick={() => setActiveTab('bookings')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap ${activeTab === 'bookings' ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:bg-neutral-50'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'bookings' ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'}`}>
             <Clock className="w-4 h-4 inline mr-2" />
             RDV vitrine ({pendingBookings.length})
           </button>
           <button onClick={() => setActiveTab('projects')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap ${activeTab === 'projects' ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:bg-neutral-50'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'projects' ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'}`}>
             <FileText className="w-4 h-4 inline mr-2" />
             Projet ({pendingProjects.length})
           </button>
           <button onClick={() => setActiveTab('history')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap ${activeTab === 'history' ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:bg-neutral-50'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'}`}>
             <MessageSquare className="w-4 h-4 inline mr-2" />
             Historique
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
+      <div className="dashboard-widget-card overflow-hidden">
         {activeTab === 'rdv' && (
           pendingAppointments.length === 0 ? (
             <EmptyState
@@ -142,30 +142,38 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               description="Les nouvelles réservations apparaîtront ici."
             />
           ) : (
-            <div className="divide-y divide-neutral-200">
+            <div className="divide-y divide-[var(--border)]">
               {pendingAppointments.map(apt => (
-                <div key={apt.id} className="p-4 sm:p-6 hover:bg-neutral-50 transition-colors">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="font-semibold text-lg">{apt.clientName}</div>
-                      <div className="text-sm text-neutral-600 mt-1">{apt.clientEmail}</div>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-neutral-600">
-                        <span>{apt.date} • {apt.time}</span>
-                        <span>{apt.service}</span>
-                        <span className="font-semibold text-neutral-900">{apt.price}€</span>
-                      </div>
-                      <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">En attente</span>
+                <div key={apt.id} className="row-clickable p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold text-lg">
+                    {apt.clientName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-lg text-[var(--text-primary)]">{apt.clientName}</div>
+                    <div className="text-sm text-[var(--text-secondary)] mt-0.5 flex items-center gap-1">
+                      <Mail className="w-3.5 h-3.5" />
+                      {apt.clientEmail}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button onClick={() => handleConfirm(apt.id)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-100 text-green-700 font-semibold hover:bg-green-200 touch-target text-sm">
-                        <CheckCircle className="w-4 h-4" /> Confirmer
-                      </button>
-                      <button onClick={() => handleReject(apt.id)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-100 text-red-700 font-semibold hover:bg-red-200 touch-target text-sm">
-                        <XCircle className="w-4 h-4" /> Refuser
-                      </button>
+                    <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-[var(--text-secondary)]">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {apt.date} • {apt.time}
+                      </span>
+                      <span className="text-[var(--text-primary)]">•</span>
+                      <span className="font-medium text-[var(--text-primary)]">{apt.service}</span>
+                      <span className="font-bold text-indigo-600">{apt.price}€</span>
                     </div>
+                    <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">En attente</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={() => handleConfirm(apt.id)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-100 text-emerald-700 font-semibold hover:bg-emerald-200 active:scale-[0.98] transition-all text-sm">
+                      <CheckCircle className="w-4 h-4" /> Confirmer
+                    </button>
+                    <button onClick={() => handleReject(apt.id)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 font-semibold hover:bg-red-100 active:scale-[0.98] transition-all text-sm">
+                      <XCircle className="w-4 h-4" /> Refuser
+                    </button>
                   </div>
                 </div>
               ))}
@@ -183,18 +191,20 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               description="Les demandes envoyées depuis la vitrine (formulaire Nom, Email, Idée, Dispo) apparaîtront ici en temps réel."
             />
           ) : (
-            <div className="divide-y divide-neutral-200">
+            <div className="divide-y divide-[var(--border)]">
               {bookings.map(bk => (
-                <div key={bk.id} className="p-4 sm:p-6 hover:bg-neutral-50 transition-colors">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="font-semibold text-lg">{bk.clientName}</div>
-                      <div className="text-sm text-neutral-600 mt-1 flex items-center gap-2">
-                        <Mail className="w-4 h-4" />
-                        {bk.clientEmail}
-                      </div>
-                      <p className="mt-2 text-sm text-neutral-700 line-clamp-2">{bk.description}</p>
-                      <div className="flex flex-wrap gap-2 mt-2 text-xs text-neutral-500">
+                <div key={bk.id} className="row-clickable p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold text-lg">
+                    {bk.clientName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-lg text-[var(--text-primary)]">{bk.clientName}</div>
+                    <div className="text-sm text-[var(--text-secondary)] mt-0.5 flex items-center gap-2">
+                      <Mail className="w-3.5 h-3.5" />
+                      {bk.clientEmail}
+                    </div>
+                      <p className="mt-2 text-sm text-[var(--text-primary)] line-clamp-2">{bk.description}</p>
+                      <div className="flex flex-wrap gap-2 mt-2 text-xs text-[var(--text-secondary)]">
                         <span>Date souhaitée : {new Date(bk.requestedDate).toLocaleDateString('fr-FR', { dateStyle: 'medium' })}</span>
                         {bk.requestedTime && <span>• {bk.requestedTime === 'morning' ? 'Matin' : bk.requestedTime === 'afternoon' ? 'Après-midi' : bk.requestedTime === 'evening' ? 'Soirée' : bk.requestedTime}</span>}
                       </div>
@@ -213,19 +223,18 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                           onClick={() => handleConfirmBooking(bk.id)}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-100 text-green-700 font-semibold hover:bg-green-200 touch-target text-sm"
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-100 text-emerald-700 font-semibold hover:bg-emerald-200 active:scale-[0.98] transition-all text-sm"
                         >
                           <CheckCircle className="w-4 h-4" /> Confirmer
                         </button>
                         <button onClick={() => handleRejectBooking(bk.id)}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-100 text-red-700 font-semibold hover:bg-red-200 touch-target text-sm">
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 font-semibold hover:bg-red-100 active:scale-[0.98] transition-all text-sm">
                           <XCircle className="w-4 h-4" /> Refuser
                         </button>
                       </div>
                     )}
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           )
         )}
@@ -238,20 +247,22 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               description="Les demandes envoyées depuis la page vitrine apparaîtront ici."
             />
           ) : (
-            <div className="divide-y divide-neutral-200">
+            <div className="divide-y divide-[var(--border)]">
               {pendingProjects.map(pr => (
-                <div key={pr.id} className="p-4 sm:p-6 hover:bg-neutral-50 transition-colors">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="font-semibold text-lg">{pr.clientName}</div>
-                      <div className="text-sm text-neutral-600 mt-1 flex items-center gap-2">
-                        <Mail className="w-4 h-4" />
-                        {pr.clientEmail}
+                <div key={pr.id} className="row-clickable p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0 text-violet-600 font-bold text-lg">
+                    {pr.clientName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-lg text-[var(--text-primary)]">{pr.clientName}</div>
+                    <div className="text-sm text-[var(--text-secondary)] mt-0.5 flex items-center gap-2">
+                      <Mail className="w-3.5 h-3.5" />
+                      {pr.clientEmail}
                         {pr.clientInstagram && (
                           <span className="text-neutral-500">• {pr.clientInstagram}</span>
                         )}
                       </div>
-                      <p className="mt-2 text-sm text-neutral-700 line-clamp-2">{pr.description}</p>
+                      <p className="mt-2 text-sm text-[var(--text-primary)] line-clamp-2">{pr.description}</p>
                       <div className="flex flex-wrap gap-2 mt-2 text-xs text-neutral-500">
                         {pr.placement && <span>{pr.placement}</span>}
                         {pr.size && <span>• {pr.size}</span>}
@@ -265,17 +276,16 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => handleApproveProject(pr.id, pr.clientEmail)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-100 text-green-700 font-semibold hover:bg-green-200 touch-target text-sm"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-100 text-emerald-700 font-semibold hover:bg-emerald-200 active:scale-[0.98] transition-all text-sm"
                       >
                         <CheckCircle className="w-4 h-4" /> Accepter & Discuter
                       </button>
                       <button onClick={() => handleRejectProject(pr.id)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-100 text-red-700 font-semibold hover:bg-red-200 touch-target text-sm">
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 font-semibold hover:bg-red-100 active:scale-[0.98] transition-all text-sm">
                         <XCircle className="w-4 h-4" /> Refuser
                       </button>
                     </div>
                   </div>
-                </div>
               ))}
             </div>
           )
@@ -289,30 +299,32 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               description="Vos demandes traitées s'afficheront ici."
             />
           ) : (
-            <div className="divide-y divide-neutral-200">
+            <div className="divide-y divide-[var(--border)]">
               {historyAppointments.map(apt => (
-                <div key={apt.id} className="p-4 sm:p-6 hover:bg-neutral-50 transition-colors">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="font-semibold text-lg">{apt.clientName}</div>
-                      <div className="text-sm text-neutral-600 mt-1">{apt.clientEmail}</div>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-neutral-600">
-                        <span>{apt.date} • {apt.time}</span>
-                        <span>{apt.service}</span>
-                        <span className="font-semibold text-neutral-900">{apt.price}€</span>
-                      </div>
-                      <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                        apt.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                        apt.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-neutral-100 text-neutral-600'
-                      }`}>
-                        {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'cancelled' ? 'Annulé' : STATUS_LABELS[apt.status] || apt.status}
-                      </span>
+                <div key={apt.id} className="row-clickable p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[var(--bg-hover)] flex items-center justify-center flex-shrink-0 text-[var(--text-secondary)] font-bold text-lg">
+                    {apt.clientName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-lg text-[var(--text-primary)]">{apt.clientName}</div>
+                    <div className="text-sm text-[var(--text-secondary)] mt-0.5">{apt.clientEmail}</div>
+                    <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-[var(--text-secondary)]">
+                      <span>{apt.date} • {apt.time}</span>
+                      <span>•</span>
+                      <span className="text-[var(--text-primary)]">{apt.service}</span>
+                      <span className="font-bold text-indigo-600">{apt.price}€</span>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {apt.status === 'confirmed' && user && (
-                        <InvoiceButton appointment={apt} artist={user} />
-                      )}
-                    </div>
+                    <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
+                      apt.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' :
+                      apt.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-[var(--bg-hover)] text-[var(--text-secondary)]'
+                    }`}>
+                      {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'cancelled' ? 'Annulé' : STATUS_LABELS[apt.status] || apt.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {apt.status === 'confirmed' && user && (
+                      <InvoiceButton appointment={apt} artist={user} />
+                    )}
                   </div>
                 </div>
               ))}

@@ -117,20 +117,20 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="flex-1 relative min-w-[200px]">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--text-tertiary)]" />
             <input type="text" placeholder="Rechercher un client..." value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900" />
+              className="input-dash w-full pl-12 pr-4 py-3" />
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 flex-nowrap">
             {(['all', 'active', 'vip', 'inactive'] as const).map(status => (
               <button key={status} onClick={() => setFilterStatus(status)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  filterStatus === status ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:border-neutral-900'
+                className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+                  filterStatus === status ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'
                 }`}>
                 {status === 'all' ? 'Tous' : status === 'vip' ? 'VIP' : status.charAt(0).toUpperCase() + status.slice(1)}
               </button>
@@ -154,7 +154,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
             <button
               onClick={() => (clientLimitReached ? onUpgradeClick?.() : setShowAddModal(true))}
               disabled={clientLimitReached}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold ${clientLimitReached ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${clientLimitReached ? 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] cursor-not-allowed' : 'btn-primary'}`}
             >
               <UserPlus className="w-5 h-5" /> Ajouter un client
             </button>
@@ -163,20 +163,20 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-4 border border-neutral-200">
-          <div className="text-sm text-neutral-600 mb-1">Total clients</div>
+        <div className="dashboard-widget-card p-4">
+          <div className="text-sm text-[var(--text-secondary)] mb-1">Total clients</div>
           <div className="text-2xl font-bold">{clients.length}</div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-neutral-200">
-          <div className="text-sm text-neutral-600 mb-1">Clients VIP</div>
+        <div className="dashboard-widget-card p-4">
+          <div className="text-sm text-[var(--text-secondary)] mb-1">Clients VIP</div>
           <div className="text-2xl font-bold text-purple-600">{clients.filter(c => c.status === 'vip').length}</div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-neutral-200">
-          <div className="text-sm text-neutral-600 mb-1">Revenus totaux</div>
+        <div className="dashboard-widget-card p-4">
+          <div className="text-sm text-[var(--text-secondary)] mb-1">Revenus totaux</div>
           <div className="text-2xl font-bold text-green-600">{clients.reduce((sum, c) => sum + c.totalSpent, 0)}€</div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-neutral-200">
-          <div className="text-sm text-neutral-600 mb-1">RDV totaux</div>
+        <div className="dashboard-widget-card p-4">
+          <div className="text-sm text-[var(--text-secondary)] mb-1">RDV totaux</div>
           <div className="text-2xl font-bold">{clients.reduce((sum, c) => sum + c.appointmentsCount, 0)}</div>
         </div>
       </div>
@@ -184,70 +184,70 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
       {/* Mobile: Client Cards */}
       <div className="space-y-3 md:hidden">
         {sortedClients.map(client => (
-          <button key={client.id} onClick={() => setSelectedClient(client)} className="mobile-card w-full text-left">
+          <button key={client.id} onClick={() => setSelectedClient(client)} className="row-clickable dashboard-widget-card w-full text-left p-5 rounded-2xl">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-neutral-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <User className="w-5 h-5 text-neutral-500" />
+              <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold text-lg">
+                {client.name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold truncate">{client.name}</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold truncate text-[var(--text-primary)]">{client.name}</span>
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0 ${getStatusColor(client.status)}`}>
                     {getStatusIcon(client.status)}
                     {client.status === 'vip' ? 'VIP' : client.status.charAt(0).toUpperCase() + client.status.slice(1)}
                   </span>
                 </div>
-                <div className="text-sm text-neutral-500 truncate mt-0.5">{client.email}</div>
+                <div className="text-sm text-[var(--text-secondary)] truncate mt-0.5">{client.email}</div>
               </div>
-              <Eye className="w-5 h-5 text-neutral-400 flex-shrink-0" />
+              <Eye className="w-5 h-5 text-[var(--text-tertiary)] flex-shrink-0" />
             </div>
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-100 text-sm">
-              <span className="text-neutral-500">{client.appointmentsCount} RDV</span>
-              <span className="font-bold text-green-600">{client.totalSpent}€</span>
-              <span className="text-neutral-400 text-xs">{client.lastVisit ? new Date(client.lastVisit).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : 'Jamais'}</span>
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border)] text-sm">
+              <span className="text-[var(--text-secondary)]">{client.appointmentsCount} RDV</span>
+              <span className="font-bold text-indigo-600">{client.totalSpent}€</span>
+              <span className="text-[var(--text-tertiary)] text-xs">{client.lastVisit ? new Date(client.lastVisit).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : 'Jamais'}</span>
             </div>
           </button>
         ))}
       </div>
 
       {/* Desktop: Table */}
-      <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden hidden md:block">
+      <div className="dashboard-widget-card overflow-hidden hidden md:block rounded-2xl">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-neutral-50 border-b border-neutral-200">
+            <thead className="bg-[var(--bg-hover)] border-b border-[var(--border)]">
               <tr>
                 <th className="w-10 px-2" />
-                <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Client</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Contact</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Statut</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">RDV</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Dépenses</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Dernière visite</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Actions</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Client</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Contact</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Statut</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">RDV</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Dépenses</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Dernière visite</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-200">
+            <tbody className="divide-y divide-[var(--border)]">
               {sortedClients.map(client => {
                 const isExpanded = expandedClient === client.id;
                 return (
                   <React.Fragment key={client.id}>
-                    <tr className="hover:bg-neutral-50 transition-colors">
+                    <tr className="row-clickable">
                       <td className="px-2 py-2">
-                        <button onClick={() => setExpandedClient(isExpanded ? null : client.id)} className="p-2 rounded hover:bg-neutral-200 touch-target">
-                          {isExpanded ? <ChevronUp className="w-4 h-4 text-neutral-500" /> : <ChevronDown className="w-4 h-4 text-neutral-500" />}
+                        <button onClick={() => setExpandedClient(isExpanded ? null : client.id)} className="p-2 rounded-xl hover:bg-[var(--bg-hover)] touch-target">
+                          {isExpanded ? <ChevronUp className="w-4 h-4 text-[var(--text-tertiary)]" /> : <ChevronDown className="w-4 h-4 text-[var(--text-tertiary)]" />}
                         </button>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-neutral-200 rounded-full flex items-center justify-center">
-                            <User className="w-5 h-5 text-neutral-600" />
+                          <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold">
+                            {client.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-semibold">{client.name}</div>
+                            <div className="font-semibold text-[var(--text-primary)]">{client.name}</div>
                             {client.tags.length > 0 && (
                               <div className="flex gap-1 mt-1">
                                 {client.tags.slice(0, 2).map(tag => (
-                                  <span key={tag} className="text-xs bg-neutral-100 px-2 py-0.5 rounded">{tag}</span>
+                                  <span key={tag} className="text-xs bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-lg text-indigo-600 dark:text-indigo-300">{tag}</span>
                                 ))}
                               </div>
                             )}
@@ -255,9 +255,9 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="space-y-1 text-sm">
-                          <div className="flex items-center gap-2 text-neutral-600"><Mail className="w-3 h-3" />{client.email}</div>
-                          <div className="flex items-center gap-2 text-neutral-600"><Phone className="w-3 h-3" />{client.phone}</div>
+                        <div className="space-y-1 text-sm text-[var(--text-secondary)]">
+                          <div className="flex items-center gap-2"><Mail className="w-3 h-3" />{client.email}</div>
+                          <div className="flex items-center gap-2"><Phone className="w-3 h-3" />{client.phone}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -266,23 +266,23 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                           {client.status === 'vip' ? 'VIP' : client.status.charAt(0).toUpperCase() + client.status.slice(1)}
                         </span>
                       </td>
-                      <td className="px-6 py-4"><div className="text-sm font-semibold">{client.appointmentsCount}</div></td>
-                      <td className="px-6 py-4"><div className="text-sm font-semibold text-green-600">{client.totalSpent}€</div></td>
+                      <td className="px-6 py-4"><div className="text-sm font-semibold text-[var(--text-primary)]">{client.appointmentsCount}</div></td>
+                      <td className="px-6 py-4"><div className="text-sm font-bold text-indigo-600">{client.totalSpent}€</div></td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-neutral-600">
+                        <div className="text-sm text-[var(--text-secondary)]">
                           {client.lastVisit ? new Date(client.lastVisit).toLocaleDateString('fr-FR') : 'Jamais'}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <button onClick={() => setSelectedClient(client)}
-                          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors touch-target">
+                          className="btn-outline inline-flex items-center gap-2 px-3 py-2 text-sm font-medium touch-target">
                           <Eye className="w-4 h-4" /> Voir
                         </button>
                       </td>
                     </tr>
                     {isExpanded && (
                       <tr>
-                        <td colSpan={8} className="bg-neutral-50 px-6 py-4">
+                        <td colSpan={8} className="bg-[var(--bg-hover)]/50 px-6 py-4">
                           <div className="flex gap-6">
                             {client.tattoos.length > 0 && (
                               <div className="flex-1">
@@ -312,12 +312,12 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
       </div>
 
       {sortedClients.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-2xl border border-neutral-200">
-          <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <User className="w-8 h-8 text-neutral-400" />
+        <div className="text-center py-12 dashboard-widget-card rounded-2xl">
+          <div className="w-16 h-16 bg-[var(--bg-hover)] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-[var(--text-tertiary)]" />
           </div>
-          <h3 className="text-xl font-bold mb-2">Aucun client trouvé</h3>
-          <p className="text-neutral-500 text-sm max-w-sm mx-auto">
+          <h3 className="text-xl font-bold mb-2 text-[var(--text-primary)]">Aucun client trouvé</h3>
+          <p className="text-[var(--text-secondary)] text-sm max-w-sm mx-auto">
             {searchTerm ? 'Essayez de modifier vos critères de recherche' : 'Vos clients apparaitront ici lorsqu\'ils prendront rendez-vous via votre page vitrine.'}
           </p>
           {onAddClient && !searchTerm && (

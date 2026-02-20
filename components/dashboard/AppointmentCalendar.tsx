@@ -57,19 +57,19 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ appoin
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-neutral-200">
+    <div className="dashboard-widget-card rounded-2xl p-6">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div className="flex items-center gap-2">
-          <button onClick={goPrev} className="p-2 rounded-lg hover:bg-neutral-100">
-            <ChevronLeft className="w-5 h-5" />
+          <button onClick={goPrev} className="p-2.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors">
+            <ChevronLeft className="w-5 h-5 text-[var(--text-secondary)]" />
           </button>
-          <h2 className="text-lg font-bold min-w-[200px] text-center">
+          <h2 className="text-lg font-bold min-w-[200px] text-center text-[var(--text-primary)]">
             {weekStart.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
           </h2>
-          <button onClick={goNext} className="p-2 rounded-lg hover:bg-neutral-100">
-            <ChevronRight className="w-5 h-5" />
+          <button onClick={goNext} className="p-2.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors">
+            <ChevronRight className="w-5 h-5 text-[var(--text-secondary)]" />
           </button>
-          <button onClick={goToday} className="px-4 py-2 rounded-lg text-sm font-medium bg-neutral-100 hover:bg-neutral-200">
+          <button onClick={goToday} className="px-4 py-2 rounded-xl text-sm font-medium bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/50">
             Aujourd'hui
           </button>
         </div>
@@ -80,11 +80,11 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ appoin
           <div />
           {weekDays.map(day => (
             <div key={day.toISOString()} className="text-center">
-              <div className="text-xs text-neutral-500 uppercase mb-2">
+              <div className="text-xs text-[var(--text-tertiary)] uppercase mb-2">
                 {day.toLocaleDateString('fr-FR', { weekday: 'short' })}
               </div>
               <div className={`mx-auto w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm ${
-                isToday(day) ? 'bg-neutral-900 text-white' : 'bg-neutral-100'
+                isToday(day) ? 'bg-indigo-600 text-white' : 'bg-[var(--bg-hover)] text-[var(--text-primary)]'
               }`}>
                 {day.getDate()}
               </div>
@@ -95,24 +95,24 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ appoin
         <div className="mt-4 grid gap-2 min-w-[700px]" style={{ gridTemplateColumns: `60px repeat(7, 1fr)` }}>
           {HOURS.map(hour => (
             <React.Fragment key={hour}>
-              <div className="text-xs text-neutral-500 py-4 text-right pr-2">{hour}:00</div>
+              <div className="text-xs text-[var(--text-tertiary)] py-4 text-right pr-2">{hour}:00</div>
               {weekDays.map(day => {
                 const slotApts = getAppointmentsForSlot(day, hour);
                 return (
                   <div
                     key={`${day.toISOString()}-${hour}`}
                     onClick={onSlotClick}
-                    className="relative min-h-[70px] rounded-lg border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 cursor-pointer p-2"
+                    className="relative min-h-[70px] rounded-xl border border-[var(--border)] bg-[var(--bg-hover)]/50 hover:bg-[var(--bg-hover)] cursor-pointer p-2 transition-colors"
                   >
                     {slotApts.map(apt => (
                       <div
                         key={apt.id}
-                        className="absolute inset-1 rounded-lg bg-neutral-900 text-white p-2 text-xs overflow-hidden"
+                        className="absolute inset-1 rounded-lg bg-indigo-600 text-white p-2 text-xs overflow-hidden shadow-sm"
                         onClick={e => e.stopPropagation()}
                       >
                         <div className="font-medium truncate">{apt.clientName}</div>
-                        <div className="text-white/80 truncate">{apt.service}</div>
-                        <div className="text-white/60 text-[10px]">{apt.time} • {apt.duration}min</div>
+                        <div className="text-white/90 truncate">{apt.service}</div>
+                        <div className="text-white/70 text-[10px]">{apt.time} • {apt.duration}min</div>
                       </div>
                     ))}
                   </div>

@@ -55,17 +55,17 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Statistiques</h2>
-          <p className="text-sm text-neutral-600 mt-1">Suivez vos performances en temps réel</p>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)]">Statistiques</h2>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">Suivez vos performances en temps réel</p>
         </div>
         <div className="relative">
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value as 'week' | 'month' | 'year')}
-            className="appearance-none bg-white border border-neutral-200 rounded-lg px-4 py-2 pr-10 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 cursor-pointer"
+            className="input-dash appearance-none pr-10 cursor-pointer"
           >
             <option value="week">Cette semaine</option>
             <option value="month">Ce mois</option>
@@ -79,7 +79,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         {stats.map((stat, idx) => {
           const Icon = stat.icon;
           return (
-            <div key={idx} className="bg-white rounded-2xl p-6 border border-neutral-200 hover:shadow-lg transition-shadow">
+            <div key={idx} className="dashboard-widget-card p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${getColorClasses(stat.color)}`}>
                   <Icon className="w-6 h-6" />
@@ -97,7 +97,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-neutral-200">
+        <div className="lg:col-span-2 dashboard-widget-card p-6">
           <h3 className="text-lg font-bold mb-6">Évolution du revenue</h3>
           <div className="space-y-4">
             {revenueByMonth.map((data, idx) => (
@@ -131,7 +131,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-neutral-200">
+        <div className="dashboard-widget-card p-6">
           <h3 className="text-lg font-bold mb-6">Clients</h3>
           <div className="space-y-6">
             <div>

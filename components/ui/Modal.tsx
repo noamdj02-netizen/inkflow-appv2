@@ -50,13 +50,13 @@ export const Modal: React.FC<ModalProps> = ({
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="flex min-h-full items-start sm:items-center justify-center p-4 sm:p-6 safe-top safe-bottom">
         <div
-          className={`relative bg-white rounded-2xl shadow-2xl w-full max-h-[90dvh] sm:max-h-[85vh] flex flex-col ${sizeClasses[size]} transform transition-all`}
+          className={`relative bg-[var(--bg-card)] rounded-2xl shadow-2xl w-full max-h-[90dvh] sm:max-h-[85vh] flex flex-col ${sizeClasses[size]} transform transition-all animate-slide-up border border-[var(--border)]`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-neutral-200 flex-shrink-0">
-            <h2 className="text-lg sm:text-2xl font-bold text-neutral-900 pr-2 truncate">{title}</h2>
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[var(--border)] flex-shrink-0">
+            <h2 className="text-lg sm:text-2xl font-bold text-[var(--text-primary)] pr-2 truncate">{title}</h2>
             {showClose && (
-              <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg transition-colors flex-shrink-0" aria-label="Fermer">
+              <button onClick={onClose} className="p-2 hover:bg-[var(--bg-hover)] rounded-xl transition-all flex-shrink-0" aria-label="Fermer">
                 <X className="w-5 h-5" />
               </button>
             )}

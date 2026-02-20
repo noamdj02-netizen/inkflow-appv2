@@ -14,6 +14,7 @@ import { FlashGallery } from '../flash/FlashGallery';
 import { ClientList } from '../crm/ClientList';
 import { AppointmentCalendar } from './AppointmentCalendar';
 import { AppointmentsView } from './AppointmentsView';
+import { MiniCalendar } from './MiniCalendar';
 import { RequestsDashboard } from './RequestsDashboard';
 import { FinanceDashboard } from './FinanceDashboard';
 import { CareSheetsSettings } from './CareSheetsSettings';
@@ -32,7 +33,6 @@ import { MessageThreadView } from '../messaging/MessageThread';
 import { ConsentFormEditor } from '../consent/ConsentFormEditor';
 import { Appointment, FlashDesign, BookingFormData, WaitlistEntry, ArtistAccount, LoyaltyEntry, MessageThread } from '../../types';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
-import { OnboardingBanner, type OnboardingStepId } from '../OnboardingBanner';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { supabase } from '../../lib/supabase';
 import { createSubscription } from '../../lib/stripeClient';
@@ -343,16 +343,42 @@ export const DashboardPro: React.FC = () => {
     setShowBookingModal(true);
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   const todayAppointments = appointments.filter(a => a.date === today);
+  const todayRevenue = appointments.filter(a => a.date === today && a.status === 'completed').reduce((sum, a) => sum + a.price, 0);
   const totalRevenue = appointments.filter(a => a.status === 'completed').reduce((sum, a) => sum + a.price, 0);
+  const monthlyRevenue = useMemo(() => {
+    const n = new Date();
+    const y = n.getFullYear();
+    const mo = n.getMonth();
+    const start = `${y}-${String(mo + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(y, mo + 1, 0).getDate();
+    const end = `${y}-${String(mo + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    return appointments
+      .filter(a => a.status === 'completed' && a.date >= start && a.date <= end)
+      .reduce((sum, a) => sum + a.price, 0);
+  }, [appointments]);
   const pendingDeposits = appointments.filter(a => !a.depositPaid && a.status !== 'cancelled').reduce((sum, a) => sum + a.deposit, 0);
   const unpaidCount = appointments.filter(a => a.status === 'confirmed' && !a.depositPaid).length;
   const upcoming24h = appointments.filter(a => {
     const d = a.date;
     return (d === today || d === tomorrow) && ['confirmed', 'pending'].includes(a.status);
   });
+
+  // Prochain RDV dans les 2h (pour la bannette)
+  const nextAppointmentIn2h = useMemo(() => {
+    const n = new Date();
+    const in2h = new Date(n.getTime() + 2 * 60 * 60 * 1000);
+    for (const a of upcoming24h) {
+      const aptDate = new Date(`${a.date}T${a.time || '00:00'}`);
+      if (aptDate >= n && aptDate <= in2h) return a;
+    }
+    return null;
+  }, [upcoming24h]);
+
+  const firstName = user?.name?.split(' ')[0] || user?.studioName || '';
 
   const alerts = useMemo(() => {
     const a: { id: string; type: 'warning' | 'info'; msg: string; cta: string }[] = [];
@@ -363,7 +389,9 @@ export const DashboardPro: React.FC = () => {
 
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [overviewCalendarMonth, setOverviewCalendarMonth] = useState(() => new Date());
   const visibleAlerts = alerts.filter(a => !dismissedAlerts.has(a.id));
 
   const revenueChartData = useMemo(() => {
@@ -399,58 +427,63 @@ export const DashboardPro: React.FC = () => {
       )}
 
       <div className="app-shell-row">
-        {/* ====== SIDEBAR (Desktop only, slide-in on tablet) ====== */}
-        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 max-w-[85vw] bg-[var(--bg-sidebar)] border-r border-[var(--border)] flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
+        {/* ====== SIDEBAR — Design premium (ÉTAPE 1) ====== */}
+        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-[260px] max-w-[85vw] bg-[var(--bg-sidebar)] border-r border-[var(--border)]/60 flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar shadow-[0_0_40px_-12px_rgba(0,0,0,0.08)] dark:shadow-[0_0_40px_-12px_rgba(0,0,0,0.3)] ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}>
-          <div className="p-4 sm:p-6 border-b border-[var(--border)] flex items-center justify-between safe-top">
-            <div className="flex items-center gap-3 min-w-0">
-              <a href="/" className="flex-shrink-0 rounded-lg hover:opacity-80 transition-opacity" aria-label="Retour à l'accueil">
-                <Logo />
-              </a>
+          {/* Zone logo — compacte et premium */}
+          <div className="px-4 py-4 border-b border-[var(--border)]/60 flex items-center justify-between safe-top">
+            <a href="/" className="flex items-center gap-3 min-w-0 group" aria-label="Retour à l'accueil">
+              <Logo size="lg" className="rounded-xl group-hover:opacity-90 transition-opacity" />
               <div className="min-w-0">
-                <h1 className="text-lg font-bold text-[var(--text-primary)]">InkFlow</h1>
-                <p className="text-xs text-[var(--text-secondary)] truncate max-w-[140px]">{user?.studioName}</p>
+                <span className="block text-base font-semibold tracking-tight text-[var(--text-primary)]">INKFLOW</span>
+                <p className="text-[11px] font-medium text-[var(--text-tertiary)] truncate max-w-[120px] mt-0.5">{user?.studioName}</p>
               </div>
-            </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-[var(--bg-hover)]">
+            </a>
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-150">
               <X className="w-5 h-5 text-[var(--text-secondary)]" />
             </button>
           </div>
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto overscroll-contain">
+          {/* Navigation — liens compacts, hover fluide */}
+          <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto overscroll-contain">
             {tabs
               .filter(tab => tab.id !== 'analytics' || canAccessFeature('stats_avancees'))
               .map(tab => {
                 const pendingCount = tab.badge === 'pending'
                   ? appointments.filter(a => a.status === 'pending').length + projectRequests.filter(p => p.status === 'PENDING').length
                   : 0;
+                const isActive = activeTab === tab.id;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                      activeTab === tab.id ? 'bg-[var(--text-primary)] text-[var(--text-on-dark)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
+                    className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-[14px] transition-colors duration-150 ${
+                      isActive ? 'sidebar-nav-active' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
                     }`}
                   >
                     {tab.id === 'requests' ? (
-                      <span className="relative flex-shrink-0">
+                      <span className="relative flex-shrink-0 ml-0.5">
                         {tab.icon}
                         <BadgeNotification count={pendingRequestsCount} />
                       </span>
                     ) : (
-                      tab.icon
+                      <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center">{tab.icon}</span>
                     )}
-                    {tab.label}
+                    <span className="flex-1 text-left">{tab.label}</span>
                     {pendingCount > 0 && (
-                      <span className="ml-auto px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded-full">{pendingCount}</span>
+                      <span className="min-w-[18px] h-[18px] px-2 py-0.5 flex items-center justify-center bg-amber-500 text-white text-[10px] font-bold rounded-full">{pendingCount}</span>
                     )}
                   </button>
                 );
               })}
           </nav>
-          <div className="p-4 border-t border-[var(--border)] safe-bottom">
-            <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] font-medium">
-              <LogOut className="w-5 h-5" />
+          {/* Déconnexion — zone séparée */}
+          <div className="px-3 py-3 border-t border-[var(--border)]/60 safe-bottom">
+            <button
+              onClick={logout}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] font-medium transition-colors duration-150"
+            >
+              <LogOut className="w-5 h-5 flex-shrink-0" />
               Déconnexion
             </button>
           </div>
@@ -471,39 +504,35 @@ export const DashboardPro: React.FC = () => {
               </button>
             </div>
           )}
-          {/* Fixed header - style Apple: plus d'air, titre imposant, backdrop-blur au scroll */}
+          {/* Header — design premium cohérent avec sidebar */}
           <header
-            className={`app-shell-header safe-top border-b border-[var(--border)] px-4 sm:px-6 md:px-8 py-4 sm:py-5 flex items-center justify-between gap-4 transition-all duration-300 ${
-              headerScrolled ? 'bg-[var(--bg-secondary)]/80 backdrop-blur-xl' : 'bg-[var(--bg-secondary)]'
+            className={`app-shell-header safe-top border-b px-4 sm:px-5 md:px-6 h-14 sm:h-16 flex items-center justify-between gap-4 transition-all duration-300 ${
+              headerScrolled
+                ? 'bg-[var(--bg-secondary)]/95 backdrop-blur-xl border-[var(--border)] shadow-[0_1px_0_0_var(--border)]'
+                : 'bg-[var(--bg-secondary)] border-[var(--border)]'
             }`}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-2 rounded-xl hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Ouvrir le menu">
+              <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2.5 -ml-1 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150" aria-label="Ouvrir le menu">
                 <Menu className="w-6 h-6 text-[var(--text-secondary)]" />
               </button>
-              <h2 className="text-2xl sm:text-3xl font-bold truncate text-[var(--text-primary)]">{tabs.find(t => t.id === activeTab)?.label}</h2>
+              <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)]">{tabs.find(t => t.id === activeTab)?.label}</h2>
             </div>
-            <div className="flex items-center gap-3 sm:gap-5">
-            {activeTab === 'overview' && (
-              <button
-                onClick={() => setShowWidgetModal(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-neutral-900 text-white text-sm font-semibold hover:bg-neutral-800 transition-colors"
-              >
-                <LayoutGrid className="w-4 h-4" />
-                <span className="hidden sm:inline">Ajouter un widget</span>
-              </button>
-            )}
+            <div className="flex items-center gap-2 sm:gap-4">
             <ThemeToggle />
             <div className="relative">
-              <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-2 rounded-lg hover:bg-[var(--bg-hover)]">
+              <button
+                onClick={() => { setShowNotifications(!showNotifications); setShowProfileDropdown(false); }}
+                className="relative p-2.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              >
                 <Bell className="w-5 h-5 text-[var(--text-secondary)]" />
                 {notifications.filter(n => !n.read).length > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-[var(--bg-secondary)]" />
                 )}
               </button>
               {showNotifications && (
-                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-auto bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl shadow-xl z-50">
-                  <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
+                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-auto bg-[var(--bg-card)] border border-[var(--border)]/80 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 animate-slide-up">
+                  <div className="p-4 border-b border-[var(--border)]/60 flex items-center justify-between">
                     <h4 className="font-bold text-sm text-[var(--text-primary)]">Notifications</h4>
                     {notifications.filter(n => !n.read).length > 0 && (
                       <button
@@ -522,10 +551,10 @@ export const DashboardPro: React.FC = () => {
                         <button
                           key={notif.id}
                           onClick={() => { markNotificationAsRead(notif.id); setShowNotifications(false); setActiveTab('requests'); }}
-                          className={`w-full text-left p-4 hover:bg-[var(--bg-hover)] transition-colors ${!notif.read ? 'bg-blue-500/10' : ''}`}
+                          className={`w-full text-left p-4 hover:bg-[var(--bg-hover)] transition-colors duration-150 ${!notif.read ? 'bg-indigo-500/8' : ''}`}
                         >
                           <div className="flex items-start gap-3">
-                            <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!notif.read ? 'bg-blue-500' : 'bg-transparent'}`} />
+                            <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!notif.read ? 'bg-indigo-500' : 'bg-transparent'}`} />
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-[var(--text-primary)] truncate">{notif.message}</p>
                               <p className="text-xs text-[var(--text-secondary)] mt-1">
@@ -540,43 +569,134 @@ export const DashboardPro: React.FC = () => {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-3 min-w-0">
-              <button className="relative p-1 rounded-full hover:bg-[var(--bg-hover)] min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <div className="relative flex items-center min-w-0">
+              <button
+                onClick={() => { setShowProfileDropdown(!showProfileDropdown); setShowNotifications(false); }}
+                className="flex items-center gap-2.5 p-1.5 pr-2 sm:pr-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-150 min-h-[44px]"
+              >
                 {user?.avatar ? (
-                  <img src={user.avatar} alt="" className="w-9 h-9 rounded-full border-2 border-neutral-200" />
+                  <img src={user.avatar} alt="" className="w-9 h-9 rounded-full border-2 border-[var(--border)] object-cover" />
                 ) : (
-                  <div className="w-9 h-9 rounded-full border-2 border-neutral-200 bg-neutral-200 flex items-center justify-center font-bold text-neutral-600 text-sm">
+                  <div className="w-9 h-9 rounded-full border-2 border-[var(--border)] bg-[var(--bg-hover)] flex items-center justify-center font-bold text-[var(--text-secondary)] text-sm">
                     {user?.name?.charAt(0) || '?'}
                   </div>
                 )}
+                <span className="font-medium text-[var(--text-primary)] hidden sm:block truncate max-w-[120px]">{user?.name}</span>
+                <ChevronRight className={`w-4 h-4 text-[var(--text-tertiary)] hidden sm:block transition-transform ${showProfileDropdown ? 'rotate-90' : ''}`} />
               </button>
-              <span className="font-medium text-[var(--text-primary)] hidden sm:block truncate">{user?.name}</span>
+              {showProfileDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowProfileDropdown(false)} aria-hidden />
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-[var(--bg-card)] border border-[var(--border)]/80 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 overflow-hidden animate-slide-up">
+                    <div className="p-4 border-b border-[var(--border)]/60">
+                      <div className="flex items-center gap-3">
+                        {user?.avatar ? (
+                          <img src={user.avatar} alt="" className="w-12 h-12 rounded-full border-2 border-[var(--border)] object-cover" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-[var(--bg-hover)] flex items-center justify-center font-bold text-lg text-[var(--text-secondary)]">
+                            {user?.name?.charAt(0) || '?'}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-[var(--text-primary)] truncate">{user?.name}</p>
+                          <p className="text-sm text-[var(--text-secondary)] truncate">{user?.email}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-2">
+                      <button
+                        onClick={() => { setActiveTab('settings'); setSettingsTab('general'); setShowProfileDropdown(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-hover)] font-medium transition-colors duration-150 text-left"
+                      >
+                        <Settings className="w-5 h-5 text-[var(--text-tertiary)]" />
+                        Paramètres
+                      </button>
+                      <button
+                        onClick={() => { logout(); setShowProfileDropdown(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 font-medium transition-colors duration-150 text-left"
+                      >
+                        <LogOut className="w-5 h-5" />
+                        Déconnexion
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           </header>
 
+          {/* Quick actions bar (Overview only) — style Prodify */}
+          {activeTab === 'overview' && (
+            <div className="px-4 sm:px-6 md:px-8 py-3 border-b border-[var(--border)] bg-[var(--bg-secondary)]/80 flex flex-wrap items-center gap-2 sm:gap-3">
+              <button
+                onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 active:scale-[0.98] transition-all shadow-sm shadow-indigo-500/25"
+              >
+                <Plus className="w-4 h-4" />
+                Nouveau RDV
+              </button>
+              <button
+                onClick={() => setActiveTab('requests')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--border)] text-sm font-semibold text-[var(--text-primary)] hover:border-indigo-300 hover:bg-indigo-50/50 active:scale-[0.98] transition-all"
+              >
+                <Inbox className="w-4 h-4" />
+                Demandes
+                {pendingRequestsCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold">{pendingRequestsCount}</span>
+                )}
+              </button>
+              {user?.studioName && (
+                <a
+                  href={`${window.location.origin}/studio/${getVitrineSlug(user.studioName)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--border)] text-sm font-semibold text-[var(--text-primary)] hover:border-indigo-300 hover:bg-indigo-50/50 active:scale-[0.98] transition-all"
+                >
+                  <Image className="w-4 h-4" />
+                  Ma vitrine
+                </a>
+              )}
+              <button
+                onClick={() => setShowWidgetModal(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--border)] text-sm font-semibold text-[var(--text-primary)] hover:border-indigo-300 hover:bg-indigo-50/50 active:scale-[0.98] transition-all"
+              >
+                <LayoutGrid className="w-4 h-4" />
+                Ajouter un widget
+              </button>
+            </div>
+          )}
+
           {/* ====== SCROLLABLE CONTENT ZONE ====== */}
           <div
             onScroll={(e) => setHeaderScrolled((e.target as HTMLDivElement).scrollTop > 8)}
-            className="app-shell-content p-4 sm:p-6 md:p-8"
+            className={`app-shell-content p-4 sm:p-5 md:p-6 ${activeTab === 'overview' ? 'dashboard-overview-bg' : 'dashboard-pages-bg'}`}
           >
-          <OnboardingBanner
-            studioId={studioId}
-            useSupabase={useSupabase ?? false}
-            hasAvatar={!!user?.avatar}
-            flashCount={flashDesigns.length}
-            bookingsEnabled={!!(vitrineData != null && ((vitrineData?.portfolio?.length ?? 0) > 0 || !!user?.studioName))}
-            onContinue={(targetStep: OnboardingStepId) => {
-              if (targetStep === 'avatar') { setActiveTab('settings'); setSettingsTab('general'); setSidebarOpen(false); }
-              else if (targetStep === 'flash') { setActiveTab('flash'); setSidebarOpen(false); }
-              else if (targetStep === 'bookings') { setActiveTab('settings'); setSettingsTab('vitrine'); setSidebarOpen(false); }
-            }}
-          />
           {loading && activeTab === 'overview' && <DashboardLoadingSkeleton />}
           {!loading && activeTab === 'overview' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
+              {/* Bannette Prochain RDV dans X min */}
+              {nextAppointmentIn2h && (
+                <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-emerald-900">Prochain RDV dans moins de 2 h</p>
+                      <p className="text-sm text-emerald-700">{nextAppointmentIn2h.clientName} • {nextAppointmentIn2h.time} — {nextAppointmentIn2h.service}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedAppointment(nextAppointmentIn2h)}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors"
+                  >
+                    Voir
+                  </button>
+                </div>
+              )}
               {visibleAlerts.length > 0 && (
-                <div className="space-y-2">
+                <div className="space-y-2 animate-fade-in">
                   {visibleAlerts.map(alert => (
                     <div key={alert.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 rounded-xl border ${
                       alert.type === 'warning' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'
@@ -602,51 +722,107 @@ export const DashboardPro: React.FC = () => {
                   ))}
                 </div>
               )}
-              {user?.studioName && (
-                <VitrineLinkButton studioName={user.studioName} userEmail={user.email} />
-              )}
-              <DashboardWidgets widgets={customWidgets} onWidgetsChange={setCustomWidgets} />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                <div className="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-100 shadow-sm shadow-neutral-900/5 relative overflow-hidden min-h-[44px]">
-                  <Calendar className="absolute top-4 right-4 w-5 h-5 text-neutral-300" />
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">{todayAppointments.length}</div>
-                      <div className="text-sm text-neutral-500 mt-1">RDV aujourd'hui</div>
-                    </div>
-                    {todayAppointments.length > 0 && (
-                      <span className="shrink-0 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">À venir</span>
-                    )}
-                  </div>
+              {/* Grille widgets — ÉTAPE 2 : Mini Calendrier + métriques clés */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
+                {/* Ligne 1 : Salutation + Mini Calendrier */}
+                <div className="lg:col-span-8 flex flex-col justify-center">
+                  <h3 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+                    Bonjour{firstName ? ` ${firstName}` : ''}
+                  </h3>
+                  <p className="text-base sm:text-lg mt-1 greeting-gradient font-semibold">
+                    Comment puis-je vous aider aujourd'hui ?
+                  </p>
+                  <p className="text-sm text-[var(--text-secondary)] mt-2">
+                    {todayAppointments.length > 0 ? `${todayAppointments.length} RDV aujourd'hui` : 'Aucun RDV aujourd\'hui'}
+                    {todayRevenue > 0 && ` • ${todayRevenue}€ encaissés`}
+                  </p>
                 </div>
-                <div className="rounded-3xl p-5 sm:p-6 relative overflow-hidden min-h-[44px] bg-gradient-to-br from-neutral-900 via-neutral-900 to-neutral-800 shadow-lg shadow-neutral-900/20">
-                  <DollarSign className="absolute top-4 right-4 w-5 h-5 text-white/20" />
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-3xl sm:text-4xl font-bold text-white">{totalRevenue}€</div>
-                      <div className="text-sm text-neutral-400 mt-1">Revenus totaux</div>
-                    </div>
-                    {totalRevenue > 0 && (
-                      <span className="shrink-0 px-2 py-0.5 rounded-full bg-white/10 text-white/90 text-xs font-semibold">RDV</span>
-                    )}
-                  </div>
-                </div>
-                <div className="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-100 shadow-sm shadow-neutral-900/5 relative overflow-hidden min-h-[44px]">
-                  <CreditCard className="absolute top-4 right-4 w-5 h-5 text-amber-200" />
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-3xl sm:text-4xl font-bold text-amber-600">{pendingDeposits}€</div>
-                      <div className="text-sm text-neutral-500 mt-1">Acomptes en attente</div>
-                    </div>
-                    {unpaidCount > 0 && (
-                      <span className="shrink-0 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">{unpaidCount} RDV</span>
-                    )}
-                  </div>
+                <div className="lg:col-span-5">
+                  <MiniCalendar
+                    selectedDate={null}
+                    onSelectDate={() => setActiveTab('appointments')}
+                    datesWithAppointments={new Set(appointments.filter(a => ['pending', 'confirmed'].includes(a.status)).map(a => a.date))}
+                    currentMonth={overviewCalendarMonth}
+                    onPrevMonth={() => setOverviewCalendarMonth(m => new Date(m.getFullYear(), m.getMonth() - 1))}
+                    onNextMonth={() => setOverviewCalendarMonth(m => new Date(m.getFullYear(), m.getMonth() + 1))}
+                    onToday={() => setOverviewCalendarMonth(new Date())}
+                    className="h-full"
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-2 bg-white rounded-3xl p-5 sm:p-6 border border-neutral-100 shadow-sm shadow-neutral-900/5 overflow-hidden min-h-0">
-                  <h3 className="font-bold text-lg mb-4">Évolution du revenu (6 mois)</h3>
+              {/* KPI widgets */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="dashboard-widget-card p-4 sm:p-5 relative overflow-hidden min-h-[44px] transition-all duration-300 hover:-translate-y-0.5">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+                        <Calendar className="w-4 h-4 text-indigo-600" />
+                      </div>
+                      <span className="font-semibold text-[var(--text-primary)]">RDV aujourd'hui</span>
+                    </div>
+                    {todayAppointments.length > 0 && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">À venir</span>
+                    )}
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">{todayAppointments.length}</div>
+                </div>
+                <div className="dashboard-widget-card p-4 sm:p-5 relative overflow-hidden min-h-[44px] bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
+                        <DollarSign className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="font-semibold text-white/90">Revenus du mois</span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-xs font-semibold">
+                      {now.toLocaleDateString('fr-FR', { month: 'short' })}
+                    </span>
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-bold text-white">{monthlyRevenue}€</div>
+                </div>
+                <button
+                  onClick={() => setActiveTab('requests')}
+                  className="dashboard-widget-card p-4 sm:p-5 relative overflow-hidden min-h-[44px] transition-all duration-300 hover:-translate-y-0.5 text-left w-full"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                        <Inbox className="w-4 h-4 text-amber-600" />
+                      </div>
+                      <span className="font-semibold text-[var(--text-primary)]">Demandes en attente</span>
+                    </div>
+                    {pendingRequestsCount > 0 && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">{pendingRequestsCount}</span>
+                    )}
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-bold text-amber-600">{pendingRequestsCount}</div>
+                </button>
+                <div className="dashboard-widget-card p-4 sm:p-5 relative overflow-hidden min-h-[44px] transition-all duration-300 hover:-translate-y-0.5">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                        <CreditCard className="w-4 h-4 text-emerald-600" />
+                      </div>
+                      <span className="font-semibold text-[var(--text-primary)]">Acomptes</span>
+                    </div>
+                    {unpaidCount > 0 && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">{unpaidCount} RDV</span>
+                    )}
+                  </div>
+                  <div className="text-3xl sm:text-4xl font-bold text-emerald-600">{pendingDeposits}€</div>
+                </div>
+              </div>
+              <DashboardWidgets widgets={customWidgets} onWidgetsChange={setCustomWidgets} onAddWidget={() => setShowWidgetModal(true)} />
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5">
+                <div className="xl:col-span-2 dashboard-widget-card p-5 sm:p-6 overflow-hidden min-h-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center">
+                      <BarChart3 className="w-4 h-4 text-indigo-600" />
+                    </div>
+                    <h3 className="font-bold text-lg">Évolution du revenu</h3>
+                    <span className="text-xs text-[var(--text-secondary)] ml-1">• 6 mois</span>
+                  </div>
+                  <p className="text-sm text-neutral-400 mb-4">Revenus cumulés</p>
                   <div className="-mx-2 sm:mx-0 h-[220px] min-h-[220px]">
                     <ResponsiveContainer width="100%" height={220}>
                       <AreaChart data={Array.isArray(revenueChartData) ? revenueChartData : []} margin={{ top: 0, right: 0, left: -8, bottom: 0 }}>
@@ -665,8 +841,14 @@ export const DashboardPro: React.FC = () => {
                     </ResponsiveContainer>
                   </div>
                 </div>
-                <div className="bg-white rounded-3xl p-6 border border-neutral-100 shadow-sm shadow-neutral-900/5">
-                  <h3 className="font-bold text-lg mb-4">Répartition RDV</h3>
+                <div className="dashboard-widget-card p-5 sm:p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-violet-100 flex items-center justify-center">
+                      <LayoutDashboard className="w-4 h-4 text-violet-600" />
+                    </div>
+                    <h3 className="font-bold text-lg">Répartition RDV</h3>
+                  </div>
+                  <p className="text-sm text-neutral-400 mb-4">Par statut</p>
                   {Array.isArray(pieData) && pieData.length > 0 ? (
                     <>
                       <div className="h-[140px] min-h-[140px]">
@@ -693,24 +875,37 @@ export const DashboardPro: React.FC = () => {
                   )}
                 </div>
               </div>
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-2 bg-white rounded-3xl p-5 sm:p-6 border border-neutral-100 shadow-sm shadow-neutral-900/5">
-                  <h3 className="font-bold text-lg mb-4">Prochains rendez-vous</h3>
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5">
+                <div className="xl:col-span-2 dashboard-widget-card p-5 sm:p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+                        <Calendar className="w-4 h-4 text-emerald-600" />
+                      </div>
+                      <h3 className="font-bold text-lg">Prochains rendez-vous</h3>
+                    </div>
+                    {appointments.length > 0 && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                        {Math.min(5, appointments.length)} RDV
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-neutral-400 mb-4">Les 5 prochains à venir</p>
                   {appointments.length === 0 ? (
                     <div className="text-center py-10">
                       <div className="w-14 h-14 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                         <Calendar className="w-7 h-7 text-neutral-400" />
                       </div>
                       <p className="font-semibold text-neutral-700 mb-1">Aucun rendez-vous</p>
-                      <p className="text-sm text-neutral-500 max-w-xs mx-auto">Vos prochains RDV apparaitront ici. Partagez votre page vitrine pour recevoir des demandes !</p>
-                      <button onClick={() => setActiveTab('settings')} className="mt-4 px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold hover:bg-neutral-800 touch-target">
+                      <button onClick={() => setActiveTab('settings')} className="mt-3 px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold hover:bg-neutral-800 active:scale-[0.98] transition-all touch-target">
                         Configurer ma vitrine
                       </button>
+                      <p className="text-sm text-neutral-500 max-w-xs mx-auto mt-4">Vos prochains RDV apparaitront ici. Partagez votre page vitrine pour recevoir des demandes !</p>
                     </div>
                   ) : (
                   <div className="space-y-3">
                     {appointments.slice(0, 5).map(apt => (
-                      <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl w-full text-left hover:bg-neutral-100 transition-colors">
+                      <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl w-full text-left hover:bg-neutral-100 active:scale-[0.995] active:bg-neutral-200/50 transition-all">
                         <div>
                           <div className="font-semibold">{apt.clientName}</div>
                           <div className="text-sm text-neutral-600">{apt.service} • {apt.date} {apt.time}</div>
@@ -727,11 +922,21 @@ export const DashboardPro: React.FC = () => {
                   </div>
                   )}
                 </div>
-                <div className="bg-white rounded-3xl p-5 sm:p-6 border border-neutral-100 shadow-sm shadow-neutral-900/5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Trophy className="w-5 h-5 text-amber-500" />
-                    <h3 className="font-bold text-lg">Top 5 clients</h3>
+                <div className="dashboard-widget-card p-5 sm:p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
+                        <Trophy className="w-4 h-4 text-amber-600" />
+                      </div>
+                      <h3 className="font-bold text-lg">Top 5 clients</h3>
+                    </div>
+                    {topClients.length > 0 && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
+                        {topClients.length} clients
+                      </span>
+                    )}
                   </div>
+                  <p className="text-sm text-neutral-400 mb-4">Par montant dépensé</p>
                   {topClients.length > 0 ? (
                     <div className="space-y-3">
                       {topClients.map((client, i) => {
@@ -744,7 +949,7 @@ export const DashboardPro: React.FC = () => {
                               <span className="text-sm font-bold">{client.totalSpent}€</span>
                             </div>
                             <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-neutral-900 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                              <div className="h-full bg-neutral-900 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                             </div>
                           </div>
                         );
@@ -844,7 +1049,7 @@ export const DashboardPro: React.FC = () => {
 
           {activeTab === 'settings' && (
             <div className="space-y-6">
-              <div className="flex gap-2 border-b border-neutral-200 pb-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide flex-nowrap">
+              <div className="flex gap-2 border-b border-[var(--border)] pb-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide flex-nowrap">
                 {([
                   { id: 'general', label: 'Général' },
                   { id: 'payments', label: 'Paiements' },
@@ -858,7 +1063,7 @@ export const DashboardPro: React.FC = () => {
                   { id: 'vitrine', label: 'Page vitrine' },
                 ] as const).map(tab => (
                   <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap ${settingsTab === tab.id ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:bg-neutral-50'}`}>
+                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${settingsTab === tab.id ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'}`}>
                     {tab.label}
                   </button>
                 ))}

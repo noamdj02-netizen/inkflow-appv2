@@ -102,22 +102,61 @@ export const Navbar: React.FC<NavbarProps> = () => {
         </div>
       </nav>
 
-      {/* Overlay + menu mobile (drawer sous la navbar, safe area) */}
+      {/* Drawer mobile — plein écran, PWA iOS: 100dvh, z-[9999], safe-area unique */}
       {isOpen && (
-        <>
+        <div
+          className="md:hidden fixed inset-0 z-[9999] flex flex-col"
+          style={{
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: '100dvh',
+            minHeight: '-webkit-fill-available',
+            backgroundColor: 'rgba(0,0,0,0.35)'
+          }}
+          aria-hidden="false"
+        >
+          {/* Overlay cliquable — ferme au tap */}
           <div
-            className="md:hidden fixed inset-0 bg-black/30 dark:bg-black/50 backdrop-blur-sm z-40"
+            className="absolute inset-0"
             onClick={() => setIsOpen(false)}
             aria-hidden="true"
           />
+          {/* Drawer — plein écran, contenu sous la safe area */}
           <div
             id="nav-menu-mobile"
             ref={menuRef}
-            className="md:hidden fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[400px] max-h-[85vh] overflow-y-auto rounded-2xl bg-white shadow-2xl border border-gray-200/80 py-4 px-4 box-border animate-navbar-dropdown"
+            className="absolute inset-x-4 bottom-0 top-0 mx-auto w-full max-w-[400px] flex flex-col bg-white rounded-t-2xl rounded-b-2xl shadow-2xl animate-navbar-drawer overflow-hidden"
+            style={{
+              marginTop: 'max(0px, env(safe-area-inset-top))',
+              marginBottom: 'max(0px, env(safe-area-inset-bottom))',
+              maxHeight: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))'
+            }}
             role="dialog"
             aria-label="Menu de navigation"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex flex-col gap-0.5">
+            {/* Header — bouton X en haut à droite, zone safe incluse */}
+            <div
+              className="flex items-center justify-between shrink-0 px-4 py-3 border-b border-gray-200/60"
+              style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
+            >
+              <span className="text-sm font-semibold text-neutral-500">Menu</span>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-neutral-700 hover:bg-neutral-100 active:bg-neutral-200 transition-colors touch-manipulation -mr-1"
+                aria-label="Fermer le menu"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            {/* Contenu */}
+            <div
+              className="flex flex-col gap-0.5 py-4 px-4 overflow-y-auto flex-1 min-h-0"
+              style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+            >
               {navLinks.map((link) => (
                 <a
                   key={link.href}
@@ -132,7 +171,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
               <a
                 href="/login"
                 onClick={() => setIsOpen(false)}
-                className="px-4 py-3.5 text-base font-medium text-neutral-700 dark:text-neutral-200 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/10 active:bg-neutral-200/80 transition-colors text-center touch-manipulation"
+                className="px-4 py-3.5 text-base font-medium text-neutral-700 rounded-xl hover:bg-neutral-100 active:bg-neutral-200/80 transition-colors text-center touch-manipulation"
               >
                 Connexion
               </a>
@@ -146,7 +185,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
               </a>
             </div>
           </div>
-        </>
+        </div>
       )}
     </>
   );

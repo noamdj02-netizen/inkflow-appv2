@@ -110,7 +110,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Layout: mini calendar left (desktop), content right */}
       <div className="flex flex-col lg:flex-row gap-6">
         <aside className="lg:w-64 flex-shrink-0 order-2 lg:order-1">
@@ -128,19 +128,21 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         <div className="flex-1 min-w-0 order-1 lg:order-2 space-y-4">
           {/* Stats */}
           <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-50 border border-neutral-200/80">
-              <Calendar className="w-4 h-4 text-neutral-500" />
-              <span className="text-sm font-medium text-neutral-700">Aujourd'hui</span>
-              <span className="text-sm font-bold text-neutral-900">{stats.todayCount}</span>
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl dashboard-widget-card">
+              <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-indigo-600" />
+              </div>
+              <span className="text-sm font-medium text-[var(--text-secondary)]">Aujourd'hui</span>
+              <span className="text-sm font-bold text-[var(--text-primary)]">{stats.todayCount}</span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-50 border border-neutral-200/80">
-              <span className="text-sm font-medium text-neutral-700">Cette semaine</span>
-              <span className="text-sm font-bold text-neutral-900">{stats.weekCount}</span>
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl dashboard-widget-card">
+              <span className="text-sm font-medium text-[var(--text-secondary)]">Cette semaine</span>
+              <span className="text-sm font-bold text-[var(--text-primary)]">{stats.weekCount}</span>
             </div>
             {stats.pendingCount > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-200/80">
-                <span className="text-sm font-medium text-amber-800">En attente</span>
-                <span className="text-sm font-bold text-amber-900">{stats.pendingCount}</span>
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200/80 dark:bg-amber-950/30 dark:border-amber-800/50">
+                <span className="text-sm font-medium text-amber-800 dark:text-amber-200">En attente</span>
+                <span className="text-sm font-bold text-amber-900 dark:text-amber-100">{stats.pendingCount}</span>
               </div>
             )}
           </div>
@@ -150,20 +152,20 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             <div className="flex gap-2">
               <button
                 onClick={() => setViewMode('list')}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                   viewMode === 'list'
-                    ? 'bg-neutral-900 text-white'
-                    : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'border-2 border-[var(--border)] text-[var(--text-primary)] hover:border-indigo-300 hover:bg-indigo-50/50'
                 }`}
               >
                 Liste
               </button>
               <button
                 onClick={() => setViewMode('calendar')}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                   viewMode === 'calendar'
-                    ? 'bg-neutral-900 text-white'
-                    : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'border-2 border-[var(--border)] text-[var(--text-primary)] hover:border-indigo-300 hover:bg-indigo-50/50'
                 }`}
               >
                 Calendrier
@@ -172,19 +174,19 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
             <div className="flex-1 flex flex-wrap items-center gap-2 min-w-0">
               <div className="relative flex-1 min-w-[140px] max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                 <input
                   type="search"
                   placeholder="Client, service…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                  className="input-dash w-full pl-9 pr-4 py-2.5 bg-[var(--bg-card)]"
                 />
               </div>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                className="px-4 py-2 rounded-xl border border-neutral-200 text-sm font-medium text-neutral-700 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                className="px-4 py-2.5 rounded-xl border-2 border-[var(--border)] text-sm font-medium bg-[var(--bg-card)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
               >
                 <option value="all">Tous les statuts</option>
                 <option value="pending">En attente</option>
@@ -196,7 +198,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
             <button
               onClick={onNewAppointment}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors w-full sm:w-auto"
+              className="btn-primary w-full sm:w-auto"
             >
               <Plus className="w-5 h-5" /> Nouveau RDV
             </button>
@@ -206,7 +208,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           {selectedDate && (
             <button
               onClick={() => setSelectedDate(null)}
-              className="text-sm font-medium text-neutral-500 hover:text-neutral-900"
+              className="text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
               Voir tous les rendez-vous
             </button>
@@ -223,10 +225,10 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               {/* Mobile cards */}
               <div className="space-y-3 md:hidden">
                 {filteredAppointments.length === 0 ? (
-                  <div className="text-center py-12 rounded-2xl bg-neutral-50 border border-neutral-200/80">
-                    <Calendar className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                    <p className="font-semibold text-neutral-600">Aucun rendez-vous</p>
-                    <p className="text-sm text-neutral-400 mt-1">
+                  <div className="text-center py-12 rounded-2xl dashboard-widget-card">
+                    <Calendar className="w-12 h-12 text-[var(--text-tertiary)] mx-auto mb-3" />
+                    <p className="font-semibold text-[var(--text-secondary)]">Aucun rendez-vous</p>
+                    <p className="text-sm text-[var(--text-tertiary)] mt-1">
                       {selectedDate ? `Aucun RDV le ${selectedDate}` : 'Vos RDV apparaîtront ici'}
                     </p>
                   </div>
@@ -235,35 +237,36 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                     <button
                       key={apt.id}
                       onClick={() => onSelectAppointment(apt)}
-                      className="w-full text-left p-4 rounded-2xl border border-neutral-200 bg-white hover:bg-neutral-50 hover:border-neutral-300 transition-all"
+                      className="row-clickable w-full text-left p-5 rounded-2xl dashboard-widget-card"
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold text-lg">
+                          {apt.clientName.charAt(0).toUpperCase()}
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-neutral-900 truncate">{apt.clientName}</div>
-                          <div className="text-sm text-neutral-500 mt-0.5">{apt.service}</div>
+                          <div className="font-semibold text-[var(--text-primary)] truncate">{apt.clientName}</div>
+                          <div className="text-sm text-[var(--text-secondary)] mt-0.5">{apt.service}</div>
                         </div>
                         <span
                           className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex-shrink-0 ${
                             apt.status === 'confirmed'
-                              ? 'bg-green-100 text-green-700'
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
                               : apt.status === 'pending'
-                                ? 'bg-amber-100 text-amber-700'
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
                                 : apt.status === 'completed'
-                                  ? 'bg-neutral-100 text-neutral-600'
-                                  : 'bg-neutral-100 text-neutral-500'
+                                  ? 'bg-[var(--bg-hover)] text-[var(--text-secondary)]'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
                           }`}
                         >
                           {STATUS_LABELS[apt.status] ?? apt.status}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-neutral-100">
-                        <div className="flex items-center gap-2 text-sm text-neutral-600">
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border)]">
+                        <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                           <Calendar className="w-3.5 h-3.5" />
-                          <span>
-                            {apt.date} • {apt.time}
-                          </span>
+                          <span>{apt.date} • {apt.time}</span>
                         </div>
-                        <span className="font-bold text-base">{apt.price}€</span>
+                        <span className="font-bold text-indigo-600">{apt.price}€</span>
                       </div>
                     </button>
                   ))
@@ -271,20 +274,20 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               </div>
 
               {/* Desktop table */}
-              <div className="hidden md:block rounded-2xl border border-neutral-200 overflow-hidden bg-white">
+              <div className="hidden md:block rounded-2xl overflow-hidden dashboard-widget-card">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-neutral-50 border-b border-neutral-200">
+                    <thead className="bg-[var(--bg-hover)] border-b border-[var(--border)]">
                       <tr>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Client</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Date / Heure</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Service</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Prix</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-neutral-900">Statut</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Client</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Date / Heure</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Service</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Prix</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Statut</th>
                         <th className="w-10" />
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-200">
+                    <tbody className="divide-y divide-[var(--border)]">
                       {filteredAppointments.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="px-6 py-12 text-center text-neutral-500">
@@ -295,16 +298,23 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                         </tr>
                       ) : (
                         filteredAppointments.map((apt) => (
-                          <tr key={apt.id} className="hover:bg-neutral-50 transition-colors">
+                          <tr key={apt.id} className="row-clickable border-b border-[var(--border)] last:border-0">
                             <td className="px-6 py-4">
-                              <div className="font-semibold text-neutral-900">{apt.clientName}</div>
-                              <div className="text-sm text-neutral-600">{apt.clientEmail}</div>
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold">
+                                  {apt.clientName.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-[var(--text-primary)]">{apt.clientName}</div>
+                                  <div className="text-sm text-[var(--text-secondary)]">{apt.clientEmail}</div>
+                                </div>
+                              </div>
                             </td>
-                            <td className="px-6 py-4 text-neutral-700">
+                            <td className="px-6 py-4 text-[var(--text-secondary)]">
                               {apt.date} • {apt.time}
                             </td>
-                            <td className="px-6 py-4 text-neutral-700">{apt.service}</td>
-                            <td className="px-6 py-4 font-semibold text-neutral-900">{apt.price}€</td>
+                            <td className="px-6 py-4 text-[var(--text-primary)]">{apt.service}</td>
+                            <td className="px-6 py-4 font-bold text-indigo-600">{apt.price}€</td>
                             <td className="px-6 py-4">
                               <span
                                 className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -323,7 +333,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                             <td className="px-6 py-4">
                               <button
                                 onClick={() => onSelectAppointment(apt)}
-                                className="p-2 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 transition-colors"
+                                className="p-2 rounded-lg text-[var(--text-tertiary)] hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
                                 aria-label="Voir le détail"
                               >
                                 <ChevronRight className="w-5 h-5" />

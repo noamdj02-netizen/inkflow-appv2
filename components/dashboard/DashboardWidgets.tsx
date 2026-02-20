@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { LayoutGrid, StickyNote, Link2, BarChart2, Trash2 } from 'lucide-react';
+import { LayoutGrid, StickyNote, Link2, BarChart2, Trash2, Plus } from 'lucide-react';
 import { getWidgetsFromSupabase, saveWidgetsToSupabase } from '../../lib/supabaseDashboard';
 
 const STORAGE_KEY = 'inkflow-dashboard-widgets';
@@ -23,49 +23,72 @@ const WIDGET_TYPES: { type: WidgetType; label: string; icon: React.ReactNode; de
 interface DashboardWidgetsProps {
   widgets: DashboardWidget[];
   onWidgetsChange: (widgets: DashboardWidget[]) => void;
+  onAddWidget?: () => void;
 }
 
-export const DashboardWidgets: React.FC<DashboardWidgetsProps> = ({ widgets, onWidgetsChange }) => {
+const WIDGET_ICONS: Record<WidgetType, React.ReactNode> = {
+  note: <StickyNote className="w-4 h-4" />,
+  link: <Link2 className="w-4 h-4" />,
+  stat: <BarChart2 className="w-4 h-4" />
+};
+
+const WIDGET_COLORS: Record<WidgetType, string> = {
+  note: 'bg-amber-100 text-amber-600',
+  link: 'bg-blue-100 text-blue-600',
+  stat: 'bg-indigo-100 text-indigo-600'
+};
+
+export const DashboardWidgets: React.FC<DashboardWidgetsProps> = ({ widgets, onWidgetsChange, onAddWidget }) => {
   const removeWidget = (id: string) => {
     onWidgetsChange(widgets.filter(w => w.id !== id));
   };
 
-  if (widgets.length === 0) return null;
-
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      {/* Carte "Ajouter un widget" style Prodify */}
+      {onAddWidget && (
+        <button
+          onClick={onAddWidget}
+          className="dashboard-widget-card p-5 flex flex-col items-center justify-center min-h-[120px] border-2 border-dashed border-[var(--border)] hover:border-indigo-400 hover:bg-indigo-500/10 transition-all group"
+        >
+          <div className="w-12 h-12 rounded-xl bg-indigo-100 group-hover:bg-indigo-200 flex items-center justify-center mb-3 transition-colors">
+            <Plus className="w-6 h-6 text-indigo-600" />
+          </div>
+          <span className="font-semibold text-[var(--text-primary)]">Ajouter un widget</span>
+          <span className="text-xs text-[var(--text-secondary)] mt-1">Note, lien ou statistique</span>
+        </button>
+      )}
       {widgets.map(widget => (
         <div
           key={widget.id}
-          className="group relative bg-white rounded-2xl p-5 border border-neutral-200 hover:border-neutral-300 transition-colors"
+          className="group relative dashboard-widget-card p-5"
         >
-          <button
-            onClick={() => removeWidget(widget.id)}
-            className="absolute top-3 right-3 p-1.5 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-            title="Supprimer"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-          {widget.type === 'note' && (
-            <div className="pr-8">
-              <h4 className="font-bold text-neutral-900 mb-2 truncate">{widget.title || 'Note'}</h4>
-              <p className="text-sm text-neutral-600 whitespace-pre-wrap line-clamp-3">{widget.content || 'Aucun contenu'}</p>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${WIDGET_COLORS[widget.type]}`}>
+                {WIDGET_ICONS[widget.type]}
+              </div>
+              <span className="font-semibold text-[var(--text-primary)] truncate">{widget.title || (widget.type === 'note' ? 'Note' : widget.type === 'link' ? 'Lien' : 'Stat')}</span>
             </div>
+            <button
+              onClick={() => removeWidget(widget.id)}
+              className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+              title="Supprimer"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+          {widget.type === 'note' && (
+            <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap line-clamp-3">{widget.content || 'Aucun contenu'}</p>
           )}
           {widget.type === 'link' && (
-            <div className="pr-8">
-              <h4 className="font-bold text-neutral-900 mb-2 truncate">{widget.title || 'Lien'}</h4>
-              <a href={widget.content} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate block">
-                {widget.content || 'URL non définie'}
-              </a>
-            </div>
+            <a href={widget.content} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline truncate block">
+              {widget.content || 'URL non définie'}
+            </a>
           )}
           {widget.type === 'stat' && (
-            <div className="pr-8">
-              <h4 className="text-sm text-neutral-600 mb-1">{widget.title || 'Statistique'}</h4>
-              <div className="text-2xl font-bold" style={{ color: widget.color || '#171717' }}>
-                {widget.content || '—'}
-              </div>
+            <div className="text-2xl font-bold" style={{ color: widget.color || '#171717' }}>
+              {widget.content || '—'}
             </div>
           )}
         </div>
@@ -112,7 +135,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { reset(); onClose(); }} />
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
+        <div className="relative bg-[var(--bg-card)] rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-[var(--border)] animate-slide-up" onClick={e => e.stopPropagation()}>
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <LayoutGrid className="w-5 h-5" />
             Ajouter un widget
@@ -124,7 +147,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
                 <button
                   key={type}
                   onClick={() => setSelectedType(type)}
-                  className="w-full flex items-center gap-4 p-4 rounded-xl border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-50 transition-colors text-left"
+                  className="row-clickable w-full flex items-center gap-4 p-4 rounded-xl border-2 border-[var(--border)] hover:border-indigo-400 hover:bg-indigo-50/30 transition-all text-left"
                 >
                   <div className="p-2 bg-neutral-100 rounded-lg text-neutral-600">{icon}</div>
                   <div>
@@ -209,7 +232,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
                 </button>
                 <button
                   onClick={handleAdd}
-                  className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800"
+                  className="flex-1 btn-primary"
                 >
                   Ajouter
                 </button>

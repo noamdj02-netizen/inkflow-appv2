@@ -80,42 +80,45 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
 
   if (!selectedThreadId) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         <div className="flex items-center gap-3">
           {onBack && (
-            <button onClick={onBack} className="p-2 rounded-lg hover:bg-neutral-100">
-              <ArrowLeft className="w-5 h-5" />
+            <button onClick={onBack} className="p-2.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors">
+              <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
             </button>
           )}
           <div>
-            <h2 className="text-xl font-bold">Messagerie</h2>
-            <p className="text-neutral-600 text-sm">Vos conversations avec les clients</p>
+            <h2 className="text-xl font-bold text-[var(--text-primary)]">Messagerie</h2>
+            <p className="text-[var(--text-secondary)] text-sm">Vos conversations avec les clients</p>
           </div>
         </div>
 
         {threads.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 border border-neutral-200 text-center">
-            <MessageCircle className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-            <p className="font-semibold mb-2">Aucune conversation</p>
-            <p className="text-neutral-600 text-sm">Les conversations apparaitront ici quand vous accepterez des demandes de projet.</p>
+          <div className="dashboard-widget-card p-12 text-center">
+            <MessageCircle className="w-16 h-16 text-[var(--text-tertiary)] mx-auto mb-4" />
+            <p className="font-semibold mb-2 text-[var(--text-primary)]">Aucune conversation</p>
+            <p className="text-[var(--text-secondary)] text-sm">Les conversations apparaitront ici quand vous accepterez des demandes de projet.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden divide-y divide-neutral-200">
+          <div className="dashboard-widget-card overflow-hidden divide-y divide-[var(--border)]">
             {threads.map(thread => (
-              <button key={thread.threadId} onClick={() => setSelectedThreadId(thread.threadId)}
-                className="w-full text-left px-6 py-4 hover:bg-neutral-50 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5 text-neutral-600" />
+              <button
+                key={thread.threadId}
+                onClick={() => setSelectedThreadId(thread.threadId)}
+                className="row-clickable w-full text-left px-6 py-4 flex items-center gap-4"
+              >
+                <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold text-lg">
+                  {thread.clientName.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold truncate">{thread.clientName}</span>
-                    <span className="text-xs text-neutral-500">{new Date(thread.lastMessageAt).toLocaleDateString('fr-FR')}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold truncate text-[var(--text-primary)]">{thread.clientName}</span>
+                    <span className="text-xs text-[var(--text-tertiary)] flex-shrink-0">{new Date(thread.lastMessageAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
                   </div>
-                  <p className="text-sm text-neutral-600 truncate">{thread.lastMessage}</p>
+                  <p className="text-sm text-[var(--text-secondary)] truncate mt-0.5">{thread.lastMessage}</p>
                 </div>
                 {thread.unreadCount > 0 && (
-                  <span className="px-2 py-0.5 bg-neutral-900 text-white text-xs font-bold rounded-full">{thread.unreadCount}</span>
+                  <span className="px-2.5 py-0.5 bg-indigo-600 text-white text-xs font-bold rounded-full">{thread.unreadCount}</span>
                 )}
               </button>
             ))}
@@ -126,30 +129,30 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)] bg-white rounded-2xl border border-neutral-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-neutral-200 flex items-center gap-3">
-        <button onClick={() => setSelectedThreadId(null)} className="p-2 rounded-lg hover:bg-neutral-100">
-          <ArrowLeft className="w-5 h-5" />
+    <div className="flex flex-col h-[calc(100vh-200px)] min-h-[400px] dashboard-widget-card overflow-hidden">
+      <div className="px-5 py-4 border-b border-[var(--border)] flex items-center gap-3 bg-[var(--bg-secondary)]/50">
+        <button onClick={() => setSelectedThreadId(null)} className="p-2.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors">
+          <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
         </button>
-        <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center">
-          <User className="w-4 h-4 text-neutral-600" />
+        <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+          {selectedThread?.clientName?.charAt(0).toUpperCase()}
         </div>
-        <div>
-          <div className="font-semibold">{selectedThread?.clientName}</div>
-          <div className="text-xs text-neutral-500">{selectedThread?.clientEmail}</div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-[var(--text-primary)] truncate">{selectedThread?.clientName}</div>
+          <div className="text-xs text-[var(--text-secondary)] truncate">{selectedThread?.clientEmail}</div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-[var(--bg-primary)]/30">
         {messages.map(msg => (
           <div key={msg.id} className={`flex ${msg.senderType === 'artist' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[70%] px-4 py-3 rounded-2xl ${
+            <div className={`max-w-[75%] px-4 py-3 rounded-2xl ${
               msg.senderType === 'artist'
-                ? 'bg-neutral-900 text-white'
-                : 'bg-neutral-100 text-neutral-900'
+                ? 'bg-indigo-600 text-white rounded-br-md shadow-sm'
+                : 'bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-primary)] rounded-bl-md'
             }`}>
-              <p className="text-sm">{msg.content}</p>
-              <span className={`text-xs mt-1 block ${msg.senderType === 'artist' ? 'text-neutral-400' : 'text-neutral-500'}`}>
+              <p className="text-sm leading-relaxed">{msg.content}</p>
+              <span className={`text-xs mt-1 block ${msg.senderType === 'artist' ? 'text-white/70' : 'text-[var(--text-tertiary)]'}`}>
                 {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
@@ -158,20 +161,20 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 border-t border-neutral-200">
+      <div className="p-4 border-t border-[var(--border)] bg-[var(--bg-card)]">
         <div className="flex gap-2">
           <input
             type="text"
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && sendMessage()}
-            placeholder="Ecrivez un message..."
-            className="flex-1 px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
+            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+            placeholder="Écrivez un message..."
+            className="input-dash flex-1 px-4 py-3"
           />
           <button
             onClick={sendMessage}
             disabled={!newMessage.trim() || sending}
-            className="px-4 py-3 bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 disabled:opacity-50"
+            className="btn-primary px-5 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="w-5 h-5" />
           </button>

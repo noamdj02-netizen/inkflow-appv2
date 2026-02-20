@@ -155,15 +155,15 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
   }, [cashEntries]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Finance</h1>
-          <p className="text-neutral-600 mt-1">Revenus, espèces et paiements</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Finance</h1>
+          <p className="text-[var(--text-secondary)] mt-1">Revenus, espèces et paiements</p>
         </div>
         <button
           onClick={() => setShowAddCash(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors"
+          className="btn-primary"
         >
           <Banknote className="w-5 h-5" />
           Ajouter encaissement espèces
@@ -171,7 +171,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-neutral-200">
+        <div className="dashboard-widget-card p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-xl bg-neutral-900 text-white">
               <DollarSign className="w-5 h-5" />
@@ -181,9 +181,9 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
           <div className="text-2xl font-bold">{totalGlobal}€</div>
           <p className="text-xs text-neutral-500 mt-1">RDV + espèces</p>
         </div>
-        <div className="bg-white rounded-2xl p-5 border border-neutral-200">
+        <div className="dashboard-widget-card p-5">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-blue-100 text-blue-700">
+            <div className="p-2 rounded-xl bg-indigo-100 text-indigo-700">
               <CreditCard className="w-5 h-5" />
             </div>
             <span className="text-sm text-neutral-600">Revenus RDV</span>
@@ -191,7 +191,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
           <div className="text-2xl font-bold">{totalRevenue}€</div>
           <p className="text-xs text-neutral-500 mt-1">Paiements carte / virement</p>
         </div>
-        <div className="bg-white rounded-2xl p-5 border border-neutral-200">
+        <div className="dashboard-widget-card p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
               <Banknote className="w-5 h-5" />
@@ -203,7 +203,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
             <p className="text-xs text-emerald-600 mt-1">Dont {todayCash}€ aujourd'hui</p>
           )}
         </div>
-        <div className="bg-white rounded-2xl p-5 border border-neutral-200">
+        <div className="dashboard-widget-card p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-xl bg-green-100 text-green-700">
               <Receipt className="w-5 h-5" />
@@ -212,7 +212,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
           </div>
           <div className="text-2xl font-bold text-green-600">{totalDeposits}€</div>
         </div>
-        <div className="bg-white rounded-2xl p-5 border border-neutral-200">
+        <div className="dashboard-widget-card p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-xl bg-amber-100 text-amber-700">
               <TrendingUp className="w-5 h-5" />
