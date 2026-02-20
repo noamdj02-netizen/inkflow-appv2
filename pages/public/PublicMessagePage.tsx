@@ -137,7 +137,7 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && sendMessage()}
-            placeholder="Ecrivez un message..."
+            placeholder="Écrivez un message..."
             className="flex-1 px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
           />
           <button

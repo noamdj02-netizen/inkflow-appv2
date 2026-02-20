@@ -25,6 +25,8 @@ import { PublicStudioPagePro } from './pages/public/PublicStudioPagePro';
 import { PublicBookingPagePro } from './pages/public/PublicBookingPagePro';
 import { ConsentPage } from './pages/public/ConsentPage';
 import { PublicMessagePage } from './pages/public/PublicMessagePage';
+import { PrivacyPolicyPage } from './pages/legal/PrivacyPolicyPage';
+import { TermsOfServicePage } from './pages/legal/TermsOfServicePage';
 
 interface Route {
   path: string | RegExp;
@@ -95,7 +97,11 @@ const Router: React.FC = () => {
     { path: /^\/studio\/([a-z0-9-]+)$/, component: PublicStudioPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
     { path: /^\/book\/([a-z0-9-]+)$/, component: PublicBookingPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
     { path: /^\/consent\/([a-z0-9_-]+)$/, component: ConsentPage, getProps: (m) => ({ consentId: m[1] }) },
-    { path: /^\/messages\/([a-z0-9_-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) }
+    { path: /^\/messages\/([a-z0-9_-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) },
+    { path: '/politique-confidentialite', component: PrivacyPolicyPage },
+    { path: '/privacy', component: PrivacyPolicyPage },
+    { path: '/conditions-utilisation', component: TermsOfServicePage },
+    { path: '/terms', component: TermsOfServicePage },
   ];
 
   const matchRoute = () => {
@@ -189,13 +195,15 @@ const LandingPage: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <SupabaseSyncProvider>
-          <Router />
-        </SupabaseSyncProvider>
-      </ToastProvider>
-    </AuthProvider>
+    <div className="app-root">
+      <AuthProvider>
+        <ToastProvider>
+          <SupabaseSyncProvider>
+            <Router />
+          </SupabaseSyncProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </div>
   );
 };
 

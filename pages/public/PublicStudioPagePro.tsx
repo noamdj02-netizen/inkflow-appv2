@@ -12,6 +12,7 @@ import { getVitrineData, getVitrineDataBySlugAsync } from '../../lib/vitrineStor
 import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
 import { createProjectRequest } from '../../lib/supabaseProjectRequests';
 import { useRealtimeVitrine } from '../../hooks/useRealtimeSync';
+import { useToast } from '../../contexts/ToastContext';
 import type { VitrineData } from '../../types/vitrine';
 import type { ProjectRequestFormData } from '../../types';
 
@@ -22,6 +23,7 @@ interface PublicStudioPageProProps {
 }
 
 export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studioSlug }) => {
+  const toast = useToast();
   const [studio, setStudio] = useState<VitrineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -103,7 +105,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const handleProjectRequestSubmit = async (data: ProjectRequestFormData) => {
     const studioId = await getStudioIdBySlug(studioSlug);
     if (!studioId) {
-      alert('Ce studio n\'est pas encore configuré. Contactez-nous directement.');
+      toast.error('Ce studio n\'est pas encore configuré. Contactez-nous directement.');
       return;
     }
     await createProjectRequest(data, studioId);
@@ -122,7 +124,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       }
       setBookingStudioId(id ?? null);
     } catch (err) {
-      console.error('Erreur chargement studio:', err);
+      if (import.meta.env.DEV) console.error('Erreur chargement studio:', err);
       setBookingError('Impossible de charger le formulaire. Réessayez.');
     }
   };
@@ -139,7 +141,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     try {
       const studioId = await getStudioIdBySlug(studioSlug);
       if (!studioId) {
-        alert('Studio introuvable. Contactez-nous directement.');
+        toast.error('Studio introuvable. Contactez-nous directement.');
         return;
       }
       const descriptionParts = [contactSubject ? `Sujet: ${contactSubject}` : '', contactPhone ? `Téléphone: ${contactPhone}` : '', contactMessage].filter(Boolean);
@@ -159,8 +161,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       setContactSubject('');
       setContactMessage('');
     } catch (err) {
-      console.error('Erreur envoi contact:', err);
-      alert('Une erreur est survenue. Réessayez.');
+      if (import.meta.env.DEV) console.error('Erreur envoi contact:', err);
+      toast.error('Une erreur est survenue. Réessayez.');
     } finally {
       setContactLoading(false);
     }
@@ -186,7 +188,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       } catch { /* cancelled */ }
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('Lien copié dans le presse-papier !');
+      toast.success('Lien copié dans le presse-papier !');
     }
   };
 
@@ -371,7 +373,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 safe-bottom">
         <div className="grid lg:grid-cols-3 gap-8 sm:gap-12">
-          <div className="lg:col-span-2 space-y-10 sm:space-y-16">
+          <div className="lg:col-span-2 space-y-10 sm:space-y-16 relative z-10">
             {/* About */}
             <section id="about" className="scroll-mt-24 sm:scroll-mt-32">
               <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
@@ -661,8 +663,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6 lg:space-y-6">
-            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border-2 border-neutral-200 lg:sticky lg:top-32">
+          <div className="space-y-6 lg:space-y-6 lg:self-start">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border-2 border-neutral-200 lg:sticky lg:top-24">
               <div className="mb-4 sm:mb-6">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <h3 className="text-xl sm:text-2xl font-bold">Réserver</h3>

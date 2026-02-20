@@ -39,7 +39,7 @@ export function setVitrineData(slug: string, data: VitrineData, userEmail?: stri
   localStorage.setItem(key, JSON.stringify({ ...data, slug }));
   if (useSupabase() && userEmail && studioName) {
     const studioId = getStudioId(userEmail, studioName);
-    saveVitrineDataToSupabase(studioId, data).catch(console.error);
+    saveVitrineDataToSupabase(studioId, data).catch((err) => { if (import.meta.env.DEV) console.error(err); });
   }
 }
 
@@ -54,7 +54,7 @@ export async function getVitrineDataAsync(slug: string, userEmail: string, studi
     localStorage.setItem(key, JSON.stringify({ ...fromDb, slug }));
     return fromDb;
   } catch (e) {
-    console.error('getVitrineDataAsync:', e);
+    if (import.meta.env.DEV) console.error('getVitrineDataAsync:', e);
     return getVitrineData(slug);
   }
 }
@@ -98,7 +98,7 @@ export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineDa
     }
     return fromDb;
   } catch (e) {
-    console.error('getVitrineDataBySlugAsync:', e);
+    if (import.meta.env.DEV) console.error('getVitrineDataBySlugAsync:', e);
     if (localRaw) {
       try {
         return { ...defaultData, ...(JSON.parse(localRaw) as object), slug } as VitrineData;

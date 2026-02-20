@@ -116,7 +116,7 @@ export const InvoiceButton: React.FC<InvoiceButtonProps> = ({ appointment, artis
       window.open(pdfUrl, '_blank');
       setTimeout(() => URL.revokeObjectURL(pdfUrl), 100);
     } catch (error) {
-      console.error('Erreur génération PDF:', error);
+      if (import.meta.env.DEV) console.error('Erreur génération PDF:', error);
       alert('Erreur lors de la génération du PDF.');
     } finally {
       setIsGenerating(false);

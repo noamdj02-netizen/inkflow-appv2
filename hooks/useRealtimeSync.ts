@@ -51,7 +51,7 @@ export function useRealtimeSync<T extends { id: string }>(
               return [...prev, newItem];
             });
           } catch (e) {
-            console.error(`[RealtimeSync] ${table} INSERT map error:`, e);
+            if (import.meta.env.DEV) console.error(`[RealtimeSync] ${table} INSERT map error:`, e);
           }
         }
       )
@@ -63,7 +63,7 @@ export function useRealtimeSync<T extends { id: string }>(
             const updated = mapFromDb(payload.new as Record<string, unknown>);
             setState(prev => prev.map(i => i.id === updated.id ? updated : i));
           } catch (e) {
-            console.error(`[RealtimeSync] ${table} UPDATE map error:`, e);
+            if (import.meta.env.DEV) console.error(`[RealtimeSync] ${table} UPDATE map error:`, e);
           }
         }
       )
@@ -136,14 +136,14 @@ export function useRealtimeVitrine(
                   setStudio({ ...defaults, ...vitrinePayload, slug: studioSlug } as VitrineData);
                 }
               } catch (e) {
-                console.error('[RealtimeVitrine] UPDATE parse error:', e);
+                if (import.meta.env.DEV) console.error('[RealtimeVitrine] UPDATE parse error:', e);
               }
             }
           )
           .subscribe();
       })
       .catch((err) => {
-        console.error('[RealtimeVitrine] Could not resolve slug:', err);
+        if (import.meta.env.DEV) console.error('[RealtimeVitrine] Could not resolve slug:', err);
       });
 
     return () => {

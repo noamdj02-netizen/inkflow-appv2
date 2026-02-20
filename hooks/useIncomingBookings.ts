@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { getBookingsFromSupabase, mapBookingFromDb } from '../lib/supabaseBookings';
 import { useToast } from '../contexts/ToastContext';
-import { DEMO_ACCOUNT_EMAIL, getDemoBookings } from '../data/demoData';
+import { DEMO_ACCOUNT_EMAILS, getDemoBookings } from '../data/demoData';
 import type { Booking, BookingStatus } from '../types';
 import { updateBookingStatus as updateBookingStatusInSupabase } from '../lib/supabaseBookings';
 
@@ -11,7 +11,7 @@ function isDemoUser(): boolean {
     const raw = typeof window !== 'undefined' ? localStorage.getItem('inkflow_user') : null;
     if (!raw) return false;
     const u = JSON.parse(raw) as { email?: string };
-    return u?.email === DEMO_ACCOUNT_EMAIL;
+    return DEMO_ACCOUNT_EMAILS.includes(u?.email?.toLowerCase().trim() ?? '');
   } catch {
     return false;
   }
@@ -52,7 +52,7 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
       const data = await getBookingsFromSupabase(studioId);
       setBookings(data);
     } catch (e) {
-      console.error('useIncomingBookings load:', e);
+      if (import.meta.env.DEV) console.error('useIncomingBookings load:', e);
       setBookings([]);
     } finally {
       setLoading(false);
@@ -88,7 +88,7 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
               playNotificationSound();
             }
           } catch (e) {
-            console.error('[useIncomingBookings] INSERT map error:', e);
+            if (import.meta.env.DEV) console.error('[useIncomingBookings] INSERT map error:', e);
           }
         }
       )
@@ -100,7 +100,7 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
             const updated = mapBookingFromDb(payload.new as Record<string, unknown>);
             setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
           } catch (e) {
-            console.error('[useIncomingBookings] UPDATE map error:', e);
+            if (import.meta.env.DEV) console.error('[useIncomingBookings] UPDATE map error:', e);
           }
         }
       )

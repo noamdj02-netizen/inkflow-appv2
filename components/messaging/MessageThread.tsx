@@ -64,18 +64,24 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedThreadId || sending) return;
     setSending(true);
-    const msg = {
-      id: `msg_${Date.now()}`,
-      studio_id: studioId,
-      thread_id: selectedThreadId,
-      sender_type: 'artist',
-      sender_name: artistName,
-      content: newMessage.trim(),
-      read: false,
-    };
-    await supabase.from('inkflow_messages').insert(msg);
-    setNewMessage('');
-    setSending(false);
+    try {
+      const msg = {
+        id: `msg_${Date.now()}`,
+        studio_id: studioId,
+        thread_id: selectedThreadId,
+        sender_type: 'artist',
+        sender_name: artistName,
+        content: newMessage.trim(),
+        read: false,
+      };
+      const { error } = await supabase.from('inkflow_messages').insert(msg);
+      if (error) throw error;
+      setNewMessage('');
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('Erreur envoi message:', err);
+    } finally {
+      setSending(false);
+    }
   };
 
   if (!selectedThreadId) {
@@ -176,7 +182,11 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
             disabled={!newMessage.trim() || sending}
             className="btn-primary px-5 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Send className="w-5 h-5" />
+            {sending ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
           </button>
         </div>
       </div>

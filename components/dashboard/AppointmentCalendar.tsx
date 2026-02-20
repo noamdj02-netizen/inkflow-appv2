@@ -7,9 +7,10 @@ const HOURS = [9, 10, 11, 12, 14, 15, 16, 17, 18];
 interface AppointmentCalendarProps {
   appointments: Appointment[];
   onSlotClick: () => void;
+  onAppointmentClick?: (apt: Appointment) => void;
 }
 
-export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ appointments, onSlotClick }) => {
+export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ appointments, onSlotClick, onAppointmentClick }) => {
   const [weekStart, setWeekStart] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - d.getDay());
@@ -105,15 +106,16 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ appoin
                     className="relative min-h-[70px] rounded-xl border border-[var(--border)] bg-[var(--bg-hover)]/50 hover:bg-[var(--bg-hover)] cursor-pointer p-2 transition-colors"
                   >
                     {slotApts.map(apt => (
-                      <div
+                      <button
                         key={apt.id}
-                        className="absolute inset-1 rounded-lg bg-indigo-600 text-white p-2 text-xs overflow-hidden shadow-sm"
-                        onClick={e => e.stopPropagation()}
+                        type="button"
+                        className="absolute inset-1 rounded-lg bg-indigo-600 text-white p-2 text-xs overflow-hidden shadow-sm text-left w-full hover:bg-indigo-700 transition-colors cursor-pointer"
+                        onClick={e => { e.stopPropagation(); onAppointmentClick?.(apt); }}
                       >
                         <div className="font-medium truncate">{apt.clientName}</div>
                         <div className="text-white/90 truncate">{apt.service}</div>
                         <div className="text-white/70 text-[10px]">{apt.time} • {apt.duration}min</div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 );

@@ -63,7 +63,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
       try {
         await saveVitrineDataAsync(slug, d, userEmail, studioName);
       } catch (err) {
-        console.warn('[VitrineSettings] auto-save failed (silent):', err);
+        if (import.meta.env.DEV) console.warn('[VitrineSettings] auto-save failed (silent):', err);
       }
     }
   };
@@ -91,7 +91,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
         toast.success('Sauvegardé !');
       }
     } catch (err) {
-      console.error('[VitrineSettings] save failed:', err);
+      if (import.meta.env.DEV) console.error('[VitrineSettings] save failed:', err);
       toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
     } finally {
       setManualSaving(false);

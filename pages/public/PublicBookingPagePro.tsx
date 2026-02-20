@@ -6,6 +6,7 @@ import {
 import { Logo } from '../../components/Logo';
 import { VitrineBookingForm } from '../../components/booking/VitrineBookingForm';
 import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
+import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 
 const supabaseEnabled = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
@@ -39,14 +40,24 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
     message: ''
   });
 
-  const studio = {
-    name: "Ink & Art Studio",
-    address: "42 Rue Oberkampf, 75011 Paris",
-    phone: "+33 1 23 45 67 89",
-    email: "contact@ink-art.fr",
-    rating: 4.9,
-    reviewCount: 127
-  };
+  const [studioInfo, setStudioInfo] = useState<{ name: string; address: string; rating: number; reviewCount: number } | null>(null);
+
+  useEffect(() => {
+    getVitrineDataBySlugAsync(studioSlug)
+      .then((data) => {
+        if (data) {
+          setStudioInfo({
+            name: data.name,
+            address: data.address || '',
+            rating: 4.9,
+            reviewCount: data.testimonials?.length || 0,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [studioSlug]);
+
+  const studio = studioInfo ?? { name: studioSlug, address: '', rating: 0, reviewCount: 0 };
 
   const serviceTypes = [
     { id: 'custom', name: 'Tatouage personnalisé', description: 'Design unique créé pour vous', price: 'À partir de 150€', duration: '2-4h', icon: '🎨' },

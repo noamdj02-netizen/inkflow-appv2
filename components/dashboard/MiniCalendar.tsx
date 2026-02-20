@@ -62,14 +62,14 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
 
   return (
     <div
-      className={`rounded-2xl dashboard-widget-card overflow-hidden ${className}`}
+      className={`rounded-2xl dashboard-widget-card overflow-hidden p-5 ${className}`}
       style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
-      <div className="flex items-center justify-between px-4 py-3.5 border-b border-[var(--border)]">
+      <div className="flex items-center justify-between px-1 py-2 border-b border-[var(--border)] mb-4">
         <button
           type="button"
           onClick={onPrevMonth}
-          className="p-2 rounded-xl hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+          className="p-2 rounded-[10px] hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
           aria-label="Mois précédent"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -80,16 +80,16 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
         <button
           type="button"
           onClick={onNextMonth}
-          className="p-2 rounded-xl hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+          className="p-2 rounded-[10px] hover:bg-[var(--bg-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
           aria-label="Mois suivant"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
-      <div className="p-4">
+      <div>
         <div className="grid grid-cols-7 gap-1 text-center">
           {WEEKDAYS.map((wd) => (
-            <div key={wd} className="py-2 text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
+            <div key={wd} className="py-2 text-[11px] font-semibold text-[#6B7280] dark:text-[var(--text-tertiary)] uppercase tracking-wide">
               {wd}
             </div>
           ))}
@@ -107,18 +107,18 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
                   type="button"
                   onClick={() => onSelectDate(dateStr)}
                   className={`
-                    aspect-square rounded-xl text-[13px] font-medium flex flex-col items-center justify-center transition-all
+                    aspect-square rounded-[10px] text-[13px] font-medium flex flex-col items-center justify-center transition-all
                     ${isSelected
-                      ? 'bg-indigo-600 text-white shadow-sm'
+                      ? 'bg-[#6B5CE7] text-white shadow-sm'
                       : isToday
-                        ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-semibold ring-1 ring-indigo-200 dark:ring-indigo-500/30'
+                        ? 'bg-[#6B5CE7]/10 text-[#6B5CE7] font-semibold ring-1 ring-[#6B5CE7]/30'
                         : 'text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                     }
                   `}
                 >
                   <span>{day}</span>
                   {hasAppointments && !isSelected && (
-                    <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isToday ? 'bg-indigo-500' : 'bg-indigo-400'}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isToday ? 'bg-[#6B5CE7]' : 'bg-[#6B5CE7]'}`} />
                   )}
                 </button>
               );
@@ -128,9 +128,9 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
         <button
           type="button"
           onClick={onToday}
-          className="w-full mt-4 py-2.5 rounded-xl text-[13px] font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/30 transition-colors"
+          className="w-full mt-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-[#6B5CE7] border-2 border-[#6B5CE7] bg-transparent hover:bg-[#6B5CE7]/10 transition-colors"
         >
-          Aujourd'hui
+          Aujourd&apos;hui
         </button>
       </div>
     </div>

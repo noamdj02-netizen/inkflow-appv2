@@ -1,5 +1,5 @@
 import React from 'react';
-import { Twitter, Instagram, Linkedin, Github } from 'lucide-react';
+import { Instagram, Mail } from 'lucide-react';
 import { Logo } from './Logo';
 
 export const Footer: React.FC = () => {
@@ -12,20 +12,18 @@ export const Footer: React.FC = () => {
             <span className="text-lg font-bold text-neutral-900 tracking-tight">InkFlow</span>
           </div>
 
-          <div className="flex gap-8 text-neutral-400">
-            <a href="#" className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100"><Twitter className="w-5 h-5" /></a>
-            <a href="#" className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100"><Instagram className="w-5 h-5" /></a>
-            <a href="#" className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100"><Linkedin className="w-5 h-5" /></a>
-            <a href="#" className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100"><Github className="w-5 h-5" /></a>
+          <div className="flex gap-6 text-neutral-400">
+            <a href="https://instagram.com/inkflow.app" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100"><Instagram className="w-5 h-5" /></a>
+            <a href="mailto:contact@inkflow.app" className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100"><Mail className="w-5 h-5" /></a>
           </div>
         </div>
 
         <div className="mt-10 sm:mt-14 flex flex-col md:flex-row justify-between items-center text-sm text-neutral-500 border-t border-neutral-200/80 pt-8 sm:pt-10 gap-6">
-          <p className="text-center md:text-left">&copy; 2025 InkFlow. Paris, France.</p>
+          <p className="text-center md:text-left">&copy; {new Date().getFullYear()} InkFlow. Paris, France.</p>
           <div className="flex flex-wrap justify-center gap-6 sm:gap-8 font-medium">
-            <a href="#" className="hover:text-neutral-900 transition-colors duration-200">Confidentialité</a>
-            <a href="#" className="hover:text-neutral-900 transition-colors duration-200">Mentions légales</a>
-            <a href="#" className="hover:text-neutral-900 transition-colors duration-200">Support</a>
+            <a href="/politique-confidentialite" className="hover:text-neutral-900 transition-colors duration-200">Politique de confidentialité</a>
+            <a href="/conditions-utilisation" className="hover:text-neutral-900 transition-colors duration-200">Conditions d'utilisation</a>
+            <a href="mailto:contact@inkflow.app" className="hover:text-neutral-900 transition-colors duration-200">Support</a>
           </div>
         </div>
       </div>

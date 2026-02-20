@@ -27,7 +27,7 @@ export function useOptimisticMutation<T extends { id: string }>(
 
       serverFn(item)
         .catch((err) => {
-          console.error('[OptimisticMutation] add failed, rolling back:', err);
+          if (import.meta.env.DEV) console.error('[OptimisticMutation] add failed, rolling back:', err);
           // Rollback: remove the optimistically added item
           setState(prev => prev.filter(i => i.id !== item.id));
           toast.error('Erreur de sauvegarde — modification annulee');
@@ -66,7 +66,7 @@ export function useOptimisticMutation<T extends { id: string }>(
 
       serverFn(capturedUpdated)
         .catch((err) => {
-          console.error('[OptimisticMutation] update failed, rolling back:', err);
+          if (import.meta.env.DEV) console.error('[OptimisticMutation] update failed, rolling back:', err);
           // Rollback: restore the snapshot
           setState(prev => prev.map(item => item.id === id ? capturedSnapshot : item));
           toast.error('Erreur de sauvegarde — modification annulee');
@@ -92,7 +92,7 @@ export function useOptimisticMutation<T extends { id: string }>(
 
       serverFn(id)
         .catch((err) => {
-          console.error('[OptimisticMutation] remove failed, rolling back:', err);
+          if (import.meta.env.DEV) console.error('[OptimisticMutation] remove failed, rolling back:', err);
           // Rollback: re-add the removed item
           setState(prev => [...prev, capturedSnapshot]);
           toast.error('Erreur de suppression — element restaure');

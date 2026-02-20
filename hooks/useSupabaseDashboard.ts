@@ -24,7 +24,7 @@ import {
 import { useOptimisticMutation } from './useOptimisticMutation';
 import { useRealtimeSync } from './useRealtimeSync';
 import {
-  DEMO_ACCOUNT_EMAIL,
+  DEMO_ACCOUNT_EMAILS,
   getCachedDemoAppointments,
   getDemoClients,
   getDemoFlash,
@@ -133,7 +133,7 @@ export const useSupabaseDashboard = () => {
       setLoading(true);
       try {
         // Compte démo : toujours charger les fausses données (stats, RDV, clients, flash, notifs) pour captures d'écran
-        if (user.email === DEMO_ACCOUNT_EMAIL) {
+        if (DEMO_ACCOUNT_EMAILS.includes(user.email?.toLowerCase().trim() ?? '')) {
           setStudioId(null);
           setAppointments(getCachedDemoAppointments());
           setClients(getDemoClients());
@@ -157,9 +157,7 @@ export const useSupabaseDashboard = () => {
         }
       } catch (err) {
         const error = err instanceof Error ? err : new Error(typeof err === 'object' && err !== null && 'message' in err ? String((err as { message: unknown }).message) : String(err));
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('Supabase init:', error.message);
-        }
+        if (import.meta.env.DEV) console.warn('Supabase init:', error.message);
         setConnectionError(error);
         const isNetworkError =
           error.message?.toLowerCase().includes('fetch') ||
@@ -271,7 +269,7 @@ export const useSupabaseDashboard = () => {
 
   const markNotificationAsRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    if (useSupabase) markNotificationReadInSupabase(id).catch(console.error);
+    if (useSupabase) markNotificationReadInSupabase(id).catch((err) => { if (import.meta.env.DEV) console.error(err); });
   }, [useSupabase]);
 
   const loadClientNotes = useCallback(async (clientId: string): Promise<string> => {
@@ -279,7 +277,7 @@ export const useSupabaseDashboard = () => {
     try {
       return await getClientNotesFromSupabase(clientId);
     } catch (e) {
-      console.error('loadClientNotes:', e);
+      if (import.meta.env.DEV) console.error('loadClientNotes:', e);
       return '';
     }
   }, [useSupabase]);
@@ -289,7 +287,7 @@ export const useSupabaseDashboard = () => {
     try {
       await saveClientNotesToSupabase(clientId, notes);
     } catch (e) {
-      console.error('saveClientNotes:', e);
+      if (import.meta.env.DEV) console.error('saveClientNotes:', e);
     }
   }, [useSupabase]);
 

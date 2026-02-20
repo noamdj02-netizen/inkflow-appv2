@@ -55,8 +55,8 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ consentId }) => {
       <div className="landing-scroll bg-neutral-50 flex items-center justify-center px-4">
         <div className="text-center">
           <Logo />
-          <h1 className="text-2xl font-bold mt-4 mb-2">Deja signe</h1>
-          <p className="text-neutral-600">Ce formulaire de consentement a deja ete signe. Merci !</p>
+          <h1 className="text-2xl font-bold mt-4 mb-2">Déjà signé</h1>
+          <p className="text-neutral-600">Ce formulaire de consentement a déjà été signé. Merci !</p>
         </div>
       </div>
     );

@@ -3,7 +3,7 @@ import { useToast } from '../contexts/ToastContext';
 import { getProjectRequestsFromSupabase, updateProjectRequestStatus as updateStatusInSupabase, mapProjectRequestFromDb } from '../lib/supabaseDashboard';
 import { useOptimisticMutation } from './useOptimisticMutation';
 import { useRealtimeSync } from './useRealtimeSync';
-import { DEMO_ACCOUNT_EMAIL, getDemoProjectRequests } from '../data/demoData';
+import { DEMO_ACCOUNT_EMAILS, getDemoProjectRequests } from '../data/demoData';
 import type { ProjectRequest, ProjectRequestStatus } from '../types';
 
 function isDemoUser(): boolean {
@@ -11,7 +11,7 @@ function isDemoUser(): boolean {
     const raw = typeof window !== 'undefined' ? localStorage.getItem('inkflow_user') : null;
     if (!raw) return false;
     const u = JSON.parse(raw) as { email?: string };
-    return u?.email === DEMO_ACCOUNT_EMAIL;
+    return DEMO_ACCOUNT_EMAILS.includes(u?.email?.toLowerCase().trim() ?? '');
   } catch {
     return false;
   }
@@ -51,7 +51,7 @@ export function useProjectRequests(studioId: string | null) {
       const data = await getProjectRequestsFromSupabase(studioId);
       setProjectRequests(data);
     } catch (e) {
-      console.error('useProjectRequests load:', e);
+      if (import.meta.env.DEV) console.error('useProjectRequests load:', e);
       setProjectRequests([]);
     } finally {
       setLoading(false);

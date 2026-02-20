@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  TrendingUp, TrendingDown, DollarSign, Users, Calendar,
+  DollarSign, Users, Calendar,
   Target, Award, ChevronDown
 } from 'lucide-react';
 import { Appointment, Client } from '../../types';
@@ -10,38 +10,65 @@ interface AnalyticsDashboardProps {
   clients: Client[];
 }
 
+const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+
 export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   appointments,
   clients
 }) => {
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
 
-  const totalRevenue = appointments.reduce((sum, apt) => sum + apt.price, 0);
-  const totalDeposits = appointments.reduce((sum, apt) => sum + (apt.depositPaid ? apt.deposit : 0), 0);
-  const averagePerAppointment = appointments.length > 0 ? totalRevenue / appointments.length : 0;
-  const completionRate = appointments.length > 0
-    ? (appointments.filter(a => a.status === 'completed').length / appointments.length) * 100
+  const filteredAppointments = useMemo(() => {
+    const now = new Date();
+    return appointments.filter(apt => {
+      const aptDate = new Date(apt.date);
+      if (period === 'week') {
+        const weekAgo = new Date(now);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return aptDate >= weekAgo && aptDate <= now;
+      }
+      if (period === 'month') {
+        return aptDate.getMonth() === now.getMonth() && aptDate.getFullYear() === now.getFullYear();
+      }
+      return aptDate.getFullYear() === now.getFullYear();
+    });
+  }, [appointments, period]);
+
+  const totalRevenue = filteredAppointments.reduce((sum, apt) => sum + apt.price, 0);
+  const totalDeposits = filteredAppointments.reduce((sum, apt) => sum + (apt.depositPaid ? apt.deposit : 0), 0);
+  const averagePerAppointment = filteredAppointments.length > 0 ? totalRevenue / filteredAppointments.length : 0;
+  const completionRate = filteredAppointments.length > 0
+    ? (filteredAppointments.filter(a => a.status === 'completed').length / filteredAppointments.length) * 100
     : 0;
 
   const vipClients = clients.filter(c => c.status === 'vip').length;
   const activeClients = clients.filter(c => c.status === 'active').length;
 
-  const revenueByMonth = [
-    { month: 'Jan', amount: 2400, appointments: 12 },
-    { month: 'Fév', amount: 3200, appointments: 16 },
-    { month: 'Mar', amount: 2800, appointments: 14 },
-    { month: 'Avr', amount: 3600, appointments: 18 },
-    { month: 'Mai', amount: 4200, appointments: 21 },
-    { month: 'Juin', amount: 3800, appointments: 19 }
-  ];
+  const revenueByMonth = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const months: { month: string; amount: number; appointments: number }[] = [];
+    for (let m = 0; m <= now.getMonth(); m++) {
+      const monthApts = appointments.filter(apt => {
+        const d = new Date(apt.date);
+        return d.getFullYear() === currentYear && d.getMonth() === m;
+      });
+      months.push({
+        month: MONTH_LABELS[m],
+        amount: monthApts.reduce((s, a) => s + a.price, 0),
+        appointments: monthApts.length,
+      });
+    }
+    return months.length > 0 ? months : [{ month: MONTH_LABELS[now.getMonth()], amount: 0, appointments: 0 }];
+  }, [appointments]);
 
-  const maxAmount = Math.max(...revenueByMonth.map(m => m.amount));
+  const maxAmount = Math.max(...revenueByMonth.map(m => m.amount), 1);
 
   const stats = [
-    { label: 'Revenue total', value: `${totalRevenue}€`, change: '+12.5%', positive: true, icon: DollarSign, color: 'green' },
-    { label: 'Acomptes reçus', value: `${totalDeposits}€`, change: '+8.2%', positive: true, icon: Target, color: 'blue' },
-    { label: 'Rendez-vous', value: appointments.length.toString(), change: '+15.3%', positive: true, icon: Calendar, color: 'purple' },
-    { label: 'Taux de complétion', value: `${completionRate.toFixed(1)}%`, change: '-2.1%', positive: false, icon: Award, color: 'orange' }
+    { label: 'Revenu total', value: `${totalRevenue}€`, icon: DollarSign, color: 'green' },
+    { label: 'Acomptes reçus', value: `${totalDeposits}€`, icon: Target, color: 'blue' },
+    { label: 'Rendez-vous', value: filteredAppointments.length.toString(), icon: Calendar, color: 'purple' },
+    { label: 'Taux de complétion', value: `${completionRate.toFixed(1)}%`, icon: Award, color: 'orange' }
   ];
 
   const getColorClasses = (color: string) => {
@@ -84,10 +111,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${getColorClasses(stat.color)}`}>
                   <Icon className="w-6 h-6" />
                 </div>
-                <div className={`flex items-center gap-1 text-sm font-semibold ${stat.positive ? 'text-green-600' : 'text-red-600'}`}>
-                  {stat.positive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                  {stat.change}
-                </div>
               </div>
               <div className="text-3xl font-bold mb-1">{stat.value}</div>
               <div className="text-sm text-neutral-600">{stat.label}</div>
@@ -98,7 +121,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 dashboard-widget-card p-6">
-          <h3 className="text-lg font-bold mb-6">Évolution du revenue</h3>
+          <h3 className="text-lg font-bold mb-6">Évolution du revenu</h3>
           <div className="space-y-4">
             {revenueByMonth.map((data, idx) => (
               <div key={idx} className="space-y-2">

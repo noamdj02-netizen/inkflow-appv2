@@ -74,82 +74,103 @@
   --chart-bg: #27272a;
 }
 
-/* Theme toggle button */
+/* Theme toggle — rendu jour/nuit amélioré (Prodify) */
 .theme-toggle {
   position: relative;
-  width: 56px;
+  width: 52px;
   height: 28px;
-  background: var(--border);
-  border-radius: 100px;
-  border: none;
+  background: #F0EEF9;
+  border-radius: 999px;
+  border: 1px solid rgba(107, 92, 231, 0.12);
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: inset 0 2px 4px var(--shadow-sm);
+  transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.6);
 }
 .theme-toggle:hover {
-  background: var(--border-light);
-  transform: scale(1.05);
+  background: #E9E5FF;
+  border-color: rgba(107, 92, 231, 0.2);
+  box-shadow: 0 2px 8px rgba(107, 92, 231, 0.15);
 }
 .theme-toggle:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
+}
+.theme-toggle[data-theme="dark"] {
+  background: #2d2a3d;
+  border-color: rgba(139, 92, 246, 0.25);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+}
+.theme-toggle[data-theme="dark"]:hover {
+  background: #36334a;
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 12px rgba(107, 92, 231, 0.25);
 }
 .toggle-slider {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 24px;
-  height: 24px;
-  background: var(--orange);
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, #fff 0%, #f8f7ff 100%);
   border-radius: 50%;
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1), background 0.35s ease, box-shadow 0.35s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(255, 140, 0, 0.4);
+  box-shadow: 0 2px 6px rgba(107, 92, 231, 0.2), 0 1px 2px rgba(0,0,0,0.06);
 }
 .theme-toggle[data-theme="dark"] .toggle-slider {
-  transform: translateX(28px);
-  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
-  box-shadow: 0 2px 8px rgba(251, 146, 60, 0.5);
+  transform: translateX(26px);
+  background: linear-gradient(135deg, #6B5CE7 0%, #8B5CF6 100%);
+  box-shadow: 0 2px 8px rgba(107, 92, 231, 0.5), 0 0 12px rgba(107, 92, 231, 0.3);
 }
 .toggle-icon {
-  width: 14px;
-  height: 14px;
-  color: white;
-  transition: all 0.3s ease;
+  width: 13px;
+  height: 13px;
+  transition: opacity 0.25s ease, transform 0.3s ease;
 }
 .toggle-icon.sun {
+  color: #F59E0B;
   opacity: 1;
   transform: rotate(0deg);
 }
 .toggle-icon.moon {
   position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -6.5px;
+  margin-left: -6.5px;
+  color: #a78bfa;
   opacity: 0;
-  transform: rotate(180deg);
+  transform: rotate(-90deg);
 }
 .theme-toggle[data-theme="dark"] .toggle-icon.sun {
   opacity: 0;
-  transform: rotate(-180deg);
+  transform: rotate(90deg);
 }
 .theme-toggle[data-theme="dark"] .toggle-icon.moon {
+  color: #fff;
   opacity: 1;
   transform: rotate(0deg);
 }
 @media (max-width: 768px) {
   .theme-toggle {
-    width: 48px;
+    width: 46px;
     height: 24px;
   }
   .toggle-slider {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
   }
   .theme-toggle[data-theme="dark"] .toggle-slider {
     transform: translateX(24px);
   }
   .toggle-icon {
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
+  }
+  .toggle-icon.moon {
+    margin-top: -5.5px;
+    margin-left: -5.5px;
   }
 }
 
@@ -212,61 +233,188 @@
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
-/* ===== Dashboard Overview — Style Prodify (widgets, fond doux) ===== */
+/* ===== Dashboard Overview — Prodify-inspired (lavande doux, cartes blanches) ===== */
 .dashboard-overview-bg {
-  background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 30%, #f0fdf4 70%, #f8fafc 100%);
+  background: linear-gradient(135deg, #ece9f8 0%, #e8e4f5 50%, #ede9fa 100%);
   background-attachment: local;
-  min-height: 100%;
 }
 :root[data-theme="dark"] .dashboard-overview-bg {
-  background: linear-gradient(135deg, #1e1b2e 0%, #1a1a2e 30%, #0f172a 70%, #18181b 100%);
+  background: linear-gradient(135deg, #1a1826 0%, #1c1a28 50%, #1a1826 100%);
 }
 .greeting-gradient {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+  background: linear-gradient(135deg, #6B5CE7 0%, #8b5cf6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 :root[data-theme="dark"] .greeting-gradient {
-  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #22d3ee 100%);
+  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-.dashboard-widget-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  box-shadow: 0 1px 3px var(--shadow-sm);
-  transition: all 0.2s ease;
+
+/* Prodify card — fond blanc, ombre violette très douce, border-radius 18px */
+.prodify-card {
+  background: white;
+  border-radius: 18px;
+  border: 1px solid rgba(107, 92, 231, 0.08);
+  box-shadow: 0 2px 12px rgba(107, 92, 231, 0.06), 0 1px 3px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.dashboard-widget-card:hover {
-  box-shadow: 0 4px 12px var(--shadow-md);
-  border-color: var(--border-light);
+.prodify-card:hover {
+  box-shadow: 0 4px 20px rgba(107, 92, 231, 0.10), 0 2px 6px rgba(0,0,0,0.05);
+}
+:root[data-theme="dark"] .prodify-card {
+  background: var(--bg-card);
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+:root[data-theme="dark"] .prodify-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  border-color: rgba(255,255,255,0.12);
 }
 
-/* ===== Sidebar nav — Design premium (indicateur actif) ===== */
-.sidebar-nav-active {
-  background: rgba(99, 102, 241, 0.08);
-  color: #6366f1;
+/* Legacy alias — existing widgets still reference this */
+.dashboard-widget-card {
+  background: white;
+  border-radius: 18px;
+  border: 1px solid rgba(107, 92, 231, 0.08);
+  box-shadow: 0 2px 12px rgba(107, 92, 231, 0.06), 0 1px 3px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.sidebar-nav-active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 24px;
-  background: #6366f1;
-  border-radius: 0 4px 4px 0;
+.dashboard-widget-card:hover {
+  box-shadow: 0 4px 20px rgba(107, 92, 231, 0.10), 0 2px 6px rgba(0,0,0,0.05);
 }
-:root[data-theme="dark"] .sidebar-nav-active {
-  background: rgba(99, 102, 241, 0.12);
+:root[data-theme="dark"] .dashboard-widget-card {
+  background: var(--bg-card);
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+:root[data-theme="dark"] .dashboard-widget-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  border-color: rgba(255,255,255,0.12);
+}
+
+/* Prodify header action pills */
+.pill-primary {
+  background: linear-gradient(135deg, #6B5CE7, #8B5CF6);
+  color: white;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+.pill-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.pill-action {
+  background: white;
+  border: 1.5px solid #E5E3F0;
+  color: #1A1A2E;
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+.pill-action:hover { border-color: #6B5CE7; color: #6B5CE7; }
+:root[data-theme="dark"] .pill-action {
+  background: var(--bg-card);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+:root[data-theme="dark"] .pill-action:hover {
+  border-color: #818cf8;
   color: #818cf8;
 }
-:root[data-theme="dark"] .sidebar-nav-active::before {
-  background: #818cf8;
+
+/* Prodify badges / pills */
+.badge-prodify {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+}
+.badge-progress  { background: #EDE9FE; color: #6B5CE7; }
+.badge-todo      { background: #FEF3C7; color: #D97706; }
+.badge-upcoming  { background: #D1FAE5; color: #059669; }
+.badge-high      { background: #FEE2E2; color: #DC2626; }
+.badge-confirmed { background: #D1FAE5; color: #059669; }
+.badge-pending   { background: #FEF3C7; color: #D97706; }
+.badge-completed { background: #F1F5F9; color: #64748B; }
+
+/* Progress bar Prodify style */
+.progress-bar-prodify {
+  flex: 1;
+  height: 6px;
+  background: #F0EEF9;
+  border-radius: 99px;
+  overflow: hidden;
+}
+:root[data-theme="dark"] .progress-bar-prodify { background: rgba(255,255,255,0.08); }
+.progress-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+.progress-fill.green  { background: #22C55E; }
+.progress-fill.orange { background: #F59E0B; }
+.progress-fill.violet { background: #6B5CE7; }
+.progress-fill.teal   { background: #14B8A6; }
+
+/* Overview widget header/value — hiérarchie visuelle */
+.overview-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.overview-widget-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.overview-widget-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Prodify fadeUp stagger animation */
+@keyframes prodify-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.prodify-stagger > *:nth-child(1) { animation: prodify-fade-up 0.4s ease 0.05s both; }
+.prodify-stagger > *:nth-child(2) { animation: prodify-fade-up 0.4s ease 0.10s both; }
+.prodify-stagger > *:nth-child(3) { animation: prodify-fade-up 0.4s ease 0.15s both; }
+.prodify-stagger > *:nth-child(4) { animation: prodify-fade-up 0.4s ease 0.20s both; }
+.prodify-stagger > *:nth-child(5) { animation: prodify-fade-up 0.4s ease 0.25s both; }
+.prodify-stagger > *:nth-child(6) { animation: prodify-fade-up 0.4s ease 0.30s both; }
+.prodify-stagger > *:nth-child(7) { animation: prodify-fade-up 0.4s ease 0.35s both; }
+.prodify-stagger > *:nth-child(8) { animation: prodify-fade-up 0.4s ease 0.40s both; }
+
+/* ===== Sidebar nav — Prodify style (fond violet doux, pas de barre latérale) ===== */
+.sidebar-nav-active {
+  background: #F3F1FF;
+  color: #6B5CE7;
+  font-weight: 600;
+}
+:root[data-theme="dark"] .sidebar-nav-active {
+  background: rgba(107, 92, 231, 0.15);
+  color: #a78bfa;
 }
 
 /* ===== Design System Dashboard — Boutons, cartes, animations ===== */
@@ -367,30 +515,29 @@
 
 /* Fond doux pour toutes les pages dashboard (pas seulement overview) */
 .app-shell-content.dashboard-pages-bg {
-  background: linear-gradient(180deg, #faf5ff 0%, #f8fafc 100%);
-  min-height: 100%;
+  background: linear-gradient(135deg, #f0edf8 0%, #f4f2fa 50%, #f8f6fc 100%);
 }
 :root[data-theme="dark"] .app-shell-content.dashboard-pages-bg {
-  background: linear-gradient(180deg, #1e1b2e 0%, #18181b 100%);
+  background: linear-gradient(135deg, #1a1826 0%, #1c1a28 50%, #1a1826 100%);
 }
 
-/* 1. BODY LOCK — Verrouillage radical du scroll global */
+/* 1. BASE — Hauteur FIXE pour que la chaîne flex/overflow fonctionne */
 html, body {
+  margin: 0;
+  padding: 0;
   height: 100%;
+  height: 100dvh;
+  -webkit-text-size-adjust: 100%;
+}
+html { overflow: hidden; }
+body {
   overflow: hidden;
   overscroll-behavior: none;
-  -webkit-overflow-scrolling: touch;
   -webkit-tap-highlight-color: transparent;
-  -webkit-text-size-adjust: 100%;
   -webkit-user-select: none;
   user-select: none;
-  position: fixed;
-  width: 100%;
-  top: 0;
-  left: 0;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Re-enable text selection in inputs/textareas */
@@ -399,24 +546,32 @@ input, textarea, select, [contenteditable="true"] {
   user-select: text;
 }
 
-/* Root container: full viewport, scroll contained */
-#root {
-  height: 100%;
-  height: 100dvh;
-  overflow: hidden;
+/* Root + App shell — hauteur 100% pour contraindre les flex children et activer le scroll */
+#root,
+.app-root {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
   background-color: var(--bg-primary);
 }
+/* Enfants directs de .app-root remplissent la hauteur (login, spinner, etc.) */
+.app-root > * {
+  flex: 1;
+  min-height: 0;
+}
 
-/* 2. APP SHELL — Zone de scroll independante */
+/* 2. APP SHELL — flex:1 hérite la hauteur fixe du parent (pas de min-height pour ne pas casser le scroll) */
 .app-shell {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
   position: relative;
+  width: 100%;
   background-color: var(--bg-primary);
 }
 
@@ -437,6 +592,7 @@ input, textarea, select, [contenteditable="true"] {
 .app-shell-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -447,13 +603,17 @@ input, textarea, select, [contenteditable="true"] {
   z-index: 30;
 }
 
+/* Zone scrollable principale — min-height: 0 critique pour le flex + overflow */
 .app-shell-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
+  /* Espace de respiration en bas (desktop) */
+  padding-bottom: 2rem;
 }
 
 /* 3. LANDING PAGE — Liberation du scroll pour marketing */
@@ -471,7 +631,7 @@ input, textarea, select, [contenteditable="true"] {
   background-color: var(--bg-primary);
 }
 
-/* 4. SAFE AREAS — Encoche & barre du bas */
+/* 4. SAFE AREAS — header padding-top, bottom-nav padding-bottom */
 @supports (padding: max(0px)) {
   .safe-top { padding-top: max(0.75rem, env(safe-area-inset-top)) !important; }
   .safe-bottom { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)) !important; }
@@ -501,12 +661,11 @@ input, select, textarea {
   font-size: 16px !important;
 }
 
-/* 6. BOTTOM NAVIGATION BAR */
+/* 6. BOTTOM NAVIGATION BAR — Fixed, does NOT add to layout height */
 .bottom-nav {
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
+  width: 100%;
   z-index: 50;
   background: var(--bg-secondary);
   backdrop-filter: blur(20px) saturate(180%);
@@ -515,10 +674,10 @@ input, select, textarea {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Bottom nav spacing on mobile */
+/* Content area: réserve espace pour la bottom nav + safe area iOS + respiration */
 @media (max-width: 767px) {
   .app-shell-content {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    padding-bottom: calc(72px + 2rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 

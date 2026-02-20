@@ -16,12 +16,12 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
       body: params,
     });
     if (error) {
-      console.error('[stripeClient] Checkout error:', error);
+      if (import.meta.env.DEV) console.error('[stripeClient] Checkout error:', error);
       return null;
     }
     return data?.url || null;
   } catch (err) {
-    console.error('[stripeClient] Unexpected error:', err);
+    if (import.meta.env.DEV) console.error('[stripeClient] Unexpected error:', err);
     return null;
   }
 }
@@ -39,12 +39,12 @@ export async function createSubscription(params: CreateSubscriptionParams): Prom
       body: params,
     });
     if (error) {
-      console.error('[stripeClient] Subscription error:', error);
+      if (import.meta.env.DEV) console.error('[stripeClient] Subscription error:', error);
       return null;
     }
     return data?.url || null;
   } catch (err) {
-    console.error('[stripeClient] Unexpected error:', err);
+    if (import.meta.env.DEV) console.error('[stripeClient] Unexpected error:', err);
     return null;
   }
 }

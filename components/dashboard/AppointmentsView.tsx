@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Calendar, Plus, ChevronRight, Search } from 'lucide-react';
+import { Calendar, Plus, ChevronRight, Search, ExternalLink, Download } from 'lucide-react';
 import { Appointment } from '../../types';
 import { MiniCalendar } from './MiniCalendar';
 import { AppointmentCalendar } from './AppointmentCalendar';
+import { downloadICS, getGoogleCalendarAddUrl } from '../../lib/googleCalendar';
 
 type ViewMode = 'list' | 'calendar';
 type StatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled';
@@ -219,6 +220,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             <AppointmentCalendar
               appointments={filteredAppointments}
               onSlotClick={onNewAppointment}
+              onAppointmentClick={onSelectAppointment}
             />
           ) : (
             <>
@@ -266,7 +268,26 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                           <Calendar className="w-3.5 h-3.5" />
                           <span>{apt.date} • {apt.time}</span>
                         </div>
-                        <span className="font-bold text-indigo-600">{apt.price}€</span>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={getGoogleCalendarAddUrl(apt)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-1.5 rounded-lg text-blue-500 hover:bg-blue-50 transition-colors"
+                            title="Google Agenda"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); downloadICS(apt); }}
+                            className="p-1.5 rounded-lg text-violet-500 hover:bg-violet-50 transition-colors"
+                            title=".ics"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="font-bold text-indigo-600">{apt.price}€</span>
+                        </div>
                       </div>
                     </button>
                   ))
@@ -284,13 +305,14 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                         <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Service</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Prix</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Statut</th>
+                        <th className="px-4 py-4 text-left text-sm font-semibold text-[var(--text-primary)]">Cal</th>
                         <th className="w-10" />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border)]">
                       {filteredAppointments.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="px-6 py-12 text-center text-neutral-500">
+                          <td colSpan={7} className="px-6 py-12 text-center text-neutral-500">
                             {selectedDate
                               ? `Aucun rendez-vous le ${selectedDate}`
                               : 'Aucun rendez-vous'}
@@ -329,6 +351,27 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                               >
                                 {STATUS_LABELS[apt.status] ?? apt.status}
                               </span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex items-center gap-1">
+                                <a
+                                  href={getGoogleCalendarAddUrl(apt)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                  title="Ajouter à Google Agenda"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); downloadICS(apt); }}
+                                  className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-violet-600 hover:bg-violet-50 transition-colors"
+                                  title="Télécharger .ics (Apple/Outlook)"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                             <td className="px-6 py-4">
                               <button

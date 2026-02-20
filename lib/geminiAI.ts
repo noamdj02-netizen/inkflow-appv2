@@ -27,16 +27,16 @@ async function callGemini(prompt: string): Promise<string> {
 }
 
 export async function suggestPrice(description: string, placement: string, size: string): Promise<string> {
-  const prompt = `Tu es un expert en tarification de tatouages en France. 
-Basé sur les informations suivantes, suggère un prix en euros avec une fourchette (min-max) et une brève justification en 2-3 lignes.
+  const prompt = `Tu es un expert en tarification de tatouages en France.
+Basé sur les informations suivantes, suggère un prix en euros avec une fourchette réaliste (min-max) et une brève justification en 2-3 lignes.
 
 Description: ${description}
 Emplacement: ${placement}
 Taille: ${size}
 
-Réponds en français avec ce format:
-Fourchette: XXX€ - XXX€
-Justification: ...`;
+Réponds en français avec ce format exact:
+Fourchette: [prix min]€ - [prix max]€
+Justification: [ta justification ici]`;
 
   return callGemini(prompt);
 }

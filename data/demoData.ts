@@ -7,6 +7,9 @@ import type { Appointment, User, Client, FlashDesign, Notification, ProjectReque
 /** Email du compte démo : connexion avec ce compte charge toujours les fausses données. */
 export const DEMO_ACCOUNT_EMAIL = 'demo@inkflow.com';
 
+/** Emails qui reçoivent les données démo (faux clients, RDV, chiffres) — pour démos persistantes. */
+export const DEMO_ACCOUNT_EMAILS: string[] = [DEMO_ACCOUNT_EMAIL, 'noamdj02@gmail.com'];
+
 function thisWeekStart(): Date {
   const d = new Date();
   d.setDate(d.getDate() - d.getDay());

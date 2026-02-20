@@ -38,6 +38,67 @@ const WIDGET_COLORS: Record<WidgetType, string> = {
   stat: 'bg-indigo-100 text-indigo-600'
 };
 
+function getLinkPreview(url: string): { domain: string; isInstagram: boolean } {
+  try {
+    const u = new URL(url.startsWith('http') ? url : `https://${url}`);
+    const host = u.hostname.replace('www.', '');
+    return { domain: host, isInstagram: host.includes('instagram.com') };
+  } catch {
+    return { domain: 'Lien', isInstagram: false };
+  }
+}
+
+/** Carte d'un widget personnalisé pour intégration dans la grille sortable */
+export const WidgetCard: React.FC<{
+  widget: DashboardWidget;
+  onRemove: () => void;
+}> = ({ widget, onRemove }) => {
+  const linkPreview = widget.type === 'link' && widget.content ? getLinkPreview(widget.content) : null;
+  return (
+    <div className="group relative dashboard-widget-card p-5 min-h-[140px] flex flex-col">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center ${WIDGET_COLORS[widget.type]}`}>
+            {WIDGET_ICONS[widget.type]}
+          </div>
+          <span className="font-semibold text-[var(--text-primary)] truncate">{widget.title || (widget.type === 'note' ? 'Note' : widget.type === 'link' ? 'Lien' : 'Stat')}</span>
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 opacity-0 group-hover:opacity-100 transition-all"
+          title="Supprimer"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+      {widget.type === 'note' && (
+        <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap line-clamp-3 flex-1">{widget.content || 'Aucun contenu'}</p>
+      )}
+      {widget.type === 'link' && (
+        <a
+          href={widget.content}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-[#6B5CE7]/5 dark:bg-[#6B5CE7]/10 border border-[#6B5CE7]/10 hover:border-[#6B5CE7]/20 transition-colors"
+        >
+          <div className="w-10 h-10 rounded-[10px] bg-[#6B5CE7]/15 flex items-center justify-center flex-shrink-0">
+            <Link2 className="w-5 h-5 text-[#6B5CE7]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="font-medium text-[var(--text-primary)] block truncate">{widget.title || linkPreview?.domain || 'Lien'}</span>
+            <span className="text-xs text-[#6B7280] dark:text-[var(--text-tertiary)] truncate block">{widget.content || 'URL non définie'}</span>
+          </div>
+        </a>
+      )}
+      {widget.type === 'stat' && (
+        <div className="overview-widget-value flex-1 flex items-end" style={{ color: widget.color || '#1A1A2E' }}>
+          {widget.content || '—'}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const DashboardWidgets: React.FC<DashboardWidgetsProps> = ({ widgets, onWidgetsChange, onAddWidget }) => {
   const removeWidget = (id: string) => {
     onWidgetsChange(widgets.filter(w => w.id !== id));
@@ -45,7 +106,6 @@ export const DashboardWidgets: React.FC<DashboardWidgetsProps> = ({ widgets, onW
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-      {/* Carte "Ajouter un widget" style Prodify */}
       {onAddWidget && (
         <button
           onClick={onAddWidget}
@@ -59,39 +119,7 @@ export const DashboardWidgets: React.FC<DashboardWidgetsProps> = ({ widgets, onW
         </button>
       )}
       {widgets.map(widget => (
-        <div
-          key={widget.id}
-          className="group relative dashboard-widget-card p-5"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${WIDGET_COLORS[widget.type]}`}>
-                {WIDGET_ICONS[widget.type]}
-              </div>
-              <span className="font-semibold text-[var(--text-primary)] truncate">{widget.title || (widget.type === 'note' ? 'Note' : widget.type === 'link' ? 'Lien' : 'Stat')}</span>
-            </div>
-            <button
-              onClick={() => removeWidget(widget.id)}
-              className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-              title="Supprimer"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-          {widget.type === 'note' && (
-            <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap line-clamp-3">{widget.content || 'Aucun contenu'}</p>
-          )}
-          {widget.type === 'link' && (
-            <a href={widget.content} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 hover:underline truncate block">
-              {widget.content || 'URL non définie'}
-            </a>
-          )}
-          {widget.type === 'stat' && (
-            <div className="text-2xl font-bold" style={{ color: widget.color || '#171717' }}>
-              {widget.content || '—'}
-            </div>
-          )}
-        </div>
+        <WidgetCard key={widget.id} widget={widget} onRemove={() => removeWidget(widget.id)} />
       ))}
     </div>
   );

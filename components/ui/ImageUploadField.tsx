@@ -66,7 +66,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
       const dataUrl = await resizeImage(file);
       onChange(dataUrl);
     } catch (err) {
-      console.error('Upload error:', err);
+      if (import.meta.env.DEV) console.error('Upload error:', err);
       alert('Erreur lors du téléchargement de l\'image.');
     }
   };

@@ -36,7 +36,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
       <nav
         className={`
           fixed z-50
-          top-4 left-4 right-4 w-[calc(100%-2rem)] mx-auto
+          top-2 left-4 right-4 w-[calc(100%-2rem)] mx-auto
           md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[90%] md:max-w-4xl
           rounded-2xl md:rounded-full
           bg-white md:bg-white/90
@@ -44,15 +44,15 @@ export const Navbar: React.FC<NavbarProps> = () => {
           md:backdrop-blur-xl
           border border-gray-200/80 md:border-gray-200/60 md:dark:border-white/10
           shadow-lg shadow-black/5
-          px-4 py-3 md:px-6 md:py-3
-          pt-[max(0.75rem,env(safe-area-inset-top))] md:pt-3
+          px-4 py-2 md:px-6 md:py-3
+          pt-[max(0.5rem,env(safe-area-inset-top))] md:pt-3
           animate-navbar-in
         `}
       >
         <div className="flex items-center justify-between gap-3">
-          {/* Logo — gauche (nom visible sur mobile pour clarté) */}
+          {/* Logo — gauche, contraint h-8, invert pour fond blanc / normal pour fond sombre */}
           <a href="/" className="flex items-center gap-2 min-w-0 shrink-0 active:opacity-80 transition-opacity">
-            <Logo size="sm" />
+            <Logo size="sm" className="invert dark:invert-0" />
             <span className="text-base font-bold tracking-tight text-neutral-900 dark:text-white truncate hidden sm:inline">
               InkFlow
             </span>

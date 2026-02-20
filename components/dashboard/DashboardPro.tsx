@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronDown, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
@@ -24,14 +24,19 @@ import { AvailabilitySettings } from '../settings/AvailabilitySettings';
 import { VitrineSettings } from '../settings/VitrineSettings';
 import { AnalyticsDashboard } from '../analytics/AnalyticsDashboard';
 import { VitrineLinkButton } from './VitrineLinkButton';
-import { DashboardWidgets, AddWidgetModal, useDashboardWidgets } from './DashboardWidgets';
+import { DashboardWidgets, AddWidgetModal, useDashboardWidgets, WidgetCard } from './DashboardWidgets';
+import { SortableOverviewWidgets, type SortableWidgetItem } from './SortableOverviewWidgets';
 import { WaitlistManager } from './WaitlistManager';
 import { ArtistManager } from './ArtistManager';
 import { PortfolioManager } from './PortfolioManager';
 import { LoyaltyManager, type LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
 import { MessageThreadView } from '../messaging/MessageThread';
 import { ConsentFormEditor } from '../consent/ConsentFormEditor';
+import { CalendarSettings } from './CalendarSettings';
 import { Appointment, FlashDesign, BookingFormData, WaitlistEntry, ArtistAccount, LoyaltyEntry, MessageThread } from '../../types';
+import type { Client } from '../../types';
+import { ClientPreviewPanel, type ClientPreviewData } from './ClientPreviewPanel';
+import { ClientPreviewDrawer } from './ClientPreviewDrawer';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { supabase } from '../../lib/supabase';
@@ -40,6 +45,7 @@ import { getStripePaymentLink, STRIPE_PAYMENT_LINKS } from '../../lib/stripePaym
 import { useToast } from '../../contexts/ToastContext';
 import { ThemeToggle } from '../ThemeToggle';
 import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
+import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
 type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings';
@@ -69,14 +75,14 @@ export const DashboardPro: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
-  const [settingsTab, setSettingsTab] = useState<'general' | 'payments' | 'care' | 'availability' | 'vitrine' | 'billing' | 'consent' | 'artists' | 'waitlist' | 'loyalty'>('general');
+  const [settingsTab, setSettingsTab] = useState<'general' | 'payments' | 'care' | 'availability' | 'vitrine' | 'billing' | 'consent' | 'artists' | 'waitlist' | 'loyalty' | 'calendar'>('general');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showWidgetModal, setShowWidgetModal] = useState(false);
   const [customWidgets, setCustomWidgets] = useDashboardWidgets(studioId, useSupabase ?? false);
 
   // New feature states — portfolio synced with vitrine (single source of truth)
   const [vitrineData, setVitrineData] = useState<VitrineData | null>(null);
-  const [messageThreads] = useState<MessageThread[]>([]);
+  const [messageThreads, setMessageThreads] = useState<MessageThread[]>([]);
   const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>([]);
   const [artistAccounts, setArtistAccounts] = useState<ArtistAccount[]>([]);
   const [loyaltyEntries, setLoyaltyEntries] = useState<LoyaltyEntry[]>([]);
@@ -99,6 +105,31 @@ export const DashboardPro: React.FC = () => {
     if (user?.studioName != null) setGeneralStudioName(user.studioName);
     if (user?.email != null) setGeneralEmail(user.email);
   }, [user?.studioName, user?.email]);
+
+  // Handle Google Calendar OAuth callback: ?code=...&state=studioId
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    if (!code || !state) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const ok = await completeGoogleAuth(code, state);
+        if (cancelled) return;
+        window.history.replaceState({}, '', '/dashboard?connected=google');
+        setActiveTab('settings');
+        setSettingsTab('calendar');
+        toast.success('Google Agenda connecté avec succès !');
+      } catch {
+        if (cancelled) return;
+        window.history.replaceState({}, '', '/dashboard?error=oauth_failed');
+        toast.error('Erreur de connexion à Google Agenda');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [toast]);
 
   // Persist consent/waitlist/artists/loyalty in localStorage so they survive refresh (until Supabase load/save is wired)
   const storageKey = (prefix: string) => `${prefix}_${studioId || user?.email || 'default'}`;
@@ -189,6 +220,54 @@ export const DashboardPro: React.FC = () => {
     getVitrineDataAsync(slug, user.email, user.studioName).then(setVitrineData);
   }, [user?.email, user?.studioName, activeTab]);
 
+  useEffect(() => {
+    if (!studioId || !useSupabase) return;
+    const loadThreads = async () => {
+      const { data: rows } = await supabase
+        .from('inkflow_messages')
+        .select('thread_id, sender_type, sender_name, content, read, created_at')
+        .eq('studio_id', studioId)
+        .order('created_at', { ascending: false });
+
+      if (!rows || rows.length === 0) return;
+
+      const threadMap = new Map<string, { clientName: string; clientEmail: string; lastMessage: string; lastMessageAt: string; unreadCount: number }>();
+      for (const row of rows) {
+        if (!threadMap.has(row.thread_id)) {
+          threadMap.set(row.thread_id, {
+            clientName: row.sender_type === 'client' ? row.sender_name : '',
+            clientEmail: '',
+            lastMessage: row.content,
+            lastMessageAt: row.created_at,
+            unreadCount: 0,
+          });
+        }
+        const t = threadMap.get(row.thread_id)!;
+        if (row.sender_type === 'client' && !t.clientName) t.clientName = row.sender_name;
+        if (!row.read && row.sender_type === 'client') t.unreadCount++;
+      }
+
+      setMessageThreads(
+        Array.from(threadMap.entries()).map(([threadId, t]) => ({
+          threadId,
+          clientName: t.clientName || 'Client',
+          clientEmail: t.clientEmail,
+          lastMessage: t.lastMessage,
+          lastMessageAt: t.lastMessageAt,
+          unreadCount: t.unreadCount,
+        }))
+      );
+    };
+    loadThreads();
+
+    const channel = supabase
+      .channel('dashboard_messages')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inkflow_messages', filter: `studio_id=eq.${studioId}` }, () => loadThreads())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [studioId, useSupabase]);
+
   // Portfolio items for PortfolioManager: derived from vitrine (single source of truth for page vitrine)
   const portfolioItemsFromVitrine = useMemo(() => {
     const list = vitrineData?.portfolio ?? [];
@@ -271,10 +350,10 @@ export const DashboardPro: React.FC = () => {
                   }).eq('id', studioId);
                 }
               } else {
-                console.warn('[Avatar] Storage upload failed, using local:', uploadError.message);
+                if (import.meta.env.DEV) console.warn('[Avatar] Storage upload failed, using local:', uploadError.message);
               }
             } catch (err) {
-              console.warn('[Avatar] Supabase upload skipped:', err);
+              if (import.meta.env.DEV) console.warn('[Avatar] Supabase upload skipped:', err);
             }
           }
 
@@ -286,7 +365,7 @@ export const DashboardPro: React.FC = () => {
       };
       reader.readAsDataURL(file);
     } catch (err) {
-      console.error('[Avatar] Upload error:', err);
+      if (import.meta.env.DEV) console.error('[Avatar] Upload error:', err);
       setAvatarUploading(false);
     }
 
@@ -335,7 +414,7 @@ export const DashboardPro: React.FC = () => {
     setShowBookingModal(false);
     setSelectedFlash(null);
     setActiveTab('appointments');
-    toast.success('Rendez-vous cree avec succes');
+    toast.success('Rendez-vous créé avec succès');
   };
 
   const handleBookFlash = (design: FlashDesign) => {
@@ -394,6 +473,37 @@ export const DashboardPro: React.FC = () => {
   const [overviewCalendarMonth, setOverviewCalendarMonth] = useState(() => new Date());
   const visibleAlerts = alerts.filter(a => !dismissedAlerts.has(a.id));
 
+  /** Prochain client de la journée (premier RDV à venir aujourd'hui) */
+  const nextClientOfDay = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const upcoming = appointments
+      .filter(a => a.date === todayStr && ['pending', 'confirmed'].includes(a.status))
+      .sort((a, b) => `${a.time}`.localeCompare(b.time));
+    return upcoming[0] ?? null;
+  }, [appointments]);
+
+  const buildClientPreviewData = useCallback((apt: Appointment | null): ClientPreviewData | null => {
+    if (!apt) return null;
+    const clientMatch = clients.find(c =>
+      c.email?.toLowerCase() === apt.clientEmail?.toLowerCase() ||
+      c.name?.toLowerCase() === apt.clientName?.toLowerCase()
+    );
+    const threadMatch = messageThreads.find(t =>
+      t.clientEmail?.toLowerCase() === apt.clientEmail?.toLowerCase()
+    );
+    return {
+      appointment: apt,
+      client: clientMatch ?? null,
+      thread: threadMatch ?? null,
+    };
+  }, [clients, messageThreads]);
+
+  const previewDataForDrawer = useMemo(() =>
+    selectedAppointment ? buildClientPreviewData(selectedAppointment) : null,
+  [selectedAppointment, buildClientPreviewData]);
+
+  // sortableOverviewItems removed — KPIs now inline in Prodify layout, custom widgets rendered separately
+
   const revenueChartData = useMemo(() => {
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
     const now = new Date();
@@ -428,7 +538,7 @@ export const DashboardPro: React.FC = () => {
 
       <div className="app-shell-row">
         {/* ====== SIDEBAR — Design premium (ÉTAPE 1) ====== */}
-        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-[260px] max-w-[85vw] bg-[var(--bg-sidebar)] border-r border-[var(--border)]/60 flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar shadow-[0_0_40px_-12px_rgba(0,0,0,0.08)] dark:shadow-[0_0_40px_-12px_rgba(0,0,0,0.3)] ${
+        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-[240px] max-w-[85vw] bg-white dark:bg-[var(--bg-sidebar)] border-r border-[#F0EEF9] dark:border-[var(--border)] flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}>
           {/* Zone logo — compacte et premium */}
@@ -457,8 +567,8 @@ export const DashboardPro: React.FC = () => {
                   <button
                     key={tab.id}
                     onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
-                    className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-[14px] transition-colors duration-150 ${
-                      isActive ? 'sidebar-nav-active' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] font-medium text-[14px] transition-colors duration-150 ${
+                      isActive ? 'sidebar-nav-active' : 'text-[#4B5563] dark:text-[var(--text-secondary)] hover:bg-[#F8F7FF] dark:hover:bg-[var(--bg-hover)] hover:text-[#1A1A2E] dark:hover:text-[var(--text-primary)]'
                     }`}
                   >
                     {tab.id === 'requests' ? (
@@ -504,60 +614,62 @@ export const DashboardPro: React.FC = () => {
               </button>
             </div>
           )}
-          {/* Header — design premium cohérent avec sidebar */}
+          {/* Header — slim bar (non-overview) or transparent (overview, greeting is inline) */}
           <header
-            className={`app-shell-header safe-top border-b px-4 sm:px-5 md:px-6 h-14 sm:h-16 flex items-center justify-between gap-4 transition-all duration-300 ${
-              headerScrolled
-                ? 'bg-[var(--bg-secondary)]/95 backdrop-blur-xl border-[var(--border)] shadow-[0_1px_0_0_var(--border)]'
-                : 'bg-[var(--bg-secondary)] border-[var(--border)]'
+            className={`app-shell-header safe-top px-4 sm:px-5 md:px-6 flex items-center justify-between gap-4 transition-all duration-300 shrink-0 overflow-visible ${
+              activeTab === 'overview'
+                ? 'h-12 sm:h-14 bg-transparent border-b-0'
+                : `h-14 sm:h-16 border-b ${headerScrolled ? 'bg-[var(--bg-secondary)]/95 backdrop-blur-xl border-[var(--border)] shadow-[0_1px_0_0_var(--border)]' : 'bg-[var(--bg-secondary)] border-[var(--border)]'}`
             }`}
           >
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2.5 -ml-1 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150" aria-label="Ouvrir le menu">
                 <Menu className="w-6 h-6 text-[var(--text-secondary)]" />
               </button>
-              <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)]">{tabs.find(t => t.id === activeTab)?.label}</h2>
+              {activeTab !== 'overview' && (
+                <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)] min-w-0">{tabs.find(t => t.id === activeTab)?.label}</h2>
+              )}
             </div>
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             <ThemeToggle />
             <div className="relative">
               <button
                 onClick={() => { setShowNotifications(!showNotifications); setShowProfileDropdown(false); }}
-                className="relative p-2.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                className="relative p-2.5 rounded-full hover:bg-white/60 dark:hover:bg-white/10 transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
-                <Bell className="w-5 h-5 text-[var(--text-secondary)]" />
+                <Bell className="w-5 h-5 text-[#6B7280] dark:text-[var(--text-secondary)]" />
                 {notifications.filter(n => !n.read).length > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-[var(--bg-secondary)]" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white dark:ring-[var(--bg-primary)]" />
                 )}
               </button>
               {showNotifications && (
-                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-auto bg-[var(--bg-card)] border border-[var(--border)]/80 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 animate-slide-up">
+                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-auto bg-white dark:bg-[var(--bg-card)] border border-[rgba(107,92,231,0.08)] dark:border-[var(--border)] rounded-2xl shadow-[0_4px_24px_rgba(107,92,231,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 animate-slide-up">
                   <div className="p-4 border-b border-[var(--border)]/60 flex items-center justify-between">
-                    <h4 className="font-bold text-sm text-[var(--text-primary)]">Notifications</h4>
+                    <h4 className="font-bold text-sm text-[#1A1A2E] dark:text-[var(--text-primary)]">Notifications</h4>
                     {notifications.filter(n => !n.read).length > 0 && (
                       <button
                         onClick={() => { notifications.filter(n => !n.read).forEach(n => markNotificationAsRead(n.id)); }}
-                        className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-medium"
+                        className="text-xs text-[#6B7280] hover:text-[#6B5CE7] font-medium"
                       >
                         Tout marquer comme lu
                       </button>
                     )}
                   </div>
                   {notifications.length === 0 ? (
-                    <div className="p-6 text-center text-sm text-[var(--text-secondary)]">Aucune notification</div>
+                    <div className="p-6 text-center text-sm text-[#8B8BA7]">Aucune notification</div>
                   ) : (
                     <div className="divide-y divide-[var(--border)]">
                       {notifications.slice(0, 20).map(notif => (
                         <button
                           key={notif.id}
                           onClick={() => { markNotificationAsRead(notif.id); setShowNotifications(false); setActiveTab('requests'); }}
-                          className={`w-full text-left p-4 hover:bg-[var(--bg-hover)] transition-colors duration-150 ${!notif.read ? 'bg-indigo-500/8' : ''}`}
+                          className={`w-full text-left p-4 hover:bg-[#F8F7FF] dark:hover:bg-[var(--bg-hover)] transition-colors duration-150 ${!notif.read ? 'bg-[#F3F1FF]' : ''}`}
                         >
                           <div className="flex items-start gap-3">
-                            <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!notif.read ? 'bg-indigo-500' : 'bg-transparent'}`} />
+                            <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!notif.read ? 'bg-[#6B5CE7]' : 'bg-transparent'}`} />
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-[var(--text-primary)] truncate">{notif.message}</p>
-                              <p className="text-xs text-[var(--text-secondary)] mt-1">
+                              <p className="text-sm font-medium text-[#1A1A2E] dark:text-[var(--text-primary)] truncate">{notif.message}</p>
+                              <p className="text-xs text-[#9CA3AF] mt-1">
                                 {new Date(notif.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </div>
@@ -572,48 +684,47 @@ export const DashboardPro: React.FC = () => {
             <div className="relative flex items-center min-w-0">
               <button
                 onClick={() => { setShowProfileDropdown(!showProfileDropdown); setShowNotifications(false); }}
-                className="flex items-center gap-2.5 p-1.5 pr-2 sm:pr-3 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-150 min-h-[44px]"
+                className="flex items-center gap-2.5 p-1.5 pr-2 sm:pr-3 rounded-full hover:bg-white/60 dark:hover:bg-white/10 transition-colors duration-150 min-h-[44px]"
               >
                 {user?.avatar ? (
-                  <img src={user.avatar} alt="" className="w-9 h-9 rounded-full border-2 border-[var(--border)] object-cover" />
+                  <img src={user.avatar} alt="" className="w-9 h-9 rounded-full border-2 border-white dark:border-[var(--border)] object-cover shadow-sm" />
                 ) : (
-                  <div className="w-9 h-9 rounded-full border-2 border-[var(--border)] bg-[var(--bg-hover)] flex items-center justify-center font-bold text-[var(--text-secondary)] text-sm">
+                  <div className="w-9 h-9 rounded-full border-2 border-white dark:border-[var(--border)] bg-[#F3F1FF] flex items-center justify-center font-bold text-[#6B5CE7] text-sm shadow-sm">
                     {user?.name?.charAt(0) || '?'}
                   </div>
                 )}
-                <span className="font-medium text-[var(--text-primary)] hidden sm:block truncate max-w-[120px]">{user?.name}</span>
-                <ChevronRight className={`w-4 h-4 text-[var(--text-tertiary)] hidden sm:block transition-transform ${showProfileDropdown ? 'rotate-90' : ''}`} />
+                <span className="font-medium text-[#1A1A2E] dark:text-[var(--text-primary)] hidden sm:block truncate max-w-[120px]">{user?.name}</span>
               </button>
               {showProfileDropdown && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowProfileDropdown(false)} aria-hidden />
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-[var(--bg-card)] border border-[var(--border)]/80 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 overflow-hidden animate-slide-up">
-                    <div className="p-4 border-b border-[var(--border)]/60">
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[var(--bg-card)] border border-[rgba(107,92,231,0.08)] dark:border-[var(--border)] rounded-2xl shadow-[0_4px_24px_rgba(107,92,231,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 overflow-hidden animate-slide-up">
+                    <div className="p-4 border-b border-[#F0EEF9] dark:border-[var(--border)]">
                       <div className="flex items-center gap-3">
                         {user?.avatar ? (
-                          <img src={user.avatar} alt="" className="w-12 h-12 rounded-full border-2 border-[var(--border)] object-cover" />
+                          <img src={user.avatar} alt="" className="w-12 h-12 rounded-full border-2 border-white object-cover" />
                         ) : (
-                          <div className="w-12 h-12 rounded-full bg-[var(--bg-hover)] flex items-center justify-center font-bold text-lg text-[var(--text-secondary)]">
+                          <div className="w-12 h-12 rounded-full bg-[#F3F1FF] flex items-center justify-center font-bold text-lg text-[#6B5CE7]">
                             {user?.name?.charAt(0) || '?'}
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-[var(--text-primary)] truncate">{user?.name}</p>
-                          <p className="text-sm text-[var(--text-secondary)] truncate">{user?.email}</p>
+                          <p className="font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] truncate">{user?.name}</p>
+                          <p className="text-sm text-[#9CA3AF] truncate">{user?.email}</p>
                         </div>
                       </div>
                     </div>
                     <div className="p-2">
                       <button
                         onClick={() => { setActiveTab('settings'); setSettingsTab('general'); setShowProfileDropdown(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-hover)] font-medium transition-colors duration-150 text-left"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[#1A1A2E] dark:text-[var(--text-primary)] hover:bg-[#F8F7FF] dark:hover:bg-[var(--bg-hover)] font-medium transition-colors duration-150 text-left"
                       >
-                        <Settings className="w-5 h-5 text-[var(--text-tertiary)]" />
+                        <Settings className="w-5 h-5 text-[#9CA3AF]" />
                         Paramètres
                       </button>
                       <button
                         onClick={() => { logout(); setShowProfileDropdown(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 font-medium transition-colors duration-150 text-left"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 font-medium transition-colors duration-150 text-left"
                       >
                         <LogOut className="w-5 h-5" />
                         Déconnexion
@@ -626,118 +737,280 @@ export const DashboardPro: React.FC = () => {
           </div>
           </header>
 
-          {/* Quick actions bar (Overview only) — style Prodify */}
-          {activeTab === 'overview' && (
-            <div className="px-4 sm:px-6 md:px-8 py-3 border-b border-[var(--border)] bg-[var(--bg-secondary)]/80 flex flex-wrap items-center gap-2 sm:gap-3">
-              <button
-                onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 active:scale-[0.98] transition-all shadow-sm shadow-indigo-500/25"
-              >
-                <Plus className="w-4 h-4" />
-                Nouveau RDV
-              </button>
-              <button
-                onClick={() => setActiveTab('requests')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--border)] text-sm font-semibold text-[var(--text-primary)] hover:border-indigo-300 hover:bg-indigo-50/50 active:scale-[0.98] transition-all"
-              >
-                <Inbox className="w-4 h-4" />
-                Demandes
-                {pendingRequestsCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold">{pendingRequestsCount}</span>
-                )}
-              </button>
-              {user?.studioName && (
-                <a
-                  href={`${window.location.origin}/studio/${getVitrineSlug(user.studioName)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--border)] text-sm font-semibold text-[var(--text-primary)] hover:border-indigo-300 hover:bg-indigo-50/50 active:scale-[0.98] transition-all"
-                >
-                  <Image className="w-4 h-4" />
-                  Ma vitrine
-                </a>
-              )}
-              <button
-                onClick={() => setShowWidgetModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-[var(--border)] text-sm font-semibold text-[var(--text-primary)] hover:border-indigo-300 hover:bg-indigo-50/50 active:scale-[0.98] transition-all"
-              >
-                <LayoutGrid className="w-4 h-4" />
-                Ajouter un widget
-              </button>
-            </div>
-          )}
-
           {/* ====== SCROLLABLE CONTENT ZONE ====== */}
           <div
             onScroll={(e) => setHeaderScrolled((e.target as HTMLDivElement).scrollTop > 8)}
             className={`app-shell-content p-4 sm:p-5 md:p-6 ${activeTab === 'overview' ? 'dashboard-overview-bg' : 'dashboard-pages-bg'}`}
           >
-          {loading && activeTab === 'overview' && <DashboardLoadingSkeleton />}
+          {loading && <DashboardLoadingSkeleton />}
           {!loading && activeTab === 'overview' && (
-            <div className="space-y-4">
-              {/* Bannette Prochain RDV dans X min */}
+            <div className="prodify-stagger">
+              {/* ===== PRODIFY HEADER — date + salutation + sous-titre + pills ===== */}
+              <div className="px-2 sm:px-4 pt-4 sm:pt-6 pb-2 sm:pb-4">
+                <p className="text-[13px] font-medium text-[#8B8BA7] dark:text-[var(--text-tertiary)] mb-1">
+                  {now.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' })}
+                </p>
+                <h1 className="text-[28px] sm:text-[32px] font-bold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-1">
+                  Bonjour{firstName ? ` ${firstName}` : ''} 👋
+                </h1>
+                <p className="text-lg sm:text-xl font-medium greeting-gradient mb-5">
+                  Comment puis-je vous aider aujourd&apos;hui ?
+                </p>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <button className="pill-primary" onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}>
+                    <Plus className="w-4 h-4" /> Nouveau RDV
+                  </button>
+                  <button className="pill-action" onClick={() => setActiveTab('requests')}>
+                    <Inbox className="w-4 h-4" /> Demandes
+                    {pendingRequestsCount > 0 && <span className="px-2 py-0.5 rounded-full bg-[#EF4444] text-white text-[11px] font-bold ml-1">{pendingRequestsCount}</span>}
+                  </button>
+                  {user?.studioName && (
+                    <a
+                      href={`${window.location.origin}/studio/${getVitrineSlug(user.studioName)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="pill-action"
+                    >
+                      <Image className="w-4 h-4" /> Ma vitrine
+                    </a>
+                  )}
+                  <button className="pill-action" onClick={() => setShowWidgetModal(true)}>
+                    <LayoutGrid className="w-4 h-4" /> + Widget
+                  </button>
+                </div>
+              </div>
+
+              {/* Alerts / banners */}
               {nextAppointmentIn2h && (
-                <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-200">
+                <div className="mx-2 sm:mx-4 mb-4 flex items-center justify-between gap-4 px-5 py-3.5 rounded-2xl bg-white dark:bg-[var(--bg-card)] border border-emerald-200 dark:border-emerald-800 shadow-sm">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-5 h-5 text-emerald-600" />
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <p className="font-semibold text-emerald-900">Prochain RDV dans moins de 2 h</p>
-                      <p className="text-sm text-emerald-700">{nextAppointmentIn2h.clientName} • {nextAppointmentIn2h.time} — {nextAppointmentIn2h.service}</p>
+                      <p className="font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)]">Prochain RDV dans moins de 2 h</p>
+                      <p className="text-sm text-[#6B7280] dark:text-[var(--text-tertiary)]">{nextAppointmentIn2h.clientName} • {nextAppointmentIn2h.time} — {nextAppointmentIn2h.service}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setSelectedAppointment(nextAppointmentIn2h)}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors"
-                  >
+                  <button onClick={() => setSelectedAppointment(nextAppointmentIn2h)} className="pill-primary text-[13px] px-4 py-2">
                     Voir
                   </button>
                 </div>
               )}
               {visibleAlerts.length > 0 && (
-                <div className="space-y-2 animate-fade-in">
+                <div className="px-2 sm:px-4 mb-4 space-y-2 animate-fade-in">
                   {visibleAlerts.map(alert => (
-                    <div key={alert.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 rounded-xl border ${
-                      alert.type === 'warning' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'
-                    }`}>
+                    <div key={alert.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5 rounded-2xl bg-white dark:bg-[var(--bg-card)] border shadow-sm ${alert.type === 'warning' ? 'border-amber-200 dark:border-amber-800' : 'border-blue-200 dark:border-blue-800'}`}>
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         {alert.type === 'warning' ? <CreditCard className="w-5 h-5 text-amber-600 flex-shrink-0" /> : <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0" />}
-                        <span className={`text-sm font-medium flex-1 min-w-0 ${alert.type === 'warning' ? 'text-amber-800' : 'text-blue-800'}`}>{alert.msg}</span>
+                        <span className={`text-sm font-medium flex-1 min-w-0 ${alert.type === 'warning' ? 'text-amber-800 dark:text-amber-200' : 'text-blue-800 dark:text-blue-200'}`}>{alert.msg}</span>
                       </div>
                       <div className="flex items-center gap-2 sm:gap-1">
-                        <button
-                          onClick={() => {
-                            setActiveTab('appointments');
-                          }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex-1 sm:flex-none ${alert.type === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}
-                        >
-                          {alert.cta}
-                        </button>
-                        <button onClick={() => setDismissedAlerts(prev => new Set(prev).add(alert.id))} className="p-1.5 rounded hover:bg-black/5">
-                          <X className="w-4 h-4 text-neutral-500" />
-                        </button>
+                        <button onClick={() => setActiveTab('appointments')} className={`px-3 py-1.5 rounded-full text-xs font-semibold flex-1 sm:flex-none ${alert.type === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{alert.cta}</button>
+                        <button onClick={() => setDismissedAlerts(prev => new Set(prev).add(alert.id))} className="p-1.5 rounded-full hover:bg-black/5"><X className="w-4 h-4 text-[#9CA3AF]" /></button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-              {/* Grille widgets — ÉTAPE 2 : Mini Calendrier + métriques clés */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
-                {/* Ligne 1 : Salutation + Mini Calendrier */}
-                <div className="lg:col-span-8 flex flex-col justify-center">
-                  <h3 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
-                    Bonjour{firstName ? ` ${firstName}` : ''}
-                  </h3>
-                  <p className="text-base sm:text-lg mt-1 greeting-gradient font-semibold">
-                    Comment puis-je vous aider aujourd'hui ?
-                  </p>
-                  <p className="text-sm text-[var(--text-secondary)] mt-2">
-                    {todayAppointments.length > 0 ? `${todayAppointments.length} RDV aujourd'hui` : 'Aucun RDV aujourd\'hui'}
-                    {todayRevenue > 0 && ` • ${todayRevenue}€ encaissés`}
-                  </p>
+
+              {/* ===== PRODIFY 2-COLUMN GRID ===== */}
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-5 px-2 sm:px-4 pb-6">
+                {/* ====== LEFT COLUMN ====== */}
+                <div className="space-y-5 min-w-0">
+                  {/* Widget: Mes Rendez-vous (Prodify "My Tasks" style) */}
+                  <div className="prodify-card p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="flex items-center gap-2 text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)]">
+                        <Calendar className="w-5 h-5 text-[#6B7280]" /> Mes Rendez-vous
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }} className="p-1.5 rounded-lg hover:bg-[#F8F7FF] text-[#6B7280] hover:text-[#6B5CE7] transition-colors" title="Nouveau RDV">
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    {/* Section AUJOURD'HUI */}
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="badge-prodify badge-progress">AUJOURD&apos;HUI</span>
+                        <span className="text-[13px] text-[#9CA3AF]">• {todayAppointments.length} RDV</span>
+                      </div>
+                      {todayAppointments.length > 0 ? (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 px-3 py-1.5 text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-wider">
+                            <span>Nom</span><span>Statut</span><span>Heure</span>
+                          </div>
+                          {todayAppointments.slice(0, 5).map(apt => (
+                            <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="grid grid-cols-[1fr_auto_auto] gap-x-4 items-center w-full px-3 py-2.5 rounded-xl hover:bg-[#F8F7FF] dark:hover:bg-[var(--bg-hover)] text-left transition-colors">
+                              <span className="text-sm font-medium text-[#1A1A2E] dark:text-[var(--text-primary)] truncate">{apt.clientName}</span>
+                              <span className={`badge-prodify ${apt.status === 'confirmed' ? 'badge-confirmed' : apt.status === 'pending' ? 'badge-pending' : 'badge-completed'}`}>
+                                {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'pending' ? 'En attente' : 'Terminé'}
+                              </span>
+                              <span className="text-[13px] font-semibold text-[#DC2626]">{apt.time || '—'}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[#9CA3AF] pl-3">Aucun RDV aujourd&apos;hui</p>
+                      )}
+                    </div>
+                    {/* Section À VENIR */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="badge-prodify badge-upcoming">À VENIR</span>
+                        <span className="text-[13px] text-[#9CA3AF]">• {appointments.filter(a => a.date > today && ['pending','confirmed'].includes(a.status)).length} RDV</span>
+                      </div>
+                      {(() => {
+                        const upcoming = appointments.filter(a => a.date > today && ['pending','confirmed'].includes(a.status)).sort((a,b) => a.date.localeCompare(b.date)).slice(0, 3);
+                        return upcoming.length > 0 ? (
+                          <div className="space-y-2">
+                            {upcoming.map(apt => (
+                              <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="grid grid-cols-[1fr_auto_auto] gap-x-4 items-center w-full px-3 py-2.5 rounded-xl hover:bg-[#F8F7FF] dark:hover:bg-[var(--bg-hover)] text-left transition-colors">
+                                <span className="text-sm font-medium text-[#1A1A2E] dark:text-[var(--text-primary)] truncate">{apt.clientName}</span>
+                                <span className={`badge-prodify ${apt.status === 'confirmed' ? 'badge-confirmed' : 'badge-pending'}`}>
+                                  {apt.status === 'confirmed' ? 'Confirmé' : 'En attente'}
+                                </span>
+                                <span className="text-[13px] text-[#6B7280]">{new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-[#9CA3AF] pl-3">Aucun RDV à venir</p>
+                        );
+                      })()}
+                    </div>
+                    <button onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }} className="w-full mt-4 py-2.5 text-[13px] font-semibold text-[#6B5CE7] hover:bg-[#F8F7FF] rounded-xl transition-colors text-center">
+                      + Ajouter un RDV
+                    </button>
+                  </div>
+
+                  {/* Widget: Mes Statistiques (Prodify "My Goals" style) */}
+                  <div className="prodify-card p-6">
+                    <div className="flex items-center gap-2 mb-5">
+                      <Target className="w-5 h-5 text-[#6B7280]" />
+                      <span className="text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)]">Mes Statistiques</span>
+                    </div>
+                    <div className="space-y-5">
+                      {/* Acomptes reçus */}
+                      <div>
+                        <div className="text-[14px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-0.5">Acomptes reçus ce mois</div>
+                        <div className="text-[12px] text-[#9CA3AF] mb-2">Finance • Mois en cours</div>
+                        <div className="flex items-center gap-3">
+                          <div className="progress-bar-prodify"><div className="progress-fill green" style={{ width: `${Math.min(100, monthlyRevenue > 0 ? (pendingDeposits / monthlyRevenue) * 100 : 0)}%` }} /></div>
+                          <span className="text-[13px] font-semibold text-[#6B7280] min-w-[48px] text-right">{pendingDeposits}€</span>
+                        </div>
+                      </div>
+                      {/* Demandes traitées */}
+                      <div>
+                        <div className="text-[14px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-0.5">Demandes traitées</div>
+                        <div className="text-[12px] text-[#9CA3AF] mb-2">Demandes • Ce mois</div>
+                        <div className="flex items-center gap-3">
+                          {(() => {
+                            const total = projectRequests.length || 1;
+                            const treated = projectRequests.filter(p => p.status !== 'PENDING').length;
+                            const pct = Math.round((treated / total) * 100);
+                            return (<>
+                              <div className="progress-bar-prodify"><div className="progress-fill orange" style={{ width: `${pct}%` }} /></div>
+                              <span className="text-[13px] font-semibold text-[#6B7280] min-w-[48px] text-right">{pct}%</span>
+                            </>);
+                          })()}
+                        </div>
+                      </div>
+                      {/* Clients actifs */}
+                      <div>
+                        <div className="text-[14px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-0.5">Clients actifs</div>
+                        <div className="text-[12px] text-[#9CA3AF] mb-2">CRM • Total</div>
+                        <div className="flex items-center gap-3">
+                          <div className="progress-bar-prodify"><div className="progress-fill violet" style={{ width: `${Math.min(100, clients.length * 5)}%` }} /></div>
+                          <span className="text-[13px] font-semibold text-[#6B7280] min-w-[48px] text-right">{clients.length}</span>
+                        </div>
+                      </div>
+                      {/* Revenu mensuel */}
+                      <div>
+                        <div className="text-[14px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-0.5">Revenu mensuel</div>
+                        <div className="text-[12px] text-[#9CA3AF] mb-2">Finance • {now.toLocaleDateString('fr-FR', { month: 'long' })}</div>
+                        <div className="flex items-center gap-3">
+                          <div className="progress-bar-prodify"><div className="progress-fill teal" style={{ width: `${Math.min(100, monthlyRevenue > 0 ? (monthlyRevenue / Math.max(totalRevenue, 1)) * 100 : 0)}%` }} /></div>
+                          <span className="text-[13px] font-semibold text-[#6B7280] min-w-[48px] text-right">{monthlyRevenue}€</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Widget: Évolution du revenu (chart) */}
+                  <div className="prodify-card p-6 overflow-hidden">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-[#6B7280]" />
+                        <span className="text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)]">Évolution du revenu</span>
+                      </div>
+                      <span className="badge-prodify badge-progress">6 mois</span>
+                    </div>
+                    <div className="-mx-2 sm:mx-0 h-[200px]">
+                      <ResponsiveContainer width="100%" height={200}>
+                        <AreaChart data={Array.isArray(revenueChartData) ? revenueChartData : []} margin={{ top: 0, right: 0, left: -8, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorRevenueOverview" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#6B5CE7" stopOpacity={0.35} />
+                              <stop offset="100%" stopColor="#6B5CE7" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#F0EEF9" vertical={false} />
+                          <XAxis dataKey="month" stroke="#9CA3AF" style={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#9CA3AF" style={{ fontSize: 11 }} tickLine={false} axisLine={false} width={32} />
+                          <Tooltip formatter={(v: number) => [`${v}€`, 'Revenu']} contentStyle={{ borderRadius: 14, border: '1px solid #F0EEF9', boxShadow: '0 4px 12px rgba(107,92,231,0.08)' }} />
+                          <Area type="monotone" dataKey="revenue" stroke="#6B5CE7" strokeWidth={2.5} fill="url(#colorRevenueOverview)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Custom widgets (sortable) */}
+                  {customWidgets.length > 0 && (
+                    <SortableOverviewWidgets
+                      items={customWidgets.map(w => ({ id: w.id, node: <WidgetCard widget={w} onRemove={() => setCustomWidgets(prev => prev.filter(x => x.id !== w.id))} /> }))}
+                      customWidgetIds={customWidgets.map(w => w.id)}
+                      gridCols={2}
+                    />
+                  )}
                 </div>
-                <div className="lg:col-span-5">
+
+                {/* ====== RIGHT COLUMN (420px) ====== */}
+                <div className="space-y-5">
+                  {/* Widget: Clients récents (Prodify "Projects" style) */}
+                  <div className="prodify-card p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="flex items-center gap-2 text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)]">
+                        <FolderOpen className="w-5 h-5 text-[#6B7280]" /> Clients récents
+                      </span>
+                      <button onClick={() => setActiveTab('clients')} className="text-[13px] font-medium text-[#6B5CE7] hover:underline">Voir tout</button>
+                    </div>
+                    <button onClick={() => setActiveTab('clients')} className="w-full flex items-center gap-3 p-3 mb-3 rounded-xl border-2 border-dashed border-[#F0EEF9] dark:border-[var(--border)] hover:border-[#6B5CE7]/40 hover:bg-[#F8F7FF] transition-colors text-left">
+                      <div className="w-8 h-8 rounded-lg bg-[#F3F1FF] flex items-center justify-center"><UserPlus className="w-4 h-4 text-[#6B5CE7]" /></div>
+                      <span className="text-sm font-medium text-[#6B5CE7]">Nouveau client</span>
+                    </button>
+                    {topClients.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        {topClients.slice(0, 4).map((client, i) => {
+                          const colors = ['bg-[#6B5CE7]', 'bg-[#3B82F6]', 'bg-[#22C55E]', 'bg-[#F59E0B]'];
+                          return (
+                            <button key={client.id} onClick={() => setActiveTab('clients')} className="text-left p-3.5 rounded-xl border border-[#F0EEF9] dark:border-[var(--border)] hover:border-[#6B5CE7] transition-colors">
+                              <div className={`w-7 h-7 rounded-lg ${colors[i % 4]} flex items-center justify-center mb-2`}>
+                                <span className="text-white text-xs font-bold">{client.name?.charAt(0)}</span>
+                              </div>
+                              <div className="text-[14px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] truncate">{client.name}</div>
+                              <div className="text-[12px] text-[#9CA3AF]">{client.appointmentCount || 0} RDV • {client.totalSpent}€</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-[#9CA3AF] text-center py-4">Aucun client pour le moment</p>
+                    )}
+                  </div>
+
+                  {/* Widget: Calendrier (compact week view like Prodify) */}
                   <MiniCalendar
                     selectedDate={null}
                     onSelectDate={() => setActiveTab('appointments')}
@@ -746,228 +1019,76 @@ export const DashboardPro: React.FC = () => {
                     onPrevMonth={() => setOverviewCalendarMonth(m => new Date(m.getFullYear(), m.getMonth() - 1))}
                     onNextMonth={() => setOverviewCalendarMonth(m => new Date(m.getFullYear(), m.getMonth() + 1))}
                     onToday={() => setOverviewCalendarMonth(new Date())}
-                    className="h-full"
+                    className=""
                   />
-                </div>
-              </div>
-              {/* KPI widgets */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                <div className="dashboard-widget-card p-4 sm:p-5 relative overflow-hidden min-h-[44px] transition-all duration-300 hover:-translate-y-0.5">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
-                        <Calendar className="w-4 h-4 text-indigo-600" />
+
+                  {/* Event du jour (below calendar) */}
+                  {nextClientOfDay && (
+                    <div className="prodify-card overflow-hidden">
+                      <div className="p-4 bg-[#F8F7FF] dark:bg-[rgba(107,92,231,0.08)] border-b border-[#E9E5FF] dark:border-[var(--border)]">
+                        <div className="text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-1">{nextClientOfDay.clientName}</div>
+                        <div className="text-[13px] text-[#6B7280]">Aujourd&apos;hui • {nextClientOfDay.time || '—'}</div>
                       </div>
-                      <span className="font-semibold text-[var(--text-primary)]">RDV aujourd'hui</span>
-                    </div>
-                    {todayAppointments.length > 0 && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">À venir</span>
-                    )}
-                  </div>
-                  <div className="text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">{todayAppointments.length}</div>
-                </div>
-                <div className="dashboard-widget-card p-4 sm:p-5 relative overflow-hidden min-h-[44px] bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/20">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
-                        <DollarSign className="w-4 h-4 text-white" />
-                      </div>
-                      <span className="font-semibold text-white/90">Revenus du mois</span>
-                    </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-xs font-semibold">
-                      {now.toLocaleDateString('fr-FR', { month: 'short' })}
-                    </span>
-                  </div>
-                  <div className="text-3xl sm:text-4xl font-bold text-white">{monthlyRevenue}€</div>
-                </div>
-                <button
-                  onClick={() => setActiveTab('requests')}
-                  className="dashboard-widget-card p-4 sm:p-5 relative overflow-hidden min-h-[44px] transition-all duration-300 hover:-translate-y-0.5 text-left w-full"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                        <Inbox className="w-4 h-4 text-amber-600" />
-                      </div>
-                      <span className="font-semibold text-[var(--text-primary)]">Demandes en attente</span>
-                    </div>
-                    {pendingRequestsCount > 0 && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">{pendingRequestsCount}</span>
-                    )}
-                  </div>
-                  <div className="text-3xl sm:text-4xl font-bold text-amber-600">{pendingRequestsCount}</div>
-                </button>
-                <div className="dashboard-widget-card p-4 sm:p-5 relative overflow-hidden min-h-[44px] transition-all duration-300 hover:-translate-y-0.5">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                        <CreditCard className="w-4 h-4 text-emerald-600" />
-                      </div>
-                      <span className="font-semibold text-[var(--text-primary)]">Acomptes</span>
-                    </div>
-                    {unpaidCount > 0 && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">{unpaidCount} RDV</span>
-                    )}
-                  </div>
-                  <div className="text-3xl sm:text-4xl font-bold text-emerald-600">{pendingDeposits}€</div>
-                </div>
-              </div>
-              <DashboardWidgets widgets={customWidgets} onWidgetsChange={setCustomWidgets} onAddWidget={() => setShowWidgetModal(true)} />
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5">
-                <div className="xl:col-span-2 dashboard-widget-card p-5 sm:p-6 overflow-hidden min-h-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center">
-                      <BarChart3 className="w-4 h-4 text-indigo-600" />
-                    </div>
-                    <h3 className="font-bold text-lg">Évolution du revenu</h3>
-                    <span className="text-xs text-[var(--text-secondary)] ml-1">• 6 mois</span>
-                  </div>
-                  <p className="text-sm text-neutral-400 mb-4">Revenus cumulés</p>
-                  <div className="-mx-2 sm:mx-0 h-[220px] min-h-[220px]">
-                    <ResponsiveContainer width="100%" height={220}>
-                      <AreaChart data={Array.isArray(revenueChartData) ? revenueChartData : []} margin={{ top: 0, right: 0, left: -8, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorRevenueOverview" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#171717" stopOpacity={0.45} />
-                            <stop offset="100%" stopColor="#171717" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" vertical={false} />
-                        <XAxis dataKey="month" stroke="#737373" style={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                        <YAxis stroke="#737373" style={{ fontSize: 10 }} tickLine={false} axisLine={false} width={28} />
-                        <Tooltip formatter={(v: number) => [`${v}€`, 'Revenu']} contentStyle={{ borderRadius: 12, border: '1px solid #e5e5e5' }} />
-                        <Area type="monotone" dataKey="revenue" stroke="#171717" strokeWidth={3} fill="url(#colorRevenueOverview)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-                <div className="dashboard-widget-card p-5 sm:p-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-9 h-9 rounded-lg bg-violet-100 flex items-center justify-center">
-                      <LayoutDashboard className="w-4 h-4 text-violet-600" />
-                    </div>
-                    <h3 className="font-bold text-lg">Répartition RDV</h3>
-                  </div>
-                  <p className="text-sm text-neutral-400 mb-4">Par statut</p>
-                  {Array.isArray(pieData) && pieData.length > 0 ? (
-                    <>
-                      <div className="h-[140px] min-h-[140px]">
-                        <ResponsiveContainer width="100%" height={140}>
-                          <PieChart>
-                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={4} dataKey="value">
-                              {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                            </Pie>
-                            <Tooltip formatter={(v: number) => [v, '']} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <div className="mt-3 space-y-2">
-                        {pieData.map((item, i) => (
-                          <div key={i} className="flex items-center justify-between text-sm">
-                            <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />{item.name}</span>
-                            <span className="font-semibold">{item.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="h-[180px] flex items-center justify-center text-neutral-500 text-sm">Aucun RDV</div>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5">
-                <div className="xl:col-span-2 dashboard-widget-card p-5 sm:p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center">
-                        <Calendar className="w-4 h-4 text-emerald-600" />
-                      </div>
-                      <h3 className="font-bold text-lg">Prochains rendez-vous</h3>
-                    </div>
-                    {appointments.length > 0 && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
-                        {Math.min(5, appointments.length)} RDV
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-neutral-400 mb-4">Les 5 prochains à venir</p>
-                  {appointments.length === 0 ? (
-                    <div className="text-center py-10">
-                      <div className="w-14 h-14 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                        <Calendar className="w-7 h-7 text-neutral-400" />
-                      </div>
-                      <p className="font-semibold text-neutral-700 mb-1">Aucun rendez-vous</p>
-                      <button onClick={() => setActiveTab('settings')} className="mt-3 px-4 py-2.5 bg-neutral-900 text-white rounded-xl text-sm font-semibold hover:bg-neutral-800 active:scale-[0.98] transition-all touch-target">
-                        Configurer ma vitrine
-                      </button>
-                      <p className="text-sm text-neutral-500 max-w-xs mx-auto mt-4">Vos prochains RDV apparaitront ici. Partagez votre page vitrine pour recevoir des demandes !</p>
-                    </div>
-                  ) : (
-                  <div className="space-y-3">
-                    {appointments.slice(0, 5).map(apt => (
-                      <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl w-full text-left hover:bg-neutral-100 active:scale-[0.995] active:bg-neutral-200/50 transition-all">
-                        <div>
-                          <div className="font-semibold">{apt.clientName}</div>
-                          <div className="text-sm text-neutral-600">{apt.service} • {apt.date} {apt.time}</div>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          apt.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                          apt.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                          apt.status === 'completed' ? 'bg-neutral-100 text-neutral-600' : 'bg-neutral-100'
-                        }`}>
-                          {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'pending' ? 'En attente' : apt.status === 'completed' ? 'Terminé' : apt.status}
+                      <div className="p-4 flex items-center justify-between">
+                        <span className="flex items-center gap-2 text-[12px] font-medium text-[#6B7280] bg-white dark:bg-[var(--bg-card)] border border-[#E5E3F0] dark:border-[var(--border)] rounded-lg px-2.5 py-1.5">
+                          <MapPin className="w-3.5 h-3.5" /> En studio
                         </span>
-                      </button>
-                    ))}
-                  </div>
-                  )}
-                </div>
-                <div className="dashboard-widget-card p-5 sm:p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
-                        <Trophy className="w-4 h-4 text-amber-600" />
+                        <button onClick={() => setSelectedAppointment(nextClientOfDay)} className="text-[13px] font-semibold text-[#6B5CE7] hover:underline">Voir détails</button>
                       </div>
-                      <h3 className="font-bold text-lg">Top 5 clients</h3>
                     </div>
-                    {topClients.length > 0 && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
-                        {topClients.length} clients
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-neutral-400 mb-4">Par montant dépensé</p>
-                  {topClients.length > 0 ? (
-                    <div className="space-y-3">
-                      {topClients.map((client, i) => {
-                        const maxSpent = topClients[0]?.totalSpent || 1;
-                        const pct = (client.totalSpent / maxSpent) * 100;
-                        return (
-                          <div key={client.id}>
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-medium truncate">{client.name}</span>
-                              <span className="text-sm font-bold">{client.totalSpent}€</span>
-                            </div>
-                            <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-neutral-900 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
-                            </div>
+                  )}
+
+                  {/* Widget: Demandes en attente (Prodify "Reminders") */}
+                  <div className="prodify-card p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Inbox className="w-5 h-5 text-[#6B7280]" />
+                      <span className="text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)]">Demandes en attente</span>
+                    </div>
+                    {(() => {
+                      const pendingItems = [
+                        ...projectRequests.filter(p => p.status === 'PENDING').slice(0, 3).map(p => ({ id: p.id, label: p.clientName || p.description || 'Demande', type: 'project' as const })),
+                        ...appointments.filter(a => a.status === 'pending').slice(0, 2).map(a => ({ id: a.id, label: a.clientName, type: 'rdv' as const })),
+                      ];
+                      return pendingItems.length > 0 ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="badge-prodify badge-todo">Aujourd&apos;hui</span>
+                            <span className="text-[13px] text-[#9CA3AF]">• {pendingItems.length}</span>
                           </div>
-                        );
-                      })}
+                          {pendingItems.map(item => (
+                            <button key={item.id} onClick={() => setActiveTab(item.type === 'project' ? 'requests' : 'appointments')} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[#F8F7FF] dark:hover:bg-[var(--bg-hover)] text-left transition-colors">
+                              <span className="text-sm text-[#1A1A2E] dark:text-[var(--text-primary)] truncate flex-1">{item.label}</span>
+                              <span className={`badge-prodify ${item.type === 'project' ? 'badge-todo' : 'badge-pending'}`}>{item.type === 'project' ? 'Projet' : 'RDV'}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[#9CA3AF] text-center py-4">Aucune demande en attente ✓</p>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Prochain client panel */}
+                  {!nextClientOfDay && (
+                    <div className="prodify-card p-5 flex flex-col items-center text-center py-8">
+                      <Calendar className="w-10 h-10 text-[#9CA3AF] mb-3" />
+                      <p className="font-semibold text-[#6B7280]">Aucun RDV aujourd&apos;hui</p>
+                      <p className="text-sm text-[#9CA3AF] mt-1">Votre prochain client apparaîtra ici</p>
+                      <button onClick={() => setActiveTab('appointments')} className="mt-4 text-sm font-medium text-[#6B5CE7] hover:underline">
+                        Voir les rendez-vous
+                      </button>
                     </div>
-                  ) : (
-                    <p className="text-sm text-neutral-500">Aucun client</p>
                   )}
                 </div>
               </div>
             </div>
           )}
 
-          {activeTab === 'analytics' && (
+          {!loading && activeTab === 'analytics' && (
             <AnalyticsDashboard appointments={appointments} clients={clients} />
           )}
 
-          {activeTab === 'requests' && (
+          {!loading && activeTab === 'requests' && (
             <RequestsDashboard
               appointments={appointments}
               onUpdateAppointment={updateAppointment}
@@ -979,7 +1100,7 @@ export const DashboardPro: React.FC = () => {
             />
           )}
 
-              {activeTab === 'appointments' && (
+              {!loading && activeTab === 'appointments' && (
             <AppointmentsView
               appointments={appointments}
               onNewAppointment={() => { setSelectedFlash(null); setShowBookingModal(true); }}
@@ -987,11 +1108,11 @@ export const DashboardPro: React.FC = () => {
             />
           )}
 
-          {activeTab === 'flash' && (
+          {!loading && activeTab === 'flash' && (
             <FlashGallery designs={flashDesigns} onBook={handleBookFlash} onAddFlash={addFlash} onUpdateFlash={updateFlash} onDeleteFlash={deleteFlash} />
           )}
 
-          {activeTab === 'clients' && (
+          {!loading && activeTab === 'clients' && (
             <ClientList
               clients={clients}
               onAddClient={addClient}
@@ -1004,7 +1125,7 @@ export const DashboardPro: React.FC = () => {
             />
           )}
 
-          {activeTab === 'messaging' && user && (
+          {!loading && activeTab === 'messaging' && user && (
             <MessageThreadView
               studioId={studioId || ''}
               threads={messageThreads}
@@ -1012,7 +1133,7 @@ export const DashboardPro: React.FC = () => {
             />
           )}
 
-          {activeTab === 'portfolio' && (
+          {!loading && activeTab === 'portfolio' && (
             <PortfolioManager
               items={portfolioItemsFromVitrine}
               onAddItem={(item) => {
@@ -1022,7 +1143,7 @@ export const DashboardPro: React.FC = () => {
                 setVitrineData(newData);
                 const slug = getVitrineSlug(user.studioName);
                 saveVitrineDataAsync(slug, newData, user.email, user.studioName).catch((err) => {
-                  console.warn('Portfolio save failed:', err);
+                  if (import.meta.env.DEV) console.warn('Portfolio save failed:', err);
                   toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
                 });
               }}
@@ -1035,7 +1156,7 @@ export const DashboardPro: React.FC = () => {
                 setVitrineData(newData);
                 const slug = getVitrineSlug(user.studioName);
                 saveVitrineDataAsync(slug, newData, user.email, user.studioName).catch((err) => {
-                  console.warn('Portfolio save failed:', err);
+                  if (import.meta.env.DEV) console.warn('Portfolio save failed:', err);
                   toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
                 });
               }}
@@ -1043,11 +1164,11 @@ export const DashboardPro: React.FC = () => {
             />
           )}
 
-          {activeTab === 'finance' && (
+          {!loading && activeTab === 'finance' && (
             <FinanceDashboard appointments={appointments} />
           )}
 
-          {activeTab === 'settings' && (
+          {!loading && activeTab === 'settings' && (
             <div className="space-y-6">
               <div className="flex gap-2 border-b border-[var(--border)] pb-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide flex-nowrap">
                 {([
@@ -1060,6 +1181,7 @@ export const DashboardPro: React.FC = () => {
                   { id: 'artists', label: 'Artistes' },
                   { id: 'waitlist', label: 'Liste d\'attente' },
                   { id: 'loyalty', label: 'Fidélité' },
+                  { id: 'calendar', label: 'Calendrier' },
                   { id: 'vitrine', label: 'Page vitrine' },
                 ] as const).map(tab => (
                   <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
@@ -1172,10 +1294,10 @@ export const DashboardPro: React.FC = () => {
                           localStorage.setItem('inkflow_studio_name', generalStudioName);
                           localStorage.setItem('inkflow_email', generalEmail);
                           setGeneralSaved(true);
-                          toast.success('Parametres du studio enregistres');
+                          toast.success('Paramètres du studio enregistrés');
                           setTimeout(() => setGeneralSaved(false), 3000);
                         } catch (err) {
-                          console.error('Erreur sauvegarde parametres:', err);
+                          if (import.meta.env.DEV) console.error('Erreur sauvegarde parametres:', err);
                           toast.error('Erreur lors de la sauvegarde');
                         } finally {
                           setGeneralSaving(false);
@@ -1226,6 +1348,7 @@ export const DashboardPro: React.FC = () => {
                   onUpdateSettings={setLoyaltySettings}
                 />
               )}
+              {settingsTab === 'calendar' && <CalendarSettings studioId={studioId || ''} onToast={(msg, type) => type === 'success' ? toast.success(msg) : toast.error(msg)} />}
               {settingsTab === 'vitrine' && user?.studioName && <VitrineSettings studioName={user.studioName} userEmail={user.email} />}
             </div>
           )}
@@ -1237,7 +1360,7 @@ export const DashboardPro: React.FC = () => {
         <AddWidgetModal
           isOpen={showWidgetModal}
           onClose={() => setShowWidgetModal(false)}
-          onAdd={(w) => { setCustomWidgets(prev => [...prev, w]); toast.success('Widget ajoute'); }}
+          onAdd={(w) => { setCustomWidgets(prev => [...prev, w]); toast.success('Widget ajouté'); }}
         />
       )}
       {showBookingModal && (
@@ -1353,97 +1476,16 @@ export const DashboardPro: React.FC = () => {
         </div>
       </nav>
 
-      {selectedAppointment && (
-        <Modal isOpen={!!selectedAppointment} onClose={() => setSelectedAppointment(null)} title="Détail du rendez-vous" size="md">
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-xs text-neutral-500 block mb-1">Client</span>
-                <span className="font-semibold">{selectedAppointment.clientName}</span>
-              </div>
-              <div>
-                <span className="text-xs text-neutral-500 block mb-1">Email</span>
-                <span className="text-sm">{selectedAppointment.clientEmail}</span>
-              </div>
-              <div>
-                <span className="text-xs text-neutral-500 block mb-1">Date</span>
-                <span className="font-semibold">{selectedAppointment.date}</span>
-              </div>
-              <div>
-                <span className="text-xs text-neutral-500 block mb-1">Heure</span>
-                <span className="font-semibold">{selectedAppointment.time}</span>
-              </div>
-              <div>
-                <span className="text-xs text-neutral-500 block mb-1">Service</span>
-                <span className="text-sm">{selectedAppointment.service}</span>
-              </div>
-              <div>
-                <span className="text-xs text-neutral-500 block mb-1">Durée</span>
-                <span className="text-sm">{selectedAppointment.duration} min</span>
-              </div>
-              <div>
-                <span className="text-xs text-neutral-500 block mb-1">Prix</span>
-                <span className="font-bold text-lg">{selectedAppointment.price}€</span>
-              </div>
-              <div>
-                <span className="text-xs text-neutral-500 block mb-1">Acompte</span>
-                <span className={`font-semibold ${selectedAppointment.depositPaid ? 'text-green-600' : 'text-amber-600'}`}>
-                  {selectedAppointment.deposit}€ {selectedAppointment.depositPaid ? '(Payé)' : '(En attente)'}
-                </span>
-              </div>
-              <div>
-                <span className="text-xs text-neutral-500 block mb-1">Statut</span>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  selectedAppointment.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                  selectedAppointment.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                  selectedAppointment.status === 'completed' ? 'bg-neutral-100 text-neutral-600' :
-                  'bg-red-100 text-red-700'
-                }`}>
-                  {selectedAppointment.status === 'confirmed' ? 'Confirmé' : selectedAppointment.status === 'pending' ? 'En attente' : selectedAppointment.status === 'completed' ? 'Terminé' : 'Annulé'}
-                </span>
-              </div>
-              {selectedAppointment.location && (
-                <div>
-                  <span className="text-xs text-neutral-500 block mb-1">Emplacement</span>
-                  <span className="text-sm capitalize">{selectedAppointment.location}</span>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-3 pt-4 border-t border-neutral-200">
-              {selectedAppointment.status === 'pending' && (
-                <>
-                  <button
-                    onClick={() => { updateAppointment(selectedAppointment.id, { status: 'confirmed' }); setSelectedAppointment(prev => prev ? { ...prev, status: 'confirmed' } : null); }}
-                    className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors text-sm"
-                  >
-                    Confirmer
-                  </button>
-                  <button
-                    onClick={() => { updateAppointment(selectedAppointment.id, { status: 'cancelled' }); setSelectedAppointment(null); }}
-                    className="flex-1 px-4 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-xl font-semibold hover:bg-red-100 transition-colors text-sm"
-                  >
-                    Annuler
-                  </button>
-                </>
-              )}
-              {selectedAppointment.status === 'confirmed' && (
-                <button
-                  onClick={() => { updateAppointment(selectedAppointment.id, { status: 'completed' }); setSelectedAppointment(null); }}
-                  className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors text-sm"
-                >
-                  Marquer comme terminé
-                </button>
-              )}
-              <button
-                onClick={() => setSelectedAppointment(null)}
-                className="px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl font-semibold hover:bg-neutral-200 transition-colors text-sm"
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      <ClientPreviewDrawer
+        isOpen={!!selectedAppointment}
+        onClose={() => setSelectedAppointment(null)}
+        data={previewDataForDrawer}
+        studioId={studioId || ''}
+        artistName={user?.name || 'Artiste'}
+        onOpenMessaging={() => { setSelectedAppointment(null); setActiveTab('messaging'); }}
+        appointment={selectedAppointment}
+        onUpdateAppointment={updateAppointment}
+      />
     </div>
   );
 };
