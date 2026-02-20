@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
@@ -18,15 +18,16 @@ import { CTAFinal } from './components/CTAFinal';
 import { Footer } from './components/Footer';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
-import { DashboardPage } from './pages/DashboardPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
-import { PublicStudioPagePro } from './pages/public/PublicStudioPagePro';
-import { PublicBookingPagePro } from './pages/public/PublicBookingPagePro';
-import { ConsentPage } from './pages/public/ConsentPage';
-import { PublicMessagePage } from './pages/public/PublicMessagePage';
-import { PrivacyPolicyPage } from './pages/legal/PrivacyPolicyPage';
-import { TermsOfServicePage } from './pages/legal/TermsOfServicePage';
+
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const PublicStudioPagePro = lazy(() => import('./pages/public/PublicStudioPagePro').then(m => ({ default: m.PublicStudioPagePro })));
+const PublicBookingPagePro = lazy(() => import('./pages/public/PublicBookingPagePro').then(m => ({ default: m.PublicBookingPagePro })));
+const ConsentPage = lazy(() => import('./pages/public/ConsentPage').then(m => ({ default: m.ConsentPage })));
+const PublicMessagePage = lazy(() => import('./pages/public/PublicMessagePage').then(m => ({ default: m.PublicMessagePage })));
+const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
+const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
 
 interface Route {
   path: string | RegExp;
@@ -144,7 +145,11 @@ const Router: React.FC = () => {
   const Component = route.component;
   const props = match && route.getProps ? route.getProps(match) : {};
 
-  return <Component {...props} />;
+  return (
+    <Suspense fallback={<FullScreenSpinner />}>
+      <Component {...props} />
+    </Suspense>
+  );
 };
 
 const NotFoundPage: React.FC = () => (

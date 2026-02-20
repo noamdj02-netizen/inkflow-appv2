@@ -75,6 +75,7 @@ export default defineConfig(({ mode }) => {
         }
       },
       build: {
+        target: 'es2020',
         commonjsOptions: {
           transformMixedEsModules: true,
         },
@@ -83,6 +84,7 @@ export default defineConfig(({ mode }) => {
             manualChunks: {
               'vendor-charts': ['recharts'],
               'vendor-supabase': ['@supabase/supabase-js'],
+              'vendor-pdf': ['jspdf'],
             },
           },
         },
