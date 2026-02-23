@@ -56,17 +56,21 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
         }`}
         aria-hidden="true"
       />
-      {/* Drawer */}
+      {/* Drawer — bottom sheet sur mobile, panneau droit sur desktop */}
       <div
-        className={`fixed top-0 right-0 bottom-0 z-50 w-full max-w-md bg-[var(--bg-primary)] shadow-xl border-l border-[var(--border)] flex flex-col transition-transform duration-300 ease-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed z-50 flex flex-col bg-[var(--bg-primary)] shadow-xl border-[var(--border)]
+          md:top-0 md:right-0 md:bottom-0 md:w-full md:max-w-md md:border-l
+          bottom-0 left-0 right-0 max-h-[90dvh] md:max-h-none rounded-t-3xl md:rounded-none border-t md:border-t-0
+          transition-transform duration-300 ease-out safe-bottom
+          ${isOpen ? 'translate-y-0 md:translate-x-0' : 'translate-y-full md:translate-y-0 md:translate-x-full'}`}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] bg-[var(--bg-secondary)]/80">
-          <h2 className="font-bold text-lg text-[var(--text-primary)]">Prévisualisation client</h2>
+        <div className="relative flex items-center justify-between px-5 py-4 border-b border-[var(--border)] bg-[var(--bg-secondary)]/80 shrink-0">
+          {/* Poignée visuelle sur mobile */}
+          <div className="absolute left-1/2 -translate-x-1/2 top-2 w-12 h-1 rounded-full bg-neutral-300 dark:bg-neutral-600 md:hidden" aria-hidden />
+          <h2 className="font-bold text-lg text-[var(--text-primary)] pt-1 md:pt-0">Prévisualisation client</h2>
           <button
             onClick={onClose}
-            className="p-2.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors text-[var(--text-secondary)]"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-[var(--bg-hover)] transition-colors text-[var(--text-secondary)] touch-target"
             aria-label="Fermer"
           >
             <X className="w-5 h-5" />

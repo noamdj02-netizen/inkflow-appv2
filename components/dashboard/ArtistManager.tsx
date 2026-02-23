@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, X, User, Mail, Edit2, Trash2, Shield, Check } from 'lucide-react';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import type { ArtistAccount } from '../../types';
 
 interface ArtistManagerProps {
@@ -23,6 +24,7 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({ artists, onAdd, on
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', email: '', role: 'artist', specialties: '', avatar: '' });
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<Record<string, boolean>>({
     view_appointments: true, manage_appointments: true, view_clients: true,
     manage_flash: true, view_finance: false, manage_vitrine: false,
@@ -103,7 +105,7 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({ artists, onAdd, on
           <div key={artist.id} className={`bg-white rounded-2xl p-6 border border-neutral-200 ${!artist.active ? 'opacity-60' : ''}`}>
             <div className="flex items-start gap-4">
               <div className="w-14 h-14 rounded-2xl bg-neutral-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                {artist.avatar ? <img src={artist.avatar} className="w-full h-full object-cover" /> : <User className="w-6 h-6 text-neutral-500" />}
+                {artist.avatar ? <img src={artist.avatar} alt={artist.name} loading="lazy" className="w-full h-full object-cover" /> : <User className="w-6 h-6 text-neutral-500" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -121,7 +123,7 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({ artists, onAdd, on
                 <button onClick={() => startEdit(artist)} className="p-2 rounded-lg hover:bg-neutral-100">
                   <Edit2 className="w-4 h-4 text-neutral-500" />
                 </button>
-                <button onClick={() => { if (confirm('Supprimer cet artiste ?')) onDelete(artist.id); }}
+                <button onClick={() => setDeleteConfirmId(artist.id)}
                   className="p-2 rounded-lg hover:bg-red-50">
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </button>
@@ -169,6 +171,16 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({ artists, onAdd, on
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => { if (deleteConfirmId) onDelete(deleteConfirmId); setDeleteConfirmId(null); }}
+        title="Supprimer cet artiste ?"
+        message="L'artiste sera retiré de votre équipe. Cette action est irréversible."
+        confirmLabel="Supprimer"
+        variant="danger"
+      />
     </div>
   );
 };

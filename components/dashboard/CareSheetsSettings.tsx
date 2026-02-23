@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Save, Trash2, FileText } from 'lucide-react';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import { getStudioId } from '../../lib/supabase';
 import { getCareTemplatesFromSupabase, saveCareTemplatesToSupabase } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
@@ -25,6 +26,7 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const useSupabase = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && userEmail && studioName);
   const studioId = userEmail && studioName ? getStudioId(userEmail, studioName) : null;
 
@@ -100,12 +102,12 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
   };
 
   const deleteTemplate = (id: string) => {
-    if (!confirm('Supprimer ce template ?')) return;
     setTemplates(prev => prev.filter(t => t.id !== id));
     if (selectedId === id) {
       const remaining = templates.filter(t => t.id !== id);
       setSelectedId(remaining[0]?.id || null);
     }
+    setDeleteConfirmId(null);
   };
 
   return (
@@ -166,7 +168,7 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
                     className="w-full px-4 py-3 border border-neutral-200 rounded-xl resize-none" />
                 </div>
                 <div className="flex justify-between">
-                  <button onClick={() => deleteTemplate(selected.id)}
+                  <button onClick={() => setDeleteConfirmId(selected.id)}
                     className="px-4 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50">
                     <Trash2 className="w-4 h-4 inline mr-2" /> Supprimer
                   </button>
@@ -180,6 +182,16 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => deleteConfirmId && deleteTemplate(deleteConfirmId)}
+        title="Supprimer ce template ?"
+        message="Cette action est irréversible."
+        confirmLabel="Supprimer"
+        variant="danger"
+      />
     </div>
   );
 };

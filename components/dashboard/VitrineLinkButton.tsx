@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Copy, Check, ExternalLink, Store, Pencil, ChevronDown, ChevronUp } from 'lucide-react';
+import { Copy, Check, ExternalLink, Store } from 'lucide-react';
 import { getStudioId } from '../../lib/supabase';
 import { getVitrineLinkSettingsFromSupabase, saveVitrineLinkSettingsToSupabase } from '../../lib/supabaseDashboard';
 
@@ -52,7 +52,6 @@ interface VitrineLinkButtonProps {
   userEmail?: string;
   variant?: 'default' | 'compact';
   showLabel?: boolean;
-  editable?: boolean;
 }
 
 function useSupabaseEnabled(): boolean {
@@ -65,11 +64,9 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
   studioName,
   userEmail,
   variant = 'default',
-  showLabel = true,
-  editable = true
+  showLabel = true
 }) => {
   const [copied, setCopied] = useState(false);
-  const [showCustomize, setShowCustomize] = useState(false);
   const [settings, setSettings] = useState<VitrineSettings>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -157,88 +154,6 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
 
   return (
     <div className="bg-white rounded-2xl p-4 sm:p-5 border border-neutral-100 shadow-sm shadow-neutral-900/5">
-      {/* Customize panel */}
-      {editable && (
-        <div className="mb-4">
-          <button
-            onClick={() => setShowCustomize(!showCustomize)}
-            className="flex items-center gap-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors py-1"
-          >
-            {showCustomize ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            <Pencil className="w-4 h-4" />
-            Personnaliser l'apparence
-          </button>
-          {showCustomize && (
-            <div className="mt-4 p-4 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Titre</label>
-                <input
-                  type="text"
-                  value={settings.title}
-                  onChange={(e) => setSettings(s => ({ ...s, title: e.target.value }))}
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Description</label>
-                <textarea
-                  value={settings.description}
-                  onChange={(e) => setSettings(s => ({ ...s, description: e.target.value }))}
-                  rows={2}
-                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Couleur principale</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={settings.primaryColor}
-                    onChange={(e) => setSettings(s => ({ ...s, primaryColor: e.target.value }))}
-                    className="w-12 h-10 rounded-lg border border-neutral-200 cursor-pointer bg-transparent"
-                  />
-                  <input
-                    type="text"
-                    value={settings.primaryColor}
-                    onChange={(e) => setSettings(s => ({ ...s, primaryColor: e.target.value }))}
-                    className="flex-1 px-3 py-2 border border-neutral-200 rounded-lg text-sm font-mono"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Bouton copier</label>
-                  <input
-                    type="text"
-                    value={settings.copyButtonText}
-                    onChange={(e) => setSettings(s => ({ ...s, copyButtonText: e.target.value }))}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Texte copié</label>
-                  <input
-                    type="text"
-                    value={settings.copiedText}
-                    onChange={(e) => setSettings(s => ({ ...s, copiedText: e.target.value }))}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Bouton ouvrir</label>
-                  <input
-                    type="text"
-                    value={settings.openButtonText}
-                    onChange={(e) => setSettings(s => ({ ...s, openButtonText: e.target.value }))}
-                    className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Ligne 1: icône + input sur une seule ligne */}
       <div className="flex items-center gap-3 min-w-0">
         <div

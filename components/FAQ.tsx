@@ -47,9 +47,12 @@ export const FAQ: React.FC = () => {
             >
               <button
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left"
+                className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left min-h-[44px]"
+                aria-expanded={openIndex === index}
+                aria-controls={`faq-answer-${index}`}
+                id={`faq-question-${index}`}
               >
-                <span className="font-semibold text-neutral-900">{faq.question}</span>
+                <span className="font-semibold text-neutral-900 dark:text-[var(--text-primary)]">{faq.question}</span>
                 <ChevronDown
                   className={`w-5 h-5 text-neutral-500 flex-shrink-0 transition-transform duration-300 ${
                     openIndex === index ? 'rotate-180' : ''
@@ -57,12 +60,15 @@ export const FAQ: React.FC = () => {
                 />
               </button>
               <div
+                id={`faq-answer-${index}`}
+                role="region"
+                aria-labelledby={`faq-question-${index}`}
                 className={`overflow-hidden transition-all duration-300 ease-out ${
-                  openIndex === index ? 'max-h-64' : 'max-h-0'
+                  openIndex === index ? 'max-h-96' : 'max-h-0'
                 }`}
               >
                 <div className="px-6 pb-5 pt-0">
-                  <p className="text-neutral-600 leading-relaxed">{faq.answer}</p>
+                  <p className="text-neutral-600 dark:text-[var(--text-secondary)] leading-relaxed">{faq.answer}</p>
                 </div>
               </div>
             </div>

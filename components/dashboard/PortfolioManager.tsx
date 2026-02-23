@@ -124,7 +124,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
           {filtered.map(item => (
             <div key={item.id} className="group relative aspect-square rounded-2xl overflow-hidden bg-neutral-100 cursor-pointer"
               onClick={() => setSelectedItem(item)}>
-              <img src={item.url} alt={item.description} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+              <img src={item.url} alt={item.description || 'Portfolio'} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
                   <div className="text-xs font-semibold mb-1">{item.category}</div>
@@ -159,7 +159,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                 }`}
               >
                 {newItem.url ? (
-                  <img src={newItem.url} className="w-32 h-32 object-cover rounded-xl mx-auto" />
+                  <img src={newItem.url} alt="Aperçu" className="w-32 h-32 object-cover rounded-xl mx-auto" />
                 ) : (
                   <>
                     <Upload className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
@@ -209,15 +209,15 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
                   <p className="text-white text-sm mb-2 font-semibold">Avant</p>
-                  <img src={selectedItem.beforeUrl} className="w-full rounded-2xl" />
+                  <img src={selectedItem.beforeUrl} alt="Avant" className="w-full rounded-2xl" />
                 </div>
                 <div className="text-center">
                   <p className="text-white text-sm mb-2 font-semibold">Apres</p>
-                  <img src={selectedItem.url} className="w-full rounded-2xl" />
+                  <img src={selectedItem.url} alt="Après" className="w-full rounded-2xl" />
                 </div>
               </div>
             ) : (
-              <img src={selectedItem.url} className="max-h-[80vh] mx-auto rounded-2xl" />
+              <img src={selectedItem.url} alt={selectedItem.description || 'Portfolio'} className="max-h-[80vh] mx-auto rounded-2xl" />
             )}
             <div className="mt-4 text-center text-white">
               <span className="text-sm bg-white/20 px-3 py-1 rounded-full">{selectedItem.category}</span>

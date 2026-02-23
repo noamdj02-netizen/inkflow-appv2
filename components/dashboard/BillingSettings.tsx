@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CreditCard, Check, AlertTriangle, Zap, Crown, Shield } from 'lucide-react';
 import { getSubscription, isSubscriptionActive } from '../../lib/subscriptionGuard';
 import { createSubscription } from '../../lib/stripeClient';
+import { getStripeBillingLink } from '../../lib/stripePaymentLinks';
 import type { Subscription, SubscriptionPlan } from '../../types';
 
 interface BillingSettingsProps {
@@ -44,17 +45,22 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     if (!studioId) return;
+    if (plan !== 'solo' && plan !== 'studio') return;
     setSubscribing(plan);
+    const interval = isAnnual ? 'annual' : 'monthly';
+    const directLink = getStripeBillingLink(plan, interval);
     const url = await createSubscription({
       studioId,
       email: userEmail,
       plan,
-      interval: isAnnual ? 'annual' : 'monthly',
+      interval,
     });
     if (url) {
       window.location.href = url;
+    } else if (directLink) {
+      window.location.href = directLink;
     } else {
-      alert('Erreur lors de la creation de l\'abonnement. Les prix Stripe ne sont pas encore configures.');
+      alert('Erreur lors de la création de l\'abonnement. Les liens Stripe ne sont pas configurés.');
       setSubscribing(null);
     }
   };

@@ -20,7 +20,13 @@ export interface CalendarIntegrationStatus {
 
 async function invokeEdge<T = unknown>(fnName: string, body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(fnName, { body });
-  if (error) throw new Error(error.message || 'Edge function error');
+  if (error) {
+    const errData = typeof data === 'object' && data && 'error' in data ? (data as { error?: string }).error : null;
+    throw new Error(errData || error.message || 'Edge function error');
+  }
+  if (data && typeof data === 'object' && 'error' in data && (data as { error?: string }).error) {
+    throw new Error((data as { error: string }).error);
+  }
   return data as T;
 }
 
@@ -127,6 +133,52 @@ export function downloadICS(apt: Parameters<typeof generateICS>[0]): void {
   const a = document.createElement('a');
   a.href = url;
   a.download = `inkflow-rdv-${apt.id.substring(0, 8)}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/** Generate combined .ics for multiple appointments (Apple Calendar, Outlook) */
+export function generateICSAll(appointments: Parameters<typeof generateICS>[0][]): string {
+  const events = appointments.map(apt => {
+    const start = new Date(`${apt.date}T${apt.time}:00`);
+    const end = new Date(start.getTime() + (apt.duration || 60) * 60 * 1000);
+    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    return [
+      'BEGIN:VEVENT',
+      `UID:${apt.id}@inkflow.app`,
+      `DTSTART:${fmt(start)}`,
+      `DTEND:${fmt(end)}`,
+      `SUMMARY:🖋 ${apt.clientName} — ${apt.service}`,
+      apt.notes ? `DESCRIPTION:${apt.notes.replace(/\n/g, '\\n')}` : '',
+      apt.location ? `LOCATION:${apt.location}` : '',
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      'DESCRIPTION:Rappel RDV InkFlow',
+      'TRIGGER:-PT60M',
+      'END:VALARM',
+      'END:VEVENT',
+    ].filter(Boolean).join('\r\n');
+  });
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//InkFlow//FR',
+    'CALSCALE:GREGORIAN',
+    ...events,
+    'END:VCALENDAR',
+  ].join('\r\n');
+}
+
+/** Download combined .ics file for all appointments */
+export function downloadICSAll(appointments: Parameters<typeof generateICS>[0][]): void {
+  const ics = generateICSAll(appointments);
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `inkflow-agenda-${new Date().toISOString().slice(0, 10)}.ics`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

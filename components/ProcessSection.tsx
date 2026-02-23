@@ -1,7 +1,9 @@
 import React from 'react';
 import { UserPlus, Settings, Rocket, CheckCircle2 } from 'lucide-react';
+import { useIntersectionAnimation } from '../hooks/useIntersectionAnimation';
 
 export const ProcessSection: React.FC = () => {
+  const { ref, isVisible } = useIntersectionAnimation(0.08);
   const steps = [
     {
       icon: UserPlus,
@@ -30,8 +32,8 @@ export const ProcessSection: React.FC = () => {
   ];
 
   return (
-    <section id="process" className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-neutral-50/50">
-      <div className="max-w-7xl mx-auto">
+    <section id="process" className={`py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-neutral-50/50 transition-opacity duration-700 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+      <div ref={ref} className={`max-w-7xl mx-auto animate-on-scroll ${isVisible ? 'is-visible' : ''}`}>
         <div className="text-center mb-12 sm:mb-20">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 px-2 tracking-tight">
             Prêt en moins de 15 minutes

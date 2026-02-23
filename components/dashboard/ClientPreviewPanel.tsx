@@ -30,6 +30,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
   artistName,
   compact = false,
   onOpenMessaging,
+  onClientClick,
 }) => {
   const { appointment, client, thread } = data;
   const [messages, setMessages] = useState<Message[]>([]);

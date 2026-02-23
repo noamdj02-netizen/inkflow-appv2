@@ -40,7 +40,7 @@ const testimonials = [
 ];
 
 const TestimonialCard: React.FC<{ testimonial: typeof testimonials[0] }> = ({ testimonial }) => (
-  <div className="flex-shrink-0 w-[340px] sm:w-[380px] bg-neutral-50/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-neutral-200/60 hover:border-neutral-200 hover:shadow-lg hover:shadow-neutral-900/5 transition-all duration-300">
+  <div className="flex-shrink-0 min-w-[280px] w-[85vw] sm:w-[340px] sm:min-w-[340px] md:w-[380px] bg-neutral-50/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-neutral-200/60 hover:border-neutral-200 hover:shadow-lg hover:shadow-neutral-900/5 transition-all duration-300">
     <div className="flex gap-1 mb-4">
       {[...Array(testimonial.rating)].map((_, i) => (
         <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
@@ -53,6 +53,7 @@ const TestimonialCard: React.FC<{ testimonial: typeof testimonials[0] }> = ({ te
       <img
         src={testimonial.avatar}
         alt={testimonial.name}
+        loading="lazy"
         className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-md"
       />
       <div>

@@ -2,9 +2,6 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
-import { initTheme } from './hooks/useTheme';
-
-initTheme();
 import { Logo } from './components/Logo';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
@@ -16,6 +13,7 @@ import { ProcessSection } from './components/ProcessSection';
 import { FAQ } from './components/FAQ';
 import { CTAFinal } from './components/CTAFinal';
 import { Footer } from './components/Footer';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -200,15 +198,17 @@ const LandingPage: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <div className="app-root">
-      <AuthProvider>
-        <ToastProvider>
-          <SupabaseSyncProvider>
-            <Router />
-          </SupabaseSyncProvider>
-        </ToastProvider>
-      </AuthProvider>
-    </div>
+    <ErrorBoundary>
+      <div className="app-root">
+        <AuthProvider>
+          <ToastProvider>
+            <SupabaseSyncProvider>
+              <Router />
+            </SupabaseSyncProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </div>
+    </ErrorBoundary>
   );
 };
 

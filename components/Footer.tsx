@@ -13,8 +13,8 @@ export const Footer: React.FC = () => {
           </div>
 
           <div className="flex gap-6 text-neutral-400">
-            <a href="https://instagram.com/inkflow.app" target="_blank" rel="noopener noreferrer" className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100"><Instagram className="w-5 h-5" /></a>
-            <a href="mailto:contact@inkflow.app" className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100"><Mail className="w-5 h-5" /></a>
+            <a href="https://instagram.com/inkflow.app" target="_blank" rel="noopener noreferrer" aria-label="Instagram InkFlow" className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100 min-w-[44px] min-h-[44px] flex items-center justify-center"><Instagram className="w-5 h-5" /></a>
+            <a href="mailto:contact@inkflow.app" aria-label="Nous contacter par email" className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100 min-w-[44px] min-h-[44px] flex items-center justify-center"><Mail className="w-5 h-5" /></a>
           </div>
         </div>
 

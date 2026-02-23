@@ -1,4 +1,5 @@
 import React from 'react';
+import { useIntersectionAnimation } from '../hooks/useIntersectionAnimation';
 
 const CARDS = [
   {
@@ -22,9 +23,10 @@ const CARDS = [
 ];
 
 export const FeaturesKey: React.FC = () => {
+  const { ref, isVisible } = useIntersectionAnimation(0.08);
   return (
-    <section id="fonctionnalites-cles" className="py-24 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <section id="fonctionnalites-cles" className={`py-24 px-4 sm:px-6 lg:px-8 transition-opacity duration-700 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+      <div ref={ref} className={`max-w-7xl mx-auto animate-on-scroll ${isVisible ? 'is-visible' : ''}`}>
         <div className="text-center mb-12 sm:mb-16">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 tracking-tight">
             Tout pour gérer votre studio
@@ -45,6 +47,7 @@ export const FeaturesKey: React.FC = () => {
                   src={card.image}
                   alt={card.title}
                   className="w-full h-auto object-cover"
+                  loading="lazy"
                 />
               </div>
               <h3 className="text-xl font-bold mb-2">{card.title}</h3>

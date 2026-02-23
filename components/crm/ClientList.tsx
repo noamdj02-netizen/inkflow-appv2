@@ -20,15 +20,23 @@ interface ClientListProps {
   clientLimit?: number;
   /** Callback pour rediriger vers la page tarifs / abonnement */
   onUpgradeClick?: () => void;
+  /** Ouvrir le modal d'ajout au montage (ex. depuis le FAB mobile) */
+  openAddModal?: boolean;
+  /** Appelé quand le modal d'ajout est fermé */
+  onAddModalClose?: () => void;
 }
 
-export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient, onAddClient, loadClientNotes, saveClientNotes, useSupabase, clientLimitReached, clientLimit, onUpgradeClick }) => {
+export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient, onAddClient, loadClientNotes, saveClientNotes, useSupabase, clientLimitReached, clientLimit, onUpgradeClick, openAddModal, onAddModalClose }) => {
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'vip' | 'inactive'>('all');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  useEffect(() => {
+    if (openAddModal && onAddClient && !clientLimitReached) setShowAddModal(true);
+  }, [openAddModal, onAddClient, clientLimitReached]);
   const [addForm, setAddForm] = useState({ name: '', email: '', phone: '', notes: '' });
   const [notes, setNotes] = useState('');
 
@@ -112,8 +120,9 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
       }
     }
     setShowAddModal(false);
+    onAddModalClose?.();
     setAddForm({ name: '', email: '', phone: '', notes: '' });
-    toast.success('Client ajoute avec succes');
+    toast.success('Client ajouté avec succès');
   };
 
   return (
@@ -401,7 +410,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
       )}
 
       {showAddModal && onAddClient && (
-        <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Ajouter un client" size="md">
+        <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); onAddModalClose?.(); }} title="Ajouter un client" size="md">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold mb-2">Nom</label>
@@ -424,7 +433,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                 placeholder="Notes sur ce client…" className="w-full px-4 py-3 border border-neutral-200 rounded-xl resize-none" />
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <button onClick={() => setShowAddModal(false)} className="px-6 py-3 border-2 border-neutral-200 rounded-xl font-semibold hover:border-neutral-900">
+              <button onClick={() => { setShowAddModal(false); onAddModalClose?.(); }} className="px-6 py-3 border-2 border-neutral-200 rounded-xl font-semibold hover:border-neutral-900">
                 Annuler
               </button>
               <button onClick={handleAddClient} disabled={!addForm.email.trim() || clientLimitReached}

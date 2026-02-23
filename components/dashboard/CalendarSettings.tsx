@@ -1,27 +1,33 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, RefreshCw, ExternalLink, Check, X, Link2, Unlink2, CloudOff, Download } from 'lucide-react';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import {
   getCalendarStatus,
   initiateGoogleAuth,
   disconnectGoogle,
   pushAllAppointments,
   pullGoogleEvents,
+  downloadICSAll,
+  getGoogleCalendarAddUrl,
   type CalendarIntegrationStatus,
   type GoogleCalendarEvent,
 } from '../../lib/googleCalendar';
+import type { Appointment } from '../../types';
 
 interface CalendarSettingsProps {
   studioId: string;
+  appointments?: Appointment[];
   onToast?: (msg: string, type: 'success' | 'error') => void;
 }
 
-export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, onToast }) => {
+export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, appointments = [], onToast }) => {
   const [googleStatus, setGoogleStatus] = useState<CalendarIntegrationStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [pulling, setPulling] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [importedEvents, setImportedEvents] = useState<GoogleCalendarEvent[]>([]);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -55,13 +61,13 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, on
     try {
       const authUrl = await initiateGoogleAuth(studioId);
       window.location.href = authUrl;
-    } catch {
-      onToast?.('Impossible d\'initier la connexion Google', 'error');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Impossible d\'initier la connexion Google';
+      onToast?.(msg.includes('non configuré') ? 'Google Calendar non configuré. Vérifiez les secrets Supabase (GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URI).' : msg, 'error');
     }
   };
 
   const handleDisconnect = async () => {
-    if (!confirm('Déconnecter Google Agenda ? Les événements déjà synchronisés resteront dans Google.')) return;
     try {
       setDisconnecting(true);
       await disconnectGoogle(studioId);
@@ -71,6 +77,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, on
       onToast?.('Erreur lors de la déconnexion', 'error');
     } finally {
       setDisconnecting(false);
+      setShowDisconnectConfirm(false);
     }
   };
 
@@ -193,7 +200,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, on
             </div>
 
             <button
-              onClick={handleDisconnect}
+              onClick={() => setShowDisconnectConfirm(true)}
               disabled={disconnecting}
               className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border-2 border-red-200 text-red-600 font-medium text-sm hover:bg-red-50 transition-colors disabled:opacity-50"
             >
@@ -204,7 +211,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, on
         )}
       </div>
 
-      {/* ── Apple Calendar (iCal export) ───── */}
+      {/* ── Apple Calendar / Export .ics ───── */}
       <div className="rounded-2xl border-2 border-[var(--border)] p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -212,9 +219,9 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, on
               <Calendar className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="font-medium text-[var(--foreground)]">Apple Calendrier</div>
+              <div className="font-medium text-[var(--foreground)]">Apple Calendrier & Outlook</div>
               <div className="text-xs text-[var(--foreground-muted)]">
-                Export via fichier .ics (compatible Apple, Outlook, etc.)
+                Export .ics — compatible Apple Calendrier, Outlook, Google (sans connexion)
               </div>
             </div>
           </div>
@@ -225,9 +232,53 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, on
         </div>
 
         <p className="text-xs text-[var(--foreground-muted)]">
-          Chaque rendez-vous peut être exporté en fichier .ics, compatible avec Apple Calendrier,
-          Outlook, et tout calendrier standard. Utilisez le bouton de calendrier sur chaque rendez-vous.
+          Téléchargez un fichier .ics pour importer vos rendez-vous dans Apple Calendrier, Outlook ou tout calendrier standard.
         </p>
+
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={() => {
+              const toExport = appointments
+                .filter(a => ['pending', 'confirmed', 'in_progress'].includes(a.status))
+                .map(a => ({
+                  id: a.id,
+                  clientName: a.clientName,
+                  service: a.service || 'Tattoo',
+                  date: a.date,
+                  time: a.time || '10:00',
+                  duration: a.duration || 60,
+                  location: a.location,
+                  notes: a.notes,
+                }));
+              if (toExport.length === 0) {
+                onToast?.('Aucun rendez-vous à exporter', 'error');
+                return;
+              }
+              downloadICSAll(toExport);
+              onToast?.(`${toExport.length} rendez-vous exporté${toExport.length > 1 ? 's' : ''}`, 'success');
+            }}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-50 text-blue-700 font-medium text-sm hover:bg-blue-100 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Exporter tous les RDV (.ics)
+          </button>
+          <a
+            href={appointments.length > 0 ? getGoogleCalendarAddUrl({
+              clientName: appointments[0].clientName,
+              service: appointments[0].service || 'Tattoo',
+              date: appointments[0].date,
+              time: appointments[0].time || '10:00',
+              duration: appointments[0].duration || 60,
+              location: appointments[0].location,
+            }) : 'https://calendar.google.com'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-[var(--border)] text-[var(--foreground)] font-medium text-sm hover:bg-[var(--bg-hover)] transition-colors"
+          >
+            <ExternalLink className="w-4 h-4" />
+            {appointments.length > 0 ? 'Ajouter un RDV à Google (sans OAuth)' : 'Ouvrir Google Calendar'}
+          </a>
+        </div>
       </div>
 
       {/* ── Imported events preview ───── */}
@@ -255,21 +306,16 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, on
         </div>
       )}
 
-      {/* ── Setup instructions ───── */}
-      {!googleStatus?.connected && (
-        <div className="rounded-2xl border-2 border-dashed border-[var(--border)] p-6 space-y-3">
-          <h4 className="font-medium text-[var(--foreground)] text-sm">Configuration requise</h4>
-          <div className="text-xs text-[var(--foreground-muted)] space-y-2">
-            <p>Pour activer Google Agenda, l'administrateur doit configurer :</p>
-            <ol className="list-decimal ml-4 space-y-1">
-              <li>Créer un projet sur <a href="https://console.cloud.google.com" target="_blank" rel="noopener" className="text-indigo-600 underline">Google Cloud Console</a></li>
-              <li>Activer l'API Google Calendar</li>
-              <li>Créer des identifiants OAuth 2.0</li>
-              <li>Ajouter les secrets (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET) dans les Edge Functions Supabase</li>
-            </ol>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={showDisconnectConfirm}
+        onClose={() => setShowDisconnectConfirm(false)}
+        onConfirm={handleDisconnect}
+        title="Déconnecter Google Agenda"
+        message="Les événements déjà synchronisés resteront dans Google. Vous pourrez vous reconnecter à tout moment."
+        confirmLabel="Déconnecter"
+        cancelLabel="Annuler"
+        variant="warning"
+      />
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronDown, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronDown, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
@@ -97,6 +97,7 @@ export const DashboardPro: React.FC = () => {
   const [generalSaving, setGeneralSaving] = useState(false);
   const [generalSaved, setGeneralSaved] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
+  const [openAddClientModal, setOpenAddClientModal] = useState(false);
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
@@ -969,7 +970,17 @@ export const DashboardPro: React.FC = () => {
                   {/* Custom widgets (sortable) */}
                   {customWidgets.length > 0 && (
                     <SortableOverviewWidgets
-                      items={customWidgets.map(w => ({ id: w.id, node: <WidgetCard widget={w} onRemove={() => setCustomWidgets(prev => prev.filter(x => x.id !== w.id))} /> }))}
+                      items={customWidgets.map(w => ({
+                        id: w.id,
+                        node: (
+                          <WidgetCard
+                            widget={w}
+                            onRemove={() => setCustomWidgets(prev => prev.filter(x => x.id !== w.id))}
+                            onShortcutClick={(tabId) => tabId !== 'vitrine' && setActiveTab(tabId as TabId)}
+                            vitrineUrl={user?.studioName ? `${typeof window !== 'undefined' ? window.location.origin : ''}/studio/${getVitrineSlug(user.studioName)}` : undefined}
+                          />
+                        )
+                      }))}
                       customWidgetIds={customWidgets.map(w => w.id)}
                       gridCols={2}
                     />
@@ -1029,11 +1040,16 @@ export const DashboardPro: React.FC = () => {
                         <div className="text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-1">{nextClientOfDay.clientName}</div>
                         <div className="text-[13px] text-[#6B7280]">Aujourd&apos;hui • {nextClientOfDay.time || '—'}</div>
                       </div>
-                      <div className="p-4 flex items-center justify-between">
+                      <div className="p-4 flex items-center justify-between gap-2 flex-wrap">
                         <span className="flex items-center gap-2 text-[12px] font-medium text-[#6B7280] bg-white dark:bg-[var(--bg-card)] border border-[#E5E3F0] dark:border-[var(--border)] rounded-lg px-2.5 py-1.5">
                           <MapPin className="w-3.5 h-3.5" /> En studio
                         </span>
-                        <button onClick={() => setSelectedAppointment(nextClientOfDay)} className="text-[13px] font-semibold text-[#6B5CE7] hover:underline">Voir détails</button>
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => setActiveTab('appointments')} className="text-[13px] font-medium text-[#6B7280] dark:text-[var(--text-secondary)] hover:text-[#6B5CE7] dark:hover:text-indigo-400 transition-colors">
+                            Voir l&apos;agenda
+                          </button>
+                          <button onClick={() => setSelectedAppointment(nextClientOfDay)} className="text-[13px] font-semibold text-[#6B5CE7] hover:underline">Voir détails</button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1074,8 +1090,8 @@ export const DashboardPro: React.FC = () => {
                       <Calendar className="w-10 h-10 text-[#9CA3AF] mb-3" />
                       <p className="font-semibold text-[#6B7280]">Aucun RDV aujourd&apos;hui</p>
                       <p className="text-sm text-[#9CA3AF] mt-1">Votre prochain client apparaîtra ici</p>
-                      <button onClick={() => setActiveTab('appointments')} className="mt-4 text-sm font-medium text-[#6B5CE7] hover:underline">
-                        Voir les rendez-vous
+                      <button onClick={() => setActiveTab('appointments')} className="mt-4 px-4 py-2.5 rounded-xl text-sm font-semibold bg-[#6B5CE7] text-white hover:bg-[#5B4CD7] transition-colors active:scale-[0.98]">
+                        Voir l&apos;agenda
                       </button>
                     </div>
                   )}
@@ -1122,6 +1138,8 @@ export const DashboardPro: React.FC = () => {
               clientLimitReached={hasReachedLimit('clients_crm', clients.length)}
               clientLimit={getLimit('clients_crm')}
               onUpgradeClick={() => { setActiveTab('settings'); setSettingsTab('billing'); }}
+              openAddModal={openAddClientModal}
+              onAddModalClose={() => setOpenAddClientModal(false)}
             />
           )}
 
@@ -1348,7 +1366,7 @@ export const DashboardPro: React.FC = () => {
                   onUpdateSettings={setLoyaltySettings}
                 />
               )}
-              {settingsTab === 'calendar' && <CalendarSettings studioId={studioId || ''} onToast={(msg, type) => type === 'success' ? toast.success(msg) : toast.error(msg)} />}
+              {settingsTab === 'calendar' && <CalendarSettings studioId={studioId || ''} appointments={appointments} onToast={(msg, type) => type === 'success' ? toast.success(msg) : toast.error(msg)} />}
               {settingsTab === 'vitrine' && user?.studioName && <VitrineSettings studioName={user.studioName} userEmail={user.email} />}
             </div>
           )}
@@ -1361,6 +1379,7 @@ export const DashboardPro: React.FC = () => {
           isOpen={showWidgetModal}
           onClose={() => setShowWidgetModal(false)}
           onAdd={(w) => { setCustomWidgets(prev => [...prev, w]); toast.success('Widget ajouté'); }}
+          studioSlug={user?.studioName ? getVitrineSlug(user.studioName) : undefined}
         />
       )}
       {showBookingModal && (
@@ -1376,45 +1395,112 @@ export const DashboardPro: React.FC = () => {
       {showFabMenu && (
         <>
           <div className="fixed inset-0 bg-black/50 z-[60] md:hidden" onClick={() => setShowFabMenu(false)} aria-hidden="true" />
-          <div className="fixed bottom-0 left-0 right-0 z-[70] md:hidden rounded-t-3xl bg-white shadow-2xl border-t border-neutral-200 safe-bottom animate-in">
-            <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-neutral-100">
-              <span className="text-sm font-semibold text-neutral-500">Nouvelle action</span>
+          <div className="fixed bottom-0 left-0 right-0 z-[70] md:hidden rounded-t-3xl bg-white dark:bg-[var(--bg-card)] shadow-2xl border-t border-neutral-200 dark:border-[var(--border)] safe-bottom animate-in max-h-[75dvh] overflow-y-auto">
+            <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-neutral-100 dark:border-[var(--border)] sticky top-0 bg-white dark:bg-[var(--bg-card)]">
+              <span className="text-sm font-semibold text-neutral-600 dark:text-[var(--text-secondary)]">Actions rapides</span>
               <button
                 onClick={() => setShowFabMenu(false)}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 font-medium"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-neutral-100 dark:bg-[var(--bg-hover)] text-neutral-600 dark:text-[var(--text-secondary)] hover:bg-neutral-200 dark:hover:bg-[var(--bg-hover)] font-medium touch-target"
                 aria-label="Fermer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-4 flex flex-col gap-2">
-              <button
-                onClick={() => { setShowFabMenu(false); setSelectedFlash(null); setShowBookingModal(true); }}
-                className="flex items-center gap-4 w-full bg-neutral-50 hover:bg-neutral-100 rounded-2xl px-5 py-4 border border-neutral-200 font-semibold text-neutral-900 min-h-[56px] text-left transition-colors"
-              >
-                <div className="w-10 h-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-5 h-5 text-neutral-700" />
+            <div className="p-4 space-y-4">
+              {/* Section Créer */}
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-[var(--text-tertiary)] mb-2 px-1">Créer</p>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => { setShowFabMenu(false); setSelectedFlash(null); setShowBookingModal(true); }}
+                    className="flex items-center gap-4 w-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-950/50 dark:hover:to-purple-950/50 rounded-2xl px-5 py-4 border border-indigo-200/60 dark:border-indigo-800/40 font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[56px] text-left transition-colors touch-target"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-5 h-5 text-white" />
+                    </div>
+                    Nouveau RDV
+                  </button>
+                  <button
+                    onClick={() => { setShowFabMenu(false); setActiveTab('clients'); setOpenAddClientModal(true); }}
+                    className="flex items-center gap-4 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-5 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[56px] text-left transition-colors touch-target"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-[var(--bg-card)] border border-neutral-200 dark:border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                      <UserPlus className="w-5 h-5 text-neutral-700 dark:text-[var(--text-secondary)]" />
+                    </div>
+                    Ajouter un client
+                  </button>
+                  <button
+                    onClick={() => { setShowFabMenu(false); setActiveTab('flash'); }}
+                    className="flex items-center gap-4 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-5 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[56px] text-left transition-colors touch-target"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-[var(--bg-card)] border border-neutral-200 dark:border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                      <Image className="w-5 h-5 text-neutral-700 dark:text-[var(--text-secondary)]" />
+                    </div>
+                    Nouveau Flash
+                  </button>
                 </div>
-                Nouveau RDV
-              </button>
-              <button
-                onClick={() => { setShowFabMenu(false); setActiveTab('clients'); }}
-                className="flex items-center gap-4 w-full bg-neutral-50 hover:bg-neutral-100 rounded-2xl px-5 py-4 border border-neutral-200 font-semibold text-neutral-900 min-h-[56px] text-left transition-colors"
-              >
-                <div className="w-10 h-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center flex-shrink-0">
-                  <UserPlus className="w-5 h-5 text-neutral-700" />
+              </div>
+              {/* Section Accès rapide */}
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-[var(--text-tertiary)] mb-2 px-1">Accès rapide</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => { setShowFabMenu(false); setActiveTab('requests'); }}
+                    className="relative flex items-center gap-3 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[52px] text-left transition-colors touch-target"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[var(--bg-card)] border border-neutral-200 dark:border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                      <Inbox className="w-4 h-4 text-neutral-600 dark:text-[var(--text-secondary)]" />
+                    </div>
+                    <span className="text-sm">Demandes</span>
+                    {pendingRequestsCount > 0 && (
+                      <span className="absolute top-2 right-2 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold">
+                        {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => { setShowFabMenu(false); setActiveTab('messaging'); }}
+                    className="flex items-center gap-3 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[52px] text-left transition-colors touch-target"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[var(--bg-card)] border border-neutral-200 dark:border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                      <MessageSquare className="w-4 h-4 text-neutral-600 dark:text-[var(--text-secondary)]" />
+                    </div>
+                    <span className="text-sm">Messagerie</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowFabMenu(false);
+                      const slug = getVitrineSlug(user?.studioName ?? '');
+                      window.open(`${window.location.origin}/studio/${slug}`, '_blank');
+                    }}
+                    className="flex items-center gap-3 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[52px] text-left transition-colors touch-target"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[var(--bg-card)] border border-neutral-200 dark:border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                      <ExternalLink className="w-4 h-4 text-neutral-600 dark:text-[var(--text-secondary)]" />
+                    </div>
+                    <span className="text-sm">Ma vitrine</span>
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setShowFabMenu(false);
+                      const slug = getVitrineSlug(user?.studioName ?? '');
+                      const url = `${window.location.origin}/studio/${slug}`;
+                      try {
+                        await navigator.clipboard.writeText(url);
+                        toast.success('Lien copié !');
+                      } catch {
+                        toast.error('Impossible de copier le lien');
+                      }
+                    }}
+                    className="flex items-center gap-3 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[52px] text-left transition-colors touch-target"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[var(--bg-card)] border border-neutral-200 dark:border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                      <Share2 className="w-4 h-4 text-neutral-600 dark:text-[var(--text-secondary)]" />
+                    </div>
+                    <span className="text-sm">Partager</span>
+                  </button>
                 </div>
-                Ajouter un client
-              </button>
-              <button
-                onClick={() => { setShowFabMenu(false); setActiveTab('flash'); }}
-                className="flex items-center gap-4 w-full bg-neutral-50 hover:bg-neutral-100 rounded-2xl px-5 py-4 border border-neutral-200 font-semibold text-neutral-900 min-h-[56px] text-left transition-colors"
-              >
-                <div className="w-10 h-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center flex-shrink-0">
-                  <Image className="w-5 h-5 text-neutral-700" />
-                </div>
-                Nouveau Flash
-              </button>
+              </div>
             </div>
           </div>
         </>
@@ -1426,7 +1512,7 @@ export const DashboardPro: React.FC = () => {
           {/* Accueil */}
           <button
             onClick={() => { setActiveTab('overview'); setShowFabMenu(false); }}
-            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center ${activeTab === 'overview' ? 'text-neutral-900' : 'text-neutral-400'}`}
+            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'overview' ? 'text-neutral-900 dark:text-[var(--text-primary)]' : 'text-neutral-400 dark:text-[var(--text-tertiary)]'}`}
           >
             <LayoutDashboard className="w-5 h-5" />
             <span className="text-[9px] font-semibold">Accueil</span>
@@ -1435,7 +1521,7 @@ export const DashboardPro: React.FC = () => {
           {/* Agenda */}
           <button
             onClick={() => { setActiveTab('appointments'); setShowFabMenu(false); }}
-            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center ${activeTab === 'appointments' ? 'text-neutral-900' : 'text-neutral-400'}`}
+            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'appointments' ? 'text-neutral-900 dark:text-[var(--text-primary)]' : 'text-neutral-400 dark:text-[var(--text-tertiary)]'}`}
           >
             <Calendar className="w-5 h-5" />
             <span className="text-[9px] font-semibold">Agenda</span>
@@ -1444,7 +1530,7 @@ export const DashboardPro: React.FC = () => {
           {/* FAB central - plus grand, ombre marquée */}
           <button
             onClick={() => setShowFabMenu(!showFabMenu)}
-            className={`flex items-center justify-center w-16 h-16 -mt-7 rounded-full shadow-xl shadow-neutral-900/30 transition-all min-w-[56px] min-h-[56px] ${
+            className={`flex items-center justify-center w-16 h-16 -mt-7 rounded-full shadow-xl shadow-neutral-900/30 transition-all min-w-[56px] min-h-[56px] active:scale-95 ${
               showFabMenu
                 ? 'bg-neutral-700 rotate-45'
                 : 'bg-neutral-900'
@@ -1456,7 +1542,7 @@ export const DashboardPro: React.FC = () => {
           {/* Demandes */}
           <button
             onClick={() => { setActiveTab('requests'); setShowFabMenu(false); }}
-            className={`relative flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center ${activeTab === 'requests' ? 'text-neutral-900' : 'text-neutral-400'}`}
+            className={`relative flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'requests' ? 'text-neutral-900 dark:text-[var(--text-primary)]' : 'text-neutral-400 dark:text-[var(--text-tertiary)]'}`}
           >
             <span className="relative flex flex-col items-center">
               <Inbox className="w-5 h-5" />
@@ -1468,7 +1554,7 @@ export const DashboardPro: React.FC = () => {
           {/* Profil / Settings */}
           <button
             onClick={() => { setActiveTab('settings'); setShowFabMenu(false); }}
-            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center ${activeTab === 'settings' ? 'text-neutral-900' : 'text-neutral-400'}`}
+            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'settings' ? 'text-neutral-900 dark:text-[var(--text-primary)]' : 'text-neutral-400 dark:text-[var(--text-tertiary)]'}`}
           >
             <User className="w-5 h-5" />
             <span className="text-[9px] font-semibold">Profil</span>

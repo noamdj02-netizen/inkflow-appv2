@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Search, Filter, Clock, DollarSign, CheckCircle, X, Plus, Grid3X3, List, Edit, Trash2 } from 'lucide-react';
+import { Search, Filter, Clock, DollarSign, CheckCircle, X, Plus, Grid3X3, List, Edit, Trash2, Sparkles } from 'lucide-react';
 import { FlashDesign } from '../../types';
 import { Modal } from '../ui/Modal';
 import { ImageUploadField } from '../ui/ImageUploadField';
+import { ConfirmModal } from '../ui/ConfirmModal';
+import { useToast } from '../../contexts/ToastContext';
 
 const STYLE_OPTIONS = ['Minimaliste', 'Traditional', 'Géométrique', 'Japonais', 'Réalisme', 'Blackwork', 'Autre'];
 
@@ -15,6 +17,7 @@ interface FlashGalleryProps {
 }
 
 export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onAddFlash, onUpdateFlash, onDeleteFlash }) => {
+  const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDesign, setSelectedDesign] = useState<FlashDesign | null>(null);
@@ -22,6 +25,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingFlash, setEditingFlash] = useState<FlashDesign | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: '', description: '', imageUrl: '', price: 100, depositAmount: 30, category: 'Minimaliste', size: 'small' as const, estimatedDuration: 60, placement: ['Bras'], tags: [''] });
 
   const categories = ['all', ...Array.from(new Set(designs.map(d => d.category)))];
@@ -35,7 +39,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
 
   const handleBookNow = (design: FlashDesign) => {
     if (design.reserved) {
-      alert('Ce flash est déjà réservé');
+      toast.warning('Ce flash est déjà réservé');
       return;
     }
     onBook(design);
@@ -93,10 +97,16 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
   };
 
   const handleDeleteFlash = (id: string) => {
-    if (onDeleteFlash && confirm('Supprimer ce flash ?')) {
-      onDeleteFlash(id);
-      setSelectedDesign(null);
-    }
+    if (!onDeleteFlash) return;
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDeleteFlash = () => {
+    if (!deleteConfirmId || !onDeleteFlash) return;
+    onDeleteFlash(deleteConfirmId);
+    setSelectedDesign(null);
+    toast.success('Flash supprimé');
+    setDeleteConfirmId(null);
   };
 
   return (
@@ -151,12 +161,37 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
         {filteredDesigns.length} design{filteredDesigns.length > 1 ? 's' : ''} disponible{filteredDesigns.length > 1 ? 's' : ''}
       </div>
 
+      {filteredDesigns.length === 0 ? (
+        <div className="text-center py-16 dashboard-widget-card">
+          <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-950/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="text-indigo-600 dark:text-indigo-400" size={36} />
+          </div>
+          <p className="text-lg font-bold text-[var(--text-primary)] mb-2">
+            {designs.length === 0 ? 'Aucun flash pour le moment' : 'Aucun résultat'}
+          </p>
+          <p className="text-[var(--text-secondary)] text-sm max-w-md mx-auto mb-6">
+            {designs.length === 0
+              ? 'Ajoutez votre premier design pour que vos clients puissent le réserver en ligne.'
+              : 'Essayez de modifier vos filtres ou votre recherche.'}
+          </p>
+          {designs.length === 0 && onAddFlash && (
+            <button onClick={openAddModal} className="btn-primary">
+              <Plus className="w-5 h-5" /> Ajouter mon premier flash
+            </button>
+          )}
+          {(designs.length > 0 || !onAddFlash) && (
+            <button onClick={() => { setSearchTerm(''); setSelectedCategory('all'); }} className="btn-outline">
+              Réinitialiser les filtres
+            </button>
+          )}
+        </div>
+      ) : (
       <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5' : 'space-y-3'}>
         {filteredDesigns.map(design => viewMode === 'grid' ? (
           <div key={design.id} className="group dashboard-widget-card overflow-hidden cursor-pointer rounded-2xl"
             onClick={() => setSelectedDesign(design)}>
             <div className="relative aspect-[4/5] overflow-hidden bg-[var(--bg-hover)]">
-              <img src={design.imageUrl} alt={design.title}
+              <img src={design.imageUrl} alt={design.title} loading="lazy"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               {design.reserved ? (
@@ -197,7 +232,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
         ) : (
           <div key={design.id} className="row-clickable flex items-center gap-5 p-5 dashboard-widget-card rounded-2xl">
             <div className="relative w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-[var(--bg-hover)]">
-              <img src={design.imageUrl} alt={design.title} className="w-full h-full object-cover" />
+              <img src={design.imageUrl} alt={design.title} loading="lazy" className="w-full h-full object-cover" />
               {design.reserved && (
                 <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
                   <span className="bg-red-500 text-white px-2 py-0.5 rounded text-xs font-bold">Réservé</span>
@@ -227,20 +262,13 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
           </div>
         ))}
       </div>
-
-      {filteredDesigns.length === 0 && (
-        <div className="text-center py-16 dashboard-widget-card rounded-2xl">
-          <div className="text-6xl mb-4">🔍</div>
-          <h3 className="text-xl font-bold mb-2 text-[var(--text-primary)]">Aucun design trouvé</h3>
-          <p className="text-[var(--text-secondary)]">Essayez de modifier vos critères de recherche</p>
-        </div>
       )}
 
       {selectedDesign && (
         <Modal isOpen={!!selectedDesign} onClose={() => setSelectedDesign(null)} title={selectedDesign.title} size="lg">
           <div className="grid md:grid-cols-2 gap-6">
             <div className="relative aspect-square rounded-2xl overflow-hidden bg-[var(--bg-hover)] ring-2 ring-[var(--border)]">
-              <img src={selectedDesign.imageUrl} alt={selectedDesign.title} className="w-full h-full object-cover" />
+              <img src={selectedDesign.imageUrl} alt={selectedDesign.title} loading="lazy" className="w-full h-full object-cover" />
             </div>
             <div className="space-y-4">
               {selectedDesign.reserved ? (
@@ -347,6 +375,16 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
           </div>
         </Modal>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={confirmDeleteFlash}
+        title="Supprimer ce flash ?"
+        message="Cette action est irréversible."
+        confirmLabel="Supprimer"
+        variant="danger"
+      />
     </div>
   );
 };

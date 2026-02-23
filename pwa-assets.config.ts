@@ -2,5 +2,5 @@ import { defineConfig, minimal2023Preset as preset } from '@vite-pwa/assets-gene
 
 export default defineConfig({
   preset,
-  images: ['public/icon-ios.png']
+  images: ['public/icon-ios-source.svg']
 })

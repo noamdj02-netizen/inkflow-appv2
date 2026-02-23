@@ -80,16 +80,29 @@ Deno.serve(async (req: Request) => {
       const tokens = await tokenResponse.json();
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+      const expiryMs = tokens.expiry_date || (Date.now() + (tokens.expires_in || 3600) * 1000);
+      const parts = String(studioId).split("::");
+      const email = parts[0] || studioId;
+      const slug = parts[1] || "studio";
+      const studioName = slug.replace(/-/g, " ");
+      const displayName = email.split("@")[0] || "Artiste";
+
       const { error: dbError } = await supabase
-        .from("inkflow_calendar_integrations")
-        .upsert({
-          studio_id: studioId,
-          provider: "google",
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          expiry_date: tokens.expiry_date || (Date.now() + (tokens.expires_in || 3600) * 1000),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "studio_id,provider" });
+        .from("inkflow_studios")
+        .upsert(
+          {
+            id: studioId,
+            email,
+            name: displayName,
+            studio_name: studioName,
+            slug,
+            google_access_token: tokens.access_token,
+            google_refresh_token: tokens.refresh_token,
+            google_token_expiry: expiryMs,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "id" }
+        );
 
       if (dbError) {
         return new Response(

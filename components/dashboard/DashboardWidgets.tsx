@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { LayoutGrid, StickyNote, Link2, BarChart2, Trash2, Plus } from 'lucide-react';
+import { LayoutGrid, StickyNote, Link2, BarChart2, Trash2, Plus, MessageSquare, Calendar, Users, Wallet, Image, Settings, ExternalLink } from 'lucide-react';
 import { getWidgetsFromSupabase, saveWidgetsToSupabase } from '../../lib/supabaseDashboard';
 
 const STORAGE_KEY = 'inkflow-dashboard-widgets';
 
-export type WidgetType = 'note' | 'link' | 'stat';
+export type WidgetType = 'note' | 'link' | 'stat' | 'shortcut';
 
 export interface DashboardWidget {
   id: string;
@@ -14,10 +14,26 @@ export interface DashboardWidget {
   color?: string;
 }
 
-const WIDGET_TYPES: { type: WidgetType; label: string; icon: React.ReactNode; description: string }[] = [
-  { type: 'note', label: 'Note rapide', icon: <StickyNote className="w-5 h-5" />, description: 'Une note personnalisée' },
-  { type: 'link', label: 'Lien favori', icon: <Link2 className="w-5 h-5" />, description: 'Lien vers un site ou une page' },
-  { type: 'stat', label: 'Statistique', icon: <BarChart2 className="w-5 h-5" />, description: 'Valeur personnalisée (ex: objectif)' }
+/** TabId pour les raccourcis (content du widget shortcut) */
+export type ShortcutTabId = 'requests' | 'appointments' | 'clients' | 'messaging' | 'analytics' | 'finance' | 'flash' | 'portfolio' | 'settings' | 'vitrine';
+
+const WIDGET_TOOLS: { type: WidgetType; label: string; icon: React.ReactNode; description: string; color: string }[] = [
+  { type: 'note', label: 'Note rapide', icon: <StickyNote className="w-5 h-5" />, description: 'Une note personnalisée', color: 'bg-amber-100 text-amber-600' },
+  { type: 'link', label: 'Lien favori', icon: <Link2 className="w-5 h-5" />, description: 'Lien vers un site ou une page', color: 'bg-blue-100 text-blue-600' },
+  { type: 'stat', label: 'Statistique', icon: <BarChart2 className="w-5 h-5" />, description: 'Valeur personnalisée (ex: objectif)', color: 'bg-indigo-100 text-indigo-600' }
+];
+
+const SHORTCUT_OPTIONS: { id: ShortcutTabId; label: string; icon: React.ReactNode; color: string }[] = [
+  { id: 'requests', label: 'Demandes', icon: <MessageSquare className="w-5 h-5" />, color: 'bg-violet-100 text-violet-600' },
+  { id: 'appointments', label: 'Rendez-vous', icon: <Calendar className="w-5 h-5" />, color: 'bg-emerald-100 text-emerald-600' },
+  { id: 'clients', label: 'Clients', icon: <Users className="w-5 h-5" />, color: 'bg-sky-100 text-sky-600' },
+  { id: 'messaging', label: 'Messagerie', icon: <MessageSquare className="w-5 h-5" />, color: 'bg-pink-100 text-pink-600' },
+  { id: 'analytics', label: 'Statistiques', icon: <BarChart2 className="w-5 h-5" />, color: 'bg-indigo-100 text-indigo-600' },
+  { id: 'finance', label: 'Finance', icon: <Wallet className="w-5 h-5" />, color: 'bg-teal-100 text-teal-600' },
+  { id: 'flash', label: 'Galerie Flash', icon: <Image className="w-5 h-5" />, color: 'bg-rose-100 text-rose-600' },
+  { id: 'portfolio', label: 'Portfolio', icon: <Image className="w-5 h-5" />, color: 'bg-amber-100 text-amber-600' },
+  { id: 'vitrine', label: 'Ma vitrine', icon: <ExternalLink className="w-5 h-5" />, color: 'bg-indigo-100 text-indigo-600' },
+  { id: 'settings', label: 'Paramètres', icon: <Settings className="w-5 h-5" />, color: 'bg-neutral-100 text-neutral-600' }
 ];
 
 interface DashboardWidgetsProps {
@@ -29,14 +45,20 @@ interface DashboardWidgetsProps {
 const WIDGET_ICONS: Record<WidgetType, React.ReactNode> = {
   note: <StickyNote className="w-4 h-4" />,
   link: <Link2 className="w-4 h-4" />,
-  stat: <BarChart2 className="w-4 h-4" />
+  stat: <BarChart2 className="w-4 h-4" />,
+  shortcut: <LayoutGrid className="w-4 h-4" />
 };
 
 const WIDGET_COLORS: Record<WidgetType, string> = {
-  note: 'bg-amber-100 text-amber-600',
-  link: 'bg-blue-100 text-blue-600',
-  stat: 'bg-indigo-100 text-indigo-600'
+  note: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400',
+  link: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400',
+  stat: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400',
+  shortcut: 'bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400'
 };
+
+function getShortcutLabel(tabId: ShortcutTabId): string {
+  return SHORTCUT_OPTIONS.find(o => o.id === tabId)?.label ?? tabId;
+}
 
 function getLinkPreview(url: string): { domain: string; isInstagram: boolean } {
   try {
@@ -52,8 +74,21 @@ function getLinkPreview(url: string): { domain: string; isInstagram: boolean } {
 export const WidgetCard: React.FC<{
   widget: DashboardWidget;
   onRemove: () => void;
-}> = ({ widget, onRemove }) => {
+  onShortcutClick?: (tabId: string) => void;
+  vitrineUrl?: string;
+}> = ({ widget, onRemove, onShortcutClick, vitrineUrl }) => {
   const linkPreview = widget.type === 'link' && widget.content ? getLinkPreview(widget.content) : null;
+  const isShortcut = widget.type === 'shortcut';
+  const shortcutLabel = isShortcut ? getShortcutLabel(widget.content as ShortcutTabId) : widget.title;
+
+  const handleShortcutClick = () => {
+    if (widget.content === 'vitrine' && vitrineUrl) {
+      window.open(vitrineUrl, '_blank');
+    } else if (onShortcutClick) {
+      onShortcutClick(widget.content);
+    }
+  };
+
   return (
     <div className="group relative dashboard-widget-card p-5 min-h-[140px] flex flex-col">
       <div className="flex items-center justify-between mb-3">
@@ -61,7 +96,9 @@ export const WidgetCard: React.FC<{
           <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center ${WIDGET_COLORS[widget.type]}`}>
             {WIDGET_ICONS[widget.type]}
           </div>
-          <span className="font-semibold text-[var(--text-primary)] truncate">{widget.title || (widget.type === 'note' ? 'Note' : widget.type === 'link' ? 'Lien' : 'Stat')}</span>
+          <span className="font-semibold text-[var(--text-primary)] truncate">
+            {widget.type === 'note' ? (widget.title || 'Note') : widget.type === 'link' ? (widget.title || linkPreview?.domain || 'Lien') : widget.type === 'stat' ? (widget.title || 'Stat') : shortcutLabel}
+          </span>
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
@@ -94,6 +131,22 @@ export const WidgetCard: React.FC<{
         <div className="overview-widget-value flex-1 flex items-end" style={{ color: widget.color || '#1A1A2E' }}>
           {widget.content || '—'}
         </div>
+      )}
+      {widget.type === 'shortcut' && (
+        <button
+          onClick={handleShortcutClick}
+          className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-[#6B5CE7]/5 dark:bg-[#6B5CE7]/10 border border-[#6B5CE7]/10 hover:border-[#6B5CE7]/30 hover:bg-[#6B5CE7]/10 transition-colors text-left"
+        >
+          <div className="w-10 h-10 rounded-[10px] bg-[#6B5CE7]/15 flex items-center justify-center flex-shrink-0">
+            {SHORTCUT_OPTIONS.find(o => o.id === widget.content)?.icon ?? <LayoutGrid className="w-5 h-5 text-[#6B5CE7]" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="font-medium text-[var(--text-primary)] block truncate">{shortcutLabel}</span>
+            <span className="text-xs text-[#6B7280] dark:text-[var(--text-tertiary)] truncate block">
+              {widget.content === 'vitrine' ? 'Ouvrir ma page publique' : 'Accéder à cette section'}
+            </span>
+          </div>
+        </button>
       )}
     </div>
   );
@@ -129,9 +182,11 @@ interface AddWidgetModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (widget: DashboardWidget) => void;
+  /** Slug du studio pour le lien vitrine (ex: mon-studio) */
+  studioSlug?: string;
 }
 
-export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose, onAdd }) => {
+export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose, onAdd, studioSlug }) => {
   const [selectedType, setSelectedType] = useState<WidgetType | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -142,6 +197,31 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
     setTitle('');
     setContent('');
     setColor('#171717');
+  };
+
+  const vitrineUrl = studioSlug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/studio/${studioSlug}` : '';
+
+  const handleAddShortcut = (id: ShortcutTabId) => {
+    onAdd({
+      id: `w${Date.now()}`,
+      type: 'shortcut',
+      title: getShortcutLabel(id),
+      content: id
+    });
+    reset();
+    onClose();
+  };
+
+  const handleAddVitrineLink = () => {
+    if (!vitrineUrl) return;
+    onAdd({
+      id: `w${Date.now()}`,
+      type: 'link',
+      title: 'Ma vitrine',
+      content: vitrineUrl
+    });
+    reset();
+    onClose();
   };
 
   const handleAdd = () => {
@@ -164,106 +244,99 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { reset(); onClose(); }} />
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-[var(--bg-card)] rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-[var(--border)] animate-slide-up" onClick={e => e.stopPropagation()}>
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <LayoutGrid className="w-5 h-5" />
+          <h2 className="text-xl font-bold mb-1 flex items-center gap-2 text-[var(--text-primary)]">
+            <LayoutGrid className="w-5 h-5 text-indigo-600" />
             Ajouter un widget
           </h2>
+          <p className="text-sm text-[var(--text-secondary)] mb-5">Personnalisez votre tableau de bord</p>
 
           {!selectedType ? (
-            <div className="space-y-2">
-              {WIDGET_TYPES.map(({ type, label, icon, description }) => (
-                <button
-                  key={type}
-                  onClick={() => setSelectedType(type)}
-                  className="row-clickable w-full flex items-center gap-4 p-4 rounded-xl border-2 border-[var(--border)] hover:border-indigo-400 hover:bg-indigo-50/30 transition-all text-left"
-                >
-                  <div className="p-2 bg-neutral-100 rounded-lg text-neutral-600">{icon}</div>
-                  <div>
-                    <div className="font-semibold text-neutral-900">{label}</div>
-                    <div className="text-sm text-neutral-500">{description}</div>
-                  </div>
-                </button>
-              ))}
+            <div className="space-y-6 max-h-[60vh] overflow-y-auto">
+              {/* Section Outils */}
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] mb-2 px-1">Outils</p>
+                <div className="space-y-2">
+                  {WIDGET_TOOLS.map(({ type, label, icon, description, color: c }) => (
+                    <button
+                      key={type}
+                      onClick={() => setSelectedType(type)}
+                      className="row-clickable w-full flex items-center gap-4 p-4 rounded-xl border-2 border-[var(--border)] hover:border-indigo-400 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 transition-all text-left"
+                    >
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${c}`}>{icon}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-[var(--text-primary)]">{label}</div>
+                        <div className="text-sm text-[var(--text-secondary)] truncate">{description}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section Raccourcis */}
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] mb-2 px-1">Raccourcis du dashboard</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {SHORTCUT_OPTIONS.map(({ id, label, icon, color: c }) => (
+                    <button
+                      key={id}
+                      onClick={() => id === 'vitrine' && vitrineUrl ? handleAddVitrineLink() : handleAddShortcut(id)}
+                      className="row-clickable flex items-center gap-3 p-3 rounded-xl border-2 border-[var(--border)] hover:border-indigo-400 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 transition-all text-left"
+                    >
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${c}`}>{icon}</div>
+                      <span className="font-medium text-[var(--text-primary)] text-sm truncate">{label}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-[var(--text-tertiary)] mt-2 px-1">Cliquez pour ajouter un raccourci vers cette section</p>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-1">Titre</label>
+                <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">Titre</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={selectedType === 'note' ? 'Ex: À faire cette semaine' : selectedType === 'link' ? 'Ex: Mon Instagram' : 'Ex: Objectif mensuel'}
-                  className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl"
+                  className="input-dash w-full px-4 py-2.5 rounded-xl"
                 />
               </div>
               {selectedType === 'stat' ? (
                 <>
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-1">Valeur</label>
+                    <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">Valeur</label>
                     <input
                       type="text"
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       placeholder="Ex: 5000€"
-                      className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl"
+                      className="input-dash w-full px-4 py-2.5 rounded-xl"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-1">Couleur</label>
+                    <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">Couleur</label>
                     <div className="flex gap-2">
-                      <input
-                        type="color"
-                        value={color}
-                        onChange={(e) => setColor(e.target.value)}
-                        className="w-12 h-10 rounded-lg border cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={color}
-                        onChange={(e) => setColor(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-neutral-200 rounded-xl font-mono text-sm"
-                      />
+                      <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12 h-10 rounded-lg border cursor-pointer" />
+                      <input type="text" value={color} onChange={(e) => setColor(e.target.value)} className="flex-1 px-3 py-2 border border-[var(--border)] rounded-xl font-mono text-sm bg-[var(--bg-primary)]" />
                     </div>
                   </div>
                 </>
               ) : (
                 <div>
-                  <label className="block text-sm font-semibold text-neutral-700 mb-1">
-                    {selectedType === 'note' ? 'Contenu' : 'URL'}
-                  </label>
+                  <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">{selectedType === 'note' ? 'Contenu' : 'URL'}</label>
                   {selectedType === 'note' ? (
-                    <textarea
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      placeholder="Votre note..."
-                      rows={3}
-                      className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl resize-none"
-                    />
+                    <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Votre note..." rows={3} className="input-dash w-full px-4 py-2.5 rounded-xl resize-none" />
                   ) : (
-                    <input
-                      type="url"
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      placeholder="https://..."
-                      className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl"
-                    />
+                    <input type="url" value={content} onChange={(e) => setContent(e.target.value)} placeholder="https://..." className="input-dash w-full px-4 py-2.5 rounded-xl" />
                   )}
                 </div>
               )}
               <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => setSelectedType(null)}
-                  className="px-4 py-2.5 rounded-xl border border-neutral-200 font-medium hover:bg-neutral-50"
-                >
+                <button onClick={() => setSelectedType(null)} className="px-4 py-2.5 rounded-xl border border-[var(--border)] font-medium hover:bg-[var(--bg-hover)]">
                   Retour
                 </button>
-                <button
-                  onClick={handleAdd}
-                  className="flex-1 btn-primary"
-                >
-                  Ajouter
-                </button>
+                <button onClick={handleAdd} className="flex-1 btn-primary">Ajouter</button>
               </div>
             </div>
           )}

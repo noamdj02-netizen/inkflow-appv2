@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, Plus, Save, Trash2, Eye } from 'lucide-react';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface ConsentTemplate {
   id: string;
@@ -43,6 +44,7 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
   const [draftTitle, setDraftTitle] = useState(items[0]?.title || '');
   const [draftContent, setDraftContent] = useState(items[0]?.content || '');
   const [preview, setPreview] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const selected = items.find(t => t.id === selectedId);
 
@@ -77,11 +79,11 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
   };
 
   const deleteTemplate = (id: string) => {
-    if (!confirm('Supprimer ce formulaire ?')) return;
     const updated = items.filter(t => t.id !== id);
     setItems(updated);
     if (selectedId === id && updated.length > 0) selectTemplate(updated[0].id);
     onSave(updated);
+    setDeleteConfirmId(null);
   };
 
   return (
@@ -130,7 +132,7 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
                 </div>
                 <div className="flex justify-between">
                   <div className="flex gap-2">
-                    <button onClick={() => deleteTemplate(selected.id)}
+                    <button onClick={() => setDeleteConfirmId(selected.id)}
                       className="px-4 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50">
                       <Trash2 className="w-4 h-4 inline mr-2" />Supprimer
                     </button>
@@ -157,6 +159,16 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => deleteConfirmId && deleteTemplate(deleteConfirmId)}
+        title="Supprimer ce formulaire ?"
+        message="Cette action est irréversible."
+        confirmLabel="Supprimer"
+        variant="danger"
+      />
     </div>
   );
 };

@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
         tailwindcss(),
         VitePWA({
           registerType: 'autoUpdate',
-          includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon-180x180.png'],
+          includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon-180x180.png', 'icon-ios-1024.png'],
           manifest: {
             name: 'InkFlow - Assistant Tatoueur',
             short_name: 'InkFlow',
