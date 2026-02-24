@@ -31,7 +31,7 @@ if (typeof window.visualViewport !== 'undefined') {
   window.visualViewport.addEventListener('resize', setAppHeight);
 }
 
-// Hide splash screen when app is ready
+// Hide splash when React has rendered (requestAnimationFrame after first paint)
 const splash = document.getElementById('splash');
 if (splash) {
   const hideSplash = () => {
@@ -39,8 +39,8 @@ if (splash) {
     setTimeout(() => splash.remove(), 350);
   };
   if (document.readyState === 'complete') {
-    setTimeout(hideSplash, 300);
+    requestAnimationFrame(() => requestAnimationFrame(hideSplash));
   } else {
-    window.addEventListener('load', () => setTimeout(hideSplash, 300));
+    window.addEventListener('load', () => requestAnimationFrame(() => requestAnimationFrame(hideSplash)));
   }
 }

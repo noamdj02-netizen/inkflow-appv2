@@ -41,7 +41,7 @@ export const HeroSection: React.FC = () => {
               <span className="text-sm font-semibold text-neutral-700">Déjà utilisé par 500+ tatoueurs</span>
             </div>
 
-            <h1 className="relative text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[4.5rem] font-bold leading-[1.05] tracking-tight text-neutral-900 opacity-0 animate-fade-in-up stagger-1" style={{ animationFillMode: 'forwards' }}>
+            <h1 className="relative text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[4.5rem] font-bold leading-[1.05] tracking-tight text-neutral-900">
               Gagnez{' '}
               <span className="relative inline-block">
                 <span className="relative z-10">5 heures</span>
@@ -51,7 +51,7 @@ export const HeroSection: React.FC = () => {
               {' '}par semaine
             </h1>
 
-            <p className="text-base sm:text-lg md:text-xl text-neutral-600 leading-relaxed max-w-xl mx-auto lg:mx-0 opacity-0 animate-fade-in-up stagger-2" style={{ animationFillMode: 'forwards' }}>
+            <p className="text-base sm:text-lg md:text-xl text-neutral-600 leading-relaxed max-w-xl mx-auto lg:mx-0">
               La plateforme tout-en-un pour tatoueurs : réservations, paiements Stripe, galerie Flash,
               et CRM. Concentrez-vous sur votre art, on s'occupe du reste.
             </p>
@@ -121,7 +121,8 @@ export const HeroSection: React.FC = () => {
                     </div>
                     <img
                       src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop"
-                      alt=""
+                      alt="Avatar utilisateur"
+                      fetchPriority="high"
                       className="w-8 h-8 rounded-full object-cover border border-neutral-200/80"
                     />
                   </div>

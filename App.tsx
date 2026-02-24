@@ -5,20 +5,14 @@ import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
 import { Logo } from './components/Logo';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
-import { SocialProof } from './components/SocialProof';
-import { FeaturesKey } from './components/FeaturesKey';
-import { FeaturesBento } from './components/FeaturesBento';
-import { PricingSection } from './components/PricingSection';
-import { ProcessSection } from './components/ProcessSection';
-import { FAQ } from './components/FAQ';
-import { CTAFinal } from './components/CTAFinal';
-import { Footer } from './components/Footer';
+import { LandingBelowFold } from './components/landing/LandingBelowFold';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 
+const LandingBelowFoldLazy = lazy(() => import('./components/landing/LandingBelowFold').then(m => ({ default: m.LandingBelowFold })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const PublicStudioPagePro = lazy(() => import('./pages/public/PublicStudioPagePro').then(m => ({ default: m.PublicStudioPagePro })));
 const PublicBookingPagePro = lazy(() => import('./pages/public/PublicBookingPagePro').then(m => ({ default: m.PublicBookingPagePro })));
@@ -182,16 +176,10 @@ const LandingPage: React.FC = () => {
 
       <main className="relative z-10">
         <HeroSection />
-        <SocialProof />
-        <FeaturesKey />
-        <FeaturesBento />
-        <PricingSection />
-        <ProcessSection />
-        <FAQ />
-        <CTAFinal />
+        <Suspense fallback={<div className="min-h-[200px]" aria-hidden />}>
+          <LandingBelowFoldLazy />
+        </Suspense>
       </main>
-
-      <Footer />
     </div>
   );
 };

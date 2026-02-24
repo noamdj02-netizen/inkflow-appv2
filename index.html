@@ -100,13 +100,16 @@
         transition: opacity 0.3s ease;
       }
       .splash-screen.hidden { opacity: 0; pointer-events: none; }
-      .splash-content { text-align: center; }
+      .splash-content { text-align: center; padding: 0 20px; }
       .splash-logo {
         width: 80px; height: 80px; margin: 0 auto 12px;
         display: block; object-fit: contain;
         border-radius: 20px;
       }
-      .splash-name { font-size: 24px; font-weight: 700; color: #ffffff; display: block; margin-bottom: 24px; }
+      .splash-hero { font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 700; color: #ffffff; line-height: 1.15; margin: 0 0 12px; max-width: 20ch; }
+      .splash-hero-accent { background: rgba(251, 191, 36, 0.4); padding: 0 4px; border-radius: 4px; }
+      .splash-sub { font-size: 0.95rem; color: rgba(255,255,255,0.85); margin: 0 0 20px; max-width: 32ch; line-height: 1.4; }
+      .splash-cta { display: inline-block; background: #fff; color: #0a0a0a; padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; text-decoration: none; margin-bottom: 20px; }
       .splash-loader {
         width: 32px; height: 4px; margin: 0 auto; background: #333; border-radius: 2px; overflow: hidden;
       }
@@ -118,10 +121,13 @@
     </style>
 </head>
   <body>
+    <!-- Critical LCP content: visible before React loads (fixes NO_LCP, FCP) -->
     <div id="splash" class="splash-screen">
       <div class="splash-content">
-        <img src="/icon.svg" alt="InkFlow" class="splash-logo" />
-        <span class="splash-name">InkFlow</span>
+        <img src="/icon.svg" alt="InkFlow" class="splash-logo" width="80" height="80" fetchpriority="high" />
+        <h1 class="splash-hero">Gagnez <span class="splash-hero-accent">5 heures</span> par semaine</h1>
+        <p class="splash-sub">La plateforme tout-en-un pour tatoueurs : réservations, paiements Stripe, galerie Flash et CRM.</p>
+        <a href="/signup" class="splash-cta">Commencer gratuitement</a>
         <div class="splash-loader"></div>
       </div>
     </div>
