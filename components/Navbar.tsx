@@ -7,9 +7,10 @@ interface NavbarProps {
 }
 
 const navLinks = [
-  { href: '#features', label: 'Fonctionnalités' },
-  { href: '#pricing', label: 'Tarifs' },
-  { href: '#faq', label: 'FAQ' },
+  { href: '/demo', label: 'Démo' },
+  { href: '/#features', label: 'Fonctionnalités' },
+  { href: '/#pricing', label: 'Tarifs' },
+  { href: '/#faq', label: 'FAQ' },
 ];
 
 export const Navbar: React.FC<NavbarProps> = () => {

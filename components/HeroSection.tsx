@@ -1,8 +1,9 @@
 import React from 'react';
-import { ArrowRight, Star, CheckCircle2, DollarSign, TrendingUp, Calendar, Clock } from 'lucide-react';
+import { ArrowRight, Star, CheckCircle2 } from 'lucide-react';
 import { Logo } from './Logo';
 import { TrustedLogos } from './TrustedLogos';
-import { InkDropMascot, ArtistMascot } from './Mascots';
+import { ArtistMascot } from './Mascots';
+import { DashboardDemoVideo } from './landing/DashboardDemoVideo';
 
 export const HeroSection: React.FC = () => {
   return (
@@ -28,11 +29,6 @@ export const HeroSection: React.FC = () => {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 xl:gap-24 items-center">
           {/* Left content */}
           <div className="relative space-y-8 sm:space-y-10 text-center lg:text-left">
-            {/* Mascotte 1 : machine à tatouer près du titre (image de marque InkFlow) */}
-            <div className="absolute -top-2 right-2 sm:right-8 lg:right-12 xl:right-16 top-0 opacity-0 animate-fade-in-up stagger-1 z-10" style={{ animationFillMode: 'forwards' }}>
-              <InkDropMascot size={64} className="animate-float opacity-90" />
-            </div>
-
             <div
               className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2.5 rounded-full border border-neutral-200/80 shadow-sm opacity-0 animate-fade-in-up stagger-0"
               style={{ animationFillMode: 'forwards' }}
@@ -79,7 +75,7 @@ export const HeroSection: React.FC = () => {
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform duration-300" />
               </a>
               <a
-                href="#demo"
+                href="/demo"
                 className="inline-flex items-center justify-center gap-2 bg-white text-neutral-900 px-8 py-4 rounded-2xl font-semibold text-base border-2 border-neutral-200 hover:border-neutral-900 hover:bg-neutral-50 transition-all duration-300"
               >
                 Voir la démo
@@ -94,108 +90,12 @@ export const HeroSection: React.FC = () => {
             </div>
           </div>
 
-          {/* Right - Dashboard preview card */}
+          {/* Right - Démo vidéo animée */}
           <div className="relative mt-8 lg:mt-0 flex justify-center lg:justify-end opacity-0 animate-fade-in-up stagger-6" style={{ animationFillMode: 'forwards' }}>
-            {/* Mascotte 2 : flacon d'encre tatouage (style 3D) en bas à gauche de la carte */}
             <div className="absolute bottom-6 left-2 sm:bottom-8 sm:left-8 lg:bottom-12 lg:left-0 z-10">
               <ArtistMascot size={72} className="animate-float opacity-95" style={{ animationDelay: '0.2s' }} />
             </div>
-
-            <div className="relative w-full max-w-xl sm:max-w-2xl lg:max-w-2xl xl:max-w-3xl">
-              {/* Glow effect behind card */}
-              <div className="absolute -inset-4 bg-neutral-200/30 rounded-[2rem] blur-2xl -z-10" />
-
-              <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl shadow-neutral-900/10 border border-neutral-200/80 bg-white/95 backdrop-blur-sm">
-                {/* Subtle top gradient */}
-                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-200 to-transparent" />
-
-                <div className="bg-gradient-to-br from-neutral-50 to-white p-6 sm:p-8 lg:p-10">
-                  {/* Dashboard Demo Header */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <Logo size="sm" />
-                      <div>
-                        <div className="text-sm font-bold text-neutral-900">InkFlow</div>
-                        <div className="text-xs text-neutral-500 font-medium">Artist Dashboard</div>
-                      </div>
-                    </div>
-                    <img
-                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop"
-                      alt="Avatar utilisateur"
-                      fetchPriority="high"
-                      className="w-8 h-8 rounded-full object-cover border border-neutral-200/80"
-                    />
-                  </div>
-
-                  {/* Dashboard Demo Grid */}
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    {/* Projet en cours - featured */}
-                    <div className="col-span-2 bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-sm border border-neutral-100">
-                      <div className="flex justify-between items-start mb-3">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full">
-                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                          En cours • 14:00
-                        </span>
-                      </div>
-                      <h3 className="text-base sm:text-lg font-bold text-neutral-900 mb-0.5">Lucas M.</h3>
-                      <p className="text-xs sm:text-sm text-neutral-500 mb-4">Bras Japonais - Carpe Koï</p>
-                      <div className="flex gap-2">
-                        <div className="flex-1 bg-neutral-50 rounded-lg px-3 py-2 border border-neutral-100">
-                          <span className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">Acompte</span>
-                          <span className="text-sm font-bold text-emerald-600">Payé (50€)</span>
-                        </div>
-                        <div className="flex-1 bg-neutral-50 rounded-lg px-3 py-2 border border-neutral-100">
-                          <span className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">Reste</span>
-                          <span className="text-sm font-bold text-neutral-900">350€</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Revenue card */}
-                    <div className="bg-neutral-900 rounded-xl sm:rounded-2xl p-4 sm:p-5 text-white">
-                      <DollarSign className="w-5 h-5 text-white/50 mb-2" />
-                      <div className="text-[10px] sm:text-xs text-neutral-400 font-semibold uppercase tracking-wide">Revenue (Aujourd'hui)</div>
-                      <div className="text-2xl sm:text-3xl font-bold mt-0.5">450€</div>
-                      <div className="text-emerald-400 text-xs flex items-center gap-1 mt-2">
-                        <TrendingUp className="w-3.5 h-3.5" /> +120€ vs hier
-                      </div>
-                    </div>
-
-                    {/* Agenda card */}
-                    <div className="bg-indigo-50/80 rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-indigo-100/80">
-                      <Calendar className="w-5 h-5 text-indigo-600 mb-2" />
-                      <div className="text-[10px] sm:text-xs font-bold text-indigo-700 mb-2 uppercase tracking-wide">Agenda</div>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 bg-white/90 rounded-lg px-2.5 py-2 border border-indigo-100/80">
-                          <Clock className="w-3.5 h-3.5 text-indigo-600" />
-                          <span className="text-xs font-semibold text-neutral-900">11:00 Lucas M.</span>
-                        </div>
-                        <div className="flex gap-1">
-                          {[12, 13, 14, 15, 16].map((d, i) => (
-                            <div
-                              key={d}
-                              className={`flex-1 min-w-[28px] h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${
-                                i === 1 ? 'bg-white text-indigo-700 shadow-sm border border-indigo-200' : 'bg-white/60 text-indigo-600'
-                              }`}
-                            >
-                              {d}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating badge */}
-              <div className="absolute -top-3 -right-2 sm:-top-4 sm:-right-4 bg-white rounded-xl shadow-lg shadow-neutral-900/10 p-3 border border-neutral-200/80 animate-float">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  <span className="text-xs font-semibold text-neutral-700">Nouveau RDV</span>
-                </div>
-              </div>
-            </div>
+            <DashboardDemoVideo />
           </div>
         </div>
 

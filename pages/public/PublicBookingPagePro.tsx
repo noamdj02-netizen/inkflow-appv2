@@ -273,7 +273,7 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
                         {flashDesigns.map((flash) => (
                           <button key={flash.id} type="button" onClick={() => { updateFormData('flashId', flash.id); nextStep(); }}
                             className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${formData.flashId === flash.id ? 'border-neutral-900 ring-4 ring-neutral-900/20' : 'border-neutral-200 hover:border-neutral-400'}`}>
-                            <img src={flash.image} alt={flash.name} className="w-full h-full object-cover" />
+                            <img src={flash.image} alt={flash.name} loading="lazy" className="w-full h-full object-cover" />
                             {formData.flashId === flash.id && (
                               <div className="absolute top-2 right-2 w-8 h-8 bg-neutral-900 rounded-full flex items-center justify-center">
                                 <Check className="w-5 h-5 text-white" />
@@ -300,7 +300,7 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
                     {artists.map((artist) => (
                       <button key={artist.id} type="button" onClick={() => { updateFormData('artistId', artist.id); nextStep(); }}
                         className={`group p-6 rounded-2xl border-2 transition-all text-left hover:border-neutral-900 hover:shadow-lg ${formData.artistId === artist.id ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200'}`}>
-                        <img src={artist.avatar} alt={artist.name} className="w-20 h-20 rounded-2xl mb-4" />
+                        <img src={artist.avatar} alt={artist.name} loading="lazy" className="w-20 h-20 rounded-2xl mb-4" />
                         <h3 className="text-xl font-bold mb-2">{artist.name}</h3>
                         <p className="text-sm text-neutral-600 mb-3">{artist.experience} d'expérience</p>
                         <div className="flex items-center gap-2 mb-4">

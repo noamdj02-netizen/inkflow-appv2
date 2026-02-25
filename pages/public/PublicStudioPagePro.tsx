@@ -385,7 +385,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 </h2>
                 <p className="text-neutral-700 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8">{studioDisplay.description}</p>
                 <div className="aspect-video rounded-xl sm:rounded-2xl overflow-hidden mb-6 sm:mb-8 bg-neutral-100">
-                  <img src={studioDisplay.coverImage} alt="Video preview" className="w-full h-full object-cover" />
+                  <img src={studioDisplay.coverImage} alt="Couverture du studio" loading="lazy" className="w-full h-full object-cover" />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 pt-6 sm:pt-8 border-t border-neutral-200">
                   {studioDisplay.whyChooseUs.map((item, idx) => {
@@ -469,7 +469,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   {studioDisplay.artists.map((artist, idx) => (
                     <div key={idx} className="group bg-gradient-to-br from-neutral-50 to-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border-2 border-neutral-200 hover:border-neutral-900 hover:shadow-xl transition-all">
                       <div className="flex flex-col md:flex-row gap-4 sm:gap-8">
-                        <img src={artist.avatar} alt={artist.name} className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl object-cover shadow-lg flex-shrink-0 mx-auto md:mx-0" />
+                        <img src={artist.avatar} alt={artist.name} loading="lazy" className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl object-cover shadow-lg flex-shrink-0 mx-auto md:mx-0" />
                         <div className="flex-1">
                           <h3 className="text-xl sm:text-3xl font-bold mb-2 text-center md:text-left">{artist.name}</h3>
                           <p className="text-neutral-600 text-sm font-medium mb-4">{artist.role}</p>
@@ -514,7 +514,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                   {studioDisplay.portfolio.map((item, idx) => (
                     <div key={idx} className="group relative aspect-square rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl transition-all" onClick={() => setSelectedImage(item.url)}>
-                      <img src={item.url} alt={item.description} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <img src={item.url} alt={item.description || 'Portfolio'} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                           <div className="text-xs font-semibold mb-2 opacity-90">{item.category}</div>
@@ -557,7 +557,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   {studioDisplay.flashDesigns.map((flash) => (
                     <div key={flash.id} className={`group relative rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all ${!flash.available ? 'opacity-75' : ''}`}>
                       <div className="aspect-square relative cursor-pointer" onClick={() => setSelectedFlash(flash)}>
-                        <img src={flash.imageUrl} alt={flash.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                        <img src={flash.imageUrl} alt={flash.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                           <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-8 text-white">
                             <div className="flex items-center gap-2 mb-3">
@@ -611,7 +611,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                       </div>
                       <p className="text-neutral-700 mb-6 leading-relaxed">"{testimonial.text}"</p>
                       <div className="flex items-center gap-4 pt-6 border-t border-neutral-200">
-                        <img src={testimonial.avatar} alt={testimonial.name} className="w-14 h-14 rounded-full object-cover" />
+                        <img src={testimonial.avatar} alt={testimonial.name} loading="lazy" className="w-14 h-14 rounded-full object-cover" />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <div className="font-bold">{testimonial.name}</div>

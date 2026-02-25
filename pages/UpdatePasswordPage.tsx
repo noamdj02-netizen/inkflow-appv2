@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AlertCircle, CheckCircle, Loader2, Lock } from 'lucide-react';
+import { Logo } from '../components/Logo';
 
 export const UpdatePasswordPage: React.FC = () => {
   const [password, setPassword] = useState('');
@@ -30,7 +31,7 @@ export const UpdatePasswordPage: React.FC = () => {
     try {
       await new Promise(r => setTimeout(r, 600));
       setStatus('success');
-      setMessage('Mot de passe mis à jour. Redirection…');
+      setMessage('');
       setTimeout(() => { window.location.href = '/dashboard'; }, 800);
     } catch {
       setStatus('error');
@@ -43,6 +44,14 @@ export const UpdatePasswordPage: React.FC = () => {
   const goLogin = () => {
     window.location.href = '/login';
   };
+
+  if (status === 'success') {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <Logo size="lg" className="rounded-2xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="landing-scroll bg-neutral-50 flex items-center justify-center p-4">

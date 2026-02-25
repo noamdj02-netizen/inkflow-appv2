@@ -114,7 +114,10 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
     const newId = onAddClient(newClient);
     if (typeof newId === 'string' && addForm.notes.trim()) {
       if (useSupabase && saveClientNotes) {
-        saveClientNotes(newId, addForm.notes.trim()).catch(console.error);
+        saveClientNotes(newId, addForm.notes.trim()).catch((err) => {
+        if (import.meta.env.DEV) console.error(err);
+        toast.error('Erreur lors de la sauvegarde des notes');
+      });
       } else {
         localStorage.setItem(NOTES_KEY(newId), addForm.notes.trim());
       }

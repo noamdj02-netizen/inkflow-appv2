@@ -11,9 +11,9 @@ import { Footer } from '../Footer';
 /** Composant lazy-loaded : tout le contenu sous la ligne de flottaison (Hero). */
 export const LandingBelowFold: React.FC = () => (
   <>
-    <SocialProof />
     <FeaturesKey />
     <FeaturesBento />
+    <SocialProof />
     <PricingSection />
     <ProcessSection />
     <FAQ />

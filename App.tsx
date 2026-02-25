@@ -20,6 +20,7 @@ const ConsentPage = lazy(() => import('./pages/public/ConsentPage').then(m => ({
 const PublicMessagePage = lazy(() => import('./pages/public/PublicMessagePage').then(m => ({ default: m.PublicMessagePage })));
 const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
 const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
+const DemoPage = lazy(() => import('./pages/DemoPage').then(m => ({ default: m.DemoPage })));
 
 interface Route {
   path: string | RegExp;
@@ -29,9 +30,15 @@ interface Route {
 }
 
 const FullScreenSpinner: React.FC = () => (
-  <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-6">
+  <div className="min-h-screen bg-black flex flex-col items-center justify-center">
     <Logo size="lg" className="rounded-2xl" />
-    <div className="w-10 h-10 border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
+    <div
+      className="w-[200px] h-1 mt-5 mx-auto rounded-full bg-white/15 overflow-hidden"
+      role="progressbar"
+      aria-label="Chargement"
+    >
+      <div className="loader-bar-inner h-full w-[40%] rounded-full bg-gradient-to-r from-white to-amber-400/90" />
+    </div>
   </div>
 );
 
@@ -80,15 +87,18 @@ const Router: React.FC = () => {
     };
   }, []);
 
+  // Routes publiques (pas de requiresAuth) : vitrine, réservation, consentement, messages, pages légales
   const routes: Route[] = [
     { path: '/', component: LandingPage },
     { path: '/login', component: LoginPage },
     { path: '/signup', component: SignupPage },
+    { path: '/demo', component: DemoPage },
     { path: '/dashboard', component: DashboardPage, requiresAuth: true },
     { path: '/auth/callback', component: AuthCallbackPage },
     { path: '/auth/update-password', component: UpdatePasswordPage },
-    { path: /^\/studio\/([a-z0-9-]+)$/, component: PublicStudioPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
-    { path: /^\/book\/([a-z0-9-]+)$/, component: PublicBookingPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
+    // Vitrine publique : accessible sans connexion (slash final optionnel)
+    { path: /^\/studio\/([a-z0-9-]+)\/?$/, component: PublicStudioPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
+    { path: /^\/book\/([a-z0-9-]+)\/?$/, component: PublicBookingPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
     { path: /^\/consent\/([a-z0-9_-]+)$/, component: ConsentPage, getProps: (m) => ({ consentId: m[1] }) },
     { path: /^\/messages\/([a-z0-9_-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) },
     { path: '/politique-confidentialite', component: PrivacyPolicyPage },
@@ -125,11 +135,7 @@ const Router: React.FC = () => {
     window.location.href = '/login';
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Logo size="lg" className="rounded-2xl" />
-          <div className="w-10 h-10 border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
-          <p className="text-neutral-600 text-sm">Redirection...</p>
-        </div>
+        <Logo size="lg" className="rounded-2xl" />
       </div>
     );
   }
@@ -137,9 +143,45 @@ const Router: React.FC = () => {
   const Component = route.component;
   const props = match && route.getProps ? route.getProps(match) : {};
 
+  // ErrorBoundary par route : évite un crash complet si une page publique plante
+  const PageWithGuard = (
+    <ErrorBoundary
+      fallback={
+        <div className="min-h-screen bg-neutral-50 dark:bg-[var(--bg-primary)] flex items-center justify-center p-6">
+          <div className="max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-2xl" aria-hidden>⚠️</span>
+            </div>
+            <h1 className="text-xl font-bold text-[var(--text-primary)] mb-2">Une erreur s&apos;est produite</h1>
+            <p className="text-[var(--text-secondary)] text-sm mb-6">
+              Cette page n&apos;a pas pu s&apos;afficher. Réessayez ou retournez à l&apos;accueil.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 rounded-xl font-semibold hover:opacity-90"
+              >
+                Réessayer
+              </button>
+              <a
+                href="/"
+                className="px-6 py-3 border-2 border-[var(--border)] rounded-xl font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+              >
+                Retour à l&apos;accueil
+              </a>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <Component {...props} />
+    </ErrorBoundary>
+  );
+
   return (
     <Suspense fallback={<FullScreenSpinner />}>
-      <Component {...props} />
+      {PageWithGuard}
     </Suspense>
   );
 };

@@ -346,7 +346,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
   );
 };
 
-export function useDashboardWidgets(studioId: string | null, useSupabase: boolean) {
+export function useDashboardWidgets(studioId: string | null, useSupabase: boolean, options?: { onError?: (err: Error) => void }) {
   const [widgets, setWidgets] = useState<DashboardWidget[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -374,10 +374,13 @@ export function useDashboardWidgets(studioId: string | null, useSupabase: boolea
     setWidgets(prev => {
       const nextVal = typeof next === 'function' ? next(prev) : next;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(nextVal));
-      if (studioId && useSupabase) saveWidgetsToSupabase(studioId, nextVal).catch(console.error);
+      if (studioId && useSupabase) saveWidgetsToSupabase(studioId, nextVal).catch((err) => {
+        if (import.meta.env.DEV) console.error(err);
+        options?.onError?.(err);
+      });
       return nextVal;
     });
-  }, [studioId, useSupabase]);
+  }, [studioId, useSupabase, options?.onError]);
 
   return [widgets, setWidgetsAndSave] as const;
 }

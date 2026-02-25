@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import { Logo } from '../components/Logo';
 import { REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
 
 export const AuthCallbackPage: React.FC = () => {
@@ -18,7 +19,6 @@ export const AuthCallbackPage: React.FC = () => {
     }
 
     setStatus('success');
-    setMessage('Connexion réussie. Redirection…');
     const redirectUrl =
       (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) || '/dashboard';
     try {
@@ -36,20 +36,14 @@ export const AuthCallbackPage: React.FC = () => {
     window.location.href = '/login';
   };
 
-  return (
-    <div className="landing-scroll bg-neutral-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl p-8 border border-neutral-200 shadow-sm">
-        <div className="text-center">
-          {status === 'loading' && <Loader2 className="animate-spin text-neutral-900 mx-auto mb-4" size={40} />}
-          {status === 'success' && <CheckCircle className="text-green-600 mx-auto mb-4" size={44} />}
-          {status === 'error' && <AlertCircle className="text-red-600 mx-auto mb-4" size={44} />}
-
-          <h1 className="text-2xl font-bold text-neutral-900 mb-2">
-            {status === 'loading' ? 'Connexion' : status === 'success' ? 'Succès' : 'Erreur'}
-          </h1>
-          <p className="text-neutral-600">{message}</p>
-
-          {status === 'error' && (
+  if (status === 'error') {
+    return (
+      <div className="landing-scroll bg-neutral-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-2xl p-8 border border-neutral-200 shadow-sm">
+          <div className="text-center">
+            <AlertCircle className="text-red-600 mx-auto mb-4" size={44} />
+            <h1 className="text-2xl font-bold text-neutral-900 mb-2">Erreur</h1>
+            <p className="text-neutral-600">{message}</p>
             <button
               type="button"
               onClick={goLogin}
@@ -57,9 +51,15 @@ export const AuthCallbackPage: React.FC = () => {
             >
               Retour à la connexion
             </button>
-          )}
+          </div>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+      <Logo size="lg" className="rounded-2xl" />
     </div>
   );
 };

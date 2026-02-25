@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Copy, Check, ExternalLink, Store } from 'lucide-react';
 import { getStudioId } from '../../lib/supabase';
+import { useToast } from '../../contexts/ToastContext';
 import { getVitrineLinkSettingsFromSupabase, saveVitrineLinkSettingsToSupabase } from '../../lib/supabaseDashboard';
 
 const STORAGE_KEY = 'inkflow-vitrine-settings';
@@ -66,6 +67,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
   variant = 'default',
   showLabel = true
 }) => {
+  const toast = useToast();
   const [copied, setCopied] = useState(false);
   const [settings, setSettings] = useState<VitrineSettings>(() => {
     try {
@@ -99,7 +101,10 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     if (!studioId || !useSupabase) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      saveVitrineLinkSettingsToSupabase(studioId, settings as unknown as Record<string, unknown>).catch(console.error);
+      saveVitrineLinkSettingsToSupabase(studioId, settings as unknown as Record<string, unknown>).catch((err) => {
+      if (import.meta.env.DEV) console.error(err);
+      toast.error('Erreur de sauvegarde des paramètres');
+    });
       saveTimeoutRef.current = null;
     }, 500);
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
