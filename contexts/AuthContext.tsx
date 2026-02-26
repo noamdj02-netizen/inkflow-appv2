@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, ReactNode } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { ensureStudio } from '../lib/supabaseDashboard';
 import { DEMO_ACCOUNT_EMAIL } from '../data/demoData';
 
-const useSupabaseAuth = () =>
+/** Évalué une seule fois au chargement du module pour éviter des appels répétés à chaque rendu. */
+const IS_SUPABASE_AUTH_ENABLED =
   !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && (import.meta.env.VITE_SUPABASE_URL as string).length > 10);
 
 function appUserFromSupabase(sessionUser: { id: string; email?: string; user_metadata?: Record<string, unknown> }): User {
@@ -19,6 +20,22 @@ function appUserFromSupabase(sessionUser: { id: string; email?: string; user_met
     role: 'studio_owner',
     avatar: savedAvatar || undefined
   };
+}
+
+/** Parse utilisateur depuis localStorage de façon sécurisée (évite crash si données corrompues). */
+function getStoredUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('inkflow_user');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === 'object' && 'id' in parsed && 'email' in parsed) {
+      return parsed as User;
+    }
+  } catch {
+    localStorage.removeItem('inkflow_user');
+  }
+  return null;
 }
 
 interface AuthContextType {
@@ -47,14 +64,11 @@ export const useAuth = () => {
 export const REDIRECT_AFTER_LOGIN_KEY = 'redirectAfterLogin';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('inkflow_user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [user, setUser] = useState<User | null>(getStoredUser);
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    if (!useSupabaseAuth()) {
+    if (!IS_SUPABASE_AUTH_ENABLED) {
       setAuthLoading(false);
       return;
     }
@@ -88,17 +102,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => subscription.unsubscribe();
   }, []);
 
-  const loginWithGoogle = async () => {
-    if (!useSupabaseAuth()) return;
+  const loginWithGoogle = useCallback(async () => {
+    if (!IS_SUPABASE_AUTH_ENABLED) return;
     const redirectTo = `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo },
     });
     if (error) throw new Error(error.message);
-  };
+  }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     // Compte démo : connexion immédiate sans Supabase, avec fausses données pour captures d'écran
     if (email.toLowerCase().trim() === DEMO_ACCOUNT_EMAIL) {
       const demoUser: User = {
@@ -113,7 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem('inkflow_user', JSON.stringify(demoUser));
       return;
     }
-    if (useSupabaseAuth()) {
+    if (IS_SUPABASE_AUTH_ENABLED) {
       const LOGIN_TIMEOUT_MS = 15000;
       const loginPromise = supabase.auth.signInWithPassword({ email, password });
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -140,10 +154,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     setUser(mockUser);
     localStorage.setItem('inkflow_user', JSON.stringify(mockUser));
-  };
+  }, []);
 
-  const signup = async (email: string, password: string, name: string, studioName: string) => {
-    if (useSupabaseAuth()) {
+  const signup = useCallback(async (email: string, password: string, name: string, studioName: string) => {
+    if (IS_SUPABASE_AUTH_ENABLED) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -171,13 +185,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     setUser(newUser);
     localStorage.setItem('inkflow_user', JSON.stringify(newUser));
-  };
+  }, []);
 
-  const logout = () => {
-    if (useSupabaseAuth()) supabase.auth.signOut();
+  const logout = useCallback(() => {
+    if (IS_SUPABASE_AUTH_ENABLED) supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem('inkflow_user');
-  };
+  }, []);
 
   const updateUser = useCallback((updates: Partial<User>) => {
     setUser(prev => {
@@ -188,8 +202,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   }, []);
 
-  return (
-    <AuthContext.Provider value={{
+  const value = useMemo<AuthContextType>(
+    () => ({
       user,
       authLoading,
       login,
@@ -198,9 +212,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logout,
       updateUser,
       isAuthenticated: !!user,
-      isGoogleAuthEnabled: useSupabaseAuth(),
-    }}>
-      {children}
-    </AuthContext.Provider>
+      isGoogleAuthEnabled: IS_SUPABASE_AUTH_ENABLED,
+    }),
+    [user, authLoading, login, loginWithGoogle, signup, logout, updateUser]
   );
-};
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}

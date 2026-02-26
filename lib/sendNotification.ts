@@ -1,5 +1,20 @@
 import { supabase } from './supabase';
 
+const MAX_TEXT_LENGTH = 2000;
+const MAX_EMAIL_LENGTH = 255;
+const MAX_NAME_LENGTH = 200;
+
+/** Sanitize string for Edge Function payload: trim, limit length. Reduces risk of abuse / oversized payloads. */
+function sanitizeText(s: string | undefined, maxLen: number = MAX_TEXT_LENGTH): string | undefined {
+  if (s == null) return undefined;
+  const t = String(s).trim();
+  return t === '' ? undefined : t.slice(0, maxLen);
+}
+
+function sanitizeEmail(email: string): string {
+  return String(email).trim().slice(0, MAX_EMAIL_LENGTH);
+}
+
 interface ProjectNotificationData {
   studioId: string;
   clientName: string;
@@ -12,26 +27,27 @@ interface ProjectNotificationData {
 
 /**
  * Sends a notification email to the tattoo artist via Supabase Edge Function.
- * This call is intentionally non-blocking: errors are logged but never thrown,
- * so the client always receives a success confirmation for their project request.
+ * Non-blocking: errors are logged in dev only; client always gets success for their request.
  */
 export async function sendProjectNotification(data: ProjectNotificationData): Promise<void> {
   try {
-    const { error } = await supabase.functions.invoke('send-project-notification', {
-      body: {
-        studioId: data.studioId,
-        clientName: data.clientName,
-        clientEmail: data.clientEmail,
-        description: data.description,
-        placement: data.placement || undefined,
-        size: data.size || undefined,
-        budget: data.budget || undefined,
-      },
-    });
-
-    if (error) {
+    const body = {
+      studioId: data.studioId,
+      clientName: sanitizeText(data.clientName, MAX_NAME_LENGTH) ?? '',
+      clientEmail: sanitizeEmail(data.clientEmail),
+      description: sanitizeText(data.description) ?? '',
+      placement: sanitizeText(data.placement, 200),
+      size: sanitizeText(data.size, 100),
+      budget: sanitizeText(data.budget, 100),
+    };
+    const { error } = await supabase.functions.invoke('send-project-notification', { body });
+    if (import.meta.env.DEV && error) {
+      console.warn('[InkFlow] send-project-notification:', error.message);
     }
   } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('[InkFlow] send-project-notification error:', err);
+    }
   }
 }
 
