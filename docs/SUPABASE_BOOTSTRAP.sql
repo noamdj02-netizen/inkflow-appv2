@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS inkflow_studios (
   studio_name TEXT NOT NULL,
   slug TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT inkflow_studios_slug_key UNIQUE (slug)
 );
 
 CREATE TABLE IF NOT EXISTS inkflow_vitrine_data (

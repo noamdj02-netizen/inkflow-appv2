@@ -2,20 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { getBookingsFromSupabase, mapBookingFromDb } from '../lib/supabaseBookings';
 import { useToast } from '../contexts/ToastContext';
-import { DEMO_ACCOUNT_EMAILS, getDemoBookings } from '../data/demoData';
 import type { Booking, BookingStatus } from '../types';
 import { updateBookingStatus as updateBookingStatusInSupabase } from '../lib/supabaseBookings';
-
-function isDemoUser(): boolean {
-  try {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem('inkflow_user') : null;
-    if (!raw) return false;
-    const u = JSON.parse(raw) as { email?: string };
-    return DEMO_ACCOUNT_EMAILS.includes(u?.email?.toLowerCase().trim() ?? '');
-  } catch {
-    return false;
-  }
-}
 
 /** Son de notification (optionnel). Placez un fichier public/notification.mp3 ou désactivez. */
 const NOTIFICATION_SOUND_URL = '/notification.mp3';
@@ -38,11 +26,7 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
 
   const load = useCallback(async () => {
     if (!studioId) {
-      if (isDemoUser()) {
-        setBookings(getDemoBookings());
-      } else {
-        setBookings([]);
-      }
+      setBookings([]);
       setLoading(false);
       initialLoadDone.current = true;
       return;
@@ -51,8 +35,7 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
     try {
       const data = await getBookingsFromSupabase(studioId);
       setBookings(data);
-    } catch (e) {
-      if (import.meta.env.DEV) console.error('useIncomingBookings load:', e);
+    } catch {
       setBookings([]);
     } finally {
       setLoading(false);
@@ -87,8 +70,8 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
               toast.success(`Nouvelle demande de ${newBooking.clientName} !`);
               playNotificationSound();
             }
-          } catch (e) {
-            if (import.meta.env.DEV) console.error('[useIncomingBookings] INSERT map error:', e);
+          } catch {
+            // ignore map error
           }
         }
       )
@@ -99,8 +82,8 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
           try {
             const updated = mapBookingFromDb(payload.new as Record<string, unknown>);
             setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
-          } catch (e) {
-            if (import.meta.env.DEV) console.error('[useIncomingBookings] UPDATE map error:', e);
+          } catch {
+            // ignore map error
           }
         }
       )
@@ -120,9 +103,15 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
   }, [enabled, studioId, toast]);
 
   const updateStatus = useCallback(async (id: string, status: BookingStatus) => {
-    await updateBookingStatusInSupabase(id, status);
-    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
-  }, []);
+    try {
+      await updateBookingStatusInSupabase(id, status);
+      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
+      // Re-fetch from DB pour garantir la persistance (au cas où le realtime serait en retard ou désactivé)
+      if (studioId) load();
+    } catch (e) {
+      throw e;
+    }
+  }, [studioId, load]);
 
   return { bookings, loading, updateStatus, refetch: load };
 }

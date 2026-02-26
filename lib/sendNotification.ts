@@ -30,9 +30,7 @@ export async function sendProjectNotification(data: ProjectNotificationData): Pr
     });
 
     if (error) {
-      if (import.meta.env.DEV) console.error('[sendProjectNotification] Edge function error:', error);
     }
   } catch (err) {
-    if (import.meta.env.DEV) console.error('[sendProjectNotification] Network/unexpected error:', err);
   }
 }

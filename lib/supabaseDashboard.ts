@@ -3,7 +3,7 @@ import type { VitrineData } from '../types/vitrine';
 import type { Appointment, Client, FlashDesign, Notification, ProjectRequest, ProjectRequestStatus } from '../types';
 import type { DashboardWidget } from '../components/dashboard/DashboardWidgets';
 
-function getStudioSlug(studioName: string): string {
+export function getStudioSlug(studioName: string): string {
   return (studioName || 'mon-studio')
     .toLowerCase()
     .normalize('NFD')
@@ -13,18 +13,63 @@ function getStudioSlug(studioName: string): string {
     .replace(/-+/g, '-') || 'mon-studio';
 }
 
-async function ensureStudio(email: string, name: string, studioName: string): Promise<string> {
+/** Suffixe déterministe à partir de l'id pour rendre un slug unique */
+function uniqueSlugSuffix(id: string): string {
+  const hash = Math.abs(
+    Array.from(id).reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0)
+  );
+  return hash.toString(36).slice(0, 8);
+}
+
+/**
+ * Crée ou met à jour le studio de l'utilisateur connecté.
+ * Garantit un slug UNIQUE par studio (évite vitrines et réservations partagées).
+ * Retourne l'id du studio et le slug à utiliser pour la vitrine (lien public).
+ */
+export async function ensureStudio(
+  email: string,
+  name: string,
+  studioName: string
+): Promise<{ studioId: string; slug: string }> {
   const id = getStudioId(email, studioName);
-  const slug = getStudioSlug(studioName);
+  const baseSlug = getStudioSlug(studioName);
+  const now = new Date().toISOString();
+
+  const { data: existing } = await supabase
+    .from('inkflow_studios')
+    .select('id, slug')
+    .eq('slug', baseSlug)
+    .maybeSingle();
+
+  let finalSlug: string;
+  if (!existing) {
+    finalSlug = baseSlug;
+  } else if (existing.id === id) {
+    finalSlug = baseSlug;
+  } else {
+    finalSlug = `${baseSlug}-${uniqueSlugSuffix(id)}`;
+  }
+
   const { error } = await supabase.from('inkflow_studios').upsert(
-    { id, email, name, studio_name: studioName, slug, updated_at: new Date().toISOString() },
+    { id, email, name, studio_name: studioName, slug: finalSlug, updated_at: now },
     { onConflict: 'id' }
   );
   if (error) {
     const msg = error.message || (error as { code?: string }).code || 'Supabase error';
     throw new Error(msg);
   }
-  return id;
+  return { studioId: id, slug: finalSlug };
+}
+
+/** Récupère le slug du studio depuis la base (pour le dashboard quand on a déjà studioId). */
+export async function getStudioSlugByStudioId(studioId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('inkflow_studios')
+    .select('slug')
+    .eq('id', studioId)
+    .maybeSingle();
+  if (error || !data?.slug) return null;
+  return data.slug;
 }
 
 // Vitrine data
@@ -361,4 +406,4 @@ export async function updateProjectRequestStatus(id: string, status: ProjectRequ
   if (error) throw error;
 }
 
-export { ensureStudio, getStudioId };
+export { getStudioId };

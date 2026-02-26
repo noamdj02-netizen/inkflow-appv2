@@ -23,38 +23,14 @@ import {
 } from '../lib/supabaseDashboard';
 import { useOptimisticMutation } from './useOptimisticMutation';
 import { useRealtimeSync } from './useRealtimeSync';
-import {
-  DEMO_ACCOUNT_EMAILS,
-  getCachedDemoAppointments,
-  getDemoClients,
-  getDemoFlash,
-  getDemoNotifications,
-} from '../data/demoData';
 import type { Appointment, Client, FlashDesign, Notification } from '../types';
 
-const MOCK_CLIENTS: Client[] = [
-  { id: '1', name: 'Lucas Martin', email: 'lucas.m@email.com', phone: '+33 6 12 34 56 78', totalSpent: 850, appointmentsCount: 3, lastVisit: '2024-02-10', firstVisit: '2023-08-15', status: 'vip', tags: ['Régulier', 'Japonais'], tattoos: [] },
-  { id: '2', name: 'Sophie Dubois', email: 'sophie.d@email.com', phone: '+33 6 23 45 67 89', totalSpent: 320, appointmentsCount: 2, lastVisit: '2024-02-12', firstVisit: '2024-01-05', status: 'active', tags: ['Flash'], tattoos: [] },
-  { id: '3', name: 'Thomas Bernard', email: 'thomas.b@email.com', phone: '+33 6 34 56 78 90', totalSpent: 180, appointmentsCount: 1, lastVisit: '2024-02-08', firstVisit: '2024-02-08', status: 'active', tags: ['Nouveau'], tattoos: [] }
-];
-
-const MOCK_APPOINTMENTS: Appointment[] = [
-  { id: 'a1', clientId: '1', clientName: 'Lucas Martin', clientEmail: 'lucas.m@email.com', clientPhone: '+33 6 12 34 56 78', date: '2025-02-14', time: '14:00', service: 'Bras Japonais - Carpe Koï', duration: 240, price: 400, deposit: 100, depositPaid: true, status: 'confirmed', tattooType: 'custom', location: 'arm', size: 'large', consentFormSigned: true, createdAt: '2024-02-01T10:00:00Z', updatedAt: '2024-02-01T10:00:00Z' },
-  { id: 'a2', clientId: '2', clientName: 'Sophie Dubois', clientEmail: 'sophie.d@email.com', clientPhone: '+33 6 23 45 67 89', date: '2025-02-15', time: '11:00', service: 'Flash #04 - Lune', duration: 90, price: 150, deposit: 50, depositPaid: true, status: 'confirmed', tattooType: 'flash', flashId: 'f4', location: 'arm', size: 'small', consentFormSigned: false, createdAt: '2024-02-05T14:00:00Z', updatedAt: '2024-02-05T14:00:00Z' },
-  { id: 'a3', clientId: '3', clientName: 'Emma Rousseau', clientEmail: 'emma.r@email.com', clientPhone: '+33 6 45 67 89 01', date: '2025-02-16', time: '09:00', service: 'Consultation Design Custom', duration: 60, price: 0, deposit: 0, depositPaid: false, status: 'pending', tattooType: 'custom', location: 'back', size: 'extra_large', consentFormSigned: false, createdAt: '2024-02-10T16:00:00Z', updatedAt: '2024-02-10T16:00:00Z' }
-];
-
-const MOCK_FLASH: FlashDesign[] = [
-  { id: 'f1', title: 'Dragon Minimaliste', description: 'Dragon stylisé en ligne fine', imageUrl: 'https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400', price: 120, depositAmount: 40, available: true, reserved: false, category: 'Minimaliste', size: 'small', placement: ['Avant-bras', 'Cheville', 'Poignet'], estimatedDuration: 60, tags: ['dragon', 'minimaliste'], createdAt: '2024-01-15T10:00:00Z' },
-  { id: 'f2', title: 'Rose Traditionnelle', description: 'Rose old school colorée', imageUrl: 'https://images.unsplash.com/photo-1590246814883-57c511e76917?w=400', price: 180, depositAmount: 60, available: true, reserved: false, category: 'Traditional', size: 'medium', placement: ['Bras', 'Cuisse', 'Épaule'], estimatedDuration: 120, tags: ['rose', 'traditional'], createdAt: '2024-01-20T10:00:00Z' },
-  { id: 'f3', title: 'Lune et Étoiles', description: 'Composition céleste délicate', imageUrl: 'https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=400', price: 100, depositAmount: 35, available: true, reserved: false, category: 'Minimaliste', size: 'small', placement: ['Poignet', 'Cheville', 'Nuque'], estimatedDuration: 45, tags: ['lune', 'étoiles'], createdAt: '2024-02-01T10:00:00Z' }
-];
-
-const MOCK_NOTIFICATIONS: Notification[] = [
-  { id: 'n1', type: 'booking', title: 'Nouvelle réservation', message: 'Emma Rousseau a réservé une consultation pour le 16 février', read: false, createdAt: '2024-02-10T16:00:00Z', actionUrl: '/dashboard/appointments/a3' },
-  { id: 'n2', type: 'payment', title: 'Acompte reçu', message: 'Acompte de 50€ reçu pour Sophie Dubois', read: false, createdAt: '2024-02-05T14:30:00Z' },
-  { id: 'n3', type: 'reminder', title: 'Rendez-vous demain', message: 'Lucas Martin - Bras Japonais à 14h00', read: true, createdAt: '2024-02-13T09:00:00Z' }
-];
+const EMPTY_ARRAYS = {
+  clients: [] as Client[],
+  appointments: [] as Appointment[],
+  flash: [] as FlashDesign[],
+  notifications: [] as Notification[],
+};
 
 function useSupabaseEnabled(): boolean {
   const url = import.meta.env.VITE_SUPABASE_URL;
@@ -66,6 +42,7 @@ export const useSupabaseDashboard = () => {
   const { user } = useAuth();
   const toast = useToast();
   const [studioId, setStudioId] = useState<string | null>(null);
+  const [studioSlug, setStudioSlug] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [flashDesigns, setFlashDesigns] = useState<FlashDesign[]>([]);
@@ -132,32 +109,22 @@ export const useSupabaseDashboard = () => {
     const init = async () => {
       setLoading(true);
       try {
-        // Compte démo : toujours charger les fausses données (stats, RDV, clients, flash, notifs) pour captures d'écran
-        if (DEMO_ACCOUNT_EMAILS.includes(user.email?.toLowerCase().trim() ?? '')) {
-          setStudioId(null);
-          setAppointments(getCachedDemoAppointments());
-          setClients(getDemoClients());
-          setFlashDesigns(getDemoFlash());
-          setNotifications(getDemoNotifications());
-          initializedRef.current = true;
-          setLoading(false);
-          return;
-        }
         if (useSupabase) {
-          const sid = await ensureStudio(user.email, user.name, user.studioName || 'Mon Studio');
+          const { studioId: sid, slug } = await ensureStudio(user.email, user.name, user.studioName || 'Mon Studio');
           setStudioId(sid);
+          setStudioSlug(slug);
           await loadAllData(sid);
           initializedRef.current = true;
         } else {
           setStudioId(null);
-          setAppointments(MOCK_APPOINTMENTS);
-          setClients(MOCK_CLIENTS);
-          setFlashDesigns(MOCK_FLASH);
-          setNotifications(MOCK_NOTIFICATIONS);
+          setStudioSlug(null);
+          setAppointments(EMPTY_ARRAYS.appointments);
+          setClients(EMPTY_ARRAYS.clients);
+          setFlashDesigns(EMPTY_ARRAYS.flash);
+          setNotifications(EMPTY_ARRAYS.notifications);
         }
       } catch (err) {
         const error = err instanceof Error ? err : new Error(typeof err === 'object' && err !== null && 'message' in err ? String((err as { message: unknown }).message) : String(err));
-        if (import.meta.env.DEV) console.warn('Supabase init:', error.message);
         setConnectionError(error);
         const isNetworkError =
           error.message?.toLowerCase().includes('fetch') ||
@@ -166,10 +133,11 @@ export const useSupabaseDashboard = () => {
         if (isNetworkError) setIsOnline(false);
         if (!initializedRef.current) {
           setStudioId(null);
-          setAppointments(MOCK_APPOINTMENTS);
-          setClients(MOCK_CLIENTS);
-          setFlashDesigns(MOCK_FLASH);
-          setNotifications(MOCK_NOTIFICATIONS);
+          setStudioSlug(null);
+          setAppointments(EMPTY_ARRAYS.appointments);
+          setClients(EMPTY_ARRAYS.clients);
+          setFlashDesigns(EMPTY_ARRAYS.flash);
+          setNotifications(EMPTY_ARRAYS.notifications);
         }
       } finally {
         setLoading(false);
@@ -269,7 +237,7 @@ export const useSupabaseDashboard = () => {
 
   const markNotificationAsRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    if (useSupabase) markNotificationReadInSupabase(id).catch((err) => { if (import.meta.env.DEV) console.error(err); });
+    if (useSupabase) markNotificationReadInSupabase(id).catch(() => {});
   }, [useSupabase]);
 
   const loadClientNotes = useCallback(async (clientId: string): Promise<string> => {
@@ -277,7 +245,6 @@ export const useSupabaseDashboard = () => {
     try {
       return await getClientNotesFromSupabase(clientId);
     } catch (e) {
-      if (import.meta.env.DEV) console.error('loadClientNotes:', e);
       return '';
     }
   }, [useSupabase]);
@@ -287,12 +254,12 @@ export const useSupabaseDashboard = () => {
     try {
       await saveClientNotesToSupabase(clientId, notes);
     } catch (e) {
-      if (import.meta.env.DEV) console.error('saveClientNotes:', e);
     }
   }, [useSupabase]);
 
   return {
     studioId,
+    studioSlug,
     appointments,
     clients,
     flashDesigns,

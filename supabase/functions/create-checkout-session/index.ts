@@ -31,8 +31,8 @@ Deno.serve(async (req: Request) => {
 
     if (!payload.studioId || !payload.amount || !payload.clientEmail) {
       return new Response(
-        JSON.stringify({ error: "studioId, amount, and clientEmail are required" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        JSON.stringify({ error: "studioId, amount et clientEmail sont requis." }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
@@ -93,10 +93,11 @@ Deno.serve(async (req: Request) => {
       { headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error("Edge function error:", err);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      JSON.stringify({ error: message || "Erreur interne. Vérifiez les secrets (STRIPE_SECRET_KEY, SITE_URL) et les logs Supabase." }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 });

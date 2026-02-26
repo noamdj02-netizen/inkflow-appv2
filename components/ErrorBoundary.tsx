@@ -17,14 +17,16 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    if (import.meta.env.DEV) console.error('ErrorBoundary:', error, errorInfo);
+  componentDidCatch(_error: Error, _errorInfo: ErrorInfo) {
   }
 
   render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) return this.props.fallback;
-      const errMsg = this.state.error?.message ?? '';
+    const props = (this as Component<Props, State>).props;
+    const state = (this as Component<Props, State>).state;
+    const setState = (this as Component<Props, State>).setState.bind(this);
+    if (state.hasError) {
+      if (props.fallback) return props.fallback;
+      const errMsg = state.error?.message ?? '';
       const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
       return (
         <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
@@ -44,7 +46,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 type="button"
-                onClick={() => this.setState({ hasError: false, error: null })}
+                onClick={() => setState({ hasError: false, error: null })}
                 className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800"
               >
                 Réessayer
@@ -60,6 +62,6 @@ export class ErrorBoundary extends Component<Props, State> {
         </div>
       );
     }
-    return this.props.children;
+    return props.children;
   }
 }

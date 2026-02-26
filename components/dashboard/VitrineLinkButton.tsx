@@ -51,6 +51,8 @@ function isLightColor(hex: string): boolean {
 interface VitrineLinkButtonProps {
   studioName: string;
   userEmail?: string;
+  /** Slug réel du studio (depuis la BDD) — prioritaire pour l’URL. Évite le partage de vitrine entre tatoueurs. */
+  studioSlug?: string | null;
   variant?: 'default' | 'compact';
   showLabel?: boolean;
 }
@@ -64,6 +66,7 @@ function useSupabaseEnabled(): boolean {
 export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
   studioName,
   userEmail,
+  studioSlug: studioSlugFromDb,
   variant = 'default',
   showLabel = true
 }) => {
@@ -81,7 +84,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
   const safeName = (studioName ?? '').toString().trim() || 'mon-studio';
   const studioId = userEmail && safeName ? getStudioId(userEmail, safeName) : null;
 
-  const slug = getStudioSlug(studioName ?? safeName);
+  const slug = (studioSlugFromDb != null && studioSlugFromDb !== '') ? studioSlugFromDb : getStudioSlug(studioName ?? safeName);
   const vitrineUrl = `${window.location.origin}/studio/${slug}`;
   const textOnPrimary = isLightColor(settings.primaryColor) ? '#171717' : '#ffffff';
 
@@ -102,7 +105,6 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
       saveVitrineLinkSettingsToSupabase(studioId, settings as unknown as Record<string, unknown>).catch((err) => {
-      if (import.meta.env.DEV) console.error(err);
       toast.error('Erreur de sauvegarde des paramètres');
     });
       saveTimeoutRef.current = null;

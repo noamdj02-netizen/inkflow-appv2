@@ -31,3 +31,6 @@ dist-ssr
 .env.production
 
 .vercel
+
+# Cursor (docs)
+docs/.cursor

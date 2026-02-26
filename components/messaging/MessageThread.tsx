@@ -78,7 +78,6 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
       if (error) throw error;
       setNewMessage('');
     } catch (err) {
-      if (import.meta.env.DEV) console.error('Erreur envoi message:', err);
     } finally {
       setSending(false);
     }

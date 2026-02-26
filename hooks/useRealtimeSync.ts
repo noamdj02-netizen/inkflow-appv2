@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { supabase } from '../lib/supabase';
 import { getStudioIdBySlug } from '../lib/supabaseDashboard';
 import type { VitrineData } from '../types/vitrine';
 import { defaultVitrineData } from '../lib/vitrineStorageDefault';
 
-type SetState<T> = React.Dispatch<React.SetStateAction<T[]>>;
+type SetState<T> = Dispatch<SetStateAction<T[]>>;
 
 /**
  * Delta-based Supabase Realtime subscription for list-type data.
@@ -51,7 +51,6 @@ export function useRealtimeSync<T extends { id: string }>(
               return [...prev, newItem];
             });
           } catch (e) {
-            if (import.meta.env.DEV) console.error(`[RealtimeSync] ${table} INSERT map error:`, e);
           }
         }
       )
@@ -63,7 +62,6 @@ export function useRealtimeSync<T extends { id: string }>(
             const updated = mapFromDb(payload.new as Record<string, unknown>);
             setState(prev => prev.map(i => i.id === updated.id ? updated : i));
           } catch (e) {
-            if (import.meta.env.DEV) console.error(`[RealtimeSync] ${table} UPDATE map error:`, e);
           }
         }
       )
@@ -98,7 +96,7 @@ export function useRealtimeSync<T extends { id: string }>(
  */
 export function useRealtimeVitrine(
   studioSlug: string,
-  setStudio: React.Dispatch<React.SetStateAction<VitrineData | null>>
+  setStudio: Dispatch<SetStateAction<VitrineData | null>>
 ): void {
   const resolvedIdRef = useRef<string | null>(null);
 
@@ -136,14 +134,12 @@ export function useRealtimeVitrine(
                   setStudio({ ...defaults, ...vitrinePayload, slug: studioSlug } as VitrineData);
                 }
               } catch (e) {
-                if (import.meta.env.DEV) console.error('[RealtimeVitrine] UPDATE parse error:', e);
               }
             }
           )
           .subscribe();
       })
       .catch((err) => {
-        if (import.meta.env.DEV) console.error('[RealtimeVitrine] Could not resolve slug:', err);
       });
 
     return () => {

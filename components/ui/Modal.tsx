@@ -46,14 +46,15 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain">
+    <div className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden overscroll-contain">
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="flex min-h-full items-start sm:items-center justify-center p-4 sm:p-6 safe-top safe-bottom">
         <div
-          className={`relative bg-[var(--bg-card)] rounded-2xl shadow-2xl w-full max-h-[90dvh] sm:max-h-[85vh] flex flex-col ${sizeClasses[size]} transform transition-all animate-slide-up border border-[var(--border)]`}
+          className={`relative bg-[var(--bg-card)] rounded-2xl shadow-2xl w-full max-h-[90dvh] sm:max-h-[85vh] flex flex-col overflow-hidden ${sizeClasses[size]} transform transition-all animate-slide-up border border-[var(--border)]`}
+          style={{ maxWidth: 'min(100%, calc(100vw - 2rem))' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[var(--border)] flex-shrink-0">
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[var(--border)] flex-shrink-0 min-w-0">
             <h2 className="text-lg sm:text-2xl font-bold text-[var(--text-primary)] pr-2 truncate">{title}</h2>
             {showClose && (
               <button onClick={onClose} className="p-2 hover:bg-[var(--bg-hover)] rounded-xl transition-all flex-shrink-0" aria-label="Fermer">
@@ -61,7 +62,7 @@ export const Modal: React.FC<ModalProps> = ({
               </button>
             )}
           </div>
-          <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">{children}</div>
+          <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex-1 min-h-0 min-w-0">{children}</div>
         </div>
       </div>
     </div>

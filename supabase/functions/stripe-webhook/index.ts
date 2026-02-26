@@ -47,14 +47,18 @@ Deno.serve(async (req: Request) => {
     const body = await req.text();
     const signature = req.headers.get("stripe-signature") || "";
 
-    if (STRIPE_WEBHOOK_SECRET) {
-      const valid = await verifyStripeSignature(body, signature, STRIPE_WEBHOOK_SECRET);
-      if (!valid) {
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        });
-      }
+    if (!STRIPE_WEBHOOK_SECRET) {
+      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+        status: 501,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+    const valid = await verifyStripeSignature(body, signature, STRIPE_WEBHOOK_SECRET);
+    if (!valid) {
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     const event = JSON.parse(body);

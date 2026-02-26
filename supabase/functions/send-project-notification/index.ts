@@ -171,7 +171,6 @@ Deno.serve(async (req: Request) => {
     }
 
     const result = await resendRes.json();
-    console.log("Email sent successfully:", result.id);
 
     return new Response(
       JSON.stringify({ success: true, emailId: result.id }),

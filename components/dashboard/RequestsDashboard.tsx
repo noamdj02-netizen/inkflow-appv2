@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { MessageSquare, CheckCircle, XCircle, Calendar, FileText, Mail, Clock } from 'lucide-react';
+import { MessageSquare, CheckCircle, XCircle, Calendar, FileText, Mail, Clock, CreditCard, Copy, Loader2, AlertTriangle } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
 import { Appointment, ProjectRequest, Booking, BookingStatus } from '../../types';
 import { InvoiceButton } from './InvoiceButton';
+import { Modal } from '../ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { createCheckoutSession } from '../../lib/stripeClient';
 
 interface RequestsDashboardProps {
+  studioId: string | null;
   appointments: Appointment[];
   onUpdateAppointment: (id: string, updates: Partial<Appointment>) => void;
+  onAddAppointment?: (appointment: Appointment) => void;
   projectRequests?: ProjectRequest[];
   onUpdateProjectRequest?: (id: string, status: ProjectRequest['status']) => void;
   bookings?: Booking[];
@@ -33,8 +37,10 @@ const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
 };
 
 export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
+  studioId,
   appointments,
   onUpdateAppointment,
+  onAddAppointment,
   projectRequests = [],
   onUpdateProjectRequest,
   bookings = [],
@@ -44,6 +50,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   const toast = useToast();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'rdv' | 'bookings' | 'projects' | 'history'>('rdv');
+
+  // Modale « Générer lien acompte » Stripe (RDV existant)
+  const [depositModalAppointment, setDepositModalAppointment] = useState<Appointment | null>(null);
+  // Modale acompte depuis une demande vitrine (booking) → crée un RDV puis génère le lien
+  const [depositModalBooking, setDepositModalBooking] = useState<Booking | null>(null);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [depositLoading, setDepositLoading] = useState(false);
+  const [depositUrl, setDepositUrl] = useState<string | null>(null);
+  const [depositError, setDepositError] = useState<string | null>(null);
 
   const pendingAppointments = appointments.filter(a => a.status === 'pending');
   const historyAppointments = appointments.filter(a => !['pending'].includes(a.status));
@@ -94,6 +109,133 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       toast.info('Demande refusée');
     } catch {
       toast.error('Erreur lors de la mise a jour');
+    }
+  };
+
+  const openDepositModal = (apt: Appointment) => {
+    setDepositModalBooking(null);
+    setDepositModalAppointment(apt);
+    setDepositAmount(String(apt.deposit > 0 ? apt.deposit : 50));
+    setDepositUrl(null);
+    setDepositError(null);
+  };
+
+  const openDepositModalForBooking = (bk: Booking) => {
+    setDepositModalAppointment(null);
+    setDepositModalBooking(bk);
+    setDepositAmount('50');
+    setDepositUrl(null);
+    setDepositError(null);
+  };
+
+  const closeDepositModal = () => {
+    setDepositModalAppointment(null);
+    setDepositModalBooking(null);
+    setDepositAmount('');
+    setDepositUrl(null);
+    setDepositError(null);
+  };
+
+  const handleGenerateDepositLink = async () => {
+    if (!studioId) return;
+    const amount = parseFloat(depositAmount.replace(',', '.'));
+    if (Number.isNaN(amount) || amount <= 0) {
+      toast.error('Indiquez un montant valide (ex: 50)');
+      return;
+    }
+
+    // Cas 1 : depuis un RDV existant
+    if (depositModalAppointment) {
+      setDepositLoading(true);
+      setDepositUrl(null);
+      setDepositError(null);
+      try {
+        const result = await createCheckoutSession({
+          studioId,
+          appointmentId: depositModalAppointment.id,
+          amount,
+          clientName: depositModalAppointment.clientName,
+          clientEmail: depositModalAppointment.clientEmail,
+          serviceName: depositModalAppointment.service,
+          type: 'deposit',
+        });
+        if ('url' in result) {
+          setDepositUrl(result.url);
+          toast.success('Lien généré. Envoyez-le au client.');
+        } else {
+          setDepositError(result.error || 'stripe_config');
+        }
+      } catch (e) {
+        setDepositError(e instanceof Error ? e.message : 'Erreur lors de la génération du lien');
+      } finally {
+        setDepositLoading(false);
+        return;
+      }
+    }
+
+    // Cas 2 : depuis une demande vitrine (booking) → créer un RDV puis générer le lien
+    if (depositModalBooking && onAddAppointment) {
+      setDepositLoading(true);
+      setDepositUrl(null);
+      const now = new Date().toISOString();
+      const aptId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      const serviceName = depositModalBooking.description.length > 50
+        ? `${depositModalBooking.description.slice(0, 47)}...`
+        : depositModalBooking.description;
+      const newApt: Appointment = {
+        id: aptId,
+        clientId: '',
+        clientName: depositModalBooking.clientName,
+        clientEmail: depositModalBooking.clientEmail,
+        clientPhone: '',
+        date: depositModalBooking.requestedDate,
+        time: depositModalBooking.requestedTime === 'morning' ? '10:00' : depositModalBooking.requestedTime === 'afternoon' ? '14:00' : depositModalBooking.requestedTime === 'evening' ? '18:00' : '10:00',
+        service: `RDV vitrine - ${serviceName}`,
+        duration: 60,
+        price: 0,
+        deposit: amount,
+        depositPaid: false,
+        status: 'pending',
+        tattooType: 'custom',
+        location: 'arm',
+        size: 'medium',
+        consentFormSigned: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      setDepositError(null);
+      try {
+        onAddAppointment(newApt);
+        const result = await createCheckoutSession({
+          studioId,
+          appointmentId: aptId,
+          amount,
+          clientName: depositModalBooking.clientName,
+          clientEmail: depositModalBooking.clientEmail,
+          serviceName: newApt.service,
+          type: 'deposit',
+        });
+        if ('url' in result) {
+          setDepositUrl(result.url);
+          toast.success('RDV créé et lien généré. Envoyez-le au client.');
+        } else {
+          setDepositError(result.error || 'stripe_config');
+        }
+      } catch (e) {
+        setDepositError(e instanceof Error ? e.message : 'Erreur lors de la création du RDV ou du lien');
+      } finally {
+        setDepositLoading(false);
+      }
+    }
+  };
+
+  const handleCopyDepositLink = async () => {
+    if (!depositUrl) return;
+    try {
+      await navigator.clipboard.writeText(depositUrl);
+      toast.success('Lien copié dans le presse-papier');
+    } catch {
+      toast.error('Impossible de copier le lien');
     }
   };
 
@@ -165,7 +307,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     </div>
                     <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">En attente</span>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                    {studioId && (
+                      <button
+                        onClick={() => openDepositModal(apt)}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 active:scale-[0.98] transition-all text-sm"
+                      >
+                        <CreditCard className="w-4 h-4" /> Générer un lien d&apos;acompte
+                      </button>
+                    )}
                     <button onClick={() => handleConfirm(apt.id)}
                       className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-100 text-emerald-700 font-semibold hover:bg-emerald-200 active:scale-[0.98] transition-all text-sm">
                       <CheckCircle className="w-4 h-4" /> Confirmer
@@ -220,7 +370,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       </span>
                     </div>
                     {bk.status === 'pending' && (
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                        {studioId && onAddAppointment && (
+                          <button
+                            onClick={() => openDepositModalForBooking(bk)}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 active:scale-[0.98] transition-all text-sm"
+                          >
+                            <CreditCard className="w-4 h-4" /> Demander un acompte
+                          </button>
+                        )}
                         <button
                           onClick={() => handleConfirmBooking(bk.id)}
                           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-100 text-emerald-700 font-semibold hover:bg-emerald-200 active:scale-[0.98] transition-all text-sm"
@@ -321,7 +479,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'cancelled' ? 'Annulé' : STATUS_LABELS[apt.status] || apt.status}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                    {apt.status === 'confirmed' && !apt.depositPaid && studioId && (
+                      <button
+                        onClick={() => openDepositModal(apt)}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 active:scale-[0.98] transition-all text-sm"
+                      >
+                        <CreditCard className="w-4 h-4" /> Générer un lien d&apos;acompte
+                      </button>
+                    )}
                     {apt.status === 'confirmed' && user && (
                       <InvoiceButton appointment={apt} artist={user} />
                     )}
@@ -332,6 +498,127 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           )
         )}
       </div>
+
+      {/* Modale : montant acompte → génération lien Stripe → copier */}
+      <Modal
+        isOpen={!!depositModalAppointment || !!depositModalBooking}
+        onClose={closeDepositModal}
+        title={depositModalBooking ? "Demander un acompte (depuis la demande)" : "Générer un lien d'acompte"}
+        size="sm"
+      >
+        {(depositModalAppointment || depositModalBooking) && (
+          <div className="space-y-5">
+            {!depositUrl ? (
+              <>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  {depositModalBooking
+                    ? "Un RDV sera créé avec les infos de la demande, puis un lien de paiement Stripe sera généré. Envoyez-le au client pour encaisser l'acompte."
+                    : "Montant de l'acompte à demander au client. Le lien de paiement Stripe sera généré."}
+                </p>
+                <div>
+                  <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2">
+                    Montant (€)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={depositAmount}
+                    onChange={(e) => { setDepositAmount(e.target.value); setDepositError(null); }}
+                    placeholder="50"
+                    className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+                {depositError && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-800 p-4 min-w-0">
+                    <div className="flex gap-2 items-start min-w-0">
+                      <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                      <div className="text-sm min-w-0 break-words">
+                        {depositError === 'stripe_config' ? (
+                          <>
+                            <p className="font-semibold text-red-800 dark:text-red-200 mb-1.5">
+                              Lien de paiement indisponible
+                            </p>
+                            <p className="text-red-700 dark:text-red-300 mb-1.5 text-xs">
+                              Vérifiez dans Supabase :
+                            </p>
+                            <ul className="list-disc list-inside text-red-700 dark:text-red-300 space-y-0.5 text-xs">
+                              <li className="break-words">Edge Function <code className="bg-red-100 dark:bg-red-900/50 px-1 rounded text-[11px]">create-checkout-session</code> déployée</li>
+                              <li className="break-words">Secret <code className="bg-red-100 dark:bg-red-900/50 px-1 rounded text-[11px]">STRIPE_SECRET_KEY</code> (Dashboard → Edge Functions → Secrets)</li>
+                              <li className="break-words">Variable <code className="bg-red-100 dark:bg-red-900/50 px-1 rounded text-[11px]">SITE_URL</code> (ex. https://votredomaine.com)</li>
+                            </ul>
+                          </>
+                        ) : (
+                          <p className="text-red-700 dark:text-red-300 break-words">{depositError}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-3 justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={closeDepositModal}
+                    className="px-4 py-2.5 rounded-xl border-2 border-[var(--border)] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGenerateDepositLink}
+                    disabled={depositLoading}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {depositLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" /> Génération du lien…
+                      </>
+                    ) : depositModalBooking ? (
+                      <>
+                        <CreditCard className="w-4 h-4" /> Créer le RDV et générer le lien
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-4 h-4" /> Générer le lien de paiement
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Envoyez ce lien au client. Dès qu&apos;il paie avec sa carte ou Apple Pay, la demande passera en &quot;Acompte payé&quot; et apparaîtra dans ton agenda.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={depositUrl}
+                    className="flex-1 px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-hover)] text-[var(--text-secondary)] text-sm truncate"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCopyDepositLink}
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shrink-0"
+                  >
+                    <Copy className="w-4 h-4" /> Copier le lien
+                  </button>
+                </div>
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={closeDepositModal}
+                    className="px-4 py-2.5 rounded-xl bg-[var(--bg-hover)] font-semibold text-[var(--text-primary)] hover:opacity-90"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

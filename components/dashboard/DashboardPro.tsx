@@ -67,7 +67,7 @@ export const DashboardPro: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
   const toast = useToast();
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
-  const { studioId, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, retry } = useSupabaseSync();
+  const { studioId, studioSlug, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, retry } = useSupabaseSync();
   const { projectRequests, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
   const { pendingRequestsCount } = useNotificationCounts(studioId);
   const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false);
@@ -216,12 +216,12 @@ export const DashboardPro: React.FC = () => {
     }
   }, [studioId, user?.email]);
 
-  // Load vitrine data so Portfolio tab and Paramètres > Vitrine share the same portfolio
+  // Load vitrine data so Portfolio tab and Paramètres > Vitrine share the same portfolio (slug depuis la BDD pour isoler par tatoueur)
   useEffect(() => {
     if (!user?.email || !user?.studioName || activeTab !== 'portfolio') return;
-    const slug = getVitrineSlug(user.studioName);
+    const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user.studioName);
     getVitrineDataAsync(slug, user.email, user.studioName).then(setVitrineData);
-  }, [user?.email, user?.studioName, activeTab]);
+  }, [user?.email, user?.studioName, studioSlug, activeTab]);
 
   useEffect(() => {
     if (!studioId || !useSupabase) return;
@@ -353,10 +353,8 @@ export const DashboardPro: React.FC = () => {
                   }).eq('id', studioId);
                 }
               } else {
-                if (import.meta.env.DEV) console.warn('[Avatar] Storage upload failed, using local:', uploadError.message);
               }
             } catch (err) {
-              if (import.meta.env.DEV) console.warn('[Avatar] Supabase upload skipped:', err);
             }
           }
 
@@ -368,7 +366,6 @@ export const DashboardPro: React.FC = () => {
       };
       reader.readAsDataURL(file);
     } catch (err) {
-      if (import.meta.env.DEV) console.error('[Avatar] Upload error:', err);
       setAvatarUploading(false);
     }
 
@@ -740,6 +737,7 @@ export const DashboardPro: React.FC = () => {
               now={now}
               firstName={firstName}
               user={user}
+              studioSlug={studioSlug}
               appointments={appointments}
               todayAppointments={todayAppointments}
               today={today}
@@ -773,8 +771,10 @@ export const DashboardPro: React.FC = () => {
 
           {!loading && activeTab === 'requests' && (
             <RequestsDashboard
+              studioId={studioId}
               appointments={appointments}
               onUpdateAppointment={updateAppointment}
+              onAddAppointment={addAppointment}
               projectRequests={projectRequests}
               onUpdateProjectRequest={updateProjectRequestStatus}
               bookings={bookings}
@@ -826,9 +826,8 @@ export const DashboardPro: React.FC = () => {
                 const v: VitrinePortfolioItem = { url: item.url, category: item.category, artist: item.artist, likes: item.likes, description: item.description };
                 const newData: VitrineData = { ...vitrineData, portfolio: [...(vitrineData.portfolio ?? []), v] };
                 setVitrineData(newData);
-                const slug = getVitrineSlug(user.studioName);
+                const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user.studioName);
                 saveVitrineDataAsync(slug, newData, user.email, user.studioName).catch((err) => {
-                  if (import.meta.env.DEV) console.warn('Portfolio save failed:', err);
                   toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
                 });
               }}
@@ -839,9 +838,8 @@ export const DashboardPro: React.FC = () => {
                 const newPortfolio = (vitrineData.portfolio ?? []).filter((_, i) => i !== idx);
                 const newData: VitrineData = { ...vitrineData, portfolio: newPortfolio };
                 setVitrineData(newData);
-                const slug = getVitrineSlug(user.studioName);
+                const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user.studioName);
                 saveVitrineDataAsync(slug, newData, user.email, user.studioName).catch((err) => {
-                  if (import.meta.env.DEV) console.warn('Portfolio save failed:', err);
                   toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
                 });
               }}
@@ -878,7 +876,7 @@ export const DashboardPro: React.FC = () => {
               {settingsTab === 'general' && (
                 <div className="space-y-6 max-w-2xl w-full overflow-hidden">
                   {user?.studioName && (
-                    <VitrineLinkButton studioName={user.studioName} userEmail={user.email} />
+                    <VitrineLinkButton studioName={user.studioName} userEmail={user.email} studioSlug={studioSlug} />
                   )}
                   <div className="bg-white rounded-2xl p-6 sm:p-8 border border-neutral-200">
                   <h3 className="font-bold text-lg mb-6">Paramètres du studio</h3>
@@ -982,7 +980,6 @@ export const DashboardPro: React.FC = () => {
                           toast.success('Paramètres du studio enregistrés');
                           setTimeout(() => setGeneralSaved(false), 3000);
                         } catch (err) {
-                          if (import.meta.env.DEV) console.error('Erreur sauvegarde parametres:', err);
                           toast.error('Erreur lors de la sauvegarde');
                         } finally {
                           setGeneralSaving(false);
@@ -1034,7 +1031,7 @@ export const DashboardPro: React.FC = () => {
                 />
               )}
               {settingsTab === 'calendar' && <CalendarSettings studioId={studioId || ''} appointments={appointments} onToast={(msg, type) => type === 'success' ? toast.success(msg) : toast.error(msg)} />}
-              {settingsTab === 'vitrine' && user?.studioName && <VitrineSettings studioName={user.studioName} userEmail={user.email} />}
+              {settingsTab === 'vitrine' && user?.studioName && <VitrineSettings studioName={user.studioName} userEmail={user.email} studioSlug={studioSlug} />}
             </div>
           )}
           </div>
@@ -1046,7 +1043,7 @@ export const DashboardPro: React.FC = () => {
           isOpen={showWidgetModal}
           onClose={() => setShowWidgetModal(false)}
           onAdd={(w) => { setCustomWidgets(prev => [...prev, w]); toast.success('Widget ajouté'); }}
-          studioSlug={user?.studioName ? getVitrineSlug(user.studioName) : undefined}
+          studioSlug={studioSlug ?? (user?.studioName ? getVitrineSlug(user.studioName) : undefined)}
         />
       )}
       {showBookingModal && (
@@ -1137,7 +1134,7 @@ export const DashboardPro: React.FC = () => {
                   <button
                     onClick={() => {
                       setShowFabMenu(false);
-                      const slug = getVitrineSlug(user?.studioName ?? '');
+                      const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user?.studioName ?? '');
                       window.open(`${window.location.origin}/studio/${slug}`, '_blank');
                     }}
                     className="flex items-center gap-3 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[52px] text-left transition-colors touch-target"
@@ -1150,7 +1147,7 @@ export const DashboardPro: React.FC = () => {
                   <button
                     onClick={async () => {
                       setShowFabMenu(false);
-                      const slug = getVitrineSlug(user?.studioName ?? '');
+                      const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user?.studioName ?? '');
                       const url = `${window.location.origin}/studio/${slug}`;
                       try {
                         await navigator.clipboard.writeText(url);

@@ -375,7 +375,6 @@ export function useDashboardWidgets(studioId: string | null, useSupabase: boolea
       const nextVal = typeof next === 'function' ? next(prev) : next;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(nextVal));
       if (studioId && useSupabase) saveWidgetsToSupabase(studioId, nextVal).catch((err) => {
-        if (import.meta.env.DEV) console.error(err);
         options?.onError?.(err);
       });
       return nextVal;

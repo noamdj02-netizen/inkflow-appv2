@@ -124,7 +124,6 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       }
       setBookingStudioId(id ?? null);
     } catch (err) {
-      if (import.meta.env.DEV) console.error('Erreur chargement studio:', err);
       setBookingError('Impossible de charger le formulaire. Réessayez.');
     }
   };
@@ -161,7 +160,6 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       setContactSubject('');
       setContactMessage('');
     } catch (err) {
-      if (import.meta.env.DEV) console.error('Erreur envoi contact:', err);
       toast.error('Une erreur est survenue. Réessayez.');
     } finally {
       setContactLoading(false);
@@ -768,12 +766,13 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
               </h3>
               <div className="space-y-3">
                 {Object.entries(studioDisplay.openingHours).map(([day, hours]) => {
+                  const h = hours as { closed?: boolean; open?: string; close?: string };
                   const isToday = getCurrentDay() === day;
                   return (
                     <div key={day} className={`flex justify-between items-center py-2 rounded-lg transition-colors ${isToday ? 'bg-neutral-900 text-white px-4 font-bold' : 'text-neutral-700'}`}>
                       <span className="capitalize text-sm">{dayLabels[day] || day}</span>
                       <span className={`text-sm ${isToday ? 'font-bold' : 'font-semibold'}`}>
-                        {hours.closed ? 'Fermé' : `${hours.open} - ${hours.close}`}
+                        {h.closed ? 'Fermé' : `${h.open ?? ''} - ${h.close ?? ''}`}
                       </span>
                     </div>
                   );

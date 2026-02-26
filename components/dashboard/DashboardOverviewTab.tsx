@@ -14,6 +14,8 @@ export interface DashboardOverviewTabProps {
   now: Date;
   firstName: string;
   user: { studioName?: string } | null;
+  /** Slug réel du studio (BDD) pour le lien vitrine — prioritaire sur getVitrineSlug(studioName). */
+  studioSlug?: string | null;
   appointments: Appointment[];
   todayAppointments: Appointment[];
   today: string;
@@ -68,7 +70,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   setSelectedFlash,
   setShowWidgetModal,
   pendingRequestsCount,
+  studioSlug,
 }) => {
+  const vitrineSlug = (studioSlug != null && studioSlug !== '') ? studioSlug : (user?.studioName ? getVitrineSlug(user.studioName) : '');
   return (
     <div className="prodify-stagger">
       {/* ===== PRODIFY HEADER — date + salutation + sous-titre + pills ===== */}
@@ -92,7 +96,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           </button>
           {user?.studioName && (
             <a
-              href={`${window.location.origin}/studio/${getVitrineSlug(user.studioName)}`}
+              href={`${window.location.origin}/studio/${vitrineSlug}`}
               target="_blank"
               rel="noopener noreferrer"
               className="pill-action"
@@ -302,7 +306,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     widget={w}
                     onRemove={() => setCustomWidgets(prev => prev.filter(x => x.id !== w.id))}
                     onShortcutClick={(tabId) => tabId !== 'vitrine' && setActiveTab(tabId as TabId)}
-                    vitrineUrl={user?.studioName ? `${typeof window !== 'undefined' ? window.location.origin : ''}/studio/${getVitrineSlug(user.studioName)}` : undefined}
+                    vitrineUrl={vitrineSlug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/studio/${vitrineSlug}` : undefined}
                   />
                 )
               }))}

@@ -19,9 +19,9 @@ export const InvoiceButton: React.FC<InvoiceButtonProps> = ({ appointment, artis
       const pageWidth = doc.internal.pageSize.getWidth();
       let yPos = 20;
 
-      const primaryColor = [23, 23, 23];
-      const textColor = [23, 23, 23];
-      const lightText = [115, 115, 115];
+      const primaryColor: [number, number, number] = [23, 23, 23];
+      const textColor: [number, number, number] = [23, 23, 23];
+      const lightText: [number, number, number] = [115, 115, 115];
 
       doc.setFillColor(...primaryColor);
       doc.rect(0, 0, pageWidth, 40, 'F');
@@ -116,7 +116,6 @@ export const InvoiceButton: React.FC<InvoiceButtonProps> = ({ appointment, artis
       window.open(pdfUrl, '_blank');
       setTimeout(() => URL.revokeObjectURL(pdfUrl), 100);
     } catch (error) {
-      if (import.meta.env.DEV) console.error('Erreur génération PDF:', error);
       alert('Erreur lors de la génération du PDF.');
     } finally {
       setIsGenerating(false);

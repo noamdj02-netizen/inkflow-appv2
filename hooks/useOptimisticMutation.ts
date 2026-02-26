@@ -1,7 +1,7 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import type { useToast } from '../contexts/ToastContext';
 
-type SetState<T> = React.Dispatch<React.SetStateAction<T[]>>;
+type SetState<T> = Dispatch<SetStateAction<T[]>>;
 type ToastHandle = ReturnType<typeof useToast>;
 
 /**
@@ -27,7 +27,6 @@ export function useOptimisticMutation<T extends { id: string }>(
 
       serverFn(item)
         .catch((err) => {
-          if (import.meta.env.DEV) console.error('[OptimisticMutation] add failed, rolling back:', err);
           // Rollback: remove the optimistically added item
           setState(prev => prev.filter(i => i.id !== item.id));
           toast.error('Erreur de sauvegarde — modification annulee');
@@ -66,7 +65,6 @@ export function useOptimisticMutation<T extends { id: string }>(
 
       serverFn(capturedUpdated)
         .catch((err) => {
-          if (import.meta.env.DEV) console.error('[OptimisticMutation] update failed, rolling back:', err);
           // Rollback: restore the snapshot
           setState(prev => prev.map(item => item.id === id ? capturedSnapshot : item));
           toast.error('Erreur de sauvegarde — modification annulee');
@@ -92,7 +90,6 @@ export function useOptimisticMutation<T extends { id: string }>(
 
       serverFn(id)
         .catch((err) => {
-          if (import.meta.env.DEV) console.error('[OptimisticMutation] remove failed, rolling back:', err);
           // Rollback: re-add the removed item
           setState(prev => [...prev, capturedSnapshot]);
           toast.error('Erreur de suppression — element restaure');

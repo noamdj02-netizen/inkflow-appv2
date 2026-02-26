@@ -115,7 +115,6 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
     if (typeof newId === 'string' && addForm.notes.trim()) {
       if (useSupabase && saveClientNotes) {
         saveClientNotes(newId, addForm.notes.trim()).catch((err) => {
-        if (import.meta.env.DEV) console.error(err);
         toast.error('Erreur lors de la sauvegarde des notes');
       });
       } else {
@@ -351,23 +350,29 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
 
       {selectedClient && (
         <Modal isOpen={!!selectedClient} onClose={closeModalAndSave} title={selectedClient.name} size="lg">
-          <div className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
+          <div className="space-y-6 min-w-0">
+            <div className="flex flex-wrap gap-2">
+              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border flex-shrink-0 ${getStatusColor(selectedClient.status)}`}>
+                {getStatusIcon(selectedClient.status)}
+                {selectedClient.status === 'vip' ? 'VIP' : selectedClient.status === 'active' ? 'Actif' : selectedClient.status === 'inactive' ? 'Inactif' : selectedClient.status}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0">
+              <div className="min-w-0">
                 <h3 className="text-sm font-semibold text-neutral-600 mb-3">Informations de contact</h3>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3"><Mail className="w-4 h-4 text-neutral-400" /><span className="text-sm">{selectedClient.email}</span></div>
-                  <div className="flex items-center gap-3"><Phone className="w-4 h-4 text-neutral-400" /><span className="text-sm">{selectedClient.phone}</span></div>
-                  {selectedClient.address && <div className="flex items-center gap-3"><Tag className="w-4 h-4 text-neutral-400" /><span className="text-sm">{selectedClient.address}</span></div>}
+                  <div className="flex items-center gap-3 min-w-0"><Mail className="w-4 h-4 text-neutral-400 flex-shrink-0" /><span className="text-sm break-words">{selectedClient.email}</span></div>
+                  <div className="flex items-center gap-3 min-w-0"><Phone className="w-4 h-4 text-neutral-400 flex-shrink-0" /><span className="text-sm break-words">{selectedClient.phone}</span></div>
+                  {selectedClient.address && <div className="flex items-center gap-3 min-w-0"><Tag className="w-4 h-4 text-neutral-400 flex-shrink-0" /><span className="text-sm break-words">{selectedClient.address}</span></div>}
                 </div>
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="text-sm font-semibold text-neutral-600 mb-3">Statistiques</h3>
                 <div className="space-y-3">
-                  <div className="flex justify-between"><span className="text-sm text-neutral-600">Total dépensé</span><span className="text-sm font-bold text-green-600">{selectedClient.totalSpent}€</span></div>
-                  <div className="flex justify-between"><span className="text-sm text-neutral-600">Rendez-vous</span><span className="text-sm font-bold">{selectedClient.appointmentsCount}</span></div>
-                  <div className="flex justify-between"><span className="text-sm text-neutral-600">Première visite</span><span className="text-sm font-semibold">{new Date(selectedClient.firstVisit).toLocaleDateString('fr-FR')}</span></div>
-                  {selectedClient.lastVisit && <div className="flex justify-between"><span className="text-sm text-neutral-600">Dernière visite</span><span className="text-sm font-semibold">{new Date(selectedClient.lastVisit).toLocaleDateString('fr-FR')}</span></div>}
+                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Total dépensé</span><span className="text-sm font-bold text-green-600">{selectedClient.totalSpent}€</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Rendez-vous</span><span className="text-sm font-bold">{selectedClient.appointmentsCount}</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Première visite</span><span className="text-sm font-semibold">{new Date(selectedClient.firstVisit).toLocaleDateString('fr-FR')}</span></div>
+                  {selectedClient.lastVisit && <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Dernière visite</span><span className="text-sm font-semibold">{new Date(selectedClient.lastVisit).toLocaleDateString('fr-FR')}</span></div>}
                 </div>
               </div>
             </div>

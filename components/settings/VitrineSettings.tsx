@@ -26,11 +26,13 @@ const DAY_LABELS: Record<string, string> = {
 interface VitrineSettingsProps {
   studioName: string;
   userEmail?: string;
+  /** Slug réel du studio (depuis la BDD) — prioritaire pour isoler les données vitrine par tatoueur. */
+  studioSlug?: string | null;
 }
 
-export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, userEmail }) => {
+export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, userEmail, studioSlug: studioSlugFromDb }) => {
   const toast = useToast();
-  const slug = getVitrineSlug(studioName);
+  const slug = (studioSlugFromDb != null && studioSlugFromDb !== '') ? studioSlugFromDb : getVitrineSlug(studioName);
   const [data, setData] = useState<VitrineData>(() => getVitrineData(slug));
   const [activeSection, setActiveSection] = useState<string>('identity');
   const [manualSaving, setManualSaving] = useState(false);
@@ -63,7 +65,6 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
       try {
         await saveVitrineDataAsync(slug, d, userEmail, studioName);
       } catch (err) {
-        if (import.meta.env.DEV) console.warn('[VitrineSettings] auto-save failed (silent):', err);
       }
     }
   };
@@ -91,7 +92,6 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
         toast.success('Sauvegardé !');
       }
     } catch (err) {
-      if (import.meta.env.DEV) console.error('[VitrineSettings] save failed:', err);
       toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
     } finally {
       setManualSaving(false);
@@ -114,7 +114,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
 
   return (
     <div className="space-y-6 max-w-4xl w-full overflow-hidden">
-      <VitrineLinkButton studioName={studioName} userEmail={userEmail} />
+      <VitrineLinkButton studioName={studioName} userEmail={userEmail} studioSlug={studioSlugFromDb} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-lg sm:text-xl font-bold">Personnaliser votre page vitrine</h2>
         <button onClick={handleManualSave} disabled={saving || manualSaving} className="flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed">

@@ -10,19 +10,26 @@ interface CreateCheckoutParams {
   type: 'deposit' | 'full_payment';
 }
 
-export async function createCheckoutSession(params: CreateCheckoutParams): Promise<string | null> {
+export type CreateCheckoutResult = { url: string } | { error: string };
+
+export async function createCheckoutSession(params: CreateCheckoutParams): Promise<CreateCheckoutResult> {
   try {
     const { data, error } = await supabase.functions.invoke('create-checkout-session', {
       body: params,
     });
     if (error) {
-      if (import.meta.env.DEV) console.error('[stripeClient] Checkout error:', error);
-      return null;
+      let msg = error.message || (typeof error === 'string' ? error : 'Erreur inconnue');
+      if (msg.includes('non-2xx status code')) {
+        msg += ' Projet Supabase peut être en pause ou la fonction non déployée : restaure le projet puis exécute « npx supabase functions deploy create-checkout-session ».';
+      }
+      return { error: msg };
     }
-    return data?.url || null;
+    if (data?.url) return { url: data.url };
+    const backendError = data?.error || data?.details;
+    return { error: backendError || 'La fonction n\'a pas renvoyé de lien. Vérifiez les secrets (STRIPE_SECRET_KEY, SITE_URL) et redéployez.' };
   } catch (err) {
-    if (import.meta.env.DEV) console.error('[stripeClient] Unexpected error:', err);
-    return null;
+    const message = err instanceof Error ? err.message : String(err);
+    return { error: message };
   }
 }
 
@@ -39,12 +46,10 @@ export async function createSubscription(params: CreateSubscriptionParams): Prom
       body: params,
     });
     if (error) {
-      if (import.meta.env.DEV) console.error('[stripeClient] Subscription error:', error);
       return null;
     }
     return data?.url || null;
   } catch (err) {
-    if (import.meta.env.DEV) console.error('[stripeClient] Unexpected error:', err);
     return null;
   }
 }

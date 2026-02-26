@@ -3,19 +3,7 @@ import { useToast } from '../contexts/ToastContext';
 import { getProjectRequestsFromSupabase, updateProjectRequestStatus as updateStatusInSupabase, mapProjectRequestFromDb } from '../lib/supabaseDashboard';
 import { useOptimisticMutation } from './useOptimisticMutation';
 import { useRealtimeSync } from './useRealtimeSync';
-import { DEMO_ACCOUNT_EMAILS, getDemoProjectRequests } from '../data/demoData';
 import type { ProjectRequest, ProjectRequestStatus } from '../types';
-
-function isDemoUser(): boolean {
-  try {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem('inkflow_user') : null;
-    if (!raw) return false;
-    const u = JSON.parse(raw) as { email?: string };
-    return DEMO_ACCOUNT_EMAILS.includes(u?.email?.toLowerCase().trim() ?? '');
-  } catch {
-    return false;
-  }
-}
 
 export function useProjectRequests(studioId: string | null) {
   const toast = useToast();
@@ -38,11 +26,7 @@ export function useProjectRequests(studioId: string | null) {
 
   const load = useCallback(async () => {
     if (!studioId) {
-      if (isDemoUser()) {
-        setProjectRequests(getDemoProjectRequests());
-      } else {
-        setProjectRequests([]);
-      }
+      setProjectRequests([]);
       setLoading(false);
       return;
     }
@@ -50,8 +34,7 @@ export function useProjectRequests(studioId: string | null) {
     try {
       const data = await getProjectRequestsFromSupabase(studioId);
       setProjectRequests(data);
-    } catch (e) {
-      if (import.meta.env.DEV) console.error('useProjectRequests load:', e);
+    } catch {
       setProjectRequests([]);
     } finally {
       setLoading(false);
@@ -66,9 +49,12 @@ export function useProjectRequests(studioId: string | null) {
     mutation.update(
       id,
       (req) => ({ ...req, status }),
-      () => updateStatusInSupabase(id, status)
+      async () => {
+        await updateStatusInSupabase(id, status);
+        if (studioId) load();
+      }
     );
-  }, [mutation]);
+  }, [mutation, studioId, load]);
 
-  return { projectRequests, loading, updateStatus };
+  return { projectRequests, loading, updateStatus, refetch: load };
 }

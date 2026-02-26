@@ -156,7 +156,7 @@ export function getDemoProjectRequests(): ProjectRequest[] {
   return [
     { id: 'demo-pr1', studioId: 'demo', clientName: 'Thomas Rousseau', clientEmail: 'thomas@exemple.fr', description: 'Je souhaite un flash dragon sur l\'avant-bras, style japonais. Budget ~200€.', placement: 'Avant-bras', size: 'medium', budget: '200€', status: 'PENDING', referenceImages: [], createdAt: fmt(new Date(base.getTime() - 86400000)) },
     { id: 'demo-pr2', studioId: 'demo', clientName: 'Julie Moreau', clientEmail: 'julie@exemple.fr', description: 'Demande de devis pour un petit symbole au poignet (infini ou étoile).', placement: 'Poignet', size: 'small', budget: '80-120€', status: 'PENDING', referenceImages: [], createdAt: fmt(new Date(base.getTime() - 172800000)) },
-    { id: 'demo-pr3', studioId: 'demo', clientName: 'Maxime Petit', clientEmail: 'maxime@exemple.fr', description: 'Consultation pour un projet dos complet, thème forêt et animaux. Je peux envoyer des refs.', status: 'ACCEPTED', referenceImages: [], createdAt: fmt(new Date(base.getTime() - 259200000)) },
+    { id: 'demo-pr3', studioId: 'demo', clientName: 'Maxime Petit', clientEmail: 'maxime@exemple.fr', description: 'Consultation pour un projet dos complet, thème forêt et animaux. Je peux envoyer des refs.', status: 'APPROVED', referenceImages: [], createdAt: fmt(new Date(base.getTime() - 259200000)) },
   ];
 }
 

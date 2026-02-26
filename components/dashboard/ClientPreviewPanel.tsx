@@ -95,7 +95,6 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
       if (error) throw error;
       setNewMessage('');
     } catch (err) {
-      if (import.meta.env.DEV) console.error('Erreur envoi message:', err);
     } finally {
       setSending(false);
     }

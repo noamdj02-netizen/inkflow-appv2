@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Upload, X, Filter, Grid, Image as ImageIcon, ChevronDown, Eye } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, X, Filter, Image as ImageIcon } from 'lucide-react';
 
 interface PortfolioItem {
   id: string;
@@ -45,6 +45,18 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
     if (filterArtist !== 'all' && item.artist !== filterArtist) return false;
     return true;
   });
+
+  // Préchargement immédiat des images pour affichage sans délai (0 ms perçu)
+  useEffect(() => {
+    filtered.forEach((item, i) => {
+      const img = new Image();
+      img.src = item.url;
+      if (item.beforeUrl) {
+        const before = new Image();
+        before.src = item.beforeUrl;
+      }
+    });
+  }, [filtered]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -121,10 +133,17 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filtered.map(item => (
+          {filtered.map((item, index) => (
             <div key={item.id} className="group relative aspect-square rounded-2xl overflow-hidden bg-neutral-100 cursor-pointer"
               onClick={() => setSelectedItem(item)}>
-              <img src={item.url} alt={item.description || 'Portfolio'} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+              <img
+                src={item.url}
+                alt={item.description || 'Portfolio'}
+                loading="eager"
+                decoding="async"
+                fetchPriority={index < 8 ? 'high' : undefined}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
                   <div className="text-xs font-semibold mb-1">{item.category}</div>

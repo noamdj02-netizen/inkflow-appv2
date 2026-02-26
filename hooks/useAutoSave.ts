@@ -56,7 +56,6 @@ export function useAutoSave<T>(
       savedTimerRef.current = setTimeout(() => setSaved(false), 1500);
     } catch (err) {
       // Silent: do not set error (no UI/toast). Caller should use a try/catch inside saveFn for silent auto-save.
-      if (import.meta.env.DEV) console.warn('[useAutoSave] save failed (silent):', err);
     } finally {
       setSaving(false);
     }
@@ -92,7 +91,7 @@ export function useAutoSave<T>(
       if (timerRef.current) clearTimeout(timerRef.current);
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       if (dirtyRef.current) {
-        saveFnRef.current(dataRef.current).catch((err) => { if (import.meta.env.DEV) console.error(err); });
+        saveFnRef.current(dataRef.current).catch(() => {});
       }
     };
   }, []);
