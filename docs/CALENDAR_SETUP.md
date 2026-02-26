@@ -56,11 +56,13 @@ GOOGLE_REDIRECT_URI=http://localhost:5173/dashboard
 ## 3. Déploiement des Edge Functions
 
 ```bash
-# Depuis la racine du projet
-supabase functions deploy google-calendar-auth
-supabase functions deploy google-calendar-sync
-supabase functions deploy google-calendar-webhook
+# Depuis la racine du projet (--no-verify-jwt évite le blocage CORS sur la préflight OPTIONS)
+npx supabase functions deploy google-calendar-auth --no-verify-jwt
+npx supabase functions deploy google-calendar-sync --no-verify-jwt
+npx supabase functions deploy google-calendar-webhook --no-verify-jwt
 ```
+
+Si une erreur CORS apparaît en console (« blocked by CORS policy » sur `google-calendar-sync`), la préflight OPTIONS est rejetée par la passerelle : redéployer avec `--no-verify-jwt` comme ci-dessus.
 
 ---
 

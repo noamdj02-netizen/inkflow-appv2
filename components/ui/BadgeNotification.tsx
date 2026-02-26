@@ -6,23 +6,19 @@ interface BadgeNotificationProps {
 }
 
 /**
- * Pastille de notification (nombre de demandes en attente, etc.).
+ * Pastille de notification (point rouge, sans chiffre).
  * Positionnée en -top-1 -right-1 sur l’icône parent (parent en relative).
- * Affiche "9+" si count > 9.
+ * Point rouge sans chiffre ; le count reste utilisé pour aria-label.
  */
 export const BadgeNotification: React.FC<BadgeNotificationProps> = ({ count, className = '' }) => {
   if (count <= 0) return null;
 
-  const label = count > 9 ? '9+' : String(count);
-
   return (
     <span
-      key={count}
       className={`
         absolute -top-1 -right-1
-        flex h-4 min-w-[1rem] items-center justify-center rounded-full
-        bg-red-600 text-[10px] font-bold text-white
-        px-1
+        block h-2 w-2 rounded-full
+        bg-red-600
         animate-badge-in
         animate-pulse
         [animation-duration:2s]
@@ -30,8 +26,6 @@ export const BadgeNotification: React.FC<BadgeNotificationProps> = ({ count, cla
       `}
       aria-live="polite"
       aria-label={`${count} demande${count > 1 ? 's' : ''} en attente`}
-    >
-      {label}
-    </span>
+    />
   );
 };

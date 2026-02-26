@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Clock, DollarSign, CheckCircle, X, Plus, Grid3X3, List, Edit, Trash2, Sparkles } from 'lucide-react';
+import { Search, Filter, Clock, DollarSign, CheckCircle, X, Plus, Grid3X3, List, Edit, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { FlashDesign } from '../../types';
 import { Modal } from '../ui/Modal';
 import { ImageUploadField } from '../ui/ImageUploadField';
@@ -26,13 +26,14 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingFlash, setEditingFlash] = useState<FlashDesign | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [savingFlash, setSavingFlash] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', imageUrl: '', price: 100, depositAmount: 30, category: 'Minimaliste', size: 'small' as const, estimatedDuration: 60, placement: ['Bras'], tags: [''] });
 
   const categories = ['all', ...Array.from(new Set(designs.map(d => d.category)))];
 
   const filteredDesigns = designs.filter(design => {
     const matchesSearch = design.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      design.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+      (design.tags ?? []).some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = selectedCategory === 'all' || design.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -70,7 +71,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
   };
 
   const handleSaveFlash = () => {
-    if (!form.title.trim()) return;
+    if (!form.title.trim() || savingFlash) return;
     const tags = form.tags.filter(t => t.trim());
     const placement = form.placement.filter(p => p.trim());
     const data = {
@@ -87,6 +88,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
       estimatedDuration: form.estimatedDuration,
       tags: tags.length ? tags : ['flash']
     };
+    setSavingFlash(true);
     if (editingFlash && onUpdateFlash) {
       onUpdateFlash(editingFlash.id, data);
     } else if (onAddFlash) {
@@ -94,6 +96,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
     }
     setShowFormModal(false);
     setEditingFlash(null);
+    setTimeout(() => setSavingFlash(false), 400);
   };
 
   const handleDeleteFlash = (id: string) => {
@@ -163,7 +166,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
 
       {filteredDesigns.length === 0 ? (
         <div className="text-center py-16 dashboard-widget-card">
-          <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-950/40 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-20 h-20 bg-indigo-100 dark:bg-[var(--bg-card-secondary)] rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Sparkles className="text-indigo-600 dark:text-indigo-400" size={36} />
           </div>
           <p className="text-lg font-bold text-[var(--text-primary)] mb-2">
@@ -217,8 +220,8 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                 <span className="font-bold text-indigo-600">{design.price}€</span>
               </div>
               <div className="flex flex-wrap gap-1 mb-3">
-                {design.tags.slice(0, 3).map(tag => (
-                  <span key={tag} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-xs text-indigo-600 dark:text-indigo-300">#{tag}</span>
+                {(design.tags ?? []).slice(0, 3).map(tag => (
+                  <span key={tag} className="px-2 py-0.5 bg-indigo-50 dark:bg-[var(--bg-card-secondary)] rounded-lg text-xs text-indigo-600 dark:text-indigo-300">#{tag}</span>
                 ))}
               </div>
               <button onClick={(e) => { e.stopPropagation(); handleBookNow(design); }} disabled={design.reserved}
@@ -244,7 +247,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)] mt-1">
                 <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{design.estimatedDuration}min</span>
                 <span className="font-bold text-indigo-600">{design.price}€</span>
-                <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-xs">{design.category}</span>
+                <span className="px-2 py-0.5 bg-indigo-50 dark:bg-[var(--bg-card-secondary)] rounded-lg text-xs">{design.category}</span>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -291,7 +294,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                 <div className="text-sm font-semibold text-[var(--text-primary)] mb-2">Emplacements suggérés</div>
                 <div className="flex flex-wrap gap-2">
                   {selectedDesign.placement.map(place => (
-                    <span key={place} className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg text-sm text-indigo-700 dark:text-indigo-200">{place}</span>
+                    <span key={place} className="px-3 py-1 bg-indigo-50 dark:bg-[var(--bg-card-secondary)] rounded-lg text-sm text-indigo-700 dark:text-indigo-200">{place}</span>
                   ))}
                 </div>
               </div>
@@ -368,8 +371,8 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               <button onClick={() => setShowFormModal(false)} className="px-6 py-3 border-2 border-neutral-200 rounded-xl font-semibold hover:border-neutral-900">
                 Annuler
               </button>
-              <button onClick={handleSaveFlash} className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800">
-                {editingFlash ? 'Mettre à jour' : 'Créer'}
+              <button onClick={handleSaveFlash} disabled={savingFlash} className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                {savingFlash ? <><Loader2 className="w-4 h-4 animate-spin" /> En cours…</> : (editingFlash ? 'Mettre à jour' : 'Créer')}
               </button>
             </div>
           </div>

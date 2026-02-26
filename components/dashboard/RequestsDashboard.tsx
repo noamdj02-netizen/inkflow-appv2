@@ -7,14 +7,20 @@ import { Modal } from '../ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { createCheckoutSession } from '../../lib/stripeClient';
+import { sendConversationLinkToClient } from '../../lib/sendNotification';
+import { supabase } from '../../lib/supabase';
 
 interface RequestsDashboardProps {
   studioId: string | null;
+  /** Slug public du studio (pour les URLs de redirection Stripe après paiement). */
+  studioSlug?: string | null;
   appointments: Appointment[];
   onUpdateAppointment: (id: string, updates: Partial<Appointment>) => void;
   onAddAppointment?: (appointment: Appointment) => void;
   projectRequests?: ProjectRequest[];
   onUpdateProjectRequest?: (id: string, status: ProjectRequest['status']) => void;
+  /** Après "Accepter & Discuter", ouvre l’onglet Messagerie avec ce fil (thread_id). */
+  onOpenMessageThread?: (threadId: string) => void;
   bookings?: Booking[];
   onUpdateBookingStatus?: (id: string, status: BookingStatus) => Promise<void>;
   bookingsLoading?: boolean;
@@ -38,11 +44,13 @@ const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
 
 export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   studioId,
+  studioSlug,
   appointments,
   onUpdateAppointment,
   onAddAppointment,
   projectRequests = [],
   onUpdateProjectRequest,
+  onOpenMessageThread,
   bookings = [],
   onUpdateBookingStatus,
   bookingsLoading = false
@@ -60,10 +68,20 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   const [depositUrl, setDepositUrl] = useState<string | null>(null);
   const [depositError, setDepositError] = useState<string | null>(null);
 
-  const pendingAppointments = appointments.filter(a => a.status === 'pending');
-  const historyAppointments = appointments.filter(a => !['pending'].includes(a.status));
-  const pendingProjects = projectRequests.filter(p => p.status === 'PENDING');
+  const byCreatedAtDesc = <T extends { createdAt: string }>(a: T, b: T) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+  const pendingAppointments = appointments
+    .filter(a => a.status === 'pending')
+    .sort((a, b) => (a.createdAt && b.createdAt ? byCreatedAtDesc(a, b) : 0));
+  const historyAppointments = appointments
+    .filter(a => !['pending'].includes(a.status))
+    .sort((a, b) => (a.createdAt && b.createdAt ? byCreatedAtDesc(a, b) : 0));
+  const pendingProjects = projectRequests
+    .filter(p => p.status === 'PENDING')
+    .sort(byCreatedAtDesc);
   const pendingBookings = bookings.filter(b => b.status === 'pending');
+  const bookingsChronological = [...bookings].sort(byCreatedAtDesc);
 
   const handleConfirm = (id: string) => {
     onUpdateAppointment(id, { status: 'confirmed' });
@@ -75,11 +93,49 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     toast.info('Rendez-vous refuse');
   };
 
-  const handleApproveProject = async (id: string, email?: string) => {
+  const handleApproveProject = async (pr: ProjectRequest) => {
+    if (!studioId || !user?.name) {
+      toast.error('Données manquantes');
+      return;
+    }
+    const threadId = `pr_${pr.id}`;
     try {
-      await onUpdateProjectRequest?.(id, 'APPROVED');
-      toast.success('Demande approuvee');
-      if (email) window.location.href = `mailto:${email}`;
+      const { error: insertErr } = await supabase.from('inkflow_messages').insert({
+        id: `msg_pr_${Date.now()}`,
+        studio_id: studioId,
+        thread_id: threadId,
+        sender_type: 'artist',
+        sender_name: user.name,
+        content: `Votre demande a été acceptée. Répondez ici pour échanger avec le studio.`,
+        read: false,
+      });
+      if (insertErr) {
+        toast.error('Impossible de créer la conversation');
+        return;
+      }
+      await onUpdateProjectRequest?.(pr.id, 'APPROVED');
+      toast.success('Demande acceptée — conversation créée');
+      onOpenMessageThread?.(threadId);
+      const link = `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${threadId}`;
+      const result = await sendConversationLinkToClient({
+        clientEmail: pr.clientEmail,
+        clientName: pr.clientName,
+        studioName: user.studioName || undefined,
+        threadId,
+      });
+      if (result.sent) {
+        toast.success('Un email avec le lien de conversation a été envoyé au client.');
+      } else if (result.unauthorized) {
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(link).catch(() => {});
+        }
+        toast.warning('Session expirée ou non autorisée — reconnectez-vous puis réessayez. Lien copié dans le presse-papiers.');
+      } else {
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(link).catch(() => {});
+        }
+        toast.info('Lien copié : envoyez-le au client par email ou SMS pour qu\'il puisse vous répondre.');
+      }
     } catch {
       toast.error('Erreur lors de la mise a jour');
     }
@@ -152,6 +208,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       try {
         const result = await createCheckoutSession({
           studioId,
+          studioSlug: studioSlug ?? undefined,
           appointmentId: depositModalAppointment.id,
           amount,
           clientName: depositModalAppointment.clientName,
@@ -208,6 +265,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         onAddAppointment(newApt);
         const result = await createCheckoutSession({
           studioId,
+          studioSlug: studioSlug ?? undefined,
           appointmentId: aptId,
           amount,
           clientName: depositModalBooking.clientName,
@@ -251,7 +309,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             {activeTab === 'history' && 'Historique des demandes'}
           </p>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="page-tabs flex gap-2 pb-1">
           <button onClick={() => setActiveTab('rdv')}
             className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'rdv' ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'}`}>
             <Calendar className="w-4 h-4 inline mr-2" />
@@ -342,7 +400,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             />
           ) : (
             <div className="divide-y divide-[var(--border)]">
-              {bookings.map(bk => (
+              {bookingsChronological.map(bk => (
                 <div key={bk.id} className="row-clickable p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold text-lg">
                     {bk.clientName.charAt(0).toUpperCase()}
@@ -433,7 +491,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
-                        onClick={() => handleApproveProject(pr.id, pr.clientEmail)}
+                        onClick={() => handleApproveProject(pr)}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-100 text-emerald-700 font-semibold hover:bg-emerald-200 active:scale-[0.98] transition-all text-sm"
                       >
                         <CheckCircle className="w-4 h-4" /> Accepter & Discuter
@@ -551,15 +609,18 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         ) : (
                           <p className="text-red-700 dark:text-red-300 break-words">{depositError}</p>
                         )}
+                        <a href="/aide#paiement" target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                          En savoir plus
+                        </a>
                       </div>
                     </div>
                   </div>
                 )}
-                <div className="flex gap-3 justify-end pt-2">
+                <div className="modal-actions-column flex flex-col-reverse sm:flex-row gap-3 justify-end pt-2">
                   <button
                     type="button"
                     onClick={closeDepositModal}
-                    className="px-4 py-2.5 rounded-xl border-2 border-[var(--border)] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+                    className="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-xl border-2 border-[var(--border)] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)] touch-manipulation"
                   >
                     Annuler
                   </button>
@@ -567,7 +628,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     type="button"
                     onClick={handleGenerateDepositLink}
                     disabled={depositLoading}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                   >
                     {depositLoading ? (
                       <>
@@ -575,11 +636,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       </>
                     ) : depositModalBooking ? (
                       <>
-                        <CreditCard className="w-4 h-4" /> Créer le RDV et générer le lien
+                        <CreditCard className="w-4 h-4 shrink-0" /> <span className="truncate">Créer le RDV et générer le lien</span>
                       </>
                     ) : (
                       <>
-                        <CreditCard className="w-4 h-4" /> Générer le lien de paiement
+                        <CreditCard className="w-4 h-4 shrink-0" /> <span className="truncate">Générer le lien de paiement</span>
                       </>
                     )}
                   </button>
@@ -590,17 +651,17 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 <p className="text-sm text-[var(--text-secondary)]">
                   Envoyez ce lien au client. Dès qu&apos;il paie avec sa carte ou Apple Pay, la demande passera en &quot;Acompte payé&quot; et apparaîtra dans ton agenda.
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 min-w-0">
                   <input
                     type="text"
                     readOnly
                     value={depositUrl}
-                    className="flex-1 px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-hover)] text-[var(--text-secondary)] text-sm truncate"
+                    className="w-full min-w-0 px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-hover)] text-[var(--text-secondary)] text-sm truncate"
                   />
                   <button
                     type="button"
                     onClick={handleCopyDepositLink}
-                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shrink-0"
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shrink-0 touch-manipulation"
                   >
                     <Copy className="w-4 h-4" /> Copier le lien
                   </button>
@@ -609,7 +670,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                   <button
                     type="button"
                     onClick={closeDepositModal}
-                    className="px-4 py-2.5 rounded-xl bg-[var(--bg-hover)] font-semibold text-[var(--text-primary)] hover:opacity-90"
+                    className="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-xl bg-[var(--bg-hover)] font-semibold text-[var(--text-primary)] hover:opacity-90 touch-manipulation"
                   >
                     Fermer
                   </button>

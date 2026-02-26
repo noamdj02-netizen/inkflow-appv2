@@ -13,6 +13,8 @@ const corsHeaders = {
 
 interface CheckoutPayload {
   studioId: string;
+  /** Slug public du studio (ex: mon-studio). Si fourni, utilisé pour success_url/cancel_url au lieu de studioId. */
+  studioSlug?: string;
   appointmentId: string;
   amount: number;
   clientName: string;
@@ -37,11 +39,14 @@ Deno.serve(async (req: Request) => {
     }
 
     const amountCents = Math.round(payload.amount * 100);
+    const urlSegment = (payload.studioSlug && /^[a-z0-9-]+$/.test(payload.studioSlug))
+      ? payload.studioSlug
+      : encodeURIComponent(payload.studioId);
 
     const stripeBody = new URLSearchParams({
       "mode": "payment",
-      "success_url": `${SITE_URL}/book/${encodeURIComponent(payload.studioId)}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      "cancel_url": `${SITE_URL}/book/${encodeURIComponent(payload.studioId)}?payment=cancelled`,
+      "success_url": `${SITE_URL}/book/${urlSegment}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      "cancel_url": `${SITE_URL}/book/${urlSegment}?payment=cancelled`,
       "customer_email": payload.clientEmail,
       "line_items[0][price_data][currency]": "eur",
       "line_items[0][price_data][product_data][name]": `${payload.type === "deposit" ? "Acompte" : "Paiement"} - ${payload.serviceName}`,

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import { ensureStudio } from '../lib/supabaseDashboard';
 
 export const AuthCallbackPage: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -26,10 +28,31 @@ export const AuthCallbackPage: React.FC = () => {
     } catch {
       // ignore
     }
-    const t = setTimeout(() => {
-      window.location.href = redirectUrl;
-    }, 1000);
-    return () => clearTimeout(t);
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const run = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || !session?.user) {
+        timeoutId = setTimeout(() => { if (!cancelled) window.location.href = redirectUrl; }, 1000);
+        return;
+      }
+      const u = session.user;
+      const meta = u.user_metadata ?? {};
+      const name = (meta.name as string) || u.email?.split('@')[0] || 'User';
+      const studioName = (meta.studio_name as string) || 'Mon studio';
+      try {
+        await ensureStudio(u.email ?? '', name, studioName);
+      } catch {
+        // Ne pas bloquer la redirection
+      }
+      if (!cancelled) window.location.href = redirectUrl;
+    };
+    run();
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, []);
 
   const goLogin = () => {

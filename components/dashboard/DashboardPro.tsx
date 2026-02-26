@@ -102,6 +102,7 @@ export const DashboardPro: React.FC = () => {
   const [openAddClientModal, setOpenAddClientModal] = useState(false);
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [openMessageThreadId, setOpenMessageThreadId] = useState<string | null>(null);
 
   // Sync general settings form when user changes (e.g. from Supabase session or localStorage)
   useEffect(() => {
@@ -232,7 +233,10 @@ export const DashboardPro: React.FC = () => {
         .eq('studio_id', studioId)
         .order('created_at', { ascending: false });
 
-      if (!rows || rows.length === 0) return;
+      if (!rows || rows.length === 0) {
+        setMessageThreads([]);
+        return;
+      }
 
       const threadMap = new Map<string, { clientName: string; clientEmail: string; lastMessage: string; lastMessageAt: string; unreadCount: number }>();
       for (const row of rows) {
@@ -248,6 +252,27 @@ export const DashboardPro: React.FC = () => {
         const t = threadMap.get(row.thread_id)!;
         if (row.sender_type === 'client' && !t.clientName) t.clientName = row.sender_name;
         if (!row.read && row.sender_type === 'client') t.unreadCount++;
+      }
+
+      const prThreadIds = Array.from(threadMap.keys()).filter((id) => id.startsWith('pr_'));
+      if (prThreadIds.length > 0) {
+        const prIds = prThreadIds.map((tid) => tid.slice(3));
+        const { data: prRows } = await supabase
+          .from('inkflow_project_requests')
+          .select('id, client_email, client_name, description')
+          .eq('studio_id', studioId)
+          .in('id', prIds);
+        const prByPrId = new Map<string, { email: string; name: string; description?: string }>();
+        if (prRows) for (const r of prRows) prByPrId.set(r.id, { email: r.client_email || '', name: r.client_name || '', description: r.description || undefined });
+        for (const threadId of prThreadIds) {
+          const prId = threadId.slice(3);
+          const t = threadMap.get(threadId);
+          const pr = prByPrId.get(prId);
+          if (t && pr) {
+            if (pr.email) t.clientEmail = pr.email;
+            if (pr.name) t.clientName = t.clientName || pr.name;
+          }
+        }
       }
 
       setMessageThreads(
@@ -527,7 +552,7 @@ export const DashboardPro: React.FC = () => {
 
       <div className="app-shell-row">
         {/* ====== SIDEBAR — Design premium (ÉTAPE 1) ====== */}
-        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-[240px] max-w-[85vw] bg-white dark:bg-[var(--bg-sidebar)] border-r border-[#F0EEF9] dark:border-[var(--border)] flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
+        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-[178px] max-w-[85vw] bg-white dark:bg-[var(--bg-sidebar)] border-r border-[#F0EEF9] dark:border-[var(--border)] flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}>
           {/* Zone logo — compacte et premium */}
@@ -772,11 +797,13 @@ export const DashboardPro: React.FC = () => {
           {!loading && activeTab === 'requests' && (
             <RequestsDashboard
               studioId={studioId}
+              studioSlug={studioSlug}
               appointments={appointments}
               onUpdateAppointment={updateAppointment}
               onAddAppointment={addAppointment}
               projectRequests={projectRequests}
               onUpdateProjectRequest={updateProjectRequestStatus}
+              onOpenMessageThread={(threadId) => { setOpenMessageThreadId(threadId); setActiveTab('messaging'); }}
               bookings={bookings}
               onUpdateBookingStatus={updateBookingStatus}
               bookingsLoading={bookingsLoading}
@@ -814,7 +841,10 @@ export const DashboardPro: React.FC = () => {
             <MessageThreadView
               studioId={studioId || ''}
               threads={messageThreads}
-              artistName={user.name}
+              artistName={user?.name ?? ''}
+              studioName={user?.studioName ?? undefined}
+              initialThreadId={openMessageThreadId}
+              onInitialThreadOpened={() => setOpenMessageThreadId(null)}
             />
           )}
 

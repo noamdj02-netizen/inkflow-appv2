@@ -128,6 +128,13 @@ export async function getVitrineLinkSettingsFromSupabase(studioId: string): Prom
   return data.settings as Record<string, unknown>;
 }
 
+/** Récupère les réglages lien vitrine par slug (page publique sans auth). Nécessite la policy vitrine_link_public_select. */
+export async function getVitrineLinkSettingsBySlug(slug: string): Promise<Record<string, unknown>> {
+  const studioId = await getStudioIdBySlug(slug);
+  if (!studioId) return {};
+  return getVitrineLinkSettingsFromSupabase(studioId);
+}
+
 export async function saveVitrineLinkSettingsToSupabase(studioId: string, settings: Record<string, unknown>): Promise<void> {
   const { error } = await supabase.from('inkflow_vitrine_link_settings').upsert(
     { studio_id: studioId, settings, updated_at: new Date().toISOString() },

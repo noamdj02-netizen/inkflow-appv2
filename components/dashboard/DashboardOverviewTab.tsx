@@ -365,7 +365,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           {/* Event du jour (below calendar) */}
           {nextClientOfDay && (
             <div className="prodify-card overflow-hidden">
-              <div className="p-4 bg-[#F8F7FF] dark:bg-[rgba(107,92,231,0.08)] border-b border-[#E9E5FF] dark:border-[var(--border)]">
+              <div className="p-4 bg-[#F8F7FF] dark:bg-[var(--bg-card-secondary)] border-b border-[#E9E5FF] dark:border-[var(--border)]">
                 <div className="text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-1">{nextClientOfDay.clientName}</div>
                 <div className="text-[13px] text-[#6B7280]">Aujourd&apos;hui • {nextClientOfDay.time || '—'}</div>
               </div>

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Clock, Mail, Check, X, Plus, Users } from 'lucide-react';
+import { Clock, Mail, Check, X, Plus, Users, Loader2 } from 'lucide-react';
 import type { WaitlistEntry } from '../../types';
+
+type ActionType = 'notify' | 'remove' | 'book';
 
 interface WaitlistManagerProps {
   entries: WaitlistEntry[];
@@ -13,6 +15,14 @@ interface WaitlistManagerProps {
 export const WaitlistManager: React.FC<WaitlistManagerProps> = ({ entries, onAdd, onNotify, onRemove, onBook }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', service: '', dates: '', notes: '' });
+  const [action, setAction] = useState<{ id: string; type: ActionType } | null>(null);
+
+  const runAction = (id: string, type: ActionType, fn: () => void) => {
+    if (action) return;
+    setAction({ id, type });
+    fn();
+    setTimeout(() => setAction(null), 400);
+  };
 
   const waiting = entries.filter(e => e.status === 'waiting');
   const notified = entries.filter(e => e.status === 'notified');
@@ -61,11 +71,20 @@ export const WaitlistManager: React.FC<WaitlistManagerProps> = ({ entries, onAdd
                 {entry.desiredService && <div className="text-xs text-neutral-500 mt-1">{entry.desiredService}</div>}
                 {entry.preferredDates && <div className="text-xs text-neutral-500">Dates souhaitees: {entry.preferredDates}</div>}
                 <div className="flex gap-2 mt-3">
-                  <button onClick={() => onNotify(entry.id)} className="flex-1 py-1.5 bg-neutral-900 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1">
-                    <Mail className="w-3 h-3" /> Notifier
+                  <button
+                    onClick={() => runAction(entry.id, 'notify', () => onNotify(entry.id))}
+                    disabled={!!action}
+                    className="flex-1 py-1.5 bg-neutral-900 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {action?.id === entry.id && action?.type === 'notify' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                    {action?.id === entry.id && action?.type === 'notify' ? 'En cours…' : 'Notifier'}
                   </button>
-                  <button onClick={() => onRemove(entry.id)} className="p-1.5 rounded-lg border border-neutral-200 hover:bg-red-50">
-                    <X className="w-3 h-3 text-red-500" />
+                  <button
+                    onClick={() => runAction(entry.id, 'remove', () => onRemove(entry.id))}
+                    disabled={!!action}
+                    className="p-1.5 rounded-lg border border-neutral-200 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {action?.id === entry.id && action?.type === 'remove' ? <Loader2 className="w-3 h-3 animate-spin text-red-500" /> : <X className="w-3 h-3 text-red-500" />}
                   </button>
                 </div>
               </div>
@@ -86,11 +105,20 @@ export const WaitlistManager: React.FC<WaitlistManagerProps> = ({ entries, onAdd
                 <div className="text-xs text-neutral-600">{entry.clientEmail}</div>
                 {entry.notifiedAt && <div className="text-xs text-amber-600 mt-1">Notifie le {new Date(entry.notifiedAt).toLocaleDateString('fr-FR')}</div>}
                 <div className="flex gap-2 mt-3">
-                  <button onClick={() => onBook(entry)} className="flex-1 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1">
-                    <Check className="w-3 h-3" /> Reserver
+                  <button
+                    onClick={() => runAction(entry.id, 'book', () => onBook(entry))}
+                    disabled={!!action}
+                    className="flex-1 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {action?.id === entry.id && action?.type === 'book' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                    {action?.id === entry.id && action?.type === 'book' ? 'En cours…' : 'Reserver'}
                   </button>
-                  <button onClick={() => onRemove(entry.id)} className="p-1.5 rounded-lg border border-neutral-200 hover:bg-red-50">
-                    <X className="w-3 h-3 text-red-500" />
+                  <button
+                    onClick={() => runAction(entry.id, 'remove', () => onRemove(entry.id))}
+                    disabled={!!action}
+                    className="p-1.5 rounded-lg border border-neutral-200 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {action?.id === entry.id && action?.type === 'remove' ? <Loader2 className="w-3 h-3 animate-spin text-red-500" /> : <X className="w-3 h-3 text-red-500" />}
                   </button>
                 </div>
               </div>

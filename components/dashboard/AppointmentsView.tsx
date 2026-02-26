@@ -236,10 +236,13 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                   </div>
                 ) : (
                   filteredAppointments.map((apt) => (
-                    <button
+                    <div
                       key={apt.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => onSelectAppointment(apt)}
-                      className="row-clickable w-full text-left p-5 rounded-2xl dashboard-widget-card"
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectAppointment(apt); } }}
+                      className="row-clickable w-full text-left p-5 rounded-2xl dashboard-widget-card cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold text-lg">
@@ -280,6 +283,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                             <ExternalLink className="w-3.5 h-3.5" />
                           </a>
                           <button
+                            type="button"
                             onClick={(e) => { e.stopPropagation(); downloadICS(apt); }}
                             className="p-1.5 rounded-lg text-violet-500 hover:bg-violet-50 transition-colors"
                             title=".ics"
@@ -289,7 +293,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                           <span className="font-bold text-indigo-600">{apt.price}€</span>
                         </div>
                       </div>
-                    </button>
+                    </div>
                   ))
                 )}
               </div>

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
+import { ensureStudio } from '../lib/supabaseDashboard';
 import { DEMO_ACCOUNT_EMAIL } from '../data/demoData';
 
 const useSupabaseAuth = () =>
@@ -152,6 +153,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const appUser = appUserFromSupabase(data.user);
         setUser(appUser);
         localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+        try {
+          await ensureStudio(email, appUser.name, studioName || appUser.studioName);
+        } catch {
+          // Ne pas bloquer l'inscription si le studio échoue (ex. table pas encore migrée)
+        }
         return;
       }
     }

@@ -112,9 +112,26 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
     { id: 'hours', label: 'Horaires' }
   ];
 
+  const publicUrl = typeof window !== 'undefined' && slug
+    ? `${window.location.origin}/studio/${slug}`
+    : '';
+  const slugConflict = (studioSlugFromDb != null && studioSlugFromDb !== '') &&
+    getVitrineSlug(studioName) !== studioSlugFromDb;
+
   return (
     <div className="space-y-6 max-w-4xl w-full overflow-hidden">
       <VitrineLinkButton studioName={studioName} userEmail={userEmail} studioSlug={studioSlugFromDb} />
+      {publicUrl && (
+        <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+          <p className="text-sm font-semibold text-neutral-700 mb-1">Votre lien public</p>
+          <p className="text-sm text-neutral-600 break-all font-mono">{publicUrl}</p>
+          {slugConflict && (
+            <p className="text-xs text-amber-700 mt-2">
+              Ce nom était déjà pris, votre lien unique est ci-dessus.
+            </p>
+          )}
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-lg sm:text-xl font-bold">Personnaliser votre page vitrine</h2>
         <button onClick={handleManualSave} disabled={saving || manualSaving} className="flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed">

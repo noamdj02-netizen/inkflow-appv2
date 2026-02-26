@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, ArrowLeft, User, MessageCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { sendMessageNotificationToClient } from '../../lib/sendNotification';
 import type { Message, MessageThread as ThreadType } from '../../types';
 
 interface MessageThreadProps {
@@ -8,9 +9,14 @@ interface MessageThreadProps {
   threads: ThreadType[];
   onBack?: () => void;
   artistName: string;
+  studioName?: string;
+  /** Ouvrir directement ce fil (ex. après "Accepter & Discuter" sur une demande de projet). */
+  initialThreadId?: string | null;
+  /** Appelé quand le fil initial a été ouvert (pour que le parent réinitialise). */
+  onInitialThreadOpened?: () => void;
 }
 
-export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, threads, onBack, artistName }) => {
+export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, threads, onBack, artistName, studioName, initialThreadId, onInitialThreadOpened }) => {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -18,6 +24,13 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const selectedThread = threads.find(t => t.threadId === selectedThreadId);
+
+  useEffect(() => {
+    if (initialThreadId && initialThreadId !== selectedThreadId) {
+      setSelectedThreadId(initialThreadId);
+      onInitialThreadOpened?.();
+    }
+  }, [initialThreadId]);
 
   useEffect(() => {
     if (!selectedThreadId) return;
@@ -76,6 +89,16 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
       };
       const { error } = await supabase.from('inkflow_messages').insert(msg);
       if (error) throw error;
+      if (selectedThread?.clientEmail) {
+        sendMessageNotificationToClient({
+          clientEmail: selectedThread.clientEmail,
+          clientName: selectedThread.clientName || 'Client',
+          studioName,
+          senderName: artistName,
+          messagePreview: newMessage.trim(),
+          threadId: selectedThreadId,
+        });
+      }
       setNewMessage('');
     } catch (err) {
     } finally {
@@ -134,17 +157,17 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-200px)] min-h-[400px] dashboard-widget-card overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-200px)] min-h-[400px] dashboard-widget-card overflow-hidden">
       <div className="px-5 py-4 border-b border-[var(--border)] flex items-center gap-3 bg-[var(--bg-secondary)]/50">
         <button onClick={() => setSelectedThreadId(null)} className="p-2.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors">
           <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
         </button>
         <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-          {selectedThread?.clientName?.charAt(0).toUpperCase()}
+          {(selectedThread?.clientName || 'Client').charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-[var(--text-primary)] truncate">{selectedThread?.clientName}</div>
-          <div className="text-xs text-[var(--text-secondary)] truncate">{selectedThread?.clientEmail}</div>
+          <div className="font-semibold text-[var(--text-primary)] truncate">{selectedThread?.clientName || 'Client'}</div>
+          <div className="text-xs text-[var(--text-secondary)] truncate">{selectedThread?.clientEmail || (selectedThreadId?.startsWith('pr_') ? 'Lien à envoyer au client pour discuter' : '')}</div>
         </div>
       </div>
 

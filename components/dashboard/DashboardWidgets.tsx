@@ -116,7 +116,7 @@ export const WidgetCard: React.FC<{
           href={widget.content}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-[#6B5CE7]/5 dark:bg-[#6B5CE7]/10 border border-[#6B5CE7]/10 hover:border-[#6B5CE7]/20 transition-colors"
+          className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-[#6B5CE7]/5 dark:bg-[var(--bg-card-secondary)] border border-[#6B5CE7]/10 dark:border-[var(--border)] hover:border-[#6B5CE7]/20 dark:hover:border-[var(--border)] transition-colors"
         >
           <div className="w-10 h-10 rounded-[10px] bg-[#6B5CE7]/15 flex items-center justify-center flex-shrink-0">
             <Link2 className="w-5 h-5 text-[#6B5CE7]" />
@@ -135,7 +135,7 @@ export const WidgetCard: React.FC<{
       {widget.type === 'shortcut' && (
         <button
           onClick={handleShortcutClick}
-          className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-[#6B5CE7]/5 dark:bg-[#6B5CE7]/10 border border-[#6B5CE7]/10 hover:border-[#6B5CE7]/30 hover:bg-[#6B5CE7]/10 transition-colors text-left"
+          className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-[#6B5CE7]/5 dark:bg-[var(--bg-card-secondary)] border border-[#6B5CE7]/10 dark:border-[var(--border)] hover:border-[#6B5CE7]/30 dark:hover:border-[var(--border)] hover:bg-[#6B5CE7]/10 dark:hover:bg-[var(--bg-card-dark)] transition-colors text-left"
         >
           <div className="w-10 h-10 rounded-[10px] bg-[#6B5CE7]/15 flex items-center justify-center flex-shrink-0">
             {SHORTCUT_OPTIONS.find(o => o.id === widget.content)?.icon ?? <LayoutGrid className="w-5 h-5 text-[#6B5CE7]" />}
@@ -191,6 +191,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [color, setColor] = useState('#171717');
+  const [isAdding, setIsAdding] = useState(false);
 
   const reset = () => {
     setSelectedType(null);
@@ -225,7 +226,8 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
   };
 
   const handleAdd = () => {
-    if (!selectedType) return;
+    if (!selectedType || isAdding) return;
+    setIsAdding(true);
     onAdd({
       id: `w${Date.now()}`,
       type: selectedType,
@@ -235,6 +237,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
     });
     reset();
     onClose();
+    setTimeout(() => setIsAdding(false), 300);
   };
 
   if (!isOpen) return null;
@@ -336,7 +339,9 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
                 <button onClick={() => setSelectedType(null)} className="px-4 py-2.5 rounded-xl border border-[var(--border)] font-medium hover:bg-[var(--bg-hover)]">
                   Retour
                 </button>
-                <button onClick={handleAdd} className="flex-1 btn-primary">Ajouter</button>
+                <button onClick={handleAdd} disabled={isAdding} className="flex-1 btn-primary disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                  {isAdding ? (<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Ajout…</>) : 'Ajouter'}
+                </button>
               </div>
             </div>
           )}

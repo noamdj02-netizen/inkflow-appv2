@@ -1,12 +1,22 @@
 # Déploiement InkFlow - GitHub & Vercel
 
+## Résumé rapide
+
+| Étape | Action |
+|-------|--------|
+| **GitHub** | Le code est poussé sur `origin/main` → [github.com/noamdj02-netizen/inkflow-appv2](https://github.com/noamdj02-netizen/inkflow-appv2) |
+| **Vercel** | Si le projet est déjà importé depuis ce dépôt, chaque `git push` déclenche un déploiement auto. Sinon : Vercel → Add New → Project → importer le repo GitHub. |
+| **Env** | Vercel → Settings → Environment Variables : ajouter `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY`, puis Redeploy. |
+
+---
+
 ## URL de production
 
 **Vercel :** https://inkflow-hlag75vyx-noam-brochets-projects-2ea9c979.vercel.app
 
 ---
 
-## 1. Créer le dépôt GitHub
+## 1. Créer le dépôt GitHub (déjà fait)
 
 1. Va sur [github.com/new](https://github.com/new)
 2. Nom du dépôt : **inkflow** ou **ink-flow**
@@ -87,13 +97,15 @@ Ton projet a déjà un domaine Vercel :
 
 ---
 
-## 5. Variables d'environnement
+## 5. Variables d'environnement (obligatoire pour Supabase/Stripe)
 
-Si tu ajoutes Supabase, Stripe, etc. :
+Sans ces variables, l’app en prod ne pourra pas se connecter à Supabase ni générer de liens Stripe.
 
 1. Vercel Dashboard → Ton projet → **Settings** → **Environment Variables**
-2. Ajoute `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, etc.
-3. Redéploie pour appliquer les changements
+2. Ajoute pour **Production** (et Preview si tu veux) :
+   - `VITE_SUPABASE_URL` = l’URL de ton projet Supabase (ex. `https://xxxx.supabase.co`)
+   - `VITE_SUPABASE_ANON_KEY` = la clé anon du projet (Supabase → Settings → API)
+3. **Redeploy** : après avoir sauvegardé, va dans **Deployments** → ⋮ sur le dernier déploiement → **Redeploy**
 
 ---
 

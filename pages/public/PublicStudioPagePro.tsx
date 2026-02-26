@@ -3,14 +3,15 @@ import {
   MapPin, Phone, Mail, Clock, Instagram, ChevronRight, CheckCircle, Star,
   MessageCircle, Share2, Heart, Award, Shield, Users, Camera, X,
   Facebook, ExternalLink, Calendar, ArrowRight, Menu,
-  ChevronDown, Send, AlertCircle, Sparkles
+  ChevronDown, Send, AlertCircle, Sparkles, Copy
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { ProjectRequestForm } from '../../components/booking/ProjectRequestForm';
 import { VitrineBookingForm } from '../../components/booking/VitrineBookingForm';
 import { getVitrineData, getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
-import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
+import { getStudioIdBySlug, getVitrineLinkSettingsBySlug } from '../../lib/supabaseDashboard';
 import { createProjectRequest } from '../../lib/supabaseProjectRequests';
+import { createCheckoutSession } from '../../lib/stripeClient';
 import { useRealtimeVitrine } from '../../hooks/useRealtimeSync';
 import { useToast } from '../../contexts/ToastContext';
 import type { VitrineData } from '../../types/vitrine';
@@ -45,6 +46,21 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [flashDepositName, setFlashDepositName] = useState('');
+  const [flashDepositEmail, setFlashDepositEmail] = useState('');
+  const [flashDepositLoading, setFlashDepositLoading] = useState(false);
+  const [flashDepositError, setFlashDepositError] = useState<string | null>(null);
+  const [flashDepositUrl, setFlashDepositUrl] = useState<string | null>(null);
+  const [primaryColor, setPrimaryColor] = useState<string>('#4f46e5');
+
+  useEffect(() => {
+    getVitrineLinkSettingsBySlug(studioSlug)
+      .then((settings) => {
+        const color = settings.primaryColor as string | undefined;
+        if (color && /^#[0-9A-Fa-f]{6}$/.test(color)) setPrimaryColor(color);
+      })
+      .catch(() => {});
+  }, [studioSlug]);
 
   const loadVitrine = React.useCallback(() => {
     setLoading(true);
@@ -73,6 +89,15 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
   // Live updates: when the tatoueur edits their vitrine, the public page updates instantly
   useRealtimeVitrine(studioSlug, setStudio);
+
+  useEffect(() => {
+    if (selectedFlash) {
+      setFlashDepositName('');
+      setFlashDepositEmail('');
+      setFlashDepositError(null);
+      setFlashDepositUrl(null);
+    }
+  }, [selectedFlash?.id]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -132,6 +157,51 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     setBookingSuccess(true);
     setShowBookingForm(false);
     setBookingError(null);
+  };
+
+  const handleFlashDepositPayment = async () => {
+    if (!selectedFlash?.available) return;
+    const name = flashDepositName.trim();
+    const email = flashDepositEmail.trim();
+    if (!name || !email) {
+      setFlashDepositError('Veuillez renseigner votre nom et votre email.');
+      return;
+    }
+    setFlashDepositError(null);
+    setFlashDepositLoading(true);
+    try {
+      const studioId = await getStudioIdBySlug(studioSlug);
+      if (!studioId) {
+        setFlashDepositError('Studio introuvable. Réessayez plus tard.');
+        setFlashDepositLoading(false);
+        return;
+      }
+      const amount = (selectedFlash as { depositAmount?: number }).depositAmount ?? (Math.round((selectedFlash.price ?? 0) * 0.3) || 30);
+      const result = await createCheckoutSession({
+        studioId,
+        studioSlug,
+        appointmentId: '',
+        amount,
+        clientName: name,
+        clientEmail: email,
+        serviceName: selectedFlash.title,
+        type: 'deposit',
+      });
+      if ('url' in result && result.url) {
+        setFlashDepositUrl(result.url);
+        try {
+          window.location.href = result.url;
+        } catch {
+          // Redirection bloquée : le lien est affiché dans la modale
+        }
+        return;
+      }
+      setFlashDepositError('error' in result ? result.error : 'Impossible de créer le lien de paiement.');
+    } catch (err) {
+      setFlashDepositError(err instanceof Error ? err.message : 'Erreur lors du paiement.');
+    } finally {
+      setFlashDepositLoading(false);
+    }
   };
 
   const handleContactSubmit = async (e: React.FormEvent) => {
@@ -198,14 +268,15 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const isOpen = () => {
     if (!studioDisplay) return false;
     const currentDay = getCurrentDay();
-    const hours = studioDisplay.openingHours[currentDay as keyof typeof studioDisplay.openingHours];
-    if (hours.closed) return false;
+    const hours = studioDisplay.openingHours?.[currentDay as keyof typeof studioDisplay.openingHours];
+    if (!hours || hours.closed) return false;
     const now = new Date();
     const currentTime = now.getHours() * 60 + now.getMinutes();
-    const [openH, openM] = hours.open.split(':').map(Number);
-    const [closeH, closeM] = hours.close.split(':').map(Number);
-    const openTime = openH * 60 + openM;
-    const closeTime = closeH * 60 + closeM;
+    const openParts = (hours.open ?? '').split(':').map(Number);
+    const closeParts = (hours.close ?? '').split(':').map(Number);
+    if (openParts.length < 2 || closeParts.length < 2) return false;
+    const openTime = openParts[0] * 60 + openParts[1];
+    const closeTime = closeParts[0] * 60 + closeParts[1];
     return currentTime >= openTime && currentTime <= closeTime;
   };
 
@@ -226,7 +297,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   }
 
   return (
-    <div className="landing-scroll bg-neutral-50">
+    <div className="landing-scroll bg-neutral-50" style={{ ['--vitrine-primary']: primaryColor } as React.CSSProperties}>
       {/* Sticky Header */}
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 safe-top ${headerScrolled ? 'bg-white/98 backdrop-blur-lg shadow-lg' : 'bg-white/80 backdrop-blur-sm'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -262,7 +333,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 <MessageCircle className="w-5 h-5" />
                 <span className="text-sm font-medium">Contact</span>
               </button>
-              <a href={`/book/${studioSlug}`} className="bg-neutral-900 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-semibold hover:bg-neutral-800 transition-all shadow-lg flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center">
+              <a href={`/book/${studioSlug}`} className="bg-[var(--vitrine-primary)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                 <span>Réserver</span>
               </a>
@@ -441,7 +512,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                           </div>
                           <div className="flex-shrink-0 text-right md:text-center">
                             <div className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">{service.price}</div>
-                            <a href={`/book/${studioSlug}`} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-all text-sm sm:text-base w-full md:w-auto">
+                            <a href={`/book/${studioSlug}`} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-[var(--vitrine-primary)] text-white rounded-xl font-semibold hover:opacity-90 transition-all text-sm sm:text-base w-full md:w-auto">
                               Réserver
                               <ArrowRight className="w-4 h-4" />
                             </a>
@@ -570,9 +641,13 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                                 <div className="text-sm opacity-80">~{flash.duration}min</div>
                               </div>
                               {flash.available ? (
-                                <a href={`/book/${studioSlug}?flash=${flash.id}`} className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-neutral-900 rounded-xl font-semibold hover:bg-neutral-100 transition-colors text-sm sm:text-base">
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setSelectedFlash(flash); }}
+                                  className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-neutral-900 rounded-xl font-semibold hover:bg-neutral-100 transition-colors text-sm sm:text-base"
+                                >
                                   Réserver
-                                </a>
+                                </button>
                               ) : (
                                 <div className="px-6 py-3 bg-red-500 text-white rounded-xl font-semibold">Réservé</div>
                               )}
@@ -622,10 +697,10 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                     </div>
                   ))}
                 </div>
-                <div className="mt-6 sm:mt-10 text-center bg-gradient-to-r from-neutral-900 to-neutral-800 rounded-xl sm:rounded-2xl p-6 sm:p-8 text-white">
+                <div className="mt-6 sm:mt-10 text-center bg-[var(--vitrine-primary)] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-white">
                   <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">Rejoignez nos clients satisfaits</h3>
                   <p className="mb-4 sm:mb-6 opacity-90">Plus de {studioDisplay.satisfactionRate}% de satisfaction</p>
-                  <a href={`/book/${studioSlug}`} className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-neutral-900 rounded-xl font-semibold hover:bg-neutral-100 transition-all w-full sm:w-auto min-h-[44px]">
+                  <a href={`/book/${studioSlug}`} className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-[var(--vitrine-primary)] rounded-xl font-semibold hover:opacity-90 transition-all w-full sm:w-auto min-h-[44px]">
                     Réserver maintenant
                     <ArrowRight className="w-5 h-5" />
                   </a>
@@ -662,7 +737,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
           {/* Sidebar */}
           <div className="space-y-6 lg:space-y-6 lg:self-start">
-            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border-2 border-neutral-200 lg:sticky lg:top-24">
+            <div className="flex flex-col bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border-2 border-neutral-200 lg:sticky lg:top-24">
               <div className="mb-4 sm:mb-6">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <h3 className="text-xl sm:text-2xl font-bold">Réserver</h3>
@@ -680,7 +755,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 </div>
                 <p className="text-neutral-600 text-sm">Réservez votre session en quelques clics</p>
               </div>
-              <a href={`/book/${studioSlug}`} className="block w-full bg-gradient-to-r from-neutral-900 to-neutral-800 text-white text-center py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all mb-3">
+              <a href={`/book/${studioSlug}`} className="block w-full bg-[var(--vitrine-primary)] text-white text-center py-4 rounded-xl font-bold text-lg hover:opacity-90 hover:shadow-xl transition-all mb-3">
                 Prendre rendez-vous
               </a>
               <button onClick={() => setShowProjectRequestForm(true)} className="block w-full bg-white border-2 border-neutral-900 text-neutral-900 text-center py-3 rounded-xl font-bold hover:bg-neutral-50 transition-all mb-3">
@@ -882,17 +957,113 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 <div className="mb-6">
                   <div className="text-sm font-semibold text-neutral-900 mb-3">Emplacements suggérés</div>
                   <div className="flex flex-wrap gap-2">
-                    {selectedFlash.placement.map((place: string) => (
+                    {(selectedFlash.placement ?? []).map((place: string) => (
                       <span key={place} className="px-4 py-2 bg-neutral-100 rounded-lg text-sm font-medium">{place}</span>
                     ))}
                   </div>
                 </div>
-                <div className="mt-auto">
-                  {selectedFlash.available ? (
-                    <a href={`/book/${studioSlug}?flash=${selectedFlash.id}`} className="block w-full bg-neutral-900 text-white text-center py-4 rounded-xl font-bold text-lg hover:bg-neutral-800 transition-all">
-                      Réserver ce flash - {selectedFlash.price}€
-                    </a>
-                  ) : (
+                <div className="mt-auto space-y-4">
+                  {selectedFlash.available && (
+                    <>
+                      {flashDepositUrl ? (
+                        <div className="rounded-xl border-2 border-green-200 bg-green-50 p-4 sm:p-5">
+                          <div className="text-sm font-semibold text-green-800 mb-2">Lien de paiement généré</div>
+                          <p className="text-sm text-neutral-700 mb-3">Cliquez ci-dessous pour ouvrir la page de paiement sécurisé Stripe, ou copiez le lien pour l&apos;ouvrir plus tard.</p>
+                          <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                            <input
+                              type="text"
+                              readOnly
+                              value={flashDepositUrl}
+                              className="flex-1 min-w-0 px-3 py-2.5 border border-neutral-200 rounded-lg bg-white text-neutral-700 text-sm truncate"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(flashDepositUrl ?? '').then(() => toast.success('Lien copié')).catch(() => {});
+                                }}
+                                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-neutral-900 text-white text-sm font-semibold hover:bg-neutral-800 shrink-0"
+                              >
+                                <Copy className="w-4 h-4" /> Copier
+                              </button>
+                              <a
+                                href={flashDepositUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 shrink-0"
+                              >
+                                <ExternalLink className="w-4 h-4" /> Ouvrir le paiement
+                              </a>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setFlashDepositUrl(null)}
+                            className="text-sm text-neutral-600 hover:text-neutral-900 underline"
+                          >
+                            Générer un autre lien
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="rounded-xl border-2 border-neutral-200 bg-neutral-50 p-4 sm:p-5">
+                            <div className="text-sm font-semibold text-neutral-900 mb-3">Réserver en payant l&apos;acompte</div>
+                            <p className="text-sm text-neutral-600 mb-4">Indiquez vos coordonnées puis cliquez pour obtenir le lien de paiement sécurisé. Le flash sera réservé à votre nom.</p>
+                            <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                              <div>
+                                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Nom *</label>
+                                <input
+                                  type="text"
+                                  value={flashDepositName}
+                                  onChange={(e) => { setFlashDepositName(e.target.value); setFlashDepositError(null); }}
+                                  placeholder="Votre nom"
+                                  className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent text-neutral-900"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Email *</label>
+                                <input
+                                  type="email"
+                                  value={flashDepositEmail}
+                                  onChange={(e) => { setFlashDepositEmail(e.target.value); setFlashDepositError(null); }}
+                                  placeholder="votre@email.com"
+                                  className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-neutral-900 focus:border-transparent text-neutral-900"
+                                />
+                              </div>
+                            </div>
+                            {flashDepositError && (
+                              <div className="mb-3">
+                                <p className="text-sm text-red-600 mb-1.5">{flashDepositError}</p>
+                                <a href="/aide#paiement" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium underline">
+                                  En savoir plus
+                                </a>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={handleFlashDepositPayment}
+                              disabled={flashDepositLoading || !flashDepositName.trim() || !flashDepositEmail.trim()}
+                              className="w-full bg-[var(--vitrine-primary)] text-white text-center py-3.5 rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px]"
+                            >
+                              {flashDepositLoading ? (
+                                <>
+                                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                  Génération du lien…
+                                </>
+                              ) : (
+                                <>Obtenir le lien de paiement ({(selectedFlash as { depositAmount?: number }).depositAmount ?? (Math.round((selectedFlash.price ?? 0) * 0.3) || 30)}€)</>
+                              )}
+                            </button>
+                          </div>
+                          <p className="text-center text-sm text-neutral-500">ou</p>
+                          <a href={`/book/${studioSlug}?flash=${selectedFlash.id}`} className="block w-full border-2 border-neutral-900 text-neutral-900 text-center py-3 rounded-xl font-semibold hover:bg-neutral-50 transition-all">
+                            Demander un créneau sans payer maintenant
+                          </a>
+                        </>
+                      )}
+                    </>
+                  )}
+                  {!selectedFlash.available && (
                     <div className="w-full bg-neutral-200 text-neutral-500 text-center py-4 rounded-xl font-bold text-lg cursor-not-allowed">Flash déjà réservé</div>
                   )}
                 </div>

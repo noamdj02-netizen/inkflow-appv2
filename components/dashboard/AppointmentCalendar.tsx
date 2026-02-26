@@ -70,7 +70,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ appoin
           <button onClick={goNext} className="p-2.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors">
             <ChevronRight className="w-5 h-5 text-[var(--text-secondary)]" />
           </button>
-          <button onClick={goToday} className="px-4 py-2 rounded-xl text-sm font-medium bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/50">
+          <button onClick={goToday} className="px-4 py-2 rounded-xl text-sm font-medium bg-indigo-100 dark:bg-[var(--bg-card-secondary)] text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-[var(--bg-card-dark)]">
             Aujourd'hui
           </button>
         </div>

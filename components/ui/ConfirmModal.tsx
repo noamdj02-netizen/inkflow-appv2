@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -9,6 +9,10 @@ interface ConfirmModalProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** Affiche un spinner et désactive le bouton pendant l'action */
+  confirmLoading?: boolean;
+  /** Si false, la modale ne se ferme pas au confirm (le parent appelle onClose quand c'est fini) */
+  closeOnConfirm?: boolean;
   /** danger = bouton rouge (suppression), warning = orange, default = neutre */
   variant?: 'danger' | 'warning' | 'default';
 }
@@ -21,6 +25,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   message,
   confirmLabel = 'Confirmer',
   cancelLabel = 'Annuler',
+  confirmLoading = false,
+  closeOnConfirm = true,
   variant = 'danger',
 }) => {
   useEffect(() => {
@@ -80,10 +86,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               {cancelLabel}
             </button>
             <button
-              onClick={() => { onConfirm(); onClose(); }}
-              className={`px-4 py-2.5 rounded-xl font-semibold transition-colors ${confirmClasses}`}
+              onClick={() => { if (!confirmLoading) { onConfirm(); if (closeOnConfirm) onClose(); } }}
+              disabled={confirmLoading}
+              className={`px-4 py-2.5 rounded-xl font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${confirmClasses}`}
             >
-              {confirmLabel}
+              {confirmLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {confirmLoading ? 'En cours…' : confirmLabel}
             </button>
           </div>
         </div>

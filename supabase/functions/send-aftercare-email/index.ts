@@ -93,7 +93,7 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "InkFlow <onboarding@resend.dev>",
+        from: "InkFlow <contact@ink-flow.me>",
         to: [payload.clientEmail],
         subject: `Soins post-tattoo - ${payload.studioName}`,
         html,

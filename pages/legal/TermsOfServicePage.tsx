@@ -105,7 +105,7 @@ export const TermsOfServicePage: React.FC = () => {
           <section>
             <h2 className="text-xl font-semibold text-neutral-900 mb-3">11. Contact</h2>
             <p>
-              Pour toute question : <a href="mailto:contact@inkflow.app" className="text-indigo-600 hover:underline">contact@inkflow.app</a>
+              Pour toute question : <a href="mailto:contact@ink-flow.me" className="text-indigo-600 hover:underline">contact@ink-flow.me</a>
             </p>
           </section>
         </div>

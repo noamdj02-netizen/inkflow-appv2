@@ -18,14 +18,24 @@ export interface CalendarIntegrationStatus {
   } | null;
 }
 
+function toUserFriendlyMessage(fnName: string, raw: string): string {
+  const lower = raw.toLowerCase();
+  if (lower.includes('failed to send') || lower.includes('edge function') || lower.includes('fetch') || lower.includes('network')) {
+    return `Impossible de contacter le serveur (fonction ${fnName}). Vérifiez votre connexion et que le projet Supabase est actif. Déployez la fonction si besoin : npx supabase functions deploy ${fnName}.`;
+  }
+  return raw;
+}
+
 async function invokeEdge<T = unknown>(fnName: string, body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(fnName, { body });
   if (error) {
     const errData = typeof data === 'object' && data && 'error' in data ? (data as { error?: string }).error : null;
-    throw new Error(errData || error.message || 'Edge function error');
+    const raw = errData || error.message || 'Edge function error';
+    throw new Error(toUserFriendlyMessage(fnName, raw));
   }
   if (data && typeof data === 'object' && 'error' in data && (data as { error?: string }).error) {
-    throw new Error((data as { error: string }).error);
+    const raw = (data as { error: string }).error;
+    throw new Error(toUserFriendlyMessage(fnName, raw));
   }
   return data as T;
 }

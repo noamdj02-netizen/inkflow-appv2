@@ -101,6 +101,8 @@ npx supabase functions deploy create-checkout-session
 npx supabase functions deploy create-subscription
 npx supabase functions deploy stripe-webhook
 npx supabase functions deploy send-project-notification
+npx supabase functions deploy send-client-conversation-link
+npx supabase functions deploy send-message-notification
 npx supabase functions deploy send-appointment-reminders
 npx supabase functions deploy send-aftercare-email
 ```
@@ -138,8 +140,20 @@ npx supabase functions deploy send-aftercare-email
 
 1. [resend.com](https://resend.com) → Créer un compte
 2. **API Keys** → Create
-3. Copiez la clé → secret `RESEND_API_KEY` dans Supabase
-4. Pour la prod : vérifiez un domaine (sinon `onboarding@resend.dev` en test)
+3. **Important** : la clé doit être définie dans **Supabase** (pas seulement dans `.env.local`), car les Edge Functions tournent sur les serveurs Supabase :
+   ```bash
+   npx supabase secrets set RESEND_API_KEY=re_xxxxxxxxxxxx
+   ```
+4. Pour la prod : vérifiez le domaine (ex. `ink-flow.me`) dans Resend → Domains ; l’app envoie depuis **InkFlow &lt;contact@ink-flow.me&gt;**
+
+### 7.1 Aucun mail reçu
+
+- **Secrets Supabase** : `RESEND_API_KEY` doit être défini côté Supabase (voir ci-dessus). Vérifier : Supabase Dashboard → Project Settings → Edge Functions → voir les secrets listés (les valeurs ne s’affichent pas).
+- **401 Unauthorized** : les Edge Functions vérifient le JWT par défaut. Si la console affiche `[InkFlow] Email lien conversation non envoyé` avec une erreur 401 ou "Unauthorized", reconnectez-vous au dashboard puis réessayez. Si le problème persiste (ex. projet avec nouvelles clés JWT), vous pouvez déployer sans vérification JWT : `npx supabase functions deploy send-client-conversation-link --no-verify-jwt` (la fonction ne reçoit que les données en body, l’accès au dashboard reste protégé par l’auth).
+- **Console navigateur** : en acceptant une demande, ouvrir F12 → Console. En cas d’échec d’envoi, un message `[InkFlow] Email lien conversation...` s’affiche avec le détail.
+- **Logs Edge Function** : Supabase Dashboard → Edge Functions → `send-client-conversation-link` → Logs. Chercher `RESEND_API_KEY is not configured` ou les erreurs Resend (status 4xx/5xx).
+- **Domaine Resend** : si le domaine `ink-flow.me` n’est pas vérifié, Resend peut refuser l’envoi ou les mails partent en spam.
+- **Spam** : vérifier le dossier spam/courrier indésirable de la boîte du client.
 
 ---
 

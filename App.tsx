@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { ToastProvider } from './contexts/ToastContext';
+import { ToastProvider, useToast } from './contexts/ToastContext';
 import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
 import { Logo } from './components/Logo';
 import { Navbar } from './components/Navbar';
@@ -20,12 +20,14 @@ const ConsentPage = lazy(() => import('./pages/public/ConsentPage').then(m => ({
 const PublicMessagePage = lazy(() => import('./pages/public/PublicMessagePage').then(m => ({ default: m.PublicMessagePage })));
 const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
 const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
+const AidePage = lazy(() => import('./pages/AidePage').then(m => ({ default: m.AidePage })));
 const DemoPage = lazy(() => import('./pages/DemoPage').then(m => ({ default: m.DemoPage })));
 
 interface Route {
   path: string | RegExp;
   component: React.ComponentType<any>;
   requiresAuth?: boolean;
+  needsSupabaseSync?: boolean;
   getProps?: (match: RegExpMatchArray) => Record<string, string>;
 }
 
@@ -93,18 +95,20 @@ const Router: React.FC = () => {
     { path: '/login', component: LoginPage },
     { path: '/signup', component: SignupPage },
     { path: '/demo', component: DemoPage },
-    { path: '/dashboard', component: DashboardPage, requiresAuth: true },
+    { path: '/dashboard', component: DashboardPage, requiresAuth: true, needsSupabaseSync: true },
     { path: '/auth/callback', component: AuthCallbackPage },
     { path: '/auth/update-password', component: UpdatePasswordPage },
     // Vitrine publique : accessible sans connexion (slash final optionnel)
     { path: /^\/studio\/([a-z0-9-]+)\/?$/, component: PublicStudioPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
     { path: /^\/book\/([a-z0-9-]+)\/?$/, component: PublicBookingPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
     { path: /^\/consent\/([a-z0-9_-]+)$/, component: ConsentPage, getProps: (m) => ({ consentId: m[1] }) },
-    { path: /^\/messages\/([a-z0-9_-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) },
+    { path: /^\/messages\/([a-z0-9_.-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) },
+    { path: /^\/c\/([a-z0-9_.-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) },
     { path: '/politique-confidentialite', component: PrivacyPolicyPage },
     { path: '/privacy', component: PrivacyPolicyPage },
     { path: '/conditions-utilisation', component: TermsOfServicePage },
     { path: '/terms', component: TermsOfServicePage },
+    { path: '/aide', component: AidePage },
   ];
 
   const matchRoute = () => {
@@ -144,7 +148,7 @@ const Router: React.FC = () => {
   const props = match && route.getProps ? route.getProps(match) : {};
 
   // ErrorBoundary par route : évite un crash complet si une page publique plante
-  const PageWithGuard = (
+  const pageContent = (
     <ErrorBoundary
       fallback={
         <div className="min-h-screen bg-neutral-50 dark:bg-[var(--bg-primary)] flex items-center justify-center p-6">
@@ -178,6 +182,10 @@ const Router: React.FC = () => {
       <Component {...props} />
     </ErrorBoundary>
   );
+
+  const PageWithGuard = route.needsSupabaseSync
+    ? <SupabaseSyncProvider>{pageContent}</SupabaseSyncProvider>
+    : pageContent;
 
   return (
     <Suspense fallback={<FullScreenSpinner />}>
@@ -226,15 +234,35 @@ const LandingPage: React.FC = () => {
   );
 };
 
+/** Log et affiche un toast sur les promesses rejetées non gérées (détection de bugs en prod). */
+const UnhandledRejectionHandler: React.FC = () => {
+  const toast = useToast();
+  useEffect(() => {
+    const handler = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      const msg = reason instanceof Error ? reason.message : String(reason);
+      console.error('[unhandledrejection]', reason);
+      try {
+        toast.error(`Erreur inattendue : ${msg.slice(0, 80)}${msg.length > 80 ? '…' : ''}`);
+      } catch {
+        // Éviter une boucle si le toast échoue
+      }
+      event.preventDefault?.();
+    };
+    window.addEventListener('unhandledrejection', handler);
+    return () => window.removeEventListener('unhandledrejection', handler);
+  }, [toast]);
+  return null;
+};
+
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <div className="app-root">
         <AuthProvider>
           <ToastProvider>
-            <SupabaseSyncProvider>
-              <Router />
-            </SupabaseSyncProvider>
+            <UnhandledRejectionHandler />
+            <Router />
           </ToastProvider>
         </AuthProvider>
       </div>

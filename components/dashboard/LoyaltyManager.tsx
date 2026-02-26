@@ -47,6 +47,7 @@ const TIER_ICONS: Record<LoyaltyTier, string> = {
 export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({ entries, clients, onUpdatePoints, settings, onUpdateSettings }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [draftSettings, setDraftSettings] = useState<LoyaltySettings>(settings || DEFAULT_SETTINGS);
+  const [saving, setSaving] = useState(false);
 
   const totalPoints = entries.reduce((sum, e) => sum + e.points, 0);
   const totalEarned = entries.reduce((sum, e) => sum + e.totalEarned, 0);
@@ -59,8 +60,11 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({ entries, clients
   const topEntries = sortedEntries.slice(0, 10);
 
   const saveSettings = () => {
+    if (saving) return;
+    setSaving(true);
     onUpdateSettings(draftSettings);
     setShowSettings(false);
+    setTimeout(() => setSaving(false), 400);
   };
 
   return (
@@ -196,8 +200,8 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({ entries, clients
                   </div>
                 </div>
               </div>
-              <button onClick={saveSettings} className="w-full py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800">
-                Enregistrer
+              <button onClick={saveSettings} disabled={saving} className="w-full py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                {saving ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Enregistrement…</> : 'Enregistrer'}
               </button>
             </div>
           </div>

@@ -96,7 +96,7 @@ Deno.serve(async (_req: Request) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "InkFlow <onboarding@resend.dev>",
+          from: "InkFlow <contact@ink-flow.me>",
           to: [apt.client_email],
           subject: `Rappel RDV ${reminderType === "2h" ? "dans 2h" : "demain"} - ${studioName}`,
           html,

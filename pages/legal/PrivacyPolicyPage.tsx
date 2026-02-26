@@ -78,7 +78,7 @@ export const PrivacyPolicyPage: React.FC = () => {
               <li><strong>Opposition</strong> : vous opposer à certains traitements</li>
             </ul>
             <p className="mt-3">
-              Contact : <a href="mailto:contact@inkflow.app" className="text-indigo-600 hover:underline">contact@inkflow.app</a>
+              Contact : <a href="mailto:contact@ink-flow.me" className="text-indigo-600 hover:underline">contact@ink-flow.me</a>
             </p>
           </section>
 

@@ -21,6 +21,7 @@ import {
   mapFlashFromDb,
   mapNotificationFromDb
 } from '../lib/supabaseDashboard';
+import { pushAppointmentToGoogle, deleteGoogleEvent } from '../lib/googleCalendar';
 import { useOptimisticMutation } from './useOptimisticMutation';
 import { useRealtimeSync } from './useRealtimeSync';
 import type { Appointment, Client, FlashDesign, Notification } from '../types';
@@ -157,7 +158,11 @@ export const useSupabaseDashboard = () => {
 
   const addAppointment = useCallback((appointment: Appointment) => {
     if (studioId && useSupabase) {
-      aptMutation.add(appointment, (apt) => saveAppointmentToSupabase(studioId, apt));
+      aptMutation.add(appointment, (apt) =>
+        saveAppointmentToSupabase(studioId, apt).then(() => {
+          pushAppointmentToGoogle(studioId, apt.id).catch(() => {});
+        })
+      );
     } else {
       setAppointments(prev => [...prev, appointment]);
     }
@@ -168,7 +173,10 @@ export const useSupabaseDashboard = () => {
       aptMutation.update(
         id,
         (apt) => ({ ...apt, ...updates, updatedAt: new Date().toISOString() }),
-        (updated) => saveAppointmentToSupabase(studioId, updated)
+        (updated) =>
+          saveAppointmentToSupabase(studioId, updated).then(() => {
+            pushAppointmentToGoogle(studioId, updated.id).catch(() => {});
+          })
       );
     } else {
       setAppointments(prev => prev.map(a => a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a));
@@ -177,7 +185,11 @@ export const useSupabaseDashboard = () => {
 
   const deleteAppointment = useCallback((id: string) => {
     if (studioId && useSupabase) {
-      aptMutation.remove(id, (aptId) => deleteAppointmentFromSupabase(aptId));
+      aptMutation.remove(id, (aptId) =>
+        deleteAppointmentFromSupabase(aptId).then(() => {
+          deleteGoogleEvent(studioId, aptId).catch(() => {});
+        })
+      );
     } else {
       setAppointments(prev => prev.filter(a => a.id !== id));
     }

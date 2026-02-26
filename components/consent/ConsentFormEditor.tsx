@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Plus, Save, Trash2, Eye } from 'lucide-react';
+import { FileText, Plus, Save, Trash2, Eye, Loader2 } from 'lucide-react';
 import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface ConsentTemplate {
@@ -45,6 +45,9 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
   const [draftContent, setDraftContent] = useState(items[0]?.content || '');
   const [preview, setPreview] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const selected = items.find(t => t.id === selectedId);
 
@@ -59,6 +62,8 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
   };
 
   const addTemplate = () => {
+    if (creating) return;
+    setCreating(true);
     const newT: ConsentTemplate = {
       id: `consent_${Date.now()}`,
       title: 'Nouveau formulaire',
@@ -68,22 +73,29 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
     setItems(updated);
     selectTemplate(newT.id);
     onSave(updated);
+    setTimeout(() => setCreating(false), 400);
   };
 
   const saveTemplate = () => {
+    if (saving) return;
+    setSaving(true);
     const updated = items.map(t =>
       t.id === selectedId ? { ...t, title: draftTitle.trim(), content: draftContent.trim() } : t
     );
     setItems(updated);
     onSave(updated);
+    setTimeout(() => setSaving(false), 400);
   };
 
   const deleteTemplate = (id: string) => {
+    if (deletingId) return;
+    setDeletingId(id);
     const updated = items.filter(t => t.id !== id);
     setItems(updated);
     if (selectedId === id && updated.length > 0) selectTemplate(updated[0].id);
     onSave(updated);
     setDeleteConfirmId(null);
+    setTimeout(() => setDeletingId(null), 400);
   };
 
   return (
@@ -93,8 +105,9 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
           <h2 className="text-xl font-bold">Formulaires de consentement</h2>
           <p className="text-neutral-600 text-sm mt-1">Templates de consentement envoyes aux clients avant leur RDV</p>
         </div>
-        <button onClick={addTemplate} className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800">
-          <Plus className="w-4 h-4" /> Nouveau
+        <button onClick={addTemplate} disabled={creating} className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-60 disabled:cursor-not-allowed">
+          {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          {creating ? 'En cours…' : 'Nouveau'}
         </button>
       </div>
 
@@ -102,7 +115,10 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
         <div className="bg-white rounded-2xl p-12 border border-neutral-200 text-center">
           <FileText className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
           <p className="font-semibold mb-2">Aucun formulaire</p>
-          <button onClick={addTemplate} className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold">Creer un formulaire</button>
+          <button onClick={addTemplate} disabled={creating} className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mx-auto">
+          {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          {creating ? 'En cours…' : 'Creer un formulaire'}
+        </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -132,17 +148,19 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
                 </div>
                 <div className="flex justify-between">
                   <div className="flex gap-2">
-                    <button onClick={() => setDeleteConfirmId(selected.id)}
-                      className="px-4 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50">
-                      <Trash2 className="w-4 h-4 inline mr-2" />Supprimer
+                    <button onClick={() => setDeleteConfirmId(selected.id)} disabled={!!deletingId}
+                      className="px-4 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed">
+                      {deletingId === selected.id ? <Loader2 className="w-4 h-4 inline mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 inline mr-2" />}
+                      {deletingId === selected.id ? 'Suppression…' : 'Supprimer'}
                     </button>
                     <button onClick={() => setPreview(true)}
                       className="px-4 py-2 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50">
                       <Eye className="w-4 h-4 inline mr-2" />Apercu
                     </button>
                   </div>
-                  <button onClick={saveTemplate} className="flex items-center gap-2 px-6 py-2 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800">
-                    <Save className="w-4 h-4" /> Enregistrer
+                  <button onClick={saveTemplate} disabled={saving} className="flex items-center gap-2 px-6 py-2 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-60 disabled:cursor-not-allowed">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {saving ? 'Enregistrement…' : 'Enregistrer'}
                   </button>
                 </div>
               </div>
@@ -167,6 +185,8 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
         title="Supprimer ce formulaire ?"
         message="Cette action est irréversible."
         confirmLabel="Supprimer"
+        confirmLoading={deletingId === deleteConfirmId}
+        closeOnConfirm={false}
         variant="danger"
       />
     </div>

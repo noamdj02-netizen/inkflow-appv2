@@ -2,11 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, User } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Logo } from '../../components/Logo';
+import { sendMessageNotificationToStudio } from '../../lib/sendNotification';
 import type { Message } from '../../types';
 
 interface PublicMessagePageProps {
   threadId: string;
 }
+
+const ROBOTS_NOINDEX = 'noindex, nofollow';
 
 export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -15,6 +18,20 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
   const [clientName, setClientName] = useState('');
   const [nameSet, setNameSet] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let meta: HTMLMetaElement | null = document.querySelector('meta[name="robots"][data-inkflow-message]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'robots';
+      meta.setAttribute('data-inkflow-message', '1');
+      document.head.appendChild(meta);
+    }
+    meta.content = ROBOTS_NOINDEX;
+    return () => {
+      if (meta && meta.parentNode) meta.parentNode.removeChild(meta);
+    };
+  }, []);
 
   useEffect(() => {
     loadMessages();
@@ -36,22 +53,17 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
   }, [messages]);
 
   const loadMessages = async () => {
-    const { data } = await supabase
-      .from('inkflow_messages')
-      .select('*')
-      .eq('thread_id', threadId)
-      .order('created_at', { ascending: true });
-
-    if (data) {
-      setMessages(data.map(row => ({
-        id: row.id,
-        studioId: row.studio_id,
-        threadId: row.thread_id,
-        senderType: row.sender_type,
-        senderName: row.sender_name,
-        content: row.content,
-        read: row.read,
-        createdAt: row.created_at,
+    const { data } = await supabase.rpc('get_public_thread_messages', { p_thread_id: threadId });
+    if (data && Array.isArray(data)) {
+      setMessages(data.map((row: Record<string, unknown>) => ({
+        id: row.id as string,
+        studioId: row.studio_id as string,
+        threadId: row.thread_id as string,
+        senderType: row.sender_type as string,
+        senderName: row.sender_name as string,
+        content: row.content as string,
+        read: row.read as boolean,
+        createdAt: row.created_at as string,
       })));
     }
   };
@@ -73,8 +85,18 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
       read: false,
     });
 
+    if (studioId) {
+      sendMessageNotificationToStudio({
+        studioId,
+        senderName: clientName.trim(),
+        messagePreview: newMessage.trim(),
+        threadId,
+      });
+    }
+
     setNewMessage('');
     setSending(false);
+    loadMessages();
   };
 
   if (!nameSet) {

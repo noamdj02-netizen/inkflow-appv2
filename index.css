@@ -5,6 +5,23 @@
    Objectif : zero rubber-band, zero bounce, native feel
    ========================================================== */
 
+/* Global responsive base */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+body {
+  overflow-x: hidden;
+}
+img, video {
+  max-width: 100%;
+  height: auto;
+}
+.main-content,
+.app-shell-content {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
 /* Respect des préférences utilisateur (accessibilité) */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -27,100 +44,110 @@
    INKFLOW THEME SYSTEM - Variables CSS
    ======================================== */
 
-/* Default + Mode Clair (Light) */
+/* PWA safe areas (iOS/Android) */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+/* Default + Mode Clair (Light) — palette maquette InkFlow (violet / lavande) */
 :root,
 :root[data-theme="light"] {
-  --bg-primary: #f8f9fa;
+  --bg-primary: #ddd6f7;
   --bg-secondary: #ffffff;
-  --bg-sidebar: #fafafa;
+  --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
-  --bg-card-secondary: #f8f9fa;
-  --bg-card-dark: #1a1a1a;
-  --bg-hover: #f5f5f5;
-  --text-primary: #1a1a1a;
-  --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
+  --bg-card-secondary: #f5f0ff;
+  --bg-card-dark: #1a1035;
+  --bg-hover: rgba(99, 40, 212, 0.06);
+  --text-primary: #1a1035;
+  --text-secondary: #4a3878;
+  --text-tertiary: #8b7bb5;
   --text-on-dark: #ffffff;
-  --orange: #ff8c00;
-  --orange-hover: #ff7700;
-  --orange-light: #fff4e6;
-  --green: #10b981;
-  --green-bg: #d1fae5;
-  --blue: #6366f1;
-  --blue-hover: #4f46e5;
-  --magenta: #d946ef;
-  --magenta-hover: #c026d3;
-  --border: #e5e7eb;
-  --border-light: #f3f4f6;
-  --shadow-sm: rgba(0, 0, 0, 0.05);
-  --shadow-md: rgba(0, 0, 0, 0.1);
-  --shadow-lg: rgba(0, 0, 0, 0.15);
-  --chart-grid: #e5e7eb;
-  --chart-text: #6b7280;
+  --orange: #e8900a;
+  --orange-hover: #d97706;
+  --orange-light: #fff7e8;
+  --green: #16a34a;
+  --green-bg: #dcfce7;
+  --blue: #6328d4;
+  --blue-hover: #5220b8;
+  --blue-light: #7c3aed;
+  --magenta: #a855f7;
+  --magenta-hover: #9333ea;
+  --border: rgba(120, 80, 220, 0.18);
+  --border-light: rgba(99, 40, 212, 0.1);
+  --shadow-sm: rgba(99, 40, 212, 0.1);
+  --shadow-md: rgba(99, 40, 212, 0.14);
+  --shadow-lg: rgba(99, 40, 212, 0.18);
+  --chart-grid: rgba(99, 40, 212, 0.12);
+  --chart-text: #4a3878;
   --chart-bg: #ffffff;
 }
 
-/* Mode Sombre (Dark) — Amélioré (moins de contraste, tons gris harmonieux) */
+/* Mode Sombre (Dark) — vrai noir charcoal (Linear/Vercel), zéro violet dans les fonds */
 :root[data-theme="dark"] {
-  --bg-primary: #18181b;
-  --bg-secondary: #1f1f23;
-  --bg-sidebar: #1c1c1e;
-  --bg-card: #27272a;
-  --bg-card-secondary: #2d2d31;
-  --bg-card-dark: #2d2d31;
-  --bg-hover: #3a3a3f;
-  --text-primary: #fafafa;
-  --text-secondary: #d4d4d8;
-  --text-tertiary: #a1a1aa;
-  --text-on-dark: #fafafa;
-  --orange: #fb923c;
-  --orange-hover: #f97316;
-  --orange-light: rgba(251, 146, 60, 0.1);
+  --bg-primary: #0a0a0b;
+  --bg-secondary: #0f0f11;
+  --bg-sidebar: #141416;
+  --bg-card: #141416;
+  --bg-card-secondary: #1c1c1f;
+  --bg-card-dark: #222225;
+  --bg-hover: rgba(124, 58, 237, 0.12);
+  --text-primary: #f1f0f0;
+  --text-secondary: #a0a0a8;
+  --text-tertiary: #4a4a52;
+  --text-on-dark: #f1f0f0;
+  --orange: #f59e0b;
+  --orange-hover: #e8900a;
+  --orange-light: rgba(245, 158, 11, 0.13);
   --green: #22c55e;
-  --green-bg: rgba(34, 197, 94, 0.15);
-  --blue: #818cf8;
-  --blue-hover: #6366f1;
-  --magenta: #e879f9;
-  --magenta-hover: #d946ef;
-  --border: #3a3a3f;
-  --border-light: #313135;
+  --green-bg: rgba(34, 197, 94, 0.14);
+  --blue: #7c3aed;
+  --blue-hover: #6d28d9;
+  --blue-light: #8b5cf6;
+  --magenta: #a78bfa;
+  --magenta-hover: #8b5cf6;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-light: rgba(255, 255, 255, 0.05);
   --shadow-sm: rgba(0, 0, 0, 0.4);
   --shadow-md: rgba(0, 0, 0, 0.5);
   --shadow-lg: rgba(0, 0, 0, 0.6);
-  --chart-grid: #3a3a3f;
-  --chart-text: #a1a1aa;
-  --chart-bg: #27272a;
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --chart-text: #a0a0a8;
+  --chart-bg: #141416;
 }
 
-/* Theme toggle — rendu jour/nuit amélioré (Prodify) */
+/* Theme toggle — palette premium (Notion/Linear/Vercel), douce et accessible */
 .theme-toggle {
   position: relative;
   width: 52px;
   height: 28px;
-  background: #F0EEF9;
+  background: #f1f5f9;
   border-radius: 999px;
-  border: 1px solid rgba(107, 92, 231, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.25);
   cursor: pointer;
   transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
-  box-shadow: inset 0 1px 2px rgba(255,255,255,0.6);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 .theme-toggle:hover {
-  background: #E9E5FF;
-  border-color: rgba(107, 92, 231, 0.2);
-  box-shadow: 0 2px 8px rgba(107, 92, 231, 0.15);
+  background: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 .theme-toggle:active {
   transform: scale(0.97);
 }
 .theme-toggle[data-theme="dark"] {
-  background: #2d2a3d;
-  border-color: rgba(139, 92, 246, 0.25);
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+  background: #141416;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 .theme-toggle[data-theme="dark"]:hover {
-  background: #36334a;
-  border-color: rgba(139, 92, 246, 0.4);
-  box-shadow: 0 0 12px rgba(107, 92, 231, 0.25);
+  background: #1c1c1f;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 .toggle-slider {
   position: absolute;
@@ -128,26 +155,27 @@
   left: 2px;
   width: 22px;
   height: 22px;
-  background: linear-gradient(135deg, #fff 0%, #f8f7ff 100%);
+  background: #ffffff;
   border-radius: 50%;
-  transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1), background 0.35s ease, box-shadow 0.35s ease;
+  transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1), background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(107, 92, 231, 0.2), 0 1px 2px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 .theme-toggle[data-theme="dark"] .toggle-slider {
   transform: translateX(26px);
-  background: linear-gradient(135deg, #6B5CE7 0%, #8B5CF6 100%);
-  box-shadow: 0 2px 8px rgba(107, 92, 231, 0.5), 0 0 12px rgba(107, 92, 231, 0.3);
+  background: #27272a;
+  border: 1px solid rgba(63, 63, 70, 0.8);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 .toggle-icon {
   width: 13px;
   height: 13px;
-  transition: opacity 0.25s ease, transform 0.3s ease;
+  transition: opacity 0.25s ease, transform 0.3s ease, color 0.25s ease;
 }
 .toggle-icon.sun {
-  color: #F59E0B;
+  color: #059669;
   opacity: 1;
   transform: rotate(0deg);
 }
@@ -157,7 +185,7 @@
   left: 50%;
   margin-top: -6.5px;
   margin-left: -6.5px;
-  color: #a78bfa;
+  color: #a1a1aa;
   opacity: 0;
   transform: rotate(-90deg);
 }
@@ -166,7 +194,7 @@
   transform: rotate(90deg);
 }
 .theme-toggle[data-theme="dark"] .toggle-icon.moon {
-  color: #fff;
+  color: #34d399;
   opacity: 1;
   transform: rotate(0deg);
 }
@@ -247,41 +275,41 @@
 }
 :root[data-theme="dark"] .stat-card-dark,
 :root[data-theme="dark"] .card-dark {
-  background: rgba(0, 0, 0, 0.3) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: var(--bg-card-secondary) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
 }
 
-/* ===== Dashboard Overview — Prodify-inspired (lavande doux, cartes blanches) ===== */
+/* ===== Dashboard Overview — palette maquette (violet / lavande) ===== */
 .dashboard-overview-bg {
-  background: linear-gradient(135deg, #ece9f8 0%, #e8e4f5 50%, #ede9fa 100%);
+  background: linear-gradient(135deg, #ddd6f7 0%, #e5e0ff 50%, #ede9fe 100%);
   background-attachment: local;
 }
 :root[data-theme="dark"] .dashboard-overview-bg {
-  background: linear-gradient(135deg, #1a1826 0%, #1c1a28 50%, #1a1826 100%);
+  background: #0a0a0b;
 }
 .greeting-gradient {
-  background: linear-gradient(135deg, #6B5CE7 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #6328d4 0%, #7c3aed 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 :root[data-theme="dark"] .greeting-gradient {
-  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
+  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Prodify card — fond blanc, ombre violette très douce, border-radius 18px */
+/* Cartes dashboard — fond blanc, bordure et ombre violette maquette */
 .prodify-card {
   background: white;
   border-radius: 18px;
-  border: 1px solid rgba(107, 92, 231, 0.08);
-  box-shadow: 0 2px 12px rgba(107, 92, 231, 0.06), 0 1px 3px rgba(0,0,0,0.04);
+  border: 1px solid rgba(99, 40, 212, 0.12);
+  box-shadow: 0 2px 8px rgba(99, 40, 212, 0.10), 0 1px 3px rgba(0,0,0,0.04);
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .prodify-card:hover {
-  box-shadow: 0 4px 20px rgba(107, 92, 231, 0.10), 0 2px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 20px rgba(99, 40, 212, 0.14), 0 2px 6px rgba(0,0,0,0.05);
 }
 :root[data-theme="dark"] .prodify-card {
   background: var(--bg-card);
@@ -297,12 +325,12 @@
 .dashboard-widget-card {
   background: white;
   border-radius: 18px;
-  border: 1px solid rgba(107, 92, 231, 0.08);
-  box-shadow: 0 2px 12px rgba(107, 92, 231, 0.06), 0 1px 3px rgba(0,0,0,0.04);
+  border: 1px solid rgba(99, 40, 212, 0.12);
+  box-shadow: 0 2px 8px rgba(99, 40, 212, 0.10), 0 1px 3px rgba(0,0,0,0.04);
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .dashboard-widget-card:hover {
-  box-shadow: 0 4px 20px rgba(107, 92, 231, 0.10), 0 2px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 20px rgba(99, 40, 212, 0.14), 0 2px 6px rgba(0,0,0,0.05);
 }
 :root[data-theme="dark"] .dashboard-widget-card {
   background: var(--bg-card);
@@ -314,9 +342,9 @@
   border-color: rgba(255,255,255,0.12);
 }
 
-/* Prodify header action pills */
+/* Boutons primaires dashboard (palette maquette) */
 .pill-primary {
-  background: linear-gradient(135deg, #6B5CE7, #8B5CF6);
+  background: linear-gradient(135deg, #6328d4, #7c3aed);
   color: white;
   border: none;
   padding: 9px 18px;
@@ -431,7 +459,7 @@
   font-weight: 600;
 }
 :root[data-theme="dark"] .sidebar-nav-active {
-  background: rgba(107, 92, 231, 0.15);
+  background: rgba(124, 58, 237, 0.12);
   color: #a78bfa;
 }
 
@@ -536,7 +564,7 @@
   background: linear-gradient(135deg, #f0edf8 0%, #f4f2fa 50%, #f8f6fc 100%);
 }
 :root[data-theme="dark"] .app-shell-content.dashboard-pages-bg {
-  background: linear-gradient(135deg, #1a1826 0%, #1c1a28 50%, #1a1826 100%);
+  background: #0a0a0b;
 }
 
 /* 1. BASE — Hauteur FIXE pour PWA/iOS (100vh bug, safe areas) */
@@ -571,7 +599,7 @@ input, textarea, select, [contenteditable="true"] {
   user-select: text;
 }
 
-/* Root + App shell — hauteur 100% pour contraindre les flex children et activer le scroll */
+/* Root + App shell — hauteur 100dvh + safe areas PWA (évite trait noir, contenu coupé) */
 #root,
 .app-root {
   display: flex;
@@ -582,6 +610,10 @@ input, textarea, select, [contenteditable="true"] {
   width: 100%;
   overflow: hidden;
   background-color: var(--bg-primary);
+  padding-top: var(--sat);
+  padding-bottom: var(--sab);
+  padding-left: var(--sal);
+  padding-right: var(--sar);
 }
 /* Enfants directs de .app-root remplissent la hauteur (login, spinner, etc.) */
 .app-root > * {
@@ -596,8 +628,10 @@ input, textarea, select, [contenteditable="true"] {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  overflow-x: hidden;
   position: relative;
   width: 100%;
+  max-width: 100%;
   background-color: var(--bg-primary);
 }
 
@@ -606,6 +640,7 @@ input, textarea, select, [contenteditable="true"] {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  max-width: 100%;
 }
 
 .app-shell-sidebar {
@@ -619,6 +654,7 @@ input, textarea, select, [contenteditable="true"] {
   flex: 1;
   min-width: 0;
   min-height: 0;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -638,7 +674,6 @@ input, textarea, select, [contenteditable="true"] {
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
-  /* Espace de respiration en bas (desktop) */
   padding-bottom: 2rem;
 }
 
@@ -665,6 +700,14 @@ input, textarea, select, [contenteditable="true"] {
   .safe-x { padding-left: max(1rem, env(safe-area-inset-left)) !important; padding-right: max(1rem, env(safe-area-inset-right)) !important; }
 }
 
+/* Topbar mobile : safe area en haut pour ne pas couper le contenu sous la barre de statut */
+@media (max-width: 767px) {
+  .app-shell-header {
+    padding-top: env(safe-area-inset-top, 0px);
+    min-height: calc(58px + env(safe-area-inset-top, 0px));
+  }
+}
+
 /* PWA standalone: landing page under status bar */
 @media all and (display-mode: standalone) {
   .landing-scroll {
@@ -675,6 +718,47 @@ input, textarea, select, [contenteditable="true"] {
 /* Bottom bar safe padding for iPhone swipe indicator */
 .pb-safe {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+/* 4b. MODAL RESPONSIVE — container + actions */
+.modal-container {
+  width: 90%;
+  max-width: 560px;
+  margin: 0 auto;
+  border-radius: 16px;
+}
+.modal-overlay-center {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 399px) {
+  .modal-actions-column {
+    flex-direction: column !important;
+  }
+}
+
+/* 4c. CLIENT CARD BODY — 2 cols desktop, 1 col mobile */
+.client-card-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 640px) {
+  .client-card-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 4d. PAGE TABS — wrap or horizontal scroll */
+.page-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 5. TOUCH-FIRST — Zones de touche & prevention zoom */
@@ -688,7 +772,7 @@ input, select, textarea {
   font-size: 16px !important;
 }
 
-/* 6. BOTTOM NAVIGATION BAR — Fixed, does NOT add to layout height */
+/* 6. BOTTOM NAVIGATION BAR — Fixed, safe area en bas (évite trait noir home indicator iOS) */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -696,19 +780,20 @@ input, select, textarea {
   right: 0;
   width: 100%;
   z-index: 50;
+  min-height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
   background: var(--bg-secondary);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-top: 1px solid var(--border);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
 }
 
-/* Content area: réserve espace pour la bottom nav + safe area iOS + respiration */
+/* Content area: réserve espace pour la bottom nav + safe area iOS + respiration (évite contenu caché) */
 @media (max-width: 767px) {
   .app-shell-content {
-    padding-bottom: calc(72px + 2rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 16px) !important;
   }
 }
 

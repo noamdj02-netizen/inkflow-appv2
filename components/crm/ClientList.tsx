@@ -258,7 +258,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                             {client.tags.length > 0 && (
                               <div className="flex gap-1 mt-1">
                                 {client.tags.slice(0, 2).map(tag => (
-                                  <span key={tag} className="text-xs bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-lg text-indigo-600 dark:text-indigo-300">{tag}</span>
+                                  <span key={tag} className="text-xs bg-indigo-50 dark:bg-[var(--bg-card-secondary)] px-2 py-0.5 rounded-lg text-indigo-600 dark:text-indigo-300">{tag}</span>
                                 ))}
                               </div>
                             )}
@@ -357,7 +357,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                 {selectedClient.status === 'vip' ? 'VIP' : selectedClient.status === 'active' ? 'Actif' : selectedClient.status === 'inactive' ? 'Inactif' : selectedClient.status}
               </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0">
+            <div className="client-card-body grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0">
               <div className="min-w-0">
                 <h3 className="text-sm font-semibold text-neutral-600 mb-3">Informations de contact</h3>
                 <div className="space-y-3">
