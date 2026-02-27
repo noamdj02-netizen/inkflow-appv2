@@ -51,6 +51,40 @@ export async function sendProjectNotification(data: ProjectNotificationData): Pr
   }
 }
 
+export interface SendBookingConfirmationParams {
+  clientEmail: string;
+  clientName: string;
+  studioName: string;
+  requestedDate: string;
+  requestedTime: string | null;
+  description: string;
+}
+
+/**
+ * Envoie au client un email de confirmation de RDV quand le tatoueur confirme une demande RDV vitrine.
+ * Non bloquant : les erreurs sont loguées en dev uniquement.
+ */
+export async function sendBookingConfirmation(params: SendBookingConfirmationParams): Promise<void> {
+  try {
+    const body = {
+      clientEmail: sanitizeEmail(params.clientEmail),
+      clientName: sanitizeText(params.clientName, MAX_NAME_LENGTH) ?? '',
+      studioName: sanitizeText(params.studioName, MAX_NAME_LENGTH) ?? '',
+      requestedDate: params.requestedDate,
+      requestedTime: params.requestedTime ?? null,
+      description: sanitizeText(params.description, 500) ?? '',
+    };
+    const { error } = await supabase.functions.invoke('send-booking-confirmation', { body });
+    if (import.meta.env.DEV && error) {
+      console.warn('[InkFlow] send-booking-confirmation:', error.message);
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('[InkFlow] send-booking-confirmation error:', err);
+    }
+  }
+}
+
 export interface SendConversationLinkToClientParams {
   clientEmail: string;
   clientName: string;
@@ -61,9 +95,9 @@ export interface SendConversationLinkToClientParams {
 /**
  * Envoie au client un email avec le lien de conversation (quand le studio accepte une demande de projet).
  * Non bloquant : en cas d'erreur (ex. Resend non configuré), on ne remonte pas l'erreur.
- * @returns { sent: true } si l'email a été envoyé, { sent: false, unauthorized: true } en cas de 401, sinon { sent: false }
+ * @returns { sent: true } si l'email a été envoyé, { sent: false, unauthorized?: boolean, errorDetails?: string } sinon
  */
-export async function sendConversationLinkToClient(params: SendConversationLinkToClientParams): Promise<{ sent: boolean; unauthorized?: boolean }> {
+export async function sendConversationLinkToClient(params: SendConversationLinkToClientParams): Promise<{ sent: boolean; unauthorized?: boolean; errorDetails?: string }> {
   const invoke = async () => {
     const { data, error } = await supabase.functions.invoke('send-client-conversation-link', {
       body: {
@@ -78,28 +112,48 @@ export async function sendConversationLinkToClient(params: SendConversationLinkT
 
   try {
     let { data, error } = await invoke();
-    const is401 = (error as { context?: { status?: number } })?.context?.status === 401
+    const status = (error as { context?: { status?: number } })?.context?.status;
+    const is401Or461 = status === 401 || status === 461
       || error?.message?.includes('401')
+      || error?.message?.includes('461')
       || error?.message?.toLowerCase().includes('unauthorized');
-    if (is401) {
+    if (is401Or461) {
       await supabase.auth.refreshSession();
       const retry = await invoke();
       data = retry.data;
       error = retry.error;
     }
+    const getErrorDetails = async (): Promise<string | undefined> => {
+      const fromData = (data as { userMessage?: string } | undefined)?.userMessage;
+      if (fromData) return fromData;
+      const err = error as { context?: { json?: () => Promise<{ userMessage?: string; error?: string }> } };
+      if (typeof err?.context?.json === 'function') {
+        try {
+          const body = await err.context.json();
+          return body?.userMessage || body?.error;
+        } catch {
+          return undefined;
+        }
+      }
+      return undefined;
+    };
     if (error) {
-      const unauthorized = (error as { context?: { status?: number } })?.context?.status === 401
+      const retryStatus = (error as { context?: { status?: number } })?.context?.status;
+      const unauthorized = retryStatus === 401 || retryStatus === 461
         || error?.message?.includes('401')
+        || error?.message?.includes('461')
         || error?.message?.toLowerCase().includes('unauthorized');
       const msg = unauthorized
         ? 'Session expirée ou non autorisée (401). Reconnectez-vous puis réessayez.'
         : error.message;
       console.warn('[InkFlow] Email lien conversation non envoyé:', msg, data);
-      return { sent: false, unauthorized: unauthorized || undefined };
+      const errorDetails = await getErrorDetails();
+      return { sent: false, unauthorized: unauthorized || undefined, errorDetails };
     }
     if (data?.error) {
+      const errorDetails = (data as { userMessage?: string }).userMessage || data.error;
       console.warn('[InkFlow] Email lien conversation échec serveur:', data.error, data.details);
-      return { sent: false };
+      return { sent: false, errorDetails };
     }
     return { sent: true };
   } catch (err) {

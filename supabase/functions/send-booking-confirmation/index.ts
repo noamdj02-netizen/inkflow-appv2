@@ -1,19 +1,17 @@
 /**
- * Envoie au client un email avec le lien de conversation (quand le studio accepte une demande de projet).
- * Le client peut cliquer sur le lien pour ouvrir /messages/:threadId et discuter avec le studio.
+ * Envoie au client un email de confirmation de RDV quand le tatoueur confirme une demande RDV vitrine.
  */
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
-const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
-// Pour tester sans domaine vérifié : définir RESEND_FROM_EMAIL = "InkFlow <onboarding@resend.dev>" dans les secrets Supabase
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
 
 interface Payload {
   clientEmail: string;
   clientName: string;
-  studioName?: string;
-  /** Ex: pr_pr_1234567890 */
-  threadId: string;
+  studioName: string;
+  requestedDate: string;
+  requestedTime: string | null;
+  description: string;
 }
 
 const corsHeaders = {
@@ -29,34 +27,53 @@ function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function buildEmailHtml(payload: Payload, conversationUrl: string): string {
+function formatTimeLabel(t: string | null): string {
+  if (!t) return "";
+  if (t === "morning") return "Matin";
+  if (t === "afternoon") return "Après-midi";
+  if (t === "evening") return "Soirée";
+  return t;
+}
+
+function buildEmailHtml(payload: Payload): string {
   const safeClientName = escapeHtml(payload.clientName);
-  const safeStudioName = escapeHtml(payload.studioName || "le studio");
+  const safeStudioName = escapeHtml(payload.studioName);
+  const safeDescription = escapeHtml(
+    payload.description.length > 200 ? payload.description.slice(0, 200) + "…" : payload.description
+  );
+  const dateStr = payload.requestedDate
+    ? new Date(payload.requestedDate + "T12:00:00").toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "";
+  const timeStr = formatTimeLabel(payload.requestedTime);
 
   return `<!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;">
   <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
-    <div style="background:linear-gradient(135deg,#6328d4 0%,#7c3aed 100%);padding:28px 32px;">
+    <div style="background:linear-gradient(135deg,#059669 0%,#10b981 100%);padding:28px 32px;">
       <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">InkFlow</h1>
-      <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">Bonne nouvelle !</p>
+      <p style="margin:8px 0 0;color:rgba(255,255,255,0.95);font-size:14px;">RDV confirmé</p>
     </div>
     <div style="padding:32px;">
       <p style="color:#1a1035;font-size:16px;line-height:1.5;margin:0 0 16px;">
         Bonjour <strong>${safeClientName}</strong>,
       </p>
-      <p style="color:#4a3878;font-size:15px;line-height:1.6;margin:0 0 24px;">
-        Votre projet a été validé par <strong>${safeStudioName}</strong> ! Cliquez sur le lien ci-dessous pour discuter avec l'artiste, affiner les détails et fixer une date.
+      <p style="color:#4a3878;font-size:15px;line-height:1.6;margin:0 0 20px;">
+        <strong>${safeStudioName}</strong> a confirmé votre rendez-vous.
       </p>
-      <div style="text-align:center;margin:28px 0 8px;">
-        <a href="${conversationUrl}" style="display:inline-block;background:#6328d4;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:12px;font-size:15px;font-weight:600;">
-          Ouvrir la conversation
-        </a>
+      <div style="background:#f0fdf4;border:1px solid rgba(5,150,105,0.2);border-radius:12px;padding:20px;margin:20px 0;">
+        <p style="margin:0 0 8px;color:#065f46;"><strong>Date :</strong> ${dateStr}</p>
+        ${timeStr ? `<p style="margin:0 0 8px;color:#065f46;"><strong>Créneau :</strong> ${escapeHtml(timeStr)}</p>` : ""}
+        ${safeDescription ? `<p style="margin:12px 0 0;color:#047857;font-size:14px;">${safeDescription}</p>` : ""}
       </div>
-      <p style="color:#8b7bb5;font-size:13px;margin-top:24px;line-height:1.5;">
-        Lien sécurisé (copiez si le bouton ne s'ouvre pas) :<br/>
-        <a href="${conversationUrl}" style="color:#6328d4;word-break:break-all;">${conversationUrl}</a>
+      <p style="color:#6b7280;font-size:13px;margin-top:24px;line-height:1.5;">
+        En cas d'empêchement, contactez le studio au plus tôt pour reporter.
       </p>
     </div>
     <div style="background:#f5f0ff;padding:16px 32px;border-top:1px solid rgba(99,40,212,0.12);">
@@ -77,11 +94,12 @@ Deno.serve(async (req: Request) => {
     const missing: string[] = [];
     if (!payload?.clientEmail?.trim?.()) missing.push("clientEmail");
     if (!payload?.clientName?.trim?.()) missing.push("clientName");
-    if (!payload?.threadId?.trim?.()) missing.push("threadId");
+    if (!payload?.studioName?.trim?.()) missing.push("studioName");
+    if (!payload?.requestedDate?.trim?.()) missing.push("requestedDate");
     if (missing.length > 0) {
-      console.error("[send-client-conversation-link] Bad request, missing or empty:", missing.join(", "));
+      console.error("[send-booking-confirmation] Bad request, missing:", missing.join(", "));
       return new Response(
-        JSON.stringify({ error: "clientEmail, clientName and threadId are required", missing }),
+        JSON.stringify({ error: "clientEmail, clientName, studioName and requestedDate are required", missing }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -94,9 +112,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const conversationUrl = `${SITE_URL}/c/${payload.threadId}`;
-    const html = buildEmailHtml(payload, conversationUrl);
-    const subject = "Bonne nouvelle ! Le studio a accepté votre projet 🎨";
+    const html = buildEmailHtml(payload);
+    const subject = `RDV confirmé — ${payload.studioName}`;
 
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -115,22 +132,8 @@ Deno.serve(async (req: Request) => {
     if (!resendRes.ok) {
       const errBody = await resendRes.text();
       console.error("Resend API error:", resendRes.status, errBody);
-      let userMessage = "Erreur Resend";
-      try {
-        const errJson = JSON.parse(errBody) as { message?: string; name?: string };
-        if (resendRes.status === 401 || errJson.message?.toLowerCase().includes("invalid") || errJson.message?.toLowerCase().includes("api key")) {
-          userMessage = "Clé API Resend invalide. Vérifiez RESEND_API_KEY dans Supabase (Secrets) et sur resend.com → API Keys.";
-        } else         if (resendRes.status === 403 || errJson.message?.toLowerCase().includes("domain") || errJson.message?.toLowerCase().includes("verified") || errJson.message?.toLowerCase().includes("only send testing emails")) {
-          userMessage = "En mode test Resend, vous ne pouvez envoyer qu'à votre propre adresse (noamdj02@gmail.com). Pour envoyer aux clients : vérifiez un domaine sur resend.com/domains et utilisez une adresse @votredomaine pour l'envoi.";
-        } else if (errJson.message) {
-          userMessage = errJson.message;
-        }
-      } catch {
-        userMessage = errBody.slice(0, 200) || userMessage;
-      }
-      console.error("[send-client-conversation-link] Cause:", userMessage);
       return new Response(
-        JSON.stringify({ error: "Email send failed", details: errBody, userMessage }),
+        JSON.stringify({ error: "Email send failed", details: errBody }),
         { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }

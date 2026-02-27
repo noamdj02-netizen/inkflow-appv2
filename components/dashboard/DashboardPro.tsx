@@ -1002,8 +1002,8 @@ export const DashboardPro: React.FC = () => {
                             }).eq('id', studioId);
                             if (error) throw error;
                           }
-                          // Sync with AuthContext so header/sidebar update instantly
-                          updateUser({ name: generalStudioName, studioName: generalStudioName, email: generalEmail });
+                          // Sync with AuthContext: only studio name and email (do not overwrite user's display name)
+                          updateUser({ studioName: generalStudioName, email: generalEmail });
                           localStorage.setItem('inkflow_studio_name', generalStudioName);
                           localStorage.setItem('inkflow_email', generalEmail);
                           setGeneralSaved(true);

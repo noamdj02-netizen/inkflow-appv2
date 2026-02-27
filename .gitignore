@@ -34,3 +34,6 @@ dist-ssr
 
 # Cursor (docs)
 docs/.cursor
+
+# Supabase CLI local
+supabase/.temp

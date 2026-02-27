@@ -3,8 +3,7 @@
  * Uses the verified domain: contact@ink-flow.me
  */
 
-export const RESEND_FROM = "InkFlow <contact@ink-flow.me>";
-
+export const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 
 export interface SendEmailParams {

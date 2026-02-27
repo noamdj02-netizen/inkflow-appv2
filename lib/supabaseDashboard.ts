@@ -61,6 +61,19 @@ export async function ensureStudio(
   return { studioId: id, slug: finalSlug };
 }
 
+/** Récupère le studio (id + slug) pour cet email (le plus récemment mis à jour). Permet de garder le même studio quand on change uniquement le nom. */
+export async function getStudioByEmail(email: string): Promise<{ id: string; slug: string } | null> {
+  const { data, error } = await supabase
+    .from('inkflow_studios')
+    .select('id, slug')
+    .eq('email', email)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data?.id) return null;
+  return { id: data.id, slug: (data.slug as string) ?? getStudioSlug('Mon studio') };
+}
+
 /** Récupère le slug du studio depuis la base (pour le dashboard quand on a déjà studioId). */
 export async function getStudioSlugByStudioId(studioId: string): Promise<string | null> {
   const { data, error } = await supabase

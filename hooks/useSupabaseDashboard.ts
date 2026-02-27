@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
   ensureStudio,
+  getStudioByEmail,
   getAppointmentsFromSupabase,
   getClientsFromSupabase,
   getFlashDesignsFromSupabase,
@@ -111,7 +112,18 @@ export const useSupabaseDashboard = () => {
       setLoading(true);
       try {
         if (useSupabase) {
-          const { studioId: sid, slug } = await ensureStudio(user.email, user.name, user.studioName || 'Mon Studio');
+          // Use existing studio for this email so changing the studio name doesn't switch to another studio
+          const existing = await getStudioByEmail(user.email);
+          let sid: string;
+          let slug: string;
+          if (existing) {
+            sid = existing.id;
+            slug = existing.slug;
+          } else {
+            const created = await ensureStudio(user.email, user.name, user.studioName || 'Mon Studio');
+            sid = created.studioId;
+            slug = created.slug;
+          }
           setStudioId(sid);
           setStudioSlug(slug);
           await loadAllData(sid);
@@ -147,7 +159,7 @@ export const useSupabaseDashboard = () => {
 
     setConnectionError(null);
     init();
-  }, [user?.id, user?.email, user?.name, user?.studioName, useSupabase, loadAllData, retryCount]);
+  }, [user?.id, user?.email, useSupabase, loadAllData, retryCount]);
 
   const retry = useCallback(() => {
     setConnectionError(null);
