@@ -8,15 +8,19 @@
     "build": "vite build",
     "preview": "vite preview",
     "generate-pwa-assets": "pwa-assets-generator",
-    "generate-pwa-icons": "node scripts/generate-pwa-icons.mjs"
+    "generate-pwa-icons": "node scripts/generate-pwa-icons.mjs",
+    "resend:templates": "node scripts/create-resend-templates.mjs",
+    "email:embed-hero": "node scripts/embed-email-hero.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.2",
+    "@react-email/components": "^0.0.29",
     "@supabase/supabase-js": "^2.95.3",
     "@tailwindcss/vite": "^4.1.18",
+    "framer-motion": "^12.34.3",
     "jspdf": "^4.1.0",
     "lucide-react": "^0.563.0",
     "react": "^19.2.4",

@@ -58,6 +58,8 @@ export interface SendBookingConfirmationParams {
   requestedDate: string;
   requestedTime: string | null;
   description: string;
+  /** Lien vers la conversation client (optionnel). Si fourni, la date devient cliquable dans l'email. */
+  conversationLink?: string;
 }
 
 /**
@@ -73,6 +75,7 @@ export async function sendBookingConfirmation(params: SendBookingConfirmationPar
       requestedDate: params.requestedDate,
       requestedTime: params.requestedTime ?? null,
       description: sanitizeText(params.description, 500) ?? '',
+      conversationLink: params.conversationLink ? sanitizeText(params.conversationLink, 500) : undefined,
     };
     const { error } = await supabase.functions.invoke('send-booking-confirmation', { body });
     if (import.meta.env.DEV && error) {

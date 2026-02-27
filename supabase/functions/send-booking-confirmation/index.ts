@@ -1,9 +1,15 @@
 /**
  * Envoie au client un email de confirmation de RDV quand le tatoueur confirme une demande RDV vitrine.
+ * Design premium : header noir, hero image, ligne date minimaliste (aligné sur RdvConfirmeEmail.tsx).
  */
+
+import { escapeHtml } from "../_shared/emailLayout.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
+const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+const SUPPORT_PHONE = Deno.env.get("SUPPORT_PHONE") || "06 33 43 89 26";
+const SUPPORT_ADDRESS = Deno.env.get("SUPPORT_ADDRESS") || "Paris, France";
 
 interface Payload {
   clientEmail: string;
@@ -12,20 +18,14 @@ interface Payload {
   requestedDate: string;
   requestedTime: string | null;
   description: string;
+  /** Lien vers la conversation client (optionnel). Si fourni, la date devient cliquable. */
+  conversationLink?: string;
 }
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function formatTimeLabel(t: string | null): string {
   if (!t) return "";
@@ -35,51 +35,86 @@ function formatTimeLabel(t: string | null): string {
   return t;
 }
 
-function buildEmailHtml(payload: Payload): string {
-  const safeClientName = escapeHtml(payload.clientName);
-  const safeStudioName = escapeHtml(payload.studioName);
-  const safeDescription = escapeHtml(
-    payload.description.length > 200 ? payload.description.slice(0, 200) + "…" : payload.description
-  );
-  const dateStr = payload.requestedDate
-    ? new Date(payload.requestedDate + "T12:00:00").toLocaleDateString("fr-FR", {
+function formatDateDisplay(requestedDate: string, requestedTime: string | null): string {
+  const dateStr = requestedDate
+    ? new Date(requestedDate + "T12:00:00").toLocaleDateString("fr-FR", {
         weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric",
       })
     : "";
-  const timeStr = formatTimeLabel(payload.requestedTime);
+  const timeStr = formatTimeLabel(requestedTime);
+  return timeStr ? `${dateStr} — ${timeStr}` : dateStr;
+}
+
+function buildRdvConfirmeHtml(payload: Payload): string {
+  const dateDisplay = formatDateDisplay(payload.requestedDate, payload.requestedTime);
+  const ctaUrl = payload.conversationLink || SITE_URL;
+  const safeClientName = escapeHtml(payload.clientName);
+  const safeStudioName = escapeHtml(payload.studioName);
 
   return `<!DOCTYPE html>
 <html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;">
-  <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
-    <div style="background:linear-gradient(135deg,#059669 0%,#10b981 100%);padding:28px 32px;">
-      <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">InkFlow</h1>
-      <p style="margin:8px 0 0;color:rgba(255,255,255,0.95);font-size:14px;">RDV confirmé</p>
-    </div>
-    <div style="padding:32px;">
-      <p style="color:#1a1035;font-size:16px;line-height:1.5;margin:0 0 16px;">
-        Bonjour <strong>${safeClientName}</strong>,
-      </p>
-      <p style="color:#4a3878;font-size:15px;line-height:1.6;margin:0 0 20px;">
-        <strong>${safeStudioName}</strong> a confirmé votre rendez-vous.
-      </p>
-      <div style="background:#f0fdf4;border:1px solid rgba(5,150,105,0.2);border-radius:12px;padding:20px;margin:20px 0;">
-        <p style="margin:0 0 8px;color:#065f46;"><strong>Date :</strong> ${dateStr}</p>
-        ${timeStr ? `<p style="margin:0 0 8px;color:#065f46;"><strong>Créneau :</strong> ${escapeHtml(timeStr)}</p>` : ""}
-        ${safeDescription ? `<p style="margin:12px 0 0;color:#047857;font-size:14px;">${safeDescription}</p>` : ""}
-      </div>
-      <p style="color:#6b7280;font-size:13px;margin-top:24px;line-height:1.5;">
-        En cas d'empêchement, contactez le studio au plus tôt pour reporter.
-      </p>
-    </div>
-    <div style="background:#f5f0ff;padding:16px 32px;border-top:1px solid rgba(99,40,212,0.12);">
-      <p style="color:#8b7bb5;font-size:11px;margin:0;text-align:center;">InkFlow — Plateforme pour tatoueurs</p>
-    </div>
-  </div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+</head>
+<body style="margin:0;padding:20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#f0f1f5;">
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#f0f1f5" style="background-color:#f0f1f5">
+    <tr><td>
+      <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;margin:0 auto;background-color:#ffffff;overflow:hidden">
+        <!-- Header noir IF. / INKFLOW -->
+        <tr><td style="background-color:#000000;padding:20px 30px">
+          <table width="100%" border="0" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="50%" style="color:#ffffff;font-size:24px;font-weight:bold;font-style:italic;">IF.</td>
+              <td width="50%" style="color:#ffffff;font-size:18px;letter-spacing:2px;text-align:right;">INKFLOW</td>
+            </tr>
+          </table>
+        </td></tr>
+        <!-- Message principal -->
+        <tr><td style="padding:30px 40px;text-align:center">
+          <p style="margin:0 0 30px;font-size:18px;color:#111827;line-height:1.5;">
+            Bonjour ${safeClientName},<br><br>
+            Nous sommes impatients de vous voir chez ${safeStudioName}.
+          </p>
+          <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0" />
+          <!-- Date -->
+          <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto 30px;max-width:400px;background-color:#fafafa;border:1px solid #e5e5e5;border-radius:8px">
+            <tr><td style="padding:16px 24px">
+              <span style="color:#171717;font-size:16px;"><strong>Date :</strong> ${escapeHtml(dateDisplay)}</span>
+            </td></tr>
+          </table>
+          <!-- Bouton Se connecter à InkFlow -->
+          <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background-color:#00c4cc;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:bold;">Se connecter à InkFlow</a>
+        </td></tr>
+        <!-- Footer (fond sombre) -->
+        <tr><td style="padding:30px 40px;background-color:#070300;text-align:left">
+          <p style="margin:0 0 16px;color:#f6f5f1;font-size:20px;font-weight:700;">Besoin d'aide ?</p>
+          <p style="margin:0 0 16px;color:#f6f5f1;font-size:15px;line-height:1.5;">
+            Appelez-nous au <a href="tel:${SUPPORT_PHONE.replace(/\s/g, "")}" style="color:#f6f5f1;font-weight:700;text-decoration:none;">${escapeHtml(SUPPORT_PHONE)}</a>,<br>
+            démarrez un <strong>chat en direct</strong> dans l'application,<br>
+            ou consultez notre <strong>Centre d'assistance</strong> à tout moment.
+          </p>
+          <p style="margin:24px 0 8px;color:#bfc3c8;font-size:12px;line-height:1.3;">
+            <a href="${escapeHtml(SITE_URL)}/parametres" style="color:#bfc3c8;text-decoration:underline;">Vous ne souhaitez plus recevoir ces e-mails ? Désabonnez-vous.</a>
+          </p>
+          <p style="margin:0;color:#bfc3c8;font-size:12px;">${escapeHtml(SUPPORT_ADDRESS)}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`;
 }
@@ -112,7 +147,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const html = buildEmailHtml(payload);
+    const html = buildRdvConfirmeHtml(payload);
     const subject = `RDV confirmé — ${payload.studioName}`;
 
     const resendRes = await fetch("https://api.resend.com/emails", {

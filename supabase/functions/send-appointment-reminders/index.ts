@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
@@ -14,36 +15,16 @@ const corsHeaders = {
 
 function buildReminderHtml(apt: Record<string, unknown>, studioName: string, hoursUntil: number): string {
   const timeLabel = hoursUntil <= 2 ? "dans 2 heures" : "demain";
-  return `<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;">
-  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
-    <div style="background:#171717;padding:28px 32px;">
-      <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;">InkFlow</h1>
-    </div>
-    <div style="padding:32px;">
-      <p style="color:#171717;font-size:16px;margin:0 0 16px;">
-        Salut <strong>${apt.client_name}</strong>,
-      </p>
-      <p style="color:#333;font-size:15px;line-height:1.6;margin:0 0 20px;">
-        Rappel : ton rendez-vous chez <strong>${studioName}</strong> est prevu <strong>${timeLabel}</strong>.
-      </p>
-      <div style="background:#fafafa;border:1px solid #e5e5e5;border-radius:12px;padding:16px 20px;margin:20px 0;">
-        <p style="margin:0 0 8px;"><strong>Service :</strong> ${apt.service}</p>
-        <p style="margin:0 0 8px;"><strong>Date :</strong> ${apt.date}</p>
-        <p style="margin:0;"><strong>Heure :</strong> ${apt.time}</p>
-      </div>
-      <p style="color:#999;font-size:12px;margin-top:24px;text-align:center;">
-        En cas d'empechement, contacte le studio au plus vite.
-      </p>
-    </div>
-    <div style="background:#fafafa;padding:16px 32px;border-top:1px solid #e5e5e5;">
-      <p style="color:#aaa;font-size:11px;margin:0;text-align:center;">InkFlow - Plateforme pour tatoueurs</p>
-    </div>
-  </div>
-</body>
-</html>`;
+  const safeStudio = escapeHtml(String(studioName));
+  const safeName = escapeHtml(String(apt.client_name ?? ""));
+  const infoContent = `<p style="margin:0 0 8px;color:#171717;font-size:14px;"><strong>Service :</strong> ${escapeHtml(String(apt.service ?? ""))}</p>
+        <p style="margin:0 0 8px;color:#171717;font-size:14px;"><strong>Date :</strong> ${escapeHtml(String(apt.date ?? ""))}</p>
+        <p style="margin:0;color:#171717;font-size:14px;"><strong>Heure :</strong> ${escapeHtml(String(apt.time ?? ""))}</p>`;
+  const bodyHtml = `<p style="color:#171717;font-size:16px;line-height:1.55;margin:0 0 12px;">Salut <strong>${safeName}</strong>,</p>
+      <p style="color:#525252;font-size:15px;line-height:1.6;margin:0 0 16px;">Rappel : ton rendez-vous chez <strong>${safeStudio}</strong> est prévu <strong>${escapeHtml(timeLabel)}</strong>.</p>
+      ${emailInfoBox(infoContent)}
+      <p style="color:#737373;font-size:13px;margin:0;text-align:center;">En cas d'empêchement, contacte le studio au plus vite.</p>`;
+  return wrapEmailLayout({ tag: "RAPPEL RDV", title: `Rappel RDV ${timeLabel}`, bodyHtml });
 }
 
 Deno.serve(async (_req: Request) => {
