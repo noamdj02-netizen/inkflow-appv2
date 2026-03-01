@@ -15,6 +15,8 @@ interface MiniCalendarProps {
   onNextMonth: () => void;
   onToday: () => void;
   className?: string;
+  /** Variante sombre pour la sidebar calendrier (style calendar.me) */
+  variant?: 'default' | 'dark';
 }
 
 function toDateStr(d: Date): string {
@@ -33,7 +35,9 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
   onNextMonth,
   onToday,
   className = '',
+  variant = 'default',
 }) => {
+  const isDark = variant === 'dark';
   const todayStr = toDateStr(new Date());
 
   const { weeks, monthLabel } = useMemo(() => {
@@ -62,25 +66,41 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
 
   return (
     <div
-      className={`rounded-2xl dashboard-widget-card overflow-hidden p-5 ${className}`}
+      className={`overflow-hidden p-5 ${className} ${
+        isDark
+          ? 'bg-transparent'
+          : 'rounded-2xl dashboard-widget-card'
+      }`}
       style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
-      <div className="flex items-center justify-between px-1 py-2 border-b border-zinc-200 dark:border-zinc-800 mb-4">
+      <div className={`flex items-center justify-between px-1 py-2 border-b mb-4 ${
+        isDark ? 'border-zinc-700' : 'border-zinc-200 dark:border-zinc-800'
+      }`}>
         <button
           type="button"
           onClick={onPrevMonth}
-          className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          className={`p-2 rounded-lg transition-colors ${
+            isDark
+              ? 'hover:bg-zinc-800 text-zinc-400 hover:text-white'
+              : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+          }`}
           aria-label="Mois précédent"
         >
           <ChevronLeft className="w-5 h-5" strokeWidth={1.5} />
         </button>
-        <span className="text-[15px] font-semibold text-zinc-900 dark:text-[var(--text-primary)] capitalize">
+        <span className={`text-[15px] font-semibold capitalize ${
+          isDark ? 'text-zinc-100' : 'text-zinc-900 dark:text-[var(--text-primary)]'
+        }`}>
           {monthLabel}
         </span>
         <button
           type="button"
           onClick={onNextMonth}
-          className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          className={`p-2 rounded-lg transition-colors ${
+            isDark
+              ? 'hover:bg-zinc-800 text-zinc-400 hover:text-white'
+              : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+          }`}
           aria-label="Mois suivant"
         >
           <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
@@ -89,7 +109,9 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
       <div>
         <div className="grid grid-cols-7 gap-1 text-center">
           {WEEKDAYS.map((wd) => (
-            <div key={wd} className="py-2 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+            <div key={wd} className={`py-2 text-[11px] font-semibold uppercase tracking-wide ${
+              isDark ? 'text-zinc-500' : 'text-zinc-500 dark:text-zinc-400'
+            }`}>
               {wd}
             </div>
           ))}
@@ -111,14 +133,18 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
                     ${isSelected
                       ? 'bg-blue-600 text-white shadow-sm'
                       : isToday
-                        ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold ring-1 ring-blue-200 dark:ring-blue-500/30'
-                        : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                        ? isDark
+                          ? 'bg-emerald-500/30 text-emerald-300 font-semibold ring-1 ring-emerald-500/50'
+                          : 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold ring-1 ring-blue-200 dark:ring-blue-500/30'
+                        : isDark
+                          ? 'text-zinc-300 hover:bg-zinc-800'
+                          : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                     }
                   `}
                 >
                   <span>{day}</span>
                   {hasAppointments && !isSelected && (
-                    <span className="w-1.5 h-1.5 rounded-full mt-0.5 bg-blue-500" />
+                    <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} />
                   )}
                 </button>
               );
@@ -128,7 +154,11 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
         <button
           type="button"
           onClick={onToday}
-          className="w-full mt-4 py-2.5 rounded-lg text-[13px] font-semibold text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-600 bg-transparent hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+          className={`w-full mt-4 py-2.5 rounded-lg text-[13px] font-semibold transition-colors ${
+            isDark
+              ? 'text-emerald-400 border border-emerald-500/50 bg-transparent hover:bg-emerald-500/10'
+              : 'text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-600 bg-transparent hover:bg-blue-50 dark:hover:bg-blue-500/10'
+          }`}
         >
           Aujourd&apos;hui
         </button>

@@ -1,6 +1,6 @@
 /**
  * Envoie au client un email de confirmation de RDV quand le tatoueur confirme une demande RDV vitrine.
- * Design premium : header noir, hero image, ligne date minimaliste (aligné sur RdvConfirmeEmail.tsx).
+ * Design premium InkFlow : minimaliste, anthracite, CTA noir/bleu, sans vert.
  */
 
 import { escapeHtml } from "../_shared/emailLayout.ts";
@@ -18,8 +18,8 @@ interface Payload {
   requestedDate: string;
   requestedTime: string | null;
   description: string;
-  /** Lien vers la conversation client (optionnel). Si fourni, la date devient cliquable. */
   conversationLink?: string;
+  paymentLink?: string;
 }
 
 const corsHeaders = {
@@ -50,9 +50,17 @@ function formatDateDisplay(requestedDate: string, requestedTime: string | null):
 
 function buildRdvConfirmeHtml(payload: Payload): string {
   const dateDisplay = formatDateDisplay(payload.requestedDate, payload.requestedTime);
-  const ctaUrl = payload.conversationLink || SITE_URL;
+  const hasPaymentLink = !!payload.paymentLink?.trim?.();
+  const ctaUrl = payload.paymentLink || payload.conversationLink || SITE_URL;
+  const ctaLabel = hasPaymentLink ? "Régler mon acompte" : "Confirmer mon rendez-vous";
   const safeClientName = escapeHtml(payload.clientName);
   const safeStudioName = escapeHtml(payload.studioName);
+  const safePaymentUrl = hasPaymentLink ? escapeHtml(payload.paymentLink!) : "";
+  const safeDescription = escapeHtml(payload.description.length > 120 ? payload.description.slice(0, 117) + "..." : payload.description);
+
+  const intro = hasPaymentLink
+    ? `Bonjour ${safeClientName}, le studio a bien reçu votre demande et a validé votre créneau. Pour bloquer définitivement cette date dans l'agenda, il ne vous reste plus qu'à régler votre acompte.`
+    : `Bonjour ${safeClientName}, votre rendez-vous chez ${safeStudioName} est confirmé. Nous avons hâte de vous accueillir.`;
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -70,47 +78,66 @@ function buildRdvConfirmeHtml(payload: Payload): string {
   </noscript>
   <![endif]-->
 </head>
-<body style="margin:0;padding:20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#f0f1f5;">
-  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#f0f1f5" style="background-color:#f0f1f5">
-    <tr><td>
-      <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;margin:0 auto;background-color:#ffffff;overflow:hidden">
-        <!-- Header noir IF. / INKFLOW -->
-        <tr><td style="background-color:#000000;padding:20px 30px">
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:#FAFAFA;">
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#FAFAFA" style="background-color:#FAFAFA;">
+    <tr><td style="padding:32px 16px;">
+      <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width:560px;margin:0 auto;background-color:#FFFFFF;overflow:hidden;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+        <!-- Header minimaliste -->
+        <tr><td style="padding:32px 40px 24px;border-bottom:1px solid #F4F4F5;">
           <table width="100%" border="0" cellpadding="0" cellspacing="0">
             <tr>
-              <td width="50%" style="color:#ffffff;font-size:24px;font-weight:bold;font-style:italic;">IF.</td>
-              <td width="50%" style="color:#ffffff;font-size:18px;letter-spacing:2px;text-align:right;">INKFLOW</td>
+              <td style="color:#171717;font-size:22px;font-weight:700;font-style:italic;letter-spacing:-0.5px;">IF.</td>
+              <td style="color:#71717a;font-size:12px;letter-spacing:1.5px;text-align:right;text-transform:uppercase;">InkFlow</td>
             </tr>
           </table>
         </td></tr>
-        <!-- Message principal -->
-        <tr><td style="padding:30px 40px;text-align:center">
-          <p style="margin:0 0 30px;font-size:18px;color:#111827;line-height:1.5;">
-            Bonjour ${safeClientName},<br><br>
-            Nous sommes impatients de vous voir chez ${safeStudioName}.
+        <!-- Contenu principal -->
+        <tr><td style="padding:40px;">
+          <h1 style="margin:0 0 24px;font-size:24px;font-weight:700;color:#171717;line-height:1.3;letter-spacing:-0.3px;">
+            Bonne nouvelle, votre projet est accepté.
+          </h1>
+          <p style="margin:0 0 28px;font-size:16px;color:#171717;line-height:1.6;">
+            ${intro}
           </p>
-          <hr style="border:none;border-top:1px solid #e5e5e5;margin:20px 0" />
-          <!-- Date -->
-          <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto 30px;max-width:400px;background-color:#fafafa;border:1px solid #e5e5e5;border-radius:8px">
-            <tr><td style="padding:16px 24px">
-              <span style="color:#171717;font-size:16px;"><strong>Date :</strong> ${escapeHtml(dateDisplay)}</span>
+          <!-- Encart récapitulatif -->
+          <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin:0 0 28px;background-color:#F4F4F5;border:1px solid #E4E4E7;border-radius:8px;">
+            <tr><td style="padding:20px 24px;">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr><td style="padding:0 0 12px;font-size:14px;color:#71717a;font-weight:600;">Date</td></tr>
+                <tr><td style="padding:0 0 16px;font-size:16px;color:#171717;font-weight:500;">${escapeHtml(dateDisplay)}</td></tr>
+                <tr><td style="padding:0 0 12px;font-size:14px;color:#71717a;font-weight:600;">Projet</td></tr>
+                <tr><td style="padding:0;font-size:16px;color:#171717;line-height:1.5;">${safeDescription}</td></tr>
+              </table>
             </td></tr>
           </table>
-          <!-- Bouton Se connecter à InkFlow -->
-          <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background-color:#00c4cc;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:bold;">Se connecter à InkFlow</a>
+          <!-- Bouton CTA -->
+          <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
+            <tr><td>
+              <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background-color:#0A0A0A;color:#FFFFFF;text-decoration:none;padding:16px 24px;border-radius:8px;font-size:16px;font-weight:700;">${escapeHtml(ctaLabel)}</a>
+            </td></tr>
+          </table>
+          ${hasPaymentLink ? `
+          <p style="margin:0;font-size:13px;color:#71717a;line-height:1.5;">
+            Si le bouton ne s'affiche pas, copiez ce lien dans votre navigateur :<br>
+            <a href="${safePaymentUrl}" style="color:#2563eb;word-break:break-all;">${safePaymentUrl}</a>
+          </p>
+          ` : ""}
         </td></tr>
-        <!-- Footer (fond sombre) -->
-        <tr><td style="padding:30px 40px;background-color:#070300;text-align:left">
-          <p style="margin:0 0 16px;color:#f6f5f1;font-size:20px;font-weight:700;">Besoin d'aide ?</p>
-          <p style="margin:0 0 16px;color:#f6f5f1;font-size:15px;line-height:1.5;">
-            Appelez-nous au <a href="tel:${SUPPORT_PHONE.replace(/\s/g, "")}" style="color:#f6f5f1;font-weight:700;text-decoration:none;">${escapeHtml(SUPPORT_PHONE)}</a>,<br>
-            démarrez un <strong>chat en direct</strong> dans l'application,<br>
-            ou consultez notre <strong>Centre d'assistance</strong> à tout moment.
+        <!-- Clôture -->
+        <tr><td style="padding:0 40px 40px;">
+          <p style="margin:0;font-size:16px;color:#171717;line-height:1.6;">
+            À très vite,<br>
+            <strong>L'équipe ${safeStudioName}</strong>
           </p>
-          <p style="margin:24px 0 8px;color:#bfc3c8;font-size:12px;line-height:1.3;">
-            <a href="${escapeHtml(SITE_URL)}/parametres" style="color:#bfc3c8;text-decoration:underline;">Vous ne souhaitez plus recevoir ces e-mails ? Désabonnez-vous.</a>
+        </td></tr>
+        <!-- Footer discret -->
+        <tr><td style="padding:24px 40px;background-color:#FAFAFA;border-top:1px solid #F4F4F5;">
+          <p style="margin:0 0 8px;font-size:13px;color:#71717a;line-height:1.5;">
+            Besoin d'aide ? <a href="tel:${SUPPORT_PHONE.replace(/\s/g, "")}" style="color:#171717;font-weight:600;text-decoration:none;">${escapeHtml(SUPPORT_PHONE)}</a>
           </p>
-          <p style="margin:0;color:#bfc3c8;font-size:12px;">${escapeHtml(SUPPORT_ADDRESS)}</p>
+          <p style="margin:0;font-size:12px;color:#a1a1aa;">
+            <a href="${escapeHtml(SITE_URL)}/parametres" style="color:#71717a;text-decoration:underline;">Se désabonner</a> · ${escapeHtml(SUPPORT_ADDRESS)}
+          </p>
         </td></tr>
       </table>
     </td></tr>
@@ -148,7 +175,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const html = buildRdvConfirmeHtml(payload);
-    const subject = `RDV confirmé — ${payload.studioName}`;
+    const hasPaymentLink = !!payload.paymentLink?.trim?.();
+    const subject = hasPaymentLink
+      ? `Action requise : finalisez votre réservation — ${payload.studioName}`
+      : `Votre rendez-vous avec ${payload.studioName} est validé`;
 
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",

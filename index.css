@@ -580,6 +580,32 @@ img, video {
   background: #0a0a0b;
 }
 
+/* Sidebar/Drawer — fond opaque + isolation pour éviter transparence mobile/PWA */
+.app-shell-sidebar {
+  isolation: isolate;
+}
+:root[data-theme="dark"] .app-shell-sidebar {
+  background-color: #09090b !important;
+  background: #09090b !important;
+}
+
+/* MOBILE (< 1024px) — force fonds opaques sur tous les overlays (évite transparence WebKit/PWA) */
+@media (max-width: 1023px) {
+  :root[data-theme="dark"] .app-shell-sidebar {
+    background-color: #09090b !important;
+    background: #09090b !important;
+  }
+  :root[data-theme="dark"] .app-shell-sidebar [aria-hidden="true"] {
+    background-color: #09090b !important;
+  }
+  :root[data-theme="dark"] .bottom-nav {
+    background: #0f0f11 !important;
+  }
+  :root[data-theme="dark"] #nav-menu-mobile {
+    background-color: #09090b !important;
+  }
+}
+
 /* 1. BASE — Hauteur FIXE pour PWA/iOS (100vh bug, safe areas) */
 html {
   margin: 0;
@@ -785,7 +811,7 @@ input, select, textarea {
   font-size: 16px !important;
 }
 
-/* 6. BOTTOM NAVIGATION BAR — Fixed, safe area en bas (évite trait noir home indicator iOS) */
+/* 6. BOTTOM NAVIGATION BAR — fond 100% opaque (pas de backdrop-filter) */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -797,10 +823,12 @@ input, select, textarea {
   padding-bottom: env(safe-area-inset-bottom, 0px);
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
-  background: var(--bg-secondary);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: #ffffff;
   border-top: 1px solid var(--border);
+}
+:root[data-theme="dark"] .bottom-nav {
+  background: #0f0f11;
+  border-top-color: rgba(255, 255, 255, 0.07);
 }
 
 /* Content area: réserve espace pour la bottom nav + safe area iOS + respiration (évite contenu caché) */
@@ -1075,6 +1103,29 @@ input, select, textarea {
 }
 .animate-demo-fade-up {
   animation: demo-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ===== Bilan Finance — Impression / Export PDF ===== */
+@media print {
+  #root,
+  .app-root,
+  .app-shell {
+    display: none !important;
+  }
+  [role="dialog"] {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 99999 !important;
+    background: white !important;
+  }
+  [role="dialog"] > div:first-child {
+    background: transparent !important;
+  }
+  [role="dialog"] .modal-container {
+    box-shadow: none !important;
+    border: 1px solid #e5e5e5 !important;
+    max-height: none !important;
+  }
 }
 
 @keyframes demo-scene-slide-out {

@@ -7,9 +7,10 @@
  * Haptique : npx expo install expo-haptics
  * Swipe : npx expo install react-native-gesture-handler react-native-reanimated
  * Bottom Sheet : npx expo install @gorhom/bottom-sheet
+ * Notifications : npx expo install expo-notifications expo-device
  * ⚠️ Envelopper l'app dans <GestureHandlerRootView> (ex: dans app/_layout.tsx).
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import {
   View,
@@ -22,7 +23,6 @@ import {
 } from 'react-native';
 import { Swipeable, RectButton } from 'react-native-gesture-handler';
 import BottomSheet, { BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Menu,
@@ -39,7 +39,15 @@ import {
   X,
   Check,
   Clock,
+  Settings,
 } from 'lucide-react-native';
+import {
+  setupNotificationHandler,
+  registerForPushNotificationsAsync,
+  sendTestNotification,
+} from './lib/notifications';
+import { useNotificationSync } from './lib/useNotificationSync';
+import { isSupabaseConfigured } from './lib/supabase';
 
 const CARD_WIDTH = 80;
 
@@ -197,19 +205,52 @@ const MOCK_REQUESTS = [
 
 const BOTTOM_SHEET_SNAP_POINTS = ['30%', '50%'];
 
+/** Passe studioId pour synchroniser les notifications avec le dashboard/planning/calendrier */
+interface HomeScreenProps {
+  studioId?: string | null;
+}
+
 const MENU_OPTIONS = [
   { id: 'rdv', label: 'Créer un nouveau rendez-vous', icon: Calendar },
   { id: 'flash', label: 'Ajouter un nouveau Flash', icon: ImageIcon },
   { id: 'creneau', label: 'Bloquer un créneau', icon: Clock },
 ] as const;
 
-export default function HomeScreen() {
+// Configure le handler au chargement du module (une seule fois)
+setupNotificationHandler();
+
+export default function HomeScreen({ studioId = null }: HomeScreenProps) {
   const [toggleOn, setToggleOn] = useState(true);
   const [dismissOrange, setDismissOrange] = useState(false);
   const [dismissBlue, setDismissBlue] = useState(false);
   const [requests, setRequests] = useState(MOCK_REQUESTS);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [testTapCount, setTestTapCount] = useState(0);
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheet>(null);
+
+  // Initialisation des permissions notifications au montage
+  useEffect(() => {
+    registerForPushNotificationsAsync().catch(() => {});
+  }, []);
+
+  // Sync notifications avec dashboard / planning / calendrier (Supabase Realtime → Expo notifications)
+  useNotificationSync(studioId ?? null, isSupabaseConfigured());
+
+  // Bouton de test caché : 5 taps sur "Bonjour Noam" déclenche une notification de test
+  const handleTestNotificationTap = useCallback(() => {
+    const next = testTapCount + 1;
+    setTestTapCount(next);
+    if (next >= 5) {
+      setTestTapCount(0);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      sendTestNotification({
+        title: 'Nouvelle demande !',
+        body: 'Jeanne a réservé le Flash Floral',
+        imageUrl: 'https://images.unsplash.com/photo-1611916656173-875e4277bea6?w=400',
+      }).catch(() => {});
+    }
+  }, [testTapCount]);
 
   const removeRequest = (id: string) => {
     setRequests((prev) => prev.filter((r) => r.id !== id));
@@ -236,7 +277,7 @@ export default function HomeScreen() {
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}
-        opacity={0.5}
+        opacity={0.6}
       />
     ),
     []
@@ -249,10 +290,8 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingTop: 100, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ─── 1. Header (Frosted Glass) ─── */}
-        <BlurView
-          tint="dark"
-          intensity={80}
+        {/* ─── 1. Header — fond opaque (pas de BlurView pour éviter transparence) ─── */}
+        <View
           style={{
             paddingTop: insets.top,
             paddingBottom: 10,
@@ -266,9 +305,22 @@ export default function HomeScreen() {
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
+            backgroundColor: '#09090B',
+            zIndex: 50,
+            ...Platform.select({
+              ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
+              android: { elevation: 8 },
+            }),
           }}
         >
-          <TouchableOpacity activeOpacity={0.7} style={{ padding: 8, marginLeft: -8 }}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={{ padding: 8, marginLeft: -8 }}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setDrawerOpen(true);
+            }}
+          >
             <Menu size={24} color={COLORS.textPrimary} strokeWidth={2} />
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -300,16 +352,22 @@ export default function HomeScreen() {
               <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.avatarLetter }}>N</Text>
             </View>
           </View>
-        </BlurView>
+        </View>
 
         {/* ─── 2. Section Bienvenue ─── */}
         <View className="px-5 mt-6">
           <Text style={{ fontSize: 13, color: COLORS.tabInactive, marginBottom: 4 }}>
             jeu. 26 février
           </Text>
-          <Text style={{ fontSize: 26, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 6 }}>
-            Bonjour Noam 👋
-          </Text>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={handleTestNotificationTap}
+            style={{ alignSelf: 'flex-start' }}
+          >
+            <Text style={{ fontSize: 26, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 6 }}>
+              Bonjour Noam 👋
+            </Text>
+          </TouchableOpacity>
           <Text
             style={{ fontSize: 15, color: COLORS.textSecondary, lineHeight: 22 }}
             numberOfLines={2}
@@ -505,10 +563,57 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {/* ─── 6. Bottom Tab Bar + FAB (Frosted Glass) ─── */}
-      <BlurView
-        tint="dark"
-        intensity={80}
+      {/* ─── Drawer latéral — fond opaque #09090B, overlay rgba(0,0,0,0.6) ─── */}
+      {drawerOpen && (
+        <>
+          <TouchableOpacity
+            activeOpacity={1}
+            style={drawerStyles.overlay}
+            onPress={() => setDrawerOpen(false)}
+          />
+          <View style={drawerStyles.panel}>
+            <View style={[drawerStyles.header, { paddingTop: insets.top + 16 }]}>
+              <Text style={drawerStyles.logo}>INKFLOW</Text>
+              <TouchableOpacity onPress={() => setDrawerOpen(false)} style={{ padding: 8 }}>
+                <X size={22} color={COLORS.textPrimary} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={drawerStyles.menu} contentContainerStyle={{ paddingVertical: 16 }}>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); }}>
+                <LayoutGrid size={20} color={COLORS.textPrimary} strokeWidth={2} />
+                <Text style={drawerStyles.menuLabel}>Vue d'ensemble</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); }}>
+                <Inbox size={20} color={COLORS.textPrimary} strokeWidth={2} />
+                <Text style={drawerStyles.menuLabel}>Demandes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); }}>
+                <Calendar size={20} color={COLORS.textPrimary} strokeWidth={2} />
+                <Text style={drawerStyles.menuLabel}>Rendez-vous</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); openBottomSheet(); }}>
+                <Plus size={20} color={COLORS.buttonPrimary} strokeWidth={2} />
+                <Text style={[drawerStyles.menuLabel, { color: COLORS.buttonPrimary }]}>Nouveau RDV</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); }}>
+                <ImageIcon size={20} color={COLORS.textPrimary} strokeWidth={2} />
+                <Text style={drawerStyles.menuLabel}>Galerie Flash</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); }}>
+                <User size={20} color={COLORS.textPrimary} strokeWidth={2} />
+                <Text style={drawerStyles.menuLabel}>Clients</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); }}>
+                <Settings size={20} color={COLORS.textPrimary} strokeWidth={2} />
+                <Text style={drawerStyles.menuLabel}>Paramètres</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </>
+      )}
+
+      {/* ─── 6. Bottom Tab Bar + FAB — fond opaque #09090B ─── */}
+      <View
         style={{
           position: 'absolute',
           bottom: 0,
@@ -522,9 +627,11 @@ export default function HomeScreen() {
           paddingBottom: Platform.OS === 'ios' ? insets.bottom + 12 : 16,
           paddingHorizontal: 8,
           overflow: 'hidden',
+          backgroundColor: '#09090B',
+          zIndex: 50,
           ...Platform.select({
-            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.08, shadowRadius: 8 },
-            android: { elevation: 12 },
+            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.15, shadowRadius: 8 },
+            android: { elevation: 20 },
           }),
         }}
       >
@@ -564,16 +671,22 @@ export default function HomeScreen() {
           <User size={24} color={COLORS.tabInactive} strokeWidth={2} />
           <Text style={{ fontSize: 11, color: COLORS.tabInactive }}>Profil</Text>
         </TouchableOpacity>
-      </BlurView>
+      </View>
 
-      {/* ─── Bottom Sheet (Menu coulissant) ─── */}
+      {/* ─── Bottom Sheet (Menu coulissant) — fond opaque #18181B, z-index élevé ─── */}
       <BottomSheet
         ref={bottomSheetRef}
         index={-1}
         snapPoints={BOTTOM_SHEET_SNAP_POINTS}
         enablePanDownToClose
         backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: '#18181B' }}
+        backgroundStyle={{
+          backgroundColor: '#18181B',
+          ...Platform.select({
+            ios: { zIndex: 50 },
+            android: { elevation: 20 },
+          }),
+        }}
         handleIndicatorStyle={{ backgroundColor: '#3F3F46' }}
       >
         <BottomSheetView style={bottomSheetStyles.content}>
@@ -596,11 +709,65 @@ export default function HomeScreen() {
   );
 }
 
+const drawerStyles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    zIndex: 49,
+    ...Platform.select({ android: { elevation: 19 } }),
+  },
+  panel: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: '85%',
+    maxWidth: 320,
+    backgroundColor: '#09090B',
+    zIndex: 50,
+    ...Platform.select({ android: { elevation: 20 } }),
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#27272A',
+  },
+  logo: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  menu: {
+    flex: 1,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  menuLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+});
+
 const bottomSheetStyles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
     paddingBottom: 24,
+    backgroundColor: '#18181B',
   },
   option: {
     flexDirection: 'row',

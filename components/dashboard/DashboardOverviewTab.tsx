@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Inbox, Image, LayoutGrid, Calendar, Target, BarChart3, FolderOpen, UserPlus, MapPin, X, CreditCard, AlertTriangle, Clock } from 'lucide-react';
+import { Plus, Inbox, Image, LayoutGrid, Calendar, Target, BarChart3, FolderOpen, UserPlus, MapPin, CreditCard, AlertTriangle, Clock, ChevronRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { MiniCalendar } from './MiniCalendar';
 import { SortableOverviewWidgets } from './SortableOverviewWidgets';
@@ -128,18 +128,23 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         </div>
       )}
       {visibleAlerts.length > 0 && (
-        <div className="px-2 sm:px-4 mb-4 space-y-2 animate-fade-in">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 px-2 sm:px-4 animate-fade-in">
           {visibleAlerts.map(alert => (
-            <div key={alert.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5 rounded-lg border bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-400">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                {alert.type === 'warning' ? <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" strokeWidth={1.5} /> : <AlertTriangle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" strokeWidth={1.5} />}
-                <span className="text-sm font-medium flex-1 min-w-0">{alert.msg}</span>
+            <button
+              key={alert.id}
+              type="button"
+              onClick={() => setActiveTab('appointments')}
+              className="flex items-center p-3 rounded-xl bg-white dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-all cursor-pointer group text-left w-full"
+            >
+              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-500 dark:text-blue-400 shrink-0 mr-3">
+                {alert.type === 'warning' ? <CreditCard className="w-4 h-4" strokeWidth={1.5} /> : <AlertTriangle className="w-4 h-4" strokeWidth={1.5} />}
               </div>
-              <div className="flex items-center gap-2 sm:gap-1">
-                <button onClick={() => setActiveTab('appointments')} className="flex-1 sm:flex-none text-xs font-semibold transition-colors px-3 py-1.5 rounded-md bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 dark:bg-blue-500/20 dark:border-transparent dark:text-blue-300 dark:hover:bg-blue-500/30">{alert.cta}</button>
-                <button onClick={() => setDismissedAlerts(prev => new Set(prev).add(alert.id))} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"><X className="w-4 h-4 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} /></button>
+              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 flex-1 min-w-0 truncate">{alert.msg}</span>
+              <div className="flex items-center gap-1 text-xs font-medium text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 ml-auto shrink-0">
+                <span className="hidden sm:inline">Gérer</span>
+                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

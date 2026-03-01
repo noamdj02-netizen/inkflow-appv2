@@ -60,6 +60,8 @@ export interface SendBookingConfirmationParams {
   description: string;
   /** Lien vers la conversation client (optionnel). Si fourni, la date devient cliquable dans l'email. */
   conversationLink?: string;
+  /** Lien de paiement Stripe (optionnel). Si fourni, l'email affiche un bouton "Payer mon acompte" (vert, style premium) dans le corps du mail. */
+  paymentLink?: string;
 }
 
 /**
@@ -76,6 +78,7 @@ export async function sendBookingConfirmation(params: SendBookingConfirmationPar
       requestedTime: params.requestedTime ?? null,
       description: sanitizeText(params.description, 500) ?? '',
       conversationLink: params.conversationLink ? sanitizeText(params.conversationLink, 500) : undefined,
+      paymentLink: params.paymentLink ? sanitizeText(params.paymentLink, 500) : undefined,
     };
     const { error } = await supabase.functions.invoke('send-booking-confirmation', { body });
     if (import.meta.env.DEV && error) {
@@ -84,6 +87,37 @@ export async function sendBookingConfirmation(params: SendBookingConfirmationPar
   } catch (err) {
     if (import.meta.env.DEV) {
       console.warn('[InkFlow] send-booking-confirmation error:', err);
+    }
+  }
+}
+
+export interface SendBookingRefusalParams {
+  clientEmail: string;
+  clientName: string;
+  studioName: string;
+  /** Contexte optionnel (description du projet, service demandé) */
+  description?: string;
+}
+
+/**
+ * Envoie au client un email de refus quand le tatoueur refuse une demande.
+ * Non bloquant : les erreurs sont loguées en dev uniquement.
+ */
+export async function sendBookingRefusal(params: SendBookingRefusalParams): Promise<void> {
+  try {
+    const body = {
+      clientEmail: sanitizeEmail(params.clientEmail),
+      clientName: sanitizeText(params.clientName, MAX_NAME_LENGTH) ?? '',
+      studioName: sanitizeText(params.studioName, MAX_NAME_LENGTH) ?? '',
+      description: params.description ? sanitizeText(params.description, 500) : undefined,
+    };
+    const { error } = await supabase.functions.invoke('send-booking-refusal', { body });
+    if (import.meta.env.DEV && error) {
+      console.warn('[InkFlow] send-booking-refusal:', error.message);
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('[InkFlow] send-booking-refusal error:', err);
     }
   }
 }

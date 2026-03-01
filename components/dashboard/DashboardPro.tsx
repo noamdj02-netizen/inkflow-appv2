@@ -6,6 +6,7 @@ import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
 import { useProjectRequests } from '../../hooks/useProjectRequests';
 import { useIncomingBookings } from '../../hooks/useIncomingBookings';
 import { useNotificationCounts } from '../../hooks/useNotificationCounts';
+import { useNotificationSync } from '../../hooks/useNotificationSync';
 import { BadgeNotification } from '../ui/BadgeNotification';
 import { useSubscriptionPermissions } from '../../hooks/useSubscriptionPermissions';
 import { Modal } from '../ui/Modal';
@@ -44,6 +45,7 @@ import { createSubscription } from '../../lib/stripeClient';
 import { getStripePaymentLink, STRIPE_PAYMENT_LINKS } from '../../lib/stripePaymentLinks';
 import { useToast } from '../../contexts/ToastContext';
 import { ThemeToggle } from '../ThemeToggle';
+import { useTheme } from 'next-themes';
 import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
@@ -66,13 +68,19 @@ const tabs: { id: TabId; label: string; icon: React.ReactNode; badge?: 'pending'
 
 export const DashboardPro: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
+  const { resolvedTheme } = useTheme();
   const toast = useToast();
+  /** Thème effectif — fallback DOM pour mobile/PWA (resolvedTheme peut être undefined avant hydration) */
+  const effectiveTheme = resolvedTheme ?? (typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null : null) ?? 'light';
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
   const { studioId, studioSlug, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, retry } = useSupabaseSync();
   const { projectRequests, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
   const { pendingRequestsCount } = useNotificationCounts(studioId);
   const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false);
   const { canAccessFeature, hasReachedLimit, getLimit } = useSubscriptionPermissions(studioId);
+
+  // Sync notifications avec dashboard / planning / calendrier (Web Notifications)
+  useNotificationSync(studioId, useSupabase ?? false);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
@@ -554,18 +562,21 @@ export const DashboardPro: React.FC = () => {
 
   return (
     <div className="app-shell bg-zinc-50 dark:bg-zinc-950">
-      {/* Mobile overlay */}
+      {/* Mobile overlay — backdrop semi-transparent (zone cliquable pour fermer) */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
+        <div className="fixed inset-0 z-40 lg:hidden" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setSidebarOpen(false)} aria-hidden="true" />
       )}
 
       <div className="app-shell-row">
-        {/* ====== SIDEBAR — Design premium (ÉTAPE 1) ====== */}
-        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-[178px] max-w-[85vw] bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}>
+        {/* ====== SIDEBAR — fond 100% opaque (wrapper interne pour mobile WebKit) ====== */}
+        <aside
+          className={`fixed lg:static inset-y-0 left-0 z-[60] w-[178px] max-w-[85vw] border-r border-zinc-200 dark:border-zinc-800 flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}
+        >
+          <div className="absolute inset-0 z-0" style={{ backgroundColor: effectiveTheme === 'dark' ? '#09090b' : '#ffffff' }} aria-hidden />
           {/* Zone logo — compacte et premium */}
-          <div className="px-4 py-4 border-b border-[var(--border)]/60 flex items-center justify-between safe-top">
+          <div className="relative z-10 px-4 py-4 border-b border-[var(--border)]/60 flex items-center justify-between safe-top">
             <a href="/" className="flex items-center gap-3 min-w-0 group" aria-label="Retour à l'accueil">
               <Logo size="lg" className="rounded-xl group-hover:opacity-90 transition-opacity" />
               <div className="min-w-0">
@@ -578,7 +589,7 @@ export const DashboardPro: React.FC = () => {
             </button>
           </div>
           {/* Navigation — liens compacts, hover fluide */}
-          <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto overscroll-contain">
+          <nav className="relative z-10 flex-1 px-3 py-4 space-y-0.5 overflow-y-auto overscroll-contain">
             {tabs
               .filter(tab => tab.id !== 'analytics' || canAccessFeature('stats_avancees'))
               .map(tab => {
@@ -611,7 +622,7 @@ export const DashboardPro: React.FC = () => {
               })}
           </nav>
           {/* Derniers acomptes + Déconnexion — zone séparée */}
-          <div className="mt-auto px-3 py-3 border-t border-[var(--border)]/60 safe-bottom">
+          <div className="relative z-10 mt-auto px-3 py-3 border-t border-[var(--border)]/60 safe-bottom">
             {/* Widget Derniers acomptes */}
             {recentDeposits.length > 0 && (
               <div className="mb-6">
@@ -662,7 +673,7 @@ export const DashboardPro: React.FC = () => {
             className={`app-shell-header safe-top px-4 sm:px-5 md:px-6 flex items-center justify-between gap-4 transition-all duration-300 shrink-0 overflow-visible ${
               activeTab === 'overview'
                 ? 'h-12 sm:h-14 bg-transparent border-b-0'
-                : `h-14 sm:h-16 border-b ${headerScrolled ? 'bg-[var(--bg-secondary)]/95 backdrop-blur-xl border-[var(--border)] shadow-[0_1px_0_0_var(--border)]' : 'bg-[var(--bg-secondary)] border-[var(--border)]'}`
+                : `h-14 sm:h-16 border-b ${headerScrolled ? 'bg-white dark:bg-[#0f0f11] border-[var(--border)] shadow-[0_1px_0_0_var(--border)]' : 'bg-white dark:bg-[#0f0f11] border-[var(--border)]'}`
             }`}
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -699,8 +710,11 @@ export const DashboardPro: React.FC = () => {
                 )}
               </button>
               {showNotifications && (
-                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-auto bg-white dark:bg-[var(--bg-card)] border border-[rgba(107,92,231,0.08)] dark:border-[var(--border)] rounded-2xl shadow-[0_4px_24px_rgba(107,92,231,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 animate-slide-up">
-                  <div className="p-4 border-b border-[var(--border)]/60 flex items-center justify-between">
+                <div
+                  className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-auto border border-[rgba(107,92,231,0.08)] dark:border-[var(--border)] rounded-2xl shadow-[0_4px_24px_rgba(107,92,231,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 animate-slide-up"
+                  style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}
+                >
+                  <div className="p-4 border-b border-[var(--border)]/60 flex items-center justify-between" style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}>
                     <h4 className="font-bold text-sm text-[#1A1A2E] dark:text-[var(--text-primary)]">Notifications</h4>
                     {notifications.filter(n => !n.read).length > 0 && (
                       <button
@@ -719,7 +733,7 @@ export const DashboardPro: React.FC = () => {
                         <button
                           key={notif.id}
                           onClick={() => { markNotificationAsRead(notif.id); setShowNotifications(false); setActiveTab('requests'); }}
-                          className={`w-full text-left p-4 hover:bg-zinc-50 dark:hover:bg-[var(--bg-hover)] transition-colors duration-150 ${!notif.read ? 'bg-blue-50/50 dark:bg-blue-500/5' : ''}`}
+                          className={`w-full text-left p-4 hover:bg-zinc-50 dark:hover:bg-[#27272A] transition-colors duration-150 ${!notif.read ? 'bg-blue-50/50 dark:bg-[#1e3a5f]' : ''}`}
                         >
                           <div className="flex items-start gap-3">
                             <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!notif.read ? 'bg-blue-600' : 'bg-transparent'}`} />
@@ -754,8 +768,11 @@ export const DashboardPro: React.FC = () => {
               {showProfileDropdown && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowProfileDropdown(false)} aria-hidden />
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-[var(--bg-card)] border border-[rgba(107,92,231,0.08)] dark:border-[var(--border)] rounded-2xl shadow-[0_4px_24px_rgba(107,92,231,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 overflow-hidden animate-slide-up">
-                    <div className="p-4 border-b border-[#F0EEF9] dark:border-[var(--border)]">
+                  <div
+                    className="absolute right-0 top-full mt-2 w-64 border border-[rgba(107,92,231,0.08)] dark:border-[var(--border)] rounded-2xl shadow-[0_4px_24px_rgba(107,92,231,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 overflow-hidden animate-slide-up"
+                    style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}
+                  >
+                    <div className="p-4 border-b border-[#F0EEF9] dark:border-[var(--border)]" style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}>
                       <div className="flex items-center gap-3">
                         {user?.avatar ? (
                           <img src={user.avatar} alt="" className="w-12 h-12 rounded-full border-2 border-white object-cover" />
@@ -770,10 +787,10 @@ export const DashboardPro: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="p-2">
+                    <div className="p-2" style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}>
                       <button
                         onClick={() => { setActiveTab('settings'); setSettingsTab('general'); setShowProfileDropdown(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-zinc-900 dark:text-[var(--text-primary)] hover:bg-zinc-100 dark:hover:bg-[var(--bg-hover)] font-medium transition-colors duration-150 text-left"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-zinc-900 dark:text-[var(--text-primary)] hover:bg-zinc-100 dark:hover:bg-[#27272A] font-medium transition-colors duration-150 text-left"
                       >
                         <Settings className="w-5 h-5 text-[#9CA3AF]" />
                         Paramètres
@@ -1127,16 +1144,22 @@ export const DashboardPro: React.FC = () => {
           />
         </Modal>
       )}
-      {/* ====== MOBILE: FAB DRAWER (bottom sheet) - au-dessus de l'overlay pour être cliquable ====== */}
+      {/* ====== MOBILE: FAB DRAWER (bottom sheet) — fond opaque #18181B, z-index 70 ====== */}
       {showFabMenu && (
         <>
-          <div className="fixed inset-0 bg-black/50 z-[60] md:hidden" onClick={() => setShowFabMenu(false)} aria-hidden="true" />
-          <div className="fixed bottom-0 left-0 right-0 z-[70] md:hidden rounded-t-3xl bg-white dark:bg-[var(--bg-card)] shadow-2xl border-t border-neutral-200 dark:border-[var(--border)] safe-bottom animate-in max-h-[75dvh] overflow-y-auto">
-            <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-neutral-100 dark:border-[var(--border)] sticky top-0 bg-white dark:bg-[var(--bg-card)]">
+          <div className="fixed inset-0 z-[60] md:hidden" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowFabMenu(false)} aria-hidden="true" />
+          <div
+            className="fixed bottom-0 left-0 right-0 z-[70] md:hidden rounded-t-3xl shadow-2xl border-t border-neutral-200 dark:border-zinc-700 safe-bottom animate-in max-h-[75dvh] overflow-y-auto"
+            style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}
+          >
+            <div
+              className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-neutral-100 dark:border-zinc-700 sticky top-0 z-10"
+              style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}
+            >
               <span className="text-sm font-semibold text-neutral-600 dark:text-[var(--text-secondary)]">Actions rapides</span>
               <button
                 onClick={() => setShowFabMenu(false)}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-neutral-100 dark:bg-[var(--bg-hover)] text-neutral-600 dark:text-[var(--text-secondary)] hover:bg-neutral-200 dark:hover:bg-[var(--bg-hover)] font-medium touch-target"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-neutral-100 dark:bg-[#27272A] text-neutral-600 dark:text-zinc-300 hover:bg-neutral-200 dark:hover:bg-[#3f3f46] font-medium touch-target"
                 aria-label="Fermer"
               >
                 <X className="w-5 h-5" />
@@ -1149,27 +1172,27 @@ export const DashboardPro: React.FC = () => {
                 <div className="flex flex-col gap-2">
                   <button
                     onClick={() => { setShowFabMenu(false); setSelectedFlash(null); setShowBookingModal(true); }}
-                    className="flex items-center gap-4 w-full bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-2xl px-5 py-4 border border-blue-200 dark:border-blue-500/20 font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[56px] text-left transition-colors touch-target"
+                    className="flex items-center gap-4 w-full bg-blue-50 dark:bg-[#1e3a5f] hover:bg-blue-100 dark:hover:bg-[#2563eb] rounded-2xl px-5 py-4 border border-blue-200 dark:border-blue-600 font-semibold text-neutral-900 dark:text-white min-h-[56px] text-left transition-colors touch-target"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 dark:bg-blue-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
                       <Calendar className="w-5 h-5 text-white" />
                     </div>
                     Nouveau RDV
                   </button>
                   <button
                     onClick={() => { setShowFabMenu(false); setActiveTab('clients'); setOpenAddClientModal(true); }}
-                    className="flex items-center gap-4 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-5 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[56px] text-left transition-colors touch-target"
+                    className="flex items-center gap-4 w-full bg-neutral-50 dark:bg-[#27272A] hover:bg-neutral-100 dark:hover:bg-[#3f3f46] rounded-2xl px-5 py-4 border border-neutral-200 dark:border-zinc-600 font-semibold text-neutral-900 dark:text-white min-h-[56px] text-left transition-colors touch-target"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-[var(--bg-card)] border border-neutral-200 dark:border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-zinc-600 flex items-center justify-center flex-shrink-0">
                       <UserPlus className="w-5 h-5 text-neutral-700 dark:text-[var(--text-secondary)]" />
                     </div>
                     Ajouter un client
                   </button>
                   <button
                     onClick={() => { setShowFabMenu(false); setActiveTab('flash'); }}
-                    className="flex items-center gap-4 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-5 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[56px] text-left transition-colors touch-target"
+                    className="flex items-center gap-4 w-full bg-neutral-50 dark:bg-[#27272A] hover:bg-neutral-100 dark:hover:bg-[#3f3f46] rounded-2xl px-5 py-4 border border-neutral-200 dark:border-zinc-600 font-semibold text-neutral-900 dark:text-white min-h-[56px] text-left transition-colors touch-target"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-[var(--bg-card)] border border-neutral-200 dark:border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-zinc-600 flex items-center justify-center flex-shrink-0">
                       <Image className="w-5 h-5 text-neutral-700 dark:text-[var(--text-secondary)]" />
                     </div>
                     Nouveau Flash
@@ -1182,9 +1205,9 @@ export const DashboardPro: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => { setShowFabMenu(false); setActiveTab('requests'); }}
-                    className="relative flex items-center gap-3 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[52px] text-left transition-colors touch-target"
+                    className="relative flex items-center gap-3 w-full bg-neutral-50 dark:bg-[#27272A] hover:bg-neutral-100 dark:hover:bg-[#3f3f46] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-zinc-600 font-semibold text-neutral-900 dark:text-white min-h-[52px] text-left transition-colors touch-target"
                   >
-                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[var(--bg-card)] border border-neutral-200 dark:border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-zinc-600 flex items-center justify-center flex-shrink-0">
                       <Inbox className="w-4 h-4 text-neutral-600 dark:text-[var(--text-secondary)]" />
                     </div>
                     <span className="text-sm">Demandes</span>
@@ -1196,9 +1219,9 @@ export const DashboardPro: React.FC = () => {
                   </button>
                   <button
                     onClick={() => { setShowFabMenu(false); setActiveTab('messaging'); }}
-                    className="flex items-center gap-3 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[52px] text-left transition-colors touch-target"
+                    className="flex items-center gap-3 w-full bg-neutral-50 dark:bg-[#27272A] hover:bg-neutral-100 dark:hover:bg-[#3f3f46] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-zinc-600 font-semibold text-neutral-900 dark:text-white min-h-[52px] text-left transition-colors touch-target"
                   >
-                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[var(--bg-card)] border border-neutral-200 dark:border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-zinc-600 flex items-center justify-center flex-shrink-0">
                       <MessageSquare className="w-4 h-4 text-neutral-600 dark:text-[var(--text-secondary)]" />
                     </div>
                     <span className="text-sm">Messagerie</span>
@@ -1209,9 +1232,9 @@ export const DashboardPro: React.FC = () => {
                       const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user?.studioName ?? '');
                       window.open(`${window.location.origin}/studio/${slug}`, '_blank');
                     }}
-                    className="flex items-center gap-3 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[52px] text-left transition-colors touch-target"
+                    className="flex items-center gap-3 w-full bg-neutral-50 dark:bg-[#27272A] hover:bg-neutral-100 dark:hover:bg-[#3f3f46] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-zinc-600 font-semibold text-neutral-900 dark:text-white min-h-[52px] text-left transition-colors touch-target"
                   >
-                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[var(--bg-card)] border border-neutral-200 dark:border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-zinc-600 flex items-center justify-center flex-shrink-0">
                       <ExternalLink className="w-4 h-4 text-neutral-600 dark:text-[var(--text-secondary)]" />
                     </div>
                     <span className="text-sm">Ma vitrine</span>
@@ -1228,9 +1251,9 @@ export const DashboardPro: React.FC = () => {
                         toast.error('Impossible de copier le lien');
                       }
                     }}
-                    className="flex items-center gap-3 w-full bg-neutral-50 dark:bg-[var(--bg-hover)] hover:bg-neutral-100 dark:hover:bg-[var(--bg-hover)] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-[var(--border)] font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[52px] text-left transition-colors touch-target"
+                    className="flex items-center gap-3 w-full bg-neutral-50 dark:bg-[#27272A] hover:bg-neutral-100 dark:hover:bg-[#3f3f46] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-zinc-600 font-semibold text-neutral-900 dark:text-white min-h-[52px] text-left transition-colors touch-target"
                   >
-                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[var(--bg-card)] border border-neutral-200 dark:border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-zinc-600 flex items-center justify-center flex-shrink-0">
                       <Share2 className="w-4 h-4 text-neutral-600 dark:text-[var(--text-secondary)]" />
                     </div>
                     <span className="text-sm">Partager</span>

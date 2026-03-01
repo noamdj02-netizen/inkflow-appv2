@@ -9,7 +9,7 @@ import { Logo } from '../../components/Logo';
 import { ProjectRequestForm } from '../../components/booking/ProjectRequestForm';
 import { VitrineBookingForm } from '../../components/booking/VitrineBookingForm';
 import { getVitrineData, getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
-import { getStudioIdBySlug, getVitrineLinkSettingsBySlug } from '../../lib/supabaseDashboard';
+import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
 import { createProjectRequest } from '../../lib/supabaseProjectRequests';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { useRealtimeVitrine } from '../../hooks/useRealtimeSync';
@@ -51,16 +51,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [flashDepositLoading, setFlashDepositLoading] = useState(false);
   const [flashDepositError, setFlashDepositError] = useState<string | null>(null);
   const [flashDepositUrl, setFlashDepositUrl] = useState<string | null>(null);
-  const [primaryColor, setPrimaryColor] = useState<string>('#4f46e5');
-
-  useEffect(() => {
-    getVitrineLinkSettingsBySlug(studioSlug)
-      .then((settings) => {
-        const color = settings.primaryColor as string | undefined;
-        if (color && /^#[0-9A-Fa-f]{6}$/.test(color)) setPrimaryColor(color);
-      })
-      .catch(() => {});
-  }, [studioSlug]);
+  // Couleur principale bleu (#2563eb) pour boutons Réserver et CTA
+  const primaryColor = '#2563eb';
 
   const loadVitrine = React.useCallback(() => {
     setLoading(true);
@@ -305,8 +297,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             <div className="flex items-center gap-3">
               <Logo />
               <div className="hidden sm:block">
-                <div className="font-bold text-lg">{studioDisplay.name}</div>
-                <div className="text-xs text-neutral-500">{studioDisplay.tagline}</div>
+                <div className="font-bold text-lg text-black">{studioDisplay.name}</div>
+                <div className="text-xs text-neutral-700">{studioDisplay.tagline}</div>
               </div>
             </div>
             <nav className="hidden lg:flex items-center gap-8">
@@ -347,7 +339,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
               <nav className="space-y-1">
                 {[{ id: 'about', label: 'À propos' }, { id: 'services', label: 'Services' }, { id: 'artists', label: 'Artistes' }, { id: 'portfolio', label: 'Portfolio' }, { id: 'flash', label: 'Flash' }, { id: 'testimonials', label: 'Avis' }].map(section => (
                   <button key={section.id} onClick={() => scrollToSection(section.id)}
-                    className={`w-full text-left px-4 py-3 rounded-lg font-medium min-h-[44px] flex items-center ${activeSection === section.id ? 'bg-neutral-900 text-white' : 'text-neutral-700 hover:bg-neutral-100'}`}>
+                    className={`w-full text-left px-4 py-3 rounded-lg font-medium min-h-[44px] flex items-center ${activeSection === section.id ? 'bg-blue-600 text-white' : 'text-neutral-800 hover:bg-neutral-100'}`}>
                     {section.label}
                   </button>
                 ))}
@@ -446,13 +438,13 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             {/* About */}
             <section id="about" className="scroll-mt-24 sm:scroll-mt-32">
               <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                <h2 className="text-2xl sm:text-4xl font-bold mb-6 sm:mb-8 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-6 sm:mb-8 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
                     <Sparkles className="w-6 h-6 text-white" />
                   </div>
                   À propos du studio
                 </h2>
-                <p className="text-neutral-700 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8">{studioDisplay.description}</p>
+                <p className="text-neutral-800 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8">{studioDisplay.description}</p>
                 <div className="aspect-video rounded-xl sm:rounded-2xl overflow-hidden mb-6 sm:mb-8 bg-neutral-100">
                   <img src={studioDisplay.coverImage} alt="Couverture du studio" loading="lazy" className="w-full h-full object-cover" />
                 </div>
@@ -465,8 +457,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                           <Icon className="w-7 h-7 text-white" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-lg mb-2">{item.title}</h3>
-                          <p className="text-sm text-neutral-600 leading-relaxed">{item.description}</p>
+                          <h3 className="font-bold text-lg text-neutral-900 mb-2">{item.title}</h3>
+                          <p className="text-sm text-neutral-800 leading-relaxed">{item.description}</p>
                         </div>
                       </div>
                     );
@@ -478,8 +470,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             {/* Services */}
             <section id="services" className="scroll-mt-24 sm:scroll-mt-32">
               <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                <h2 className="text-2xl sm:text-4xl font-bold mb-6 sm:mb-10 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-6 sm:mb-10 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
                     <Award className="w-6 h-6 text-white" />
                   </div>
                   Nos services
@@ -496,8 +488,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                             </div>
                           </div>
                           <div className="flex-1">
-                            <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">{service.name}</h3>
-                            <p className="text-neutral-600 mb-4 leading-relaxed">{service.description}</p>
+                            <h3 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-2 sm:mb-3">{service.name}</h3>
+                            <p className="text-neutral-800 mb-4 leading-relaxed">{service.description}</p>
                             <div className="flex flex-wrap gap-2 mb-4">
                               {service.features.map((feature, i) => (
                                 <span key={i} className="px-3 py-1.5 bg-green-100 text-green-700 text-sm rounded-full font-medium flex items-center gap-1">
@@ -506,7 +498,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                                 </span>
                               ))}
                             </div>
-                            <div className="flex items-center gap-4 text-sm text-neutral-500">
+                            <div className="flex items-center gap-4 text-sm text-neutral-700">
                               <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{service.duration}</span>
                             </div>
                           </div>
@@ -528,8 +520,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             {/* Artists */}
             <section id="artists" className="scroll-mt-24 sm:scroll-mt-32">
               <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                <h2 className="text-2xl sm:text-4xl font-bold mb-6 sm:mb-10 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-6 sm:mb-10 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
                     <Users className="w-6 h-6 text-white" />
                   </div>
                   Notre équipe d'artistes
@@ -540,24 +532,24 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                       <div className="flex flex-col md:flex-row gap-4 sm:gap-8">
                         <img src={artist.avatar} alt={artist.name} loading="lazy" className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl object-cover shadow-lg flex-shrink-0 mx-auto md:mx-0" />
                         <div className="flex-1">
-                          <h3 className="text-xl sm:text-3xl font-bold mb-2 text-center md:text-left">{artist.name}</h3>
-                          <p className="text-neutral-600 text-sm font-medium mb-4">{artist.role}</p>
-                          <p className="text-neutral-700 mb-6 leading-relaxed">{artist.bio}</p>
+                          <h3 className="text-xl sm:text-3xl font-bold text-neutral-900 mb-2 text-center md:text-left">{artist.name}</h3>
+                          <p className="text-neutral-800 text-sm font-medium mb-4">{artist.role}</p>
+                          <p className="text-neutral-800 mb-6 leading-relaxed">{artist.bio}</p>
                           <div className="flex flex-wrap gap-2 mb-6">
                             {artist.specialties.map((spec, i) => (
-                              <span key={i} className="px-4 py-2 bg-neutral-900 text-white text-sm rounded-xl font-semibold">{spec}</span>
+                              <span key={i} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-xl font-semibold">{spec}</span>
                             ))}
                           </div>
                           <div className="flex flex-wrap items-center gap-6 text-sm">
-                            <div className="flex items-center gap-2 text-neutral-600">
-                              <Award className="w-5 h-5" />
+                            <div className="flex items-center gap-2 text-neutral-800">
+                              <Award className="w-5 h-5 text-neutral-700" />
                               <span className="font-semibold">{artist.experience} d'expérience</span>
                             </div>
-                            <div className="flex items-center gap-2 text-neutral-600">
-                              <Camera className="w-5 h-5" />
+                            <div className="flex items-center gap-2 text-neutral-800">
+                              <Camera className="w-5 h-5 text-neutral-700" />
                               <span className="font-semibold">{artist.portfolio}+ tatouages</span>
                             </div>
-                            <a href={`https://instagram.com/${artist.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-neutral-900 hover:text-neutral-700 font-semibold">
+                            <a href={`https://instagram.com/${artist.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-neutral-900 hover:text-blue-600 font-semibold">
                               <Instagram className="w-5 h-5" />
                               {artist.instagram}
                               <ExternalLink className="w-4 h-4" />
@@ -574,8 +566,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             {/* Portfolio */}
             <section id="portfolio" className="scroll-mt-24 sm:scroll-mt-32">
               <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                <h2 className="text-2xl sm:text-4xl font-bold mb-6 sm:mb-10 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-6 sm:mb-10 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
                     <Camera className="w-6 h-6 text-white" />
                   </div>
                   Notre portfolio
@@ -599,7 +591,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   ))}
                 </div>
                 <div className="mt-8 text-center">
-                  <a href={`https://instagram.com/${studioDisplay.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg">
+                  <a href={`https://instagram.com/${studioDisplay.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-lg">
                     <Instagram className="w-5 h-5" />
                     Voir plus sur Instagram
                     <ExternalLink className="w-4 h-4" />
@@ -612,8 +604,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             <section id="flash" className="scroll-mt-24 sm:scroll-mt-32">
               <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-10">
-                  <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3">
-                    <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                  <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 flex items-center gap-3">
+                    <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
                       <Sparkles className="w-6 h-6 text-white" />
                     </div>
                     Flash disponibles
@@ -667,13 +659,13 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             {/* Testimonials */}
             <section id="testimonials" className="scroll-mt-24 sm:scroll-mt-32">
               <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                <h2 className="text-2xl sm:text-4xl font-bold mb-4 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                  <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-4 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
                     <Star className="w-6 h-6 text-white" />
                   </div>
                   Avis clients
                 </h2>
-                <p className="text-neutral-600 mb-6 sm:mb-10">Ce que disent nos clients sur leur expérience</p>
+                <p className="text-neutral-800 mb-6 sm:mb-10">Ce que disent nos clients sur leur expérience</p>
                 <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                   {studioDisplay.testimonials.map((testimonial, idx) => (
                     <div key={idx} className="bg-gradient-to-br from-neutral-50 to-white p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl border-2 border-neutral-200 hover:border-neutral-900 hover:shadow-lg transition-all">
@@ -682,7 +674,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                           <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                         ))}
                       </div>
-                      <p className="text-neutral-700 mb-6 leading-relaxed">"{testimonial.text}"</p>
+                      <p className="text-neutral-800 mb-6 leading-relaxed">"{testimonial.text}"</p>
                       <div className="flex items-center gap-4 pt-6 border-t border-neutral-200">
                         <img src={testimonial.avatar} alt={testimonial.name} loading="lazy" className="w-14 h-14 rounded-full object-cover" />
                         <div className="flex-1">
@@ -690,8 +682,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                             <div className="font-bold">{testimonial.name}</div>
                             {testimonial.verified && <CheckCircle className="w-4 h-4 text-green-600" />}
                           </div>
-                          <div className="text-sm text-neutral-600">{testimonial.tattoo}</div>
-                          <div className="text-xs text-neutral-500">{testimonial.date}</div>
+                          <div className="text-sm text-neutral-700">{testimonial.tattoo}</div>
+                          <div className="text-xs text-neutral-600">{testimonial.date}</div>
                         </div>
                       </div>
                     </div>
@@ -711,22 +703,22 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             {/* FAQ */}
             <section id="faq" className="scroll-mt-24 sm:scroll-mt-32">
               <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                <h2 className="text-2xl sm:text-4xl font-bold mb-4 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center">
+                <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-4 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
                     <AlertCircle className="w-6 h-6 text-white" />
                   </div>
                   Questions fréquentes
                 </h2>
-                <p className="text-neutral-600 mb-6 sm:mb-10">Tout ce que vous devez savoir avant votre premier tatouage</p>
+                <p className="text-neutral-800 mb-6 sm:mb-10">Tout ce que vous devez savoir avant votre premier tatouage</p>
                 <div className="space-y-3 sm:space-y-4">
                   {studioDisplay.faqs.map((faq, idx) => (
                     <div key={idx} className="border-2 border-neutral-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-neutral-900 transition-colors">
                       <button onClick={() => setExpandedFaq(expandedFaq === idx ? null : idx)} className="w-full px-4 sm:px-6 md:px-8 py-4 sm:py-6 flex items-center justify-between text-left hover:bg-neutral-50 transition-colors">
-                        <span className="font-bold text-base sm:text-lg pr-4">{faq.q}</span>
+                        <span className="font-bold text-base sm:text-lg text-neutral-900 pr-4">{faq.q}</span>
                         <ChevronDown className={`w-6 h-6 flex-shrink-0 transition-transform ${expandedFaq === idx ? 'rotate-180' : ''}`} />
                       </button>
                       {expandedFaq === idx && (
-                        <div className="px-4 sm:px-6 md:px-8 pb-4 sm:pb-6 text-neutral-700 leading-relaxed text-sm sm:text-base">{faq.a}</div>
+                        <div className="px-4 sm:px-6 md:px-8 pb-4 sm:pb-6 text-neutral-800 leading-relaxed text-sm sm:text-base">{faq.a}</div>
                       )}
                     </div>
                   ))}
@@ -740,7 +732,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             <div className="flex flex-col bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border-2 border-neutral-200 lg:sticky lg:top-24">
               <div className="mb-4 sm:mb-6">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <h3 className="text-xl sm:text-2xl font-bold">Réserver</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">Réserver</h3>
                   {isOpen() ? (
                     <span className="flex items-center gap-2 text-green-600 text-sm font-semibold">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
@@ -753,15 +745,15 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                     </span>
                   )}
                 </div>
-                <p className="text-neutral-600 text-sm">Réservez votre session en quelques clics</p>
+                <p className="text-neutral-800 text-sm">Réservez votre session en quelques clics</p>
               </div>
               <a href={`/book/${studioSlug}`} className="block w-full bg-[var(--vitrine-primary)] text-white text-center py-4 rounded-xl font-bold text-lg hover:opacity-90 hover:shadow-xl transition-all mb-3">
                 Prendre rendez-vous
               </a>
-              <button onClick={() => setShowProjectRequestForm(true)} className="block w-full bg-white border-2 border-neutral-900 text-neutral-900 text-center py-3 rounded-xl font-bold hover:bg-neutral-50 transition-all mb-3">
+              <button onClick={() => setShowProjectRequestForm(true)} className="block w-full bg-white border-2 border-blue-600 text-blue-600 text-center py-3 rounded-xl font-bold hover:bg-blue-50 transition-all mb-3">
                 Demande de projet
               </button>
-              <button onClick={openBookingForm} className="block w-full bg-neutral-800 text-white text-center py-3 rounded-xl font-bold hover:bg-neutral-700 transition-all mb-6">
+              <button onClick={openBookingForm} className="block w-full bg-blue-600 text-white text-center py-3 rounded-xl font-bold hover:bg-blue-700 transition-all mb-6">
                 Demande de RDV (créneau)
               </button>
               <div className="space-y-4 mb-6">
@@ -775,12 +767,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   return (
                     <div key={idx} className="flex items-center gap-3">
                       <Icon className={`w-5 h-5 ${item.color} flex-shrink-0`} />
-                      <span className="text-sm text-neutral-700 font-medium">{item.text}</span>
+                      <span className="text-sm text-neutral-800 font-medium">{item.text}</span>
                     </div>
                   );
                 })}
               </div>
-              <div className="pt-6 border-t border-neutral-200 text-center text-sm text-neutral-600">
+              <div className="pt-6 border-t border-neutral-200 text-center text-sm text-neutral-800">
                 <p>Besoin d'aide ?</p>
                 <button onClick={() => setShowContactForm(true)} className="text-neutral-900 font-semibold hover:underline">
                   Contactez-nous
@@ -789,7 +781,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             </div>
 
             <div className="bg-white rounded-3xl p-8 shadow-xl border-2 border-neutral-200">
-              <h3 className="text-xl font-bold mb-6">Coordonnées</h3>
+              <h3 className="text-xl font-bold text-neutral-900 mb-6">Coordonnées</h3>
               <div className="space-y-5">
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -797,7 +789,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   </div>
                   <div className="flex-1">
                     <div className="font-semibold text-sm mb-1">Adresse</div>
-                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(studioDisplay.address)}`} target="_blank" rel="noopener noreferrer" className="text-neutral-700 hover:text-neutral-900 text-sm">
+                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(studioDisplay.address)}`} target="_blank" rel="noopener noreferrer" className="text-neutral-800 hover:text-blue-600 text-sm">
                       {studioDisplay.address}
                     </a>
                   </div>
@@ -808,7 +800,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   </div>
                   <div>
                     <div className="font-semibold text-sm mb-1">Téléphone</div>
-                    <a href={`tel:${studioDisplay.phone}`} className="text-neutral-700 hover:text-neutral-900 text-sm font-medium">{studioDisplay.phone}</a>
+                    <a href={`tel:${studioDisplay.phone}`} className="text-neutral-800 hover:text-blue-600 text-sm font-medium">{studioDisplay.phone}</a>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -817,14 +809,14 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   </div>
                   <div>
                     <div className="font-semibold text-sm mb-1">Email</div>
-                    <a href={`mailto:${studioDisplay.email}`} className="text-neutral-700 hover:text-neutral-900 text-sm">{studioDisplay.email}</a>
+                    <a href={`mailto:${studioDisplay.email}`} className="text-neutral-800 hover:text-blue-600 text-sm">{studioDisplay.email}</a>
                   </div>
                 </div>
               </div>
               <div className="pt-6 mt-6 border-t border-neutral-200">
                 <div className="font-semibold text-sm mb-4">Réseaux sociaux</div>
                 <div className="flex gap-3">
-                  <a href={`https://instagram.com/${studioDisplay.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="w-11 h-11 bg-gradient-to-br from-purple-600 to-pink-600 text-white rounded-xl flex items-center justify-center hover:shadow-lg transition-all">
+                  <a href={`https://instagram.com/${studioDisplay.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="w-11 h-11 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:bg-blue-700 hover:shadow-lg transition-all">
                     <Instagram className="w-5 h-5" />
                   </a>
                   <a href={`https://facebook.com/${studioDisplay.facebook}`} target="_blank" rel="noopener noreferrer" className="w-11 h-11 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:shadow-lg transition-all">
@@ -835,7 +827,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             </div>
 
             <div className="bg-white rounded-3xl p-8 shadow-xl border-2 border-neutral-200">
-              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <h3 className="text-xl font-bold text-neutral-900 mb-6 flex items-center gap-2">
                 <Clock className="w-6 h-6" />
                 Horaires
               </h3>
@@ -844,7 +836,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   const h = hours as { closed?: boolean; open?: string; close?: string };
                   const isToday = getCurrentDay() === day;
                   return (
-                    <div key={day} className={`flex justify-between items-center py-2 rounded-lg transition-colors ${isToday ? 'bg-neutral-900 text-white px-4 font-bold' : 'text-neutral-700'}`}>
+                    <div key={day} className={`flex justify-between items-center py-2 rounded-lg transition-colors ${isToday ? 'bg-blue-600 text-white px-4 font-bold' : 'text-neutral-800'}`}>
                       <span className="capitalize text-sm">{dayLabels[day] || day}</span>
                       <span className={`text-sm ${isToday ? 'font-bold' : 'font-semibold'}`}>
                         {h.closed ? 'Fermé' : `${h.open ?? ''} - ${h.close ?? ''}`}

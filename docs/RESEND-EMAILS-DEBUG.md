@@ -3,6 +3,7 @@
 **Fonctions qui envoient des emails** (toutes utilisent `SITE_URL` sans slash final et `RESEND_FROM_EMAIL` si défini) :
 - **send-client-conversation-link** : lien conversation quand le studio accepte une demande de projet
 - **send-booking-confirmation** : confirmation RDV vitrine quand le tatoueur clique « Confirmer »
+- **send-booking-refusal** : refus de demande (RDV, RDV vitrine, projet) quand le tatoueur clique « Refuser »
 - **send-message-notification** : notification nouveau message (client ou studio)
 - **send-project-notification** : notification nouvelle demande de projet → artiste (lien dashboard)
 - **send-appointment-reminders** : rappels RDV (2h avant, 24h avant)
@@ -47,6 +48,7 @@ Avec l’adresse de test Resend (`onboarding@resend.dev`), **tu ne peux envoyer 
    ```bash
    npx supabase functions deploy send-client-conversation-link --no-verify-jwt
    npx supabase functions deploy send-booking-confirmation --no-verify-jwt
+   npx supabase functions deploy send-booking-refusal --no-verify-jwt
    npx supabase functions deploy send-message-notification --no-verify-jwt
    npx supabase functions deploy send-project-notification --no-verify-jwt
    npx supabase functions deploy send-appointment-reminders --no-verify-jwt

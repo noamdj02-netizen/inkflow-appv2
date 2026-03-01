@@ -136,26 +136,27 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
 
   if (supabaseEnabled && studioId && studioId !== 'loading' && !bookingSuccess) {
     return (
-      <div className="landing-scroll bg-neutral-50 min-h-screen">
-        <header className="bg-white border-b border-neutral-200 sticky top-0 z-40 safe-top">
+      <div className="landing-scroll bg-zinc-950 min-h-screen">
+        <header className="bg-zinc-900/95 border-b border-zinc-800 sticky top-0 z-40 safe-top backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
             <div className="flex items-center justify-between">
-              <a href={`/studio/${studioSlug}`} className="flex items-center gap-2 text-neutral-700 hover:text-neutral-900 font-medium transition-colors">
+              <a href={`/studio/${studioSlug}`} className="flex items-center gap-2 text-zinc-300 hover:text-white font-medium transition-colors">
                 <ArrowLeft className="w-5 h-5" />
                 <span className="hidden sm:inline">Retour au studio</span>
               </a>
-              <Logo />
+              <Logo className="invert" />
             </div>
           </div>
         </header>
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
-          <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl border border-neutral-200">
+          <div className="bg-zinc-900 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-zinc-800 shadow-2xl">
             <VitrineBookingForm
               studioId={studioId}
               onSubmitSuccess={() => setBookingSuccess(true)}
               onError={setBookingError}
               submitLabel="Envoyer ma demande"
               submitError={bookingError}
+              variant="dark"
             />
           </div>
         </div>
@@ -165,24 +166,24 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
 
   if (supabaseEnabled && studioId && studioId !== 'loading' && bookingSuccess) {
     return (
-      <div className="landing-scroll bg-neutral-50 min-h-screen">
-        <header className="bg-white border-b border-neutral-200 sticky top-0 z-40 safe-top">
+      <div className="landing-scroll bg-zinc-950 min-h-screen">
+        <header className="bg-zinc-900/95 border-b border-zinc-800 sticky top-0 z-40 safe-top backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-            <a href={`/studio/${studioSlug}`} className="flex items-center gap-2 text-neutral-700 hover:text-neutral-900 font-medium transition-colors">
+            <a href={`/studio/${studioSlug}`} className="flex items-center gap-2 text-zinc-300 hover:text-white font-medium transition-colors">
               <ArrowLeft className="w-5 h-5" />
               Retour au studio
             </a>
           </div>
         </header>
         <div className="max-w-xl mx-auto px-4 py-12 text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Check className="w-10 h-10 text-green-600" />
+          <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Check className="w-10 h-10 text-emerald-400" />
           </div>
-          <h2 className="text-2xl font-bold mb-4">Demande envoyée au tatoueur !</h2>
-          <p className="text-neutral-600 mb-8">
+          <h2 className="text-2xl font-bold text-white mb-4">Demande envoyée au tatoueur !</h2>
+          <p className="text-zinc-400 mb-8">
             Le studio vous recontactera pour confirmer le créneau.
           </p>
-          <a href={`/studio/${studioSlug}`} className="inline-block px-8 py-4 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors">
+          <a href={`/studio/${studioSlug}`} className="inline-block px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors">
             Retour au studio
           </a>
         </div>
@@ -200,7 +201,7 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
               <span className="hidden sm:inline">Retour au studio</span>
             </a>
             <div className="flex items-center gap-3">
-              <Logo />
+              <Logo className="invert" />
               <div className="hidden sm:block">
                 <div className="font-bold">{studio.name}</div>
                 <div className="text-xs text-neutral-500">Réservation en ligne</div>

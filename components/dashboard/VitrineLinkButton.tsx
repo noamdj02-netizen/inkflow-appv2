@@ -18,7 +18,7 @@ interface VitrineSettings {
 const defaultSettings: VitrineSettings = {
   title: "Lien de votre vitrine",
   description: "Partagez ce lien avec vos clients pour qu'ils découvrent vos flashs, prennent rendez-vous et consultent votre portfolio.",
-  primaryColor: "#4f46e5",
+  primaryColor: "#2563eb",
   copyButtonText: "Copier le lien",
   copiedText: "Copié !",
   openButtonText: "Ouvrir"

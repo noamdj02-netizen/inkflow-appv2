@@ -103,7 +103,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
         </div>
       </nav>
 
-      {/* Drawer mobile — plein écran, PWA iOS: 100dvh, z-[9999], safe-area unique */}
+      {/* Drawer mobile — fond 100% opaque, backdrop rgba(0,0,0,0.6) */}
       {isOpen && (
         <div
           className="md:hidden fixed inset-0 z-[9999] flex flex-col"
@@ -114,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = () => {
             bottom: 0,
             height: '100dvh',
             minHeight: '-webkit-fill-available',
-            backgroundColor: 'rgba(0,0,0,0.35)'
+            backgroundColor: 'rgba(0,0,0,0.6)'
           }}
           aria-hidden="false"
         >
@@ -124,55 +124,62 @@ export const Navbar: React.FC<NavbarProps> = () => {
             onClick={() => setIsOpen(false)}
             aria-hidden="true"
           />
-          {/* Drawer — plein écran, contenu sous la safe area */}
+          {/* Drawer — fond 100% opaque (mobile: évite transparence WebKit/PWA) */}
           <div
             id="nav-menu-mobile"
             ref={menuRef}
-            className="absolute inset-x-4 bottom-0 top-0 mx-auto w-full max-w-[400px] flex flex-col bg-white rounded-t-2xl rounded-b-2xl shadow-2xl animate-navbar-drawer overflow-hidden"
+            className="absolute inset-x-4 bottom-0 top-0 mx-auto w-full max-w-[400px] flex flex-col rounded-t-2xl rounded-b-2xl shadow-2xl animate-navbar-drawer overflow-hidden"
             style={{
               marginTop: 'max(0px, env(safe-area-inset-top))',
               marginBottom: 'max(0px, env(safe-area-inset-bottom))',
-              maxHeight: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))'
+              maxHeight: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+              backgroundColor: typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark' ? '#09090B' : '#ffffff'
             }}
             role="dialog"
             aria-label="Menu de navigation"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header — bouton X en haut à droite, zone safe incluse */}
+            {/* Header — fond opaque (mobile) */}
             <div
-              className="flex items-center justify-between shrink-0 px-4 py-3 border-b border-gray-200/60"
-              style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
+              className="flex items-center justify-between shrink-0 px-4 py-3 border-b border-gray-200/60 dark:border-zinc-700"
+              style={{
+                paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
+                backgroundColor: typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark' ? '#09090B' : '#ffffff'
+              }}
             >
-              <span className="text-sm font-semibold text-neutral-500">Menu</span>
+              <span className="text-sm font-semibold text-neutral-500 dark:text-zinc-400">Menu</span>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-neutral-700 hover:bg-neutral-100 active:bg-neutral-200 transition-colors touch-manipulation -mr-1"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-neutral-700 dark:text-zinc-300 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 transition-colors touch-manipulation -mr-1"
                 aria-label="Fermer le menu"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            {/* Contenu */}
+            {/* Contenu — fond opaque (mobile) */}
             <div
               className="flex flex-col gap-0.5 py-4 px-4 overflow-y-auto flex-1 min-h-0"
-              style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+              style={{
+                paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+                backgroundColor: typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark' ? '#09090B' : '#ffffff'
+              }}
             >
               {navLinks.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsOpen(false)}
-                  className="px-4 py-3.5 text-base font-medium text-neutral-700 rounded-xl hover:bg-neutral-100 active:bg-neutral-200/80 transition-colors touch-manipulation"
+                  className="px-4 py-3.5 text-base font-medium text-neutral-700 dark:text-zinc-300 rounded-xl hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 transition-colors touch-manipulation"
                 >
                   {link.label}
                 </a>
               ))}
-              <div className="border-t border-gray-200/60 my-2" />
+              <div className="border-t border-gray-200/60 dark:border-zinc-700 my-2" />
               <a
                 href="/login"
                 onClick={() => setIsOpen(false)}
-                className="px-4 py-3.5 text-base font-medium text-neutral-700 rounded-xl hover:bg-neutral-100 active:bg-neutral-200/80 transition-colors text-center touch-manipulation"
+                className="px-4 py-3.5 text-base font-medium text-neutral-700 dark:text-zinc-300 rounded-xl hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 transition-colors text-center touch-manipulation"
               >
                 Connexion
               </a>

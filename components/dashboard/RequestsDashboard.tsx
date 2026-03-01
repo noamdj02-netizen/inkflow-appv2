@@ -7,7 +7,7 @@ import { Modal } from '../ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { createCheckoutSession } from '../../lib/stripeClient';
-import { sendConversationLinkToClient, sendBookingConfirmation } from '../../lib/sendNotification';
+import { sendConversationLinkToClient, sendBookingConfirmation, sendBookingRefusal } from '../../lib/sendNotification';
 import { supabase } from '../../lib/supabase';
 
 interface RequestsDashboardProps {
@@ -85,14 +85,28 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   const pendingBookings = bookings.filter(b => b.status === 'pending');
   const bookingsChronological = [...bookings].sort(byCreatedAtDesc);
 
-  const handleConfirm = (id: string) => {
-    onUpdateAppointment(id, { status: 'confirmed' });
-    toast.success('Rendez-vous confirme');
+  const handleConfirm = async (apt: Appointment) => {
+    onUpdateAppointment(apt.id, { status: 'confirmed' });
+    sendBookingConfirmation({
+      clientEmail: apt.clientEmail,
+      clientName: apt.clientName,
+      studioName: user?.studioName || 'Le studio',
+      requestedDate: apt.date,
+      requestedTime: apt.time || null,
+      description: apt.service,
+    });
+    toast.success('RDV confirmé — un email de confirmation a été envoyé au client');
   };
 
-  const handleReject = (id: string) => {
-    onUpdateAppointment(id, { status: 'cancelled' });
-    toast.info('Rendez-vous refuse');
+  const handleReject = (apt: Appointment) => {
+    onUpdateAppointment(apt.id, { status: 'cancelled' });
+    sendBookingRefusal({
+      clientEmail: apt.clientEmail,
+      clientName: apt.clientName,
+      studioName: user?.studioName || 'Le studio',
+      description: `${apt.service} — ${apt.date} à ${apt.time}`,
+    });
+    toast.info('Rendez-vous refusé — un email a été envoyé au client');
   };
 
   const handleApproveProject = async (pr: ProjectRequest) => {
@@ -148,10 +162,16 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     }
   };
 
-  const handleRejectProject = async (id: string) => {
+  const handleRejectProject = async (pr: ProjectRequest) => {
     try {
-      await onUpdateProjectRequest?.(id, 'REJECTED');
-      toast.info('Demande refusee');
+      await onUpdateProjectRequest?.(pr.id, 'REJECTED');
+      sendBookingRefusal({
+        clientEmail: pr.clientEmail,
+        clientName: pr.clientName,
+        studioName: user?.studioName || 'Le studio',
+        description: pr.description,
+      });
+      toast.info('Demande refusée — un email a été envoyé au client');
     } catch {
       toast.error('Erreur lors de la mise a jour');
     }
@@ -174,10 +194,16 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     }
   };
 
-  const handleRejectBooking = async (id: string) => {
+  const handleRejectBooking = async (bk: Booking) => {
     try {
-      await onUpdateBookingStatus?.(id, 'rejected');
-      toast.info('Demande refusée');
+      await onUpdateBookingStatus?.(bk.id, 'rejected');
+      sendBookingRefusal({
+        clientEmail: bk.clientEmail,
+        clientName: bk.clientName,
+        studioName: user?.studioName || 'Le studio',
+        description: bk.description,
+      });
+      toast.info('Demande refusée — un email a été envoyé au client');
     } catch {
       toast.error('Erreur lors de la mise a jour');
     }
@@ -245,7 +271,16 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         });
         if ('url' in result) {
           setDepositUrl(result.url);
-          toast.success('Lien généré. Envoyez-le au client.');
+          await sendBookingConfirmation({
+            clientEmail: depositModalAppointment.clientEmail,
+            clientName: depositModalAppointment.clientName,
+            studioName: user?.studioName || 'Le studio',
+            requestedDate: depositModalAppointment.date,
+            requestedTime: depositModalAppointment.time || null,
+            description: depositModalAppointment.service,
+            paymentLink: result.url,
+          });
+          toast.success('Lien généré et email envoyé au client avec le lien de paiement.');
         } else {
           setDepositError(result.error || 'stripe_config');
         }
@@ -257,7 +292,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       }
     }
 
-    // Cas 2 : depuis une demande vitrine (booking) → créer un RDV puis générer le lien
+    // Cas 2 : depuis une demande vitrine (booking) → créer RDV, générer lien, envoyer email auto, confirmer
     if (depositModalBooking && onAddAppointment) {
       setDepositLoading(true);
       setDepositUrl(null);
@@ -301,8 +336,18 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           type: 'deposit',
         });
         if ('url' in result) {
-          setDepositUrl(result.url);
-          toast.success('RDV créé et lien généré. Envoyez-le au client.');
+          await sendBookingConfirmation({
+            clientEmail: depositModalBooking.clientEmail,
+            clientName: depositModalBooking.clientName,
+            studioName: user?.studioName || 'Le studio',
+            requestedDate: depositModalBooking.requestedDate,
+            requestedTime: depositModalBooking.requestedTime ?? null,
+            description: depositModalBooking.description,
+            paymentLink: result.url,
+          });
+          await onUpdateBookingStatus?.(depositModalBooking.id, 'confirmed');
+          toast.success('RDV confirmé et email envoyé avec le lien de paiement !');
+          closeDepositModal();
         } else {
           setDepositError(result.error || 'stripe_config');
         }
@@ -359,8 +404,17 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         });
         if ('url' in result) {
           setDepositUrl(result.url);
+          await sendBookingConfirmation({
+            clientEmail: depositModalProject.clientEmail,
+            clientName: depositModalProject.clientName,
+            studioName: user?.studioName || 'Le studio',
+            requestedDate: newApt.date,
+            requestedTime: null,
+            description: newApt.service,
+            paymentLink: result.url,
+          });
           await onUpdateProjectRequest?.(depositModalProject.id, 'APPROVED');
-          toast.success('RDV créé et lien généré. Envoyez-le au client (ex. par DM Instagram).');
+          toast.success('RDV créé, lien généré et email envoyé au client avec le lien de paiement.');
         } else {
           setDepositError(result.error || 'stripe_config');
         }
@@ -454,16 +508,16 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     {studioId && (
                       <button
                         onClick={() => openDepositModal(apt)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 active:scale-[0.98] transition-all text-sm"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 active:scale-[0.98] transition-all text-sm dark:bg-blue-500/20 dark:text-blue-400 dark:hover:bg-blue-500/30"
                       >
                         <CreditCard className="w-4 h-4" /> Générer un lien d&apos;acompte
                       </button>
                     )}
-                    <button onClick={() => handleConfirm(apt.id)}
+                    <button onClick={() => handleConfirm(apt)}
                       className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 font-semibold hover:bg-blue-200 dark:hover:bg-blue-500/30 active:scale-[0.98] transition-all text-sm">
                       <CheckCircle className="w-4 h-4" /> Confirmer
                     </button>
-                    <button onClick={() => handleReject(apt.id)}
+                    <button onClick={() => handleReject(apt)}
                       className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 text-zinc-600 font-semibold hover:bg-zinc-200 dark:bg-zinc-500/20 dark:text-zinc-400 dark:hover:bg-zinc-500/30 active:scale-[0.98] transition-all text-sm">
                       <XCircle className="w-4 h-4" /> Refuser
                     </button>
@@ -517,18 +571,12 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         {studioId && onAddAppointment && (
                           <button
                             onClick={() => openDepositModalForBooking(bk)}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 active:scale-[0.98] transition-all text-sm"
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all text-sm"
                           >
-                            <CreditCard className="w-4 h-4" /> Demander un acompte
+                            <CreditCard className="w-4 h-4" /> Accepter & Demander un acompte
                           </button>
                         )}
-                        <button
-                          onClick={() => handleConfirmBooking(bk)}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 font-semibold hover:bg-blue-200 dark:hover:bg-blue-500/30 active:scale-[0.98] transition-all text-sm"
-                        >
-                          <CheckCircle className="w-4 h-4" /> Confirmer
-                        </button>
-                        <button onClick={() => handleRejectBooking(bk.id)}
+                        <button onClick={() => handleRejectBooking(bk)}
                           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 text-zinc-600 font-semibold hover:bg-zinc-200 dark:bg-zinc-500/20 dark:text-zinc-400 dark:hover:bg-zinc-500/30 active:scale-[0.98] transition-all text-sm">
                           <XCircle className="w-4 h-4" /> Refuser
                         </button>
@@ -594,7 +642,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       >
                         <CheckCircle className="w-4 h-4" /> Accepter & Discuter
                       </button>
-                      <button onClick={() => handleRejectProject(pr.id)}
+                      <button onClick={() => handleRejectProject(pr)}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 text-zinc-600 font-semibold hover:bg-zinc-200 dark:bg-zinc-500/20 dark:text-zinc-400 dark:hover:bg-zinc-500/30 active:scale-[0.98] transition-all text-sm"
                       >
                         <XCircle className="w-4 h-4" /> Refuser
@@ -640,7 +688,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     {apt.status === 'confirmed' && !apt.depositPaid && studioId && (
                       <button
                         onClick={() => openDepositModal(apt)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 active:scale-[0.98] transition-all text-sm"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 active:scale-[0.98] transition-all text-sm dark:bg-blue-500/20 dark:text-blue-400 dark:hover:bg-blue-500/30"
                       >
                         <CreditCard className="w-4 h-4" /> Générer un lien d&apos;acompte
                       </button>
@@ -669,7 +717,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               <>
                 <p className="text-sm text-[var(--text-secondary)]">
                   {depositModalBooking
-                    ? "Un RDV sera créé avec les infos de la demande, puis un lien de paiement Stripe sera généré. Envoyez-le au client pour encaisser l'acompte."
+                    ? "Un RDV sera créé et un email contenant le lien de paiement Stripe sera automatiquement envoyé au client pour confirmer sa réservation."
                     : depositModalProject
                       ? "Un RDV sera créé avec les infos du projet, puis un lien de paiement sera généré. Envoyez-le au client (ex. par DM Instagram) pour encaisser l'acompte."
                       : "Montant de l'acompte à demander au client. Le lien de paiement Stripe sera généré."}
@@ -735,7 +783,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" /> Génération du lien…
                       </>
-                    ) : depositModalBooking || depositModalProject ? (
+                    ) : depositModalBooking ? (
+                      <>
+                        <Mail className="w-4 h-4 shrink-0" /> <span className="truncate">Accepter et Envoyer l&apos;email</span>
+                      </>
+                    ) : depositModalProject ? (
                       <>
                         <CreditCard className="w-4 h-4 shrink-0" /> <span className="truncate">Créer le RDV et générer le lien</span>
                       </>
