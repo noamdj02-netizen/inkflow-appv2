@@ -1,22 +1,33 @@
-import React from 'react';
-import { Moon, Sun } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
+import React, { useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
+import { Sun, Moon } from 'lucide-react';
 
 export const ThemeToggle: React.FC = () => {
-  const { theme, toggleTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="w-9 h-9" aria-hidden />;
+  }
+
+  const isDark = resolvedTheme === 'dark';
 
   return (
     <button
       type="button"
-      className="theme-toggle"
-      onClick={toggleTheme}
-      data-theme={theme}
-      aria-label={theme === 'light' ? 'Passer en mode sombre' : 'Passer en mode clair'}
+      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      className="flex items-center justify-center w-9 h-9 rounded-full transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400"
+      aria-label={isDark ? 'Passer en mode clair' : 'Passer en mode sombre'}
     >
-      <div className="toggle-slider">
-        <Sun className="toggle-icon sun" />
-        <Moon className="toggle-icon moon" />
-      </div>
+      {isDark ? (
+        <Sun className="w-5 h-5" strokeWidth={1.5} />
+      ) : (
+        <Moon className="w-5 h-5" strokeWidth={1.5} />
+      )}
     </button>
   );
 };

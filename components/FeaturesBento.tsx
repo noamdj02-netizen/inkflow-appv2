@@ -11,13 +11,13 @@ const DEMO_CYCLE_MS = 2800;
 /* ------------------------------------------------------------------ */
 /*  Wrapper: cycle animé type démo vidéo                               */
 /* ------------------------------------------------------------------ */
-const DemoCycle: React.FC<{ children: React.ReactNode[]; className?: string; indicatorColor?: 'indigo' | 'white' | 'green' | 'purple' }> = ({ children, className = '', indicatorColor = 'indigo' }) => {
+const DemoCycle: React.FC<{ children: React.ReactNode[]; className?: string; indicatorColor?: 'blue' | 'white' | 'zinc' }> = ({ children, className = '', indicatorColor = 'blue' }) => {
   const [i, setI] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setI((prev) => (prev + 1) % children.length), DEMO_CYCLE_MS);
     return () => clearInterval(t);
   }, [children.length]);
-  const activeClass = indicatorColor === 'white' ? 'bg-white/80' : indicatorColor === 'green' ? 'bg-green-500' : indicatorColor === 'purple' ? 'bg-purple-500' : 'bg-indigo-500';
+  const activeClass = indicatorColor === 'white' ? 'bg-white/80' : indicatorColor === 'zinc' ? 'bg-zinc-500' : 'bg-blue-500';
   const inactiveClass = indicatorColor === 'white' ? 'bg-white/20' : 'bg-neutral-200/80';
   return (
     <div className={`relative ${className}`}>
@@ -51,8 +51,8 @@ const MiniCalendarUI: React.FC = () => {
         { label: 'Dim', num: 23 },
       ],
       rdvs: [
-        { letter: 'M', name: 'Marie D. — Flash rose', time: '14h00 – 16h00', status: 'Confirmé', statusClass: 'emerald' },
-        { letter: 'L', name: 'Lucas T. — Sleeve bras', time: '17h00 – 19h30', status: 'En attente', statusClass: 'amber' },
+        { letter: 'M', name: 'Marie D. — Flash rose', time: '14h00 – 16h00', status: 'Confirmé', statusClass: 'blue' },
+        { letter: 'L', name: 'Lucas T. — Sleeve bras', time: '17h00 – 19h30', status: 'En attente', statusClass: 'zinc' },
       ],
     },
     {
@@ -66,8 +66,8 @@ const MiniCalendarUI: React.FC = () => {
         { label: 'Dim', num: 30 },
       ],
       rdvs: [
-        { letter: 'C', name: 'Chloé R. — Mandala dos', time: '10h00 – 12h00', status: 'Confirmé', statusClass: 'emerald' },
-        { letter: 'T', name: 'Thomas B. — Minimaliste', time: '15h00 – 16h00', status: 'Confirmé', statusClass: 'emerald' },
+        { letter: 'C', name: 'Chloé R. — Mandala dos', time: '10h00 – 12h00', status: 'Confirmé', statusClass: 'blue' },
+        { letter: 'T', name: 'Thomas B. — Minimaliste', time: '15h00 – 16h00', status: 'Confirmé', statusClass: 'blue' },
       ],
     },
     {
@@ -81,8 +81,8 @@ const MiniCalendarUI: React.FC = () => {
         { label: 'Dim', num: 9 },
       ],
       rdvs: [
-        { letter: 'S', name: 'Sophie D. — Rose traditional', time: '11h00 – 13h00', status: 'Confirmé', statusClass: 'emerald' },
-        { letter: 'A', name: 'Alex M. — Dragon', time: '14h00 – 17h00', status: 'En attente', statusClass: 'amber' },
+        { letter: 'S', name: 'Sophie D. — Rose traditional', time: '11h00 – 13h00', status: 'Confirmé', statusClass: 'blue' },
+        { letter: 'A', name: 'Alex M. — Dragon', time: '14h00 – 17h00', status: 'En attente', statusClass: 'zinc' },
       ],
     },
   ];
@@ -100,10 +100,10 @@ const MiniCalendarUI: React.FC = () => {
             {scene.days.map((d) => (
               <div key={d.label} className="flex flex-col items-center gap-0.5">
                 <span className="text-[10px] text-neutral-400 font-medium">{d.label}</span>
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold transition-all ${d.active ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'text-neutral-700 hover:bg-neutral-50'}`}>{d.num}</div>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold transition-all ${d.active ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900/30' : 'text-neutral-700 hover:bg-neutral-50'}`}>{d.num}</div>
                 <div className="flex gap-0.5 h-1.5">
                   {Array.from({ length: d.dots || 0 }).map((_, i) => (
-                    <div key={i} className={`w-1 h-1 rounded-full ${d.active ? 'bg-indigo-300' : 'bg-indigo-400'}`} />
+                    <div key={i} className={`w-1 h-1 rounded-full ${d.active ? 'bg-blue-300 dark:bg-blue-500/50' : 'bg-blue-400 dark:bg-blue-500/40'}`} />
                   ))}
                 </div>
               </div>
@@ -111,13 +111,13 @@ const MiniCalendarUI: React.FC = () => {
           </div>
           <div className="px-3 pb-3 space-y-2">
             {scene.rdvs.map((r, i) => (
-              <div key={i} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 border ${i === 0 ? 'bg-indigo-50/80 border-indigo-100/60' : 'bg-white border-neutral-100'}`}>
-                <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{r.letter}</div>
+              <div key={i} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 border ${i === 0 ? 'bg-blue-50/80 dark:bg-blue-500/10 border-blue-100/60 dark:border-blue-500/20' : 'bg-white border-neutral-100'}`}>
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{r.letter}</div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-neutral-800 truncate">{r.name}</div>
                   <div className="text-[10px] text-neutral-500">{r.time}</div>
                 </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${r.statusClass === 'emerald' ? 'text-emerald-700 bg-emerald-50 border border-emerald-100' : 'text-amber-700 bg-amber-50 border border-amber-100'}`}>{r.status}</span>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${r.statusClass === 'blue' ? 'text-blue-700 bg-blue-50 border border-blue-100 dark:text-blue-400 dark:bg-blue-500/10 dark:border-blue-500/20' : 'text-zinc-700 bg-zinc-50 border border-zinc-100 dark:text-zinc-400 dark:bg-zinc-500/10 dark:border-zinc-500/20'}`}>{r.status}</span>
               </div>
             ))}
           </div>
@@ -147,7 +147,7 @@ const MiniPaymentsUI: React.FC = () => {
               <span className="text-xs font-semibold text-white">{s.total}</span>
             </div>
             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-green-400 to-emerald-400 rounded-full transition-all duration-700" style={{ width: `${s.pct}%` }} />
+              <div className="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full transition-all duration-700" style={{ width: `${s.pct}%` }} />
             </div>
             <div className="flex justify-between mt-1">
               <span className="text-[10px] text-neutral-500">{s.pct}% de l&apos;objectif</span>
@@ -160,7 +160,7 @@ const MiniPaymentsUI: React.FC = () => {
                 <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">{t.name.charAt(0)}</div>
                 <div className="flex-1 min-w-0"><span className="text-xs font-medium text-white truncate block">{t.name}</span></div>
                 <span className="text-xs font-bold text-emerald-400">{t.amount}</span>
-                {t.ok ? <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                {t.ok ? <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : <Clock className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" />}
               </div>
             ))}
           </div>
@@ -204,7 +204,7 @@ const MiniFlashGallery: React.FC = () => {
   ];
 
   return (
-    <DemoCycle indicatorColor="purple">
+    <DemoCycle indicatorColor="blue">
       {scenes.map((flashes, idx) => (
         <div key={idx} className="flex gap-2 sm:gap-3">
           {flashes.map((f, i) => (
@@ -215,8 +215,8 @@ const MiniFlashGallery: React.FC = () => {
               <div className="bg-white px-2.5 py-2">
                 <div className="text-xs font-semibold text-neutral-800 truncate">{f.name}</div>
                 <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-[10px] font-bold text-purple-600">{f.price}</span>
-                  <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full">Dispo</span>
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">{f.price}</span>
+                  <span className="text-[9px] font-semibold text-blue-700 bg-blue-50 dark:text-blue-400 dark:bg-blue-500/10 px-1.5 py-0.5 rounded-full">Dispo</span>
                 </div>
               </div>
             </div>
@@ -264,7 +264,7 @@ const MiniClientProfile: React.FC = () => {
               <div className="text-[10px] text-neutral-500">Satisfaction</div>
             </div>
             <div className="flex-1">
-              <div className="text-lg font-bold text-emerald-600">{c.status}</div>
+              <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{c.status}</div>
               <div className="text-[10px] text-neutral-500">Statut</div>
             </div>
           </div>
@@ -297,16 +297,16 @@ const MiniAutomationTimeline: React.FC = () => {
   ];
 
   return (
-    <DemoCycle indicatorColor="green">
+    <DemoCycle indicatorColor="blue">
       {scenes.map((steps, idx) => (
         <div key={idx} className="mt-3 space-y-0">
           {steps.map((s, i) => (
             <div key={i} className="flex gap-3 relative">
               <div className="flex flex-col items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${s.done ? 'bg-green-600 text-white' : s.next ? 'bg-green-100 text-green-700 ring-2 ring-green-300' : 'bg-neutral-100 text-neutral-400'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${s.done ? 'bg-blue-600 text-white' : s.next ? 'bg-green-100 text-green-700 ring-2 ring-green-300' : 'bg-neutral-100 text-neutral-400'}`}>
                   <s.icon className="w-3.5 h-3.5" />
                 </div>
-                {i < steps.length - 1 && <div className={`w-0.5 h-6 ${s.done ? 'bg-green-300' : 'bg-neutral-200'}`} />}
+                {i < steps.length - 1 && <div className={`w-0.5 h-6 ${s.done ? 'bg-blue-300 dark:bg-blue-500/50' : 'bg-neutral-200'}`} />}
               </div>
               <div className="pb-4">
                 <div className={`text-sm font-semibold ${s.done ? 'text-neutral-900' : 'text-neutral-600'}`}>{s.label}</div>
@@ -347,7 +347,7 @@ const MiniSecurityScore: React.FC = () => {
             <div className="text-sm font-bold text-neutral-800">Score de sécurité</div>
             <div className="text-xs text-neutral-500 mt-0.5">{s.desc}</div>
             <div className="flex items-center gap-1.5 mt-1.5">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
               <span className="text-[11px] font-medium text-green-700">{s.status}</span>
             </div>
           </div>
@@ -377,12 +377,12 @@ export const FeaturesBento: React.FC = () => {
         <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
 
           {/* ---- 1. Réservations en ligne (2 cols, indigo) ---- */}
-          <div className="md:col-span-2 bg-gradient-to-br from-indigo-50 to-indigo-100/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl hover:shadow-indigo-900/5 transition-all duration-300 border border-indigo-100/50">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-200 rounded-full blur-3xl opacity-30" />
+          <div className="md:col-span-2 bg-gradient-to-br from-blue-50 to-blue-100/80 dark:from-blue-500/10 dark:to-blue-500/20 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 border border-blue-100/50 dark:border-blue-500/20">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-200 dark:bg-blue-500/30 rounded-full blur-3xl opacity-30" />
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
                     <Calendar className="w-6 h-6 text-white" />
                   </div>
                   <h3 className="text-xl sm:text-2xl font-bold mb-2">Réservations en ligne 24/7</h3>
@@ -411,10 +411,10 @@ export const FeaturesBento: React.FC = () => {
           </div>
 
           {/* ---- 3. Galerie Flash (violet / rose) ---- */}
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl hover:shadow-purple-900/5 transition-all duration-300 border border-purple-100/50">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-purple-200 rounded-full blur-3xl opacity-30" />
+          <div className="bg-gradient-to-br from-blue-50 to-zinc-50/80 dark:from-blue-500/10 dark:to-zinc-500/10 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 border border-blue-100/50 dark:border-blue-500/20">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-200 dark:bg-blue-500/30 rounded-full blur-3xl opacity-30" />
             <div className="relative z-10">
-              <div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl font-bold mb-2">Galerie Flash</h3>
@@ -438,8 +438,8 @@ export const FeaturesBento: React.FC = () => {
           </div>
 
           {/* ---- 5. Automatisation (vert) ---- */}
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl transition-all duration-300 border border-green-100/50">
-            <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center mb-4">
+          <div className="bg-gradient-to-br from-blue-50 to-zinc-50/80 dark:from-blue-500/10 dark:to-zinc-500/10 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl transition-all duration-300 border border-blue-100/50 dark:border-blue-500/20">
+            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
               <Zap className="w-6 h-6 text-white" />
             </div>
             <h3 className="text-xl font-bold mb-1">Automatisation</h3>
@@ -450,10 +450,10 @@ export const FeaturesBento: React.FC = () => {
           </div>
 
           {/* ---- 6. Sécurité (2 cols, orange/rouge) ---- */}
-          <div className="md:col-span-2 bg-gradient-to-r from-orange-50 to-red-50/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl transition-all duration-300 border border-orange-100/50">
+          <div className="md:col-span-2 bg-gradient-to-r from-zinc-50 to-zinc-100/80 dark:from-zinc-500/10 dark:to-zinc-500/20 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative overflow-hidden group hover:shadow-xl transition-all duration-300 border border-zinc-200/50 dark:border-zinc-500/20">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-center">
               <div>
-                <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-zinc-600 dark:bg-zinc-500 rounded-xl flex items-center justify-center mb-4">
                   <Shield className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold mb-3">Sécurisé et Conforme</h3>
@@ -472,7 +472,7 @@ export const FeaturesBento: React.FC = () => {
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-3 bg-white rounded-lg p-3 border border-neutral-100/80">
                     <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center shrink-0">
-                      <Check className="w-3.5 h-3.5 text-green-600" />
+                      <Check className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div className="min-w-0">
                       <span className="text-sm font-semibold text-neutral-800 block">{item.label}</span>

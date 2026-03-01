@@ -96,7 +96,7 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({ artists, onAdd, on
           </button>
         )}
         {!canAdd && (
-          <div className="text-sm text-amber-600 font-medium">Limite atteinte - Passez au plan superieur</div>
+          <div className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">Limite atteinte - Passez au plan superieur</div>
         )}
       </div>
 
@@ -125,7 +125,7 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({ artists, onAdd, on
                 </button>
                 <button onClick={() => setDeleteConfirmId(artist.id)}
                   className="p-2 rounded-lg hover:bg-red-50">
-                  <Trash2 className="w-4 h-4 text-red-500" />
+                  <Trash2 className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
                 </button>
               </div>
             </div>

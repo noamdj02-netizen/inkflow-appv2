@@ -265,7 +265,7 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ onSa
                                   className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
                                 />
                               </div>
-                              <button onClick={() => removeBreak(key, idx)} className="p-2 h-fit self-end text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                              <button onClick={() => removeBreak(key, idx)} className="p-2 h-fit self-end text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-500/20 rounded-lg transition-colors">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -306,7 +306,7 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ onSa
                     {new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                   </span>
                 </div>
-                <button onClick={() => removeClosedDate(date)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                <button onClick={() => removeClosedDate(date)} className="p-2 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-500/20 rounded-lg transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

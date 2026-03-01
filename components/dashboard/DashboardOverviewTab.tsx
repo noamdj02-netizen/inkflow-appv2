@@ -75,51 +75,51 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   const vitrineSlug = (studioSlug != null && studioSlug !== '') ? studioSlug : (user?.studioName ? getVitrineSlug(user.studioName) : '');
   return (
     <div className="prodify-stagger">
-      {/* ===== PRODIFY HEADER — date + salutation + sous-titre + pills ===== */}
+      {/* ===== HEADER — date + salutation + sous-titre + boutons SaaS ===== */}
       <div className="px-2 sm:px-4 pt-4 sm:pt-6 pb-2 sm:pb-4">
-        <p className="text-[13px] font-medium text-[#8B8BA7] dark:text-[var(--text-tertiary)] mb-1">
+        <p className="text-[13px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">
           {now.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' })}
         </p>
-        <h1 className="text-[28px] sm:text-[32px] font-bold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-1">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">
           Bonjour{firstName ? ` ${firstName}` : ''} 👋
         </h1>
-        <p className="text-lg sm:text-xl font-medium greeting-gradient mb-5">
+        <p className="text-lg sm:text-xl font-medium text-zinc-500 dark:text-zinc-400 mb-5">
           Comment puis-je vous aider aujourd&apos;hui ?
         </p>
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <button className="pill-primary" onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}>
-            <Plus className="w-4 h-4" /> Nouveau RDV
+            <Plus className="w-4 h-4" strokeWidth={1.5} /> Nouveau RDV
           </button>
-          <button className="pill-action" onClick={() => setActiveTab('requests')}>
-            <Inbox className="w-4 h-4" /> Demandes
-            {pendingRequestsCount > 0 && <span className="px-2 py-0.5 rounded-full bg-[#EF4444] text-white text-[11px] font-bold ml-1">{pendingRequestsCount}</span>}
+          <button className="rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 text-sm font-medium transition-colors inline-flex items-center gap-2 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800" onClick={() => setActiveTab('requests')}>
+            <Inbox className="w-4 h-4" strokeWidth={1.5} /> Demandes
+            {pendingRequestsCount > 0 && <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[11px] font-bold">{pendingRequestsCount}</span>}
           </button>
           {user?.studioName && (
             <a
               href={`${window.location.origin}/studio/${vitrineSlug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="pill-action"
+              className="rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 text-sm font-medium transition-colors inline-flex items-center gap-2 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
-              <Image className="w-4 h-4" /> Ma vitrine
+              <Image className="w-4 h-4" strokeWidth={1.5} /> Ma vitrine
             </a>
           )}
-          <button className="pill-action" onClick={() => setShowWidgetModal(true)}>
-            <LayoutGrid className="w-4 h-4" /> + Widget
+          <button className="rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 text-sm font-medium transition-colors inline-flex items-center gap-2 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800" onClick={() => setShowWidgetModal(true)}>
+            <LayoutGrid className="w-4 h-4" strokeWidth={1.5} /> + Widget
           </button>
         </div>
       </div>
 
       {/* Alerts / banners */}
       {nextAppointmentIn2h && (
-        <div className="mx-2 sm:mx-4 mb-4 flex items-center justify-between gap-4 px-5 py-3.5 rounded-2xl bg-white dark:bg-[var(--bg-card)] border border-emerald-200 dark:border-emerald-800 shadow-sm">
+        <div className="mx-2 sm:mx-4 mb-4 flex items-center justify-between gap-4 px-5 py-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center flex-shrink-0">
-              <Clock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+              <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" strokeWidth={1.5} />
             </div>
             <div>
-              <p className="font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)]">Prochain RDV dans moins de 2 h</p>
-              <p className="text-sm text-[#6B7280] dark:text-[var(--text-tertiary)]">{nextAppointmentIn2h.clientName} • {nextAppointmentIn2h.time} — {nextAppointmentIn2h.service}</p>
+              <p className="font-semibold text-zinc-900 dark:text-zinc-100">Prochain RDV dans moins de 2 h</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">{nextAppointmentIn2h.clientName} • {nextAppointmentIn2h.time} — {nextAppointmentIn2h.service}</p>
             </div>
           </div>
           <button onClick={() => setSelectedAppointment(nextAppointmentIn2h)} className="pill-primary text-[13px] px-4 py-2">
@@ -130,14 +130,14 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       {visibleAlerts.length > 0 && (
         <div className="px-2 sm:px-4 mb-4 space-y-2 animate-fade-in">
           {visibleAlerts.map(alert => (
-            <div key={alert.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5 rounded-2xl bg-white dark:bg-[var(--bg-card)] border shadow-sm ${alert.type === 'warning' ? 'border-amber-200 dark:border-amber-800' : 'border-blue-200 dark:border-blue-800'}`}>
+            <div key={alert.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5 rounded-lg border bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-400">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                {alert.type === 'warning' ? <CreditCard className="w-5 h-5 text-amber-600 flex-shrink-0" /> : <AlertTriangle className="w-5 h-5 text-blue-600 flex-shrink-0" />}
-                <span className={`text-sm font-medium flex-1 min-w-0 ${alert.type === 'warning' ? 'text-amber-800 dark:text-amber-200' : 'text-blue-800 dark:text-blue-200'}`}>{alert.msg}</span>
+                {alert.type === 'warning' ? <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" strokeWidth={1.5} /> : <AlertTriangle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" strokeWidth={1.5} />}
+                <span className="text-sm font-medium flex-1 min-w-0">{alert.msg}</span>
               </div>
               <div className="flex items-center gap-2 sm:gap-1">
-                <button onClick={() => setActiveTab('appointments')} className={`px-3 py-1.5 rounded-full text-xs font-semibold flex-1 sm:flex-none ${alert.type === 'warning' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{alert.cta}</button>
-                <button onClick={() => setDismissedAlerts(prev => new Set(prev).add(alert.id))} className="p-1.5 rounded-full hover:bg-black/5"><X className="w-4 h-4 text-[#9CA3AF]" /></button>
+                <button onClick={() => setActiveTab('appointments')} className="flex-1 sm:flex-none text-xs font-semibold transition-colors px-3 py-1.5 rounded-md bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 dark:bg-blue-500/20 dark:border-transparent dark:text-blue-300 dark:hover:bg-blue-500/30">{alert.cta}</button>
+                <button onClick={() => setDismissedAlerts(prev => new Set(prev).add(alert.id))} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"><X className="w-4 h-4 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} /></button>
               </div>
             </div>
           ))}
@@ -148,15 +148,15 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-5 px-2 sm:px-4 pb-6">
         {/* ====== LEFT COLUMN ====== */}
         <div className="space-y-5 min-w-0">
-          {/* Widget: Mes Rendez-vous (Prodify "My Tasks" style) */}
+          {/* Widget: Mes Rendez-vous */}
           <div className="prodify-card p-6">
             <div className="flex items-center justify-between mb-4">
-              <span className="flex items-center gap-2 text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)]">
-                <Calendar className="w-5 h-5 text-[#6B7280]" /> Mes Rendez-vous
+              <span className="flex items-center gap-2 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+                <Calendar className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} /> Mes Rendez-vous
               </span>
               <div className="flex items-center gap-1">
-                <button onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }} className="p-1.5 rounded-lg hover:bg-[#F8F7FF] text-[#6B7280] hover:text-[#6B5CE7] transition-colors" title="Nouveau RDV">
-                  <Plus className="w-4 h-4" />
+                <button onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="Nouveau RDV">
+                  <Plus className="w-4 h-4" strokeWidth={1.5} />
                 </button>
               </div>
             </div>
@@ -164,105 +164,105 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3">
                 <span className="badge-prodify badge-progress">AUJOURD&apos;HUI</span>
-                <span className="text-[13px] text-[#9CA3AF]">• {todayAppointments.length} RDV</span>
+                <span className="text-[13px] text-zinc-500 dark:text-zinc-400">• {todayAppointments.length} RDV</span>
               </div>
               {todayAppointments.length > 0 ? (
                 <div className="space-y-2">
-                  <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 px-3 py-1.5 text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-wider">
+                  <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 px-3 py-1.5 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                     <span>Nom</span><span>Statut</span><span>Heure</span>
                   </div>
                   {todayAppointments.slice(0, 5).map(apt => (
-                    <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="grid grid-cols-[1fr_auto_auto] gap-x-4 items-center w-full px-3 py-2.5 rounded-xl hover:bg-[#F8F7FF] dark:hover:bg-[var(--bg-hover)] text-left transition-colors">
-                      <span className="text-sm font-medium text-[#1A1A2E] dark:text-[var(--text-primary)] truncate">{apt.clientName}</span>
+                    <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="grid grid-cols-[1fr_auto_auto] gap-x-4 items-center w-full px-3 py-2.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 text-left transition-colors">
+                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{apt.clientName}</span>
                       <span className={`badge-prodify ${apt.status === 'confirmed' ? 'badge-confirmed' : apt.status === 'pending' ? 'badge-pending' : 'badge-completed'}`}>
                         {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'pending' ? 'En attente' : 'Terminé'}
                       </span>
-                      <span className="text-[13px] font-semibold text-[#DC2626]">{apt.time || '—'}</span>
+                      <span className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-400">{apt.time || '—'}</span>
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-[#9CA3AF] pl-3">Aucun RDV aujourd&apos;hui</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 pl-3">Aucun RDV aujourd&apos;hui</p>
               )}
             </div>
             {/* Section À VENIR */}
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <span className="badge-prodify badge-upcoming">À VENIR</span>
-                <span className="text-[13px] text-[#9CA3AF]">• {appointments.filter(a => a.date > today && ['pending','confirmed'].includes(a.status)).length} RDV</span>
+                <span className="text-[13px] text-zinc-500 dark:text-zinc-400">• {appointments.filter(a => a.date > today && ['pending','confirmed'].includes(a.status)).length} RDV</span>
               </div>
               {(() => {
                 const upcoming = appointments.filter(a => a.date > today && ['pending','confirmed'].includes(a.status)).sort((a,b) => a.date.localeCompare(b.date)).slice(0, 3);
                 return upcoming.length > 0 ? (
                   <div className="space-y-2">
                     {upcoming.map(apt => (
-                      <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="grid grid-cols-[1fr_auto_auto] gap-x-4 items-center w-full px-3 py-2.5 rounded-xl hover:bg-[#F8F7FF] dark:hover:bg-[var(--bg-hover)] text-left transition-colors">
-                        <span className="text-sm font-medium text-[#1A1A2E] dark:text-[var(--text-primary)] truncate">{apt.clientName}</span>
+                      <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="grid grid-cols-[1fr_auto_auto] gap-x-4 items-center w-full px-3 py-2.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 text-left transition-colors">
+                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{apt.clientName}</span>
                         <span className={`badge-prodify ${apt.status === 'confirmed' ? 'badge-confirmed' : 'badge-pending'}`}>
                           {apt.status === 'confirmed' ? 'Confirmé' : 'En attente'}
                         </span>
-                        <span className="text-[13px] text-[#6B7280]">{new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                        <span className="text-[13px] text-zinc-500 dark:text-zinc-400">{new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-[#9CA3AF] pl-3">Aucun RDV à venir</p>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 pl-3">Aucun RDV à venir</p>
                 );
               })()}
             </div>
-            <button onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }} className="w-full mt-4 py-2.5 text-[13px] font-semibold text-[#6B5CE7] hover:bg-[#F8F7FF] rounded-xl transition-colors text-center">
+            <button onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }} className="w-full mt-4 py-2.5 text-[13px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors text-center">
               + Ajouter un RDV
             </button>
           </div>
 
-          {/* Widget: Mes Statistiques (Prodify "My Goals" style) */}
+          {/* Widget: Mes Statistiques */}
           <div className="prodify-card p-6">
             <div className="flex items-center gap-2 mb-5">
-              <Target className="w-5 h-5 text-[#6B7280]" />
-              <span className="text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)]">Mes Statistiques</span>
+              <Target className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
+              <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Mes Statistiques</span>
             </div>
             <div className="space-y-5">
               {/* Acomptes reçus */}
               <div>
-                <div className="text-[14px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-0.5">Acomptes reçus ce mois</div>
-                <div className="text-[12px] text-[#9CA3AF] mb-2">Finance • Mois en cours</div>
+                <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">Acomptes reçus ce mois</div>
+                <div className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">Finance • Mois en cours</div>
                 <div className="flex items-center gap-3">
-                  <div className="progress-bar-prodify"><div className="progress-fill green" style={{ width: `${Math.min(100, monthlyRevenue > 0 ? (pendingDeposits / monthlyRevenue) * 100 : 0)}%` }} /></div>
-                  <span className="text-[13px] font-semibold text-[#6B7280] min-w-[48px] text-right">{pendingDeposits}€</span>
+                  <div className="progress-bar-prodify"><div className="progress-fill blue" style={{ width: `${Math.min(100, monthlyRevenue > 0 ? (pendingDeposits / monthlyRevenue) * 100 : 0)}%` }} /></div>
+                  <span className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 min-w-[48px] text-right">{pendingDeposits}€</span>
                 </div>
               </div>
               {/* Demandes traitées */}
               <div>
-                <div className="text-[14px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-0.5">Demandes traitées</div>
-                <div className="text-[12px] text-[#9CA3AF] mb-2">Demandes • Ce mois</div>
+                <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">Demandes traitées</div>
+                <div className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">Demandes • Ce mois</div>
                 <div className="flex items-center gap-3">
                   {(() => {
                     const total = projectRequests.length || 1;
                     const treated = projectRequests.filter(p => p.status !== 'PENDING').length;
                     const pct = Math.round((treated / total) * 100);
                     return (<>
-                      <div className="progress-bar-prodify"><div className="progress-fill orange" style={{ width: `${pct}%` }} /></div>
-                      <span className="text-[13px] font-semibold text-[#6B7280] min-w-[48px] text-right">{pct}%</span>
+                      <div className="progress-bar-prodify"><div className="progress-fill blue" style={{ width: `${pct}%` }} /></div>
+                      <span className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 min-w-[48px] text-right">{pct}%</span>
                     </>);
                   })()}
                 </div>
               </div>
               {/* Clients actifs */}
               <div>
-                <div className="text-[14px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-0.5">Clients actifs</div>
-                <div className="text-[12px] text-[#9CA3AF] mb-2">CRM • Total</div>
+                <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">Clients actifs</div>
+                <div className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">CRM • Total</div>
                 <div className="flex items-center gap-3">
-                  <div className="progress-bar-prodify"><div className="progress-fill violet" style={{ width: `${Math.min(100, clients.length * 5)}%` }} /></div>
-                  <span className="text-[13px] font-semibold text-[#6B7280] min-w-[48px] text-right">{clients.length}</span>
+                  <div className="progress-bar-prodify"><div className="progress-fill blue" style={{ width: `${Math.min(100, clients.length * 5)}%` }} /></div>
+                  <span className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 min-w-[48px] text-right">{clients.length}</span>
                 </div>
               </div>
               {/* Revenu mensuel */}
               <div>
-                <div className="text-[14px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-0.5">Revenu mensuel</div>
-                <div className="text-[12px] text-[#9CA3AF] mb-2">Finance • {now.toLocaleDateString('fr-FR', { month: 'long' })}</div>
+                <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">Revenu mensuel</div>
+                <div className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">Finance • {now.toLocaleDateString('fr-FR', { month: 'long' })}</div>
                 <div className="flex items-center gap-3">
-                  <div className="progress-bar-prodify"><div className="progress-fill teal" style={{ width: `${Math.min(100, monthlyRevenue > 0 ? (monthlyRevenue / Math.max(totalRevenue, 1)) * 100 : 0)}%` }} /></div>
-                  <span className="text-[13px] font-semibold text-[#6B7280] min-w-[48px] text-right">{monthlyRevenue}€</span>
+                  <div className="progress-bar-prodify"><div className="progress-fill blue" style={{ width: `${Math.min(100, monthlyRevenue > 0 ? (monthlyRevenue / Math.max(totalRevenue, 1)) * 100 : 0)}%` }} /></div>
+                  <span className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 min-w-[48px] text-right">{monthlyRevenue}€</span>
                 </div>
               </div>
             </div>
@@ -272,8 +272,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           <div className="prodify-card p-6 overflow-hidden">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-[#6B7280]" />
-                <span className="text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)]">Évolution du revenu</span>
+                <BarChart3 className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
+                <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Évolution du revenu</span>
               </div>
               <span className="badge-prodify badge-progress">6 mois</span>
             </div>
@@ -282,15 +282,15 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 <AreaChart data={Array.isArray(revenueChartData) ? revenueChartData : []} margin={{ top: 0, right: 0, left: -8, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorRevenueOverview" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6B5CE7" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#6B5CE7" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#2563eb" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F0EEF9" vertical={false} />
-                  <XAxis dataKey="month" stroke="#9CA3AF" style={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#9CA3AF" style={{ fontSize: 11 }} tickLine={false} axisLine={false} width={32} />
-                  <Tooltip formatter={(v: number) => [`${v}€`, 'Revenu']} contentStyle={{ borderRadius: 14, border: '1px solid #F0EEF9', boxShadow: '0 4px 12px rgba(107,92,231,0.08)' }} />
-                  <Area type="monotone" dataKey="revenue" stroke="#6B5CE7" strokeWidth={2.5} fill="url(#colorRevenueOverview)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
+                  <XAxis dataKey="month" stroke="#71717a" style={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#71717a" style={{ fontSize: 11 }} tickLine={false} axisLine={false} width={32} />
+                  <Tooltip formatter={(v: number) => [`${v}€`, 'Revenu']} contentStyle={{ borderRadius: 12, border: '1px solid #e4e4e7', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }} />
+                  <Area type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} fill="url(#colorRevenueOverview)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -318,35 +318,35 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
         {/* ====== RIGHT COLUMN (420px) ====== */}
         <div className="space-y-5">
-          {/* Widget: Clients récents (Prodify "Projects" style) */}
+          {/* Widget: Clients récents */}
           <div className="prodify-card p-6">
             <div className="flex items-center justify-between mb-4">
-              <span className="flex items-center gap-2 text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)]">
-                <FolderOpen className="w-5 h-5 text-[#6B7280]" /> Clients récents
+              <span className="flex items-center gap-2 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+                <FolderOpen className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} /> Clients récents
               </span>
-              <button onClick={() => setActiveTab('clients')} className="text-[13px] font-medium text-[#6B5CE7] hover:underline">Voir tout</button>
+              <button onClick={() => setActiveTab('clients')} className="text-[13px] font-medium text-blue-600 dark:text-blue-400 hover:underline">Voir tout</button>
             </div>
-            <button onClick={() => setActiveTab('clients')} className="w-full flex items-center gap-3 p-3 mb-3 rounded-xl border-2 border-dashed border-[#F0EEF9] dark:border-[var(--border)] hover:border-[#6B5CE7]/40 hover:bg-[#F8F7FF] transition-colors text-left">
-              <div className="w-8 h-8 rounded-lg bg-[#F3F1FF] flex items-center justify-center"><UserPlus className="w-4 h-4 text-[#6B5CE7]" /></div>
-              <span className="text-sm font-medium text-[#6B5CE7]">Nouveau client</span>
+            <button onClick={() => setActiveTab('clients')} className="w-full flex items-center gap-3 p-3 mb-3 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-colors text-left">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center"><UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" strokeWidth={1.5} /></div>
+              <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Nouveau client</span>
             </button>
             {topClients.length > 0 ? (
               <div className="grid grid-cols-2 gap-3">
                 {topClients.slice(0, 4).map((client, i) => {
-                  const colors = ['bg-[#6B5CE7]', 'bg-[#3B82F6]', 'bg-[#22C55E]', 'bg-[#F59E0B]'];
+                  const colors = ['bg-blue-600', 'bg-blue-500', 'bg-zinc-600', 'bg-zinc-500'];
                   return (
-                    <button key={client.id} onClick={() => setActiveTab('clients')} className="text-left p-3.5 rounded-xl border border-[#F0EEF9] dark:border-[var(--border)] hover:border-[#6B5CE7] transition-colors">
+                    <button key={client.id} onClick={() => setActiveTab('clients')} className="text-left p-3.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
                       <div className={`w-7 h-7 rounded-lg ${colors[i % 4]} flex items-center justify-center mb-2`}>
                         <span className="text-white text-xs font-bold">{client.name?.charAt(0)}</span>
                       </div>
-                      <div className="text-[14px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] truncate">{client.name}</div>
-                      <div className="text-[12px] text-[#9CA3AF]">{client.appointmentCount || 0} RDV • {client.totalSpent}€</div>
+                      <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 truncate">{client.name}</div>
+                      <div className="text-[12px] text-zinc-500 dark:text-zinc-400">{client.appointmentsCount ?? 0} RDV • {client.totalSpent}€</div>
                     </button>
                   );
                 })}
               </div>
             ) : (
-              <p className="text-sm text-[#9CA3AF] text-center py-4">Aucun client pour le moment</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-4">Aucun client pour le moment</p>
             )}
           </div>
 
@@ -365,29 +365,29 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           {/* Event du jour (below calendar) */}
           {nextClientOfDay && (
             <div className="prodify-card overflow-hidden">
-              <div className="p-4 bg-[#F8F7FF] dark:bg-[var(--bg-card-secondary)] border-b border-[#E9E5FF] dark:border-[var(--border)]">
-                <div className="text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)] mb-1">{nextClientOfDay.clientName}</div>
-                <div className="text-[13px] text-[#6B7280]">Aujourd&apos;hui • {nextClientOfDay.time || '—'}</div>
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700">
+                <div className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{nextClientOfDay.clientName}</div>
+                <div className="text-[13px] text-zinc-500 dark:text-zinc-400">Aujourd&apos;hui • {nextClientOfDay.time || '—'}</div>
               </div>
               <div className="p-4 flex items-center justify-between gap-2 flex-wrap">
-                <span className="flex items-center gap-2 text-[12px] font-medium text-[#6B7280] bg-white dark:bg-[var(--bg-card)] border border-[#E5E3F0] dark:border-[var(--border)] rounded-lg px-2.5 py-1.5">
-                  <MapPin className="w-3.5 h-3.5" /> En studio
+                <span className="flex items-center gap-2 text-[12px] font-medium text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5">
+                  <MapPin className="w-3.5 h-3.5" strokeWidth={1.5} /> En studio
                 </span>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setActiveTab('appointments')} className="text-[13px] font-medium text-[#6B7280] dark:text-[var(--text-secondary)] hover:text-[#6B5CE7] dark:hover:text-indigo-400 transition-colors">
+                  <button onClick={() => setActiveTab('appointments')} className="text-[13px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                     Voir l&apos;agenda
                   </button>
-                  <button onClick={() => setSelectedAppointment(nextClientOfDay)} className="text-[13px] font-semibold text-[#6B5CE7] hover:underline">Voir détails</button>
+                  <button onClick={() => setSelectedAppointment(nextClientOfDay)} className="text-[13px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">Voir détails</button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Widget: Demandes en attente (Prodify "Reminders") */}
+          {/* Widget: Demandes en attente */}
           <div className="prodify-card p-6">
             <div className="flex items-center gap-2 mb-4">
-              <Inbox className="w-5 h-5 text-[#6B7280]" />
-              <span className="text-[15px] font-semibold text-[#1A1A2E] dark:text-[var(--text-primary)]">Demandes en attente</span>
+              <Inbox className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
+              <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Demandes en attente</span>
             </div>
             {(() => {
               const pendingItems = [
@@ -398,17 +398,17 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="badge-prodify badge-todo">Aujourd&apos;hui</span>
-                    <span className="text-[13px] text-[#9CA3AF]">• {pendingItems.length}</span>
+                    <span className="text-[13px] text-zinc-500 dark:text-zinc-400">• {pendingItems.length}</span>
                   </div>
                   {pendingItems.map(item => (
-                    <button key={item.id} onClick={() => setActiveTab(item.type === 'project' ? 'requests' : 'appointments')} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[#F8F7FF] dark:hover:bg-[var(--bg-hover)] text-left transition-colors">
-                      <span className="text-sm text-[#1A1A2E] dark:text-[var(--text-primary)] truncate flex-1">{item.label}</span>
+                    <button key={item.id} onClick={() => setActiveTab(item.type === 'project' ? 'requests' : 'appointments')} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 text-left transition-colors">
+                      <span className="text-sm text-zinc-900 dark:text-zinc-100 truncate flex-1">{item.label}</span>
                       <span className={`badge-prodify ${item.type === 'project' ? 'badge-todo' : 'badge-pending'}`}>{item.type === 'project' ? 'Projet' : 'RDV'}</span>
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-[#9CA3AF] text-center py-4">Aucune demande en attente ✓</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-4">Aucune demande en attente ✓</p>
               );
             })()}
           </div>
@@ -416,10 +416,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           {/* Prochain client panel */}
           {!nextClientOfDay && (
             <div className="prodify-card p-5 flex flex-col items-center text-center py-8">
-              <Calendar className="w-10 h-10 text-[#9CA3AF] mb-3" />
-              <p className="font-semibold text-[#6B7280]">Aucun RDV aujourd&apos;hui</p>
-              <p className="text-sm text-[#9CA3AF] mt-1">Votre prochain client apparaîtra ici</p>
-              <button onClick={() => setActiveTab('appointments')} className="mt-4 px-4 py-2.5 rounded-xl text-sm font-semibold bg-[#6B5CE7] text-white hover:bg-[#5B4CD7] transition-colors active:scale-[0.98]">
+              <Calendar className="w-10 h-10 text-zinc-400 dark:text-zinc-500 mb-3" strokeWidth={1.5} />
+              <p className="font-semibold text-zinc-600 dark:text-zinc-400">Aucun RDV aujourd&apos;hui</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Votre prochain client apparaîtra ici</p>
+              <button onClick={() => setActiveTab('appointments')} className="mt-4 px-4 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500 transition-colors active:scale-[0.98]">
                 Voir l&apos;agenda
               </button>
             </div>

@@ -82,9 +82,9 @@ export const WaitlistManager: React.FC<WaitlistManagerProps> = ({ entries, onAdd
                   <button
                     onClick={() => runAction(entry.id, 'remove', () => onRemove(entry.id))}
                     disabled={!!action}
-                    className="p-1.5 rounded-lg border border-neutral-200 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="p-1.5 rounded-lg border border-neutral-200 hover:bg-zinc-100 dark:hover:bg-zinc-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {action?.id === entry.id && action?.type === 'remove' ? <Loader2 className="w-3 h-3 animate-spin text-red-500" /> : <X className="w-3 h-3 text-red-500" />}
+                    {action?.id === entry.id && action?.type === 'remove' ? <Loader2 className="w-3 h-3 animate-spin text-zinc-600 dark:text-zinc-400" /> : <X className="w-3 h-3 text-zinc-600 dark:text-zinc-400" />}
                   </button>
                 </div>
               </div>
@@ -100,15 +100,15 @@ export const WaitlistManager: React.FC<WaitlistManagerProps> = ({ entries, onAdd
           </h3>
           <div className="space-y-3">
             {notified.map(entry => (
-              <div key={entry.id} className="bg-white rounded-xl p-4 border border-amber-200">
+              <div key={entry.id} className="bg-white rounded-xl p-4 border border-zinc-200 dark:border-zinc-600">
                 <div className="font-semibold text-sm">{entry.clientName}</div>
                 <div className="text-xs text-neutral-600">{entry.clientEmail}</div>
-                {entry.notifiedAt && <div className="text-xs text-amber-600 mt-1">Notifie le {new Date(entry.notifiedAt).toLocaleDateString('fr-FR')}</div>}
+                {entry.notifiedAt && <div className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">Notifie le {new Date(entry.notifiedAt).toLocaleDateString('fr-FR')}</div>}
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => runAction(entry.id, 'book', () => onBook(entry))}
                     disabled={!!action}
-                    className="flex-1 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="flex-1 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {action?.id === entry.id && action?.type === 'book' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                     {action?.id === entry.id && action?.type === 'book' ? 'En cours…' : 'Reserver'}
@@ -116,9 +116,9 @@ export const WaitlistManager: React.FC<WaitlistManagerProps> = ({ entries, onAdd
                   <button
                     onClick={() => runAction(entry.id, 'remove', () => onRemove(entry.id))}
                     disabled={!!action}
-                    className="p-1.5 rounded-lg border border-neutral-200 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="p-1.5 rounded-lg border border-neutral-200 hover:bg-zinc-100 dark:hover:bg-zinc-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {action?.id === entry.id && action?.type === 'remove' ? <Loader2 className="w-3 h-3 animate-spin text-red-500" /> : <X className="w-3 h-3 text-red-500" />}
+                    {action?.id === entry.id && action?.type === 'remove' ? <Loader2 className="w-3 h-3 animate-spin text-zinc-600 dark:text-zinc-400" /> : <X className="w-3 h-3 text-zinc-600 dark:text-zinc-400" />}
                   </button>
                 </div>
               </div>
@@ -134,10 +134,10 @@ export const WaitlistManager: React.FC<WaitlistManagerProps> = ({ entries, onAdd
           </h3>
           <div className="space-y-3">
             {booked.map(entry => (
-              <div key={entry.id} className="bg-white rounded-xl p-4 border border-green-200">
+              <div key={entry.id} className="bg-white rounded-xl p-4 border border-blue-200 dark:border-blue-500/30">
                 <div className="font-semibold text-sm">{entry.clientName}</div>
                 <div className="text-xs text-neutral-600">{entry.clientEmail}</div>
-                {entry.desiredService && <div className="text-xs text-green-600 mt-1">{entry.desiredService}</div>}
+                {entry.desiredService && <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">{entry.desiredService}</div>}
               </div>
             ))}
             {booked.length === 0 && <p className="text-sm text-neutral-400 text-center py-4">Aucun</p>}

@@ -45,9 +45,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   if (!isOpen) return null;
 
   const confirmClasses = variant === 'danger'
-    ? 'bg-red-600 hover:bg-red-700 text-white'
+    ? 'bg-zinc-600 hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-600 text-white'
     : variant === 'warning'
-      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+      ? 'bg-zinc-600 hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-600 text-white'
       : 'bg-[var(--text-primary)] hover:opacity-90 text-white';
 
   return (
@@ -63,8 +63,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         >
           <div className="flex items-start gap-4">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              variant === 'danger' ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' :
-              variant === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400' :
+              variant === 'danger' ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400' :
+              variant === 'warning' ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400' :
               'bg-neutral-100 text-neutral-600 dark:bg-[var(--bg-hover)] dark:text-[var(--text-secondary)]'
             }`}>
               <AlertTriangle className="w-6 h-6" />

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tailwind dark: variant — active when data-theme="dark" on root */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* ==========================================================
    INKFLOW — Native App Shell CSS
    Objectif : zero rubber-band, zero bounce, native feel
@@ -52,37 +55,37 @@ img, video {
   --sal: env(safe-area-inset-left, 0px);
 }
 
-/* Default + Mode Clair (Light) — palette maquette InkFlow (violet / lavande) */
+/* Default + Mode Clair (Light) — SaaS premium (zinc/gray, violet accent) */
 :root,
 :root[data-theme="light"] {
-  --bg-primary: #ddd6f7;
+  --bg-primary: #fafafa;
   --bg-secondary: #ffffff;
   --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
-  --bg-card-secondary: #f5f0ff;
+  --bg-card-secondary: #f4f4f5;
   --bg-card-dark: #1a1035;
-  --bg-hover: rgba(99, 40, 212, 0.06);
-  --text-primary: #1a1035;
-  --text-secondary: #4a3878;
-  --text-tertiary: #8b7bb5;
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-tertiary: #71717a;
   --text-on-dark: #ffffff;
-  --orange: #e8900a;
-  --orange-hover: #d97706;
-  --orange-light: #fff7e8;
-  --green: #16a34a;
-  --green-bg: #dcfce7;
-  --blue: #6328d4;
-  --blue-hover: #5220b8;
-  --blue-light: #7c3aed;
-  --magenta: #a855f7;
-  --magenta-hover: #9333ea;
-  --border: rgba(120, 80, 220, 0.18);
-  --border-light: rgba(99, 40, 212, 0.1);
-  --shadow-sm: rgba(99, 40, 212, 0.1);
-  --shadow-md: rgba(99, 40, 212, 0.14);
-  --shadow-lg: rgba(99, 40, 212, 0.18);
-  --chart-grid: rgba(99, 40, 212, 0.12);
-  --chart-text: #4a3878;
+  --orange: #71717a;
+  --orange-hover: #52525b;
+  --orange-light: #f4f4f5;
+  --green: #2563eb;
+  --green-bg: #eff6ff;
+  --blue: #2563eb;
+  --blue-hover: #1d4ed8;
+  --blue-light: #3b82f6;
+  --magenta: #3f3f46;
+  --magenta-hover: #52525b;
+  --border: rgba(37, 99, 235, 0.18);
+  --border-light: rgba(37, 99, 235, 0.1);
+  --shadow-sm: rgba(37, 99, 235, 0.1);
+  --shadow-md: rgba(37, 99, 235, 0.14);
+  --shadow-lg: rgba(37, 99, 235, 0.18);
+  --chart-grid: rgba(37, 99, 235, 0.12);
+  --chart-text: #1e3a8a;
   --chart-bg: #ffffff;
 }
 
@@ -94,20 +97,20 @@ img, video {
   --bg-card: #141416;
   --bg-card-secondary: #1c1c1f;
   --bg-card-dark: #222225;
-  --bg-hover: rgba(124, 58, 237, 0.12);
+  --bg-hover: rgba(59, 130, 246, 0.12);
   --text-primary: #f1f0f0;
   --text-secondary: #a0a0a8;
   --text-tertiary: #4a4a52;
   --text-on-dark: #f1f0f0;
-  --orange: #f59e0b;
-  --orange-hover: #e8900a;
-  --orange-light: rgba(245, 158, 11, 0.13);
-  --green: #22c55e;
-  --green-bg: rgba(34, 197, 94, 0.14);
-  --blue: #7c3aed;
-  --blue-hover: #6d28d9;
-  --blue-light: #8b5cf6;
-  --magenta: #a78bfa;
+  --orange: #71717a;
+  --orange-hover: #52525b;
+  --orange-light: rgba(113, 113, 122, 0.13);
+  --green: #3b82f6;
+  --green-bg: rgba(59, 130, 246, 0.14);
+  --blue: #3b82f6;
+  --blue-hover: #2563eb;
+  --blue-light: #60a5fa;
+  --magenta: #71717a;
   --magenta-hover: #8b5cf6;
   --border: rgba(255, 255, 255, 0.07);
   --border-light: rgba(255, 255, 255, 0.05);
@@ -279,91 +282,94 @@ img, video {
   border: 1px solid rgba(255, 255, 255, 0.07) !important;
 }
 
-/* ===== Dashboard Overview — palette maquette (violet / lavande) ===== */
+/* ===== Dashboard Overview — SaaS premium (zinc/gray, violet accent) ===== */
 .dashboard-overview-bg {
-  background: linear-gradient(135deg, #ddd6f7 0%, #e5e0ff 50%, #ede9fe 100%);
+  background: #fafafa;
   background-attachment: local;
 }
 :root[data-theme="dark"] .dashboard-overview-bg {
-  background: #0a0a0b;
+  background: #09090b; /* zinc-950 */
 }
 .greeting-gradient {
-  background: linear-gradient(135deg, #6328d4 0%, #7c3aed 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #71717a;
 }
 :root[data-theme="dark"] .greeting-gradient {
-  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #a1a1aa;
 }
 
-/* Cartes dashboard — fond blanc, bordure et ombre violette maquette */
+/* Cartes dashboard — fond blanc, bordure fine, ombre subtile */
 .prodify-card {
   background: white;
-  border-radius: 18px;
-  border: 1px solid rgba(99, 40, 212, 0.12);
-  box-shadow: 0 2px 8px rgba(99, 40, 212, 0.10), 0 1px 3px rgba(0,0,0,0.04);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  border-radius: 12px;
+  border: 1px solid #e4e4e7;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .prodify-card:hover {
-  box-shadow: 0 4px 20px rgba(99, 40, 212, 0.14), 0 2px 6px rgba(0,0,0,0.05);
+  border-color: #d4d4d8;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 :root[data-theme="dark"] .prodify-card {
-  background: var(--bg-card);
-  border-color: rgba(255,255,255,0.08);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  background: #18181b; /* zinc-900 */
+  border-color: #27272a; /* zinc-800 */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 :root[data-theme="dark"] .prodify-card:hover {
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
   border-color: rgba(255,255,255,0.12);
 }
 
-/* Legacy alias — existing widgets still reference this */
+/* Legacy alias — MiniCalendar, etc. */
 .dashboard-widget-card {
   background: white;
-  border-radius: 18px;
-  border: 1px solid rgba(99, 40, 212, 0.12);
-  box-shadow: 0 2px 8px rgba(99, 40, 212, 0.10), 0 1px 3px rgba(0,0,0,0.04);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  border-radius: 12px;
+  border: 1px solid #e4e4e7;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .dashboard-widget-card:hover {
-  box-shadow: 0 4px 20px rgba(99, 40, 212, 0.14), 0 2px 6px rgba(0,0,0,0.05);
+  border-color: #d4d4d8;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 :root[data-theme="dark"] .dashboard-widget-card {
-  background: var(--bg-card);
-  border-color: rgba(255,255,255,0.08);
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  background: #18181b; /* zinc-900 */
+  border-color: #27272a; /* zinc-800 */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 :root[data-theme="dark"] .dashboard-widget-card:hover {
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
   border-color: rgba(255,255,255,0.12);
 }
 
-/* Boutons primaires dashboard (palette maquette) */
+/* Boutons dashboard — Bleu SaaS */
 .pill-primary {
-  background: linear-gradient(135deg, #6328d4, #7c3aed);
+  background: #2563eb; /* blue-600 */
   color: white;
   border: none;
-  padding: 9px 18px;
-  border-radius: 999px;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.15s;
+  transition: background 0.15s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-.pill-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.pill-primary:hover { background: #1d4ed8; } /* blue-700 */
+:root[data-theme="dark"] .pill-primary {
+  background: #2563eb; /* blue-600 */
+  color: white;
+  box-shadow: 0 1px 3px rgba(30, 58, 138, 0.2); /* blue-900/20 */
+}
+:root[data-theme="dark"] .pill-primary:hover {
+  background: #3b82f6; /* blue-500 */
+}
 .pill-action {
   background: white;
-  border: 1.5px solid #E5E3F0;
-  color: #1A1A2E;
-  padding: 9px 18px;
-  border-radius: 999px;
+  border: 1px solid #e4e4e7;
+  color: #18181b;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -372,50 +378,54 @@ img, video {
   gap: 6px;
   transition: all 0.15s;
 }
-.pill-action:hover { border-color: #6B5CE7; color: #6B5CE7; }
+.pill-action:hover { border-color: #d4d4d8; background: #fafafa; color: #2563eb; }
 :root[data-theme="dark"] .pill-action {
   background: var(--bg-card);
   border-color: var(--border);
   color: var(--text-primary);
 }
 :root[data-theme="dark"] .pill-action:hover {
-  border-color: #818cf8;
-  color: #818cf8;
+  border-color: rgba(255,255,255,0.15);
+  background: var(--bg-hover);
+  color: #60a5fa;
 }
 
-/* Prodify badges / pills */
+/* Badges / pills — plus sobres */
 .badge-prodify {
-  padding: 3px 10px;
-  border-radius: 999px;
+  padding: 2px 8px;
+  border-radius: 6px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   display: inline-flex;
   align-items: center;
 }
-.badge-progress  { background: #EDE9FE; color: #6B5CE7; }
-.badge-todo      { background: #FEF3C7; color: #D97706; }
-.badge-upcoming  { background: #D1FAE5; color: #059669; }
-.badge-high      { background: #FEE2E2; color: #DC2626; }
-.badge-confirmed { background: #D1FAE5; color: #059669; }
-.badge-pending   { background: #FEF3C7; color: #D97706; }
-.badge-completed { background: #F1F5F9; color: #64748B; }
+.badge-progress  { background: #dbeafe; color: #1d4ed8; } /* blue-100, blue-700 — actif */
+.badge-todo      { background: #f4f4f5; color: #52525b; } /* zinc-100, zinc-600 — secondaire */
+.badge-upcoming  { background: #f4f4f5; color: #52525b; } /* zinc-100, zinc-600 — secondaire */
+:root[data-theme="dark"] .badge-progress  { background: rgba(59, 130, 246, 0.1); color: #60a5fa; }
+:root[data-theme="dark"] .badge-upcoming  { background: rgba(113, 113, 122, 0.1); color: #a1a1aa; } /* zinc-500/10, zinc-400 */
+:root[data-theme="dark"] .badge-todo      { background: rgba(113, 113, 122, 0.1); color: #a1a1aa; }
+.badge-high      { background: #f4f4f5; color: #52525b; } /* zinc — important = bleu, sinon zinc */
+.badge-confirmed { background: #dbeafe; color: #1d4ed8; } /* blue */
+.badge-pending   { background: #f4f4f5; color: #52525b; } /* zinc */
+.badge-completed { background: #f4f4f5; color: #71717a; } /* zinc */
 
-/* Progress bar Prodify style */
+/* Progress bar — zinc */
 .progress-bar-prodify {
   flex: 1;
   height: 6px;
-  background: #F0EEF9;
+  background: #f4f4f5;
   border-radius: 99px;
   overflow: hidden;
 }
 :root[data-theme="dark"] .progress-bar-prodify { background: rgba(255,255,255,0.08); }
 .progress-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
-.progress-fill.green  { background: #22C55E; }
-.progress-fill.orange { background: #F59E0B; }
-.progress-fill.violet { background: #6B5CE7; }
-.progress-fill.teal   { background: #14B8A6; }
+.progress-fill.green  { background: #2563eb; } /* blue-600 */
+.progress-fill.orange { background: #2563eb; } /* blue-600 */
+.progress-fill.violet { background: #2563eb; } /* blue-600 */
+.progress-fill.teal   { background: #2563eb; } /* blue-600 */
 
 /* Overview widget header/value — hiérarchie visuelle */
 .overview-widget-header {
@@ -452,15 +462,18 @@ img, video {
 .prodify-stagger > *:nth-child(7) { animation: prodify-fade-up 0.4s ease 0.35s both; }
 .prodify-stagger > *:nth-child(8) { animation: prodify-fade-up 0.4s ease 0.40s both; }
 
-/* ===== Sidebar nav — Prodify style (fond violet doux, pas de barre latérale) ===== */
+/* ===== Sidebar nav — SaaS premium (fond gris subtil + trait violet) ===== */
 .sidebar-nav-active {
-  background: #F3F1FF;
-  color: #6B5CE7;
+  background: #f4f4f5;
+  color: #7c3aed;
   font-weight: 600;
+  border-left: 2px solid #7c3aed;
+  padding-left: 14px;
 }
 :root[data-theme="dark"] .sidebar-nav-active {
-  background: rgba(124, 58, 237, 0.12);
+  background: rgba(124, 58, 237, 0.1);
   color: #a78bfa;
+  border-left-color: #7c3aed;
 }
 
 /* ===== Design System Dashboard — Boutons, cartes, animations ===== */
@@ -561,7 +574,7 @@ img, video {
 
 /* Fond doux pour toutes les pages dashboard (pas seulement overview) */
 .app-shell-content.dashboard-pages-bg {
-  background: linear-gradient(135deg, #f0edf8 0%, #f4f2fa 50%, #f8f6fc 100%);
+  background: #fafafa;
 }
 :root[data-theme="dark"] .app-shell-content.dashboard-pages-bg {
   background: #0a0a0b;

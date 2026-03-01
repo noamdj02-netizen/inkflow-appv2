@@ -149,7 +149,7 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
                 <div className="flex justify-between">
                   <div className="flex gap-2">
                     <button onClick={() => setDeleteConfirmId(selected.id)} disabled={!!deletingId}
-                      className="px-4 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed">
+                      className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 dark:border-zinc-600 dark:text-zinc-400 font-medium hover:bg-zinc-100 dark:hover:bg-zinc-500/20 disabled:opacity-60 disabled:cursor-not-allowed">
                       {deletingId === selected.id ? <Loader2 className="w-4 h-4 inline mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 inline mr-2" />}
                       {deletingId === selected.id ? 'Suppression…' : 'Supprimer'}
                     </button>

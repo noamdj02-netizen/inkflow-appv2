@@ -91,7 +91,7 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({ userEmail, s
               }
               setSettings(s => ({ ...s, stripeConnected: !s.stripeConnected }));
             }}
-            className={`shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${settings.stripeConnected ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
+            className={`shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${settings.stripeConnected ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:hover:bg-blue-500/30' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}
           >
             {settings.stripeConnected ? 'Connecté ✓' : 'Connecter'}
           </button>
@@ -133,7 +133,7 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({ userEmail, s
         </div>
 
         <button onClick={save} disabled={saving}
-          className={`px-6 py-3 rounded-xl font-semibold transition-colors touch-target disabled:opacity-50 ${saved ? 'bg-green-600 text-white' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}>
+          className={`px-6 py-3 rounded-xl font-semibold transition-colors touch-target disabled:opacity-50 ${saved ? 'bg-blue-600 text-white' : 'bg-neutral-900 text-white hover:bg-neutral-800'}`}>
           {saving ? 'Enregistrement...' : saved ? 'Enregistre !' : 'Enregistrer'}
         </button>
       </div>

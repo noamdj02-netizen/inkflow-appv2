@@ -71,15 +71,15 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'vip': return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'active': return 'bg-green-100 text-green-700 border-green-200';
+      case 'vip': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30';
+      case 'active': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30';
       case 'inactive': return 'bg-neutral-100 text-neutral-600 border-neutral-200';
       default: return 'bg-neutral-100 text-neutral-600 border-neutral-200';
     }
   };
 
   const getStatusIcon = (status: string) => {
-    if (status === 'vip') return <span className="text-purple-600">★</span>;
+    if (status === 'vip') return <span className="text-blue-600 dark:text-blue-400">★</span>;
     return null;
   };
 
@@ -141,7 +141,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
             {(['all', 'active', 'vip', 'inactive'] as const).map(status => (
               <button key={status} onClick={() => setFilterStatus(status)}
                 className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
-                  filterStatus === status ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'
+                  filterStatus === status ? 'bg-blue-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-blue-300 hover:bg-blue-50/50 dark:hover:border-blue-500/50 dark:hover:bg-blue-500/10'
                 }`}>
                 {status === 'all' ? 'Tous' : status === 'vip' ? 'VIP' : status.charAt(0).toUpperCase() + status.slice(1)}
               </button>
@@ -151,12 +151,12 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
         {onAddClient && (
           <>
             {clientLimitReached && (
-              <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm">
-                <span className="text-amber-800">
+              <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-zinc-100 dark:bg-zinc-500/20 border border-zinc-200 dark:border-zinc-600 rounded-xl text-sm">
+                <span className="text-zinc-800 dark:text-zinc-200">
                   Limite atteinte{typeof clientLimit === 'number' && clientLimit > 0 ? ` (${clients.length} / ${clientLimit} clients)` : ''}. Passez au plan Studio pour en ajouter plus.
                 </span>
                 {onUpgradeClick && (
-                  <button onClick={onUpgradeClick} className="px-4 py-2 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 whitespace-nowrap">
+                  <button onClick={onUpgradeClick} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 whitespace-nowrap">
                     Voir les offres
                   </button>
                 )}
@@ -180,11 +180,11 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
         </div>
         <div className="dashboard-widget-card p-4">
           <div className="text-sm text-[var(--text-secondary)] mb-1">Clients VIP</div>
-          <div className="text-2xl font-bold text-purple-600">{clients.filter(c => c.status === 'vip').length}</div>
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{clients.filter(c => c.status === 'vip').length}</div>
         </div>
         <div className="dashboard-widget-card p-4">
           <div className="text-sm text-[var(--text-secondary)] mb-1">Revenus totaux</div>
-          <div className="text-2xl font-bold text-green-600">{clients.reduce((sum, c) => sum + c.totalSpent, 0)}€</div>
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{clients.reduce((sum, c) => sum + c.totalSpent, 0)}€</div>
         </div>
         <div className="dashboard-widget-card p-4">
           <div className="text-sm text-[var(--text-secondary)] mb-1">RDV totaux</div>
@@ -197,7 +197,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
         {sortedClients.map(client => (
           <button key={client.id} onClick={() => setSelectedClient(client)} className="row-clickable dashboard-widget-card w-full text-left p-5 rounded-2xl">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold text-lg">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-bold text-lg">
                 {client.name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
@@ -214,7 +214,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
             </div>
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border)] text-sm">
               <span className="text-[var(--text-secondary)]">{client.appointmentsCount} RDV</span>
-              <span className="font-bold text-indigo-600">{client.totalSpent}€</span>
+              <span className="font-bold text-blue-600 dark:text-blue-400">{client.totalSpent}€</span>
               <span className="text-[var(--text-tertiary)] text-xs">{client.lastVisit ? new Date(client.lastVisit).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : 'Jamais'}</span>
             </div>
           </button>
@@ -250,7 +250,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold">
+                          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-bold">
                             {client.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -258,7 +258,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                             {client.tags.length > 0 && (
                               <div className="flex gap-1 mt-1">
                                 {client.tags.slice(0, 2).map(tag => (
-                                  <span key={tag} className="text-xs bg-indigo-50 dark:bg-[var(--bg-card-secondary)] px-2 py-0.5 rounded-lg text-indigo-600 dark:text-indigo-300">{tag}</span>
+                                  <span key={tag} className="text-xs bg-blue-50 dark:bg-blue-500/10 dark:bg-[var(--bg-card-secondary)] px-2 py-0.5 rounded-lg text-blue-600 dark:text-blue-400 dark:text-blue-400">{tag}</span>
                                 ))}
                               </div>
                             )}
@@ -278,7 +278,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                         </span>
                       </td>
                       <td className="px-6 py-4"><div className="text-sm font-semibold text-[var(--text-primary)]">{client.appointmentsCount}</div></td>
-                      <td className="px-6 py-4"><div className="text-sm font-bold text-indigo-600">{client.totalSpent}€</div></td>
+                      <td className="px-6 py-4"><div className="text-sm font-bold text-blue-600 dark:text-blue-400">{client.totalSpent}€</div></td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-[var(--text-secondary)]">
                           {client.lastVisit ? new Date(client.lastVisit).toLocaleDateString('fr-FR') : 'Jamais'}
@@ -334,7 +334,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
           {onAddClient && !searchTerm && (
             <>
               {clientLimitReached && onUpgradeClick && (
-                <p className="text-sm text-amber-600 mt-2 mb-2">Limite atteinte. <button type="button" onClick={onUpgradeClick} className="underline font-semibold">Passer au plan Studio</button></p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2 mb-2">Limite atteinte. <button type="button" onClick={onUpgradeClick} className="underline font-semibold">Passer au plan Studio</button></p>
               )}
               <button
                 onClick={() => (clientLimitReached ? onUpgradeClick?.() : setShowAddModal(true))}
@@ -369,7 +369,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
               <div className="min-w-0">
                 <h3 className="text-sm font-semibold text-neutral-600 mb-3">Statistiques</h3>
                 <div className="space-y-3">
-                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Total dépensé</span><span className="text-sm font-bold text-green-600">{selectedClient.totalSpent}€</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Total dépensé</span><span className="text-sm font-bold text-blue-600 dark:text-blue-400">{selectedClient.totalSpent}€</span></div>
                   <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Rendez-vous</span><span className="text-sm font-bold">{selectedClient.appointmentsCount}</span></div>
                   <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Première visite</span><span className="text-sm font-semibold">{new Date(selectedClient.firstVisit).toLocaleDateString('fr-FR')}</span></div>
                   {selectedClient.lastVisit && <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Dernière visite</span><span className="text-sm font-semibold">{new Date(selectedClient.lastVisit).toLocaleDateString('fr-FR')}</span></div>}
@@ -405,7 +405,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                     <div key={tattoo.id} className="bg-neutral-50 rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
                         <div><h4 className="font-semibold">{tattoo.description}</h4><p className="text-sm text-neutral-600">{tattoo.location} • {tattoo.size}</p></div>
-                        <span className="text-sm font-bold text-green-600">{tattoo.price}€</span>
+                        <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{tattoo.price}€</span>
                       </div>
                       <div className="text-xs text-neutral-500">{new Date(tattoo.date).toLocaleDateString('fr-FR')} • {tattoo.duration}min</div>
                     </div>
@@ -449,7 +449,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                 Ajouter
               </button>
               {clientLimitReached && (
-                <p className="text-sm text-amber-600 mt-2">Limite de votre plan atteinte. Passez au plan Studio pour ajouter plus de clients.</p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">Limite de votre plan atteinte. Passez au plan Studio pour ajouter plus de clients.</p>
               )}
             </div>
           </div>

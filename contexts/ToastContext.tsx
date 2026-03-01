@@ -26,16 +26,16 @@ export const useToast = () => {
 };
 
 const ICONS: Record<ToastType, React.ReactNode> = {
-  success: <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />,
-  error: <XCircle className="w-5 h-5 text-red-500 shrink-0" />,
+  success: <CheckCircle2 className="w-5 h-5 text-blue-500 dark:text-blue-400 shrink-0" />,
+  error: <XCircle className="w-5 h-5 text-zinc-600 dark:text-zinc-400 shrink-0" />,
   warning: <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />,
   info: <Info className="w-5 h-5 text-blue-500 shrink-0" />,
 };
 
 const BG: Record<ToastType, string> = {
-  success: 'bg-green-50 border-green-200',
-  error: 'bg-red-50 border-red-200',
-  warning: 'bg-amber-50 border-amber-200',
+  success: 'bg-blue-50 border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/30',
+  error: 'bg-zinc-100 border-zinc-200 dark:bg-zinc-500/20 dark:border-zinc-600',
+  warning: 'bg-zinc-100 border-zinc-200 dark:bg-zinc-500/20 dark:border-zinc-600',
   info: 'bg-blue-50 border-blue-200',
 };
 

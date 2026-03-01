@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronDown, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronDown, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
@@ -50,17 +50,18 @@ import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
 type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings';
 
+const iconProps = { className: 'w-5 h-5', strokeWidth: 1.5 };
 const tabs: { id: TabId; label: string; icon: React.ReactNode; badge?: 'pending' }[] = [
-  { id: 'overview', label: 'Vue d\'ensemble', icon: <LayoutDashboard className="w-5 h-5" /> },
-  { id: 'analytics', label: 'Statistiques', icon: <BarChart3 className="w-5 h-5" /> },
-  { id: 'requests', label: 'Demandes', icon: <MessageSquare className="w-5 h-5" />, badge: 'pending' },
-  { id: 'appointments', label: 'Rendez-vous', icon: <Calendar className="w-5 h-5" /> },
-  { id: 'flash', label: 'Galerie Flash', icon: <Image className="w-5 h-5" /> },
-  { id: 'clients', label: 'Clients', icon: <Users className="w-5 h-5" /> },
-  { id: 'messaging', label: 'Messagerie', icon: <MessageSquare className="w-5 h-5" /> },
-  { id: 'portfolio', label: 'Portfolio', icon: <Image className="w-5 h-5" /> },
-  { id: 'finance', label: 'Finance', icon: <Wallet className="w-5 h-5" /> },
-  { id: 'settings', label: 'Paramètres', icon: <Settings className="w-5 h-5" /> }
+  { id: 'overview', label: 'Vue d\'ensemble', icon: <LayoutDashboard {...iconProps} /> },
+  { id: 'analytics', label: 'Statistiques', icon: <BarChart3 {...iconProps} /> },
+  { id: 'requests', label: 'Demandes', icon: <MessageSquare {...iconProps} />, badge: 'pending' },
+  { id: 'appointments', label: 'Rendez-vous', icon: <Calendar {...iconProps} /> },
+  { id: 'flash', label: 'Galerie Flash', icon: <Image {...iconProps} /> },
+  { id: 'clients', label: 'Clients', icon: <Users {...iconProps} /> },
+  { id: 'messaging', label: 'Messagerie', icon: <MessageSquare {...iconProps} /> },
+  { id: 'portfolio', label: 'Portfolio', icon: <Image {...iconProps} /> },
+  { id: 'finance', label: 'Finance', icon: <Wallet {...iconProps} /> },
+  { id: 'settings', label: 'Paramètres', icon: <Settings {...iconProps} /> }
 ];
 
 export const DashboardPro: React.FC = () => {
@@ -543,8 +544,16 @@ export const DashboardPro: React.FC = () => {
     return [...clients].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
   }, [clients]);
 
+  /** Derniers acomptes payés (pour le widget sidebar) */
+  const recentDeposits = useMemo(() => {
+    return appointments
+      .filter(a => a.depositPaid && a.deposit > 0)
+      .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))
+      .slice(0, 3);
+  }, [appointments]);
+
   return (
-    <div className="app-shell bg-[var(--bg-primary)]">
+    <div className="app-shell bg-zinc-50 dark:bg-zinc-950">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
@@ -552,7 +561,7 @@ export const DashboardPro: React.FC = () => {
 
       <div className="app-shell-row">
         {/* ====== SIDEBAR — Design premium (ÉTAPE 1) ====== */}
-        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-[178px] max-w-[85vw] bg-white dark:bg-[var(--bg-sidebar)] border-r border-[#F0EEF9] dark:border-[var(--border)] flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
+        <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-[178px] max-w-[85vw] bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}>
           {/* Zone logo — compacte et premium */}
@@ -581,8 +590,8 @@ export const DashboardPro: React.FC = () => {
                   <button
                     key={tab.id}
                     onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] font-medium text-[14px] transition-colors duration-150 ${
-                      isActive ? 'sidebar-nav-active' : 'text-[#4B5563] dark:text-[var(--text-secondary)] hover:bg-[#F8F7FF] dark:hover:bg-[var(--bg-hover)] hover:text-[#1A1A2E] dark:hover:text-[var(--text-primary)]'
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-[14px] transition-colors duration-150 ${
+                      isActive ? 'bg-blue-50 text-blue-900 dark:bg-blue-500/10 dark:text-blue-400 [&_svg]:text-blue-600 [&_svg]:dark:text-blue-400' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
                     }`}
                   >
                     {tab.id === 'requests' ? (
@@ -595,21 +604,41 @@ export const DashboardPro: React.FC = () => {
                     )}
                     <span className="flex-1 text-left">{tab.label}</span>
                     {pendingCount > 0 && (
-                      <span className="min-w-[18px] h-[18px] px-2 py-0.5 flex items-center justify-center bg-amber-500 text-white text-[10px] font-bold rounded-full">{pendingCount}</span>
+                      <span className="min-w-[18px] h-[18px] px-2 py-0.5 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold rounded-full">{pendingCount}</span>
                     )}
                   </button>
                 );
               })}
           </nav>
-          {/* Déconnexion — zone séparée */}
-          <div className="px-3 py-3 border-t border-[var(--border)]/60 safe-bottom">
-            <button
-              onClick={logout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] font-medium transition-colors duration-150"
-            >
-              <LogOut className="w-5 h-5 flex-shrink-0" />
-              Déconnexion
-            </button>
+          {/* Derniers acomptes + Déconnexion — zone séparée */}
+          <div className="mt-auto px-3 py-3 border-t border-[var(--border)]/60 safe-bottom">
+            {/* Widget Derniers acomptes */}
+            {recentDeposits.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-500 uppercase tracking-wider mb-3">Derniers acomptes</h3>
+                <div className="flex flex-col gap-3">
+                  {recentDeposits.map((apt) => (
+                    <div key={apt.id} className="flex items-center gap-3 group cursor-default">
+                      <div className="flex flex-shrink-0 items-center justify-center w-7 h-7 rounded-full bg-blue-500/10 text-blue-400">
+                        <CreditCard className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate min-w-0">{apt.clientName || 'Client'}</span>
+                      <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 ml-auto flex-shrink-0">+{apt.deposit}€</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Séparateur + Déconnexion */}
+            <div className={`border-t border-zinc-200 dark:border-zinc-800 pt-4 ${recentDeposits.length > 0 ? 'mt-4' : ''}`}>
+              <button
+                onClick={logout}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] font-medium transition-colors duration-150"
+              >
+                <LogOut className="w-5 h-5 flex-shrink-0" />
+                Déconnexion
+              </button>
+            </div>
           </div>
         </aside>
 
@@ -617,13 +646,13 @@ export const DashboardPro: React.FC = () => {
         <div className="app-shell-main">
           {/* Bandeau hors-ligne / erreur de connexion */}
           {useSupabase && (!isOnline || connectionError) && (
-            <div className="bg-amber-500/90 text-amber-950 px-4 py-2 flex items-center justify-between gap-4 text-sm font-medium">
+            <div className="bg-blue-600 text-white px-4 py-2 flex items-center justify-between gap-4 text-sm font-medium">
               <span className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                 {!isOnline ? 'Vous êtes hors ligne.' : 'Erreur de connexion.'}
                 {connectionError?.message && <span className="opacity-90 truncate">{connectionError.message}</span>}
               </span>
-              <button onClick={retry} className="px-3 py-1.5 rounded-lg bg-amber-950/20 hover:bg-amber-950/30 font-semibold">
+              <button onClick={retry} className="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 font-semibold">
                 Réessayer
               </button>
             </div>
@@ -645,6 +674,19 @@ export const DashboardPro: React.FC = () => {
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            {/* Barre de recherche globale (style Command Palette) */}
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-colors w-64 lg:w-72">
+              <Search className="w-4 h-4 text-zinc-500 dark:text-zinc-400 flex-shrink-0" />
+              <input
+                type="search"
+                placeholder="Chercher un client, RDV..."
+                className="bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-500 w-full min-w-0"
+                aria-label="Recherche globale"
+              />
+              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-200 dark:bg-zinc-800 rounded border border-zinc-300 dark:border-zinc-700 flex-shrink-0">
+                ⌘K
+              </kbd>
+            </div>
             <ThemeToggle />
             <div className="relative">
               <button
@@ -653,7 +695,7 @@ export const DashboardPro: React.FC = () => {
               >
                 <Bell className="w-5 h-5 text-[#6B7280] dark:text-[var(--text-secondary)]" />
                 {notifications.filter(n => !n.read).length > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white dark:ring-[var(--bg-primary)]" />
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full ring-2 ring-white dark:ring-[var(--bg-primary)]" />
                 )}
               </button>
               {showNotifications && (
@@ -663,7 +705,7 @@ export const DashboardPro: React.FC = () => {
                     {notifications.filter(n => !n.read).length > 0 && (
                       <button
                         onClick={() => { notifications.filter(n => !n.read).forEach(n => markNotificationAsRead(n.id)); }}
-                        className="text-xs text-[#6B7280] hover:text-[#6B5CE7] font-medium"
+                        className="text-xs text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
                       >
                         Tout marquer comme lu
                       </button>
@@ -677,10 +719,10 @@ export const DashboardPro: React.FC = () => {
                         <button
                           key={notif.id}
                           onClick={() => { markNotificationAsRead(notif.id); setShowNotifications(false); setActiveTab('requests'); }}
-                          className={`w-full text-left p-4 hover:bg-[#F8F7FF] dark:hover:bg-[var(--bg-hover)] transition-colors duration-150 ${!notif.read ? 'bg-[#F3F1FF]' : ''}`}
+                          className={`w-full text-left p-4 hover:bg-zinc-50 dark:hover:bg-[var(--bg-hover)] transition-colors duration-150 ${!notif.read ? 'bg-blue-50/50 dark:bg-blue-500/5' : ''}`}
                         >
                           <div className="flex items-start gap-3">
-                            <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!notif.read ? 'bg-[#6B5CE7]' : 'bg-transparent'}`} />
+                            <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!notif.read ? 'bg-blue-600' : 'bg-transparent'}`} />
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-[#1A1A2E] dark:text-[var(--text-primary)] truncate">{notif.message}</p>
                               <p className="text-xs text-[#9CA3AF] mt-1">
@@ -703,7 +745,7 @@ export const DashboardPro: React.FC = () => {
                 {user?.avatar ? (
                   <img src={user.avatar} alt="" className="w-9 h-9 rounded-full border-2 border-white dark:border-[var(--border)] object-cover shadow-sm" />
                 ) : (
-                  <div className="w-9 h-9 rounded-full border-2 border-white dark:border-[var(--border)] bg-[#F3F1FF] flex items-center justify-center font-bold text-[#6B5CE7] text-sm shadow-sm">
+                  <div className="w-9 h-9 rounded-full border-2 border-white dark:border-[var(--border)] bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center font-bold text-blue-600 dark:text-blue-400 text-sm shadow-sm">
                     {user?.name?.charAt(0) || '?'}
                   </div>
                 )}
@@ -718,7 +760,7 @@ export const DashboardPro: React.FC = () => {
                         {user?.avatar ? (
                           <img src={user.avatar} alt="" className="w-12 h-12 rounded-full border-2 border-white object-cover" />
                         ) : (
-                          <div className="w-12 h-12 rounded-full bg-[#F3F1FF] flex items-center justify-center font-bold text-lg text-[#6B5CE7]">
+                          <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center font-bold text-lg text-blue-600 dark:text-blue-400">
                             {user?.name?.charAt(0) || '?'}
                           </div>
                         )}
@@ -731,14 +773,14 @@ export const DashboardPro: React.FC = () => {
                     <div className="p-2">
                       <button
                         onClick={() => { setActiveTab('settings'); setSettingsTab('general'); setShowProfileDropdown(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[#1A1A2E] dark:text-[var(--text-primary)] hover:bg-[#F8F7FF] dark:hover:bg-[var(--bg-hover)] font-medium transition-colors duration-150 text-left"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-zinc-900 dark:text-[var(--text-primary)] hover:bg-zinc-100 dark:hover:bg-[var(--bg-hover)] font-medium transition-colors duration-150 text-left"
                       >
                         <Settings className="w-5 h-5 text-[#9CA3AF]" />
                         Paramètres
                       </button>
                       <button
                         onClick={() => { logout(); setShowProfileDropdown(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 font-medium transition-colors duration-150 text-left"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium transition-colors duration-150 text-left"
                       >
                         <LogOut className="w-5 h-5" />
                         Déconnexion
@@ -898,7 +940,7 @@ export const DashboardPro: React.FC = () => {
                   { id: 'vitrine', label: 'Page vitrine' },
                 ] as const).map(tab => (
                   <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${settingsTab === tab.id ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'}`}>
+                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${settingsTab === tab.id ? 'bg-blue-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-blue-300 hover:bg-blue-50/50'}`}>
                     {tab.label}
                   </button>
                 ))}
@@ -950,7 +992,7 @@ export const DashboardPro: React.FC = () => {
                             <button
                               type="button"
                               onClick={handleAvatarRemove}
-                              className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-1.5"
+                              className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors flex items-center gap-1.5"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               Supprimer
@@ -1018,7 +1060,7 @@ export const DashboardPro: React.FC = () => {
                       disabled={generalSaving}
                       className={`px-6 py-3 rounded-xl font-semibold transition-colors touch-target ${
                         generalSaved
-                          ? 'bg-green-600 text-white'
+                          ? 'bg-blue-600 text-white'
                           : 'bg-neutral-900 text-white hover:bg-neutral-800'
                       } disabled:opacity-50`}
                     >
@@ -1107,9 +1149,9 @@ export const DashboardPro: React.FC = () => {
                 <div className="flex flex-col gap-2">
                   <button
                     onClick={() => { setShowFabMenu(false); setSelectedFlash(null); setShowBookingModal(true); }}
-                    className="flex items-center gap-4 w-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-950/50 dark:hover:to-purple-950/50 rounded-2xl px-5 py-4 border border-indigo-200/60 dark:border-indigo-800/40 font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[56px] text-left transition-colors touch-target"
+                    className="flex items-center gap-4 w-full bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-2xl px-5 py-4 border border-blue-200 dark:border-blue-500/20 font-semibold text-neutral-900 dark:text-[var(--text-primary)] min-h-[56px] text-left transition-colors touch-target"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 dark:bg-blue-500 flex items-center justify-center flex-shrink-0">
                       <Calendar className="w-5 h-5 text-white" />
                     </div>
                     Nouveau RDV
@@ -1147,7 +1189,7 @@ export const DashboardPro: React.FC = () => {
                     </div>
                     <span className="text-sm">Demandes</span>
                     {pendingRequestsCount > 0 && (
-                      <span className="absolute top-2 right-2 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold">
+                      <span className="absolute top-2 right-2 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] font-bold">
                         {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
                       </span>
                     )}

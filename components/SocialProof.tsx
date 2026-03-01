@@ -43,7 +43,7 @@ const TestimonialCard: React.FC<{ testimonial: typeof testimonials[0] }> = ({ te
   <div className="flex-shrink-0 min-w-[280px] w-[85vw] sm:w-[340px] sm:min-w-[340px] md:w-[380px] bg-neutral-50/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-neutral-200/60 hover:border-neutral-200 hover:shadow-lg hover:shadow-neutral-900/5 transition-all duration-300">
     <div className="flex gap-1 mb-4">
       {[...Array(testimonial.rating)].map((_, i) => (
-        <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
+        <Star key={i} className="w-5 h-5 fill-blue-500 text-blue-500 dark:fill-blue-400 dark:text-blue-400" />
       ))}
     </div>
     <p className="text-neutral-700 mb-6 leading-relaxed">
@@ -72,7 +72,7 @@ export const SocialProof: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 bg-neutral-50 px-4 py-2.5 rounded-full border border-neutral-200/80 mb-6">
-            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+            <Star className="w-4 h-4 fill-blue-500 text-blue-500 dark:fill-blue-400 dark:text-blue-400" />
             <span className="text-sm font-semibold text-neutral-700">4.9/5 sur 200+ avis</span>
           </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 px-2 tracking-tight">

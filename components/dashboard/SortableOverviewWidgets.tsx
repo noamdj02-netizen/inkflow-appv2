@@ -102,7 +102,7 @@ function SortableWidget({
       style={style}
       className={`relative transition-all duration-200 ${
         isDragging
-          ? 'opacity-90 shadow-xl shadow-black/20 scale-[1.02] z-50 ring-2 ring-indigo-500/30 rounded-2xl'
+          ? 'opacity-90 shadow-xl shadow-black/20 scale-[1.02] z-50 ring-2 ring-blue-500/30 rounded-2xl'
           : ''
       }`}
     >
@@ -110,7 +110,7 @@ function SortableWidget({
         <div
           {...attributes}
           {...listeners}
-          className="absolute top-2 right-2 z-10 p-1.5 rounded-lg cursor-grab active:cursor-grabbing bg-white/70 dark:bg-white/10 backdrop-blur-sm text-neutral-600 dark:text-white/80 hover:opacity-100 opacity-30 hover:bg-white/90 dark:hover:bg-white/20 transition-all touch-none shadow-sm"
+          className="absolute top-2 right-2 z-10 p-1.5 rounded-lg cursor-grab active:cursor-grabbing bg-white/70 dark:bg-white/10 backdrop-blur-sm text-zinc-600 dark:text-white/80 hover:opacity-100 opacity-30 hover:bg-white/90 dark:hover:bg-white/20 transition-all touch-none shadow-sm"
           aria-label="Déplacer le widget"
         >
           <GripVertical className="w-4 h-4" />

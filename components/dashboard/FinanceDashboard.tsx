@@ -183,7 +183,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
         </div>
         <div className="dashboard-widget-card p-5">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-indigo-100 text-indigo-700">
+            <div className="p-2 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
               <CreditCard className="w-5 h-5" />
             </div>
             <span className="text-sm text-neutral-600">Revenus RDV</span>
@@ -193,33 +193,33 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
         </div>
         <div className="dashboard-widget-card p-5">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700">
+            <div className="p-2 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
               <Banknote className="w-5 h-5" />
             </div>
             <span className="text-sm text-neutral-600">Espèces</span>
           </div>
-          <div className="text-2xl font-bold text-emerald-700">{totalCash}€</div>
+          <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{totalCash}€</div>
           {todayCash > 0 && (
-            <p className="text-xs text-emerald-600 mt-1">Dont {todayCash}€ aujourd'hui</p>
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Dont {todayCash}€ aujourd'hui</p>
           )}
         </div>
         <div className="dashboard-widget-card p-5">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-green-100 text-green-700">
+            <div className="p-2 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
               <Receipt className="w-5 h-5" />
             </div>
             <span className="text-sm text-neutral-600">Acomptes reçus</span>
           </div>
-          <div className="text-2xl font-bold text-green-600">{totalDeposits}€</div>
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalDeposits}€</div>
         </div>
         <div className="dashboard-widget-card p-5">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-amber-100 text-amber-700">
+            <div className="p-2 rounded-xl bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400">
               <TrendingUp className="w-5 h-5" />
             </div>
             <span className="text-sm text-neutral-600">Acomptes en attente</span>
           </div>
-          <div className="text-2xl font-bold text-amber-600">{pendingDeposits}€</div>
+          <div className="text-2xl font-bold text-zinc-600 dark:text-zinc-400">{pendingDeposits}€</div>
           <p className="text-xs text-neutral-500 mt-1">{completedCount} RDV terminés</p>
         </div>
       </div>
@@ -291,17 +291,17 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
                 .map((e) => (
                   <div
                     key={e.id}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-neutral-50 group"
+                    className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-500/10 group"
                   >
                     <div className="min-w-0">
                       <div className="font-medium text-neutral-900 truncate">{e.label}</div>
                       <div className="text-xs text-neutral-500">{e.date}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-emerald-700">{e.amount}€</span>
+                      <span className="font-bold text-blue-700 dark:text-blue-400">{e.amount}€</span>
                       <button
                         onClick={() => removeCashEntry(e.id)}
-                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 text-red-600 transition-opacity"
+                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-zinc-100 text-zinc-600 dark:hover:bg-zinc-500/20 dark:text-zinc-400 transition-opacity"
                         aria-label="Supprimer"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -323,11 +323,11 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
             <div className="py-12 text-center text-neutral-400">Aucune transaction</div>
           ) : (
             transactions.map((t) => (
-              <div key={t.id} className="flex items-center justify-between px-6 py-4 hover:bg-neutral-50">
+              <div key={t.id} className="flex items-center justify-between px-6 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-500/10">
                 <div className="flex items-center gap-3">
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      t.type === 'cash' ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-700'
+                      t.type === 'cash' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400'
                     }`}
                   >
                     {t.type === 'cash' ? (
@@ -341,7 +341,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
                     <div className="text-sm text-neutral-600">
                       {t.sub} • {t.date}
                       {t.type === 'cash' && (
-                        <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-xs font-medium">
+                        <span className="ml-2 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-medium">
                           Espèces
                         </span>
                       )}
@@ -412,7 +412,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
               </button>
               <button
                 onClick={() => setShowAddCash(false)}
-                className="px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-xl font-semibold hover:bg-neutral-200"
+                className="px-4 py-2.5 bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400 rounded-xl font-semibold hover:bg-neutral-200"
               >
                 Annuler
               </button>

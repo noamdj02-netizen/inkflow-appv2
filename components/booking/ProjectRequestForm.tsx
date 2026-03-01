@@ -85,7 +85,7 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
           className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
         />
         {errors.clientName && (
-          <p className="mt-1 text-sm text-red-600">{errors.clientName.message}</p>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{errors.clientName.message}</p>
         )}
       </div>
 
@@ -101,7 +101,7 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
             className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
           />
           {errors.clientEmail && (
-            <p className="mt-1 text-sm text-red-600">{errors.clientEmail.message}</p>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{errors.clientEmail.message}</p>
           )}
         </div>
         <div>
@@ -128,7 +128,7 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
           className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none"
         />
         {errors.description && (
-          <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{errors.description.message}</p>
         )}
       </div>
 

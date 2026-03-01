@@ -152,7 +152,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                 </div>
               </div>
               <button onClick={e => { e.stopPropagation(); onDeleteItem(item.id); }}
-                className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                className="absolute top-2 right-2 p-1.5 bg-zinc-600 dark:bg-zinc-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                 <X className="w-3 h-3" />
               </button>
             </div>

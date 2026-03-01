@@ -88,8 +88,8 @@ export const ConsentFormSign: React.FC<ConsentFormSignProps> = ({ template, clie
   if (done) {
     return (
       <div className="max-w-2xl mx-auto text-center py-16">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Check className="w-10 h-10 text-green-600" />
+        <div className="w-20 h-20 bg-blue-100 dark:bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Check className="w-10 h-10 text-blue-600 dark:text-blue-400" />
         </div>
         <h2 className="text-2xl font-bold mb-2">Formulaire signe</h2>
         <p className="text-neutral-600">Merci {clientName} ! Votre consentement a ete enregistre.</p>

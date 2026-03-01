@@ -169,7 +169,7 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
                 </div>
                 <div className="flex justify-between">
                   <button onClick={() => setDeleteConfirmId(selected.id)}
-                    className="px-4 py-2 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50">
+                    className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 dark:border-zinc-600 dark:text-zinc-400 font-medium hover:bg-zinc-100 dark:hover:bg-zinc-500/20">
                     <Trash2 className="w-4 h-4 inline mr-2" /> Supprimer
                   </button>
                   <button onClick={saveTemplate} disabled={saving}

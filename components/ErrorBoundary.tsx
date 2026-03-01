@@ -31,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
           <div className="max-w-md w-full text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
               <span className="text-2xl" aria-hidden>⚠️</span>
             </div>
             <h1 className="text-xl font-bold text-neutral-900 mb-2">Une erreur s&apos;est produite</h1>
@@ -39,7 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
               Le tableau de bord n&apos;a pas pu s&apos;afficher. Réessayez ou déconnectez-vous.
             </p>
             {isDev && errMsg && (
-              <p className="text-left text-xs text-red-600 bg-red-50 p-3 rounded-lg mb-6 font-mono break-all">
+              <p className="text-left text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-500/20 p-3 rounded-lg mb-6 font-mono break-all">
                 {errMsg}
               </p>
             )}

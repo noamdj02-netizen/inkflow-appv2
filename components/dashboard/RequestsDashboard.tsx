@@ -396,22 +396,22 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         </div>
         <div className="page-tabs flex gap-2 pb-1">
           <button onClick={() => setActiveTab('rdv')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'rdv' ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'rdv' ? 'bg-blue-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-blue-300 hover:bg-blue-50/50'}`}>
             <Calendar className="w-4 h-4 inline mr-2" />
             RDV ({pendingAppointments.length})
           </button>
           <button onClick={() => setActiveTab('bookings')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'bookings' ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'bookings' ? 'bg-blue-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-blue-300 hover:bg-blue-50/50'}`}>
             <Clock className="w-4 h-4 inline mr-2" />
             RDV vitrine ({pendingBookings.length})
           </button>
           <button onClick={() => setActiveTab('projects')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'projects' ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'projects' ? 'bg-blue-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-blue-300 hover:bg-blue-50/50'}`}>
             <FileText className="w-4 h-4 inline mr-2" />
             Projet ({pendingProjects.length})
           </button>
           <button onClick={() => setActiveTab('history')}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${activeTab === 'history' ? 'bg-blue-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-blue-300 hover:bg-blue-50/50'}`}>
             <MessageSquare className="w-4 h-4 inline mr-2" />
             Historique
           </button>
@@ -430,7 +430,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             <div className="divide-y divide-[var(--border)]">
               {pendingAppointments.map(apt => (
                 <div key={apt.id} className="row-clickable p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold text-lg">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 font-bold text-lg">
                     {apt.clientName.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -446,25 +446,25 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       </span>
                       <span className="text-[var(--text-primary)]">•</span>
                       <span className="font-medium text-[var(--text-primary)]">{apt.service}</span>
-                      <span className="font-bold text-indigo-600">{apt.price}€</span>
+                      <span className="font-bold text-blue-600">{apt.price}€</span>
                     </div>
-                    <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">En attente</span>
+                    <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400">En attente</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
                     {studioId && (
                       <button
                         onClick={() => openDepositModal(apt)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 active:scale-[0.98] transition-all text-sm"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 active:scale-[0.98] transition-all text-sm"
                       >
                         <CreditCard className="w-4 h-4" /> Générer un lien d&apos;acompte
                       </button>
                     )}
                     <button onClick={() => handleConfirm(apt.id)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-100 text-emerald-700 font-semibold hover:bg-emerald-200 active:scale-[0.98] transition-all text-sm">
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 font-semibold hover:bg-blue-200 dark:hover:bg-blue-500/30 active:scale-[0.98] transition-all text-sm">
                       <CheckCircle className="w-4 h-4" /> Confirmer
                     </button>
                     <button onClick={() => handleReject(apt.id)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 font-semibold hover:bg-red-100 active:scale-[0.98] transition-all text-sm">
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 text-zinc-600 font-semibold hover:bg-zinc-200 dark:bg-zinc-500/20 dark:text-zinc-400 dark:hover:bg-zinc-500/30 active:scale-[0.98] transition-all text-sm">
                       <XCircle className="w-4 h-4" /> Refuser
                     </button>
                   </div>
@@ -487,7 +487,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             <div className="divide-y divide-[var(--border)]">
               {bookingsChronological.map(bk => (
                 <div key={bk.id} className="row-clickable p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold text-lg">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 font-bold text-lg">
                     {bk.clientName.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -505,8 +505,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         {new Date(bk.createdAt).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
                       </div>
                       <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                        bk.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                        bk.status === 'confirmed' || bk.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                        bk.status === 'pending' ? 'bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400' :
+                        bk.status === 'confirmed' || bk.status === 'accepted' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' :
                         'bg-neutral-100 text-neutral-600'
                       }`}>
                         {BOOKING_STATUS_LABELS[bk.status] || bk.status}
@@ -517,19 +517,19 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         {studioId && onAddAppointment && (
                           <button
                             onClick={() => openDepositModalForBooking(bk)}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 active:scale-[0.98] transition-all text-sm"
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 active:scale-[0.98] transition-all text-sm"
                           >
                             <CreditCard className="w-4 h-4" /> Demander un acompte
                           </button>
                         )}
                         <button
                           onClick={() => handleConfirmBooking(bk)}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-100 text-emerald-700 font-semibold hover:bg-emerald-200 active:scale-[0.98] transition-all text-sm"
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 font-semibold hover:bg-blue-200 dark:hover:bg-blue-500/30 active:scale-[0.98] transition-all text-sm"
                         >
                           <CheckCircle className="w-4 h-4" /> Confirmer
                         </button>
                         <button onClick={() => handleRejectBooking(bk.id)}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 font-semibold hover:bg-red-100 active:scale-[0.98] transition-all text-sm">
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 text-zinc-600 font-semibold hover:bg-zinc-200 dark:bg-zinc-500/20 dark:text-zinc-400 dark:hover:bg-zinc-500/30 active:scale-[0.98] transition-all text-sm">
                           <XCircle className="w-4 h-4" /> Refuser
                         </button>
                       </div>
@@ -549,14 +549,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             />
           ) : (
             <div className="divide-y divide-[var(--border)]">
-              <div className="px-5 sm:px-6 py-4 bg-indigo-50/80 dark:bg-indigo-950/30 border-b border-indigo-100 dark:border-indigo-900/50 rounded-t-xl sm:rounded-t-2xl">
-                <p className="text-sm text-indigo-800 dark:text-indigo-200 font-medium">
+              <div className="px-5 sm:px-6 py-4 bg-blue-50/80 dark:bg-blue-950/30 border-b border-blue-100 dark:border-blue-900/50 rounded-t-xl sm:rounded-t-2xl">
+                <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">
                   <strong>Conseil :</strong> Discutez avec le client sur Instagram (ou autre) pour valider le projet, puis envoyez-lui le lien d&apos;acompte ci-dessous. Plus efficace que d&apos;échanger dans la messagerie du dashboard.
                 </p>
               </div>
               {pendingProjects.map(pr => (
                 <div key={pr.id} className="row-clickable p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0 text-violet-600 font-bold text-lg">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-bold text-lg">
                     {pr.clientName.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -577,25 +577,25 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       <div className="mt-2 text-xs text-neutral-400">
                         {new Date(pr.createdAt).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
                       </div>
-                      <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Nouvelle</span>
+                      <span className="inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400">Nouvelle</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
                       {studioId && onAddAppointment && (
                         <button
                           onClick={() => openDepositModalForProject(pr)}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 active:scale-[0.98] transition-all text-sm"
+                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 active:scale-[0.98] transition-all text-sm"
                         >
                           <CreditCard className="w-4 h-4" /> Demander un acompte
                         </button>
                       )}
                       <button
                         onClick={() => handleApproveProject(pr)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-100 text-emerald-700 font-semibold hover:bg-emerald-200 active:scale-[0.98] transition-all text-sm"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 font-semibold hover:bg-blue-200 dark:hover:bg-blue-500/30 active:scale-[0.98] transition-all text-sm"
                       >
                         <CheckCircle className="w-4 h-4" /> Accepter & Discuter
                       </button>
                       <button onClick={() => handleRejectProject(pr.id)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 font-semibold hover:bg-red-100 active:scale-[0.98] transition-all text-sm"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 text-zinc-600 font-semibold hover:bg-zinc-200 dark:bg-zinc-500/20 dark:text-zinc-400 dark:hover:bg-zinc-500/30 active:scale-[0.98] transition-all text-sm"
                       >
                         <XCircle className="w-4 h-4" /> Refuser
                       </button>
@@ -627,11 +627,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       <span>{apt.date} • {apt.time}</span>
                       <span>•</span>
                       <span className="text-[var(--text-primary)]">{apt.service}</span>
-                      <span className="font-bold text-indigo-600">{apt.price}€</span>
+                      <span className="font-bold text-blue-600">{apt.price}€</span>
                     </div>
                     <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                      apt.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' :
-                      apt.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-[var(--bg-hover)] text-[var(--text-secondary)]'
+                      apt.status === 'confirmed' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' :
+                      apt.status === 'cancelled' ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400' : 'bg-[var(--bg-hover)] text-[var(--text-secondary)]'
                     }`}>
                       {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'cancelled' ? 'Annulé' : STATUS_LABELS[apt.status] || apt.status}
                     </span>
@@ -640,7 +640,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     {apt.status === 'confirmed' && !apt.depositPaid && studioId && (
                       <button
                         onClick={() => openDepositModal(apt)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 active:scale-[0.98] transition-all text-sm"
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 active:scale-[0.98] transition-all text-sm"
                       >
                         <CreditCard className="w-4 h-4" /> Générer un lien d&apos;acompte
                       </button>
@@ -685,32 +685,32 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     value={depositAmount}
                     onChange={(e) => { setDepositAmount(e.target.value); setDepositError(null); }}
                     placeholder="50"
-                    className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 {depositError && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-800 p-4 min-w-0">
+                  <div className="rounded-xl border border-zinc-200 bg-zinc-100 dark:bg-zinc-500/10 dark:border-zinc-700 p-4 min-w-0">
                     <div className="flex gap-2 items-start min-w-0">
-                      <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                      <AlertTriangle className="w-5 h-5 text-zinc-700 dark:text-zinc-400 shrink-0 mt-0.5" />
                       <div className="text-sm min-w-0 break-words">
                         {depositError === 'stripe_config' ? (
                           <>
-                            <p className="font-semibold text-red-800 dark:text-red-200 mb-1.5">
+                            <p className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1.5">
                               Lien de paiement indisponible
                             </p>
-                            <p className="text-red-700 dark:text-red-300 mb-1.5 text-xs">
+                            <p className="text-zinc-700 dark:text-zinc-400 mb-1.5 text-xs">
                               Vérifiez dans Supabase :
                             </p>
-                            <ul className="list-disc list-inside text-red-700 dark:text-red-300 space-y-0.5 text-xs">
-                              <li className="break-words">Edge Function <code className="bg-red-100 dark:bg-red-900/50 px-1 rounded text-[11px]">create-checkout-session</code> déployée</li>
-                              <li className="break-words">Secret <code className="bg-red-100 dark:bg-red-900/50 px-1 rounded text-[11px]">STRIPE_SECRET_KEY</code> (Dashboard → Edge Functions → Secrets)</li>
-                              <li className="break-words">Variable <code className="bg-red-100 dark:bg-red-900/50 px-1 rounded text-[11px]">SITE_URL</code> (ex. https://votredomaine.com)</li>
+                            <ul className="list-disc list-inside text-zinc-700 dark:text-zinc-400 space-y-0.5 text-xs">
+                              <li className="break-words">Edge Function <code className="bg-zinc-100 dark:bg-zinc-500/20 px-1 rounded text-[11px]">create-checkout-session</code> déployée</li>
+                              <li className="break-words">Secret <code className="bg-zinc-100 dark:bg-zinc-500/20 px-1 rounded text-[11px]">STRIPE_SECRET_KEY</code> (Dashboard → Edge Functions → Secrets)</li>
+                              <li className="break-words">Variable <code className="bg-zinc-100 dark:bg-zinc-500/20 px-1 rounded text-[11px]">SITE_URL</code> (ex. https://votredomaine.com)</li>
                             </ul>
                           </>
                         ) : (
-                          <p className="text-red-700 dark:text-red-300 break-words">{depositError}</p>
+                          <p className="text-zinc-700 dark:text-zinc-400 break-words">{depositError}</p>
                         )}
-                        <a href="/aide#paiement" target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                        <a href="/aide#paiement" target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
                           En savoir plus
                         </a>
                       </div>
@@ -729,7 +729,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     type="button"
                     onClick={handleGenerateDepositLink}
                     disabled={depositLoading}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                   >
                     {depositLoading ? (
                       <>
@@ -762,7 +762,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                   <button
                     type="button"
                     onClick={handleCopyDepositLink}
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shrink-0 touch-manipulation"
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 shrink-0 touch-manipulation"
                   >
                     <Copy className="w-4 h-4" /> Copier le lien
                   </button>

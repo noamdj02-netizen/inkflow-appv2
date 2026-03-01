@@ -36,11 +36,11 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="landing-scroll bg-neutral-50 flex flex-col">
+    <div className="landing-scroll bg-neutral-50 dark:bg-zinc-900 flex flex-col min-h-screen">
       <header className="p-4 sm:p-6 safe-top">
         <a
           href="/"
-          className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors"
+          className="inline-flex items-center gap-2 text-neutral-600 dark:text-zinc-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
           <span className="font-medium">Retour</span>
@@ -51,34 +51,34 @@ export const LoginPage: React.FC = () => {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 mb-4">
-              <Logo />
-              <span className="text-2xl font-bold text-neutral-900">InkFlow</span>
+              <Logo className="dark:invert" />
+              <span className="text-2xl font-bold text-neutral-900 dark:text-white">InkFlow</span>
             </div>
-            <h1 className="text-3xl font-bold mb-2">Bon retour !</h1>
-            <p className="text-neutral-600">Connectez-vous à votre compte</p>
+            <h1 className="text-3xl font-bold mb-2 text-neutral-900 dark:text-white">Bon retour !</h1>
+            <p className="text-neutral-600 dark:text-zinc-400">Connectez-vous à votre compte</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 sm:p-8">
+          <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-sm border border-neutral-200 dark:border-zinc-700 p-6 sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-800">{error}</p>
+                <div className="bg-zinc-100 dark:bg-zinc-500/20 border border-zinc-200 dark:border-zinc-600 rounded-lg p-4 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-zinc-600 dark:text-zinc-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-zinc-800 dark:text-zinc-200">{error}</p>
                 </div>
               )}
 
               <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-neutral-900 mb-2">
+                <label htmlFor="email" className="block text-sm font-semibold text-neutral-900 dark:text-zinc-200 mb-2">
                   Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                  <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400 dark:text-zinc-500" />
                   <input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                    className="w-full pl-12 pr-4 py-3 border border-neutral-200 dark:border-zinc-600 dark:bg-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-blue-500 focus:border-transparent placeholder:text-neutral-400 dark:placeholder:text-zinc-500"
                     placeholder="vous@exemple.com"
                     required
                   />
@@ -86,17 +86,17 @@ export const LoginPage: React.FC = () => {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-neutral-900 mb-2">
+                <label htmlFor="password" className="block text-sm font-semibold text-neutral-900 dark:text-zinc-200 mb-2">
                   Mot de passe
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-400 dark:text-zinc-500" />
                   <input
                     id="password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                    className="w-full pl-12 pr-4 py-3 border border-neutral-200 dark:border-zinc-600 dark:bg-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-blue-500 focus:border-transparent placeholder:text-neutral-400 dark:placeholder:text-zinc-500"
                     placeholder="••••••••"
                     required
                   />
@@ -105,10 +105,10 @@ export const LoginPage: React.FC = () => {
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="rounded border-neutral-300 w-4 h-4" />
-                  <span className="text-sm text-neutral-600">Se souvenir de moi</span>
+                  <input type="checkbox" className="rounded border-neutral-300 dark:border-zinc-600 dark:bg-zinc-900 w-4 h-4" />
+                  <span className="text-sm text-neutral-600 dark:text-zinc-400">Se souvenir de moi</span>
                 </label>
-                <a href="#" className="text-sm font-semibold text-neutral-900 hover:text-neutral-700 py-2 sm:py-0">
+                <a href="#" className="text-sm font-semibold text-neutral-900 dark:text-zinc-200 hover:text-neutral-700 dark:hover:text-white py-2 sm:py-0">
                   Mot de passe oublié ?
                 </a>
               </div>
@@ -116,7 +116,7 @@ export const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-neutral-900 text-white py-3 rounded-xl font-semibold hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-neutral-900 dark:bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-neutral-800 dark:hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Connexion...' : 'Se connecter'}
               </button>
@@ -124,16 +124,17 @@ export const LoginPage: React.FC = () => {
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-neutral-200" />
+                <div className="w-full border-t border-neutral-200 dark:border-zinc-600" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-neutral-500">ou</span>
+                <span className="px-4 bg-white dark:bg-zinc-800 text-neutral-500 dark:text-zinc-400">ou</span>
               </div>
             </div>
 
             {isGoogleAuthEnabled && (
               <>
                 <GoogleSignInButton
+                  className="dark:bg-zinc-700 dark:border-zinc-600 dark:text-white dark:hover:bg-zinc-600"
                   onClick={async () => {
                     setError('');
                     setGoogleLoading(true);
@@ -150,10 +151,10 @@ export const LoginPage: React.FC = () => {
                 />
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-neutral-200" />
+                    <div className="w-full border-t border-neutral-200 dark:border-zinc-600" />
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-neutral-500">ou</span>
+                    <span className="px-4 bg-white dark:bg-zinc-800 text-neutral-500 dark:text-zinc-400">ou</span>
                   </div>
                 </div>
               </>
@@ -164,18 +165,18 @@ export const LoginPage: React.FC = () => {
                 setEmail('demo@inkflow.com');
                 setPassword('demo');
               }}
-              className="w-full border-2 border-neutral-200 text-neutral-900 py-3 rounded-xl font-semibold hover:border-neutral-900 transition-colors"
+              className="w-full border-2 border-neutral-200 dark:border-zinc-600 dark:bg-zinc-900/50 text-neutral-900 dark:text-zinc-200 py-3 rounded-xl font-semibold hover:border-neutral-900 dark:hover:border-zinc-500 transition-colors"
             >
               Utiliser le compte démo
             </button>
-            <p className="text-center text-xs text-neutral-500 mt-2">
+            <p className="text-center text-xs text-neutral-500 dark:text-zinc-500 mt-2">
               Compte démo : fausses statistiques, RDV, clients et flash pour captures d&apos;écran.
             </p>
           </div>
 
-          <p className="text-center mt-6 text-neutral-600">
+          <p className="text-center mt-6 text-neutral-600 dark:text-zinc-400">
             Pas encore de compte ?{' '}
-            <a href="/signup" className="font-semibold text-neutral-900 hover:text-neutral-700">
+            <a href="/signup" className="font-semibold text-neutral-900 dark:text-white hover:text-neutral-700 dark:hover:text-zinc-200">
               Créer un compte
             </a>
           </p>

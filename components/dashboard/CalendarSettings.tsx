@@ -112,7 +112,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <RefreshCw className="w-5 h-5 animate-spin text-indigo-500" />
+        <RefreshCw className="w-5 h-5 animate-spin text-blue-500 dark:text-blue-400" />
         <span className="ml-3 text-sm text-[var(--foreground-muted)]">Chargement...</span>
       </div>
     );
@@ -122,7 +122,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
     <div className="space-y-8 max-w-2xl">
       <div>
         <h3 className="text-lg font-semibold text-[var(--foreground)] flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-indigo-500" />
+          <Calendar className="w-5 h-5 text-blue-500 dark:text-blue-400" />
           Synchronisation des calendriers
         </h3>
         <p className="text-sm text-[var(--foreground-muted)] mt-1">
@@ -155,7 +155,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
           </div>
 
           {googleStatus?.connected ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 text-xs font-semibold">
               <Check className="w-3.5 h-3.5" /> Connecté
             </span>
           ) : (
@@ -168,7 +168,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
         {!googleStatus?.connected ? (
           <button
             onClick={handleConnectGoogle}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-colors"
           >
             <Link2 className="w-4 h-4" />
             Connecter Google Agenda
@@ -185,7 +185,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
               <button
                 onClick={handleSyncAll}
                 disabled={syncing}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-50 text-indigo-700 font-medium text-sm hover:bg-indigo-100 transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 font-medium text-sm hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
                 {syncing ? 'Synchronisation...' : 'Pousser vers Google'}
@@ -194,7 +194,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
               <button
                 onClick={handlePull}
                 disabled={pulling}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-violet-50 text-violet-700 font-medium text-sm hover:bg-violet-100 transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400 font-medium text-sm hover:bg-zinc-200 dark:hover:bg-zinc-500/30 transition-colors disabled:opacity-50"
               >
                 <Download className={`w-4 h-4 ${pulling ? 'animate-bounce' : ''}`} />
                 {pulling ? 'Import...' : 'Importer de Google'}
@@ -204,7 +204,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
             <button
               onClick={() => setShowDisconnectConfirm(true)}
               disabled={disconnecting}
-              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border-2 border-red-200 text-red-600 font-medium text-sm hover:bg-red-50 transition-colors disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border-2 border-zinc-200 text-zinc-600 dark:border-zinc-600 dark:text-zinc-400 font-medium text-sm hover:bg-zinc-100 dark:hover:bg-zinc-500/20 transition-colors disabled:opacity-50"
             >
               <Unlink2 className="w-4 h-4" />
               {disconnecting ? 'Déconnexion...' : 'Déconnecter'}
@@ -217,7 +217,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
       <div className="rounded-2xl border-2 border-[var(--border)] p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-500 to-zinc-600 flex items-center justify-center shadow-sm">
               <Calendar className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -287,7 +287,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
       {importedEvents.length > 0 && (
         <div className="rounded-2xl border-2 border-[var(--border)] p-6 space-y-3">
           <h4 className="font-medium text-[var(--foreground)] flex items-center gap-2">
-            <ExternalLink className="w-4 h-4 text-violet-500" />
+            <ExternalLink className="w-4 h-4 text-blue-500 dark:text-blue-400" />
             Événements Google importés ({importedEvents.length})
           </h4>
           <div className="space-y-2 max-h-64 overflow-y-auto">

@@ -91,13 +91,13 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
                 <div className="flex gap-2">
                   <button
                     onClick={handleConfirm}
-                    className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-colors text-sm"
+                    className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors text-sm"
                   >
                     Confirmer
                   </button>
                   <button
                     onClick={handleCancel}
-                    className="flex-1 px-4 py-2.5 bg-red-50 text-red-600 border border-red-200 rounded-xl font-semibold hover:bg-red-100 transition-colors text-sm"
+                    className="flex-1 px-4 py-2.5 bg-zinc-100 text-zinc-600 border border-zinc-200 rounded-xl font-semibold hover:bg-zinc-200 dark:bg-zinc-500/20 dark:text-zinc-400 dark:border-zinc-600 dark:hover:bg-zinc-500/30 transition-colors text-sm"
                   >
                     Annuler
                   </button>

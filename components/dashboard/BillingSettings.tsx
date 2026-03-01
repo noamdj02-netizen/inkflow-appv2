@@ -85,12 +85,12 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
       {active && subscription && (
         <div className="bg-white rounded-2xl p-6 border border-neutral-200">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-xl bg-green-100">
-              <Shield className="w-5 h-5 text-green-700" />
+            <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-500/20">
+              <Shield className="w-5 h-5 text-blue-700 dark:text-blue-400" />
             </div>
             <div>
               <div className="font-semibold">Plan {subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)}</div>
-              <div className="text-sm text-green-600 font-medium">
+              <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
                 {subscription.status === 'trialing' ? 'Essai gratuit' : 'Actif'}
               </div>
             </div>
@@ -106,9 +106,9 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
       )}
 
       {!active && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-          <p className="text-sm text-amber-800">Vous n'avez pas d'abonnement actif. Choisissez un plan pour debloquer toutes les fonctionnalites.</p>
+        <div className="bg-zinc-100 dark:bg-zinc-500/20 border border-zinc-200 dark:border-zinc-600 rounded-2xl p-4 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-zinc-600 dark:text-zinc-400 flex-shrink-0" />
+          <p className="text-sm text-zinc-800 dark:text-zinc-200">Vous n'avez pas d'abonnement actif. Choisissez un plan pour debloquer toutes les fonctionnalites.</p>
         </div>
       )}
 
@@ -125,7 +125,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
             className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all relative ${isAnnual ? 'bg-neutral-900 text-white shadow-sm' : 'text-neutral-600'}`}
           >
             Annuel
-            <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">-20%</span>
+            <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-semibold">-20%</span>
           </button>
         </div>
       </div>
@@ -134,12 +134,12 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
         {plans.map(plan => {
           const isCurrent = active && subscription?.plan === plan.id;
           return (
-            <div key={plan.id} className={`bg-white rounded-2xl p-6 border-2 transition-all ${isCurrent ? 'border-green-500 shadow-lg' : 'border-neutral-200 hover:border-neutral-400'}`}>
+            <div key={plan.id} className={`bg-white rounded-2xl p-6 border-2 transition-all ${isCurrent ? 'border-blue-500 shadow-lg' : 'border-neutral-200 hover:border-neutral-400'}`}>
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-xl bg-neutral-900 text-white">{plan.icon}</div>
                 <div>
                   <h3 className="font-bold text-lg">{plan.name}</h3>
-                  {isCurrent && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">Plan actuel</span>}
+                  {isCurrent && <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 px-2 py-0.5 rounded-full font-semibold">Plan actuel</span>}
                 </div>
               </div>
               <div className="mb-6">
@@ -152,7 +152,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
               <div className="space-y-3 mb-6">
                 {plan.features.map((feature, i) => (
                   <div key={i} className="flex items-center gap-2 text-sm">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                    <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                     <span className="text-neutral-700">{feature}</span>
                   </div>
                 ))}

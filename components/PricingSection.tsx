@@ -105,7 +105,7 @@ export const PricingSection: React.FC = () => {
               aria-pressed={isAnnual}
             >
               Annuel
-              <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+              <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
                 -20%
               </span>
             </button>
@@ -181,7 +181,7 @@ export const PricingSection: React.FC = () => {
                 {plan.features.map((feature, featureIndex) => (
                   <div key={featureIndex} className="flex items-start gap-3">
                     <Check className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                      plan.popular ? 'text-emerald-400' : 'text-emerald-500'
+                      plan.popular ? 'text-blue-400' : 'text-blue-600 dark:text-blue-500'
                     }`} />
                     <span className={`text-sm ${plan.popular ? 'text-neutral-200' : 'text-neutral-700'}`}>
                       {feature}
@@ -196,15 +196,15 @@ export const PricingSection: React.FC = () => {
         <div className="text-center space-y-4">
             <div className="flex justify-center items-center gap-6 flex-wrap text-sm text-neutral-600">
             <div className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-emerald-500" />
+              <Check className="w-5 h-5 text-blue-600 dark:text-blue-500" />
               <span>14 jours d'essai gratuit</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-emerald-500" />
+              <Check className="w-5 h-5 text-blue-600 dark:text-blue-500" />
               <span>Annulation à tout moment</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-emerald-500" />
+              <Check className="w-5 h-5 text-blue-600 dark:text-blue-500" />
               <span>Pas d'engagement</span>
             </div>
           </div>

@@ -1,11 +1,9 @@
 import './index.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { initTheme } from './hooks/useTheme';
 import App from './App';
 
-// Appliquer le thème avant le premier render pour éviter un flash (light/dark).
-initTheme();
+// Le thème est géré par next-themes + script inline dans index.html (évite le flash)
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

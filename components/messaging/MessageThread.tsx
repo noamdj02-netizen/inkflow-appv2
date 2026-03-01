@@ -135,7 +135,7 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
                 onClick={() => setSelectedThreadId(thread.threadId)}
                 className="row-clickable w-full text-left px-6 py-4 flex items-center gap-4"
               >
-                <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold text-lg">
+                <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-bold text-lg">
                   {thread.clientName.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -146,7 +146,7 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
                   <p className="text-sm text-[var(--text-secondary)] truncate mt-0.5">{thread.lastMessage}</p>
                 </div>
                 {thread.unreadCount > 0 && (
-                  <span className="px-2.5 py-0.5 bg-indigo-600 text-white text-xs font-bold rounded-full">{thread.unreadCount}</span>
+                  <span className="px-2.5 py-0.5 bg-blue-600 text-white text-xs font-bold rounded-full">{thread.unreadCount}</span>
                 )}
               </button>
             ))}
@@ -162,7 +162,7 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
         <button onClick={() => setSelectedThreadId(null)} className="p-2.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors">
           <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
         </button>
-        <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+        <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
           {(selectedThread?.clientName || 'Client').charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
@@ -176,7 +176,7 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
           <div key={msg.id} className={`flex ${msg.senderType === 'artist' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[75%] px-4 py-3 rounded-2xl ${
               msg.senderType === 'artist'
-                ? 'bg-indigo-600 text-white rounded-br-md shadow-sm'
+                ? 'bg-blue-600 text-white rounded-br-md shadow-sm'
                 : 'bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-primary)] rounded-bl-md'
             }`}>
               <p className="text-sm leading-relaxed">{msg.content}</p>

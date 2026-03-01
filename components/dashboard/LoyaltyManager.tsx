@@ -31,10 +31,10 @@ const DEFAULT_SETTINGS: LoyaltySettings = {
 };
 
 const TIER_COLORS: Record<LoyaltyTier, string> = {
-  bronze: 'bg-amber-100 text-amber-800',
-  silver: 'bg-neutral-200 text-neutral-800',
-  gold: 'bg-yellow-100 text-yellow-800',
-  platinum: 'bg-purple-100 text-purple-800',
+  bronze: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400',
+  silver: 'bg-zinc-200 text-zinc-800 dark:bg-zinc-500/30 dark:text-zinc-300',
+  gold: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
+  platinum: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
 };
 
 const TIER_ICONS: Record<LoyaltyTier, string> = {
@@ -71,7 +71,7 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({ entries, clients
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-600 text-white">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white">
             <Award className="w-5 h-5" />
           </div>
           <div>
@@ -91,15 +91,15 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({ entries, clients
           <div className="text-2xl font-bold">{entries.length}</div>
         </div>
         <div className="bg-white rounded-2xl p-6 border border-neutral-200">
-          <div className="flex items-center gap-2 mb-2"><Star className="w-5 h-5 text-yellow-500" /><span className="text-sm text-neutral-600">Points en circulation</span></div>
+          <div className="flex items-center gap-2 mb-2"><Star className="w-5 h-5 text-blue-500 dark:text-blue-400" /><span className="text-sm text-neutral-600">Points en circulation</span></div>
           <div className="text-2xl font-bold">{totalPoints.toLocaleString()}</div>
         </div>
         <div className="bg-white rounded-2xl p-6 border border-neutral-200">
-          <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-5 h-5 text-green-600" /><span className="text-sm text-neutral-600">Points distribues</span></div>
+          <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" /><span className="text-sm text-neutral-600">Points distribues</span></div>
           <div className="text-2xl font-bold">{totalEarned.toLocaleString()}</div>
         </div>
         <div className="bg-white rounded-2xl p-6 border border-neutral-200">
-          <div className="flex items-center gap-2 mb-2"><Gift className="w-5 h-5 text-purple-600" /><span className="text-sm text-neutral-600">Recompenses</span></div>
+          <div className="flex items-center gap-2 mb-2"><Gift className="w-5 h-5 text-blue-600 dark:text-blue-400" /><span className="text-sm text-neutral-600">Recompenses</span></div>
           <div className="text-2xl font-bold">{settings?.rewards?.length || 0}</div>
         </div>
       </div>
@@ -151,7 +151,7 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({ entries, clients
             {(settings?.rewards || DEFAULT_SETTINGS.rewards).map((reward, i) => (
               <div key={i} className="flex items-center justify-between text-sm p-3 bg-neutral-50 rounded-xl">
                 <span>{reward.name}</span>
-                <span className="font-bold text-amber-600">{reward.cost} pts</span>
+                <span className="font-bold text-blue-600 dark:text-blue-400">{reward.cost} pts</span>
               </div>
             ))}
           </div>

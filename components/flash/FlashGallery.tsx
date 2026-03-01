@@ -128,10 +128,10 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               <Filter className="w-5 h-5" /> Filtres
             </button>
             <div className="flex rounded-xl border-2 border-[var(--border)] overflow-hidden">
-              <button onClick={() => setViewMode('grid')} className={`p-3 transition-all ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-indigo-50/50'}`}>
+              <button onClick={() => setViewMode('grid')} className={`p-3 transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-blue-50 dark:bg-blue-500/10/50'}`}>
                 <Grid3X3 className="w-5 h-5" />
               </button>
-              <button onClick={() => setViewMode('list')} className={`p-3 transition-all ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-indigo-50/50'}`}>
+              <button onClick={() => setViewMode('list')} className={`p-3 transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-blue-50 dark:bg-blue-500/10/50'}`}>
                 <List className="w-5 h-5" />
               </button>
             </div>
@@ -151,7 +151,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
             {categories.map(category => (
               <button key={category} onClick={() => setSelectedCategory(category)}
                 className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
-                  selectedCategory === category ? 'bg-indigo-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-indigo-300 hover:bg-indigo-50/50'
+                  selectedCategory === category ? 'bg-blue-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-blue-300 dark:hover:border-blue-500/50 hover:bg-blue-50 dark:bg-blue-500/10/50'
                 }`}>
                 {category === 'all' ? 'Tous' : category}
               </button>
@@ -167,7 +167,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
       {filteredDesigns.length === 0 ? (
         <div className="text-center py-16 dashboard-widget-card">
           <div className="w-20 h-20 bg-indigo-100 dark:bg-[var(--bg-card-secondary)] rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Sparkles className="text-indigo-600 dark:text-indigo-400" size={36} />
+            <Sparkles className="text-blue-600 dark:text-blue-400" size={36} />
           </div>
           <p className="text-lg font-bold text-[var(--text-primary)] mb-2">
             {designs.length === 0 ? 'Aucun flash pour le moment' : 'Aucun résultat'}
@@ -198,9 +198,9 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               {design.reserved ? (
-                <div className="absolute top-3 right-3 bg-red-500/95 text-white px-3 py-1 rounded-full text-xs font-bold shadow">Réservé</div>
+                <div className="absolute top-3 right-3 bg-zinc-600 dark:bg-zinc-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow">Réservé</div>
               ) : (
-                <div className="absolute top-3 right-3 bg-emerald-500/95 text-white px-3 py-1 rounded-full text-xs font-bold shadow">Disponible</div>
+                <div className="absolute top-3 right-3 bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow">Disponible</div>
               )}
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
                 <span className="bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-[var(--text-primary)]">{design.category}</span>
@@ -209,7 +209,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               {(onUpdateFlash || onDeleteFlash) && (
                 <div className="absolute top-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   {onUpdateFlash && <button onClick={(e) => { e.stopPropagation(); openEditModal(design); }} className="p-2 bg-white/95 backdrop-blur rounded-xl hover:bg-white shadow"><Edit className="w-4 h-4 text-[var(--text-primary)]" /></button>}
-                  {onDeleteFlash && <button onClick={(e) => { e.stopPropagation(); handleDeleteFlash(design.id); }} className="p-2 bg-red-500/95 text-white rounded-xl shadow hover:bg-red-600"><Trash2 className="w-4 h-4" /></button>}
+                  {onDeleteFlash && <button onClick={(e) => { e.stopPropagation(); handleDeleteFlash(design.id); }} className="p-2 bg-zinc-600 dark:bg-zinc-500 text-white rounded-xl shadow hover:bg-zinc-700 dark:hover:bg-zinc-600"><Trash2 className="w-4 h-4" /></button>}
                 </div>
               )}
             </div>
@@ -221,7 +221,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               </div>
               <div className="flex flex-wrap gap-1 mb-3">
                 {(design.tags ?? []).slice(0, 3).map(tag => (
-                  <span key={tag} className="px-2 py-0.5 bg-indigo-50 dark:bg-[var(--bg-card-secondary)] rounded-lg text-xs text-indigo-600 dark:text-indigo-300">#{tag}</span>
+                  <span key={tag} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-500/10 dark:bg-[var(--bg-card-secondary)] rounded-lg text-xs text-indigo-600 dark:text-blue-400">#{tag}</span>
                 ))}
               </div>
               <button onClick={(e) => { e.stopPropagation(); handleBookNow(design); }} disabled={design.reserved}
@@ -237,8 +237,8 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
             <div className="relative w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-[var(--bg-hover)]">
               <img src={design.imageUrl} alt={design.title} loading="lazy" className="w-full h-full object-cover" />
               {design.reserved && (
-                <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
-                  <span className="bg-red-500 text-white px-2 py-0.5 rounded text-xs font-bold">Réservé</span>
+                <div className="absolute inset-0 bg-zinc-500/20 dark:bg-zinc-500/30 flex items-center justify-center">
+                  <span className="bg-zinc-600 dark:bg-zinc-500 text-white px-2 py-0.5 rounded text-xs font-bold">Réservé</span>
                 </div>
               )}
             </div>
@@ -247,14 +247,14 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)] mt-1">
                 <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{design.estimatedDuration}min</span>
                 <span className="font-bold text-indigo-600">{design.price}€</span>
-                <span className="px-2 py-0.5 bg-indigo-50 dark:bg-[var(--bg-card-secondary)] rounded-lg text-xs">{design.category}</span>
+                <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-500/10 dark:bg-[var(--bg-card-secondary)] rounded-lg text-xs">{design.category}</span>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {(onUpdateFlash || onDeleteFlash) && (
                 <>
                   {onUpdateFlash && <button onClick={() => openEditModal(design)} className="p-2 rounded-xl hover:bg-[var(--bg-hover)]"><Edit className="w-4 h-4 text-[var(--text-secondary)]" /></button>}
-                  {onDeleteFlash && <button onClick={() => handleDeleteFlash(design.id)} className="p-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600"><Trash2 className="w-4 h-4" /></button>}
+                  {onDeleteFlash && <button onClick={() => handleDeleteFlash(design.id)} className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-500/20 text-zinc-600 dark:text-zinc-400"><Trash2 className="w-4 h-4" /></button>}
                 </>
               )}
               <button onClick={() => handleBookNow(design)} disabled={design.reserved}
@@ -275,11 +275,11 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
             </div>
             <div className="space-y-4">
               {selectedDesign.reserved ? (
-                <div className="inline-flex items-center gap-2 bg-red-100 text-red-700 px-4 py-2 rounded-full font-semibold">
+                <div className="inline-flex items-center gap-2 bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400 px-4 py-2 rounded-full font-semibold">
                   <X className="w-4 h-4" /> Réservé
                 </div>
               ) : (
-                <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold">
+                <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 px-4 py-2 rounded-full font-semibold">
                   <CheckCircle className="w-4 h-4" /> Disponible
                 </div>
               )}
@@ -294,7 +294,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                 <div className="text-sm font-semibold text-[var(--text-primary)] mb-2">Emplacements suggérés</div>
                 <div className="flex flex-wrap gap-2">
                   {selectedDesign.placement.map(place => (
-                    <span key={place} className="px-3 py-1 bg-indigo-50 dark:bg-[var(--bg-card-secondary)] rounded-lg text-sm text-indigo-700 dark:text-indigo-200">{place}</span>
+                    <span key={place} className="px-3 py-1 bg-blue-50 dark:bg-blue-500/10 dark:bg-[var(--bg-card-secondary)] rounded-lg text-sm text-indigo-700 dark:text-indigo-200">{place}</span>
                   ))}
                 </div>
               </div>

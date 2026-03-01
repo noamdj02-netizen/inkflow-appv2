@@ -24,7 +24,7 @@ export const AIAssistantDemo: React.FC = () => {
   return (
     <div className="space-y-4 h-full flex flex-col">
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 text-white">
+        <div className="p-2 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white">
           <Sparkles className="w-5 h-5" />
         </div>
         <div>
@@ -63,10 +63,10 @@ export const AIAssistantDemo: React.FC = () => {
         </div>
 
         {result && (
-          <div className="mt-4 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200 flex-1 min-h-0 overflow-auto">
+          <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-zinc-50 rounded-xl border border-blue-200 dark:border-blue-500/30 flex-1 min-h-0 overflow-auto">
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-purple-600" />
-              <span className="text-sm font-semibold text-purple-800">Résultat IA</span>
+              <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-semibold text-blue-800 dark:text-blue-200">Résultat IA</span>
             </div>
             <p className="whitespace-pre-wrap text-sm text-neutral-800 leading-relaxed">{result}</p>
           </div>

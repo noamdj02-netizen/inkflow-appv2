@@ -18,22 +18,22 @@ export interface DashboardWidget {
 export type ShortcutTabId = 'requests' | 'appointments' | 'clients' | 'messaging' | 'analytics' | 'finance' | 'flash' | 'portfolio' | 'settings' | 'vitrine';
 
 const WIDGET_TOOLS: { type: WidgetType; label: string; icon: React.ReactNode; description: string; color: string }[] = [
-  { type: 'note', label: 'Note rapide', icon: <StickyNote className="w-5 h-5" />, description: 'Une note personnalisée', color: 'bg-amber-100 text-amber-600' },
+  { type: 'note', label: 'Note rapide', icon: <StickyNote className="w-5 h-5" />, description: 'Une note personnalisée', color: 'bg-blue-100 text-blue-600' },
   { type: 'link', label: 'Lien favori', icon: <Link2 className="w-5 h-5" />, description: 'Lien vers un site ou une page', color: 'bg-blue-100 text-blue-600' },
-  { type: 'stat', label: 'Statistique', icon: <BarChart2 className="w-5 h-5" />, description: 'Valeur personnalisée (ex: objectif)', color: 'bg-indigo-100 text-indigo-600' }
+  { type: 'stat', label: 'Statistique', icon: <BarChart2 className="w-5 h-5" />, description: 'Valeur personnalisée (ex: objectif)', color: 'bg-blue-100 text-blue-600' }
 ];
 
 const SHORTCUT_OPTIONS: { id: ShortcutTabId; label: string; icon: React.ReactNode; color: string }[] = [
-  { id: 'requests', label: 'Demandes', icon: <MessageSquare className="w-5 h-5" />, color: 'bg-violet-100 text-violet-600' },
-  { id: 'appointments', label: 'Rendez-vous', icon: <Calendar className="w-5 h-5" />, color: 'bg-emerald-100 text-emerald-600' },
-  { id: 'clients', label: 'Clients', icon: <Users className="w-5 h-5" />, color: 'bg-sky-100 text-sky-600' },
-  { id: 'messaging', label: 'Messagerie', icon: <MessageSquare className="w-5 h-5" />, color: 'bg-pink-100 text-pink-600' },
-  { id: 'analytics', label: 'Statistiques', icon: <BarChart2 className="w-5 h-5" />, color: 'bg-indigo-100 text-indigo-600' },
-  { id: 'finance', label: 'Finance', icon: <Wallet className="w-5 h-5" />, color: 'bg-teal-100 text-teal-600' },
-  { id: 'flash', label: 'Galerie Flash', icon: <Image className="w-5 h-5" />, color: 'bg-rose-100 text-rose-600' },
-  { id: 'portfolio', label: 'Portfolio', icon: <Image className="w-5 h-5" />, color: 'bg-amber-100 text-amber-600' },
-  { id: 'vitrine', label: 'Ma vitrine', icon: <ExternalLink className="w-5 h-5" />, color: 'bg-indigo-100 text-indigo-600' },
-  { id: 'settings', label: 'Paramètres', icon: <Settings className="w-5 h-5" />, color: 'bg-neutral-100 text-neutral-600' }
+  { id: 'requests', label: 'Demandes', icon: <MessageSquare className="w-5 h-5" />, color: 'bg-blue-100 text-blue-600' },
+  { id: 'appointments', label: 'Rendez-vous', icon: <Calendar className="w-5 h-5" />, color: 'bg-blue-100 text-blue-600' },
+  { id: 'clients', label: 'Clients', icon: <Users className="w-5 h-5" />, color: 'bg-zinc-100 text-zinc-600' },
+  { id: 'messaging', label: 'Messagerie', icon: <MessageSquare className="w-5 h-5" />, color: 'bg-zinc-100 text-zinc-600' },
+  { id: 'analytics', label: 'Statistiques', icon: <BarChart2 className="w-5 h-5" />, color: 'bg-blue-100 text-blue-600' },
+  { id: 'finance', label: 'Finance', icon: <Wallet className="w-5 h-5" />, color: 'bg-zinc-100 text-zinc-600' },
+  { id: 'flash', label: 'Galerie Flash', icon: <Image className="w-5 h-5" />, color: 'bg-zinc-100 text-zinc-600' },
+  { id: 'portfolio', label: 'Portfolio', icon: <Image className="w-5 h-5" />, color: 'bg-blue-100 text-blue-600' },
+  { id: 'vitrine', label: 'Ma vitrine', icon: <ExternalLink className="w-5 h-5" />, color: 'bg-blue-100 text-blue-600' },
+  { id: 'settings', label: 'Paramètres', icon: <Settings className="w-5 h-5" />, color: 'bg-zinc-100 text-zinc-600' }
 ];
 
 interface DashboardWidgetsProps {
@@ -50,10 +50,10 @@ const WIDGET_ICONS: Record<WidgetType, React.ReactNode> = {
 };
 
 const WIDGET_COLORS: Record<WidgetType, string> = {
-  note: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400',
-  link: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400',
-  stat: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400',
-  shortcut: 'bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400'
+  note: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+  link: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+  stat: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400',
+  shortcut: 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400'
 };
 
 function getShortcutLabel(tabId: ShortcutTabId): string {
@@ -102,7 +102,7 @@ export const WidgetCard: React.FC<{
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 opacity-0 group-hover:opacity-100 transition-all"
+          className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-zinc-600 dark:hover:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 opacity-0 group-hover:opacity-100 transition-all"
           title="Supprimer"
         >
           <Trash2 className="w-4 h-4" />
@@ -116,10 +116,10 @@ export const WidgetCard: React.FC<{
           href={widget.content}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-[#6B5CE7]/5 dark:bg-[var(--bg-card-secondary)] border border-[#6B5CE7]/10 dark:border-[var(--border)] hover:border-[#6B5CE7]/20 dark:hover:border-[var(--border)] transition-colors"
+          className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-blue-50/50 dark:bg-[var(--bg-card-secondary)] border border-blue-200/50 dark:border-[var(--border)] hover:border-blue-300 dark:hover:border-[var(--border)] transition-colors"
         >
-          <div className="w-10 h-10 rounded-[10px] bg-[#6B5CE7]/15 flex items-center justify-center flex-shrink-0">
-            <Link2 className="w-5 h-5 text-[#6B5CE7]" />
+          <div className="w-10 h-10 rounded-[10px] bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+            <Link2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="min-w-0 flex-1">
             <span className="font-medium text-[var(--text-primary)] block truncate">{widget.title || linkPreview?.domain || 'Lien'}</span>
@@ -135,10 +135,10 @@ export const WidgetCard: React.FC<{
       {widget.type === 'shortcut' && (
         <button
           onClick={handleShortcutClick}
-          className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-[#6B5CE7]/5 dark:bg-[var(--bg-card-secondary)] border border-[#6B5CE7]/10 dark:border-[var(--border)] hover:border-[#6B5CE7]/30 dark:hover:border-[var(--border)] hover:bg-[#6B5CE7]/10 dark:hover:bg-[var(--bg-card-dark)] transition-colors text-left"
+          className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-blue-50/50 dark:bg-[var(--bg-card-secondary)] border border-blue-200/50 dark:border-[var(--border)] hover:border-blue-300 dark:hover:border-[var(--border)] hover:bg-blue-50 dark:hover:bg-[var(--bg-card-dark)] transition-colors text-left"
         >
-          <div className="w-10 h-10 rounded-[10px] bg-[#6B5CE7]/15 flex items-center justify-center flex-shrink-0">
-            {SHORTCUT_OPTIONS.find(o => o.id === widget.content)?.icon ?? <LayoutGrid className="w-5 h-5 text-[#6B5CE7]" />}
+          <div className="w-10 h-10 rounded-[10px] bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+            {SHORTCUT_OPTIONS.find(o => o.id === widget.content)?.icon ?? <LayoutGrid className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
           </div>
           <div className="min-w-0 flex-1">
             <span className="font-medium text-[var(--text-primary)] block truncate">{shortcutLabel}</span>
@@ -162,10 +162,10 @@ export const DashboardWidgets: React.FC<DashboardWidgetsProps> = ({ widgets, onW
       {onAddWidget && (
         <button
           onClick={onAddWidget}
-          className="dashboard-widget-card p-5 flex flex-col items-center justify-center min-h-[120px] border-2 border-dashed border-[var(--border)] hover:border-indigo-400 hover:bg-indigo-500/10 transition-all group"
+          className="dashboard-widget-card p-5 flex flex-col items-center justify-center min-h-[120px] border-2 border-dashed border-[var(--border)] hover:border-blue-400 hover:bg-blue-500/10 transition-all group"
         >
-          <div className="w-12 h-12 rounded-xl bg-indigo-100 group-hover:bg-indigo-200 flex items-center justify-center mb-3 transition-colors">
-            <Plus className="w-6 h-6 text-indigo-600" />
+          <div className="w-12 h-12 rounded-xl bg-blue-100 group-hover:bg-blue-200 dark:bg-blue-500/20 dark:group-hover:bg-blue-500/30 flex items-center justify-center mb-3 transition-colors">
+            <Plus className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
           <span className="font-semibold text-[var(--text-primary)]">Ajouter un widget</span>
           <span className="text-xs text-[var(--text-secondary)] mt-1">Note, lien ou statistique</span>
@@ -248,7 +248,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-[var(--bg-card)] rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-[var(--border)] animate-slide-up" onClick={e => e.stopPropagation()}>
           <h2 className="text-xl font-bold mb-1 flex items-center gap-2 text-[var(--text-primary)]">
-            <LayoutGrid className="w-5 h-5 text-indigo-600" />
+            <LayoutGrid className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Ajouter un widget
           </h2>
           <p className="text-sm text-[var(--text-secondary)] mb-5">Personnalisez votre tableau de bord</p>
@@ -263,7 +263,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
                     <button
                       key={type}
                       onClick={() => setSelectedType(type)}
-                      className="row-clickable w-full flex items-center gap-4 p-4 rounded-xl border-2 border-[var(--border)] hover:border-indigo-400 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 transition-all text-left"
+                      className="row-clickable w-full flex items-center gap-4 p-4 rounded-xl border-2 border-[var(--border)] hover:border-blue-400 hover:bg-blue-50/30 dark:hover:bg-blue-500/10 transition-all text-left"
                     >
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${c}`}>{icon}</div>
                       <div className="min-w-0 flex-1">
@@ -283,7 +283,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
                     <button
                       key={id}
                       onClick={() => id === 'vitrine' && vitrineUrl ? handleAddVitrineLink() : handleAddShortcut(id)}
-                      className="row-clickable flex items-center gap-3 p-3 rounded-xl border-2 border-[var(--border)] hover:border-indigo-400 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 transition-all text-left"
+                      className="row-clickable flex items-center gap-3 p-3 rounded-xl border-2 border-[var(--border)] hover:border-blue-400 hover:bg-blue-50/30 dark:hover:bg-blue-500/10 transition-all text-left"
                     >
                       <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${c}`}>{icon}</div>
                       <span className="font-medium text-[var(--text-primary)] text-sm truncate">{label}</span>

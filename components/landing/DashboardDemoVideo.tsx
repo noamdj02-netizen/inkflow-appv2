@@ -10,8 +10,8 @@ const DEMO_SCENES = [
     content: (
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <div className="col-span-2 bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-sm border border-neutral-100">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full mb-3 block">
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-semibold rounded-full mb-3 block">
+            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
             En cours • 14:00
           </span>
           <h3 className="text-base sm:text-lg font-bold text-neutral-900 mb-0.5">Lucas M.</h3>
@@ -19,7 +19,7 @@ const DEMO_SCENES = [
           <div className="flex gap-2">
             <div className="flex-1 bg-neutral-50 rounded-lg px-3 py-2 border border-neutral-100">
               <span className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">Acompte</span>
-              <span className="text-sm font-bold text-emerald-600">Payé (50€)</span>
+              <span className="text-sm font-bold text-blue-600 dark:text-blue-400">Payé (50€)</span>
             </div>
             <div className="flex-1 bg-neutral-50 rounded-lg px-3 py-2 border border-neutral-100">
               <span className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">Reste</span>
@@ -31,21 +31,21 @@ const DEMO_SCENES = [
           <DollarSign className="w-5 h-5 text-white/50 mb-2" />
           <div className="text-[10px] sm:text-xs text-neutral-400 font-semibold uppercase tracking-wide">Revenue (Aujourd&apos;hui)</div>
           <div className="text-2xl sm:text-3xl font-bold mt-0.5">450€</div>
-          <div className="text-emerald-400 text-xs flex items-center gap-1 mt-2">
+          <div className="text-blue-500 dark:text-blue-400 text-xs flex items-center gap-1 mt-2">
             <TrendingUp className="w-3.5 h-3.5" /> +120€ vs hier
           </div>
         </div>
-        <div className="bg-indigo-50/80 rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-indigo-100/80">
-          <Calendar className="w-5 h-5 text-indigo-600 mb-2" />
-          <div className="text-[10px] sm:text-xs font-bold text-indigo-700 mb-2 uppercase tracking-wide">Agenda</div>
+        <div className="bg-blue-50/80 dark:bg-blue-500/10 rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-blue-100/80 dark:border-blue-500/20">
+          <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400 mb-2" />
+          <div className="text-[10px] sm:text-xs font-bold text-blue-700 dark:text-blue-400 mb-2 uppercase tracking-wide">Agenda</div>
           <div className="space-y-2">
-            <div className="flex items-center gap-2 bg-white/90 rounded-lg px-2.5 py-2 border border-indigo-100/80">
-              <Clock className="w-3.5 h-3.5 text-indigo-600" />
+            <div className="flex items-center gap-2 bg-white/90 rounded-lg px-2.5 py-2 border border-blue-100/80 dark:border-blue-500/20">
+              <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               <span className="text-xs font-semibold text-neutral-900">11:00 Lucas M.</span>
             </div>
             <div className="flex gap-1">
               {[12, 13, 14, 15, 16].map((d, i) => (
-                <div key={d} className={`flex-1 min-w-[28px] h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${i === 1 ? 'bg-white text-indigo-700 shadow-sm border border-indigo-200' : 'bg-white/60 text-indigo-600'}`}>{d}</div>
+                <div key={d} className={`flex-1 min-w-[28px] h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-colors ${i === 1 ? 'bg-white text-blue-700 dark:text-blue-400 shadow-sm border border-blue-200 dark:border-blue-500/30' : 'bg-white/60 text-blue-600 dark:text-blue-400'}`}>{d}</div>
               ))}
             </div>
           </div>
@@ -62,7 +62,7 @@ const DEMO_SCENES = [
           <DollarSign className="w-6 h-6 text-white/50 mb-3" />
           <div className="text-xs text-neutral-400 font-semibold uppercase tracking-wide">Ce mois</div>
           <div className="text-3xl sm:text-4xl font-bold mt-1">2 340€</div>
-          <div className="text-emerald-400 text-sm flex items-center gap-2 mt-3">
+          <div className="text-blue-500 dark:text-blue-400 text-sm flex items-center gap-2 mt-3">
             <TrendingUp className="w-4 h-4" /> +18% vs mois dernier
           </div>
         </div>
@@ -88,7 +88,7 @@ const DEMO_SCENES = [
             <div className="font-semibold text-neutral-900">Lucas M.</div>
             <div className="text-xs text-neutral-500">3 tatouages • Prochain RDV 14:00</div>
           </div>
-          <span className="text-xs font-semibold text-emerald-600">Payé</span>
+          <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Payé</span>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm border border-neutral-100 flex items-center gap-3">
           <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop" alt="" className="w-10 h-10 rounded-full object-cover" />
@@ -96,11 +96,11 @@ const DEMO_SCENES = [
             <div className="font-semibold text-neutral-900">Marie L.</div>
             <div className="text-xs text-neutral-500">1 tatouage • Prochain RDV 16:30</div>
           </div>
-          <span className="text-xs font-semibold text-amber-600">En attente</span>
+          <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">En attente</span>
         </div>
-        <div className="bg-indigo-50/80 rounded-xl p-3 border border-indigo-100/80 flex items-center gap-2">
-          <Users className="w-4 h-4 text-indigo-600" />
-          <span className="text-xs font-semibold text-indigo-700">12 clients ce mois</span>
+        <div className="bg-blue-50/80 dark:bg-blue-500/10 rounded-xl p-3 border border-blue-100/80 dark:border-blue-500/20 flex items-center gap-2">
+          <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">12 clients ce mois</span>
         </div>
       </div>
     ),
@@ -113,7 +113,7 @@ const DEMO_SCENES = [
         <div className="bg-white rounded-xl p-4 shadow-sm border border-neutral-100">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-semibold text-neutral-900">Carpe Koï - Lucas M.</span>
-            <span className="text-sm font-bold text-emerald-600">50€</span>
+            <span className="text-sm font-bold text-blue-600 dark:text-blue-400">50€</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-neutral-500">
             <CreditCard className="w-3.5 h-3.5" /> Acompte Stripe • Il y a 2h
@@ -128,9 +128,9 @@ const DEMO_SCENES = [
             <CreditCard className="w-3.5 h-3.5" /> Complet • Hier
           </div>
         </div>
-        <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100 flex items-center gap-2">
-          <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-          <span className="text-xs font-semibold text-emerald-700">Nouveau paiement reçu</span>
+        <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-3 border border-blue-100 dark:border-blue-500/20 flex items-center gap-2">
+          <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+          <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">Nouveau paiement reçu</span>
         </div>
       </div>
     ),
@@ -175,7 +175,7 @@ export const DashboardDemoVideo: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-100 text-amber-800 text-[10px] font-semibold rounded-full">
+              <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400 text-[10px] font-semibold rounded-full">
                 Démo
               </span>
               <img
@@ -211,7 +211,7 @@ export const DashboardDemoVideo: React.FC = () => {
       {/* Badge flottant */}
       <div className="absolute -top-3 -right-2 sm:-top-4 sm:-right-4 bg-white rounded-xl shadow-lg shadow-neutral-900/10 p-3 border border-neutral-200/80">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+          <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
           <span className="text-xs font-semibold text-neutral-700">En direct</span>
         </div>
       </div>

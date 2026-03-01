@@ -111,11 +111,11 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         tabIndex={onClientClick ? 0 : undefined}
         onClick={onClientClick}
         onKeyDown={onClientClick ? (e) => e.key === 'Enter' && onClientClick() : undefined}
-        className={`rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] shadow-sm overflow-hidden ${onClientClick ? 'cursor-pointer hover:border-indigo-300 transition-colors' : ''}`}
+        className={`rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] shadow-sm overflow-hidden ${onClientClick ? 'cursor-pointer hover:border-blue-300 dark:hover:border-blue-500/50 transition-colors' : ''}`}
       >
         <div className="p-5">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0 text-indigo-600 dark:text-indigo-300 font-bold text-xl">
+            <div className="w-14 h-14 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-bold text-xl">
               {avatarLetter}
             </div>
             <div className="flex-1 min-w-0">
@@ -141,7 +141,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
           </div>
           <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[var(--border)]">
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--bg-hover)]">
-              <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <div>
                 <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">RDV</p>
                 <p className="text-sm font-semibold text-[var(--text-primary)]">
@@ -150,7 +150,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--bg-hover)]">
-              <Euro className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <Euro className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <div>
                 <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">Dépensé</p>
                 <p className="text-sm font-semibold text-[var(--text-primary)]">
@@ -166,13 +166,13 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
       <div className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
         <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-secondary)]/50">
           <div className="flex items-center gap-2">
-            <MessageCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <MessageCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span className="font-semibold text-sm text-[var(--text-primary)]">Messagerie</span>
           </div>
           {onOpenMessaging && (
             <button
               onClick={onOpenMessaging}
-              className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
             >
               Voir tout
             </button>
@@ -193,7 +193,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                     <div
                       className={`max-w-[85%] px-3 py-2 rounded-xl text-sm ${
                         msg.senderType === 'artist'
-                          ? 'bg-indigo-600 text-white rounded-br-md'
+                          ? 'bg-blue-600 text-white rounded-br-md'
                           : 'bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-primary)] rounded-bl-md'
                       }`}
                     >
@@ -214,7 +214,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               {onOpenMessaging && (
                 <button
                   onClick={onOpenMessaging}
-                  className="mt-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                  className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   Ouvrir la messagerie
                 </button>
@@ -236,7 +236,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               <button
                 onClick={sendMessage}
                 disabled={!newMessage.trim() || sending}
-                className="bg-indigo-600 text-white p-2.5 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="bg-blue-600 text-white p-2.5 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Send className="w-4 h-4" />
               </button>

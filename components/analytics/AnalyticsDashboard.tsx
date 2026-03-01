@@ -65,20 +65,18 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const maxAmount = Math.max(...revenueByMonth.map(m => m.amount), 1);
 
   const stats = [
-    { label: 'Revenu total', value: `${totalRevenue}€`, icon: DollarSign, color: 'green' },
+    { label: 'Revenu total', value: `${totalRevenue}€`, icon: DollarSign, color: 'blue' },
     { label: 'Acomptes reçus', value: `${totalDeposits}€`, icon: Target, color: 'blue' },
-    { label: 'Rendez-vous', value: filteredAppointments.length.toString(), icon: Calendar, color: 'purple' },
-    { label: 'Taux de complétion', value: `${completionRate.toFixed(1)}%`, icon: Award, color: 'orange' }
+    { label: 'Rendez-vous', value: filteredAppointments.length.toString(), icon: Calendar, color: 'blue' },
+    { label: 'Taux de complétion', value: `${completionRate.toFixed(1)}%`, icon: Award, color: 'zinc' }
   ];
 
   const getColorClasses = (color: string) => {
     const classes: Record<string, string> = {
-      green: 'bg-green-100 text-green-700',
-      blue: 'bg-blue-100 text-blue-700',
-      purple: 'bg-purple-100 text-purple-700',
-      orange: 'bg-orange-100 text-orange-700'
+      blue: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
+      zinc: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400'
     };
-    return classes[color] || classes.green;
+    return classes[color] || classes.blue;
   };
 
   return (
@@ -131,7 +129,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 </div>
                 <div className="relative h-10 bg-neutral-100 rounded-lg overflow-hidden">
                   <div
-                    className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg transition-all duration-500"
+                    className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg transition-all duration-500"
                     style={{ width: `${(data.amount / maxAmount) * 100}%` }}
                   >
                     <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white text-xs font-semibold">
@@ -169,19 +167,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-neutral-600 flex items-center gap-1"><Award className="w-4 h-4" /> VIP</span>
-                <span className="text-2xl font-bold text-purple-600">{vipClients}</span>
+                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{vipClients}</span>
               </div>
               <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-                <div className="h-full bg-purple-600" style={{ width: `${clients.length ? (vipClients / clients.length) * 100 : 0}%` }} />
+                <div className="h-full bg-blue-600" style={{ width: `${clients.length ? (vipClients / clients.length) * 100 : 0}%` }} />
               </div>
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-neutral-600">Actifs</span>
-                <span className="text-2xl font-bold text-green-600">{activeClients}</span>
+                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{activeClients}</span>
               </div>
               <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-                <div className="h-full bg-green-600" style={{ width: `${clients.length ? (activeClients / clients.length) * 100 : 0}%` }} />
+                <div className="h-full bg-blue-600" style={{ width: `${clients.length ? (activeClients / clients.length) * 100 : 0}%` }} />
               </div>
             </div>
             <div className="pt-6 border-t border-neutral-200">
@@ -194,15 +192,15 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             {clients.length > 0 && (
               <div className="pt-6 border-t border-neutral-200">
                 <span className="text-sm text-neutral-600 mb-3 block">Meilleur client</span>
-                <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
-                  <div className="w-10 h-10 bg-purple-200 rounded-full flex items-center justify-center">
-                    <Users className="w-5 h-5 text-purple-700" />
+                <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-zinc-50 dark:from-blue-500/10 dark:to-zinc-500/10 rounded-lg">
+                  <div className="w-10 h-10 bg-blue-200 dark:bg-blue-500/30 rounded-full flex items-center justify-center">
+                    <Users className="w-5 h-5 text-blue-700 dark:text-blue-400" />
                   </div>
                   <div>
                     <div className="font-bold text-sm">
                       {[...clients].sort((a, b) => b.totalSpent - a.totalSpent)[0].name}
                     </div>
-                    <div className="text-xs text-purple-600 font-semibold">
+                    <div className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
                       {[...clients].sort((a, b) => b.totalSpent - a.totalSpent)[0].totalSpent}€
                     </div>
                   </div>

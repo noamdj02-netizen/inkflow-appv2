@@ -18,7 +18,7 @@ export const BadgeNotification: React.FC<BadgeNotificationProps> = ({ count, cla
       className={`
         absolute -top-1 -right-1
         block h-2 w-2 rounded-full
-        bg-red-600
+        bg-blue-600
         animate-badge-in
         animate-pulse
         [animation-duration:2s]

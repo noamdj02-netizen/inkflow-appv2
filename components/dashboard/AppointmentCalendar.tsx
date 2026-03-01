@@ -70,7 +70,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ appoin
           <button onClick={goNext} className="p-2.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors">
             <ChevronRight className="w-5 h-5 text-[var(--text-secondary)]" />
           </button>
-          <button onClick={goToday} className="px-4 py-2 rounded-xl text-sm font-medium bg-indigo-100 dark:bg-[var(--bg-card-secondary)] text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-[var(--bg-card-dark)]">
+          <button onClick={goToday} className="px-4 py-2 rounded-xl text-sm font-medium bg-blue-100 dark:bg-[var(--bg-card-secondary)] text-blue-700 dark:text-blue-400 hover:bg-indigo-200 dark:hover:bg-[var(--bg-card-dark)]">
             Aujourd'hui
           </button>
         </div>
@@ -85,7 +85,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ appoin
                 {day.toLocaleDateString('fr-FR', { weekday: 'short' })}
               </div>
               <div className={`mx-auto w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm ${
-                isToday(day) ? 'bg-indigo-600 text-white' : 'bg-[var(--bg-hover)] text-[var(--text-primary)]'
+                isToday(day) ? 'bg-blue-600 text-white' : 'bg-[var(--bg-hover)] text-[var(--text-primary)]'
               }`}>
                 {day.getDate()}
               </div>
@@ -109,7 +109,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({ appoin
                       <button
                         key={apt.id}
                         type="button"
-                        className="absolute inset-1 rounded-lg bg-indigo-600 text-white p-2 text-xs overflow-hidden shadow-sm text-left w-full hover:bg-indigo-700 transition-colors cursor-pointer"
+                        className="absolute inset-1 rounded-lg bg-blue-600 text-white p-2 text-xs overflow-hidden shadow-sm text-left w-full hover:bg-blue-700 transition-colors cursor-pointer"
                         onClick={e => { e.stopPropagation(); onAppointmentClick?.(apt); }}
                       >
                         <div className="font-medium truncate">{apt.clientName}</div>

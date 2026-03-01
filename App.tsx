@@ -1,4 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { ThemeProvider } from 'next-themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
@@ -258,14 +259,16 @@ const UnhandledRejectionHandler: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <div className="app-root">
-        <AuthProvider>
-          <ToastProvider>
-            <UnhandledRejectionHandler />
-            <Router />
-          </ToastProvider>
-        </AuthProvider>
-      </div>
+      <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem storageKey="inkflow-theme">
+        <div className="app-root">
+          <AuthProvider>
+            <ToastProvider>
+              <UnhandledRejectionHandler />
+              <Router />
+            </ToastProvider>
+          </AuthProvider>
+        </div>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 };

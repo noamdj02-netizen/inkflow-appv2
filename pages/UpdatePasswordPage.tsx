@@ -68,9 +68,9 @@ export const UpdatePasswordPage: React.FC = () => {
           <div
             className={`mb-6 p-4 rounded-xl border flex items-start gap-3 ${
               status === 'success'
-                ? 'bg-green-50 border-green-200 text-green-800'
+                ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-800 dark:text-blue-200'
                 : status === 'error'
-                  ? 'bg-red-50 border-red-200 text-red-800'
+                  ? 'bg-zinc-100 dark:bg-zinc-500/20 border-zinc-200 dark:border-zinc-600 text-zinc-800 dark:text-zinc-200'
                   : 'bg-neutral-50 border-neutral-200 text-neutral-700'
             }`}
           >

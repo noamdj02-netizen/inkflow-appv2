@@ -130,8 +130,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           {/* Stats */}
           <div className="flex flex-wrap gap-3">
             <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl dashboard-widget-card">
-              <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
-                <Calendar className="w-4 h-4 text-indigo-600" />
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Calendar className="w-4 h-4 text-blue-600" />
               </div>
               <span className="text-sm font-medium text-[var(--text-secondary)]">Aujourd'hui</span>
               <span className="text-sm font-bold text-[var(--text-primary)]">{stats.todayCount}</span>
@@ -141,9 +141,9 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <span className="text-sm font-bold text-[var(--text-primary)]">{stats.weekCount}</span>
             </div>
             {stats.pendingCount > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200/80 dark:bg-amber-950/30 dark:border-amber-800/50">
-                <span className="text-sm font-medium text-amber-800 dark:text-amber-200">En attente</span>
-                <span className="text-sm font-bold text-amber-900 dark:text-amber-100">{stats.pendingCount}</span>
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-500/10 border border-zinc-200 dark:border-zinc-500/20">
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-400">En attente</span>
+                <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{stats.pendingCount}</span>
               </div>
             )}
           </div>
@@ -155,8 +155,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 onClick={() => setViewMode('list')}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                   viewMode === 'list'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'border-2 border-[var(--border)] text-[var(--text-primary)] hover:border-indigo-300 hover:bg-indigo-50/50'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'border-2 border-[var(--border)] text-[var(--text-primary)] hover:border-blue-300 hover:bg-blue-50/50'
                 }`}
               >
                 Liste
@@ -165,8 +165,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 onClick={() => setViewMode('calendar')}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                   viewMode === 'calendar'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'border-2 border-[var(--border)] text-[var(--text-primary)] hover:border-indigo-300 hover:bg-indigo-50/50'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'border-2 border-[var(--border)] text-[var(--text-primary)] hover:border-blue-300 hover:bg-blue-50/50'
                 }`}
               >
                 Calendrier
@@ -187,7 +187,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                className="px-4 py-2.5 rounded-xl border-2 border-[var(--border)] text-sm font-medium bg-[var(--bg-card)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                className="px-4 py-2.5 rounded-xl border-2 border-[var(--border)] text-sm font-medium bg-[var(--bg-card)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
               >
                 <option value="all">Tous les statuts</option>
                 <option value="pending">En attente</option>
@@ -245,7 +245,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                       className="row-clickable w-full text-left p-5 rounded-2xl dashboard-widget-card cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold text-lg">
+                        <div className="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 font-bold text-lg">
                           {apt.clientName.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -255,12 +255,12 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                         <span
                           className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex-shrink-0 ${
                             apt.status === 'confirmed'
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
                               : apt.status === 'pending'
-                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                                ? 'bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400'
                                 : apt.status === 'completed'
                                   ? 'bg-[var(--bg-hover)] text-[var(--text-secondary)]'
-                                  : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                                  : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400'
                           }`}
                         >
                           {STATUS_LABELS[apt.status] ?? apt.status}
@@ -285,12 +285,12 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); downloadICS(apt); }}
-                            className="p-1.5 rounded-lg text-violet-500 hover:bg-violet-50 transition-colors"
+                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
                             title=".ics"
                           >
                             <Download className="w-3.5 h-3.5" />
                           </button>
-                          <span className="font-bold text-indigo-600">{apt.price}€</span>
+                          <span className="font-bold text-blue-600">{apt.price}€</span>
                         </div>
                       </div>
                     </div>
@@ -327,7 +327,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                           <tr key={apt.id} className="row-clickable border-b border-[var(--border)] last:border-0">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 font-bold">
+                                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 font-bold">
                                   {apt.clientName.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
@@ -340,14 +340,14 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                               {apt.date} • {apt.time}
                             </td>
                             <td className="px-6 py-4 text-[var(--text-primary)]">{apt.service}</td>
-                            <td className="px-6 py-4 font-bold text-indigo-600">{apt.price}€</td>
+                            <td className="px-6 py-4 font-bold text-blue-600">{apt.price}€</td>
                             <td className="px-6 py-4">
                               <span
                                 className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                   apt.status === 'confirmed'
-                                    ? 'bg-green-100 text-green-700'
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
                                     : apt.status === 'pending'
-                                      ? 'bg-amber-100 text-amber-700'
+                                      ? 'bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400'
                                       : apt.status === 'completed'
                                         ? 'bg-neutral-100 text-neutral-600'
                                         : 'bg-neutral-100 text-neutral-500'
@@ -370,7 +370,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                                 </a>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); downloadICS(apt); }}
-                                  className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-violet-600 hover:bg-violet-50 transition-colors"
+                                  className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
                                   title="Télécharger .ics (Apple/Outlook)"
                                 >
                                   <Download className="w-3.5 h-3.5" />
@@ -380,7 +380,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                             <td className="px-6 py-4">
                               <button
                                 onClick={() => onSelectAppointment(apt)}
-                                className="p-2 rounded-lg text-[var(--text-tertiary)] hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                className="p-2 rounded-lg text-[var(--text-tertiary)] hover:text-blue-600 hover:bg-blue-50 transition-colors"
                                 aria-label="Voir le détail"
                               >
                                 <ChevronRight className="w-5 h-5" />
