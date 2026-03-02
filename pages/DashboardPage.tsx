@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { DashboardPro } from '../components/dashboard/DashboardPro';
+import { SEO } from '../components/SEO';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Logo } from '../components/Logo';
 
@@ -31,6 +32,7 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <ErrorBoundary>
+      <SEO title="Tableau de bord" noindex />
       <DashboardPro />
     </ErrorBoundary>
   );

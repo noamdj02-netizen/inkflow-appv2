@@ -10,6 +10,7 @@ import { ProjectRequestForm } from '../../components/booking/ProjectRequestForm'
 import { VitrineBookingForm } from '../../components/booking/VitrineBookingForm';
 import { getVitrineData, getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
+import { SEO, createTattooStudioSchema } from '../../components/SEO';
 import { createProjectRequest } from '../../lib/supabaseProjectRequests';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { useRealtimeVitrine } from '../../hooks/useRealtimeSync';
@@ -288,8 +289,26 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     );
   }
 
+  const studioName = studioDisplay.name || studioSlug.replace(/-/g, ' ');
+  const studioSchema = createTattooStudioSchema({
+    name: studioDisplay.name,
+    description: studioDisplay.description || studioDisplay.tagline,
+    address: studioDisplay.address || '',
+    city: studioDisplay.address?.split(',').pop()?.trim() || '',
+    postalCode: '',
+    image: studioDisplay.coverImage || studioDisplay.avatar,
+    slug: studioSlug,
+  });
+
   return (
     <div className="landing-scroll bg-neutral-50" style={{ ['--vitrine-primary']: primaryColor } as React.CSSProperties}>
+      <SEO
+        title={`${studioName} | Tatoueur & Prise de RDV - InkFlow`}
+        description={`Découvrez les flashs et prenez rendez-vous avec ${studioName}. Réservez votre prochain tatouage facilement en ligne.`}
+        canonical={`/studio/${studioSlug}`}
+        ogImage={studioDisplay.coverImage || studioDisplay.avatar}
+        schema={studioSchema}
+      />
       {/* Sticky Header */}
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 safe-top ${headerScrolled ? 'bg-white/98 backdrop-blur-lg shadow-lg' : 'bg-white/80 backdrop-blur-sm'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -729,7 +748,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
           {/* Sidebar */}
           <div className="space-y-6 lg:space-y-6 lg:self-start">
-            <div className="flex flex-col bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border-2 border-neutral-200 lg:sticky lg:top-24">
+            <div className="flex flex-col bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border-2 border-neutral-200">
               <div className="mb-4 sm:mb-6">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">Réserver</h3>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Calendar, Check, Shield, Info,
-  ChevronRight, Star, MapPin
+  ChevronRight, Star, MapPin, Instagram, User
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { VitrineBookingForm } from '../../components/booking/VitrineBookingForm';
@@ -40,7 +40,7 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
     message: ''
   });
 
-  const [studioInfo, setStudioInfo] = useState<{ name: string; address: string; rating: number; reviewCount: number } | null>(null);
+  const [studioInfo, setStudioInfo] = useState<{ name: string; address: string; avatar: string; instagram: string; rating: number; reviewCount: number } | null>(null);
 
   useEffect(() => {
     getVitrineDataBySlugAsync(studioSlug)
@@ -49,6 +49,8 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
           setStudioInfo({
             name: data.name,
             address: data.address || '',
+            avatar: data.avatar || '',
+            instagram: data.instagram || '',
             rating: 4.9,
             reviewCount: data.testimonials?.length || 0,
           });
@@ -57,7 +59,7 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
       .catch(() => {});
   }, [studioSlug]);
 
-  const studio = studioInfo ?? { name: studioSlug, address: '', rating: 0, reviewCount: 0 };
+  const studio = studioInfo ?? { name: studioSlug, address: '', avatar: '', instagram: '', rating: 0, reviewCount: 0 };
 
   const serviceTypes = [
     { id: 'custom', name: 'Tatouage personnalisé', description: 'Design unique créé pour vous', price: 'À partir de 150€', duration: '2-4h', icon: '🎨' },
@@ -149,6 +151,44 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
           </div>
         </header>
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
+          {/* En-tête artiste — avatar, nom, infos, bio */}
+          <div className="mb-8 sm:mb-10">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+              <div className="flex justify-center sm:justify-start">
+                {studio.avatar ? (
+                  <img src={studio.avatar} alt={studio.name} className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-2 border-zinc-700 shadow-lg" />
+                ) : (
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center">
+                    <User className="w-12 h-12 sm:w-14 sm:h-14 text-zinc-500" strokeWidth={1.5} />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3">{studio.name}</h1>
+                <div className="flex flex-wrap gap-4 sm:gap-6 justify-center sm:justify-start text-sm text-zinc-400">
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
+                    {studio.address || 'Ville, Pays'}
+                  </span>
+                  {studio.instagram && (
+                    <span className="flex items-center gap-1.5">
+                      <Instagram className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
+                      {(() => {
+                        const raw = studio.instagram.trim();
+                        if (raw.startsWith('@')) return raw;
+                        const match = raw.match(/instagram\.com\/([^/?]+)/);
+                        return match ? `@${match[1]}` : `@${raw}`;
+                      })()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <p className="mt-6 text-zinc-400 text-sm leading-relaxed max-w-2xl">
+              Bienvenue sur mon espace de réservation. Décrivez votre projet avec un maximum de détails pour que je puisse l&apos;étudier.
+            </p>
+          </div>
+
           <div className="bg-zinc-900 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-zinc-800 shadow-2xl">
             <VitrineBookingForm
               studioId={studioId}

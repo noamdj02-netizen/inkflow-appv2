@@ -2,15 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { User, Mail, FileText, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, Mail, FileText, Calendar, Clock, ChevronLeft, ChevronRight, UploadCloud, MapPin, Ruler, X } from 'lucide-react';
 import { createBooking } from '../../lib/supabaseBookings';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS } from '../../lib/studioAvailability';
 import type { VitrineBookingFormData } from '../../types';
+
+const BODY_PLACEMENT_OPTIONS = [
+  { value: '', label: 'Sélectionnez...' },
+  { value: 'bras', label: 'Bras' },
+  { value: 'avant-bras', label: 'Avant-bras' },
+  { value: 'épaule', label: 'Épaule' },
+  { value: 'dos', label: 'Dos' },
+  { value: 'poitrine', label: 'Poitrine' },
+  { value: 'ventre', label: 'Ventre' },
+  { value: 'cuisse', label: 'Cuisse' },
+  { value: 'mollet', label: 'Mollet' },
+  { value: 'poignet', label: 'Poignet' },
+  { value: 'main', label: 'Main' },
+  { value: 'cou', label: 'Cou' },
+  { value: 'autre', label: 'Autre' },
+];
 
 const schema = z.object({
   clientName: z.string().min(2, 'Nom requis (min. 2 caractères)'),
   clientEmail: z.string().email('Email invalide'),
   description: z.string().min(10, 'Décrivez votre idée (min. 10 caractères)'),
+  bodyPlacement: z.string().optional(),
+  estimatedSizeCm: z.string().optional(),
   requestedDate: z.string().min(1, 'Choisissez une date'),
   requestedTime: z.string().min(1, 'Choisissez un créneau'),
 });
@@ -48,6 +66,8 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
   const [busySlots, setBusySlots] = useState<Record<string, string[]>>({});
   const [availabilityLoading, setAvailabilityLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const [referenceImages, setReferenceImages] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
   const {
     register,
@@ -61,6 +81,8 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
       clientName: '',
       clientEmail: '',
       description: '',
+      bodyPlacement: '',
+      estimatedSizeCm: '',
       requestedDate: '',
       requestedTime: '',
     },
@@ -115,11 +137,38 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
     setValue('requestedTime', time);
   };
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+    setReferenceImages((prev) => [...prev, ...files].slice(0, 10));
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
+    setReferenceImages((prev) => [...prev, ...files].slice(0, 10));
+    e.target.value = '';
+  };
+
+  const removeImage = (index: number) => {
+    setReferenceImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const onSubmit = async (data: FormData) => {
+    let fullDescription = data.description.trim();
+    const extras: string[] = [];
+    if (data.bodyPlacement?.trim()) {
+      const label = BODY_PLACEMENT_OPTIONS.find((o) => o.value === data.bodyPlacement)?.label || data.bodyPlacement;
+      extras.push(`Emplacement : ${label}`);
+    }
+    if (data.estimatedSizeCm?.trim()) extras.push(`Taille estimée : ${data.estimatedSizeCm.trim()} cm`);
+    if (referenceImages.length > 0) extras.push(`${referenceImages.length} image(s) de référence jointes`);
+    if (extras.length > 0) fullDescription += '\n\n--- Détails ---\n' + extras.join('\n');
+
     const payload: VitrineBookingFormData = {
       clientName: data.clientName,
       clientEmail: data.clientEmail,
-      description: data.description,
+      description: fullDescription,
       requestedDate: data.requestedDate,
       requestedTime: data.requestedTime || undefined,
     };
@@ -188,6 +237,75 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
         />
         {errors.description && (
           <p className={errorCls}>{errors.description.message}</p>
+        )}
+      </div>
+
+      {/* Emplacement et taille — 2 colonnes desktop, 1 mobile */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className={labelCls}>
+            <MapPin className="w-4 h-4 inline mr-2" /> Emplacement sur le corps
+          </label>
+          <select
+            {...register('bodyPlacement')}
+            className={inputCls}
+          >
+            {BODY_PLACEMENT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>
+            <Ruler className="w-4 h-4 inline mr-2" /> Taille estimée (en cm)
+          </label>
+          <input
+            {...register('estimatedSizeCm')}
+            type="text"
+            placeholder="Ex : 10"
+            className={inputCls}
+          />
+        </div>
+      </div>
+
+      {/* Zone Drag & Drop images de référence */}
+      <div>
+        <label className={labelCls}>Images de référence</label>
+        <div
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
+          onClick={() => document.getElementById('ref-images-input')?.click()}
+          className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer ${
+            isDark
+              ? 'border-zinc-700 bg-zinc-900/50 hover:bg-zinc-800'
+              : 'border-neutral-300 bg-neutral-50 hover:bg-neutral-100'
+          } ${isDragging ? (isDark ? 'bg-zinc-800 border-zinc-600' : 'bg-neutral-100 border-neutral-400') : ''}`}
+        >
+          <input
+            id="ref-images-input"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <UploadCloud className={`w-10 h-10 mx-auto mb-3 ${isDark ? 'text-zinc-500' : 'text-neutral-400'}`} strokeWidth={1.5} />
+          <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-neutral-600'}`}>
+            Ajoutez des images de référence ou une photo de la zone (Optionnel)
+          </p>
+        </div>
+        {referenceImages.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {referenceImages.map((file, i) => (
+              <div key={i} className={`relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-neutral-100 text-neutral-700'}`}>
+                <span className="truncate max-w-[120px]">{file.name}</span>
+                <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(i); }} className="p-0.5 rounded hover:bg-red-500/20 text-red-400" aria-label="Supprimer">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
@@ -324,6 +442,10 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
           {isSubmitting ? 'Envoi en cours...' : submitLabel}
         </button>
       </div>
+
+      <p className={`text-xs text-center mt-4 ${isDark ? 'text-zinc-500' : 'text-neutral-500'}`}>
+        🔒 Aucune facturation immédiate. Le tatoueur étudiera votre projet avant de valider le créneau.
+      </p>
     </form>
   );
 };

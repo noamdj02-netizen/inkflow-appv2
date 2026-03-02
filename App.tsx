@@ -7,6 +7,7 @@ import { Logo } from './components/Logo';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { LandingBelowFold } from './components/landing/LandingBelowFold';
+import { SEO, organizationSchema, websiteSchema } from './components/SEO';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
@@ -223,6 +224,12 @@ const LandingPage: React.FC = () => {
 
   return (
     <div ref={scrollRef} className="landing-scroll !bg-white text-neutral-900 selection:bg-neutral-900 selection:text-white">
+      <SEO
+        title="InkFlow | Le logiciel de gestion et réservation pour Tatoueurs"
+        description="Gagnez du temps avec InkFlow. Agenda, acomptes automatisés (Stripe), galerie de flashs et CRM pensés spécifiquement pour les studios de tatouage."
+        canonical="/"
+        schema={[organizationSchema, websiteSchema]}
+      />
       <Navbar scrolled={scrolled} />
 
       <main className="relative z-10">

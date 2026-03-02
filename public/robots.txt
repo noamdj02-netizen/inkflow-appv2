@@ -1,0 +1,12 @@
+# InkFlow - robots.txt
+# https://ink-flow.me
+
+User-Agent: *
+Allow: /
+
+# Bloquer l'indexation du dashboard privé (connexion requise)
+Disallow: /dashboard/
+Disallow: /dashboard
+
+# Sitemap
+Sitemap: https://ink-flow.me/sitemap.xml

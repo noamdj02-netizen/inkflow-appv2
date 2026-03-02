@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/generate-sitemap.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "generate-pwa-assets": "pwa-assets-generator",
@@ -21,6 +22,7 @@
     "@react-email/components": "^0.0.29",
     "@supabase/supabase-js": "^2.95.3",
     "@tailwindcss/vite": "^4.1.18",
+    "@vercel/analytics": "^1.6.1",
     "framer-motion": "^12.34.3",
     "jspdf": "^4.1.0",
     "lucide-react": "^0.563.0",
@@ -33,6 +35,10 @@
     "tailwindcss": "^4.1.18",
     "tslib": "^2.8.1",
     "zod": "^4.3.6"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.3",
+    "prismjs": "^1.30.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
