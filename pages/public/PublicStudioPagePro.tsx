@@ -84,6 +84,15 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   // Live updates: when the tatoueur edits their vitrine, the public page updates instantly
   useRealtimeVitrine(studioSlug, setStudio);
 
+  // Afficher un message si le client revient après annulation du paiement (success → /reservation-succes)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'cancelled') {
+      toast.info('Paiement annulé. Vous pouvez réessayer quand vous le souhaitez.');
+      window.history.replaceState({}, '', `/studio/${studioSlug}`);
+    }
+  }, [studioSlug, toast]);
+
   useEffect(() => {
     if (selectedFlash) {
       setFlashDepositName('');
@@ -192,7 +201,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         }
         return;
       }
-      setFlashDepositError('error' in result ? result.error : 'Impossible de créer le lien de paiement.');
+      setFlashDepositError('error' in result ? result.error : 'Impossible de créer la session de paiement.');
     } catch (err) {
       setFlashDepositError(err instanceof Error ? err.message : 'Erreur lors du paiement.');
     } finally {
@@ -1022,7 +1031,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                         <>
                           <div className="rounded-xl border-2 border-neutral-200 bg-neutral-50 p-4 sm:p-5">
                             <div className="text-sm font-semibold text-neutral-900 mb-3">Réserver en payant l&apos;acompte</div>
-                            <p className="text-sm text-neutral-600 mb-4">Indiquez vos coordonnées puis cliquez pour obtenir le lien de paiement sécurisé. Le flash sera réservé à votre nom.</p>
+                            <p className="text-sm text-neutral-600 mb-4">Indiquez vos coordonnées puis cliquez pour être redirigé vers le paiement sécurisé. Le flash sera réservé à votre nom.</p>
                             <div className="grid sm:grid-cols-2 gap-3 mb-4">
                               <div>
                                 <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Nom *</label>
@@ -1076,10 +1085,10 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                               {flashDepositLoading ? (
                                 <>
                                   <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                  Génération du lien…
+                                  Redirection vers le paiement…
                                 </>
                               ) : (
-                                <>Obtenir le lien de paiement ({(selectedFlash as { depositAmount?: number }).depositAmount ?? (Math.round((selectedFlash.price ?? 0) * 0.3) || 30)}€)</>
+                                <>Payer l&apos;acompte ({(selectedFlash as { depositAmount?: number }).depositAmount ?? (Math.round((selectedFlash.price ?? 0) * 0.3) || 30)}€)</>
                               )}
                             </button>
                           </div>

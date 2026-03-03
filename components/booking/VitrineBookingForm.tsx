@@ -51,7 +51,7 @@ interface VitrineBookingFormProps {
 
 const inputBase = 'w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-colors';
 const inputLight = 'border border-neutral-200 focus:ring-neutral-900';
-const inputDark = 'border border-zinc-700 bg-zinc-800/50 text-white placeholder:text-zinc-500 focus:ring-blue-500 focus:border-zinc-600';
+const inputDark = 'border border-zinc-700 bg-zinc-800/50 text-white placeholder:text-zinc-300 focus:ring-blue-500 focus:border-zinc-600';
 
 export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
   studioId,

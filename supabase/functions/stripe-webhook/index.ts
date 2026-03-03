@@ -133,7 +133,7 @@ Deno.serve(async (req: Request) => {
         if (studioId) {
           const { data: studio } = await supabase
             .from("inkflow_studios")
-            .select("name")
+            .select("name, email")
             .eq("id", studioId)
             .single();
           if (studio?.name) studioName = studio.name;
@@ -186,6 +186,42 @@ Deno.serve(async (req: Request) => {
             }
           } catch (emailErr) {
             console.error("[stripe-webhook] send-payment-confirmation error:", emailErr);
+          }
+        }
+
+        // Envoyer un email de confirmation au tatoueur (studio) pour les acomptes
+        if (type === "deposit" && studioId) {
+          const { data: studioForEmail } = await supabase
+            .from("inkflow_studios")
+            .select("email")
+            .eq("id", studioId)
+            .single();
+          const studioEmail = (studioForEmail?.email as string) || "";
+          if (studioEmail) {
+            try {
+              const fnUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-deposit-studio-notification`;
+              const studioRes = await fetch(fnUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                },
+                body: JSON.stringify({
+                  studioEmail,
+                  studioName,
+                  clientName,
+                  clientEmail,
+                  amountPaid,
+                  serviceName,
+                }),
+              });
+              if (!studioRes.ok) {
+                const errBody = await studioRes.text();
+                console.error("[stripe-webhook] send-deposit-studio-notification failed:", studioRes.status, errBody);
+              }
+            } catch (studioErr) {
+              console.error("[stripe-webhook] send-deposit-studio-notification error:", studioErr);
+            }
           }
         }
         break;

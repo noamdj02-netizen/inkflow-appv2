@@ -141,11 +141,17 @@ Deno.serve(async (req: Request) => {
     if (!portalRes.ok) {
       const errBody = await portalRes.text();
       console.error("[create-portal-session] Stripe error:", portalRes.status, errBody);
+      let errorMsg = "Impossible de créer le portail de facturation.";
+      try {
+        const parsed = JSON.parse(errBody) as { error?: { message?: string } };
+        if (parsed?.error?.message) {
+          errorMsg = parsed.error.message;
+        }
+      } catch {
+        // errBody might be form-urlencoded or plain text
+      }
       return new Response(
-        JSON.stringify({
-          error: "Failed to create portal session",
-          details: portalRes.status === 400 ? errBody : undefined,
-        }),
+        JSON.stringify({ error: errorMsg }),
         {
           status: portalRes.status >= 500 ? 502 : 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },

@@ -13,8 +13,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function buildReminderHtml(apt: Record<string, unknown>, studioName: string, hoursUntil: number): string {
-  const timeLabel = hoursUntil <= 2 ? "dans 2 heures" : "demain";
+function buildReminderHtml(apt: Record<string, unknown>, studioName: string, reminderType: string): string {
+  const timeLabel = reminderType === "2h" ? "dans 2 heures" : reminderType === "48h" ? "dans 2 jours" : "demain";
   const safeStudio = escapeHtml(String(studioName));
   const safeName = escapeHtml(String(apt.client_name ?? ""));
   const infoContent = `<p style="margin:0 0 8px;color:#171717;font-size:14px;"><strong>Service :</strong> ${escapeHtml(String(apt.service ?? ""))}</p>
@@ -27,20 +27,24 @@ function buildReminderHtml(apt: Record<string, unknown>, studioName: string, hou
   return wrapEmailLayout({ tag: "RAPPEL RDV", title: `Rappel RDV ${timeLabel}`, bodyHtml });
 }
 
+function getReminderSubject(reminderType: string, studioName: string): string {
+  if (reminderType === "2h") return `Rappel RDV dans 2h - ${studioName}`;
+  if (reminderType === "48h") return `Rappel RDV J-2 - ${studioName}`;
+  return `Rappel RDV demain - ${studioName}`;
+}
+
 Deno.serve(async (_req: Request) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const now = new Date();
-    const in2h = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
     const todayStr = now.toISOString().split("T")[0];
-    const tomorrowStr = in24h.toISOString().split("T")[0];
+    const tomorrowStr = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const in2DaysStr = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString().split("T")[0];
 
     const { data: appointments, error } = await supabase
       .from("inkflow_appointments")
       .select("*, inkflow_studios(studio_name)")
-      .in("date", [todayStr, tomorrowStr])
+      .in("date", [todayStr, tomorrowStr, in2DaysStr])
       .in("status", ["confirmed", "pending"])
       .order("date")
       .order("time");
@@ -56,6 +60,7 @@ Deno.serve(async (_req: Request) => {
       let reminderType: string | null = null;
       if (hoursUntil > 1.5 && hoursUntil <= 2.5) reminderType = "2h";
       else if (hoursUntil > 22 && hoursUntil <= 26) reminderType = "24h";
+      else if (hoursUntil > 46 && hoursUntil <= 50) reminderType = "48h";
       else continue;
 
       const { data: existingLog } = await supabase
@@ -69,7 +74,7 @@ Deno.serve(async (_req: Request) => {
       if (existingLog) continue;
 
       const studioName = apt.inkflow_studios?.studio_name || "votre studio";
-      const html = buildReminderHtml(apt, studioName, reminderType === "2h" ? 2 : 24);
+      const html = buildReminderHtml(apt, studioName, reminderType);
 
       const resendRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -80,7 +85,7 @@ Deno.serve(async (_req: Request) => {
         body: JSON.stringify({
           from: RESEND_FROM,
           to: [apt.client_email],
-          subject: `Rappel RDV ${reminderType === "2h" ? "dans 2h" : "demain"} - ${studioName}`,
+          subject: getReminderSubject(reminderType, studioName),
           html,
         }),
       });

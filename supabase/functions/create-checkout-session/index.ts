@@ -44,11 +44,14 @@ Deno.serve(async (req: Request) => {
     const urlSegment = (payload.studioSlug && /^[a-z0-9-]+$/.test(payload.studioSlug))
       ? payload.studioSlug
       : encodeURIComponent(payload.studioId);
+    const basePath = payload.flashId ? "studio" : "book";
+    const successUrl = `${SITE_URL}/reservation-succes?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${SITE_URL}/${basePath}/${urlSegment}?payment=cancelled`;
 
     const stripeBody = new URLSearchParams({
       "mode": "payment",
-      "success_url": `${SITE_URL}/book/${urlSegment}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      "cancel_url": `${SITE_URL}/book/${urlSegment}?payment=cancelled`,
+      "success_url": successUrl,
+      "cancel_url": cancelUrl,
       "customer_email": payload.clientEmail,
       "line_items[0][price_data][currency]": "eur",
       "line_items[0][price_data][product_data][name]": `${payload.type === "deposit" ? "Acompte" : "Paiement"} - ${payload.serviceName}`,

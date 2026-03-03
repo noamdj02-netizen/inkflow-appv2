@@ -21,6 +21,7 @@ const PublicStudioPagePro = lazy(() => import('./pages/public/PublicStudioPagePr
 const PublicBookingPagePro = lazy(() => import('./pages/public/PublicBookingPagePro').then(m => ({ default: m.PublicBookingPagePro })));
 const ConsentPage = lazy(() => import('./pages/public/ConsentPage').then(m => ({ default: m.ConsentPage })));
 const PublicMessagePage = lazy(() => import('./pages/public/PublicMessagePage').then(m => ({ default: m.PublicMessagePage })));
+const ReservationSuccessPage = lazy(() => import('./pages/public/ReservationSuccessPage').then(m => ({ default: m.ReservationSuccessPage })));
 const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
 const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
 const AidePage = lazy(() => import('./pages/AidePage').then(m => ({ default: m.AidePage })));
@@ -107,6 +108,7 @@ const Router: React.FC = () => {
     { path: /^\/consent\/([a-z0-9_-]+)$/, component: ConsentPage, getProps: (m) => ({ consentId: m[1] }) },
     { path: /^\/messages\/([a-z0-9_.-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) },
     { path: /^\/c\/([a-z0-9_.-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) },
+    { path: '/reservation-succes', component: ReservationSuccessPage },
     { path: '/politique-confidentialite', component: PrivacyPolicyPage },
     { path: '/privacy', component: PrivacyPolicyPage },
     { path: '/conditions-utilisation', component: TermsOfServicePage },

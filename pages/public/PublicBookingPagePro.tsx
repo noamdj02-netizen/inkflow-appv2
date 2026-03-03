@@ -147,7 +147,7 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
 
   if (supabaseEnabled && studioId && studioId !== 'loading' && paymentStatus === 'success') {
     return (
-      <div className="landing-scroll bg-zinc-950 min-h-screen">
+      <div className="landing-scroll min-h-screen" style={{ backgroundColor: '#09090b' }}>
         <header className="bg-zinc-900/95 border-b border-zinc-800 sticky top-0 z-40 safe-top backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
             <a href={`/studio/${studioSlug}`} className="flex items-center gap-2 text-zinc-300 hover:text-white font-medium transition-colors">
@@ -174,7 +174,7 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
 
   if (supabaseEnabled && studioId && studioId !== 'loading' && paymentStatus === 'cancelled') {
     return (
-      <div className="landing-scroll bg-zinc-950 min-h-screen">
+      <div className="landing-scroll min-h-screen" style={{ backgroundColor: '#09090b' }}>
         <header className="bg-zinc-900/95 border-b border-zinc-800 sticky top-0 z-40 safe-top backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
             <a href={`/studio/${studioSlug}`} className="flex items-center gap-2 text-zinc-300 hover:text-white font-medium transition-colors">
@@ -201,7 +201,7 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
 
   if (supabaseEnabled && studioId && studioId !== 'loading' && paymentStatus === 'error') {
     return (
-      <div className="landing-scroll bg-zinc-950 min-h-screen">
+      <div className="landing-scroll min-h-screen" style={{ backgroundColor: '#09090b' }}>
         <header className="bg-zinc-900/95 border-b border-zinc-800 sticky top-0 z-40 safe-top backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
             <a href={`/studio/${studioSlug}`} className="flex items-center gap-2 text-zinc-300 hover:text-white font-medium transition-colors">
@@ -228,7 +228,7 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
 
   if (supabaseEnabled && studioId && studioId !== 'loading' && !bookingSuccess) {
     return (
-      <div className="landing-scroll bg-zinc-950 min-h-screen">
+      <div className="landing-scroll min-h-screen" style={{ backgroundColor: '#09090b' }}>
         <header className="bg-zinc-900/95 border-b border-zinc-800 sticky top-0 z-40 safe-top backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
             <div className="flex items-center justify-between">
@@ -296,7 +296,7 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
 
   if (supabaseEnabled && studioId && studioId !== 'loading' && bookingSuccess) {
     return (
-      <div className="landing-scroll bg-zinc-950 min-h-screen">
+      <div className="landing-scroll min-h-screen" style={{ backgroundColor: '#09090b' }}>
         <header className="bg-zinc-900/95 border-b border-zinc-800 sticky top-0 z-40 safe-top backdrop-blur-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
             <a href={`/studio/${studioSlug}`} className="flex items-center gap-2 text-zinc-300 hover:text-white font-medium transition-colors">
