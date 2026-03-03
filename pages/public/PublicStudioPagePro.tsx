@@ -49,6 +49,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [flashDepositName, setFlashDepositName] = useState('');
   const [flashDepositEmail, setFlashDepositEmail] = useState('');
+  const [flashDepositAcceptTerms, setFlashDepositAcceptTerms] = useState(false);
   const [flashDepositLoading, setFlashDepositLoading] = useState(false);
   const [flashDepositError, setFlashDepositError] = useState<string | null>(null);
   const [flashDepositUrl, setFlashDepositUrl] = useState<string | null>(null);
@@ -87,6 +88,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     if (selectedFlash) {
       setFlashDepositName('');
       setFlashDepositEmail('');
+      setFlashDepositAcceptTerms(false);
       setFlashDepositError(null);
       setFlashDepositUrl(null);
     }
@@ -174,6 +176,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         studioId,
         studioSlug,
         appointmentId: '',
+        flashId: selectedFlash.id,
         amount,
         clientName: name,
         clientEmail: email,
@@ -1042,6 +1045,20 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                                 />
                               </div>
                             </div>
+                            <label className="flex items-start gap-3 mb-4 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={flashDepositAcceptTerms}
+                                onChange={(e) => setFlashDepositAcceptTerms(e.target.checked)}
+                                className="mt-1 w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900"
+                              />
+                              <span className="text-sm text-neutral-700">
+                                J&apos;accepte les{' '}
+                                <a href="/conditions-utilisation" target="_blank" rel="noopener noreferrer" className="underline font-medium">conditions générales de vente</a>
+                                {' '}et la{' '}
+                                <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="underline font-medium">politique de confidentialité</a> (RGPD). *
+                              </span>
+                            </label>
                             {flashDepositError && (
                               <div className="mb-3">
                                 <p className="text-sm text-red-600 mb-1.5">{flashDepositError}</p>
@@ -1053,7 +1070,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                             <button
                               type="button"
                               onClick={handleFlashDepositPayment}
-                              disabled={flashDepositLoading || !flashDepositName.trim() || !flashDepositEmail.trim()}
+                              disabled={flashDepositLoading || !flashDepositName.trim() || !flashDepositEmail.trim() || !flashDepositAcceptTerms}
                               className="w-full bg-[var(--vitrine-primary)] text-white text-center py-3.5 rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px]"
                             >
                               {flashDepositLoading ? (

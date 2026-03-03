@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTheme } from 'next-themes';
 import { Calendar, Plus, ChevronRight, Search, ExternalLink, Download } from 'lucide-react';
 import { Appointment } from '../../types';
 import { MiniCalendar } from './MiniCalendar';
@@ -35,6 +36,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   onNewAppointment,
   onSelectAppointment,
 }) => {
+  const { resolvedTheme } = useTheme();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -129,7 +131,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         <aside
           className={`lg:w-64 flex-shrink-0 order-2 lg:order-1 rounded-2xl overflow-hidden transition-colors ${
             viewMode === 'calendar'
-              ? 'bg-zinc-900 dark:bg-zinc-950 border border-zinc-800 dark:border-zinc-800'
+              ? 'bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800'
               : ''
           }`}
         >
@@ -141,7 +143,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             onPrevMonth={handlePrevMonth}
             onNextMonth={handleNextMonth}
             onToday={handleToday}
-            variant={viewMode === 'calendar' ? 'dark' : 'default'}
+            variant={viewMode === 'calendar' && resolvedTheme === 'dark' ? 'dark' : 'default'}
           />
         </aside>
 

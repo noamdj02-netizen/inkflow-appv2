@@ -1,5 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { ThemeProvider } from 'next-themes';
+import { Analytics } from '@vercel/analytics/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
@@ -276,6 +277,7 @@ const App: React.FC = () => {
           </AuthProvider>
         </div>
       </ThemeProvider>
+      <Analytics />
     </ErrorBoundary>
   );
 };

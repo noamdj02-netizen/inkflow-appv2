@@ -19,5 +19,10 @@ CREATE TABLE IF NOT EXISTS inkflow_project_requests (
 CREATE INDEX IF NOT EXISTS idx_project_requests_studio ON inkflow_project_requests(studio_id);
 CREATE INDEX IF NOT EXISTS idx_project_requests_status ON inkflow_project_requests(status);
 
--- Activer Realtime pour mises à jour instantanées du dashboard
-ALTER PUBLICATION supabase_realtime ADD TABLE inkflow_project_requests;
+-- Activer Realtime pour mises à jour instantanées du dashboard (idempotent)
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE inkflow_project_requests;
+EXCEPTION WHEN duplicate_object THEN
+  NULL; /* déjà dans la publication */
+END $$;

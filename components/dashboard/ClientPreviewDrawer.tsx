@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { ClientPreviewPanel, type ClientPreviewData } from './ClientPreviewPanel';
+import { sendAftercareEmail } from '../../lib/sendNotification';
 import type { Appointment } from '../../types';
 
 interface ClientPreviewDrawerProps {
@@ -42,6 +43,7 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
   const handleComplete = () => {
     if (appointment && onUpdateAppointment) {
       onUpdateAppointment(appointment.id, { status: 'completed' });
+      sendAftercareEmail({ appointmentId: appointment.id, studioId });
       onClose();
     }
   };

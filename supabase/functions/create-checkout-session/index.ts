@@ -16,6 +16,8 @@ interface CheckoutPayload {
   /** Slug public du studio (ex: mon-studio). Si fourni, utilisé pour success_url/cancel_url au lieu de studioId. */
   studioSlug?: string;
   appointmentId: string;
+  /** ID du flash (vitrine) — propagé dans metadata pour le webhook (mise à jour available=false). */
+  flashId?: string;
   amount: number;
   clientName: string;
   clientEmail: string;
@@ -57,6 +59,9 @@ Deno.serve(async (req: Request) => {
       "metadata[appointment_id]": payload.appointmentId || "",
       "metadata[type]": payload.type,
       "metadata[client_name]": payload.clientName,
+      "metadata[client_email]": payload.clientEmail,
+      "metadata[service_name]": payload.serviceName,
+      ...(payload.flashId ? { "metadata[flash_id]": payload.flashId } : {}),
     });
 
     const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {

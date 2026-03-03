@@ -7,6 +7,7 @@ import { Modal } from '../ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { createCheckoutSession } from '../../lib/stripeClient';
+import { saveAppointmentToSupabase } from '../../lib/supabaseDashboard';
 import { sendConversationLinkToClient, sendBookingConfirmation, sendBookingRefusal } from '../../lib/sendNotification';
 import { supabase } from '../../lib/supabase';
 
@@ -324,6 +325,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       };
       setDepositError(null);
       try {
+        await saveAppointmentToSupabase(studioId, newApt);
         onAddAppointment(newApt);
         const result = await createCheckoutSession({
           studioId,
@@ -391,6 +393,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       };
       setDepositError(null);
       try {
+        await saveAppointmentToSupabase(studioId, newApt);
         onAddAppointment(newApt);
         const result = await createCheckoutSession({
           studioId,

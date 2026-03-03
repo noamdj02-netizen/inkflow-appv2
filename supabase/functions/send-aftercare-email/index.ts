@@ -15,11 +15,12 @@ const corsHeaders = {
 interface AftercarePayload {
   appointmentId: string;
   studioId: string;
-  clientName: string;
-  clientEmail: string;
-  serviceName: string;
-  careContent: string;
-  studioName: string;
+  /** Si fournis, utilisés directement. Sinon, les données sont récupérées depuis Supabase. */
+  clientName?: string;
+  clientEmail?: string;
+  serviceName?: string;
+  careContent?: string;
+  studioName?: string;
 }
 
 function buildAftercareHtml(payload: AftercarePayload): string {
@@ -57,14 +58,68 @@ Deno.serve(async (req: Request) => {
   try {
     const payload: AftercarePayload = await req.json();
 
-    if (!payload.clientEmail || !payload.careContent) {
+    if (!payload.appointmentId || !payload.studioId) {
       return new Response(
-        JSON.stringify({ error: "clientEmail and careContent are required" }),
+        JSON.stringify({ error: "appointmentId and studioId are required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const html = buildAftercareHtml(payload);
+    let clientEmail = payload.clientEmail;
+    let clientName = payload.clientName;
+    let serviceName = payload.serviceName;
+    let careContent = payload.careContent;
+    let studioName = payload.studioName;
+
+    if (!clientEmail || !careContent) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: apt, error: aptErr } = await supabase
+        .from("inkflow_appointments")
+        .select("client_name, client_email, service")
+        .eq("id", payload.appointmentId)
+        .eq("studio_id", payload.studioId)
+        .single();
+      if (aptErr || !apt) {
+        console.error("Appointment not found:", payload.appointmentId, aptErr);
+        return new Response(
+          JSON.stringify({ error: "Appointment not found" }),
+          { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      clientEmail = clientEmail || apt.client_email;
+      clientName = clientName || apt.client_name;
+      serviceName = serviceName || apt.service;
+
+      const { data: studio } = await supabase
+        .from("inkflow_studios")
+        .select("studio_name")
+        .eq("id", payload.studioId)
+        .single();
+      studioName = studioName || studio?.studio_name || "votre studio";
+
+      const { data: care } = await supabase
+        .from("inkflow_care_templates")
+        .select("templates")
+        .eq("studio_id", payload.studioId)
+        .single();
+      const templates = (care?.templates as { content?: string; name?: string }[] | null) || [];
+      const defaultContent = templates.find((t) => t.content)?.content
+        || templates[0]?.content
+        || "Applique une crème cicatrisante recommandée par ton tatoueur. Évite l'eau et le soleil pendant les premières semaines. Ne gratte pas.";
+      careContent = careContent || defaultContent;
+    }
+
+    const fullPayload: AftercarePayload = {
+      appointmentId: payload.appointmentId,
+      studioId: payload.studioId,
+      clientName: clientName || "Client",
+      clientEmail: clientEmail!,
+      serviceName: serviceName || "tatouage",
+      careContent: careContent!,
+      studioName: studioName || "votre studio",
+    };
+
+    const html = buildAftercareHtml(fullPayload);
 
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -74,8 +129,8 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         from: RESEND_FROM,
-        to: [payload.clientEmail],
-        subject: `Soins post-tattoo - ${payload.studioName}`,
+        to: [fullPayload.clientEmail],
+        subject: `Soins post-tattoo - ${fullPayload.studioName}`,
         html,
       }),
     });

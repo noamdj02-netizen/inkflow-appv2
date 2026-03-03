@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Check, AlertTriangle, Zap, Crown, Shield } from 'lucide-react';
+import { CreditCard, Check, AlertTriangle, Zap, Crown, Shield, FileText } from 'lucide-react';
 import { getSubscription, isSubscriptionActive } from '../../lib/subscriptionGuard';
-import { createSubscription } from '../../lib/stripeClient';
+import { createSubscription, createPortalSession } from '../../lib/stripeClient';
 import { getStripeBillingLink } from '../../lib/stripePaymentLinks';
+import { TrialCountdown } from '../TrialCountdown';
+import { useToast } from '../../contexts/ToastContext';
 import type { Subscription, SubscriptionPlan } from '../../types';
 
 interface BillingSettingsProps {
   studioId: string | null;
   userEmail: string;
+  /** Date de fin d'essai (ISO string) — pour le compteur à rebours */
+  trialEndsAt?: string | null;
 }
 
 const plans: { id: SubscriptionPlan; name: string; priceMonthly: number; priceAnnual: number; features: string[]; icon: React.ReactNode }[] = [
@@ -20,20 +24,30 @@ const plans: { id: SubscriptionPlan; name: string; priceMonthly: number; priceAn
     icon: <Zap className="w-5 h-5" />,
   },
   {
+    id: 'pro',
+    name: 'Pro',
+    priceMonthly: 49,
+    priceAnnual: 39,
+    features: ['Tout du plan Solo', '3 artistes inclus', '300 clients CRM', 'Statistiques de base', 'Support prioritaire'],
+    icon: <Shield className="w-5 h-5" />,
+  },
+  {
     id: 'studio',
     name: 'Studio',
-    priceMonthly: 79,
-    priceAnnual: 65,
-    features: ['Tout du plan Solo', '5 artistes inclus', 'Clients CRM illimites', 'Messagerie interne', 'Statistiques avancees', 'Assistant IA'],
+    priceMonthly: 99,
+    priceAnnual: 79,
+    features: ['Tout du plan Pro', '5 artistes inclus', 'Clients CRM illimites', 'Messagerie interne', 'Statistiques avancees', 'Assistant IA'],
     icon: <Crown className="w-5 h-5" />,
   },
 ];
 
-export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, userEmail }) => {
+export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, userEmail, trialEndsAt }) => {
+  const toast = useToast();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAnnual, setIsAnnual] = useState(false);
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     if (!studioId) { setLoading(false); return; }
@@ -45,7 +59,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     if (!studioId) return;
-    if (plan !== 'solo' && plan !== 'studio') return;
+    if (plan !== 'solo' && plan !== 'pro' && plan !== 'studio') return;
     setSubscribing(plan);
     const interval = isAnnual ? 'annual' : 'monthly';
     const directLink = getStripeBillingLink(plan, interval);
@@ -67,6 +81,18 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
 
   const active = isSubscriptionActive(subscription);
 
+  const handleManageSubscription = async () => {
+    if (!studioId) return;
+    setPortalLoading(true);
+    const result = await createPortalSession({ studioId, email: userEmail });
+    setPortalLoading(false);
+    if ('url' in result) {
+      window.location.href = result.url;
+    } else {
+      toast.error(result.error || 'Impossible d\'ouvrir le portail de facturation.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -77,9 +103,28 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold">Abonnement</h2>
-        <p className="text-neutral-600 text-sm mt-1">Gerez votre plan InkFlow</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold">Abonnement</h2>
+          <p className="text-neutral-600 text-sm mt-1">Gerez votre plan InkFlow</p>
+        </div>
+        <button
+          onClick={handleManageSubscription}
+          disabled={portalLoading}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-neutral-300 dark:border-neutral-600 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl font-medium text-sm transition-colors disabled:opacity-50 shrink-0"
+        >
+          {portalLoading ? (
+            <>
+              <span className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-700 dark:border-neutral-600 dark:border-t-neutral-400 rounded-full animate-spin" />
+              Ouverture...
+            </>
+          ) : (
+            <>
+              <FileText className="w-4 h-4" />
+              Gérer mon abonnement / Factures
+            </>
+          )}
+        </button>
       </div>
 
       {active && subscription && (
@@ -106,9 +151,14 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
       )}
 
       {!active && (
-        <div className="bg-zinc-100 dark:bg-zinc-500/20 border border-zinc-200 dark:border-zinc-600 rounded-2xl p-4 flex items-center gap-3">
+        <div className="bg-zinc-100 dark:bg-zinc-500/20 border border-zinc-200 dark:border-zinc-600 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-zinc-600 dark:text-zinc-400 flex-shrink-0" />
-          <p className="text-sm text-zinc-800 dark:text-zinc-200">Vous n'avez pas d'abonnement actif. Choisissez un plan pour debloquer toutes les fonctionnalites.</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-zinc-800 dark:text-zinc-200">
+              Votre période d&apos;essai de 14 jours se termine bientôt. Abonnez-vous maintenant pour ne pas perdre l&apos;accès à vos fonctionnalités pro.
+            </p>
+            <TrialCountdown trialEndsAt={trialEndsAt} />
+          </div>
         </div>
       )}
 
@@ -130,7 +180,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {plans.map(plan => {
           const isCurrent = active && subscription?.plan === plan.id;
           return (
@@ -143,10 +193,10 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
                 </div>
               </div>
               <div className="mb-6">
-                <span className="text-4xl font-bold">{isAnnual ? plan.priceAnnual : plan.priceMonthly}EUR</span>
+                <span className="text-4xl font-bold">{isAnnual ? plan.priceAnnual : plan.priceMonthly} EUR</span>
                 <span className="text-neutral-600">/mois</span>
                 {isAnnual && (
-                  <div className="text-sm text-neutral-500 mt-1">Facture {plan.priceAnnual * 12}EUR par an</div>
+                  <div className="text-sm text-neutral-500 mt-1">Facture {plan.priceAnnual * 12} EUR par an</div>
                 )}
               </div>
               <div className="space-y-3 mb-6">

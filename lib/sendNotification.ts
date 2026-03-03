@@ -62,6 +62,8 @@ export interface SendBookingConfirmationParams {
   conversationLink?: string;
   /** Lien de paiement Stripe (optionnel). Si fourni, l'email affiche un bouton "Payer mon acompte" (vert, style premium) dans le corps du mail. */
   paymentLink?: string;
+  /** Adresse du studio pour la pièce jointe .ics (optionnel) */
+  studioAddress?: string;
 }
 
 /**
@@ -79,6 +81,7 @@ export async function sendBookingConfirmation(params: SendBookingConfirmationPar
       description: sanitizeText(params.description, 500) ?? '',
       conversationLink: params.conversationLink ? sanitizeText(params.conversationLink, 500) : undefined,
       paymentLink: params.paymentLink ? sanitizeText(params.paymentLink, 500) : undefined,
+      studioAddress: params.studioAddress ? sanitizeText(params.studioAddress, 300) : undefined,
     };
     const { error } = await supabase.functions.invoke('send-booking-confirmation', { body });
     if (import.meta.env.DEV && error) {
@@ -234,6 +237,33 @@ export async function sendMessageNotificationToClient(params: SendMessageNotific
     });
   } catch {
     // ignore
+  }
+}
+
+export interface SendAftercareEmailParams {
+  appointmentId: string;
+  studioId: string;
+}
+
+/**
+ * Envoie l'email de soins post-tatouage au client quand un RDV est marqué terminé.
+ * L'Edge Function récupère les données (client, studio, template de soins) depuis Supabase.
+ * Non bloquant : les erreurs sont loguées en dev uniquement.
+ */
+export async function sendAftercareEmail(params: SendAftercareEmailParams): Promise<void> {
+  try {
+    const body = {
+      appointmentId: params.appointmentId,
+      studioId: params.studioId,
+    };
+    const { error } = await supabase.functions.invoke('send-aftercare-email', { body });
+    if (import.meta.env.DEV && error) {
+      console.warn('[InkFlow] send-aftercare-email:', error.message);
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('[InkFlow] send-aftercare-email error:', err);
+    }
   }
 }
 

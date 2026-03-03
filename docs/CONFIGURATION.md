@@ -82,6 +82,7 @@ Voir `docs/CALENDAR_SETUP.md` pour la configuration Google Cloud Console.
 |--------|--------|
 | `STRIPE_SECRET_KEY` | `sk_live_xxx` (ou `sk_test_xxx` en test) |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_xxx` (depuis Stripe Dashboard → Webhooks) |
+| `STRIPE_PORTAL_CONFIGURATION_ID` | `bpc_xxx` (optionnel — ID de config du Customer Portal depuis Stripe Dashboard → Settings → Billing → Customer portal) |
 
 ### 3.3 Resend (emails)
 
@@ -99,6 +100,7 @@ npx supabase functions deploy google-calendar-auth
 npx supabase functions deploy google-calendar-sync
 npx supabase functions deploy create-checkout-session
 npx supabase functions deploy create-subscription
+npx supabase functions deploy create-portal-session --no-verify-jwt
 npx supabase functions deploy stripe-webhook
 npx supabase functions deploy send-project-notification
 npx supabase functions deploy send-client-conversation-link

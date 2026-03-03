@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Calendar, Check, Shield, Info,
-  ChevronRight, Star, MapPin, Instagram, User
+  ChevronRight, Star, MapPin, Instagram, User, XCircle, AlertCircle
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { VitrineBookingForm } from '../../components/booking/VitrineBookingForm';
@@ -18,6 +18,15 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
   const [studioId, setStudioId] = useState<string | null | 'loading'>('loading');
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
+
+  const paymentStatus = (() => {
+    if (typeof window === 'undefined') return null;
+    const p = new URLSearchParams(window.location.search).get('payment');
+    if (p === 'success') return 'success';
+    if (p === 'cancelled') return 'cancelled';
+    if (p === 'error') return 'error';
+    return null;
+  })();
 
   useEffect(() => {
     if (supabaseEnabled) {
@@ -132,6 +141,87 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
     return (
       <div className="landing-scroll bg-neutral-50 min-h-screen flex items-center justify-center">
         <p className="text-neutral-600">Studio introuvable.</p>
+      </div>
+    );
+  }
+
+  if (supabaseEnabled && studioId && studioId !== 'loading' && paymentStatus === 'success') {
+    return (
+      <div className="landing-scroll bg-zinc-950 min-h-screen">
+        <header className="bg-zinc-900/95 border-b border-zinc-800 sticky top-0 z-40 safe-top backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+            <a href={`/studio/${studioSlug}`} className="flex items-center gap-2 text-zinc-300 hover:text-white font-medium transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+              Retour au studio
+            </a>
+          </div>
+        </header>
+        <div className="max-w-xl mx-auto px-4 py-12 text-center">
+          <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Check className="w-10 h-10 text-emerald-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Paiement réussi</h2>
+          <p className="text-zinc-400 mb-8">
+            Votre acompte a bien été enregistré. Le studio vous contactera pour confirmer votre rendez-vous.
+          </p>
+          <a href={`/studio/${studioSlug}`} className="inline-block px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors">
+            Retour au studio
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (supabaseEnabled && studioId && studioId !== 'loading' && paymentStatus === 'cancelled') {
+    return (
+      <div className="landing-scroll bg-zinc-950 min-h-screen">
+        <header className="bg-zinc-900/95 border-b border-zinc-800 sticky top-0 z-40 safe-top backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+            <a href={`/studio/${studioSlug}`} className="flex items-center gap-2 text-zinc-300 hover:text-white font-medium transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+              Retour au studio
+            </a>
+          </div>
+        </header>
+        <div className="max-w-xl mx-auto px-4 py-12 text-center">
+          <div className="w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <XCircle className="w-10 h-10 text-amber-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Paiement annulé</h2>
+          <p className="text-zinc-400 mb-8">
+            Vous avez annulé le paiement. Vous pouvez réessayer quand vous le souhaitez en retournant sur la page du studio.
+          </p>
+          <a href={`/studio/${studioSlug}`} className="inline-block px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors">
+            Retour au studio
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  if (supabaseEnabled && studioId && studioId !== 'loading' && paymentStatus === 'error') {
+    return (
+      <div className="landing-scroll bg-zinc-950 min-h-screen">
+        <header className="bg-zinc-900/95 border-b border-zinc-800 sticky top-0 z-40 safe-top backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+            <a href={`/studio/${studioSlug}`} className="flex items-center gap-2 text-zinc-300 hover:text-white font-medium transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+              Retour au studio
+            </a>
+          </div>
+        </header>
+        <div className="max-w-xl mx-auto px-4 py-12 text-center">
+          <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-10 h-10 text-red-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Erreur de paiement</h2>
+          <p className="text-zinc-400 mb-8">
+            Une erreur s&apos;est produite lors du paiement. Vérifiez vos informations bancaires ou réessayez plus tard. En cas de problème, contactez directement le studio.
+          </p>
+          <a href={`/studio/${studioSlug}`} className="inline-block px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors">
+            Retour au studio
+          </a>
+        </div>
       </div>
     );
   }

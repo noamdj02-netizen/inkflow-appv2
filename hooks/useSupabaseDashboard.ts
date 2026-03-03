@@ -45,6 +45,8 @@ export const useSupabaseDashboard = () => {
   const toast = useToast();
   const [studioId, setStudioId] = useState<string | null>(null);
   const [studioSlug, setStudioSlug] = useState<string | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [flashDesigns, setFlashDesigns] = useState<FlashDesign[]>([]);
@@ -103,6 +105,8 @@ export const useSupabaseDashboard = () => {
       setClients([]);
       setFlashDesigns([]);
       setNotifications([]);
+      setSubscriptionStatus(null);
+      setTrialEndsAt(null);
       setLoading(false);
       initializedRef.current = false;
       return;
@@ -119,10 +123,15 @@ export const useSupabaseDashboard = () => {
           if (existing) {
             sid = existing.id;
             slug = existing.slug;
+            setSubscriptionStatus(existing.subscription_status ?? 'trialing');
+            setTrialEndsAt(existing.trial_ends_at ?? null);
           } else {
             const created = await ensureStudio(user.email, user.name, user.studioName || 'Mon Studio');
             sid = created.studioId;
             slug = created.slug;
+            setSubscriptionStatus('trialing');
+            const refreshed = await getStudioByEmail(user.email);
+            setTrialEndsAt(refreshed?.trial_ends_at ?? null);
           }
           setStudioId(sid);
           setStudioSlug(slug);
@@ -147,6 +156,8 @@ export const useSupabaseDashboard = () => {
         if (!initializedRef.current) {
           setStudioId(null);
           setStudioSlug(null);
+          setSubscriptionStatus(null);
+          setTrialEndsAt(null);
           setAppointments(EMPTY_ARRAYS.appointments);
           setClients(EMPTY_ARRAYS.clients);
           setFlashDesigns(EMPTY_ARRAYS.flash);
@@ -284,6 +295,8 @@ export const useSupabaseDashboard = () => {
   return {
     studioId,
     studioSlug,
+    subscriptionStatus,
+    trialEndsAt,
     appointments,
     clients,
     flashDesigns,

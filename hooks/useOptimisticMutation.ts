@@ -29,7 +29,9 @@ export function useOptimisticMutation<T extends { id: string }>(
         .catch((err) => {
           // Rollback: remove the optimistically added item
           setState(prev => prev.filter(i => i.id !== item.id));
-          toast.error('Erreur de sauvegarde — modification annulee');
+          const msg = err?.message || '';
+          const displayMsg = msg && (msg.includes('créneau') || msg.includes('slot')) ? msg : 'Erreur de sauvegarde — modification annulée';
+          toast.error(displayMsg);
         })
         .finally(() => { inflightRef.current--; });
     },

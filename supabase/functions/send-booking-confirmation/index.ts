@@ -8,6 +8,8 @@ import { escapeHtml } from "../_shared/emailLayout.ts";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
 const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+// Logo InkFlow — Colle ton URL ici ou définis le secret LOGO_URL dans Supabase (Edge Functions → Secrets)
+const LOGO_URL = Deno.env.get("LOGO_URL") || "https://ink-flow.me/icon.svg";
 const SUPPORT_PHONE = Deno.env.get("SUPPORT_PHONE") || "06 33 43 89 26";
 const SUPPORT_ADDRESS = Deno.env.get("SUPPORT_ADDRESS") || "Paris, France";
 
@@ -20,6 +22,8 @@ interface Payload {
   description: string;
   conversationLink?: string;
   paymentLink?: string;
+  /** Adresse du studio pour le .ics (optionnel) */
+  studioAddress?: string;
 }
 
 const corsHeaders = {
@@ -33,6 +37,50 @@ function formatTimeLabel(t: string | null): string {
   if (t === "afternoon") return "Après-midi";
   if (t === "evening") return "Soirée";
   return t;
+}
+
+function timeToHHMM(t: string | null): { hour: number; min: number } {
+  if (!t) return { hour: 9, min: 0 };
+  if (t === "morning") return { hour: 9, min: 0 };
+  if (t === "afternoon") return { hour: 14, min: 0 };
+  if (t === "evening") return { hour: 18, min: 0 };
+  const m = t.match(/^(\d{1,2}):(\d{2})$/);
+  if (m) return { hour: parseInt(m[1], 10), min: parseInt(m[2], 10) };
+  return { hour: 9, min: 0 };
+}
+
+function buildIcsContent(payload: Payload): string {
+  const { requestedDate, requestedTime } = payload;
+  const { hour, min } = timeToHHMM(requestedTime);
+  const [y, m, d] = requestedDate.split("-").map(Number);
+  const start = new Date(y, m - 1, d, hour, min, 0);
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const fmtLocal = (d: Date) =>
+    `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}T` +
+    `${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}${String(d.getSeconds()).padStart(2, "0")}`;
+  const uid = `rdv-${payload.clientEmail}-${requestedDate}-${Date.now()}@ink-flow.me`;
+  const summary = `RDV chez ${payload.studioName}`;
+  const desc = payload.description?.replace(/\r?\n/g, "\\n").slice(0, 500) || "Rendez-vous tatouage";
+  const loc = payload.studioAddress?.replace(/\r?\n/g, " ") || "";
+  const fmtUtc = (d: Date) =>
+    d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//InkFlow//Booking//FR",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${fmtUtc(new Date())}`,
+    `DTSTART:${fmtLocal(start)}`,
+    `DTEND:${fmtLocal(end)}`,
+    `SUMMARY:${summary.replace(/\n/g, " ")}`,
+    `DESCRIPTION:${desc}`,
+    ...(loc ? [`LOCATION:${loc}`] : []),
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
 }
 
 function formatDateDisplay(requestedDate: string, requestedTime: string | null): string {
@@ -82,8 +130,20 @@ function buildRdvConfirmeHtml(payload: Payload): string {
   <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#FAFAFA" style="background-color:#FAFAFA;">
     <tr><td style="padding:32px 16px;">
       <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width:560px;margin:0 auto;background-color:#FFFFFF;overflow:hidden;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+        <!-- En-tête : logo InkFlow centré -->
+        <tr>
+          <td align="center" style="padding:32px 40px 24px;">
+            <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+              <tr>
+                <td align="center" style="padding:0 0 24px;">
+                  <img src="${escapeHtml(LOGO_URL)}" alt="InkFlow" width="150" style="max-width:150px;width:150px;height:auto;display:block;margin:0 auto;border:0;" />
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
         <!-- Header minimaliste -->
-        <tr><td style="padding:32px 40px 24px;border-bottom:1px solid #F4F4F5;">
+        <tr><td style="padding:0 40px 24px;border-bottom:1px solid #F4F4F5;">
           <table width="100%" border="0" cellpadding="0" cellspacing="0">
             <tr>
               <td style="color:#171717;font-size:22px;font-weight:700;font-style:italic;letter-spacing:-0.5px;">IF.</td>
@@ -180,6 +240,12 @@ Deno.serve(async (req: Request) => {
       ? `Action requise : finalisez votre réservation — ${payload.studioName}`
       : `Votre rendez-vous avec ${payload.studioName} est validé`;
 
+    const icsContent = buildIcsContent(payload);
+    const icsBytes = new TextEncoder().encode(icsContent);
+    let icsBinary = "";
+    for (let i = 0; i < icsBytes.length; i++) icsBinary += String.fromCharCode(icsBytes[i]);
+    const icsBase64 = btoa(icsBinary);
+
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -191,6 +257,9 @@ Deno.serve(async (req: Request) => {
         to: [payload.clientEmail],
         subject,
         html,
+        attachments: [
+          { filename: "rendez-vous.ics", content: icsBase64 },
+        ],
       }),
     });
 

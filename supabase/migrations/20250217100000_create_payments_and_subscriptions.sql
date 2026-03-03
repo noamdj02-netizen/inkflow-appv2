@@ -132,5 +132,9 @@ CREATE TABLE IF NOT EXISTS inkflow_loyalty (
 CREATE INDEX IF NOT EXISTS idx_loyalty_studio ON inkflow_loyalty(studio_id);
 CREATE INDEX IF NOT EXISTS idx_loyalty_client ON inkflow_loyalty(client_id);
 
--- Enable Realtime for messages
-ALTER PUBLICATION supabase_realtime ADD TABLE inkflow_messages;
+-- Enable Realtime for messages (idempotent)
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE inkflow_messages;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

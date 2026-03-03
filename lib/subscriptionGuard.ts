@@ -9,6 +9,11 @@ const PLAN_LIMITS: Record<SubscriptionPlan, { maxArtists: number; maxClients: nu
     maxClients: PLAN_CONFIG.solo.limits.clients_crm,
     features: ['bookings', 'payments', 'flash_gallery', 'crm_basic', 'analytics_basic'],
   },
+  pro: {
+    maxArtists: PLAN_CONFIG.pro.limits.artists,
+    maxClients: PLAN_CONFIG.pro.limits.clients_crm,
+    features: ['bookings', 'payments', 'flash_gallery', 'crm_basic', 'analytics_basic', 'multi_artist', 'analytics_full'],
+  },
   studio: {
     maxArtists: PLAN_CONFIG.studio.limits.artists,
     maxClients: PLAN_CONFIG.studio.limits.clients_crm === -1 ? -1 : PLAN_CONFIG.studio.limits.clients_crm,

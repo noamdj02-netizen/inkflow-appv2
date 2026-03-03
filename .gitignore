@@ -37,3 +37,6 @@ docs/.cursor
 
 # Supabase CLI local
 supabase/.temp
+
+# Sentry Config File
+.env.sentry-build-plugin

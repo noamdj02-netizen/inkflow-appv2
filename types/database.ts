@@ -15,8 +15,15 @@ export interface Database {
           slug: string;
           created_at: string;
           updated_at: string;
+          trial_ends_at: string | null;
+          subscription_status: 'trialing' | 'active' | 'restricted' | 'canceled';
         };
-        Insert: Omit<Database['public']['Tables']['inkflow_studios']['Row'], 'created_at' | 'updated_at'> & { created_at?: string; updated_at?: string };
+        Insert: Omit<Database['public']['Tables']['inkflow_studios']['Row'], 'created_at' | 'updated_at'> & {
+          created_at?: string;
+          updated_at?: string;
+          trial_ends_at?: string | null;
+          subscription_status?: 'trialing' | 'active' | 'restricted' | 'canceled';
+        };
         Update: Partial<Database['public']['Tables']['inkflow_studios']['Insert']>;
       };
       inkflow_appointments: {

@@ -31,6 +31,7 @@ const schema = z.object({
   estimatedSizeCm: z.string().optional(),
   requestedDate: z.string().min(1, 'Choisissez une date'),
   requestedTime: z.string().min(1, 'Choisissez un créneau'),
+  acceptTerms: z.literal(true, { errorMap: () => ({ message: 'Vous devez accepter les CGV et la politique de confidentialité.' }) }),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -85,6 +86,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
       estimatedSizeCm: '',
       requestedDate: '',
       requestedTime: '',
+      acceptTerms: false,
     },
   });
 
@@ -419,6 +421,23 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
           <p className={errorCls}>{errors.requestedTime.message}</p>
         )}
       </div>
+
+      <label className={`flex items-start gap-3 cursor-pointer ${isDark ? 'text-zinc-300' : ''}`}>
+        <input
+          type="checkbox"
+          {...register('acceptTerms')}
+          className="mt-1 w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900"
+        />
+        <span className="text-sm">
+          J&apos;accepte les{' '}
+          <a href="/conditions-utilisation" target="_blank" rel="noopener noreferrer" className="underline font-medium">conditions générales de vente</a>
+          {' '}et la{' '}
+          <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="underline font-medium">politique de confidentialité</a> (RGPD). *
+        </span>
+      </label>
+      {errors.acceptTerms && (
+        <p className={errorCls}>{errors.acceptTerms.message}</p>
+      )}
 
       {submitError && (
         <p className={`text-sm px-4 py-2 rounded-lg ${isDark ? 'text-red-300 bg-red-500/10' : 'text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-500/20'}`}>{submitError}</p>

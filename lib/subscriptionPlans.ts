@@ -32,12 +32,22 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
     features: ['galerie_flash', 'app_mobile'],
     // Interdit : api_access, stats_avancees (non listés = pas d'accès)
   },
+  pro: {
+    id: 'pro',
+    name: 'Pro',
+    priceEur: 49,
+    limits: {
+      artists: 3,
+      clients_crm: 300,
+    },
+    features: ['galerie_flash', 'app_mobile', 'multi_calendriers', 'stats_avancees'],
+  },
   studio: {
     id: 'studio',
     name: 'Studio',
-    priceEur: 79,
+    priceEur: 99,
     limits: {
-      artists: 3,
+      artists: 5,
       clients_crm: -1,
     },
     features: [

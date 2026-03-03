@@ -15,6 +15,7 @@ Le build Vite n’a accès qu’aux variables **préfixées par `VITE_`**. Tout 
 | `VITE_SUPABASE_URL` | URL du projet Supabase | `https://xxxx.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | Clé anonyme (publique) Supabase | `eyJhbGc...` |
 | `VITE_GEMINI_API_KEY` | Clé API Google Gemini (optionnel, pour l’assistant IA) | (optionnel) |
+| `VITE_SENTRY_DSN` | DSN Sentry pour le monitoring (optionnel) | `https://xxx@xxx.ingest.sentry.io/xxx` |
 
 **Important :** n’utilise **jamais** en frontend :
 - `SUPABASE_SERVICE_ROLE_KEY`

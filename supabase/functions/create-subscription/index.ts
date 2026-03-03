@@ -11,6 +11,10 @@ const PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
     monthly: Deno.env.get("STRIPE_PRICE_SOLO_MONTHLY") || "",
     annual: Deno.env.get("STRIPE_PRICE_SOLO_ANNUAL") || "",
   },
+  pro: {
+    monthly: Deno.env.get("STRIPE_PRICE_PRO_MONTHLY") || "",
+    annual: Deno.env.get("STRIPE_PRICE_PRO_ANNUAL") || "",
+  },
   studio: {
     monthly: Deno.env.get("STRIPE_PRICE_STUDIO_MONTHLY") || "",
     annual: Deno.env.get("STRIPE_PRICE_STUDIO_ANNUAL") || "",
@@ -25,7 +29,7 @@ const corsHeaders = {
 interface SubscriptionPayload {
   studioId: string;
   email: string;
-  plan: "solo" | "studio";
+  plan: "solo" | "pro" | "studio";
   interval: "monthly" | "annual";
 }
 

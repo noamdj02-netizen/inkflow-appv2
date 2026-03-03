@@ -64,12 +64,36 @@ Deno.serve(async (req: Request) => {
     const event = JSON.parse(body);
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    console.log("[stripe-webhook] Événement reçu:", event.type, "id:", event.id);
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        const studioId = session.metadata?.studio_id;
+        const studioId = session.metadata?.studio_id || session.metadata?.studioId;
         const appointmentId = session.metadata?.appointment_id;
-        const type = session.metadata?.type || "deposit";
+
+        // Abonnement : débloquer le studio dès que le checkout est payé
+        if (session.mode === "subscription" && session.payment_status === "paid" && studioId) {
+          const { data: studio, error: studioErr } = await supabase
+            .from("inkflow_studios")
+            .update({ subscription_status: "active", updated_at: new Date().toISOString() })
+            .eq("id", studioId)
+            .select("id, studio_name")
+            .single();
+          if (studioErr) {
+            console.error("[stripe-webhook] Erreur déblocage studio (checkout):", studioErr.message);
+          } else if (studio) {
+            console.log("[stripe-webhook] Studio débloqué via checkout.session.completed:", studio.id, studio.studio_name);
+          }
+          break; // Ne pas traiter comme paiement RDV
+        }
+
+        const flashId = session.metadata?.flash_id;
+        const type = (session.metadata?.type || "deposit") as "deposit" | "full_payment";
+        const amountPaid = (session.amount_total || 0) / 100;
+        const clientEmail = session.customer_email || session.metadata?.client_email || "";
+        const clientName = session.metadata?.client_name || "Client";
+        const serviceName = session.metadata?.service_name || "Service";
 
         await supabase
           .from("inkflow_payments")
@@ -79,6 +103,9 @@ Deno.serve(async (req: Request) => {
             updated_at: new Date().toISOString(),
           })
           .eq("stripe_session_id", session.id);
+
+        let amountRemaining = 0;
+        let studioName = "Le studio";
 
         if (appointmentId) {
           if (type === "deposit") {
@@ -92,18 +119,74 @@ Deno.serve(async (req: Request) => {
               .update({ deposit_paid: true, updated_at: new Date().toISOString() })
               .eq("id", appointmentId);
           }
+          const { data: apt } = await supabase
+            .from("inkflow_appointments")
+            .select("price, deposit")
+            .eq("id", appointmentId)
+            .single();
+          if (apt) {
+            const total = Number(apt.price) || 0;
+            amountRemaining = Math.max(0, total - amountPaid);
+          }
         }
 
         if (studioId) {
+          const { data: studio } = await supabase
+            .from("inkflow_studios")
+            .select("name")
+            .eq("id", studioId)
+            .single();
+          if (studio?.name) studioName = studio.name;
+
           await supabase.from("inkflow_notifications").insert({
             id: `n_${Date.now()}`,
             studio_id: studioId,
             type: "payment",
             title: "Paiement recu",
-            message: `${type === "deposit" ? "Acompte" : "Paiement"} de ${(session.amount_total / 100).toFixed(2)}EUR recu de ${session.metadata?.client_name || session.customer_email}`,
+            message: `${type === "deposit" ? "Acompte" : "Paiement"} de ${amountPaid.toFixed(2)}EUR recu de ${clientName}`,
             read: false,
             action_url: "/dashboard",
           });
+        }
+
+        if (flashId) {
+          await supabase
+            .from("inkflow_flash_designs")
+            .update({
+              available: false,
+              reserved: true,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", flashId);
+        }
+
+        if (clientEmail) {
+          try {
+            const fnUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-payment-confirmation`;
+            const emailRes = await fetch(fnUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              },
+              body: JSON.stringify({
+                clientEmail,
+                clientName,
+                studioName,
+                amountPaid,
+                amountRemaining,
+                paymentDate: new Date().toISOString(),
+                serviceName,
+                type,
+              }),
+            });
+            if (!emailRes.ok) {
+              const errBody = await emailRes.text();
+              console.error("[stripe-webhook] send-payment-confirmation failed:", emailRes.status, errBody);
+            }
+          } catch (emailErr) {
+            console.error("[stripe-webhook] send-payment-confirmation error:", emailErr);
+          }
         }
         break;
       }
@@ -111,20 +194,37 @@ Deno.serve(async (req: Request) => {
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const sub = event.data.object;
-        const studioId = sub.metadata?.studio_id;
+        const studioId = sub.metadata?.studio_id || sub.metadata?.studioId;
         if (studioId) {
+          const subStatus = sub.status === "active" ? "active" : sub.status === "trialing" ? "trialing" : sub.status === "past_due" ? "past_due" : "cancelled";
           await supabase.from("inkflow_subscriptions").upsert({
             id: sub.metadata?.subscription_id || `sub_${Date.now()}`,
             studio_id: studioId,
             stripe_subscription_id: sub.id,
             stripe_customer_id: sub.customer,
             plan: sub.metadata?.plan || "solo",
-            status: sub.status === "active" ? "active" : sub.status === "trialing" ? "trialing" : sub.status === "past_due" ? "past_due" : "cancelled",
+            status: subStatus,
             current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
             current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
             cancel_at_period_end: sub.cancel_at_period_end || false,
             updated_at: new Date().toISOString(),
           }, { onConflict: "stripe_subscription_id" });
+
+          if (sub.status === "active") {
+            const { data: studio, error: studioErr } = await supabase
+              .from("inkflow_studios")
+              .update({ subscription_status: "active", updated_at: new Date().toISOString() })
+              .eq("id", studioId)
+              .select("id, studio_name")
+              .single();
+            if (studioErr) {
+              console.error("[stripe-webhook] Erreur mise à jour studio:", studioErr.message);
+            } else if (studio) {
+              console.log("[stripe-webhook] Studio débloqué avec succès:", studio.id, studio.studio_name);
+            }
+          }
+        } else {
+          console.warn("[stripe-webhook] customer.subscription sans studio_id dans metadata:", sub.id);
         }
         break;
       }

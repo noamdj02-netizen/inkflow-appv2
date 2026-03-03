@@ -124,15 +124,17 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
             Aujourd&apos;hui
           </button>
         </div>
-        <div className="flex rounded-xl overflow-hidden border border-[var(--border)] p-0.5 bg-[var(--bg-hover)]">
-          {(['week', 'day'] as const).map((mode) => (
+        <div className="inline-flex rounded-xl border border-[var(--border)] p-1 bg-[var(--bg-hover)]">
+          {(['week', 'day'] as const).map((mode, idx) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
               className={`px-4 py-2 text-sm font-medium transition-all ${
+                idx === 0 ? 'rounded-l-lg' : 'rounded-r-lg'
+              } ${
                 viewMode === mode
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/50 dark:hover:bg-zinc-700/50'
               }`}
             >
               {mode === 'week' ? 'Semaine' : 'Jour'}

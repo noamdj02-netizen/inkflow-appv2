@@ -210,7 +210,10 @@ export interface Payment {
 }
 
 // Subscriptions & plan-based permissions
-export type SubscriptionPlan = 'solo' | 'studio' | 'enterprise';
+export type SubscriptionPlan = 'solo' | 'pro' | 'studio' | 'enterprise';
+
+/** Statut d'abonnement studio (inkflow_studios.subscription_status) */
+export type SubscriptionStatus = 'trialing' | 'active' | 'restricted' | 'canceled';
 
 /** Clés des fonctionnalités gérées par le plan (Stripe) */
 export type PlanFeatureKey =

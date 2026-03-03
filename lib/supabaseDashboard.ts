@@ -61,17 +61,22 @@ export async function ensureStudio(
   return { studioId: id, slug: finalSlug };
 }
 
-/** Récupère le studio (id + slug) pour cet email (le plus récemment mis à jour). Permet de garder le même studio quand on change uniquement le nom. */
-export async function getStudioByEmail(email: string): Promise<{ id: string; slug: string } | null> {
+/** Récupère le studio (id + slug + subscription_status + trial_ends_at) pour cet email (le plus récemment mis à jour). */
+export async function getStudioByEmail(email: string): Promise<{ id: string; slug: string; subscription_status?: string; trial_ends_at?: string | null } | null> {
   const { data, error } = await supabase
     .from('inkflow_studios')
-    .select('id, slug')
+    .select('id, slug, subscription_status, trial_ends_at')
     .eq('email', email)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error || !data?.id) return null;
-  return { id: data.id, slug: (data.slug as string) ?? getStudioSlug('Mon studio') };
+  return {
+    id: data.id,
+    slug: (data.slug as string) ?? getStudioSlug('Mon studio'),
+    subscription_status: data.subscription_status as string | undefined,
+    trial_ends_at: data.trial_ends_at as string | null | undefined,
+  };
 }
 
 /** Récupère le slug du studio depuis la base (pour le dashboard quand on a déjà studioId). */
@@ -308,7 +313,12 @@ export async function saveAppointmentToSupabase(studioId: string, apt: Appointme
     updated_at: new Date().toISOString()
   };
   const { error } = await supabase.from('inkflow_appointments').upsert(row, { onConflict: 'id' });
-  if (error) throw error;
+  if (error) {
+    if (error.code === '23505' && error.message?.includes('idx_appointments_slot_unique')) {
+      throw new Error('Ce créneau vient juste d\'être pris par un autre client. Veuillez en choisir un autre.');
+    }
+    throw error;
+  }
 }
 
 export async function deleteAppointmentFromSupabase(aptId: string): Promise<void> {

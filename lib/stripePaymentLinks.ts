@@ -13,10 +13,14 @@ export const STRIPE_PAYMENT_LINKS = {
  * Créez des Payment Links séparés (mensuel + annuel) dans Stripe Dashboard
  * et mettez à jour les URLs ci-dessous.
  */
-export const STRIPE_BILLING_LINKS: Record<'solo' | 'studio', { monthly: string; annual: string }> = {
+export const STRIPE_BILLING_LINKS: Record<'solo' | 'pro' | 'studio', { monthly: string; annual: string }> = {
   solo: {
     monthly: 'https://buy.stripe.com/28EaEQ52e1erbS66W0fUQ09',
     annual: 'https://buy.stripe.com/28EaEQ52e1erbS66W0fUQ09',
+  },
+  pro: {
+    monthly: 'https://buy.stripe.com/fZucMY3Ya0anbS6a8cfUQ0a',
+    annual: 'https://buy.stripe.com/fZucMY3Ya0anbS6a8cfUQ0a',
   },
   studio: {
     monthly: 'https://buy.stripe.com/dRm14gamyg9lf4i804fUQ0b',
@@ -30,6 +34,6 @@ export function getStripePaymentLink(plan: StripePlanId): string {
   return STRIPE_PAYMENT_LINKS[plan];
 }
 
-export function getStripeBillingLink(plan: 'solo' | 'studio', interval: 'monthly' | 'annual'): string {
+export function getStripeBillingLink(plan: 'solo' | 'pro' | 'studio', interval: 'monthly' | 'annual'): string {
   return STRIPE_BILLING_LINKS[plan][interval];
 }

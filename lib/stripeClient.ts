@@ -5,6 +5,8 @@ interface CreateCheckoutParams {
   /** Slug public du studio pour les URLs de redirection Stripe (évite "Studio introuvable" après paiement). */
   studioSlug?: string;
   appointmentId: string;
+  /** ID du flash (vitrine) — utilisé pour mettre available=false à l'acompte payé. */
+  flashId?: string;
   amount: number;
   clientName: string;
   clientEmail: string;
@@ -59,7 +61,7 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
 interface CreateSubscriptionParams {
   studioId: string;
   email: string;
-  plan: 'solo' | 'studio';
+  plan: 'solo' | 'pro' | 'studio';
   interval: 'monthly' | 'annual';
 }
 
@@ -74,5 +76,43 @@ export async function createSubscription(params: CreateSubscriptionParams): Prom
     return data?.url || null;
   } catch (err) {
     return null;
+  }
+}
+
+export type CreatePortalSessionResult = { url: string } | { error: string };
+
+/** Crée une session du Customer Portal Stripe pour gérer l'abonnement (facture, paiement, annulation). */
+export async function createPortalSession(params: {
+  studioId?: string;
+  email?: string;
+}): Promise<CreatePortalSessionResult> {
+  const { url: baseUrl, key } = getSupabaseConfig();
+  if (!baseUrl || !key) return { error: 'Supabase non configuré.' };
+
+  try {
+    const fnUrl = `${baseUrl.replace(/\/$/, '')}/functions/v1/create-portal-session`;
+
+    const res = await fetch(fnUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify(params),
+    });
+
+    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string };
+
+    if (res.ok && data?.url) return { url: data.url };
+
+    const msg = data?.error || data?.details || data?.message || `Erreur ${res.status}`;
+    return { error: msg };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      error: message === 'Failed to fetch'
+        ? 'Impossible de contacter le serveur. Vérifiez votre connexion et que l\'Edge Function create-portal-session est déployée (npx supabase functions deploy create-portal-session --no-verify-jwt).'
+        : message,
+    };
   }
 }
