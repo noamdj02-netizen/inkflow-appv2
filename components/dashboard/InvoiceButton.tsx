@@ -126,7 +126,7 @@ export const InvoiceButton: React.FC<InvoiceButtonProps> = ({ appointment, artis
     <button
       onClick={generateInvoice}
       disabled={isGenerating}
-      className="flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 text-sm font-medium disabled:opacity-50"
+      className="flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-sm font-medium disabled:opacity-50"
       title="Générer le reçu PDF"
     >
       {isGenerating ? (

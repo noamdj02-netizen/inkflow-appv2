@@ -265,31 +265,31 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
         </div>
 
         <div id="bilan-print-content" className="space-y-6">
-          <div className="border-b border-neutral-200 pb-4">
-            <h2 className="text-xl font-bold text-neutral-900">Bilan du {label}</h2>
+          <div className="border-b border-neutral-200 dark:border-neutral-700 pb-4">
+            <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Bilan du {label}</h2>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="dashboard-widget-card p-4">
-              <div className="text-xs text-neutral-500 uppercase tracking-wide">Chiffre d'affaires</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Chiffre d'affaires</div>
               <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{totalCA}€</div>
             </div>
             <div className="dashboard-widget-card p-4">
-              <div className="text-xs text-neutral-500 uppercase tracking-wide">Nombre de clients</div>
-              <div className="text-2xl font-bold">{clientCount}</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Nombre de clients</div>
+              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{clientCount}</div>
             </div>
             <div className="dashboard-widget-card p-4">
-              <div className="text-xs text-neutral-500 uppercase tracking-wide">Acomptes reçus</div>
-              <div className="text-2xl font-bold">{depositsReceived}€</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Acomptes reçus</div>
+              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{depositsReceived}€</div>
             </div>
             <div className="dashboard-widget-card p-4">
-              <div className="text-xs text-neutral-500 uppercase tracking-wide">Reste à payer encaissé</div>
-              <div className="text-2xl font-bold">{restPaid}€</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Reste à payer encaissé</div>
+              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{restPaid}€</div>
             </div>
           </div>
 
           {totalMinutes > 0 && (
-            <div className="flex items-center gap-2 text-neutral-600">
+            <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400">
               <Clock className="w-5 h-5" />
               <span className="font-medium">
                 Temps passé : {hoursTattooed}h {minsTattooed > 0 ? `${minsTattooed} min` : ''}
@@ -298,29 +298,29 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
           )}
 
           <div>
-            <h3 className="font-semibold text-neutral-800 mb-3">Transactions de la période</h3>
-            <div className="border border-neutral-200 rounded-xl overflow-hidden">
+            <h3 className="font-semibold text-neutral-800 dark:text-neutral-200 mb-3">Transactions de la période</h3>
+            <div className="border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
               {transactions.length === 0 ? (
-                <div className="py-8 text-center text-neutral-400 text-sm">Aucune transaction</div>
+                <div className="py-8 text-center text-neutral-400 dark:text-neutral-500 text-sm">Aucune transaction</div>
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-zinc-50 dark:bg-zinc-500/10 border-b border-neutral-200">
-                      <th className="text-left px-4 py-3 font-semibold">Heure</th>
-                      <th className="text-left px-4 py-3 font-semibold">Client</th>
-                      <th className="text-left px-4 py-3 font-semibold">Service</th>
-                      <th className="text-right px-4 py-3 font-semibold">Montant</th>
+                    <tr className="bg-zinc-50 dark:bg-zinc-500/10 border-b border-neutral-200 dark:border-neutral-700">
+                      <th className="text-left px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">Heure</th>
+                      <th className="text-left px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">Client</th>
+                      <th className="text-left px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">Service</th>
+                      <th className="text-right px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">Montant</th>
                     </tr>
                   </thead>
                   <tbody>
                     {transactions.map((t) => (
-                      <tr key={t.id} className="border-b border-neutral-100 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-500/5">
-                        <td className="px-4 py-3 text-neutral-600">
+                      <tr key={t.id} className="border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-500/5">
+                        <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">
                           {t.date} {t.time ? `• ${t.time}` : ''}
                         </td>
-                        <td className="px-4 py-3 font-medium">{t.label}</td>
-                        <td className="px-4 py-3 text-neutral-600">{t.sub}</td>
-                        <td className="px-4 py-3 text-right font-bold">{t.amount}€</td>
+                        <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">{t.label}</td>
+                        <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{t.sub}</td>
+                        <td className="px-4 py-3 text-right font-bold text-neutral-900 dark:text-neutral-100">{t.amount}€</td>
                       </tr>
                     ))}
                   </tbody>
@@ -344,7 +344,7 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2.5 bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400 rounded-xl font-semibold hover:bg-neutral-200"
+            className="px-4 py-2.5 bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-300 rounded-xl font-semibold hover:bg-neutral-200 dark:hover:bg-zinc-500/30"
           >
             Fermer
           </button>
@@ -532,27 +532,27 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
             <div className="p-2 rounded-xl bg-neutral-900 text-white">
               <DollarSign className="w-5 h-5" />
             </div>
-            <span className="text-sm text-neutral-600">Total global</span>
+            <span className="text-sm text-neutral-600 dark:text-neutral-400">Total global</span>
           </div>
-          <div className="text-2xl font-bold">{totalGlobal}€</div>
-          <p className="text-xs text-neutral-500 mt-1">RDV + espèces</p>
+          <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{totalGlobal}€</div>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">RDV + espèces</p>
         </div>
         <div className="dashboard-widget-card p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
               <CreditCard className="w-5 h-5" />
             </div>
-            <span className="text-sm text-neutral-600">Revenus RDV</span>
+            <span className="text-sm text-neutral-600 dark:text-neutral-400">Revenus RDV</span>
           </div>
-          <div className="text-2xl font-bold">{totalRevenue}€</div>
-          <p className="text-xs text-neutral-500 mt-1">Paiements carte / virement</p>
+          <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{totalRevenue}€</div>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Paiements carte / virement</p>
         </div>
         <div className="dashboard-widget-card p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
               <Banknote className="w-5 h-5" />
             </div>
-            <span className="text-sm text-neutral-600">Espèces</span>
+            <span className="text-sm text-neutral-600 dark:text-neutral-400">Espèces</span>
           </div>
           <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{totalCash}€</div>
           {todayCash > 0 && (
@@ -564,7 +564,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
             <div className="p-2 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
               <Receipt className="w-5 h-5" />
             </div>
-            <span className="text-sm text-neutral-600">Acomptes reçus</span>
+            <span className="text-sm text-neutral-600 dark:text-neutral-400">Acomptes reçus</span>
           </div>
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalDeposits}€</div>
         </div>
@@ -573,16 +573,16 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
             <div className="p-2 rounded-xl bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400">
               <TrendingUp className="w-5 h-5" />
             </div>
-            <span className="text-sm text-neutral-600">Acomptes en attente</span>
+            <span className="text-sm text-neutral-600 dark:text-neutral-400">Acomptes en attente</span>
           </div>
           <div className="text-2xl font-bold text-zinc-600 dark:text-zinc-400">{pendingDeposits}€</div>
-          <p className="text-xs text-neutral-500 mt-1">{completedCount} RDV terminés</p>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{completedCount} RDV terminés</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-neutral-200">
-          <h3 className="font-bold text-lg mb-4">Évolution des revenus (6 mois)</h3>
+        <div className="lg:col-span-2 bg-white dark:bg-[var(--bg-card)] rounded-2xl p-6 border border-neutral-200 dark:border-neutral-700">
+          <h3 className="font-bold text-lg text-neutral-900 dark:text-neutral-100 mb-4">Évolution des revenus (6 mois)</h3>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={chartData}>
               <defs>
@@ -625,20 +625,20 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
-          <div className="px-4 py-3 border-b border-neutral-200 flex items-center justify-between">
-            <h3 className="font-bold text-lg">Caisse espèces</h3>
+        <div className="bg-white dark:bg-[var(--bg-card)] rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+          <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
+            <h3 className="font-bold text-lg text-neutral-900 dark:text-neutral-100">Caisse espèces</h3>
             <button
               onClick={() => setShowAddCash(true)}
-              className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-600"
+              className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
               aria-label="Ajouter"
             >
               <Plus className="w-5 h-5" />
             </button>
           </div>
-          <div className="max-h-64 overflow-y-auto divide-y divide-neutral-100">
+          <div className="max-h-64 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
             {cashEntries.length === 0 ? (
-              <div className="py-8 text-center text-neutral-400 text-sm">Aucun encaissement espèces</div>
+              <div className="py-8 text-center text-neutral-400 dark:text-neutral-500 text-sm">Aucun encaissement espèces</div>
             ) : (
               cashEntries
                 .slice()
@@ -650,8 +650,8 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
                     className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-500/10 group"
                   >
                     <div className="min-w-0">
-                      <div className="font-medium text-neutral-900 truncate">{e.label}</div>
-                      <div className="text-xs text-neutral-500">{e.date}</div>
+                      <div className="font-medium text-neutral-900 dark:text-neutral-100 truncate">{e.label}</div>
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400">{e.date}</div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-blue-700 dark:text-blue-400">{e.amount}€</span>
@@ -670,13 +670,13 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-neutral-200">
-          <h3 className="font-bold text-lg">Dernières transactions</h3>
+      <div className="bg-white dark:bg-[var(--bg-card)] rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+        <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
+          <h3 className="font-bold text-lg text-neutral-900 dark:text-neutral-100">Dernières transactions</h3>
         </div>
-        <div className="divide-y divide-neutral-200">
+        <div className="divide-y divide-neutral-200 dark:divide-neutral-700">
           {transactions.length === 0 ? (
-            <div className="py-12 text-center text-neutral-400">Aucune transaction</div>
+            <div className="py-12 text-center text-neutral-400 dark:text-neutral-500">Aucune transaction</div>
           ) : (
             transactions.map((t) => (
               <div key={t.id} className="flex items-center justify-between px-6 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-500/10">
@@ -693,8 +693,8 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
                     )}
                   </div>
                   <div>
-                    <div className="font-semibold">{t.label}</div>
-                    <div className="text-sm text-neutral-600">
+                    <div className="font-semibold text-neutral-900 dark:text-neutral-100">{t.label}</div>
+                    <div className="text-sm text-neutral-600 dark:text-neutral-400">
                       {t.sub} • {t.date}
                       {t.type === 'cash' && (
                         <span className="ml-2 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-medium">
@@ -705,7 +705,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="font-bold">{t.amount}€</span>
+                  <span className="font-bold text-neutral-900 dark:text-neutral-100">{t.amount}€</span>
                   {t.type === 'rdv' && t.appointment && user && (
                     <InvoiceButton
                       appointment={t.appointment}
@@ -737,16 +737,16 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-neutral-700 mb-1">Date</label>
+              <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Date</label>
               <input
                 type="date"
                 value={newCash.date}
                 onChange={(e) => setNewCash((c) => ({ ...c, date: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-neutral-700 mb-1">Montant (€)</label>
+              <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Montant (€)</label>
               <input
                 type="number"
                 step="0.01"
@@ -754,17 +754,17 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
                 placeholder="0,00"
                 value={newCash.amount}
                 onChange={(e) => setNewCash((c) => ({ ...c, amount: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-neutral-700 mb-1">Libellé (optionnel)</label>
+              <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Libellé (optionnel)</label>
               <input
                 type="text"
                 placeholder="Ex: Caisse du jour, Dépot client…"
                 value={newCash.label}
                 onChange={(e) => setNewCash((c) => ({ ...c, label: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
               />
             </div>
             <div className="flex gap-3 pt-2">
@@ -777,7 +777,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
               </button>
               <button
                 onClick={() => setShowAddCash(false)}
-                className="px-4 py-2.5 bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400 rounded-xl font-semibold hover:bg-neutral-200"
+                className="px-4 py-2.5 bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-300 rounded-xl font-semibold hover:bg-neutral-200 dark:hover:bg-zinc-500/30"
               >
                 Annuler
               </button>

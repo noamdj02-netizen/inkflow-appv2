@@ -59,7 +59,7 @@ export const Modal: React.FC<ModalProps> = ({
           <div className="flex items-center justify-between gap-2 p-4 sm:p-6 border-b border-[var(--border)] flex-shrink-0 min-w-0">
             <h2 id="modal-title" className="text-base sm:text-2xl font-bold text-[var(--text-primary)] truncate">{title}</h2>
             {showClose && (
-              <button onClick={onClose} className="p-2 hover:bg-[var(--bg-hover)] rounded-xl transition-all flex-shrink-0 touch-manipulation" aria-label="Fermer">
+              <button onClick={onClose} className="p-2 hover:bg-[var(--bg-hover)] rounded-xl transition-all flex-shrink-0 touch-manipulation text-[var(--text-primary)]" aria-label="Fermer">
                 <X className="w-5 h-5" />
               </button>
             )}

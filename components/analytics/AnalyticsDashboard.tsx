@@ -110,8 +110,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                   <Icon className="w-6 h-6" />
                 </div>
               </div>
-              <div className="text-3xl font-bold mb-1">{stat.value}</div>
-              <div className="text-sm text-neutral-600">{stat.label}</div>
+              <div className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mb-1">{stat.value}</div>
+              <div className="text-sm text-neutral-600 dark:text-neutral-400">{stat.label}</div>
             </div>
           );
         })}
@@ -119,15 +119,15 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 dashboard-widget-card p-6">
-          <h3 className="text-lg font-bold mb-6">Évolution du revenu</h3>
+          <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-6">Évolution du revenu</h3>
           <div className="space-y-4">
             {revenueByMonth.map((data, idx) => (
               <div key={idx} className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-neutral-700">{data.month}</span>
-                  <span className="font-bold">{data.amount}€</span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">{data.month}</span>
+                  <span className="font-bold text-neutral-900 dark:text-neutral-100">{data.amount}€</span>
                 </div>
-                <div className="relative h-10 bg-neutral-100 rounded-lg overflow-hidden">
+                <div className="relative h-10 bg-neutral-100 dark:bg-neutral-800 rounded-lg overflow-hidden">
                   <div
                     className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg transition-all duration-500"
                     style={{ width: `${(data.amount / maxAmount) * 100}%` }}
@@ -140,45 +140,45 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               </div>
             ))}
           </div>
-          <div className="mt-6 pt-6 border-t border-neutral-200 grid grid-cols-2 gap-4 text-sm">
+          <div className="mt-6 pt-6 border-t border-neutral-200 dark:border-neutral-700 grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-neutral-600">Moyenne/RDV</span>
-              <div className="text-2xl font-bold mt-1">{averagePerAppointment.toFixed(0)}€</div>
+              <span className="text-neutral-600 dark:text-neutral-400">Moyenne/RDV</span>
+              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 mt-1">{averagePerAppointment.toFixed(0)}€</div>
             </div>
             <div>
-              <span className="text-neutral-600">Total période</span>
-              <div className="text-2xl font-bold mt-1">{revenueByMonth.reduce((sum, m) => sum + m.amount, 0)}€</div>
+              <span className="text-neutral-600 dark:text-neutral-400">Total période</span>
+              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 mt-1">{revenueByMonth.reduce((sum, m) => sum + m.amount, 0)}€</div>
             </div>
           </div>
         </div>
 
         <div className="dashboard-widget-card p-6">
-          <h3 className="text-lg font-bold mb-6">Clients</h3>
+          <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-6">Clients</h3>
           <div className="space-y-6">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-neutral-600">Total</span>
-                <span className="text-2xl font-bold">{clients.length}</span>
+                <span className="text-sm text-neutral-600 dark:text-neutral-400">Total</span>
+                <span className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{clients.length}</span>
               </div>
-              <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                 <div className="h-full bg-neutral-900" style={{ width: '100%' }} />
               </div>
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-neutral-600 flex items-center gap-1"><Award className="w-4 h-4" /> VIP</span>
+                <span className="text-sm text-neutral-600 dark:text-neutral-400 flex items-center gap-1"><Award className="w-4 h-4" /> VIP</span>
                 <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{vipClients}</span>
               </div>
-              <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                 <div className="h-full bg-blue-600" style={{ width: `${clients.length ? (vipClients / clients.length) * 100 : 0}%` }} />
               </div>
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-neutral-600">Actifs</span>
+                <span className="text-sm text-neutral-600 dark:text-neutral-400">Actifs</span>
                 <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{activeClients}</span>
               </div>
-              <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                 <div className="h-full bg-blue-600" style={{ width: `${clients.length ? (activeClients / clients.length) * 100 : 0}%` }} />
               </div>
             </div>

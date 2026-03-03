@@ -147,7 +147,7 @@ export const AIAssistant: React.FC = () => {
               <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span className="text-sm font-semibold text-blue-800 dark:text-blue-200">Resultat IA</span>
             </div>
-            <div className="whitespace-pre-wrap text-sm text-neutral-800 leading-relaxed">{result}</div>
+            <div className="whitespace-pre-wrap text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed">{result}</div>
             <button onClick={() => navigator.clipboard.writeText(result)}
               className="mt-3 text-sm text-blue-700 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 font-medium underline">
               Copier

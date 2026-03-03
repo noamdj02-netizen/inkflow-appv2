@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
               <span className="text-2xl" aria-hidden>⚠️</span>
             </div>
-            <h1 className="text-xl font-bold text-neutral-900 mb-2">Une erreur s&apos;est produite</h1>
+            <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">Une erreur s&apos;est produite</h1>
             <p className="text-neutral-600 text-sm mb-6">
               Le tableau de bord n&apos;a pas pu s&apos;afficher. Réessayez ou déconnectez-vous.
             </p>
@@ -55,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </button>
               <a
                 href="/login"
-                className="px-6 py-3 border-2 border-neutral-300 rounded-xl font-semibold text-neutral-700 hover:bg-neutral-100"
+                className="px-6 py-3 border-2 border-neutral-300 dark:border-neutral-600 rounded-xl font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
                 Retour à la connexion
               </a>

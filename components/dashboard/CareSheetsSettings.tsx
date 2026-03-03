@@ -124,10 +124,10 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
       </div>
 
       {templates.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 border border-neutral-200 text-center">
-          <FileText className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-          <p className="font-semibold text-neutral-900 mb-2">Aucun template</p>
-          <p className="text-neutral-600 text-sm mb-4">Créez votre premier template de soins post-tattoo.</p>
+        <div className="bg-white dark:bg-[var(--bg-card)] rounded-2xl p-12 border border-neutral-200 dark:border-neutral-700 text-center">
+          <FileText className="w-16 h-16 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
+          <p className="font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Aucun template</p>
+          <p className="text-neutral-600 dark:text-neutral-400 text-sm mb-4">Créez votre premier template de soins post-tattoo.</p>
           <button onClick={createTemplate}
             className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800">
             Créer un template
@@ -135,26 +135,26 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
-            <div className="p-4 border-b border-neutral-200">
-              <h3 className="font-semibold">Templates</h3>
+          <div className="bg-white dark:bg-[var(--bg-card)] rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+            <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
+              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Templates</h3>
             </div>
-            <div className="divide-y divide-neutral-200 max-h-[400px] overflow-y-auto">
+            <div className="divide-y divide-neutral-200 dark:divide-neutral-700 max-h-[400px] overflow-y-auto">
               {templates.map(t => (
                 <button
                   key={t.id}
                   onClick={() => setSelectedId(t.id)}
-                  className={`w-full text-left px-4 py-3 hover:bg-neutral-50 transition-colors ${selectedId === t.id ? 'bg-neutral-100 border-l-4 border-neutral-900' : ''}`}
+                  className={`w-full text-left px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors ${selectedId === t.id ? 'bg-neutral-100 dark:bg-neutral-800 border-l-4 border-neutral-900 dark:border-neutral-100' : ''}`}
                 >
-                  <div className="font-medium truncate">{t.title}</div>
-                  <div className="text-xs text-neutral-500 mt-0.5">
+                  <div className="font-medium text-neutral-900 dark:text-neutral-100 truncate">{t.title}</div>
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                     {new Date(t.updatedAt).toLocaleDateString('fr-FR')}
                   </div>
                 </button>
               ))}
             </div>
           </div>
-          <div className="md:col-span-2 bg-white rounded-2xl p-6 border border-neutral-200">
+          <div className="md:col-span-2 bg-white dark:bg-[var(--bg-card)] rounded-2xl p-6 border border-neutral-200 dark:border-neutral-700">
             {selected && (
               <div className="space-y-4">
                 <div>

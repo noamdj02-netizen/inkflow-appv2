@@ -73,8 +73,8 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
     switch (status) {
       case 'vip': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30';
       case 'active': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30';
-      case 'inactive': return 'bg-neutral-100 text-neutral-600 border-neutral-200';
-      default: return 'bg-neutral-100 text-neutral-600 border-neutral-200';
+      case 'inactive': return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700';
+      default: return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700';
     }
   };
 
@@ -297,7 +297,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                           <div className="flex gap-6">
                             {client.tattoos.length > 0 && (
                               <div className="flex-1">
-                                <div className="text-xs font-semibold text-neutral-500 uppercase mb-2">Derniers tatouages</div>
+                                <div className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase mb-2">Derniers tatouages</div>
                                 <div className="space-y-2">
                                   {client.tattoos.slice(0, 2).map(t => (
                                     <div key={t.id} className="text-sm bg-white rounded-lg p-2 border border-neutral-200">
@@ -307,7 +307,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                                 </div>
                               </div>
                             )}
-                            <button onClick={() => setSelectedClient(client)} className="text-sm font-medium text-neutral-700 hover:text-neutral-900">
+                            <button onClick={() => setSelectedClient(client)} className="text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100">
                               Voir tout le détail →
                             </button>
                           </div>
@@ -359,26 +359,26 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
             </div>
             <div className="client-card-body grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0">
               <div className="min-w-0">
-                <h3 className="text-sm font-semibold text-neutral-600 mb-3">Informations de contact</h3>
+                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3">Informations de contact</h3>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 min-w-0"><Mail className="w-4 h-4 text-neutral-400 flex-shrink-0" /><span className="text-sm break-words">{selectedClient.email}</span></div>
-                  <div className="flex items-center gap-3 min-w-0"><Phone className="w-4 h-4 text-neutral-400 flex-shrink-0" /><span className="text-sm break-words">{selectedClient.phone}</span></div>
-                  {selectedClient.address && <div className="flex items-center gap-3 min-w-0"><Tag className="w-4 h-4 text-neutral-400 flex-shrink-0" /><span className="text-sm break-words">{selectedClient.address}</span></div>}
+                  <div className="flex items-center gap-3 min-w-0"><Mail className="w-4 h-4 text-neutral-400 dark:text-neutral-500 flex-shrink-0" /><span className="text-sm text-neutral-900 dark:text-neutral-100 break-words">{selectedClient.email}</span></div>
+                  <div className="flex items-center gap-3 min-w-0"><Phone className="w-4 h-4 text-neutral-400 dark:text-neutral-500 flex-shrink-0" /><span className="text-sm text-neutral-900 dark:text-neutral-100 break-words">{selectedClient.phone}</span></div>
+                  {selectedClient.address && <div className="flex items-center gap-3 min-w-0"><Tag className="w-4 h-4 text-neutral-400 dark:text-neutral-500 flex-shrink-0" /><span className="text-sm text-neutral-900 dark:text-neutral-100 break-words">{selectedClient.address}</span></div>}
                 </div>
               </div>
               <div className="min-w-0">
                 <h3 className="text-sm font-semibold text-neutral-600 mb-3">Statistiques</h3>
                 <div className="space-y-3">
-                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Total dépensé</span><span className="text-sm font-bold text-blue-600 dark:text-blue-400">{selectedClient.totalSpent}€</span></div>
-                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Rendez-vous</span><span className="text-sm font-bold">{selectedClient.appointmentsCount}</span></div>
-                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Première visite</span><span className="text-sm font-semibold">{new Date(selectedClient.firstVisit).toLocaleDateString('fr-FR')}</span></div>
-                  {selectedClient.lastVisit && <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 shrink-0">Dernière visite</span><span className="text-sm font-semibold">{new Date(selectedClient.lastVisit).toLocaleDateString('fr-FR')}</span></div>}
+                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 dark:text-neutral-400 shrink-0">Total dépensé</span><span className="text-sm font-bold text-blue-600 dark:text-blue-400">{selectedClient.totalSpent}€</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 dark:text-neutral-400 shrink-0">Rendez-vous</span><span className="text-sm font-bold text-neutral-900 dark:text-neutral-100">{selectedClient.appointmentsCount}</span></div>
+                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 dark:text-neutral-400 shrink-0">Première visite</span><span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{new Date(selectedClient.firstVisit).toLocaleDateString('fr-FR')}</span></div>
+                  {selectedClient.lastVisit && <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 dark:text-neutral-400 shrink-0">Dernière visite</span><span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{new Date(selectedClient.lastVisit).toLocaleDateString('fr-FR')}</span></div>}
                 </div>
               </div>
             </div>
             {selectedClient.tags.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-neutral-600 mb-3">Tags</h3>
+                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3">Tags</h3>
                 <div className="flex flex-wrap gap-2">
                   {selectedClient.tags.map(tag => <span key={tag} className="px-3 py-1 bg-neutral-100 rounded-lg text-sm">{tag}</span>)}
                 </div>
@@ -389,25 +389,25 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
               <textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={saveNow}
                 placeholder="Ajoutez vos notes sur ce client…"
                 className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-neutral-900" />
-              <p className="text-xs text-neutral-500 mt-1">{useSupabase ? 'Sauvegardées automatiquement.' : 'Sauvegardées localement dans votre navigateur.'}</p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{useSupabase ? 'Sauvegardées automatiquement.' : 'Sauvegardées localement dans votre navigateur.'}</p>
             </div>
             {selectedClient.notes && (
               <div>
-                <h3 className="text-sm font-semibold text-neutral-600 mb-3">Notes (fiche client)</h3>
-                <p className="text-sm text-neutral-700 bg-neutral-50 p-4 rounded-lg">{selectedClient.notes}</p>
+                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3">Notes (fiche client)</h3>
+                <p className="text-sm text-neutral-700 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-800 p-4 rounded-lg">{selectedClient.notes}</p>
               </div>
             )}
             {selectedClient.tattoos.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-neutral-600 mb-3">Historique des tatouages</h3>
+                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3">Historique des tatouages</h3>
                 <div className="space-y-4">
                   {selectedClient.tattoos.map(tattoo => (
                     <div key={tattoo.id} className="bg-neutral-50 rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
-                        <div><h4 className="font-semibold">{tattoo.description}</h4><p className="text-sm text-neutral-600">{tattoo.location} • {tattoo.size}</p></div>
+                        <div><h4 className="font-semibold text-neutral-900 dark:text-neutral-100">{tattoo.description}</h4><p className="text-sm text-neutral-600 dark:text-neutral-400">{tattoo.location} • {tattoo.size}</p></div>
                         <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{tattoo.price}€</span>
                       </div>
-                      <div className="text-xs text-neutral-500">{new Date(tattoo.date).toLocaleDateString('fr-FR')} • {tattoo.duration}min</div>
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400">{new Date(tattoo.date).toLocaleDateString('fr-FR')} • {tattoo.duration}min</div>
                     </div>
                   ))}
                 </div>

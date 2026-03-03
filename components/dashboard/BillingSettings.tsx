@@ -163,16 +163,16 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
       )}
 
       <div className="flex justify-center mb-4">
-        <div className="inline-flex items-center gap-1 p-1.5 rounded-2xl bg-neutral-100 border border-neutral-200/80">
+        <div className="inline-flex items-center gap-1 p-1.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700">
           <button
             onClick={() => setIsAnnual(false)}
-            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${!isAnnual ? 'bg-white text-neutral-900 shadow-sm border border-neutral-200/80' : 'text-neutral-600'}`}
+            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${!isAnnual ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-sm border border-neutral-200/80 dark:border-neutral-600' : 'text-neutral-600 dark:text-neutral-400'}`}
           >
             Mensuel
           </button>
           <button
             onClick={() => setIsAnnual(true)}
-            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all relative ${isAnnual ? 'bg-neutral-900 text-white shadow-sm' : 'text-neutral-600'}`}
+            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all relative ${isAnnual ? 'bg-neutral-900 text-white shadow-sm' : 'text-neutral-600 dark:text-neutral-400'}`}
           >
             Annuel
             <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-semibold">-20%</span>
@@ -184,26 +184,26 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
         {plans.map(plan => {
           const isCurrent = active && subscription?.plan === plan.id;
           return (
-            <div key={plan.id} className={`bg-white rounded-2xl p-6 border-2 transition-all ${isCurrent ? 'border-blue-500 shadow-lg' : 'border-neutral-200 hover:border-neutral-400'}`}>
+            <div key={plan.id} className={`bg-white dark:bg-[var(--bg-card)] rounded-2xl p-6 border-2 transition-all ${isCurrent ? 'border-blue-500 shadow-lg' : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600'}`}>
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-xl bg-neutral-900 text-white">{plan.icon}</div>
                 <div>
-                  <h3 className="font-bold text-lg">{plan.name}</h3>
+                  <h3 className="font-bold text-lg text-neutral-900 dark:text-neutral-100">{plan.name}</h3>
                   {isCurrent && <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 px-2 py-0.5 rounded-full font-semibold">Plan actuel</span>}
                 </div>
               </div>
               <div className="mb-6">
-                <span className="text-4xl font-bold">{isAnnual ? plan.priceAnnual : plan.priceMonthly} EUR</span>
-                <span className="text-neutral-600">/mois</span>
+                <span className="text-4xl font-bold text-neutral-900 dark:text-neutral-100">{isAnnual ? plan.priceAnnual : plan.priceMonthly} EUR</span>
+                <span className="text-neutral-600 dark:text-neutral-400">/mois</span>
                 {isAnnual && (
-                  <div className="text-sm text-neutral-500 mt-1">Facture {plan.priceAnnual * 12} EUR par an</div>
+                  <div className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Facture {plan.priceAnnual * 12} EUR par an</div>
                 )}
               </div>
               <div className="space-y-3 mb-6">
                 {plan.features.map((feature, i) => (
                   <div key={i} className="flex items-center gap-2 text-sm">
                     <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                    <span className="text-neutral-700">{feature}</span>
+                    <span className="text-neutral-700 dark:text-neutral-300">{feature}</span>
                   </div>
                 ))}
               </div>

@@ -36,7 +36,7 @@ const BG: Record<ToastType, string> = {
   success: 'bg-blue-50 border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/30',
   error: 'bg-zinc-100 border-zinc-200 dark:bg-zinc-500/20 dark:border-zinc-600',
   warning: 'bg-zinc-100 border-zinc-200 dark:bg-zinc-500/20 dark:border-zinc-600',
-  info: 'bg-blue-50 border-blue-200',
+  info: 'bg-blue-50 border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/30',
 };
 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -86,12 +86,12 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg animate-slide-down max-w-[min(400px,calc(100vw-2rem))] w-full ${BG[currentToast.type]}`}
           >
             {ICONS[currentToast.type]}
-            <span className="text-sm font-medium text-neutral-800 flex-1">{currentToast.message}</span>
+            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-100 flex-1">{currentToast.message}</span>
             <button
               onClick={removeToast}
-              className="p-1 rounded-lg hover:bg-black/5 shrink-0"
+              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 shrink-0"
             >
-              <X className="w-4 h-4 text-neutral-400" />
+              <X className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
             </button>
           </div>
         )}
