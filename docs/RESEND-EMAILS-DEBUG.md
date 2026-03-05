@@ -1,6 +1,6 @@
 # Emails non reçus — débogage Resend
 
-**Fonctions qui envoient des emails** (toutes utilisent `SITE_URL` sans slash final et `RESEND_FROM_EMAIL` si défini) :
+**Fonctions qui envoient des emails** (utilisent `APP_URL` pour les liens CTA, `RESEND_FROM_EMAIL` si défini) :
 - **send-client-conversation-link** : lien conversation quand le studio accepte une demande de projet
 - **send-booking-confirmation** : confirmation RDV vitrine quand le tatoueur clique « Confirmer »
 - **send-booking-refusal** : refus de demande (RDV, RDV vitrine, projet) quand le tatoueur clique « Refuser »
@@ -9,7 +9,13 @@
 - **send-appointment-reminders** : rappels RDV (2h avant, 24h avant)
 - **send-aftercare-email** : soins post-tattoo après un RDV
 
-Les liens Stripe (acompte, abo) et Google Calendar utilisent aussi **SITE_URL** (create-checkout-session, create-subscription, google-calendar-auth).
+Les liens Stripe (acompte, abo) et Google Calendar utilisent **APP_URL** ou **SITE_URL** (create-checkout-session, create-subscription, google-calendar-auth).
+
+**ERR_CONNECTION_FAILED sur les liens d'email** : Si le bouton « Confirmer mon rendez-vous » ou les liens de conversation plantent (resend-clicks-a.com inaccessible), définis **APP_URL** dans Supabase Secrets avec l'URL absolue de ton app en prod :
+```bash
+npx supabase secrets set APP_URL=https://app.ink-flow.me
+```
+Puis redéploie : `send-booking-confirmation`, `send-client-conversation-link`, `send-message-notification`, `create-portal-session`.
 
 ---
 

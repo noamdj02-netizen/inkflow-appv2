@@ -23,6 +23,7 @@ import { BillingSettings } from './BillingSettings';
 import { PaywallView } from './PaywallView';
 import { AvailabilitySettings } from '../settings/AvailabilitySettings';
 import { VitrineSettings } from '../settings/VitrineSettings';
+import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 import { VitrineLinkButton } from './VitrineLinkButton';
 
 const FinanceDashboard = lazy(() => import('./FinanceDashboard').then(m => ({ default: m.FinanceDashboard })));
@@ -1096,6 +1097,9 @@ export const DashboardPro: React.FC = () => {
                     >
                       {generalSaving ? 'Enregistrement...' : generalSaved ? 'Enregistre !' : 'Enregistrer'}
                     </button>
+
+                    <hr className="border-neutral-100" />
+                    <PushNotificationsSettings studioId={studioId} />
                   </div>
                   </div>
                 </div>

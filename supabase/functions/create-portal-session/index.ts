@@ -5,7 +5,8 @@ const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const STRIPE_PORTAL_CONFIGURATION_ID = Deno.env.get("STRIPE_PORTAL_CONFIGURATION_ID") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+/** URL absolue de l'app (dashboard, etc.). En prod : https://app.ink-flow.me. Définir APP_URL dans Supabase Secrets. */
+const APP_URL = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -122,7 +123,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const returnUrl = `${SITE_URL}/dashboard`;
+    const returnUrl = `${APP_URL}/dashboard`;
     const body = new URLSearchParams({
       customer: customerId,
       return_url: returnUrl,

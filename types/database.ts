@@ -154,6 +154,18 @@ export interface Database {
         Insert: { studio_id: string; onboarding_step?: number; onboarding_dismissed?: boolean; updated_at?: string };
         Update: Partial<Database['public']['Tables']['inkflow_user_settings']['Insert']>;
       };
+      inkflow_push_subscriptions: {
+        Row: {
+          id: string;
+          studio_id: string;
+          endpoint: string;
+          keys_p256dh: string;
+          keys_auth: string;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['inkflow_push_subscriptions']['Row'], 'id' | 'created_at'> & { id?: string; created_at?: string };
+        Update: Partial<Database['public']['Tables']['inkflow_push_subscriptions']['Insert']>;
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

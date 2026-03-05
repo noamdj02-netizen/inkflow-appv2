@@ -4,12 +4,16 @@ import type { Database } from '../types/database';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
+/** Stockage pour la persistance de session. localStorage explicite pour PWA Safari (évite déconnexion à la fermeture). */
+const authStorage = typeof window !== 'undefined' ? window.localStorage : undefined;
+
 /** Client Supabase typé (Database) pour autocomplétion et typage des réponses */
 export const supabase: SupabaseClient<Database> = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    storage: authStorage,
   },
 });
 

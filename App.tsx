@@ -10,6 +10,7 @@ import { HeroSection } from './components/HeroSection';
 import { LandingBelowFold } from './components/landing/LandingBelowFold';
 import { SEO, organizationSchema, websiteSchema } from './components/SEO';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { CookieConsent } from './components/CookieConsent';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -111,6 +112,7 @@ const Router: React.FC = () => {
     { path: '/reservation-succes', component: ReservationSuccessPage },
     { path: '/politique-confidentialite', component: PrivacyPolicyPage },
     { path: '/privacy', component: PrivacyPolicyPage },
+    { path: '/privacy-policy', component: PrivacyPolicyPage },
     { path: '/conditions-utilisation', component: TermsOfServicePage },
     { path: '/terms', component: TermsOfServicePage },
     { path: '/aide', component: AidePage },
@@ -275,6 +277,7 @@ const App: React.FC = () => {
             <ToastProvider>
               <UnhandledRejectionHandler />
               <Router />
+              <CookieConsent />
             </ToastProvider>
           </AuthProvider>
         </div>

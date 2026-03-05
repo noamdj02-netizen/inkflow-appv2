@@ -8,6 +8,16 @@ import { escapeHtml } from "../_shared/emailLayout.ts";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
 const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+/** URL absolue de l'app (dashboard, /c/, etc.). En prod : https://app.ink-flow.me. Définir APP_URL dans Supabase Secrets. */
+const APP_URL = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
+
+/** Garantit une URL absolue pour Resend (évite ERR_CONNECTION_FAILED sur chemins relatifs). */
+function ensureAbsoluteUrl(url: string | undefined, base: string): string {
+  if (!url?.trim()) return base;
+  const u = url.trim();
+  if (u.startsWith("http://") || u.startsWith("https://")) return u;
+  return base + (u.startsWith("/") ? u : "/" + u);
+}
 // Logo InkFlow — Colle ton URL ici ou définis le secret LOGO_URL dans Supabase (Edge Functions → Secrets)
 const LOGO_URL = Deno.env.get("LOGO_URL") || "https://ink-flow.me/icon.svg";
 const SUPPORT_PHONE = Deno.env.get("SUPPORT_PHONE") || "06 33 43 89 26";
@@ -99,7 +109,8 @@ function formatDateDisplay(requestedDate: string, requestedTime: string | null):
 function buildRdvConfirmeHtml(payload: Payload): string {
   const dateDisplay = formatDateDisplay(payload.requestedDate, payload.requestedTime);
   const hasPaymentLink = !!payload.paymentLink?.trim?.();
-  const ctaUrl = payload.paymentLink || payload.conversationLink || SITE_URL;
+  const rawCta = payload.paymentLink || payload.conversationLink || APP_URL;
+  const ctaUrl = ensureAbsoluteUrl(rawCta, APP_URL);
   const ctaLabel = hasPaymentLink ? "Régler mon acompte" : "Confirmer mon rendez-vous";
   const safeClientName = escapeHtml(payload.clientName);
   const safeStudioName = escapeHtml(payload.studioName);

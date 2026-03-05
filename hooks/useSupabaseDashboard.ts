@@ -24,6 +24,7 @@ import {
   mapNotificationFromDb
 } from '../lib/supabaseDashboard';
 import { pushAppointmentToGoogle, deleteGoogleEvent } from '../lib/googleCalendar';
+import { updateAppBadge } from '../lib/appBadge';
 import { useOptimisticMutation } from './useOptimisticMutation';
 import { useRealtimeSync } from './useRealtimeSync';
 import type { Appointment, Client, FlashDesign, Notification } from '../types';
@@ -75,6 +76,12 @@ export const useSupabaseDashboard = () => {
   useRealtimeSync('inkflow_clients', { column: 'studio_id', value: studioId }, setClients, mapClientFromDb, useSupabase);
   useRealtimeSync('inkflow_flash_designs', { column: 'studio_id', value: studioId }, setFlashDesigns, mapFlashFromDb, useSupabase);
   useRealtimeSync('inkflow_notifications', { column: 'studio_id', value: studioId }, setNotifications, mapNotificationFromDb, useSupabase);
+
+  // Pastille PWA sur l'icône (iOS/Android) : nombre de notifications non lues
+  useEffect(() => {
+    const unread = notifications.filter((n) => !n.read).length;
+    updateAppBadge(unread).catch(() => {});
+  }, [notifications]);
 
   // Load data from Supabase or use mocks
   const loadAllData = useCallback(async (sid: string) => {

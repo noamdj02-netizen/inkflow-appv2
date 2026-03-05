@@ -6,8 +6,9 @@
 import { wrapEmailLayout, escapeHtml } from "../_shared/emailLayout.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
-const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
+/** URL absolue de l'app. En prod : https://app.ink-flow.me. Définir APP_URL dans Supabase Secrets. */
+const APP_URL = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
 
 interface Payload {
   clientEmail: string;
@@ -65,7 +66,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const conversationUrl = `${SITE_URL}/c/${payload.threadId}`;
+    const conversationUrl = `${APP_URL}/c/${payload.threadId}`;
     const html = buildEmailHtml(payload, conversationUrl);
     const subject = "Bonne nouvelle ! Le studio a accepté votre projet 🎨";
 

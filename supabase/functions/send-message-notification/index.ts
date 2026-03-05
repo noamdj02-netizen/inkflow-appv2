@@ -10,7 +10,8 @@ import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayou
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+/** URL absolue de l'app. En prod : https://app.ink-flow.me. Définir APP_URL dans Supabase Secrets. */
+const APP_URL = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -81,7 +82,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const conversationUrl = `${SITE_URL}/dashboard`;
+    const conversationUrl = `${APP_URL}/dashboard`;
     if (payload.type === "to_client") {
       if (!payload.clientEmail || !payload.clientName) {
         return new Response(
@@ -94,7 +95,7 @@ Deno.serve(async (req: Request) => {
         payload.studioName || "Le studio",
         payload.senderName,
         payload.messagePreview,
-        `${SITE_URL}/c/${payload.threadId}`
+        `${APP_URL}/c/${payload.threadId}`
       );
       const sent = await sendEmail({
         to: [payload.clientEmail],
