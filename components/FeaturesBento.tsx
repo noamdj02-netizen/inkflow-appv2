@@ -363,13 +363,13 @@ const MiniSecurityScore: React.FC = () => {
 export const FeaturesBento: React.FC = () => {
   const { ref, isVisible } = useIntersectionAnimation(0.08);
   return (
-    <section id="features" className={`py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-neutral-50/50 transition-opacity duration-700 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+    <section id="features" className={`py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-neutral-100 dark:bg-zinc-900/80 text-neutral-900 dark:text-white transition-opacity duration-700 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       <div ref={ref} className={`max-w-7xl mx-auto animate-on-scroll ${isVisible ? 'is-visible' : ''}`}>
-        <div className="text-center mb-12 sm:mb-20">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 px-2 tracking-tight">
+        <div className="text-center mb-10 sm:mb-20">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 px-2 tracking-tight text-neutral-900 dark:text-white">
             Tout ce dont vous avez besoin
           </h2>
-          <p className="text-base sm:text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto px-2">
+          <p className="text-base sm:text-lg md:text-xl text-neutral-600 dark:text-zinc-400 max-w-2xl mx-auto px-2">
             Une plateforme complète pour gérer votre activité de tatoueur professionnel
           </p>
         </div>
@@ -385,8 +385,8 @@ export const FeaturesBento: React.FC = () => {
                   <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
                     <Calendar className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-bold mb-2">Réservations en ligne 24/7</h3>
-                  <p className="text-neutral-700 text-sm sm:text-base max-w-sm">
+                  <h3 className="text-xl sm:text-2xl font-bold mb-2 text-neutral-900 dark:text-white">Réservations en ligne 24/7</h3>
+                  <p className="text-neutral-700 dark:text-zinc-300 text-sm sm:text-base max-w-sm">
                     Vos clients réservent directement en ligne. Calendrier synchronisé, notifications automatiques et rappels.
                   </p>
                 </div>
@@ -396,7 +396,7 @@ export const FeaturesBento: React.FC = () => {
           </div>
 
           {/* ---- 2. Paiements Stripe (fond noir) ---- */}
-          <div className="bg-neutral-900 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden group hover:shadow-xl hover:shadow-neutral-900/20 transition-all duration-300">
+          <div className="bg-neutral-900 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden group hover:shadow-xl hover:shadow-neutral-900/20 transition-all duration-300 [&_h3]:text-white [&_p]:text-neutral-400">
             <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
             <div className="relative z-10">
               <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-4 backdrop-blur-sm">
@@ -417,8 +417,8 @@ export const FeaturesBento: React.FC = () => {
               <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-2">Galerie Flash</h3>
-              <p className="text-neutral-700 mb-4 text-sm">
+              <h3 className="text-xl font-bold mb-2 text-neutral-900 dark:text-white">Galerie Flash</h3>
+              <p className="text-neutral-700 dark:text-zinc-300 mb-4 text-sm">
                 Publiez vos flashs avec prix. Vos clients réservent en 2 clics.
               </p>
               <MiniFlashGallery />
@@ -430,8 +430,8 @@ export const FeaturesBento: React.FC = () => {
             <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center mb-4">
               <Users className="w-6 h-6 text-neutral-900" />
             </div>
-            <h3 className="text-xl font-bold mb-1">CRM Client</h3>
-            <p className="text-neutral-700 text-sm">
+            <h3 className="text-xl font-bold mb-1 text-neutral-900 dark:text-white">CRM Client</h3>
+            <p className="text-neutral-700 dark:text-zinc-400 text-sm">
               Historique complet, notes privées, photos des tatouages précédents.
             </p>
             <MiniClientProfile />
@@ -442,8 +442,8 @@ export const FeaturesBento: React.FC = () => {
             <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
               <Zap className="w-6 h-6 text-white" />
             </div>
-            <h3 className="text-xl font-bold mb-1">Automatisation</h3>
-            <p className="text-neutral-700 text-sm">
+            <h3 className="text-xl font-bold mb-1 text-neutral-900 dark:text-white">Automatisation</h3>
+            <p className="text-neutral-700 dark:text-zinc-400 text-sm">
               Confirmations, rappels et formulaires de consentement — tout est automatique.
             </p>
             <MiniAutomationTimeline />
@@ -456,8 +456,8 @@ export const FeaturesBento: React.FC = () => {
                 <div className="w-12 h-12 bg-zinc-600 dark:bg-zinc-500 rounded-xl flex items-center justify-center mb-4">
                   <Shield className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl sm:text-2xl font-bold mb-3">Sécurisé et Conforme</h3>
-                <p className="text-neutral-700 text-sm sm:text-base mb-4">
+                <h3 className="text-xl sm:text-2xl font-bold mb-3 text-neutral-900 dark:text-white">Sécurisé et Conforme</h3>
+                <p className="text-neutral-700 dark:text-zinc-400 text-sm sm:text-base mb-4">
                   Hébergement européen, RGPD compliant, backup automatique.
                   Vos données et celles de vos clients sont protégées.
                 </p>

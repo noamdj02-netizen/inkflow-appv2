@@ -1,6 +1,5 @@
 import React from 'react';
-import { Star, Check, ArrowRight, TrendingUp, User } from 'lucide-react';
-import { Logo } from './Logo';
+import { Star, Check, ArrowRight } from 'lucide-react';
 
 const FEATURES = [
   'Réservations en ligne 24/7',
@@ -11,112 +10,68 @@ const FEATURES = [
 
 export const HeroSection: React.FC = () => {
   return (
-    <section className="relative z-10 bg-[#fafafa] dark:bg-zinc-950 overflow-hidden">
-      {/* Grille pointillée subtile */}
-      <div
-        className="absolute inset-0 opacity-[0.4] dark:opacity-20 pointer-events-none"
-        style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
-          backgroundSize: '24px 24px',
-        }}
-      />
-
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 lg:pt-28 pb-20 sm:pb-28 lg:pb-36">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Colonne gauche */}
-          <div>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm mb-6">
-              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+    <section className="relative z-10 bg-[#f5f5f7] dark:bg-zinc-950 overflow-hidden">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-[calc(5rem+env(safe-area-inset-top))] sm:pt-24 lg:pt-28 pb-12 sm:pb-20 lg:pb-36">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-16 items-center">
+          {/* Colonne gauche — titre + CTA en premier sur mobile */}
+          <div className="order-1 lg:order-1 text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/90 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-sm mb-4 sm:mb-6">
+              <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 fill-amber-500 flex-shrink-0" />
+              <span className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 Déjà utilisé par 500+ tatoueurs
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-zinc-900 dark:text-white tracking-tight mb-6">
+            <h1 className="text-2xl min-[375px]:text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-zinc-900 dark:text-white tracking-tight mb-4 sm:mb-6 leading-tight">
               Gagnez{' '}
-              <span className="bg-amber-300/70 dark:bg-amber-500/30 text-zinc-900 dark:text-white px-1 rounded">
+              <span className="bg-amber-300/80 dark:bg-amber-500/40 text-zinc-900 dark:text-white px-1.5 rounded">
                 5 heures
               </span>{' '}
               par semaine
             </h1>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-xl mb-8 leading-relaxed">
+            <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400 max-w-xl mx-auto lg:mx-0 mb-6 sm:mb-8 leading-relaxed">
               La plateforme tout-en-un pour tatoueurs : réservations, paiements Stripe, galerie Flash, et CRM.
               Concentrez-vous sur votre art, on s&apos;occupe du reste.
             </p>
-            <ul className="space-y-3 mb-8">
+            <ul className="space-y-2 sm:space-y-3 mb-6 sm:mb-8 max-w-md mx-auto lg:mx-0">
               {FEATURES.map((f) => (
-                <li key={f} className="flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
-                  <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" strokeWidth={2.5} />
+                <li key={f} className="flex items-center gap-3 text-zinc-700 dark:text-zinc-300 text-sm sm:text-base">
+                  <Check className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 flex-shrink-0" strokeWidth={2.5} />
                   <span>{f}</span>
                 </li>
               ))}
             </ul>
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center lg:justify-start gap-3 sm:gap-4">
               <a
                 href="/signup"
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold text-base hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors active:scale-[0.98]"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 sm:px-6 sm:py-3.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold text-sm sm:text-base hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors active:scale-[0.98] min-h-[48px] touch-manipulation"
               >
                 Commencer gratuitement
                 <ArrowRight className="w-4 h-4" />
               </a>
               <a
                 href="/demo"
-                className="inline-flex items-center px-6 py-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white font-semibold text-base hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors active:scale-[0.98]"
+                className="inline-flex items-center justify-center px-5 py-3.5 sm:px-6 sm:py-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white font-semibold text-sm sm:text-base hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors active:scale-[0.98] min-h-[48px] touch-manipulation"
               >
                 Voir la démo
               </a>
             </div>
-            <p className="mt-4 flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="mt-4 flex items-center justify-center lg:justify-start gap-2 text-sm text-zinc-500 dark:text-zinc-400">
               <Check className="w-4 h-4 text-emerald-500" strokeWidth={2.5} />
               14 jours d&apos;essai
             </p>
           </div>
 
-          {/* Colonne droite — mockup dashboard Revenus */}
-          <div className="flex justify-center lg:justify-end">
-            <div
-              className="relative w-full max-w-[380px] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden"
-              style={{ transform: 'rotate(3deg)' }}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
-                <div className="flex items-center gap-2">
-                  <Logo size="sm" className="rounded-lg" />
-                  <span className="font-semibold text-zinc-900 dark:text-white">InkFlow Revenus</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
-                    <User className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
-                  </div>
-                  <span className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400">
-                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                    En direct
-                  </span>
-                </div>
-              </div>
-              {/* Bloc principal revenus */}
-              <div className="px-5 py-6 bg-zinc-900 dark:bg-zinc-950">
-                <div className="text-zinc-500 dark:text-zinc-400 text-sm font-medium mb-1">CE MOIS</div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-white">2340€</span>
-                </div>
-                <div className="mt-2 flex items-center gap-1.5 text-sm text-emerald-500">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>+18% vs mois dernier</span>
-                </div>
-              </div>
-              {/* Cartes jour / semaine */}
-              <div className="p-4 flex gap-3">
-                <div className="flex-1 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1">
-                    Aujourd&apos;hui
-                  </div>
-                  <div className="text-xl font-bold text-zinc-900 dark:text-white">450€</div>
-                </div>
-                <div className="flex-1 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1">
-                    Cette semaine
-                  </div>
-                  <div className="text-xl font-bold text-zinc-900 dark:text-white">1120€</div>
+          {/* Colonne droite — mockup téléphone, en dessous du titre + CTA sur mobile */}
+          <div className="order-2 lg:order-2 flex justify-center lg:justify-end overflow-hidden">
+            <div className="relative -rotate-3 sm:-rotate-6 scale-90 sm:scale-100 origin-center">
+              <div className="relative w-[200px] min-[375px]:w-[220px] sm:w-[260px] lg:w-[300px] aspect-[9/19] rounded-[2rem] sm:rounded-[2.5rem] bg-zinc-900 dark:bg-zinc-950 p-2 sm:p-2.5 shadow-2xl shadow-zinc-900/30 sm:shadow-zinc-900/40 ring-2 sm:ring-4 ring-zinc-800/60">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 sm:w-20 h-4 sm:h-5 bg-zinc-900 rounded-b-lg sm:rounded-b-xl z-10" />
+                <div className="w-full h-full rounded-[1.5rem] sm:rounded-[2rem] overflow-hidden bg-white">
+                  <img
+                    src="/images/hero-dashboard-mockup.png"
+                    alt="Dashboard InkFlow — Accueil"
+                    className="w-full h-full object-cover object-top"
+                  />
                 </div>
               </div>
             </div>

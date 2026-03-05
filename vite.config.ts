@@ -27,6 +27,10 @@ export default defineConfig(({ mode }) => {
             ]
           : []),
         VitePWA({
+          disable: process.env.DISABLE_PWA === '1',
+          strategies: 'injectManifest',
+          srcDir: 'public',
+          filename: 'sw.js',
           registerType: 'autoUpdate',
           includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon-180x180.png', 'icon-ios-1024.png'],
           manifest: {
@@ -50,30 +54,10 @@ export default defineConfig(({ mode }) => {
               { src: '/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
             ]
           },
-          workbox: {
-            maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB (images landing > 2 MB)
-            globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-            runtimeCaching: [
-              {
-                urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
-                handler: 'CacheFirst',
-                options: {
-                  cacheName: 'google-fonts-cache',
-                  expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-                  cacheableResponse: { statuses: [0, 200] }
-                }
-              },
-              {
-                urlPattern: /^https:\/\/.*supabase\.co\/.*/i,
-                handler: 'NetworkFirst',
-                options: {
-                  cacheName: 'supabase-api-cache',
-                  expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
-                  networkTimeoutSeconds: 10,
-                  cacheableResponse: { statuses: [0, 200] }
-                }
-              }
-            ]
+          injectManifest: {
+            globPatterns: ['**/*.{js,html,ico,png,svg,woff2}'],
+            globIgnores: ['**/node_modules/**', '**/sw.js', '**/workbox-*.js', '**/*.map', '**/*.css'],
+            maximumFileSizeToCacheInBytes: 3 * 1024 * 1024 // 3 MB (images landing > 2 MB)
           }
         })
       ],

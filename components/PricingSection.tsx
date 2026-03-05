@@ -73,10 +73,10 @@ export const PricingSection: React.FC = () => {
   };
 
   return (
-    <section id="pricing" className={`py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-white transition-opacity duration-700 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+    <section id="pricing" className={`py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-white text-neutral-900 transition-opacity duration-700 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       <div ref={ref} className={`max-w-7xl mx-auto animate-on-scroll ${isVisible ? 'is-visible' : ''}`}>
-        <div className="text-center mb-12 sm:mb-20">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 px-2 tracking-tight">
+        <div className="text-center mb-10 sm:mb-20">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 px-2 tracking-tight">
             Un tarif simple et transparent
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-neutral-600 mb-8 sm:mb-10 px-2 max-w-2xl mx-auto">
@@ -144,10 +144,10 @@ export const PricingSection: React.FC = () => {
                 {plan.priceMonthly ? (
                   <>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-bold">
+                      <span className={`text-5xl font-bold ${plan.popular ? 'text-white' : 'text-neutral-900'}`}>
                         €{isAnnual ? plan.priceAnnual : plan.priceMonthly}
                       </span>
-                      <span className={plan.popular ? 'text-neutral-400' : 'text-neutral-600'}>
+                      <span className={plan.popular ? 'text-neutral-400' : 'text-neutral-600 dark:text-neutral-500'}>
                         /mois
                       </span>
                     </div>
