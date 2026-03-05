@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useSupabaseEnabled } from './useSupabaseEnabled';
 import {
   ensureStudio,
   getStudioByEmail,
@@ -34,12 +35,6 @@ const EMPTY_ARRAYS = {
   notifications: [] as Notification[],
 };
 
-function useSupabaseEnabled(): boolean {
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  return !!(url && key && url.length > 10);
-}
-
 export const useSupabaseDashboard = () => {
   const { user } = useAuth();
   const toast = useToast();
@@ -52,15 +47,11 @@ export const useSupabaseDashboard = () => {
   const [flashDesigns, setFlashDesigns] = useState<FlashDesign[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [useSupabase, setUseSupabase] = useState(false);
+  const useSupabase = useSupabaseEnabled();
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [connectionError, setConnectionError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const initializedRef = useRef(false);
-
-  useEffect(() => {
-    setUseSupabase(useSupabaseEnabled());
-  }, []);
 
   // Écouter le mode hors-ligne (navigateur)
   useEffect(() => {

@@ -226,14 +226,14 @@ const LandingPage: React.FC = () => {
   }, []);
 
   return (
-    <div ref={scrollRef} className="landing-scroll !bg-white text-neutral-900 selection:bg-neutral-900 selection:text-white">
+    <div ref={scrollRef} className="landing-scroll bg-[#0a0a0f] text-white selection:bg-white/20 selection:text-white">
       <SEO
         title="InkFlow | Le logiciel de gestion et réservation pour Tatoueurs"
         description="Gagnez du temps avec InkFlow. Agenda, acomptes automatisés (Stripe), galerie de flashs et CRM pensés spécifiquement pour les studios de tatouage."
         canonical="/"
         schema={[organizationSchema, websiteSchema]}
       />
-      <Navbar scrolled={scrolled} />
+      <Navbar scrolled={scrolled} variant="landing-dark" />
 
       <main className="relative z-10">
         <HeroSection />

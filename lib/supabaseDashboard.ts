@@ -209,8 +209,11 @@ export function mapClientFromDb(row: Record<string, unknown>): Client {
   };
 }
 
+/** Limite par défaut pour éviter surcharge mémoire (pagination à ajouter si > 500) */
+const DEFAULT_LIST_LIMIT = 500;
+
 export async function getClientsFromSupabase(studioId: string): Promise<Client[]> {
-  const { data, error } = await supabase.from('inkflow_clients').select('*').eq('studio_id', studioId).order('updated_at', { ascending: false });
+  const { data, error } = await supabase.from('inkflow_clients').select('*').eq('studio_id', studioId).order('updated_at', { ascending: false }).limit(DEFAULT_LIST_LIMIT);
   if (error) throw error;
   return (data || []).map(mapClientFromDb);
 }
@@ -284,7 +287,7 @@ export function mapAppointmentFromDb(row: Record<string, unknown>): Appointment 
 }
 
 export async function getAppointmentsFromSupabase(studioId: string): Promise<Appointment[]> {
-  const { data, error } = await supabase.from('inkflow_appointments').select('*').eq('studio_id', studioId).order('date', { ascending: true }).order('time', { ascending: true });
+  const { data, error } = await supabase.from('inkflow_appointments').select('*').eq('studio_id', studioId).order('date', { ascending: true }).order('time', { ascending: true }).limit(DEFAULT_LIST_LIMIT);
   if (error) throw error;
   return (data || []).map(mapAppointmentFromDb);
 }
@@ -347,7 +350,7 @@ export function mapFlashFromDb(row: Record<string, unknown>): FlashDesign {
 }
 
 export async function getFlashDesignsFromSupabase(studioId: string): Promise<FlashDesign[]> {
-  const { data, error } = await supabase.from('inkflow_flash_designs').select('*').eq('studio_id', studioId).order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('inkflow_flash_designs').select('*').eq('studio_id', studioId).order('created_at', { ascending: false }).limit(DEFAULT_LIST_LIMIT);
   if (error) throw error;
   return (data || []).map(mapFlashFromDb);
 }
@@ -426,7 +429,8 @@ export async function getProjectRequestsFromSupabase(studioId: string): Promise<
     .from('inkflow_project_requests')
     .select('*')
     .eq('studio_id', studioId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(DEFAULT_LIST_LIMIT);
   if (error) throw error;
   return (data || []).map(mapProjectRequestFromDb);
 }

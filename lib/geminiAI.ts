@@ -1,29 +1,14 @@
-const GEMINI_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) || '';
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-
-interface GeminiResponse {
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{ text?: string }>;
-    };
-  }>;
-}
+import { supabase, isSupabaseConfigured } from './supabase';
 
 async function callGemini(prompt: string): Promise<string> {
-  if (!GEMINI_API_KEY) throw new Error('Gemini API key not configured');
+  if (!isSupabaseConfigured()) throw new Error('Gemini requires Supabase (API key is server-side)');
 
-  const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
-    }),
+  const { data, error } = await supabase.functions.invoke<{ text: string }>('call-gemini', {
+    body: { prompt },
   });
 
-  if (!res.ok) throw new Error(`Gemini API error: ${res.status}`);
-  const data: GeminiResponse = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  if (error) throw new Error(error.message || 'Gemini Edge Function failed');
+  return data?.text ?? '';
 }
 
 export async function suggestPrice(description: string, placement: string, size: string): Promise<string> {
@@ -79,6 +64,7 @@ Réponds avec uniquement les tags séparés par des virgules, sans numérotation
   return result.split(',').map(tag => tag.trim()).filter(Boolean);
 }
 
+/** Gemini est disponible via l'Edge Function lorsque Supabase est configuré. */
 export function isGeminiConfigured(): boolean {
-  return !!GEMINI_API_KEY;
+  return isSupabaseConfigured();
 }

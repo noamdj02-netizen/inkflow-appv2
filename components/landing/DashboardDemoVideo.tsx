@@ -161,10 +161,10 @@ export const DashboardDemoVideo: React.FC = () => {
       {/* Glow effect */}
       <div className="absolute -inset-4 bg-neutral-200/30 rounded-[2rem] blur-2xl -z-10" />
 
-      <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl shadow-neutral-900/10 border border-neutral-200/80 bg-white/95 backdrop-blur-sm">
+      <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl shadow-black/20 border border-white/5 bg-white/5 backdrop-blur-xl">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-200 to-transparent" />
 
-        <div className="bg-gradient-to-br from-neutral-50 to-white p-6 sm:p-8 lg:p-10">
+        <div className="bg-white/5 p-6 sm:p-8 lg:p-10">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">

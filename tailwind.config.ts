@@ -4,6 +4,9 @@ export default {
   content: ['**/*.tsx', '**/*.ts'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
       height: {
         screen: '100dvh',
       },

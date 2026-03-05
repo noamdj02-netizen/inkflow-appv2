@@ -1,110 +1,126 @@
 import React from 'react';
-import { ArrowRight, Star, CheckCircle2 } from 'lucide-react';
+import { Star, Check, ArrowRight, TrendingUp, User } from 'lucide-react';
 import { Logo } from './Logo';
-import { TrustedLogos } from './TrustedLogos';
-import { ArtistMascot } from './Mascots';
-import { DashboardDemoVideo } from './landing/DashboardDemoVideo';
+
+const FEATURES = [
+  'Réservations en ligne 24/7',
+  'Acomptes automatiques via Stripe',
+  'Votre vitrine et mini site web',
+  'CRM client intégré',
+];
 
 export const HeroSection: React.FC = () => {
   return (
-    <section className="relative min-h-[90vh] sm:min-h-[85vh] flex flex-col justify-center pt-28 sm:pt-32 md:pt-36 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      {/* Background - fond blanc ; grille et mesh très discrets pour garder un peu de texture */}
-      <div className="absolute inset-0 -z-10 bg-white">
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, #0a0a0a 1px, transparent 1px),
-              linear-gradient(to bottom, #0a0a0a 1px, transparent 1px)
-            `,
-            backgroundSize: '64px 64px',
-          }}
-        />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-neutral-100/50 rounded-full blur-[120px] -z-10" />
-        <div className="absolute bottom-0 right-0 w-[500px] h-[400px] bg-neutral-100/40 rounded-full blur-[100px] -z-10" />
-        <div className="absolute top-1/2 left-0 w-[400px] h-[400px] bg-neutral-100/30 rounded-full blur-[80px] -z-10" />
-      </div>
+    <section className="relative z-10 bg-[#fafafa] dark:bg-zinc-950 overflow-hidden">
+      {/* Grille pointillée subtile */}
+      <div
+        className="absolute inset-0 opacity-[0.4] dark:opacity-20 pointer-events-none"
+        style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
+          backgroundSize: '24px 24px',
+        }}
+      />
 
-      <div className="max-w-7xl mx-auto w-full">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 xl:gap-24 items-center">
-          {/* Left content */}
-          <div className="relative space-y-8 sm:space-y-10 text-center lg:text-left">
-            <div
-              className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2.5 rounded-full border border-neutral-200/80 shadow-sm opacity-0 animate-fade-in-up stagger-0"
-              style={{ animationFillMode: 'forwards' }}
-            >
-              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-              <span className="text-sm font-semibold text-neutral-700">Déjà utilisé par 500+ tatoueurs</span>
-            </div>
-
-            <h1 className="relative text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[4.5rem] font-bold leading-[1.05] tracking-tight text-neutral-900">
-              Gagnez{' '}
-              <span className="relative inline-block">
-                <span className="relative z-10">5 heures</span>
-                <span className="absolute inset-0 bg-amber-200/60 -z-0" />
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 lg:pt-28 pb-20 sm:pb-28 lg:pb-36">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Colonne gauche */}
+          <div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm mb-6">
+              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Déjà utilisé par 500+ tatoueurs
               </span>
-              <br className="hidden sm:block" />
-              {' '}par semaine
-            </h1>
-
-            <p className="text-base sm:text-lg md:text-xl text-neutral-600 leading-relaxed max-w-xl mx-auto lg:mx-0">
-              La plateforme tout-en-un pour tatoueurs : réservations, paiements Stripe, galerie Flash,
-              et CRM. Concentrez-vous sur votre art, on s'occupe du reste.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto lg:mx-0 opacity-0 animate-fade-in-up stagger-3" style={{ animationFillMode: 'forwards' }}>
-              {[
-                'Réservations en ligne 24/7',
-                'Acomptes automatiques via Stripe',
-                'Votre vitrine et mini site web',
-                'CRM client intégré'
-              ].map((benefit, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                  <span className="text-neutral-700 font-medium text-left">{benefit}</span>
-                </div>
-              ))}
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-2 opacity-0 animate-fade-in-up stagger-4" style={{ animationFillMode: 'forwards' }}>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-zinc-900 dark:text-white tracking-tight mb-6">
+              Gagnez{' '}
+              <span className="bg-amber-300/70 dark:bg-amber-500/30 text-zinc-900 dark:text-white px-1 rounded">
+                5 heures
+              </span>{' '}
+              par semaine
+            </h1>
+            <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-xl mb-8 leading-relaxed">
+              La plateforme tout-en-un pour tatoueurs : réservations, paiements Stripe, galerie Flash, et CRM.
+              Concentrez-vous sur votre art, on s&apos;occupe du reste.
+            </p>
+            <ul className="space-y-3 mb-8">
+              {FEATURES.map((f) => (
+                <li key={f} className="flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
+                  <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" strokeWidth={2.5} />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap items-center gap-4">
               <a
                 href="/signup"
-                className="group inline-flex items-center justify-center gap-2 bg-neutral-900 text-white px-8 py-4 rounded-2xl font-semibold text-base hover:bg-neutral-800 transition-all duration-300 shadow-lg shadow-neutral-900/20 hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold text-base hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors active:scale-[0.98]"
               >
                 Commencer gratuitement
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform duration-300" />
+                <ArrowRight className="w-4 h-4" />
               </a>
               <a
                 href="/demo"
-                className="inline-flex items-center justify-center gap-2 bg-white text-neutral-900 px-8 py-4 rounded-2xl font-semibold text-base border-2 border-neutral-200 hover:border-neutral-900 hover:bg-neutral-50 transition-all duration-300"
+                className="inline-flex items-center px-6 py-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white font-semibold text-base hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors active:scale-[0.98]"
               >
                 Voir la démo
               </a>
             </div>
+            <p className="mt-4 flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+              <Check className="w-4 h-4 text-emerald-500" strokeWidth={2.5} />
+              14 jours d&apos;essai
+            </p>
+          </div>
 
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 pt-2 text-sm text-neutral-500 opacity-0 animate-fade-in-up stagger-5" style={{ animationFillMode: 'forwards' }}>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>14 jours d'essai</span>
+          {/* Colonne droite — mockup dashboard Revenus */}
+          <div className="flex justify-center lg:justify-end">
+            <div
+              className="relative w-full max-w-[380px] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden"
+              style={{ transform: 'rotate(3deg)' }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <Logo size="sm" className="rounded-lg" />
+                  <span className="font-semibold text-zinc-900 dark:text-white">InkFlow Revenus</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center">
+                    <User className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+                  </div>
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                    En direct
+                  </span>
+                </div>
+              </div>
+              {/* Bloc principal revenus */}
+              <div className="px-5 py-6 bg-zinc-900 dark:bg-zinc-950">
+                <div className="text-zinc-500 dark:text-zinc-400 text-sm font-medium mb-1">CE MOIS</div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold text-white">2340€</span>
+                </div>
+                <div className="mt-2 flex items-center gap-1.5 text-sm text-emerald-500">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>+18% vs mois dernier</span>
+                </div>
+              </div>
+              {/* Cartes jour / semaine */}
+              <div className="p-4 flex gap-3">
+                <div className="flex-1 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1">
+                    Aujourd&apos;hui
+                  </div>
+                  <div className="text-xl font-bold text-zinc-900 dark:text-white">450€</div>
+                </div>
+                <div className="flex-1 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1">
+                    Cette semaine
+                  </div>
+                  <div className="text-xl font-bold text-zinc-900 dark:text-white">1120€</div>
+                </div>
               </div>
             </div>
           </div>
-
-          {/* Right - Démo vidéo animée */}
-          <div className="relative mt-8 lg:mt-0 flex justify-center lg:justify-end opacity-0 animate-fade-in-up stagger-6" style={{ animationFillMode: 'forwards' }}>
-            <div className="absolute bottom-6 left-2 sm:bottom-8 sm:left-8 lg:bottom-12 lg:left-0 z-10">
-              <ArtistMascot size={72} className="animate-float opacity-95" style={{ animationDelay: '0.2s' }} />
-            </div>
-            <DashboardDemoVideo />
-          </div>
-        </div>
-
-        {/* Trusted by - logos entreprises */}
-        <div className="mt-16 sm:mt-20 pt-12 sm:pt-16 border-t border-neutral-200/60 -mx-4 sm:-mx-6 lg:-mx-8">
-          <p className="text-center text-sm font-medium text-neutral-500 mb-8">
-            Ils nous font confiance
-          </p>
-          <TrustedLogos />
         </div>
       </div>
     </section>

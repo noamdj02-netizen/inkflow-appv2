@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Copy, Check, ExternalLink, Store } from 'lucide-react';
 import { getStudioId } from '../../lib/supabase';
+import { getStudioSlug } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
+import { useSupabaseEnabled } from '../../hooks/useSupabaseEnabled';
 import { getVitrineLinkSettingsFromSupabase, saveVitrineLinkSettingsToSupabase } from '../../lib/supabaseDashboard';
 
 const STORAGE_KEY = 'inkflow-vitrine-settings';
@@ -24,18 +26,6 @@ const defaultSettings: VitrineSettings = {
   openButtonText: "Ouvrir"
 };
 
-function getStudioSlug(studioName: string | undefined): string {
-  const s = (studioName ?? '').toString().trim() || 'mon-studio';
-  return s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-') // collapse multiple dashes
-    || 'mon-studio';
-}
-
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
@@ -55,12 +45,6 @@ interface VitrineLinkButtonProps {
   studioSlug?: string | null;
   variant?: 'default' | 'compact';
   showLabel?: boolean;
-}
-
-function useSupabaseEnabled(): boolean {
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  return !!(url && key && url.length > 10);
 }
 
 export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({

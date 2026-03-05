@@ -24,7 +24,7 @@ export const TrustedLogos: React.FC = () => {
             <img
               src={logo.src}
               alt={logo.name}
-              className="max-h-full max-w-[56px] sm:max-w-[64px] w-auto object-contain mix-blend-multiply"
+              className="max-h-full max-w-[56px] sm:max-w-[64px] w-auto object-contain opacity-60 hover:opacity-80"
               loading="lazy"
             />
           </div>

@@ -2,11 +2,8 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { ensureStudio } from '../lib/supabaseDashboard';
+import { useSupabaseEnabled } from '../hooks/useSupabaseEnabled';
 import { DEMO_ACCOUNT_EMAIL } from '../data/demoData';
-
-/** Évalué une seule fois au chargement du module pour éviter des appels répétés à chaque rendu. */
-const IS_SUPABASE_AUTH_ENABLED =
-  !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && (import.meta.env.VITE_SUPABASE_URL as string).length > 10);
 
 function appUserFromSupabase(sessionUser: { id: string; email?: string; user_metadata?: Record<string, unknown> }): User {
   const email = sessionUser.email ?? '';
@@ -66,9 +63,10 @@ export const REDIRECT_AFTER_LOGIN_KEY = 'redirectAfterLogin';
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(getStoredUser);
   const [authLoading, setAuthLoading] = useState(true);
+  const isSupabaseAuthEnabled = useSupabaseEnabled();
 
   useEffect(() => {
-    if (!IS_SUPABASE_AUTH_ENABLED) {
+    if (!isSupabaseAuthEnabled) {
       setAuthLoading(false);
       return;
     }
@@ -103,14 +101,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const loginWithGoogle = useCallback(async () => {
-    if (!IS_SUPABASE_AUTH_ENABLED) return;
+    if (!isSupabaseAuthEnabled) return;
     const redirectTo = `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo },
     });
     if (error) throw new Error(error.message);
-  }, []);
+  }, [isSupabaseAuthEnabled]);
 
   const login = useCallback(async (email: string, password: string) => {
     // Compte démo : connexion immédiate sans Supabase, avec fausses données pour captures d'écran
@@ -127,7 +125,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem('inkflow_user', JSON.stringify(demoUser));
       return;
     }
-    if (IS_SUPABASE_AUTH_ENABLED) {
+    if (isSupabaseAuthEnabled) {
       const LOGIN_TIMEOUT_MS = 15000;
       const loginPromise = supabase.auth.signInWithPassword({ email, password });
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -154,10 +152,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     setUser(mockUser);
     localStorage.setItem('inkflow_user', JSON.stringify(mockUser));
-  }, []);
+  }, [isSupabaseAuthEnabled]);
 
   const signup = useCallback(async (email: string, password: string, name: string, studioName: string) => {
-    if (IS_SUPABASE_AUTH_ENABLED) {
+    if (isSupabaseAuthEnabled) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -185,13 +183,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     setUser(newUser);
     localStorage.setItem('inkflow_user', JSON.stringify(newUser));
-  }, []);
+  }, [isSupabaseAuthEnabled]);
 
   const logout = useCallback(() => {
-    if (IS_SUPABASE_AUTH_ENABLED) supabase.auth.signOut();
+    if (isSupabaseAuthEnabled) supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem('inkflow_user');
-  }, []);
+  }, [isSupabaseAuthEnabled]);
 
   const updateUser = useCallback((updates: Partial<User>) => {
     setUser(prev => {
@@ -212,9 +210,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       logout,
       updateUser,
       isAuthenticated: !!user,
-      isGoogleAuthEnabled: IS_SUPABASE_AUTH_ENABLED,
+      isGoogleAuthEnabled: isSupabaseAuthEnabled,
     }),
-    [user, authLoading, login, loginWithGoogle, signup, logout, updateUser]
+    [user, authLoading, login, loginWithGoogle, signup, logout, updateUser, isSupabaseAuthEnabled]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

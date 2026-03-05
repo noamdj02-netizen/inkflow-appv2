@@ -12,7 +12,9 @@
     "generate-pwa-icons": "node scripts/generate-pwa-icons.mjs",
     "resend:templates": "node scripts/create-resend-templates.mjs",
     "email:embed-hero": "node scripts/embed-email-hero.mjs",
-    "seed:mockup": "node --env-file=.env.local scripts/seed-mockup-data.mjs"
+    "seed:mockup": "node --env-file=.env.local scripts/seed-mockup-data.mjs",
+    "seed:demo": "node --env-file=.env.local scripts/seed-demo-marketing.mjs",
+    "seed:demo:clean": "node --env-file=.env.local scripts/seed-demo-marketing.mjs --clean"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -26,6 +28,7 @@
     "@supabase/supabase-js": "^2.95.3",
     "@tailwindcss/vite": "^4.1.18",
     "@vercel/analytics": "^1.6.1",
+    "date-fns": "^4.1.0",
     "framer-motion": "^12.34.3",
     "jspdf": "^4.1.0",
     "lucide-react": "^0.563.0",

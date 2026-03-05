@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { VitrineBookingForm } from '../../components/booking/VitrineBookingForm';
+import { toLocalDateString } from '../../lib/utils';
 import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
 import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 
@@ -103,7 +104,7 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
       const date = new Date(today);
       date.setDate(date.getDate() + i);
       if (date.getDay() !== 0) {
-        dates.push(date.toISOString().split('T')[0]);
+        dates.push(toLocalDateString(date));
       }
     }
     return dates.slice(0, 20);

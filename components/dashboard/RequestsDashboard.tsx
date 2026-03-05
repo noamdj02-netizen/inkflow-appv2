@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { saveAppointmentToSupabase } from '../../lib/supabaseDashboard';
+import { isSlotAvailableForBooking } from '../../lib/supabaseBookings';
 import { sendConversationLinkToClient, sendBookingConfirmation, sendBookingRefusal } from '../../lib/sendNotification';
 import { supabase } from '../../lib/supabase';
 
@@ -246,8 +247,13 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     setDepositError(null);
   };
 
+  const SLOT_UNAVAILABLE_MSG = 'Ce créneau vient d\'être réservé entre-temps';
+
+  const isSlotErrorVisible = (depositError?.includes('créneau') && depositError?.includes('réservé')) ?? false;
+
   const handleGenerateDepositLink = async () => {
     if (!studioId) return;
+    if (isSlotErrorVisible) return;
     const amount = parseFloat(depositAmount.replace(',', '.'));
     if (Number.isNaN(amount) || amount <= 0) {
       toast.error('Indiquez un montant valide (ex: 50)');
@@ -295,6 +301,23 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
 
     // Cas 2 : depuis une demande vitrine (booking) → créer RDV, générer lien, envoyer email auto, confirmer
     if (depositModalBooking && onAddAppointment) {
+      try {
+        const available = await isSlotAvailableForBooking(
+          studioId,
+          depositModalBooking.requestedDate,
+          depositModalBooking.requestedTime ?? null,
+          depositModalBooking.id
+        );
+        if (!available) {
+          setDepositError(SLOT_UNAVAILABLE_MSG);
+          toast.error(SLOT_UNAVAILABLE_MSG);
+          return;
+        }
+      } catch {
+        setDepositError(SLOT_UNAVAILABLE_MSG);
+        toast.error(SLOT_UNAVAILABLE_MSG);
+        return;
+      }
       setDepositLoading(true);
       setDepositUrl(null);
       const now = new Date().toISOString();
@@ -354,7 +377,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           setDepositError(result.error || 'stripe_config');
         }
       } catch (e) {
-        setDepositError(e instanceof Error ? e.message : 'Erreur lors de la création du RDV ou du lien');
+        const msg = e instanceof Error ? e.message : 'Erreur lors de la création du RDV ou du lien';
+        setDepositError(msg);
+        if (msg.includes('créneau') && msg.includes('réservé')) {
+          toast.error(msg);
+        }
       } finally {
         setDepositLoading(false);
       }
@@ -740,9 +767,13 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                   />
                 </div>
                 {depositError && (
-                  <div className="rounded-xl border border-zinc-200 bg-zinc-100 dark:bg-zinc-500/10 dark:border-zinc-700 p-4 min-w-0">
+                  <div className={`rounded-xl border p-4 min-w-0 ${
+                    isSlotErrorVisible
+                      ? 'border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-800'
+                      : 'border-zinc-200 bg-zinc-100 dark:bg-zinc-500/10 dark:border-zinc-700'
+                  }`}>
                     <div className="flex gap-2 items-start min-w-0">
-                      <AlertTriangle className="w-5 h-5 text-zinc-700 dark:text-zinc-400 shrink-0 mt-0.5" />
+                      <AlertTriangle className={`w-5 h-5 shrink-0 mt-0.5 ${isSlotErrorVisible ? 'text-red-600 dark:text-red-400' : 'text-zinc-700 dark:text-zinc-400'}`} />
                       <div className="text-sm min-w-0 break-words">
                         {depositError === 'stripe_config' ? (
                           <>
@@ -759,7 +790,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                             </ul>
                           </>
                         ) : (
-                          <p className="text-zinc-700 dark:text-zinc-400 break-words">{depositError}</p>
+                          <p className={`break-words ${isSlotErrorVisible ? 'text-red-800 dark:text-red-200 font-medium' : 'text-zinc-700 dark:text-zinc-400'}`}>{depositError}</p>
                         )}
                         <a href="/aide#paiement" target="_blank" rel="noopener noreferrer" className="inline-block mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">
                           En savoir plus
@@ -779,7 +810,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                   <button
                     type="button"
                     onClick={handleGenerateDepositLink}
-                    disabled={depositLoading}
+                    disabled={depositLoading || isSlotErrorVisible}
                     className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
                   >
                     {depositLoading ? (

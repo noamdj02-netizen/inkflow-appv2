@@ -4,6 +4,7 @@ import { Logo } from './Logo';
 
 interface NavbarProps {
   scrolled?: boolean;
+  variant?: 'default' | 'landing-dark';
 }
 
 const navLinks = [
@@ -13,7 +14,8 @@ const navLinks = [
   { href: '/#faq', label: 'FAQ' },
 ];
 
-export const Navbar: React.FC<NavbarProps> = () => {
+export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
+  const isLandingDark = variant === 'landing-dark';
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -40,21 +42,20 @@ export const Navbar: React.FC<NavbarProps> = () => {
           top-2 left-4 right-4 w-[calc(100%-2rem)] mx-auto
           md:top-6 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[90%] md:max-w-4xl
           rounded-2xl md:rounded-full
-          bg-white md:bg-white/90
-          dark:bg-white md:dark:bg-black/60
-          md:backdrop-blur-xl
-          border border-gray-200/80 md:border-gray-200/60 md:dark:border-white/10
-          shadow-lg shadow-black/5
           px-4 py-2 md:px-6 md:py-3
           pt-[max(0.5rem,env(safe-area-inset-top))] md:pt-3
           animate-navbar-in
+          ${isLandingDark
+            ? 'bg-white/5 md:bg-white/5 backdrop-blur-xl border border-white/5 text-white'
+            : 'bg-white md:bg-white/90 dark:bg-white md:dark:bg-black/60 md:backdrop-blur-xl border border-gray-200/80 md:border-gray-200/60 md:dark:border-white/10 shadow-lg shadow-black/5'
+          }
         `}
       >
         <div className="flex items-center justify-between gap-3">
           {/* Logo — gauche, contraint h-8, invert pour fond blanc / normal pour fond sombre */}
           <a href="/" className="flex items-center gap-2 min-w-0 shrink-0 active:opacity-80 transition-opacity">
-            <Logo size="sm" className="invert dark:invert-0" />
-            <span className="text-base font-bold tracking-tight text-neutral-900 dark:text-white truncate hidden sm:inline">
+            <Logo size="sm" className={isLandingDark ? 'invert' : 'invert dark:invert-0'} />
+            <span className={`text-base font-bold tracking-tight truncate hidden sm:inline ${isLandingDark ? 'text-white' : 'text-neutral-900 dark:text-white'}`}>
               InkFlow
             </span>
           </a>
@@ -65,7 +66,9 @@ export const Navbar: React.FC<NavbarProps> = () => {
               <a
                 key={link.href}
                 href={link.href}
-                className="px-4 py-2 text-sm font-medium text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white rounded-full hover:bg-white/10 dark:hover:bg-white/10 transition-all duration-200"
+                className={`px-4 py-2 text-sm font-medium rounded-full hover:bg-white/10 transition-all duration-200 ${
+                  isLandingDark ? 'text-zinc-400 hover:text-white' : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white dark:hover:bg-white/10'
+                }`}
               >
                 {link.label}
               </a>
@@ -76,13 +79,17 @@ export const Navbar: React.FC<NavbarProps> = () => {
           <div className="flex items-center gap-1 shrink-0">
             <a
               href="/login"
-              className="hidden md:inline-flex px-4 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white rounded-full hover:bg-white/10 transition-colors"
+              className={`hidden md:inline-flex px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 hover:scale-[1.02] ${
+                isLandingDark ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-white/10'
+              }`}
             >
               Connexion
             </a>
             <a
               href="/signup"
-              className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-sm font-semibold transition-all duration-200 hover:bg-neutral-800 dark:hover:bg-neutral-100 shadow-md hover:shadow-lg"
+              className={`hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 hover:scale-[1.02] ${
+                isLandingDark ? 'bg-white text-[#0a0a0f] hover:bg-zinc-100' : 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100 shadow-md hover:shadow-lg'
+              }`}
             >
               Accès Anticipé
               <ArrowRight className="w-4 h-4" />
@@ -92,7 +99,9 @@ export const Navbar: React.FC<NavbarProps> = () => {
             <button
               type="button"
               onClick={() => setIsOpen(!isOpen)}
-              className="md:hidden p-3 -m-1 rounded-xl text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-white/10 active:bg-neutral-200/80 dark:active:bg-white/15 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation"
+              className={`md:hidden p-3 -m-1 rounded-xl transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation ${
+                isLandingDark ? 'text-zinc-400 hover:bg-white/10 active:bg-white/15' : 'text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-white/10 active:bg-neutral-200/80 dark:active:bg-white/15'
+              }`}
               aria-label={isOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
               aria-expanded={isOpen}
               aria-controls="nav-menu-mobile"

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Mail, FileText, Calendar, Clock, ChevronLeft, ChevronRight, UploadCloud, MapPin, Ruler, X } from 'lucide-react';
 import { createBooking } from '../../lib/supabaseBookings';
+import { toLocalDateString } from '../../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS } from '../../lib/studioAvailability';
 import type { VitrineBookingFormData } from '../../types';
 
@@ -113,7 +114,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
     today.setHours(0, 0, 0, 0);
     if (date < today) return true;
     if (DEFAULT_OFF_DAYS.includes(date.getDay())) return true;
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toLocalDateString(date);
     const available = getAvailableSlotsForDate(dateStr);
     return available.length === 0;
   };
@@ -130,7 +131,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
 
   const handleDateClick = (date: Date) => {
     if (isDateDisabled(date)) return;
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toLocalDateString(date);
     setValue('requestedDate', dateStr);
     setValue('requestedTime', '');
   };
@@ -353,7 +354,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
             <div className="grid grid-cols-7 gap-1">
               {getDaysInMonth(calendarMonth.getFullYear(), calendarMonth.getMonth()).map((d, i) => {
                 if (!d) return <div key={`empty-${i}`} />;
-                const dateStr = d.toISOString().split('T')[0];
+                const dateStr = toLocalDateString(d);
                 const disabled = isDateDisabled(d);
                 const selected = requestedDate === dateStr;
                 return (

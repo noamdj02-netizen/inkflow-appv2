@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
 import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronDown, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,15 +17,16 @@ import { AppointmentCalendar } from './AppointmentCalendar';
 import { AppointmentsView } from './AppointmentsView';
 import { MiniCalendar } from './MiniCalendar';
 import { RequestsDashboard } from './RequestsDashboard';
-import { FinanceDashboard } from './FinanceDashboard';
 import { CareSheetsSettings } from './CareSheetsSettings';
 import { PaymentsSettings } from './PaymentsSettings';
 import { BillingSettings } from './BillingSettings';
 import { PaywallView } from './PaywallView';
 import { AvailabilitySettings } from '../settings/AvailabilitySettings';
 import { VitrineSettings } from '../settings/VitrineSettings';
-import { AnalyticsDashboard } from '../analytics/AnalyticsDashboard';
 import { VitrineLinkButton } from './VitrineLinkButton';
+
+const FinanceDashboard = lazy(() => import('./FinanceDashboard').then(m => ({ default: m.FinanceDashboard })));
+const AnalyticsDashboard = lazy(() => import('../analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
 import { DashboardWidgets, AddWidgetModal, useDashboardWidgets, WidgetCard } from './DashboardWidgets';
 import { SortableOverviewWidgets, type SortableWidgetItem } from './SortableOverviewWidgets';
 import { DashboardOverviewTab } from './DashboardOverviewTab';
@@ -48,6 +49,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { ThemeToggle } from '../ThemeToggle';
 import { useTheme } from 'next-themes';
 import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
+import { safeJsonParse } from '../../lib/utils';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
@@ -149,18 +151,17 @@ export const DashboardPro: React.FC = () => {
   const storageKey = (prefix: string) => `${prefix}_${studioId || user?.email || 'default'}`;
   useEffect(() => {
     if (!user) return;
-    try {
-      const c = localStorage.getItem(storageKey('inkflow_consent'));
-      if (c) setConsentTemplates(JSON.parse(c));
-      const w = localStorage.getItem(storageKey('inkflow_waitlist'));
-      if (w) setWaitlistEntries(JSON.parse(w));
-      const a = localStorage.getItem(storageKey('inkflow_artists'));
-      if (a) setArtistAccounts(JSON.parse(a));
-      const ly = localStorage.getItem(storageKey('inkflow_loyalty_settings'));
-      if (ly) setLoyaltySettings(JSON.parse(ly));
-      const le = localStorage.getItem(storageKey('inkflow_loyalty_entries'));
-      if (le) setLoyaltyEntries(JSON.parse(le));
-    } catch (_) { /* ignore */ }
+    const c = safeJsonParse<{ id: string; title: string; content: string }[]>(localStorage.getItem(storageKey('inkflow_consent')), []);
+    if (c.length > 0) setConsentTemplates(c);
+    const w = safeJsonParse<WaitlistEntry[]>(localStorage.getItem(storageKey('inkflow_waitlist')), []);
+    if (w.length > 0) setWaitlistEntries(w);
+    const a = safeJsonParse<ArtistAccount[]>(localStorage.getItem(storageKey('inkflow_artists')), []);
+    if (a.length > 0) setArtistAccounts(a);
+    const defaultLoyalty: LoyaltySettingsType = { enabled: true, pointsPerEuro: 1, referralBonus: 50, tierThresholds: { silver: 200, gold: 500, platinum: 1000 }, rewards: [{ name: '10% sur prochain tattoo', cost: 100 }, { name: 'Retouche gratuite', cost: 200 }, { name: 'Flash offert', cost: 500 }] };
+    const ly = safeJsonParse<LoyaltySettingsType>(localStorage.getItem(storageKey('inkflow_loyalty_settings')), defaultLoyalty);
+    if (ly && Object.keys(ly).length > 0) setLoyaltySettings(ly);
+    const le = safeJsonParse<LoyaltyEntry[]>(localStorage.getItem(storageKey('inkflow_loyalty_entries')), []);
+    if (le.length > 0) setLoyaltyEntries(le);
   }, [user?.email, studioId]);
 
   useEffect(() => {
@@ -858,7 +859,9 @@ export const DashboardPro: React.FC = () => {
           )}
 
           {!loading && activeTab === 'analytics' && (
-            <AnalyticsDashboard appointments={appointments} clients={clients} />
+            <Suspense fallback={<DashboardLoadingSkeleton />}>
+              <AnalyticsDashboard appointments={appointments} clients={clients} />
+            </Suspense>
           )}
 
           {!loading && activeTab === 'requests' && (
@@ -945,7 +948,9 @@ export const DashboardPro: React.FC = () => {
           )}
 
           {!loading && activeTab === 'finance' && (
-            <FinanceDashboard appointments={appointments} />
+            <Suspense fallback={<DashboardLoadingSkeleton />}>
+              <FinanceDashboard appointments={appointments} />
+            </Suspense>
           )}
 
           {!loading && activeTab === 'settings' && (
