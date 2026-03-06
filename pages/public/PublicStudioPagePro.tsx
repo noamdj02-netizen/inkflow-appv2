@@ -441,20 +441,20 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white rounded-full blur-3xl" />
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-            <div className="text-center">
+          <div className="flex md:grid flex-nowrap md:grid-cols-4 overflow-x-auto md:overflow-visible gap-4 md:gap-6 pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory scrollbar-hide">
+            <div className="flex-shrink-0 min-w-[120px] md:min-w-0 snap-center text-center">
               <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-0.5 sm:mb-1">{studioDisplay.totalTattoos}+</div>
               <div className="text-xs sm:text-sm text-neutral-300">Tatouages réalisés</div>
             </div>
-            <div className="text-center">
+            <div className="flex-shrink-0 min-w-[120px] md:min-w-0 snap-center text-center">
               <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-0.5 sm:mb-1">{studioDisplay.satisfactionRate}%</div>
               <div className="text-xs sm:text-sm text-neutral-300">Satisfaction</div>
             </div>
-            <div className="text-center">
+            <div className="flex-shrink-0 min-w-[120px] md:min-w-0 snap-center text-center">
               <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-0.5 sm:mb-1">{studioDisplay.repeatClients}%</div>
               <div className="text-xs sm:text-sm text-neutral-300">Clients fidèles</div>
             </div>
-            <div className="text-center">
+            <div className="flex-shrink-0 min-w-[120px] md:min-w-0 snap-center text-center">
               <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-0.5 sm:mb-1">{studioDisplay.artists.length}</div>
               <div className="text-xs sm:text-sm text-neutral-300">Artistes experts</div>
             </div>

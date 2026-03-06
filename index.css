@@ -25,6 +25,11 @@ img, video {
   overflow-x: hidden;
 }
 
+/* Hero title — serif moderne, style reel.ai (bold, high-contrast) */
+.font-hero-title {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
 /* Respect des préférences utilisateur (accessibilité) */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

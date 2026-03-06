@@ -3,12 +3,10 @@ import { ThemeProvider } from 'next-themes';
 import { Analytics } from '@vercel/analytics/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
 import { Logo } from './components/Logo';
-import { Navbar } from './components/Navbar';
-import { HeroSection } from './components/HeroSection';
-import { LandingBelowFold } from './components/landing/LandingBelowFold';
-import { SEO, organizationSchema, websiteSchema } from './components/SEO';
+import { LandingEnhanceAI } from './components/landing/LandingEnhanceAI';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CookieConsent } from './components/CookieConsent';
 import { LoginPage } from './pages/LoginPage';
@@ -16,7 +14,6 @@ import { SignupPage } from './pages/SignupPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 
-const LandingBelowFoldLazy = lazy(() => import('./components/landing/LandingBelowFold').then(m => ({ default: m.LandingBelowFold })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const PublicStudioPagePro = lazy(() => import('./pages/public/PublicStudioPagePro').then(m => ({ default: m.PublicStudioPagePro })));
 const PublicBookingPagePro = lazy(() => import('./pages/public/PublicBookingPagePro').then(m => ({ default: m.PublicBookingPagePro })));
@@ -27,6 +24,7 @@ const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage').t
 const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
 const AidePage = lazy(() => import('./pages/AidePage').then(m => ({ default: m.AidePage })));
 const DemoPage = lazy(() => import('./pages/DemoPage').then(m => ({ default: m.DemoPage })));
+const FeatureDetailPage = lazy(() => import('./pages/features/FeatureDetailPage').then(m => ({ default: m.FeatureDetailPage })));
 
 interface Route {
   path: string | RegExp;
@@ -100,6 +98,7 @@ const Router: React.FC = () => {
     { path: '/login', component: LoginPage },
     { path: '/signup', component: SignupPage },
     { path: '/demo', component: DemoPage },
+    { path: /^\/(vue-ensemble|demandes|rendez-vous|galerie-flash|clients|messagerie|portfolio|finance|parametres)\/?$/, component: FeatureDetailPage, getProps: (m) => ({ slug: m[1] }) },
     { path: '/dashboard', component: DashboardPage, requiresAuth: true, needsSupabaseSync: true },
     { path: '/auth/callback', component: AuthCallbackPage },
     { path: '/auth/update-password', component: UpdatePasswordPage },
@@ -213,39 +212,7 @@ const NotFoundPage: React.FC = () => (
   </div>
 );
 
-const LandingPage: React.FC = () => {
-  const [scrolled, setScrolled] = useState(false);
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const handleScroll = () => {
-      setScrolled(el.scrollTop > 50);
-    };
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  return (
-    <div ref={scrollRef} className="landing-scroll bg-[#0a0a0f] text-white selection:bg-white/20 selection:text-white">
-      <SEO
-        title="InkFlow | Le logiciel de gestion et réservation pour Tatoueurs"
-        description="Gagnez du temps avec InkFlow. Agenda, acomptes automatisés (Stripe), galerie de flashs et CRM pensés spécifiquement pour les studios de tatouage."
-        canonical="/"
-        schema={[organizationSchema, websiteSchema]}
-      />
-      <Navbar scrolled={scrolled} variant="landing-dark" />
-
-      <main className="relative z-10">
-        <HeroSection />
-        <Suspense fallback={<div className="min-h-[200px]" aria-hidden />}>
-          <LandingBelowFoldLazy />
-        </Suspense>
-      </main>
-    </div>
-  );
-};
+const LandingPage: React.FC = () => <LandingEnhanceAI />;
 
 /** Log et affiche un toast sur les promesses rejetées non gérées (détection de bugs en prod). */
 const UnhandledRejectionHandler: React.FC = () => {
@@ -275,9 +242,11 @@ const App: React.FC = () => {
         <div className="app-root">
           <AuthProvider>
             <ToastProvider>
-              <UnhandledRejectionHandler />
-              <Router />
-              <CookieConsent />
+              <LanguageProvider>
+                <UnhandledRejectionHandler />
+                <Router />
+                <CookieConsent />
+              </LanguageProvider>
             </ToastProvider>
           </AuthProvider>
         </div>
