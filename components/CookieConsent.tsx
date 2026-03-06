@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 const STORAGE_KEY = 'inkflow_cookie_consent';
 
@@ -6,8 +7,14 @@ export type CookieConsentValue = 'all' | 'essential';
 
 export const CookieConsent: React.FC = () => {
   const [visible, setVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (!stored) {
@@ -16,7 +23,7 @@ export const CookieConsent: React.FC = () => {
     } catch {
       setVisible(true);
     }
-  }, []);
+  }, [mounted]);
 
   const saveAndHide = (value: CookieConsentValue) => {
     try {
@@ -27,13 +34,13 @@ export const CookieConsent: React.FC = () => {
     }
   };
 
-  if (!visible) return null;
+  if (!visible || !mounted || typeof document === 'undefined') return null;
 
-  return (
+  const content = (
     <div
       role="dialog"
       aria-label="Consentement aux cookies"
-      className="fixed bottom-0 left-0 right-0 z-[9999] p-4 sm:p-5 md:left-4 md:right-auto md:bottom-4 md:max-w-md md:rounded-2xl md:shadow-xl animate-in"
+      className="fixed bottom-0 left-0 right-0 z-[99999] p-4 pb-safe sm:p-5 md:left-4 md:right-auto md:bottom-4 md:max-w-md md:rounded-2xl md:shadow-xl bg-white/95 dark:bg-[var(--bg-primary)]/95 backdrop-blur-sm md:bg-transparent md:dark:bg-transparent"
     >
       <div className="bg-white dark:bg-[var(--bg-secondary)] border border-neutral-200 dark:border-neutral-700/60 rounded-xl md:rounded-2xl shadow-lg overflow-hidden">
         <div className="p-4 sm:p-5">
@@ -66,4 +73,6 @@ export const CookieConsent: React.FC = () => {
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 };
