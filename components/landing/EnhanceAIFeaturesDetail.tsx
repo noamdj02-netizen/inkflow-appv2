@@ -56,7 +56,7 @@ const sections: DetailSectionConfig[] = [
       { icon: BarChart3, label: 'Statistiques avancées' },
     ],
     visualType: 'timeline',
-    visualTitle: 'Timeline Growth',
+    visualTitle: 'Évolution',
     visualIcon: BarChart3,
     visualData: [
       { label: 'Réservations', value: 60, color: 'bg-blue-500' },
