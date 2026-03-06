@@ -197,8 +197,12 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
         {sortedClients.map(client => (
           <button key={client.id} onClick={() => setSelectedClient(client)} className="row-clickable dashboard-widget-card w-full text-left p-5 rounded-2xl">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-bold text-lg">
-                {client.name.charAt(0).toUpperCase()}
+              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {client.avatar ? (
+                  <img src={client.avatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">{client.name.charAt(0).toUpperCase()}</span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -250,8 +254,12 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-bold">
-                            {client.name.charAt(0).toUpperCase()}
+                          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {client.avatar ? (
+                              <img src={client.avatar} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-blue-600 dark:text-blue-400 font-bold">{client.name.charAt(0).toUpperCase()}</span>
+                            )}
                           </div>
                           <div>
                             <div className="font-semibold text-[var(--text-primary)]">{client.name}</div>

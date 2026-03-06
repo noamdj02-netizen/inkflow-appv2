@@ -3,7 +3,8 @@
  * Peuple le studio noamdj02@gmail.com avec des fausses données valorisantes
  * pour captures d'écran et vidéos promotionnelles.
  *
- * Marqueur : préfixe "demo_" dans les IDs + "DEMO_" dans description (bookings)
+ * Inclut : clients avec photos de profil, RDV, chiffres réalistes.
+ * Marqueur : préfixe "demo_" dans les IDs
  * Nettoyage : node scripts/seed-demo-marketing.mjs --clean
  *
  * Usage:
@@ -43,27 +44,33 @@ if (!url || !serviceKey) {
 
 const supabase = createClient(url, serviceKey);
 
-// Noms et emails réalistes
+// Clients avec photos de profil (pravatar.cc — images réalistes)
 const FAKE_CLIENTS = [
-  { name: 'Sophie Martin', email: 'sophie.martin@email.com' },
-  { name: 'Thomas Dubois', email: 'thomas.dubois@email.com' },
-  { name: 'Emma Lemaire', email: 'emma.lemaire@email.com' },
-  { name: 'Lucas Bernard', email: 'lucas.bernard@email.com' },
-  { name: 'Chloé Petit', email: 'chloe.petit@email.com' },
-  { name: 'Hugo Moreau', email: 'hugo.moreau@email.com' },
-  { name: 'Léa Laurent', email: 'lea.laurent@email.com' },
-  { name: 'Nathan Simon', email: 'nathan.simon@email.com' },
-  { name: 'Manon Michel', email: 'manon.michel@email.com' },
-  { name: 'Enzo Lefebvre', email: 'enzo.lefebvre@email.com' },
-  { name: 'Julie Roux', email: 'julie.roux@email.com' },
-  { name: 'Louis David', email: 'louis.david@email.com' },
-  { name: 'Camille Bertrand', email: 'camille.bertrand@email.com' },
-  { name: 'Raphaël Garnier', email: 'raphael.garnier@email.com' },
-  { name: 'Océane Faure', email: 'oceane.faure@email.com' },
-  { name: 'Arthur Mercier', email: 'arthur.mercier@email.com' },
-  { name: 'Inès Rousseau', email: 'ines.rousseau@email.com' },
-  { name: 'Jules Vincent', email: 'jules.vincent@email.com' },
-  { name: 'Margot Fournier', email: 'margot.fournier@email.com' },
+  { name: 'Sophie Martin', email: 'sophie.martin@email.com', avatar: 'https://i.pravatar.cc/150?img=1' },
+  { name: 'Thomas Dubois', email: 'thomas.dubois@email.com', avatar: 'https://i.pravatar.cc/150?img=3' },
+  { name: 'Emma Lemaire', email: 'emma.lemaire@email.com', avatar: 'https://i.pravatar.cc/150?img=5' },
+  { name: 'Lucas Bernard', email: 'lucas.bernard@email.com', avatar: 'https://i.pravatar.cc/150?img=11' },
+  { name: 'Chloé Petit', email: 'chloe.petit@email.com', avatar: 'https://i.pravatar.cc/150?img=9' },
+  { name: 'Hugo Moreau', email: 'hugo.moreau@email.com', avatar: 'https://i.pravatar.cc/150?img=12' },
+  { name: 'Léa Laurent', email: 'lea.laurent@email.com', avatar: 'https://i.pravatar.cc/150?img=16' },
+  { name: 'Nathan Simon', email: 'nathan.simon@email.com', avatar: 'https://i.pravatar.cc/150?img=15' },
+  { name: 'Manon Michel', email: 'manon.michel@email.com', avatar: 'https://i.pravatar.cc/150?img=20' },
+  { name: 'Enzo Lefebvre', email: 'enzo.lefebvre@email.com', avatar: 'https://i.pravatar.cc/150?img=14' },
+  { name: 'Julie Roux', email: 'julie.roux@email.com', avatar: 'https://i.pravatar.cc/150?img=23' },
+  { name: 'Louis David', email: 'louis.david@email.com', avatar: 'https://i.pravatar.cc/150?img=33' },
+  { name: 'Camille Bertrand', email: 'camille.bertrand@email.com', avatar: 'https://i.pravatar.cc/150?img=25' },
+  { name: 'Raphaël Garnier', email: 'raphael.garnier@email.com', avatar: 'https://i.pravatar.cc/150?img=34' },
+  { name: 'Océane Faure', email: 'oceane.faure@email.com', avatar: 'https://i.pravatar.cc/150?img=26' },
+  { name: 'Arthur Mercier', email: 'arthur.mercier@email.com', avatar: 'https://i.pravatar.cc/150?img=35' },
+  { name: 'Inès Rousseau', email: 'ines.rousseau@email.com', avatar: 'https://i.pravatar.cc/150?img=28' },
+  { name: 'Jules Vincent', email: 'jules.vincent@email.com', avatar: 'https://i.pravatar.cc/150?img=36' },
+  { name: 'Margot Fournier', email: 'margot.fournier@email.com', avatar: 'https://i.pravatar.cc/150?img=32' },
+  { name: 'Marie Dupont', email: 'marie.dupont@email.com', avatar: 'https://i.pravatar.cc/150?img=41' },
+  { name: 'Paul Leroy', email: 'paul.leroy@email.com', avatar: 'https://i.pravatar.cc/150?img=44' },
+  { name: 'Clara Garnier', email: 'clara.garnier@email.com', avatar: 'https://i.pravatar.cc/150?img=45' },
+  { name: 'Léo Bonnet', email: 'leo.bonnet@email.com', avatar: 'https://i.pravatar.cc/150?img=47' },
+  { name: 'Zoé Lambert', email: 'zoe.lambert@email.com', avatar: 'https://i.pravatar.cc/150?img=48' },
+  { name: 'Adam Fontaine', email: 'adam.fontaine@email.com', avatar: 'https://i.pravatar.cc/150?img=51' },
 ];
 
 const SERVICES = [
@@ -104,6 +111,10 @@ function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+function phoneFormat() {
+  return `+33 6 ${randomInt(10, 99)} ${randomInt(10, 99)} ${randomInt(10, 99)} ${randomInt(10, 99)}`;
+}
+
 async function cleanup(supabaseClient, studioId) {
   console.log('🧹 Nettoyage des données DEMO...\n');
 
@@ -129,7 +140,18 @@ async function cleanup(supabaseClient, studioId) {
     return false;
   }
 
-  console.log('✓ Données DEMO supprimées (appointments + bookings)\n');
+  const { error: errCl } = await supabaseClient
+    .from('inkflow_clients')
+    .delete()
+    .eq('studio_id', studioId)
+    .like('id', `${ID_PREFIX}%`);
+
+  if (errCl) {
+    console.error('Clients:', errCl.message);
+    return false;
+  }
+
+  console.log('✓ Données DEMO supprimées (clients, appointments, bookings)\n');
   return true;
 }
 
@@ -139,7 +161,6 @@ async function main() {
   console.log('🌱 Seed Mode Démo Marketing — InkFlow\n');
   console.log('Cible :', EMAIL, '\n');
 
-  // Récupérer le studio
   const { data: studio, error: studioErr } = await supabase
     .from('inkflow_studios')
     .select('id, slug')
@@ -162,31 +183,69 @@ async function main() {
   const now = new Date().toISOString();
   const today = now.split('T')[0];
 
-  // === 1. BOOKINGS (~20) — répartis sur le mois dernier + semaine en cours ===
+  // === 0. CLIENTS — avec photos de profil et stats réalistes ===
+  const clients = [];
+  for (let i = 0; i < FAKE_CLIENTS.length; i++) {
+    const c = FAKE_CLIENTS[i];
+    const aptCount = randomInt(1, 8);
+    const totalSpent = randomInt(80, 2000);
+    const firstVisit = addDays(today, -randomInt(30, 180));
+    const lastVisit = addDays(today, -randomInt(0, 90));
+    const status = totalSpent >= 800 ? 'vip' : aptCount >= 3 ? 'active' : 'active';
+    const tags = totalSpent >= 1000 ? ['VIP', 'Fidèle'] : aptCount >= 2 ? ['Régulier'] : ['Nouveau'];
+
+    clients.push({
+      id: `${ID_PREFIX}cl_${i + 1}`,
+      studio_id: STUDIO_ID,
+      name: c.name,
+      email: c.email,
+      phone: phoneFormat(),
+      avatar_url: c.avatar,
+      total_spent: totalSpent,
+      appointments_count: aptCount,
+      first_visit: firstVisit,
+      last_visit: lastVisit,
+      status,
+      tags,
+      tattoos: [],
+      updated_at: now,
+    });
+  }
+
+  for (const c of clients) {
+    const { error } = await supabase.from('inkflow_clients').upsert(c, { onConflict: 'id' });
+    if (error) console.error('Client', c.id, error.message);
+  }
+  console.log('✓', clients.length, 'clients (avec photos de profil)');
+
+  // === 1. BOOKINGS (~35) — fausses demandes RDV vitrine avec photos (majorité pending) ===
   const bookings = [];
-  const usedSlots = new Set();
-  for (let i = 1; i <= 20; i++) {
-    const dayOffset = randomInt(-28, 7);
+  const usedBkSlots = new Set();
+  for (let i = 1; i <= 35; i++) {
+    const dayOffset = randomInt(-7, 21);
     const date = addDays(today, dayOffset);
     const times = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
     const time = pick(times);
-    const slotKey = `${date}-${time}`;
-    if (usedSlots.has(slotKey)) continue;
-    usedSlots.add(slotKey);
+    const slotKey = `${date}-${time}-${i}`;
+    if (usedBkSlots.has(slotKey)) continue;
+    usedBkSlots.add(slotKey);
 
-    const client = pick(FAKE_CLIENTS);
-    const statuses = ['pending', 'pending', 'pending', 'confirmed', 'accepted', 'rejected'];
+    const client = pick(clients);
+    const statuses = ['pending', 'pending', 'pending', 'pending', 'confirmed', 'accepted', 'rejected'];
     const status = pick(statuses);
 
+    const createdDate = new Date();
+    createdDate.setDate(createdDate.getDate() - randomInt(0, 5));
     bookings.push({
       id: `${ID_PREFIX}bk_${i}`,
       studio_id: STUDIO_ID,
       client_name: client.name,
       client_email: client.email,
-      description: `DEMO_ ${pick(DESCRIPTIONS)}`,
+      description: pick(DESCRIPTIONS),
       requested_date: date,
       requested_time: time,
       status,
+      created_at: createdDate.toISOString(),
       updated_at: now,
     });
   }
@@ -197,12 +256,13 @@ async function main() {
   }
   console.log('✓', bookings.length, 'bookings (demandes RDV)');
 
-  // === 2. APPOINTMENTS (~20) — montants 50€-300€, répartis mois dernier + semaine ===
+  // === 2. APPOINTMENTS (~50) — RDV avec clients liés, dont ~18 en attente (Demandes) ===
   const appointments = [];
   const usedAptSlots = new Set();
-  for (let i = 1; i <= 20; i++) {
-    // Répartition : 70% mois dernier + 30% semaine en cours (pour historique + à venir)
-    const dayOffset = Math.random() > 0.3 ? randomInt(-28, -1) : randomInt(0, 7);
+  const pendingCount = 18;
+  let pendingCreated = 0;
+  for (let i = 1; i <= 50; i++) {
+    const dayOffset = i <= pendingCount ? randomInt(0, 14) : randomInt(-45, -1);
     const date = addDays(today, dayOffset);
     const times = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
     const time = pick(times);
@@ -210,23 +270,24 @@ async function main() {
     if (usedAptSlots.has(slotKey)) continue;
     usedAptSlots.add(slotKey);
 
-    const client = pick(FAKE_CLIENTS);
-    const deposit = randomInt(50, 300);
-    const price = deposit + randomInt(50, 400);
-    const depositPaid = Math.random() > 0.25;
-    const status = Math.random() > 0.15 ? 'completed' : (depositPaid ? 'confirmed' : 'pending');
+    const client = pick(clients);
+    const deposit = randomInt(50, 200);
+    const price = deposit + randomInt(80, 450);
+    const depositPaid = Math.random() > 0.2;
+    const status = pendingCreated < pendingCount ? 'pending' : (Math.random() > 0.15 ? 'completed' : (depositPaid ? 'confirmed' : 'pending'));
+    if (status === 'pending') pendingCreated++;
 
     appointments.push({
       id: `${ID_PREFIX}apt_${i}`,
       studio_id: STUDIO_ID,
-      client_id: null,
+      client_id: client.id,
       client_name: client.name,
       client_email: client.email,
-      client_phone: `+33 6 ${randomInt(10, 99)} ${randomInt(10, 99)} ${randomInt(10, 99)} ${randomInt(10, 99)}`,
+      client_phone: client.phone,
       date,
       time,
       service: pick(SERVICES),
-      duration: randomInt(60, 180),
+      duration: randomInt(60, 240),
       price,
       deposit,
       deposit_paid: depositPaid,
@@ -256,8 +317,9 @@ async function main() {
   console.log('\n📊 Stats générées :');
   console.log('   Revenu total (completed):', totalRevenue, '€');
   console.log('   Revenu dernier mois:', monthlyRev, '€');
+  console.log('   Clients:', clients.length, '(avec photos)');
   console.log('\n✅ Seed terminé. Connecte-toi avec', EMAIL, 'pour les captures marketing.');
-  console.log('\n💡 Pour supprimer ces données : node --env-file=.env.local scripts/seed-demo-marketing.mjs --clean');
+  console.log('\n💡 Pour supprimer : node --env-file=.env.local scripts/seed-demo-marketing.mjs --clean');
 }
 
 main().catch(console.error);

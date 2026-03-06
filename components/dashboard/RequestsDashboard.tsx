@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { MessageSquare, CheckCircle, XCircle, Calendar, FileText, Mail, Clock, CreditCard, Copy, Loader2, AlertTriangle } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
-import { Appointment, ProjectRequest, Booking, BookingStatus } from '../../types';
+import { Appointment, ProjectRequest, Booking, BookingStatus, Client } from '../../types';
 import { InvoiceButton } from './InvoiceButton';
 import { Modal } from '../ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,6 +17,7 @@ interface RequestsDashboardProps {
   /** Slug public du studio (pour les URLs de redirection Stripe après paiement). */
   studioSlug?: string | null;
   appointments: Appointment[];
+  clients?: Client[];
   onUpdateAppointment: (id: string, updates: Partial<Appointment>) => void;
   onAddAppointment?: (appointment: Appointment) => void;
   projectRequests?: ProjectRequest[];
@@ -48,6 +49,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   studioId,
   studioSlug,
   appointments,
+  clients = [],
   onUpdateAppointment,
   onAddAppointment,
   projectRequests = [],
@@ -58,6 +60,31 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   bookingsLoading = false
 }) => {
   const toast = useToast();
+  const clientByEmail = useMemo(() => {
+    const m = new Map<string, Client>();
+    clients.forEach((c) => { if (c.email) m.set(c.email.toLowerCase(), c); });
+    return m;
+  }, [clients]);
+  const clientByName = useMemo(() => {
+    const m = new Map<string, Client>();
+    clients.forEach((c) => { if (c.name) m.set(c.name.toLowerCase().trim(), c); });
+    return m;
+  }, [clients]);
+  const getAvatar = (email?: string, clientId?: string, name?: string) => {
+    if (clientId) {
+      const c = clients.find((x) => x.id === clientId);
+      if (c?.avatar) return c.avatar;
+    }
+    if (email) {
+      const c = clientByEmail.get(email.toLowerCase());
+      if (c?.avatar) return c.avatar;
+    }
+    if (name) {
+      const c = clientByName.get(name.toLowerCase().trim());
+      if (c?.avatar) return c.avatar;
+    }
+    return undefined;
+  };
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'rdv' | 'bookings' | 'projects' | 'history'>('rdv');
 
@@ -514,8 +541,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             <div className="divide-y divide-[var(--border)]">
               {pendingAppointments.map(apt => (
                 <div key={apt.id} className="row-clickable p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 font-bold text-lg">
-                    {apt.clientName.charAt(0).toUpperCase()}
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {(() => {
+                      const avatar = getAvatar(apt.clientEmail, apt.clientId, apt.clientName);
+                      return avatar ? (
+                        <img src={avatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">{apt.clientName.charAt(0).toUpperCase()}</span>
+                      );
+                    })()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-lg text-[var(--text-primary)]">{apt.clientName}</div>
@@ -571,8 +605,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             <div className="divide-y divide-[var(--border)]">
               {bookingsChronological.map(bk => (
                 <div key={bk.id} className="row-clickable p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 font-bold text-lg">
-                    {bk.clientName.charAt(0).toUpperCase()}
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {(() => {
+                      const avatar = getAvatar(bk.clientEmail, undefined, bk.clientName);
+                      return avatar ? (
+                        <img src={avatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">{bk.clientName.charAt(0).toUpperCase()}</span>
+                      );
+                    })()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-lg text-[var(--text-primary)]">{bk.clientName}</div>
@@ -634,8 +675,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               </div>
               {pendingProjects.map(pr => (
                 <div key={pr.id} className="row-clickable p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-bold text-lg">
-                    {pr.clientName.charAt(0).toUpperCase()}
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {(() => {
+                      const avatar = getAvatar(pr.clientEmail, undefined, pr.clientName);
+                      return avatar ? (
+                        <img src={avatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">{pr.clientName.charAt(0).toUpperCase()}</span>
+                      );
+                    })()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-lg text-[var(--text-primary)]">{pr.clientName}</div>
@@ -695,8 +743,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             <div className="divide-y divide-[var(--border)]">
               {historyAppointments.map(apt => (
                 <div key={apt.id} className="row-clickable p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[var(--bg-hover)] flex items-center justify-center flex-shrink-0 text-[var(--text-secondary)] font-bold text-lg">
-                    {apt.clientName.charAt(0).toUpperCase()}
+                  <div className="w-12 h-12 rounded-xl bg-[var(--bg-hover)] dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {(() => {
+                      const avatar = getAvatar(apt.clientEmail, apt.clientId, apt.clientName);
+                      return avatar ? (
+                        <img src={avatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[var(--text-secondary)] dark:text-blue-400 font-bold text-lg">{apt.clientName.charAt(0).toUpperCase()}</span>
+                      );
+                    })()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-lg text-[var(--text-primary)]">{apt.clientName}</div>

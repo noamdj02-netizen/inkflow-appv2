@@ -341,8 +341,12 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   const colors = ['bg-blue-600', 'bg-blue-500', 'bg-zinc-600', 'bg-zinc-500'];
                   return (
                     <button key={client.id} onClick={() => setActiveTab('clients')} className="text-left p-3.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
-                      <div className={`w-7 h-7 rounded-lg ${colors[i % 4]} flex items-center justify-center mb-2`}>
-                        <span className="text-white text-xs font-bold">{client.name?.charAt(0)}</span>
+                      <div className={`w-7 h-7 rounded-lg ${colors[i % 4]} flex items-center justify-center mb-2 overflow-hidden flex-shrink-0`}>
+                        {client.avatar ? (
+                          <img src={client.avatar} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-white text-xs font-bold">{client.name?.charAt(0)}</span>
+                        )}
                       </div>
                       <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 truncate">{client.name}</div>
                       <div className="text-[12px] text-zinc-500 dark:text-zinc-400">{client.appointmentsCount ?? 0} RDV • {client.totalSpent}€</div>

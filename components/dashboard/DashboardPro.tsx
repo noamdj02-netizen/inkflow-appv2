@@ -870,6 +870,7 @@ export const DashboardPro: React.FC = () => {
               studioId={studioId}
               studioSlug={studioSlug}
               appointments={appointments}
+              clients={clients}
               onUpdateAppointment={updateAppointment}
               onAddAppointment={addAppointment}
               projectRequests={projectRequests}
@@ -884,6 +885,7 @@ export const DashboardPro: React.FC = () => {
               {!loading && activeTab === 'appointments' && (
             <AppointmentsView
               appointments={appointments}
+              clients={clients}
               onNewAppointment={() => { setSelectedFlash(null); setShowBookingModal(true); }}
               onSelectAppointment={setSelectedAppointment}
             />

@@ -102,6 +102,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
 
   const pseudo = client?.name?.split(' ')[0] || appointment.clientName?.split(' ')[0] || 'Client';
   const avatarLetter = (appointment.clientName || '?').charAt(0).toUpperCase();
+  const avatarUrl = client?.avatar;
 
   return (
     <div className={`flex flex-col gap-4 ${compact ? 'min-w-0' : ''}`}>
@@ -115,8 +116,12 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
       >
         <div className="p-5">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-bold text-xl">
-              {avatarLetter}
+            <div className="w-14 h-14 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-blue-600 dark:text-blue-400 font-bold text-xl">{avatarLetter}</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-lg text-[var(--text-primary)] truncate">

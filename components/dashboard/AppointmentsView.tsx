@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { Calendar, Plus, ChevronRight, Search, ExternalLink, Download } from 'lucide-react';
-import { Appointment } from '../../types';
+import { Appointment, Client } from '../../types';
 import { MiniCalendar } from './MiniCalendar';
 import { AppointmentCalendar } from './AppointmentCalendar';
 import { downloadICS, getGoogleCalendarAddUrl } from '../../lib/googleCalendar';
@@ -11,6 +11,7 @@ type StatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled';
 
 interface AppointmentsViewProps {
   appointments: Appointment[];
+  clients?: Client[];
   onNewAppointment: () => void;
   onSelectAppointment: (apt: Appointment) => void;
 }
@@ -33,9 +34,18 @@ const STATUS_LABELS: Record<string, string> = {
 
 export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   appointments,
+  clients = [],
   onNewAppointment,
   onSelectAppointment,
 }) => {
+  const clientByEmail = useMemo(() => {
+    const m = new Map<string, Client>();
+    clients.forEach((c) => { if (c.email) m.set(c.email.toLowerCase(), c); });
+    return m;
+  }, [clients]);
+  const getAvatar = (apt: Appointment) =>
+    (apt.clientId && clients.find((c) => c.id === apt.clientId)?.avatar) ||
+    clientByEmail.get(apt.clientEmail?.toLowerCase() || '')?.avatar;
   const { resolvedTheme } = useTheme();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -287,8 +297,12 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                       className="row-clickable w-full text-left p-5 rounded-2xl dashboard-widget-card cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-bold text-lg">
-                          {apt.clientName.charAt(0).toUpperCase()}
+                        <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {getAvatar(apt) ? (
+                            <img src={getAvatar(apt)} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">{apt.clientName.charAt(0).toUpperCase()}</span>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-base font-bold text-[var(--text-primary)] truncate">{apt.clientName}</div>
@@ -371,8 +385,12 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                           <tr key={apt.id} className="row-clickable border-b border-[var(--border)] last:border-0">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 font-bold">
-                                  {apt.clientName.charAt(0).toUpperCase()}
+                                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                  {getAvatar(apt) ? (
+                                    <img src={getAvatar(apt)} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <span className="text-blue-600 dark:text-blue-400 font-bold">{apt.clientName.charAt(0).toUpperCase()}</span>
+                                  )}
                                 </div>
                                 <div>
                                   <div className="font-semibold text-[var(--text-primary)]">{apt.clientName}</div>
