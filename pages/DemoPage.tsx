@@ -302,9 +302,9 @@ const createScenes = (): SceneConfig[] => [
     renderContent: (focusIndex) => (
       <div className="grid grid-cols-3 gap-4">
         {[
-          { name: 'Iris floral', price: '180 €', src: '/gallery/iris-floral.png', i: 0 },
-          { name: 'Léopard', price: '150 €', src: '/gallery/leopard.png', i: 1 },
-          { name: 'Carpe Koï', price: '220 €', src: '/gallery/carpe-koi.png', i: 2 },
+          { name: 'Iris floral', price: '180 €', src: 'https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=400', i: 0 },
+          { name: 'Léopard', price: '150 €', src: 'https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400', i: 1 },
+          { name: 'Carpe Koï', price: '220 €', src: 'https://images.unsplash.com/photo-1565058379802-bbe93b2f703f?w=400', i: 2 },
         ].map((f) => (
           <Focusable key={f.name} focused={focusIndex === f.i}>
             <div className="rounded-2xl overflow-hidden border border-neutral-200/80 bg-white shadow-sm transition-all duration-300 hover:scale-[1.02]">

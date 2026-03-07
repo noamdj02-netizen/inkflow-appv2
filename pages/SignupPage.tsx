@@ -199,11 +199,11 @@ export const SignupPage: React.FC = () => {
                 />
                 <label htmlFor="terms" className="text-sm text-neutral-600">
                   J'accepte les{' '}
-                  <a href="#" className="font-semibold text-neutral-900 hover:text-neutral-700">
+                  <a href="/conditions-utilisation" target="_blank" rel="noopener noreferrer" className="font-semibold text-neutral-900 hover:text-neutral-700">
                     conditions d'utilisation
                   </a>{' '}
                   et la{' '}
-                  <a href="#" className="font-semibold text-neutral-900 hover:text-neutral-700">
+                  <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="font-semibold text-neutral-900 hover:text-neutral-700">
                     politique de confidentialité
                   </a>
                 </label>

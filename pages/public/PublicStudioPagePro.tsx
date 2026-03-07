@@ -15,7 +15,7 @@ import { createProjectRequest } from '../../lib/supabaseProjectRequests';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { useRealtimeVitrine } from '../../hooks/useRealtimeSync';
 import { useToast } from '../../contexts/ToastContext';
-import type { VitrineData } from '../../types/vitrine';
+import type { VitrineData, VitrineFlashDesign } from '../../types/vitrine';
 import type { ProjectRequestFormData } from '../../types';
 
 const ICON_MAP = { sparkles: Sparkles, award: Award, star: Star, camera: Camera, shield: Shield, heart: Heart, users: Users };
@@ -29,7 +29,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [studio, setStudio] = useState<VitrineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedFlash, setSelectedFlash] = useState<any>(null);
+  const [selectedFlash, setSelectedFlash] = useState<VitrineFlashDesign | null>(null);
   const [activeSection, setActiveSection] = useState('about');
   const [showContactForm, setShowContactForm] = useState(false);
   const [contactLoading, setContactLoading] = useState(false);
@@ -93,6 +93,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     }
   }, [studioSlug, toast]);
 
+  const selectedFlashId = selectedFlash?.id;
   useEffect(() => {
     if (selectedFlash) {
       setFlashDepositName('');
@@ -101,7 +102,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       setFlashDepositError(null);
       setFlashDepositUrl(null);
     }
-  }, [selectedFlash?.id]);
+  }, [selectedFlashId]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -246,7 +247,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     if (element) {
       const offset = 100;
       const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - offset;
+      const offsetPosition = elementPosition + window.scrollY - offset;
       window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
       setActiveSection(sectionId);
       setShowMobileMenu(false);
@@ -896,7 +897,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 </div>
               </div>
               <p className="text-neutral-300 leading-relaxed mb-6">
-                Studio professionnel de tatouage à Paris. Créations uniques et travail de qualité depuis 2015.
+                {studioDisplay.description || 'Studio professionnel de tatouage. Créations uniques et travail de qualité.'}
               </p>
               <div className="flex gap-3">
                 <a href={`https://instagram.com/${studioDisplay.instagram.replace('@', '')}`} className="w-11 h-11 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition-colors">

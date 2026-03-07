@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AlertCircle, CheckCircle, Loader2, Lock } from 'lucide-react';
 import { Logo } from '../components/Logo';
+import { supabase } from '../lib/supabase';
 
 export const UpdatePasswordPage: React.FC = () => {
   const [password, setPassword] = useState('');
@@ -29,13 +30,14 @@ export const UpdatePasswordPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await new Promise(r => setTimeout(r, 600));
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
       setStatus('success');
       setMessage('');
       setTimeout(() => { window.location.href = '/dashboard'; }, 800);
-    } catch {
+    } catch (err) {
       setStatus('error');
-      setMessage('Erreur lors de la mise à jour du mot de passe');
+      setMessage(err instanceof Error ? err.message : 'Erreur lors de la mise à jour du mot de passe');
     } finally {
       setLoading(false);
     }

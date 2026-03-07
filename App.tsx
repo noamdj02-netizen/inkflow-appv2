@@ -13,6 +13,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const PublicStudioPagePro = lazy(() => import('./pages/public/PublicStudioPagePro').then(m => ({ default: m.PublicStudioPagePro })));
@@ -97,6 +98,7 @@ const Router: React.FC = () => {
     { path: '/', component: LandingPage },
     { path: '/login', component: LoginPage },
     { path: '/signup', component: SignupPage },
+    { path: '/reset-password', component: ResetPasswordPage },
     { path: '/demo', component: DemoPage },
     { path: /^\/(vue-ensemble|demandes|rendez-vous|galerie-flash|clients|messagerie|portfolio|finance|parametres)\/?$/, component: FeatureDetailPage, getProps: (m) => ({ slug: m[1] }) },
     { path: '/dashboard', component: DashboardPage, requiresAuth: true, needsSupabaseSync: true },

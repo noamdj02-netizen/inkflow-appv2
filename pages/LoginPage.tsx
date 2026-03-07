@@ -108,7 +108,7 @@ export const LoginPage: React.FC = () => {
                   <input type="checkbox" className="rounded border-neutral-300 dark:border-zinc-600 dark:bg-zinc-900 w-4 h-4" />
                   <span className="text-sm text-neutral-600 dark:text-zinc-400">Se souvenir de moi</span>
                 </label>
-                <a href="#" className="text-sm font-semibold text-neutral-900 dark:text-zinc-200 hover:text-neutral-700 dark:hover:text-white py-2 sm:py-0">
+                <a href="/reset-password" className="text-sm font-semibold text-neutral-900 dark:text-zinc-200 hover:text-neutral-700 dark:hover:text-white py-2 sm:py-0">
                   Mot de passe oublié ?
                 </a>
               </div>
