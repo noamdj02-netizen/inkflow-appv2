@@ -1,63 +1,45 @@
 import React, { useState } from 'react';
 import { Check, Zap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { STRIPE_PAYMENT_LINKS } from '../lib/stripePaymentLinks';
 import { useIntersectionAnimation } from '../hooks/useIntersectionAnimation';
 
 export const PricingSection: React.FC = () => {
   const [isAnnual, setIsAnnual] = useState(false);
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   const { ref, isVisible } = useIntersectionAnimation(0.08);
 
   const plans = [
     {
       id: 'starter' as const,
       name: 'Starter',
-      description: 'Pour les tatoueurs indépendants',
+      descriptionKey: 'pricing.starterDesc',
       priceMonthly: 29,
       priceAnnual: 24,
-      features: [
-        'Réservations illimitées',
-        'Paiements Stripe',
-        'Galerie Flash',
-        '100 clients CRM',
-        'Support email',
-        'Application mobile'
-      ],
-      cta: 'Commencer',
+      featureKeys: ['pricing.f1', 'pricing.f2', 'pricing.f3', 'pricing.f4', 'pricing.f5', 'pricing.f6'],
+      ctaKey: 'pricing.start',
       popular: false
     },
     {
       id: 'pro' as const,
       name: 'Pro',
-      description: 'Pour les artistes qui veulent aller plus loin',
+      descriptionKey: 'pricing.proDesc',
       priceMonthly: 49,
       priceAnnual: 39,
-      features: [
-        'Tout du plan Starter',
-        '2 artistes inclus',
-        '200 clients CRM',
-        'Multi-calendriers',
-        'Statistiques avancées',
-        'Support prioritaire'
-      ],
-      cta: 'Commencer',
+      featureKeys: ['pricing.f7', 'pricing.f8', 'pricing.f9', 'pricing.f10', 'pricing.f11', 'pricing.f12'],
+      ctaKey: 'pricing.start',
       popular: true
     },
     {
       id: 'studio' as const,
       name: 'Studio',
-      description: 'Pour les studios avec plusieurs artistes',
+      descriptionKey: 'pricing.studioDesc',
       priceMonthly: 79,
       priceAnnual: 65,
-      features: [
-        'Tout du plan Pro',
-        '3 artistes inclus',
-        'Clients CRM illimités',
-        'Formation personnalisée',
-        'API access'
-      ],
-      cta: 'Commencer',
+      featureKeys: ['pricing.f13', 'pricing.f14', 'pricing.f15', 'pricing.f16', 'pricing.f17'],
+      ctaKey: 'pricing.start',
       popular: false
     }
   ];
@@ -77,10 +59,10 @@ export const PricingSection: React.FC = () => {
       <div ref={ref} className={`max-w-7xl mx-auto animate-on-scroll ${isVisible ? 'is-visible' : ''}`}>
         <div className="text-center mb-10 sm:mb-20">
           <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 px-2 tracking-tight">
-            Un tarif simple et transparent
+            {t('pricing.title')}
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-neutral-600 mb-8 sm:mb-10 px-2 max-w-2xl mx-auto">
-            Choisissez le plan qui correspond à votre activité
+            {t('pricing.subtitle')}
           </p>
 
           <div className="inline-flex items-center gap-1 p-1.5 rounded-2xl bg-neutral-100 border border-neutral-200/80" role="group" aria-label="Choisir la fréquence de facturation">
@@ -93,7 +75,7 @@ export const PricingSection: React.FC = () => {
               }`}
               aria-pressed={!isAnnual}
             >
-              Mensuel
+              {t('pricing.monthly')}
             </button>
             <button
               onClick={() => setIsAnnual(true)}
@@ -104,7 +86,7 @@ export const PricingSection: React.FC = () => {
               }`}
               aria-pressed={isAnnual}
             >
-              Annuel
+              {t('pricing.annual')}
               <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
                 -20%
               </span>
@@ -126,7 +108,7 @@ export const PricingSection: React.FC = () => {
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                   <div className="bg-white/10 backdrop-blur-sm text-white px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-1.5 border border-white/20">
                     <Zap className="w-4 h-4" />
-                    Plus populaire
+                    {t('pricing.mostPopular')}
                   </div>
                 </div>
               )}
@@ -136,7 +118,7 @@ export const PricingSection: React.FC = () => {
                   {plan.name}
                 </h3>
                 <p className={plan.popular ? 'text-neutral-300' : 'text-neutral-600'}>
-                  {plan.description}
+                  {t(plan.descriptionKey)}
                 </p>
               </div>
 
@@ -148,17 +130,17 @@ export const PricingSection: React.FC = () => {
                         €{isAnnual ? plan.priceAnnual : plan.priceMonthly}
                       </span>
                       <span className={plan.popular ? 'text-neutral-400' : 'text-neutral-600 dark:text-neutral-500'}>
-                        /mois
+                        {t('pricing.perMonth')}
                       </span>
                     </div>
                     {isAnnual && plan.priceAnnual && (
                       <div className={`text-sm mt-2 ${plan.popular ? 'text-neutral-400' : 'text-neutral-500'}`}>
-                        Facturé €{plan.priceAnnual * 12} par an
+                        {t('pricing.billed').replace('{amount}', String(plan.priceAnnual * 12))}
                       </div>
                     )}
                   </>
                 ) : (
-                  <div className="text-3xl font-bold">Sur mesure</div>
+                  <div className="text-3xl font-bold">{t('pricing.custom')}</div>
                 )}
               </div>
 
@@ -174,17 +156,17 @@ export const PricingSection: React.FC = () => {
                     : 'bg-neutral-900 text-white hover:bg-neutral-800'
                 }`}
               >
-                {plan.cta}
+                {t(plan.ctaKey)}
               </a>
 
               <div className="space-y-4">
-                {plan.features.map((feature, featureIndex) => (
+                {plan.featureKeys.map((key, featureIndex) => (
                   <div key={featureIndex} className="flex items-start gap-3">
                     <Check className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
                       plan.popular ? 'text-blue-400' : 'text-blue-600 dark:text-blue-500'
                     }`} />
                     <span className={`text-sm ${plan.popular ? 'text-neutral-200' : 'text-neutral-700'}`}>
-                      {feature}
+                      {t(key)}
                     </span>
                   </div>
                 ))}
@@ -197,15 +179,15 @@ export const PricingSection: React.FC = () => {
             <div className="flex justify-center items-center gap-6 flex-wrap text-sm text-neutral-600">
             <div className="flex items-center gap-2">
               <Check className="w-5 h-5 text-blue-600 dark:text-blue-500" />
-              <span>14 jours d'essai gratuit</span>
+              <span>{t('pricing.trial14')}</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="w-5 h-5 text-blue-600 dark:text-blue-500" />
-              <span>Annulation à tout moment</span>
+              <span>{t('pricing.cancelAnytime')}</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="w-5 h-5 text-blue-600 dark:text-blue-500" />
-              <span>Pas d'engagement</span>
+              <span>{t('pricing.noCommitment')}</span>
             </div>
           </div>
         </div>

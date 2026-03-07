@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   User,
 } from 'lucide-react';
+import { getAvatarPlaceholder } from '../../lib/avatar-placeholders';
 
 /** Réplique exacte du dashboard hero en mode démo pour la landing */
 export const DashboardDemo: React.FC = () => {
@@ -37,7 +38,7 @@ export const DashboardDemo: React.FC = () => {
             <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-600" />
           </button>
           <img
-            src="https://i.pravatar.cc/80?img=11"
+            src={getAvatarPlaceholder(0)}
             alt="Profil"
             className="w-8 h-8 rounded-full object-cover ml-1"
           />

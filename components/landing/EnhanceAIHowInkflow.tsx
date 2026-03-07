@@ -1,29 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Palette, Zap } from 'lucide-react';
-
-const items = [
-  {
-    icon: Calendar,
-    title: 'Gestion d\'agenda fluide',
-    text: 'Réservations, acomptes Stripe et rappels automatiques.',
-    gradient: 'from-blue-500 to-blue-600',
-  },
-  {
-    icon: Palette,
-    title: 'CRM client puissant',
-    text: 'Profils complets, notes de session et suivi de cicatrisation.',
-    gradient: 'from-blue-500 to-sky-600',
-  },
-  {
-    icon: Zap,
-    title: 'Galerie Flash unique',
-    text: 'Vendez vos designs exclusifs et bloquez les flashs uniques après paiement.',
-    gradient: 'from-sky-500 to-blue-600',
-  },
-];
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export const EnhanceAIHowInkflow: React.FC = () => {
+  const { t } = useLanguage();
+  const items = [
+    { icon: Calendar, titleKey: 'how.item1.title', textKey: 'how.item1.text', gradient: 'from-blue-500 to-blue-600' },
+    { icon: Palette, titleKey: 'how.item2.title', textKey: 'how.item2.text', gradient: 'from-blue-500 to-sky-600' },
+    { icon: Zap, titleKey: 'how.item3.title', textKey: 'how.item3.text', gradient: 'from-sky-500 to-blue-600' },
+  ];
   return (
     <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
@@ -34,9 +20,9 @@ export const EnhanceAIHowInkflow: React.FC = () => {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">Fonctionnalités</p>
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">{t('how.badge')}</p>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-neutral-800">
-            Comment Inkflow peut vous aider
+            {t('how.title')}
           </h2>
         </motion.div>
 
@@ -55,8 +41,8 @@ export const EnhanceAIHowInkflow: React.FC = () => {
               >
                 <item.icon className="w-10 h-10 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-neutral-800 mb-3">{item.title}</h3>
-              <p className="text-neutral-600 leading-relaxed">{item.text}</p>
+              <h3 className="text-xl font-bold text-neutral-800 mb-3">{t(item.titleKey)}</h3>
+              <p className="text-neutral-600 leading-relaxed">{t(item.textKey)}</p>
             </motion.div>
           ))}
         </div>

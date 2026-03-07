@@ -1,37 +1,20 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
-const faqs = [
-  {
-    question: "Qu'est-ce que l'assistant IA Inkflow ?",
-    answer:
-      "L'assistant IA Inkflow vous aide à répondre aux demandes de réservation instantanément, à suggérer des créneaux et à personnaliser les réponses selon le type de tatouage. Il apprend de vos habitudes pour optimiser vos réponses.",
-  },
-  {
-    question: 'Comment fonctionnent les paiements Stripe ?',
-    answer:
-      "Inkflow s'intègre directement avec Stripe. Vos clients paient l'acompte en ligne lors de la réservation. Les fonds arrivent sur votre compte Stripe en quelques jours. Aucune configuration complexe.",
-  },
-  {
-    question: 'Quelle est la différence entre le plan Solo et Studio ?',
-    answer:
-      'Le plan Solo est conçu pour les tatoueurs indépendants (1 artiste, 100 clients CRM). Le plan Studio inclut plusieurs artistes, des clients CRM illimités et des statistiques avancées par artiste.',
-  },
-  {
-    question: 'Puis-je gérer mon propre portail client ?',
-    answer:
-      "Oui. Chaque client dispose d'un espace personnel pour voir ses rendez-vous, ses messages et l'historique de ses tatouages. Vous contrôlez les accès depuis votre dashboard.",
-  },
-  {
-    question: 'Comment est gérée la galerie flash unique ?',
-    answer:
-      "Publiez vos flashs avec photos et prix. Une fois qu'un client paie l'acompte pour un flash, il est automatiquement bloqué et retiré de la galerie publique. Plus de double réservation.",
-  },
+const faqKeys = [
+  { q: 'faq.q1', a: 'faq.a1' },
+  { q: 'faq.q2', a: 'faq.a2' },
+  { q: 'faq.q3', a: 'faq.a3' },
+  { q: 'faq.q4', a: 'faq.a4' },
+  { q: 'faq.q5', a: 'faq.a5' },
 ];
 
 export const EnhanceAIFAQ: React.FC = () => {
+  const { t } = useLanguage();
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const faqs = faqKeys.map((k) => ({ question: t(k.q), answer: t(k.a) }));
 
   return (
     <section id="faq" className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-white">
@@ -42,7 +25,7 @@ export const EnhanceAIFAQ: React.FC = () => {
           viewport={{ once: true }}
           className="text-center text-2xl sm:text-3xl font-bold text-neutral-800 mb-12"
         >
-          Questions & Réponses
+          {t('faq.title')}
         </motion.h2>
 
         <div className="space-y-3">

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { Check, TrendingUp, BarChart3, Calendar, Wallet, MessageCircle, Star, Heart } from 'lucide-react';
+import { Check, TrendingUp, BarChart3, Calendar, Wallet, MessageCircle, Star } from 'lucide-react';
+import { getAvatarPlaceholder } from '../../lib/avatar-placeholders';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 
 const barData = [
@@ -78,22 +79,21 @@ export const EnhanceAIHero: React.FC = () => {
             </a>
           </div>
 
-          <div className="flex items-center justify-center gap-2 mt-6">
+          <div className="flex items-center justify-center gap-3 mt-6">
             <div className="flex -space-x-3">
-              {[1, 2, 3].map((i) => (
-                <div
+              {[0, 1, 2].map((i) => (
+                <img
                   key={i}
-                  className="w-9 h-9 rounded-full border-2 border-white overflow-hidden bg-neutral-200 shadow-md"
-                >
-                  <img
-                    src={`https://i.pravatar.cc/64?img=${i + 10}`}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+                  src={getAvatarPlaceholder(i)}
+                  alt={t('hero.avatarAlt')}
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-white flex-shrink-0 bg-neutral-200"
+                  loading="eager"
+                  fetchPriority={i === 1 ? 'high' : undefined}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
               ))}
             </div>
-            <span className="text-sm text-neutral-600 font-medium">{t('hero.social')}</span>
+            <span className="text-sm font-medium text-slate-700">{t('hero.social')}</span>
           </div>
         </div>
 
@@ -179,7 +179,7 @@ export const EnhanceAIHero: React.FC = () => {
           >
             <div className="w-full h-full rounded-[2rem] overflow-hidden bg-neutral-200">
               <img
-                src="/images/mockup-profil.jpg"
+                src="/images/mockup-profil.png"
                 alt="Profil"
                 className="w-full h-full object-cover"
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
@@ -198,12 +198,20 @@ export const EnhanceAIHero: React.FC = () => {
             ))}
           </div>
 
-          <div className="absolute top-[15%] right-[2%] sm:right-[8%] z-30 flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] hidden md:flex">
-            <Heart className="w-4 h-4 fill-red-500 text-red-500" />
-            <div className="w-6 h-6 rounded-full bg-neutral-300 flex-shrink-0 overflow-hidden">
-              <img src="https://i.pravatar.cc/64?img=15" alt="" className="w-full h-full object-cover" />
+          <div className="absolute top-[15%] right-[2%] sm:right-[8%] z-30 flex items-center gap-3 px-4 py-2 rounded-full bg-white/80 backdrop-blur-md shadow-sm hidden md:flex">
+            <div className="flex -space-x-2">
+              {[2, 3, 4].map((i) => (
+                <img
+                  key={i}
+                  src={getAvatarPlaceholder(i)}
+                  alt={t('hero.avatarAlt')}
+                  className="w-8 h-8 rounded-full object-cover ring-2 ring-white flex-shrink-0 bg-neutral-200"
+                  loading="lazy"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              ))}
             </div>
-            <span className="text-xs font-semibold text-neutral-800">+1 Nouveau RDV !</span>
+            <span className="text-sm font-medium text-slate-700">{t('hero.badgeNewRdv')}</span>
           </div>
         </div>
       </div>

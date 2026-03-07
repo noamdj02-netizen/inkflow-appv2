@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface FeatureItem {
   icon: LucideIcon;
@@ -35,6 +36,7 @@ interface DetailSectionConfig {
   visualTitle?: string;
   visualIcon?: LucideIcon;
   reverse?: boolean;
+  files?: string[];
 }
 
 const glassCardStyle = {
@@ -44,78 +46,77 @@ const glassCardStyle = {
   boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255,255,255,0.5) inset',
 };
 
-const sections: DetailSectionConfig[] = [
-  {
-    title: 'Optimisation des réservations et engagement client hyper-personnalisé',
-    description:
-      "L'IA analyse vos données pour identifier ce qui fonctionne et optimiser vos campagnes de réservation pour un impact maximal.",
-    features: [
-      { icon: Calendar, label: 'Réservations illimitées' },
-      { icon: CreditCard, label: 'Paiements Stripe intégrés' },
-      { icon: Users, label: 'Clients CRM illimités' },
-      { icon: BarChart3, label: 'Statistiques avancées' },
-    ],
-    visualType: 'timeline',
-    visualTitle: 'Évolution',
-    visualIcon: BarChart3,
-    visualData: [
-      { label: 'Réservations', value: 60, color: 'bg-blue-500' },
-      { label: 'Acomptes', value: 40, color: 'bg-amber-400' },
-      { label: 'Flash', value: 10, color: 'bg-emerald-500' },
-    ] as TimelineItem[],
-  },
-  {
-    title: 'CRM client et fidélisation en un seul endroit',
-    description:
-      'Centralisez l\'historique de chaque client : rendez-vous, notes de session, préférences. Suivez la cicatrisation et fidélisez vos clients avec des rappels personnalisés.',
-    features: [
-      { icon: Users, label: 'Fiches clients complètes' },
-      { icon: FileText, label: 'Notes et suivi de cicatrisation' },
-      { icon: Bell, label: 'Rappels automatiques personnalisés' },
-      { icon: BarChart3, label: 'Historique des paiements' },
-    ],
-    visualType: 'list',
-    visualTitle: 'Clients récents',
-    visualIcon: Users,
-    visualData: ['Lucas M. — 3 RDV • Prochain 14:00', 'Marie L. — 1 RDV • Prochain 16:30', 'Emma L. — Nouvelle demande'],
-    reverse: true,
-  },
-  {
-    title: 'Paiements sécurisés et automatisation des acomptes',
-    description:
-      'Stripe intégré de bout en bout. Envoyez des liens de paiement en un clic, encaissez les acomptes avant le RDV et réduisez les no-shows.',
-    features: [
-      { icon: CreditCard, label: 'Liens de paiement Stripe' },
-      { icon: Shield, label: 'Paiements sécurisés PCI' },
-      { icon: CheckCircle, label: 'Confirmation automatique' },
-      { icon: Bell, label: 'Relances acomptes non payés' },
-    ],
-    visualType: 'stats',
-    visualTitle: 'Ce mois',
-    visualIcon: CreditCard,
-    visualData: [
-      { label: 'Revenus', value: '2 340 €' },
-      { label: 'Acomptes encaissés', value: '18' },
-      { label: 'Taux de conversion', value: '94 %' },
-    ],
-  },
-  {
-    title: 'Vitrine en ligne et galerie flash pour vendre vos designs',
-    description:
-      'Publiez votre portfolio et vos flashs. Vos clients découvrent vos créations, réservent en ligne et paient l\'acompte. Le design est bloqué automatiquement après paiement.',
-    features: [
-      { icon: Image, label: 'Galerie flash avec statut' },
-      { icon: Store, label: 'Page vitrine personnalisable' },
-      { icon: Sparkles, label: 'Blocage auto après réservation' },
-      { icon: CreditCard, label: 'Acompte en ligne intégré' },
-    ],
-    visualType: 'checklist',
-    visualTitle: 'Galerie Flash',
-    visualIcon: Image,
-    visualData: ['Iris floral — 180 € • Disponible', 'Léopard — 150 € • Réservé', 'Carpe Koï — 220 € • Disponible'],
-    reverse: true,
-  },
-];
+function getSections(t: (k: string) => string): DetailSectionConfig[] {
+  return [
+    {
+      title: t('features.section1.title'),
+      description: t('features.section1.desc'),
+      features: [
+        { icon: Calendar, label: t('features.section1.f1') },
+        { icon: CreditCard, label: t('features.section1.f2') },
+        { icon: Users, label: t('features.section1.f3') },
+        { icon: BarChart3, label: t('features.section1.f4') },
+      ],
+      visualType: 'timeline' as const,
+      visualTitle: t('features.section1.visualTitle'),
+      visualIcon: BarChart3,
+      visualData: [
+        { label: t('features.section1.v1'), value: 60, color: 'bg-blue-500' },
+        { label: t('features.section1.v2'), value: 40, color: 'bg-amber-400' },
+        { label: t('features.section1.v3'), value: 10, color: 'bg-emerald-500' },
+      ] as TimelineItem[],
+      files: [t('features.file1'), t('features.file2'), t('features.file3')],
+    },
+    {
+      title: t('features.section2.title'),
+      description: t('features.section2.desc'),
+      features: [
+        { icon: Users, label: t('features.section2.f1') },
+        { icon: FileText, label: t('features.section2.f2') },
+        { icon: Bell, label: t('features.section2.f3') },
+        { icon: BarChart3, label: t('features.section2.f4') },
+      ],
+      visualType: 'list' as const,
+      visualTitle: t('features.section2.visualTitle'),
+      visualIcon: Users,
+      visualData: [t('features.section2.v1'), t('features.section2.v2'), t('features.section2.v3')],
+      reverse: true,
+    },
+    {
+      title: t('features.section3.title'),
+      description: t('features.section3.desc'),
+      features: [
+        { icon: CreditCard, label: t('features.section3.f1') },
+        { icon: Shield, label: t('features.section3.f2') },
+        { icon: CheckCircle, label: t('features.section3.f3') },
+        { icon: Bell, label: t('features.section3.f4') },
+      ],
+      visualType: 'stats' as const,
+      visualTitle: t('features.section3.visualTitle'),
+      visualIcon: CreditCard,
+      visualData: [
+        { label: t('features.section3.v1'), value: t('features.section3.val1') },
+        { label: t('features.section3.v2'), value: t('features.section3.val2') },
+        { label: t('features.section3.v3'), value: t('features.section3.val3') },
+      ],
+    },
+    {
+      title: t('features.section4.title'),
+      description: t('features.section4.desc'),
+      features: [
+        { icon: Image, label: t('features.section4.f1') },
+        { icon: Store, label: t('features.section4.f2') },
+        { icon: Sparkles, label: t('features.section4.f3') },
+        { icon: CreditCard, label: t('features.section4.f4') },
+      ],
+      visualType: 'checklist' as const,
+      visualTitle: t('features.section4.visualTitle'),
+      visualIcon: Image,
+      visualData: [t('features.section4.v1'), t('features.section4.v2'), t('features.section4.v3')],
+      reverse: true,
+    },
+  ];
+}
 
 function VisualCard({ config }: { config: DetailSectionConfig }) {
   const Icon = config.visualIcon ?? BarChart3;
@@ -185,9 +186,9 @@ function VisualCard({ config }: { config: DetailSectionConfig }) {
         </div>
       )}
 
-      {config.visualType === 'timeline' && (
+      {config.visualType === 'timeline' && config.files && (
         <div className="space-y-2 pt-4 border-t border-neutral-200/60">
-          {['Rapport mensuel.pdf', 'Clients actifs.xls', 'Acomptes Stripe.doc'].map((f, i) => (
+          {config.files.map((f, i) => (
             <div key={i} className="flex items-center gap-2 text-sm text-neutral-600">
               <FileText className="w-4 h-4 text-blue-500" />
               {f}
@@ -226,6 +227,8 @@ function TextBlock({ config }: { config: DetailSectionConfig }) {
 }
 
 export const EnhanceAIFeaturesDetail: React.FC = () => {
+  const { t } = useLanguage();
+  const sections = getSections(t);
   return (
     <>
       {sections.map((config, idx) => (

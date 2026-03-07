@@ -1,36 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { getAvatarPlaceholder } from '../../lib/avatar-placeholders';
+import { useLanguage } from '../../contexts/LanguageContext';
 
-const testimonials = [
-  {
-    quote: "La galerie flash a boosté mes ventes de 40%. Mes clients adorent pouvoir réserver un design en un clic.",
-    name: "Emma Dubois",
-    studio: "Artistic Tattoo",
-    location: "Marseille",
-    avatar: "https://i.pravatar.cc/128?img=5",
-  },
-  {
-    quote: "Le CRM intégré me fait gagner un temps fou. J'ai tout l'historique de mes clients sous la main.",
-    name: "Thomas Leroy",
-    studio: "Urban Ink",
-    location: "Bordeaux",
-    avatar: "https://i.pravatar.cc/128?img=12",
-  },
-  {
-    quote: "Enfin une solution pensée pour les tatoueurs. Simple, efficace, et le support répond en moins d'une heure.",
-    name: "Léa Petit",
-    studio: "Noir Tattoo",
-    location: "Lille",
-    avatar: "https://i.pravatar.cc/128?img=9",
-  },
-  {
-    quote: "InkFlow a transformé mon quotidien. Je gagne facilement 6h par semaine en automatisant les réservations.",
-    name: "Sophie Martin",
-    studio: "Ink & Soul",
-    location: "Paris",
-    avatar: "https://i.pravatar.cc/128?img=1",
-  },
+const testimonialsConfig = [
+  { quoteKey: 'testimonials.quote1', name: 'Emma Dubois', studio: 'Artistic Tattoo', location: 'Marseille', avatarIdx: 0 },
+  { quoteKey: 'testimonials.quote2', name: 'Thomas Leroy', studio: 'Urban Ink', location: 'Bordeaux', avatarIdx: 1 },
+  { quoteKey: 'testimonials.quote3', name: 'Léa Petit', studio: 'Noir Tattoo', location: 'Lille', avatarIdx: 2 },
+  { quoteKey: 'testimonials.quote4', name: 'Sophie Martin', studio: 'Ink & Soul', location: 'Paris', avatarIdx: 3 },
 ];
 
 const glassStyle = {
@@ -42,9 +20,15 @@ const glassStyle = {
 };
 
 export const EnhanceAITestimonials: React.FC = () => {
+  const { t } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isUserClick = useRef(false);
+  const testimonials = testimonialsConfig.map((c) => ({
+    ...c,
+    quote: t(c.quoteKey),
+    avatar: getAvatarPlaceholder(c.avatarIdx),
+  }));
 
   const goNext = () => {
     isUserClick.current = true;
@@ -95,13 +79,13 @@ export const EnhanceAITestimonials: React.FC = () => {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-100 border border-neutral-200/80 mb-4">
             <Star className="w-4 h-4 text-blue-500 fill-blue-500" />
-            <span className="text-sm font-medium text-neutral-700">4.9/5 sur 200+ avis</span>
+            <span className="text-sm font-medium text-neutral-700">{t('testimonials.badge')}</span>
           </div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-800 mb-3">
-            Ils nous font confiance
+            {t('testimonials.title')}
           </h2>
           <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto">
-            Rejoignez des centaines de tatoueurs qui ont repris le contrôle de leur temps
+            {t('testimonials.subtitle')}
           </p>
         </motion.div>
 
@@ -163,7 +147,7 @@ export const EnhanceAITestimonials: React.FC = () => {
               type="button"
               onClick={goPrev}
               className="w-12 h-12 rounded-full bg-neutral-900 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors shadow-lg"
-              aria-label="Témoignage précédent"
+              aria-label={t('testimonials.prev')}
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
@@ -171,7 +155,7 @@ export const EnhanceAITestimonials: React.FC = () => {
               type="button"
               onClick={goNext}
               className="w-12 h-12 rounded-full bg-neutral-900 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors shadow-lg"
-              aria-label="Témoignage suivant"
+              aria-label={t('testimonials.next')}
             >
               <ChevronRight className="w-6 h-6" />
             </button>
@@ -187,7 +171,7 @@ export const EnhanceAITestimonials: React.FC = () => {
                 className={`w-2 h-2 rounded-full transition-colors ${
                   i === currentIndex ? 'bg-neutral-900' : 'bg-neutral-300 hover:bg-neutral-400'
                 }`}
-                aria-label={`Aller au témoignage ${i + 1}`}
+                aria-label={`${t('testimonials.goTo')} ${i + 1}`}
               />
             ))}
           </div>

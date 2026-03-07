@@ -1,6 +1,7 @@
 import React from 'react';
 import { MessageSquare, Calendar, Image, Users, Mail, Briefcase, DollarSign, Settings, CheckCircle, Clock } from 'lucide-react';
 import { DashboardDemo } from './DashboardDemo';
+import { getAvatarPlaceholder } from '../../lib/avatar-placeholders';
 
 interface FeaturePreviewProps {
   slug: string;
@@ -21,8 +22,8 @@ export const FeaturePreview: React.FC<FeaturePreviewProps> = ({ slug }) => {
         </div>
         <div className="space-y-3">
           {[
-            { name: 'Emma L.', service: 'Mandala dos', date: '8 mars', status: 'Nouvelle', avatar: 'https://i.pravatar.cc/80?img=9' },
-            { name: 'Thomas D.', service: 'Carpe Koï', date: '9 mars', status: 'Nouvelle', avatar: 'https://i.pravatar.cc/80?img=12' },
+            { name: 'Emma L.', service: 'Mandala dos', date: '8 mars', status: 'Nouvelle', avatar: getAvatarPlaceholder(0) },
+            { name: 'Thomas D.', service: 'Carpe Koï', date: '9 mars', status: 'Nouvelle', avatar: getAvatarPlaceholder(1) },
           ].map((r, i) => (
             <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-100">
               <img src={r.avatar} alt={r.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
@@ -125,8 +126,8 @@ export const FeaturePreview: React.FC<FeaturePreviewProps> = ({ slug }) => {
         </div>
         <div className="space-y-3">
           {[
-            { name: 'Lucas M.', info: '3 RDV • Prochain 14:00', status: 'Payé', avatar: 'https://i.pravatar.cc/96?img=11' },
-            { name: 'Marie L.', info: '1 RDV • Prochain 16:30', status: 'En attente', avatar: 'https://i.pravatar.cc/96?img=5' },
+            { name: 'Lucas M.', info: '3 RDV • Prochain 14:00', status: 'Payé', avatar: getAvatarPlaceholder(2) },
+            { name: 'Marie L.', info: '1 RDV • Prochain 16:30', status: 'En attente', avatar: getAvatarPlaceholder(3) },
           ].map((c, i) => (
             <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 border border-neutral-100">
               <img src={c.avatar} alt={c.name} className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
@@ -155,7 +156,7 @@ export const FeaturePreview: React.FC<FeaturePreviewProps> = ({ slug }) => {
         </div>
         <div className="space-y-2">
           <div className="flex gap-2">
-            <img src="https://i.pravatar.cc/64?img=9" alt="Client" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+            <img src={getAvatarPlaceholder(0)} alt="Client" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
             <div className="flex-1 bg-neutral-100 rounded-2xl rounded-tl-none px-3 py-2">
               <p className="text-sm text-neutral-700">Bonjour, je voudrais réserver le flash Iris pour samedi.</p>
             </div>
@@ -164,7 +165,7 @@ export const FeaturePreview: React.FC<FeaturePreviewProps> = ({ slug }) => {
             <div className="flex-1 max-w-[80%] bg-blue-600 text-white rounded-2xl rounded-tr-none px-3 py-2 text-right">
               <p className="text-sm">Parfait ! Samedi 14h vous convient ?</p>
             </div>
-            <img src="https://i.pravatar.cc/64?img=11" alt="Artiste" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+            <img src={getAvatarPlaceholder(1)} alt="Artiste" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
           </div>
         </div>
       </div>

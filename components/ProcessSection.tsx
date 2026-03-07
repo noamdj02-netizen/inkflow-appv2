@@ -1,40 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { UserPlus, Settings, Rocket, CheckCircle2, Mail, Copy, Bell } from 'lucide-react';
-
-const steps = [
-  {
-    icon: UserPlus,
-    title: 'Créez votre compte',
-    description: 'Inscription en 2 minutes. Aucune carte bancaire requise pour l\'essai.',
-    duration: '2 min',
-    preview: 'signup',
-  },
-  {
-    icon: Settings,
-    title: 'Configurez votre studio',
-    description: 'Ajoutez vos horaires, services, et connectez Stripe pour les paiements.',
-    duration: '10 min',
-    preview: 'config',
-  },
-  {
-    icon: Rocket,
-    title: 'Partagez votre lien',
-    description: 'Envoyez votre lien de réservation à vos clients sur Instagram, WhatsApp...',
-    duration: '1 min',
-    preview: 'share',
-  },
-  {
-    icon: CheckCircle2,
-    title: 'Recevez vos réservations',
-    description: 'Vos clients réservent 24/7. Vous êtes notifié et les acomptes arrivent automatiquement.',
-    duration: 'Automatique',
-    preview: 'receive',
-  },
-];
+import { useLanguage } from '../contexts/LanguageContext';
 
 // Mini previews visuels pour chaque étape
-const StepPreview: React.FC<{ type: string }> = ({ type }) => {
+const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ type, t }) => {
   if (type === 'signup') {
     return (
       <div className="w-full h-full p-3 bg-gradient-to-br from-neutral-50 to-white rounded-lg border border-neutral-200/80 flex flex-col gap-2">
@@ -74,7 +44,7 @@ const StepPreview: React.FC<{ type: string }> = ({ type }) => {
       <div className="w-full h-full p-3 bg-gradient-to-br from-neutral-50 to-white rounded-lg border border-neutral-200/80 flex flex-col gap-2">
         <div className="flex items-center gap-1.5">
           <Copy className="w-3.5 h-3.5 text-blue-500" />
-          <span className="text-[8px] font-medium text-neutral-600">Lien copié !</span>
+          <span className="text-[8px] font-medium text-neutral-600">{t('process.linkCopied')}</span>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="px-2 py-1 bg-neutral-100 rounded text-[7px] text-neutral-500 font-mono truncate max-w-full">
@@ -101,7 +71,7 @@ const StepPreview: React.FC<{ type: string }> = ({ type }) => {
         />
         <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent flex items-center gap-1.5">
           <Bell className="w-3.5 h-3.5 text-amber-400" />
-          <span className="text-[8px] font-medium text-white">+1 Nouveau RDV</span>
+          <span className="text-[8px] font-medium text-white">{t('process.newRdv')}</span>
         </div>
       </div>
     );
@@ -127,6 +97,13 @@ const itemVariants = {
 };
 
 export const ProcessSection: React.FC = () => {
+  const { t } = useLanguage();
+  const steps = [
+    { icon: UserPlus, titleKey: 'process.step1.title', descKey: 'process.step1.desc', durationKey: 'process.step1.duration', preview: 'signup' as const },
+    { icon: Settings, titleKey: 'process.step2.title', descKey: 'process.step2.desc', durationKey: 'process.step2.duration', preview: 'config' as const },
+    { icon: Rocket, titleKey: 'process.step3.title', descKey: 'process.step3.desc', durationKey: 'process.step3.duration', preview: 'share' as const },
+    { icon: CheckCircle2, titleKey: 'process.step4.title', descKey: 'process.step4.desc', durationKey: 'process.step4.duration', preview: 'receive' as const },
+  ];
   return (
     <section
       id="process"
@@ -145,10 +122,10 @@ export const ProcessSection: React.FC = () => {
         {/* Header */}
         <motion.div variants={itemVariants} className="text-center mb-16 sm:mb-20">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 px-2 tracking-tight text-neutral-900">
-            Prêt en moins de 15 minutes
+            {t('process.title')}
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto px-2">
-            De l'inscription à votre première réservation, tout est simple et rapide
+            {t('process.subtitle')}
           </p>
         </motion.div>
 
@@ -168,13 +145,13 @@ export const ProcessSection: React.FC = () => {
                   {/* Preview visuel */}
                   <div className="relative mb-6">
                     <div className="aspect-[4/3] max-h-[140px] rounded-xl overflow-hidden bg-neutral-100/80 border border-neutral-200/60">
-                      <StepPreview type={step.preview} />
+                      <StepPreview type={step.preview} t={t} />
                     </div>
                     <div className="absolute -top-2 -right-2 w-9 h-9 bg-neutral-900 text-white rounded-xl flex items-center justify-center shadow-lg">
                       <span className="text-sm font-bold">{index + 1}</span>
                     </div>
                     <div className="absolute bottom-2 left-2 px-2 py-1 rounded-lg bg-white/90 backdrop-blur-sm border border-white/60 shadow-sm">
-                      <span className="text-xs font-semibold text-neutral-600">{step.duration}</span>
+                      <span className="text-xs font-semibold text-neutral-600">{t(step.durationKey)}</span>
                     </div>
                   </div>
 
@@ -183,10 +160,10 @@ export const ProcessSection: React.FC = () => {
                     <div className="w-10 h-10 rounded-xl bg-neutral-900 flex items-center justify-center">
                       <Icon className="w-5 h-5 text-white" />
                     </div>
-                    <h3 className="text-lg font-bold text-neutral-900">{step.title}</h3>
+                    <h3 className="text-lg font-bold text-neutral-900">{t(step.titleKey)}</h3>
                   </div>
                   <p className="text-neutral-600 leading-relaxed text-sm">
-                    {step.description}
+                    {t(step.descKey)}
                   </p>
                 </div>
 
@@ -211,17 +188,17 @@ export const ProcessSection: React.FC = () => {
               whileHover={{ scale: 1.03, boxShadow: '0 20px 40px -12px rgba(0,0,0,0.25)' }}
               whileTap={{ scale: 0.98 }}
             >
-              Commencer maintenant
+              {t('process.cta1')}
             </motion.a>
             <a
               href="/demo"
               className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl border-2 border-neutral-300 bg-white text-neutral-800 font-semibold text-base hover:border-neutral-400 hover:bg-neutral-50 transition-all duration-300"
             >
-              Voir la démo
+              {t('process.cta2')}
             </a>
           </div>
           <p className="text-sm text-neutral-500 mt-4">
-            Essai gratuit de 14 jours • Pas de carte bancaire requise
+            {t('process.trial')}
           </p>
         </motion.div>
       </motion.div>
