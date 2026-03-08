@@ -68,7 +68,7 @@ export const EnhanceAITestimonials: React.FC = () => {
   }, []);
 
   return (
-    <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-neutral-50/50 to-white">
+    <section id="avis" className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-neutral-50/50 to-white">
       <div className="max-w-6xl mx-auto">
         {/* Badge + Titre + Sous-titre */}
         <motion.div

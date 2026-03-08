@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { ensureStudio } from '../lib/supabaseDashboard';
+import { clearAllInkflowStorage } from '../lib/clearAuthStorage';
 import { useSupabaseEnabled } from '../hooks/useSupabaseEnabled';
 import { DEMO_ACCOUNT_EMAIL } from '../data/demoData';
 
@@ -76,9 +77,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setAuthLoading(false);
     }, AUTH_SESSION_TIMEOUT_MS);
     supabase.auth.getSession()
-      .then(({ data: { session } }) => {
+      .then(async ({ data: { session } }) => {
         if (session?.user) {
-          const appUser = appUserFromSupabase(session.user);
+          const { data: { session: refreshed } } = await supabase.auth.refreshSession().catch(() => ({ data: { session } }));
+          const user = refreshed?.user ?? session.user;
+          const appUser = appUserFromSupabase(user);
           setUser(appUser);
           localStorage.setItem('inkflow_user', JSON.stringify(appUser));
         }
@@ -186,9 +189,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [isSupabaseAuthEnabled]);
 
   const logout = useCallback(() => {
-    if (isSupabaseAuthEnabled) supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('inkflow_user');
+    clearAllInkflowStorage();
+    if (isSupabaseAuthEnabled) supabase.auth.signOut();
   }, [isSupabaseAuthEnabled]);
 
   const updateUser = useCallback((updates: Partial<User>) => {

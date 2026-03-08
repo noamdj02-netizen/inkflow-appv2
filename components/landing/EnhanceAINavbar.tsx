@@ -4,15 +4,9 @@ import { Logo } from '../Logo';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const navLinksConfig = [
-  { href: '/vue-ensemble', key: 'nav.overview' },
-  { href: '/demandes', key: 'nav.requests' },
-  { href: '/rendez-vous', key: 'nav.appointments' },
-  { href: '/galerie-flash', key: 'nav.flash' },
-  { href: '/clients', key: 'nav.clients' },
-  { href: '/messagerie', key: 'nav.messaging' },
-  { href: '/portfolio', key: 'nav.portfolio' },
-  { href: '/finance', key: 'nav.finance' },
-  { href: '/parametres', key: 'nav.settings' },
+  { href: '/#fonctionnalites', key: 'nav.features' },
+  { href: '/#pricing', key: 'nav.pricing' },
+  { href: '/#avis', key: 'nav.reviews' },
 ];
 
 export const EnhanceAINavbar: React.FC = () => {
@@ -39,7 +33,7 @@ export const EnhanceAINavbar: React.FC = () => {
   return (
     <>
       <nav
-        className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-neutral-200/60 shadow-sm"
+        className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-neutral-200/60 shadow-sm"
         style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -78,9 +72,15 @@ export const EnhanceAINavbar: React.FC = () => {
               </div>
               <a
                 href="/login"
-                className="hidden sm:inline-flex px-5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/25"
+                className="hidden sm:inline-flex px-4 py-2.5 rounded-xl border-2 border-neutral-300 text-neutral-700 font-semibold text-sm hover:border-neutral-400 hover:bg-neutral-50 transition-colors"
               >
                 {t('nav.login')}
+              </a>
+              <a
+                href="/signup"
+                className="hidden sm:inline-flex px-5 py-2.5 rounded-xl bg-neutral-900 text-white font-semibold text-sm hover:bg-neutral-800 transition-colors shadow-md"
+              >
+                {t('nav.trial')}
               </a>
               <button
                 type="button"
@@ -107,8 +107,11 @@ export const EnhanceAINavbar: React.FC = () => {
                 {link.label}
               </a>
             ))}
-            <a href="/login" onClick={() => setIsOpen(false)} className="mx-4 mt-4 block text-center py-3 rounded-xl bg-blue-600 text-white font-semibold">
+            <a href="/login" onClick={() => setIsOpen(false)} className="mx-4 mt-2 block text-center py-3 rounded-xl border-2 border-neutral-300 text-neutral-700 font-semibold">
               {t('nav.login')}
+            </a>
+            <a href="/signup" onClick={() => setIsOpen(false)} className="mx-4 mt-2 block text-center py-3 rounded-xl bg-neutral-900 text-white font-semibold">
+              {t('nav.trial')}
             </a>
           </div>
         </div>

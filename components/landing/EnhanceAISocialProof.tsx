@@ -1,37 +1,29 @@
 import React from 'react';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { motion } from 'framer-motion';
 
-const LOGOS = [
-  'HEIRESS',
-  'TOZO',
-  'HELLBABES',
-  'cocokind',
-  'Oxyfresh',
-  'DOT & KEY',
-  "Skybag's",
-  'Bellefit',
-  'AMAZING LACE',
-];
-
 export const EnhanceAISocialProof: React.FC = () => {
+  const { t } = useLanguage();
+
   return (
-    <section className="pt-6 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8 bg-white overflow-hidden">
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-wrap items-center justify-center gap-8 sm:gap-10 md:gap-14 lg:gap-16"
+    <section className="py-12 sm:py-16 bg-white border-y border-slate-100">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <motion.p
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-lg sm:text-xl text-slate-700 font-medium mb-4"
         >
-          {LOGOS.map((name, i) => (
-            <div
-              key={i}
-              className="text-neutral-500 font-semibold text-sm sm:text-base tracking-wide hover:text-neutral-700 transition-colors"
-            >
-              {name}
-            </div>
-          ))}
+          {t('hero.social')}
+        </motion.p>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.1 }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-50 border border-slate-100 text-sm font-semibold text-slate-700 shadow-sm"
+        >
+          {t('hero.socialBadge')}
         </motion.div>
       </div>
     </section>

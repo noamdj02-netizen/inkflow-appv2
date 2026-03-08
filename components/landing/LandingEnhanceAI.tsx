@@ -5,6 +5,8 @@ import { AddToHomeScreenBanner } from './AddToHomeScreenBanner';
 import { SEO, organizationSchema, websiteSchema } from '../SEO';
 
 const EnhanceAISocialProof = lazy(() => import('./EnhanceAISocialProof').then(m => ({ default: m.EnhanceAISocialProof })));
+const LandingFeaturesKeys = lazy(() => import('./LandingFeaturesKeys').then(m => ({ default: m.LandingFeaturesKeys })));
+const LandingAppSection = lazy(() => import('./LandingAppSection').then(m => ({ default: m.LandingAppSection })));
 const EnhanceAIFeaturesDetail = lazy(() => import('./EnhanceAIFeaturesDetail').then(m => ({ default: m.EnhanceAIFeaturesDetail })));
 const EnhanceAIHowInkflow = lazy(() => import('./EnhanceAIHowInkflow').then(m => ({ default: m.EnhanceAIHowInkflow })));
 const ProcessSection = lazy(() => import('../ProcessSection').then(m => ({ default: m.ProcessSection })));
@@ -37,6 +39,8 @@ export const LandingEnhanceAI: React.FC = () => {
       <EnhanceAIHero />
       <Suspense fallback={<div className="min-h-[200px]" aria-hidden />}>
         <EnhanceAISocialProof />
+        <LandingFeaturesKeys />
+        <LandingAppSection />
         <EnhanceAIFeaturesDetail />
         <EnhanceAIHowInkflow />
         <ProcessSection />

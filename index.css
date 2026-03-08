@@ -38,9 +38,9 @@ img, video {
   overflow-x: hidden;
 }
 
-/* Hero title — serif moderne, style reel.ai (bold, high-contrast) */
+/* Hero title — sans-serif type ChronoTask (bold, clean) */
 .font-hero-title {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 /* Respect des préférences utilisateur (accessibilité) */

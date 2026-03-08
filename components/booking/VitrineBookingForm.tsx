@@ -174,7 +174,8 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
         refUrls = await uploadBookingReferenceImages(studioId, referenceImages);
       }
     } catch (e) {
-      onError?.(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : (e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : String(e));
+      onError?.(msg);
       return;
     }
 
@@ -190,7 +191,8 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
       await createBooking(payload, studioId);
       onSubmitSuccess();
     } catch (e) {
-      onError?.(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : (e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : String(e));
+      onError?.(msg);
     }
   };
 

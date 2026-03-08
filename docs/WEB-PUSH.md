@@ -8,17 +8,19 @@ Les tatoueurs reçoivent des alertes (nouveau RDV, message) même lorsque l'appl
 
 ## 1. Générer les clés VAPID
 
+À la racine du projet :
+
 ```bash
-npx web-push generate-vapid-keys
+npm run vapid:generate
 ```
 
-Tu obtiens :
-- **Public Key** → `VITE_VAPID_PUBLIC_KEY` dans `.env` (et Vercel)
-- **Private Key** → `VAPID_PRIVATE_KEY` dans Supabase Secrets (pour l'Edge Function)
+Tu obtiens deux clés (ex. `BNx...` et `xxx...`) :
+- **Public Key** → à mettre dans `.env` / `.env.local` en **`VITE_VAPID_PUBLIC_KEY`** (frontend + Vercel)
+- **Private Key** → à mettre dans **Supabase Edge Function Secrets** en **`VAPID_PRIVATE_KEY`** (jamais côté client)
 
-Exemple `.env` :
+Exemple `.env.local` (côté frontend) :
 ```
-VITE_VAPID_PUBLIC_KEY=BNx...votre_clé_publique...
+VITE_VAPID_PUBLIC_KEY=BNx...votre_cle_publique...
 ```
 
 ---
@@ -40,86 +42,48 @@ L'abonnement est stocké dans **inkflow_push_subscriptions** :
 
 ---
 
-## 3. Envoyer une notification depuis le backend
+## 3. Edge Function `send-push-notification`
 
-### Option A : Edge Function Supabase
+La fonction **`send-push-notification`** est déjà créée dans `supabase/functions/send-push-notification/`.
 
-Installer `web-push` :
-```bash
-cd supabase/functions
-npm init -y
-npm install web-push
-```
+### Déploiement et secrets
 
-Exemple `send-push-notification/index.ts` :
+1. Définir les secrets Supabase (clés générées à l’étape 1) :
+   ```bash
+   npx supabase secrets set VAPID_PUBLIC_KEY=BNx...  VAPID_PRIVATE_KEY=xxx...
+   ```
+   Ou dans le dashboard : **Project Settings → Edge Functions → Secrets**.
 
-```typescript
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import webpush from "web-push";
-import { createClient } from "npm:@supabase/supabase-js@2";
+2. Déployer la fonction :
+   ```bash
+   npx supabase functions deploy send-push-notification
+   ```
 
-const VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC_KEY") || "";
-const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY") || "";
-webpush.setVapidDetails("mailto:contact@ink-flow.me", VAPID_PUBLIC, VAPID_PRIVATE);
-
-Deno.serve(async (req: Request) => {
-  const { studioId, title, body, url } = await req.json();
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
-  const { data: subs } = await supabase
-    .from("inkflow_push_subscriptions")
-    .select("endpoint, keys_p256dh, keys_auth")
-    .eq("studio_id", studioId);
-
-  const payload = JSON.stringify({
-    title: title || "InkFlow",
-    body: body || "Nouvelle notification",
-    data: { url: url || "/dashboard" },
-  });
-
-  for (const sub of subs || []) {
-    try {
-      await webpush.sendNotification(
-        {
-          endpoint: sub.endpoint,
-          keys: { p256dh: sub.keys_p256dh, auth: sub.keys_auth },
-        },
-        payload
-      );
-    } catch (e) {
-      if ((e as { statusCode?: number }).statusCode === 410 || (e as { statusCode?: number }).statusCode === 404) {
-        await supabase.from("inkflow_push_subscriptions").delete().eq("endpoint", sub.endpoint);
-      }
-    }
-  }
-  return new Response(JSON.stringify({ ok: true }));
-});
-```
-
-### Option B : Déclencher depuis un trigger ou une autre Edge Function
-
-Quand un nouveau RDV est créé (ex. `inkflow_bookings` INSERT), appelle l'Edge Function :
+### Appel depuis le frontend ou une autre Edge Function
 
 ```typescript
 await supabase.functions.invoke("send-push-notification", {
   body: {
     studioId: "...",
-    title: "Nouveau rendez-vous",
+    title: "InkFlow",
     body: "Sophie Martin a réservé pour le 15 mars",
     url: "/dashboard?tab=requests",
+    tag: "inkflow-booking",  // optionnel
   },
 });
 ```
 
 ---
 
-## 4. Secrets Supabase à configurer
+## 4. Secrets Supabase (récap)
+
+| Secret              | Où le mettre | Description |
+|---------------------|--------------|-------------|
+| `VAPID_PUBLIC_KEY`  | Supabase Edge Function Secrets | Même clé que `VITE_VAPID_PUBLIC_KEY` (pour la fonction) |
+| `VAPID_PRIVATE_KEY`| Supabase Edge Function Secrets | Clé privée (ne jamais l’exposer côté client) |
 
 ```bash
-npx supabase secrets set VAPID_PUBLIC_KEY=BNx...
-npx supabase secrets set VAPID_PRIVATE_KEY=...
+npx supabase secrets set VAPID_PUBLIC_KEY=BNx...  VAPID_PRIVATE_KEY=xxx...
 ```
 
 ---

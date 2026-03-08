@@ -97,16 +97,12 @@ export async function getVitrineDataFromSupabase(studioId: string, defaultData: 
   return { ...defaultData, ...(data.data as object), slug: defaultData.slug } as VitrineData;
 }
 
-/** Récupère le studio_id à partir du slug (pour la page publique) */
+/** Récupère le studio_id à partir du slug (pour la page publique). Utilise la RPC sécurisée pour ne pas exposer les emails. */
 export async function getStudioIdBySlug(slug: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('inkflow_studios')
-    .select('id')
-    .eq('slug', slug)
-    .limit(1)
-    .maybeSingle();
-  if (error || !data?.id) return null;
-  return data.id;
+  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: slug });
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row?.id) return null;
+  return row.id as string;
 }
 
 /** Récupère les données vitrine par slug (pour la page publique /studio/:slug) */

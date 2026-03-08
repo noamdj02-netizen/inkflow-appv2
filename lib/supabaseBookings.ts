@@ -131,7 +131,7 @@ export async function createBooking(data: VitrineBookingFormData, studioId: stri
   };
 
   const { error } = await supabase.from('inkflow_bookings').insert(row);
-  if (error) throw error;
+  if (error) throw new Error(error.message || "Erreur lors de l'envoi de la demande.");
   return id;
 }
 

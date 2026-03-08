@@ -170,7 +170,12 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_studio_public_by_slug: {
+        Args: { p_slug: string };
+        Returns: { id: string; name: string; studio_name: string; slug: string }[];
+      };
+    };
     Enums: Record<string, never>;
   };
 }
