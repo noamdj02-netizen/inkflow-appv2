@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Mail, FileText, Calendar, Clock, ChevronLeft, ChevronRight, UploadCloud, MapPin, Ruler, X } from 'lucide-react';
-import { createBooking } from '../../lib/supabaseBookings';
+import { createBooking, uploadBookingReferenceImages } from '../../lib/supabaseBookings';
 import { toLocalDateString } from '../../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS } from '../../lib/studioAvailability';
 import type { VitrineBookingFormData } from '../../types';
@@ -168,12 +168,23 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
     if (referenceImages.length > 0) extras.push(`${referenceImages.length} image(s) de référence jointes`);
     if (extras.length > 0) fullDescription += '\n\n--- Détails ---\n' + extras.join('\n');
 
+    let refUrls: string[] = [];
+    try {
+      if (referenceImages.length > 0) {
+        refUrls = await uploadBookingReferenceImages(studioId, referenceImages);
+      }
+    } catch (e) {
+      onError?.(e instanceof Error ? e.message : String(e));
+      return;
+    }
+
     const payload: VitrineBookingFormData = {
       clientName: data.clientName,
       clientEmail: data.clientEmail,
       description: fullDescription,
       requestedDate: data.requestedDate,
       requestedTime: data.requestedTime || undefined,
+      referenceImages: refUrls.length > 0 ? refUrls : undefined,
     };
     try {
       await createBooking(payload, studioId);

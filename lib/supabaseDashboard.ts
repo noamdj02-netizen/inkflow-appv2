@@ -139,6 +139,25 @@ export async function saveWidgetsToSupabase(studioId: string, widgets: Dashboard
   if (error) throw error;
 }
 
+/** Ordre des widgets Vue d'ensemble (KPI + personnalisés) */
+export async function getWidgetOrderFromSupabase(studioId: string): Promise<string[]> {
+  const { data, error } = await supabase.from('inkflow_widgets').select('widget_order').eq('studio_id', studioId).maybeSingle();
+  if (error || !data?.widget_order) return [];
+  const arr = data.widget_order as unknown;
+  if (!Array.isArray(arr)) return [];
+  return arr.filter((id): id is string => typeof id === 'string');
+}
+
+export async function saveWidgetOrderToSupabase(studioId: string, order: string[]): Promise<void> {
+  const { data: existing } = await supabase.from('inkflow_widgets').select('widgets').eq('studio_id', studioId).maybeSingle();
+  const widgets = (existing?.widgets as unknown[]) ?? [];
+  const { error } = await supabase.from('inkflow_widgets').upsert(
+    { studio_id: studioId, widgets, widget_order: order, updated_at: new Date().toISOString() },
+    { onConflict: 'studio_id' }
+  );
+  if (error) throw error;
+}
+
 // Vitrine link settings
 export async function getVitrineLinkSettingsFromSupabase(studioId: string): Promise<Record<string, unknown>> {
   const { data, error } = await supabase.from('inkflow_vitrine_link_settings').select('settings').eq('studio_id', studioId).single();

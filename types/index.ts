@@ -167,6 +167,7 @@ export interface Booking {
   requestedDate: string;
   requestedTime: string | null;
   status: BookingStatus;
+  referenceImages?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -178,6 +179,7 @@ export interface VitrineBookingFormData {
   description: string;
   requestedDate: string;
   requestedTime?: string;
+  referenceImages?: string[];
 }
 
 export interface StudioSettings {

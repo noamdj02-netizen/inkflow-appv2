@@ -31,8 +31,8 @@ export default defineConfig(({ mode }) => {
           strategies: 'injectManifest',
           srcDir: 'public',
           filename: 'sw.js',
-          registerType: 'autoUpdate',
-          includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon-180x180.png', 'icon-ios-1024.png'],
+          registerType: 'prompt',
+          includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon-180x180.png', 'icon-ios-1024.png', 'images/mockup-profil.webp'],
           manifest: {
             name: 'InkFlow - Assistant Tatoueur',
             short_name: 'InkFlow',
@@ -80,6 +80,7 @@ export default defineConfig(({ mode }) => {
               'vendor-charts': ['recharts'],
               'vendor-supabase': ['@supabase/supabase-js'],
               'vendor-pdf': ['jspdf'],
+              'vendor-framer-motion': ['framer-motion'],
             },
           },
         },

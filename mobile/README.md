@@ -52,7 +52,25 @@ Le système de notifications locales (avec son et image) est intégré. Pour l'a
    - Copie `HomeScreen.tsx` dans `app/` (Expo Router) ou `screens/` selon ta structure.
    - Dans ton écran principal ou `app/index.tsx` : `import HomeScreen from './HomeScreen';` puis `<HomeScreen />`.
 
-4. **Palette utilisée** (définie dans le fichier) :
+4. **Navigation** : Branche `onNavigate` pour naviguer vers les écrans correspondants (drawer, bottom bar, boutons rapides) :
+   ```tsx
+   import { useRouter } from 'expo-router';
+   import HomeScreen, { type HomeScreenNavId } from './HomeScreen';
+
+   const router = useRouter();
+   const handleNavigate = (screen: HomeScreenNavId) => {
+     const routes: Record<HomeScreenNavId, string> = {
+       overview: '/', requests: '/requests', appointments: '/appointments',
+       'new-appointment': '/appointments/new', flash: '/flash', 'block-slot': '/block-slot',
+       clients: '/clients', vitrine: '/vitrine', settings: '/settings', widget: '/widget',
+     };
+     router.push(routes[screen] ?? '/');
+   };
+
+   <HomeScreen studioId={studioId} onNavigate={handleNavigate} />
+   ```
+
+5. **Palette utilisée** (définie dans le fichier) :
    - Fond app : `#E8E2F6`
    - Texte principal : `#1A1035`
    - Texte secondaire : `#7A5DD8`

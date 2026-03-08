@@ -9,6 +9,7 @@ import { Logo } from './components/Logo';
 import { LandingEnhanceAI } from './components/landing/LandingEnhanceAI';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CookieConsent } from './components/CookieConsent';
+import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -26,6 +27,7 @@ const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage')
 const AidePage = lazy(() => import('./pages/AidePage').then(m => ({ default: m.AidePage })));
 const DemoPage = lazy(() => import('./pages/DemoPage').then(m => ({ default: m.DemoPage })));
 const FeatureDetailPage = lazy(() => import('./pages/features/FeatureDetailPage').then(m => ({ default: m.FeatureDetailPage })));
+const InstagramCallbackPage = lazy(() => import('./pages/InstagramCallbackPage').then(m => ({ default: m.InstagramCallbackPage })));
 
 interface Route {
   path: string | RegExp;
@@ -103,6 +105,7 @@ const Router: React.FC = () => {
     { path: /^\/(vue-ensemble|demandes|rendez-vous|galerie-flash|clients|messagerie|portfolio|finance|parametres)\/?$/, component: FeatureDetailPage, getProps: (m) => ({ slug: m[1] }) },
     { path: '/dashboard', component: DashboardPage, requiresAuth: true, needsSupabaseSync: true },
     { path: '/auth/callback', component: AuthCallbackPage },
+    { path: '/instagram/callback', component: InstagramCallbackPage },
     { path: '/auth/update-password', component: UpdatePasswordPage },
     // Vitrine publique : accessible sans connexion (slash final optionnel)
     { path: /^\/studio\/([a-z0-9-]+)\/?$/, component: PublicStudioPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
@@ -248,6 +251,7 @@ const App: React.FC = () => {
                 <UnhandledRejectionHandler />
                 <Router />
                 <CookieConsent />
+                <PWAUpdatePrompt />
               </LanguageProvider>
             </ToastProvider>
           </AuthProvider>

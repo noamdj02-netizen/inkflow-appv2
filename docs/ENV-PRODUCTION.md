@@ -38,6 +38,9 @@ Le build Vite n’a accès qu’aux variables **préfixées par `VITE_`**. Tout 
 | `SITE_URL` | create-checkout-session, create-subscription | URL de production (ex. `https://inkflow.app`) pour success_url / cancel_url |
 | `RESEND_API_KEY` | send-project-notification, send-aftercare-email, send-appointment-reminders | Envoi d’emails (Resend) |
 | `GEMINI_API_KEY` | (si utilisé côté Edge Function) | Optionnel |
+| `META_APP_ID` | instagram | ID de l'app Meta (developers.facebook.com) |
+| `META_APP_SECRET` | instagram | Secret de l'app Meta |
+| `META_WEBHOOK_VERIFY_TOKEN` | instagram-webhook | Token de vérification du webhook Meta |
 
 En **production** :
 - Définir **obligatoirement** `STRIPE_WEBHOOK_SECRET` (sinon le webhook renvoie 501).

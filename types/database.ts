@@ -123,9 +123,10 @@ export interface Database {
         Row: {
           studio_id: string;
           widgets: unknown[];
+          widget_order: string[];
           updated_at: string;
         };
-        Insert: { studio_id: string; widgets: unknown[]; updated_at?: string };
+        Insert: { studio_id: string; widgets: unknown[]; widget_order?: string[]; updated_at?: string };
         Update: Partial<Database['public']['Tables']['inkflow_widgets']['Insert']>;
       };
       inkflow_bookings: {
@@ -138,10 +139,11 @@ export interface Database {
           requested_date: string;
           requested_time: string | null;
           status: string;
+          reference_images: string[];
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['inkflow_bookings']['Row'], 'created_at' | 'updated_at'> & { created_at?: string; updated_at?: string };
+        Insert: Omit<Database['public']['Tables']['inkflow_bookings']['Row'], 'created_at' | 'updated_at'> & { created_at?: string; updated_at?: string; reference_images?: string[] };
         Update: Partial<Database['public']['Tables']['inkflow_bookings']['Insert']>;
       };
       inkflow_user_settings: {

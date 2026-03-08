@@ -1,0 +1,123 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Instagram, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { getInstagramStatus, getInstagramAuthUrl, disconnectInstagram } from '../../lib/instagram';
+
+interface InstagramConnectProps {
+  studioId: string;
+}
+
+export const InstagramConnect: React.FC<InstagramConnectProps> = ({ studioId }) => {
+  const [connected, setConnected] = useState(false);
+  const [igUsername, setIgUsername] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!studioId) return;
+    getInstagramStatus(studioId)
+      .then((data) => {
+        if (data.connected) {
+          setConnected(true);
+          setIgUsername(data.username ?? null);
+        }
+      })
+      .catch(() => {});
+  }, [studioId]);
+
+  const handleConnect = async () => {
+    if (!studioId || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const authUrl = await getInstagramAuthUrl(studioId);
+      window.location.href = authUrl;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur de connexion');
+      setLoading(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!studioId || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await disconnectInstagram(studioId);
+      setConnected(false);
+      setIgUsername(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur de déconnexion');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-[var(--border)] p-6 bg-[var(--bg-card)]">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 rounded-xl flex items-center justify-center">
+          <Instagram className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-[var(--text-primary)]">Instagram Direct</h3>
+          <p className="text-sm text-[var(--text-secondary)]">
+            Réponds à tes clients directement depuis Inkflow
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm">
+          {error}
+        </div>
+      )}
+
+      {connected ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 rounded-lg px-4 py-3">
+            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm font-medium">
+              Connecté en tant que @{igUsername ?? 'instagram'}
+            </span>
+          </div>
+          <button
+            onClick={handleDisconnect}
+            disabled={loading}
+            className="text-sm text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 underline disabled:opacity-50"
+          >
+            Déconnecter Instagram
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-start gap-2 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 rounded-lg px-4 py-3">
+            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <p className="text-xs">
+              Ton compte Instagram doit être en mode <strong>Professionnel</strong>{' '}
+              et lié à une Page Facebook.
+            </p>
+          </div>
+          <button
+            onClick={handleConnect}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl px-4 py-3 font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+          >
+            <Instagram className="w-4 h-4" />
+            {loading ? 'Connexion...' : 'Connecter mon Instagram'}
+          </button>
+          <a
+            href="https://help.instagram.com/502981923235522"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] justify-center"
+          >
+            Comment passer en compte professionnel ?
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      )}
+    </div>
+  );
+};

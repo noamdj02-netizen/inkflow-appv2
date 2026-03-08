@@ -55,13 +55,12 @@
       }
     }
     </script>
+    <link rel="preload" href="/images/mockup-profil.webp" as="image" fetchpriority="high" type="image/webp" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/icon.svg" sizes="any" type="image/svg+xml" />
     <!-- iOS : PNG avec 20% padding pour masque arrondi. Généré via npm run generate-pwa-icons -->
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" sizes="180x180" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <!-- Fonts: self-hosted via @fontsource (non-blocking, font-display: swap) -->
     <style>
       :root {
         --color-bg: #ddd6f7;
@@ -132,6 +131,14 @@
       </div>
     </div>
     <div id="root"></div>
+    <!-- Fallback pour crawlers sans JS (SEO) -->
+    <noscript>
+      <div style="max-width:800px;margin:2rem auto;padding:2rem;font-family:system-ui,sans-serif;">
+        <h1>InkFlow — Logiciel de gestion pour tatoueurs</h1>
+        <p>Gérez vos rendez-vous, clients et portfolio de tatouage en un seul endroit. Agenda, acomptes Stripe, galerie flash et CRM.</p>
+        <p><a href="/">Accéder au site</a> (JavaScript requis)</p>
+      </div>
+    </noscript>
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>

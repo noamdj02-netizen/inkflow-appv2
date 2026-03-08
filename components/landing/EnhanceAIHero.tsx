@@ -178,12 +178,20 @@ export const EnhanceAIHero: React.FC = () => {
             style={{ boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07), 0 25px 50px -12px rgba(0,0,0,0.2)' }}
           >
             <div className="w-full h-full rounded-[2rem] overflow-hidden bg-neutral-200">
-              <img
-                src="/images/mockup-profil.png"
-                alt="Profil"
-                className="w-full h-full object-cover"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
+              <picture>
+                <source srcSet="/images/mockup-profil.webp" type="image/webp" />
+                <img
+                  src="/images/mockup-profil.png"
+                  alt="Profil"
+                  width={260}
+                  height={520}
+                  className="w-full h-full object-cover"
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              </picture>
             </div>
           </div>
 

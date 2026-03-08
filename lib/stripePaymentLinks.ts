@@ -10,23 +10,34 @@ export const STRIPE_PAYMENT_LINKS = {
 
 /**
  * Liens Stripe pour la page Abonnement (BillingSettings).
- * Créez des Payment Links séparés (mensuel + annuel) dans Stripe Dashboard
- * et mettez à jour les URLs ci-dessous.
+ * Créez des Payment Links séparés (mensuel + annuel) dans Stripe Dashboard.
+ * Pour l'annuel, définissez VITE_STRIPE_BILLING_*_ANNUAL en variables d'environnement.
  */
-export const STRIPE_BILLING_LINKS: Record<'solo' | 'pro' | 'studio', { monthly: string; annual: string }> = {
-  solo: {
-    monthly: 'https://buy.stripe.com/28EaEQ52e1erbS66W0fUQ09',
-    annual: 'https://buy.stripe.com/28EaEQ52e1erbS66W0fUQ09',
-  },
-  pro: {
-    monthly: 'https://buy.stripe.com/fZucMY3Ya0anbS6a8cfUQ0a',
-    annual: 'https://buy.stripe.com/fZucMY3Ya0anbS6a8cfUQ0a',
-  },
-  studio: {
-    monthly: 'https://buy.stripe.com/dRm14gamyg9lf4i804fUQ0b',
-    annual: 'https://buy.stripe.com/dRm14gamyg9lf4i804fUQ0b',
-  },
-};
+const BILLING_BASE = {
+  solo: { monthly: 'https://buy.stripe.com/28EaEQ52e1erbS66W0fUQ09' },
+  pro: { monthly: 'https://buy.stripe.com/fZucMY3Ya0anbS6a8cfUQ0a' },
+  studio: { monthly: 'https://buy.stripe.com/dRm14gamyg9lf4i804fUQ0b' },
+} as const;
+
+function getBillingLinks(): Record<'solo' | 'pro' | 'studio', { monthly: string; annual: string }> {
+  const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
+  return {
+    solo: {
+      monthly: BILLING_BASE.solo.monthly,
+      annual: (env.VITE_STRIPE_BILLING_SOLO_ANNUAL as string) || BILLING_BASE.solo.monthly,
+    },
+    pro: {
+      monthly: BILLING_BASE.pro.monthly,
+      annual: (env.VITE_STRIPE_BILLING_PRO_ANNUAL as string) || BILLING_BASE.pro.monthly,
+    },
+    studio: {
+      monthly: BILLING_BASE.studio.monthly,
+      annual: (env.VITE_STRIPE_BILLING_STUDIO_ANNUAL as string) || BILLING_BASE.studio.monthly,
+    },
+  };
+}
+
+export const STRIPE_BILLING_LINKS = getBillingLinks();
 
 export type StripePlanId = keyof typeof STRIPE_PAYMENT_LINKS;
 

@@ -18,10 +18,13 @@ export const CookieConsent: React.FC = () => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (!stored) {
-        setVisible(true);
+        // Délai 2.5s pour laisser l'utilisateur voir le contenu avant la bannière
+        const t = setTimeout(() => setVisible(true), 2500);
+        return () => clearTimeout(t);
       }
     } catch {
-      setVisible(true);
+      const t = setTimeout(() => setVisible(true), 2500);
+      return () => clearTimeout(t);
     }
   }, [mounted]);
 
@@ -40,7 +43,7 @@ export const CookieConsent: React.FC = () => {
     <div
       role="dialog"
       aria-label="Consentement aux cookies"
-      className="fixed bottom-0 left-0 right-0 z-[99999] p-4 pb-safe sm:p-5 md:left-4 md:right-auto md:bottom-4 md:max-w-md md:rounded-2xl md:shadow-xl bg-white/95 dark:bg-[var(--bg-primary)]/95 backdrop-blur-sm md:bg-transparent md:dark:bg-transparent"
+      className="fixed bottom-0 left-0 right-0 z-[99999] p-3 pb-safe sm:p-4 md:left-4 md:right-auto md:bottom-4 md:max-w-md md:rounded-2xl md:shadow-xl bg-white/98 dark:bg-[var(--bg-primary)]/98 backdrop-blur-md md:bg-transparent md:dark:bg-transparent shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
     >
       <div className="bg-white dark:bg-[var(--bg-secondary)] border border-neutral-200 dark:border-neutral-700/60 rounded-xl md:rounded-2xl shadow-lg overflow-hidden">
         <div className="p-4 sm:p-5">

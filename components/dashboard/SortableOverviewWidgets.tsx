@@ -17,7 +17,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getWidgetOrderFromStorage, setWidgetOrderToStorage, FIXED_WIDGET_IDS } from '../../lib/dashboardWidgetOrder';
+import { getWidgetOrderFromStorage, syncWidgetOrderToApi, FIXED_WIDGET_IDS } from '../../lib/dashboardWidgetOrder';
 
 export interface SortableWidgetItem {
   id: string;
@@ -125,6 +125,8 @@ export const SortableOverviewWidgets: React.FC<SortableOverviewWidgetsProps> = (
   items,
   customWidgetIds,
   onOrderChange,
+  studioId = null,
+  useSupabase = false,
   disabled = false,
   appendNode,
   gridCols = 4,
@@ -137,6 +139,17 @@ export const SortableOverviewWidgets: React.FC<SortableOverviewWidgetsProps> = (
   useEffect(() => {
     setOrder(prev => mergeOrder(prev, customWidgetIds));
   }, [customWidgetIds.join(',')]);
+
+  useEffect(() => {
+    if (!studioId || !useSupabase) return;
+    let cancelled = false;
+    import('../../lib/supabaseDashboard').then(({ getWidgetOrderFromSupabase }) =>
+      getWidgetOrderFromSupabase(studioId).then((fromApi) => {
+        if (!cancelled && fromApi.length > 0) setOrder(prev => mergeOrder(fromApi, customWidgetIds));
+      })
+    ).catch(() => {});
+    return () => { cancelled = true; };
+  }, [studioId, useSupabase, customWidgetIds.join(',')]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -161,12 +174,13 @@ export const SortableOverviewWidgets: React.FC<SortableOverviewWidgetsProps> = (
         const newIndex = prev.indexOf(String(over.id));
         if (oldIndex === -1 || newIndex === -1) return prev;
         const next = arrayMove(prev, oldIndex, newIndex);
-        setWidgetOrderToStorage(next);
+        if (studioId && useSupabase) syncWidgetOrderToApi(studioId, next);
+        else syncWidgetOrderToApi('', next); // localStorage only when no studioId
         onOrderChange?.(next);
         return next;
       });
     },
-    [onOrderChange]
+    [onOrderChange, studioId, useSupabase]
   );
 
   const itemsById = useMemo(() => {

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronDown, CreditCard, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
@@ -23,6 +23,7 @@ import { BillingSettings } from './BillingSettings';
 import { PaywallView } from './PaywallView';
 import { AvailabilitySettings } from '../settings/AvailabilitySettings';
 import { VitrineSettings } from '../settings/VitrineSettings';
+import { InstagramConnect } from '../settings/InstagramConnect';
 import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 import { VitrineLinkButton } from './VitrineLinkButton';
 
@@ -35,7 +36,7 @@ import { WaitlistManager } from './WaitlistManager';
 import { ArtistManager } from './ArtistManager';
 import { PortfolioManager } from './PortfolioManager';
 import { LoyaltyManager, type LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
-import { MessageThreadView } from '../messaging/MessageThread';
+import { MessagingTab } from '../messaging/MessagingTab';
 import { ConsentFormEditor } from '../consent/ConsentFormEditor';
 import { CalendarSettings } from './CalendarSettings';
 import { Appointment, FlashDesign, BookingFormData, WaitlistEntry, ArtistAccount, LoyaltyEntry, MessageThread } from '../../types';
@@ -88,7 +89,7 @@ export const DashboardPro: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
-  const [settingsTab, setSettingsTab] = useState<'general' | 'payments' | 'care' | 'availability' | 'vitrine' | 'billing' | 'consent' | 'artists' | 'waitlist' | 'loyalty' | 'calendar'>('general');
+  const [settingsTab, setSettingsTab] = useState<'general' | 'payments' | 'care' | 'availability' | 'vitrine' | 'billing' | 'consent' | 'artists' | 'waitlist' | 'loyalty' | 'calendar' | 'messagerie'>('general');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showWidgetModal, setShowWidgetModal] = useState(false);
   const [customWidgets, setCustomWidgets] = useDashboardWidgets(studioId, useSupabase ?? false, {
@@ -228,6 +229,22 @@ export const DashboardPro: React.FC = () => {
         });
     }
   }, [studioId, user?.email]);
+
+  // Instagram OAuth callback: ?ig=connected → ouvrir Paramètres > Messagerie
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ig = params.get('ig');
+    const section = params.get('section');
+    if (ig === 'connected') {
+      window.history.replaceState({}, '', '/dashboard');
+      setActiveTab('settings');
+      setSettingsTab('messagerie');
+      toast.success('Instagram connecté avec succès !');
+    } else if (section === 'messagerie') {
+      setActiveTab('settings');
+      setSettingsTab('messagerie');
+    }
+  }, [toast]);
 
   // Load vitrine data so Portfolio tab and Paramètres > Vitrine share the same portfolio (slug depuis la BDD pour isoler par tatoueur)
   useEffect(() => {
@@ -624,27 +641,9 @@ export const DashboardPro: React.FC = () => {
                 );
               })}
           </nav>
-          {/* Derniers acomptes + Déconnexion — zone séparée */}
+          {/* Déconnexion — zone séparée (Derniers acomptes déplacé dans la colonne droite du dashboard) */}
           <div className="relative z-10 mt-auto px-3 py-3 border-t border-[var(--border)]/60 safe-bottom">
-            {/* Widget Derniers acomptes */}
-            {recentDeposits.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-500 uppercase tracking-wider mb-3">Derniers acomptes</h3>
-                <div className="flex flex-col gap-3">
-                  {recentDeposits.map((apt) => (
-                    <div key={apt.id} className="flex items-center gap-3 group cursor-default">
-                      <div className="flex flex-shrink-0 items-center justify-center w-7 h-7 rounded-full bg-blue-500/10 text-blue-400">
-                        <CreditCard className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate min-w-0">{apt.clientName || 'Client'}</span>
-                      <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 ml-auto flex-shrink-0">+{apt.deposit}€</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {/* Séparateur + Déconnexion */}
-            <div className={`border-t border-zinc-200 dark:border-zinc-800 pt-4 ${recentDeposits.length > 0 ? 'mt-4' : ''}`}>
+            <div className="border-t border-zinc-200 dark:border-zinc-800 pt-4">
               <button
                 onClick={logout}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] font-medium transition-colors duration-150"
@@ -832,6 +831,8 @@ export const DashboardPro: React.FC = () => {
               firstName={firstName}
               user={user}
               studioSlug={studioSlug}
+              studioId={studioId}
+              useSupabase={useSupabase ?? false}
               appointments={appointments}
               todayAppointments={todayAppointments}
               today={today}
@@ -856,6 +857,7 @@ export const DashboardPro: React.FC = () => {
               setSelectedFlash={setSelectedFlash}
               setShowWidgetModal={setShowWidgetModal}
               pendingRequestsCount={pendingRequestsCount}
+              recentDeposits={recentDeposits}
             />
           )}
 
@@ -910,15 +912,8 @@ export const DashboardPro: React.FC = () => {
             />
           )}
 
-          {!loading && activeTab === 'messaging' && user && (
-            <MessageThreadView
-              studioId={studioId || ''}
-              threads={messageThreads}
-              artistName={user?.name ?? ''}
-              studioName={user?.studioName ?? undefined}
-              initialThreadId={openMessageThreadId}
-              onInitialThreadOpened={() => setOpenMessageThreadId(null)}
-            />
+          {!loading && activeTab === 'messaging' && (
+            <MessagingTab studioId={studioId || ''} />
           )}
 
           {!loading && activeTab === 'portfolio' && (
@@ -971,6 +966,7 @@ export const DashboardPro: React.FC = () => {
                   { id: 'loyalty', label: 'Fidélité' },
                   { id: 'calendar', label: 'Calendrier' },
                   { id: 'vitrine', label: 'Page vitrine' },
+                  { id: 'messagerie', label: 'Messagerie' },
                 ] as const).map(tab => (
                   <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
                     className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${settingsTab === tab.id ? 'bg-blue-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-blue-300 hover:bg-blue-50/50'}`}>
@@ -1140,6 +1136,7 @@ export const DashboardPro: React.FC = () => {
               )}
               {settingsTab === 'calendar' && <CalendarSettings studioId={studioId || ''} appointments={appointments} onToast={(msg, type) => type === 'success' ? toast.success(msg) : toast.error(msg)} />}
               {settingsTab === 'vitrine' && user?.studioName && <VitrineSettings studioName={user.studioName} userEmail={user.email} studioSlug={studioSlug} />}
+              {settingsTab === 'messagerie' && studioId && <InstagramConnect studioId={studioId} />}
             </div>
           )}
           </>

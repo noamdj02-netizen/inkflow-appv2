@@ -50,22 +50,23 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
 
   return (
     <>
-      {/* Overlay — fond opaque semi-transparent, pas de blur (évite transparence mobile) */}
+      {/* Backdrop — couvre uniquement le contenu principal, pas la sidebar (desktop) */}
       <div
         onClick={onClose}
-        className={`fixed inset-0 z-40 transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed z-30 transition-opacity duration-300
+          inset-y-0 right-0 left-0 lg:left-[178px]
+          ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
         aria-hidden="true"
       />
-      {/* Drawer — fond 100% opaque (mobile/PWA) */}
+      {/* Drawer — slide depuis la droite, ne recouvre jamais la sidebar */}
       <div
-        className={`fixed z-50 flex flex-col shadow-xl border-[var(--border)]
-          md:top-0 md:right-0 md:bottom-0 md:w-full md:max-w-md md:border-l
-          bottom-0 left-0 right-0 max-h-[90dvh] md:max-h-none rounded-t-3xl md:rounded-none border-t md:border-t-0
-          transition-transform duration-300 ease-out safe-bottom
-          ${isOpen ? 'translate-y-0 md:translate-x-0' : 'translate-y-full md:translate-y-0 md:translate-x-full'}`}
+        className={`fixed z-40 flex flex-col shadow-2xl border-l border-[var(--border)]
+          right-0 inset-y-0
+          w-full md:w-96
+          max-h-[90dvh] md:max-h-none rounded-t-3xl md:rounded-none border-t md:border-t-0
+          transition-transform duration-300 ease-out safe-bottom overflow-hidden
+          ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
         style={{ backgroundColor: 'var(--bg-primary)' }}
       >
         <div className="relative flex items-center justify-between px-5 py-4 border-b border-[var(--border)] shrink-0" style={{ backgroundColor: 'var(--bg-secondary)' }}>

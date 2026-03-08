@@ -6,14 +6,6 @@ import { CacheFirst, NetworkFirst } from 'workbox-strategies';
 precacheAndRoute(self.__WB_MANIFEST);
 
 registerRoute(
-  ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
-  new CacheFirst({
-    cacheName: 'google-fonts-cache',
-    plugins: []
-  })
-);
-
-registerRoute(
   ({ url }) => url.hostname.includes('supabase.co'),
   new NetworkFirst({
     cacheName: 'supabase-api-cache',

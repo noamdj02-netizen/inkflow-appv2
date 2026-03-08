@@ -16,6 +16,9 @@ export interface DashboardOverviewTabProps {
   user: { studioName?: string } | null;
   /** Slug réel du studio (BDD) pour le lien vitrine — prioritaire sur getVitrineSlug(studioName). */
   studioSlug?: string | null;
+  /** studioId pour sync ordre des widgets */
+  studioId?: string | null;
+  useSupabase?: boolean;
   appointments: Appointment[];
   todayAppointments: Appointment[];
   today: string;
@@ -40,6 +43,8 @@ export interface DashboardOverviewTabProps {
   setSelectedFlash: (f: FlashDesign | null) => void;
   setShowWidgetModal: (show: boolean) => void;
   pendingRequestsCount: number;
+  /** Derniers acomptes payés (affichés à droite avec les clients) */
+  recentDeposits: Appointment[];
 }
 
 export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
@@ -71,6 +76,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   setShowWidgetModal,
   pendingRequestsCount,
   studioSlug,
+  studioId,
+  useSupabase = false,
+  recentDeposits = [],
 }) => {
   const vitrineSlug = (studioSlug != null && studioSlug !== '') ? studioSlug : (user?.studioName ? getVitrineSlug(user.studioName) : '');
   return (
@@ -149,10 +157,77 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         </div>
       )}
 
-      {/* ===== PRODIFY 2-COLUMN GRID ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-5 px-2 sm:px-4 pb-6">
-        {/* ====== LEFT COLUMN ====== */}
-        <div className="space-y-5 min-w-0">
+      {/* ===== PRODIFY 2-COLUMN GRID — clients toujours à gauche ===== */}
+      <div className="grid grid-cols-1 md:grid-cols-[420px_1fr] gap-5 px-2 sm:px-4 pb-6">
+        {/* ====== LEFT COLUMN (420px) — clients, acomptes, calendrier ====== */}
+        <div className="space-y-5 order-1 min-w-0">
+          {/* Widget: Derniers acomptes (client) */}
+          {recentDeposits.length > 0 && (
+            <div className="prodify-card p-6">
+              <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-500 uppercase tracking-wider mb-3">Derniers acomptes</h3>
+              <div className="flex flex-col gap-3">
+                {recentDeposits.map((apt) => (
+                  <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="flex items-center gap-3 group cursor-pointer text-left p-2 -m-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                    <div className="flex-shrink-0 items-center justify-center w-7 h-7 rounded-full bg-blue-500/10 text-blue-400 flex">
+                      <CreditCard className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate min-w-0 flex-1">{apt.clientName || 'Client'}</span>
+                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex-shrink-0">+{apt.deposit}€</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Widget: Clients récents */}
+          <div className="prodify-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <span className="flex items-center gap-2 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+                <FolderOpen className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} /> Clients récents
+              </span>
+              <button onClick={() => setActiveTab('clients')} className="text-[13px] font-medium text-blue-600 dark:text-blue-400 hover:underline">Voir tout</button>
+            </div>
+            <button onClick={() => setActiveTab('clients')} className="w-full flex items-center gap-3 p-3 mb-3 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-colors text-left">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center"><UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" strokeWidth={1.5} /></div>
+              <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Nouveau client</span>
+            </button>
+            {topClients.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3">
+                {topClients.slice(0, 4).map((client, i) => {
+                  const colors = ['bg-blue-600', 'bg-blue-500', 'bg-zinc-600', 'bg-zinc-500'];
+                  return (
+                    <button key={client.id} onClick={() => setActiveTab('clients')} className="text-left p-3.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
+                      <div className={`w-7 h-7 rounded-lg ${colors[i % 4]} flex items-center justify-center mb-2 overflow-hidden flex-shrink-0`}>
+                        {client.avatar ? (
+                          <img src={client.avatar} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-white text-xs font-bold">{client.name?.charAt(0)}</span>
+                        )}
+                      </div>
+                      <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 truncate">{client.name}</div>
+                      <div className="text-[12px] text-zinc-500 dark:text-zinc-400">{client.appointmentsCount ?? 0} RDV • {client.totalSpent}€</div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-4">Aucun client pour le moment</p>
+            )}
+          </div>
+          {/* Widget: Calendrier (compact week view like Prodify) */}
+          <MiniCalendar
+            selectedDate={null}
+            onSelectDate={() => setActiveTab('appointments')}
+            datesWithAppointments={new Set(appointments.filter(a => ['pending', 'confirmed'].includes(a.status)).map(a => a.date))}
+            currentMonth={overviewCalendarMonth}
+            onPrevMonth={() => setOverviewCalendarMonth(m => new Date(m.getFullYear(), m.getMonth() - 1))}
+            onNextMonth={() => setOverviewCalendarMonth(m => new Date(m.getFullYear(), m.getMonth() + 1))}
+            onToday={() => setOverviewCalendarMonth(new Date())}
+            className=""
+          />
+        </div>
+
+        {/* ====== RIGHT COLUMN — RDV, statistiques, graphique ====== */}
+        <div className="space-y-5 min-w-0 order-2">
           {/* Widget: Mes Rendez-vous */}
           <div className="prodify-card p-6">
             <div className="flex items-center justify-between mb-4">
@@ -316,13 +391,32 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 )
               }))}
               customWidgetIds={customWidgets.map(w => w.id)}
+              studioId={studioId}
+              useSupabase={useSupabase}
               gridCols={2}
             />
           )}
         </div>
 
-        {/* ====== RIGHT COLUMN (420px) ====== */}
-        <div className="space-y-5">
+        {/* ====== RIGHT COLUMN (420px) — clients et acomptes toujours à droite ====== */}
+        <div className="space-y-5 order-1 md:order-2">
+          {/* Widget: Derniers acomptes (client) */}
+          {recentDeposits.length > 0 && (
+            <div className="prodify-card p-6">
+              <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-500 uppercase tracking-wider mb-3">Derniers acomptes</h3>
+              <div className="flex flex-col gap-3">
+                {recentDeposits.map((apt) => (
+                  <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="flex items-center gap-3 group cursor-pointer text-left p-2 -m-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                    <div className="flex-shrink-0 items-center justify-center w-7 h-7 rounded-full bg-blue-500/10 text-blue-400 flex">
+                      <CreditCard className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate min-w-0 flex-1">{apt.clientName || 'Client'}</span>
+                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex-shrink-0">+{apt.deposit}€</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Widget: Clients récents */}
           <div className="prodify-card p-6">
             <div className="flex items-center justify-between mb-4">

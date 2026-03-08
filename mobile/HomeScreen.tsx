@@ -205,9 +205,24 @@ const MOCK_REQUESTS = [
 
 const BOTTOM_SHEET_SNAP_POINTS = ['30%', '50%'];
 
+/** IDs des écrans pour la navigation (à brancher sur React Navigation / Expo Router) */
+export type HomeScreenNavId =
+  | 'overview'
+  | 'requests'
+  | 'appointments'
+  | 'new-appointment'
+  | 'flash'
+  | 'block-slot'
+  | 'clients'
+  | 'vitrine'
+  | 'settings'
+  | 'widget';
+
 /** Passe studioId pour synchroniser les notifications avec le dashboard/planning/calendrier */
 interface HomeScreenProps {
   studioId?: string | null;
+  /** Callback de navigation vers l'écran correspondant (brancher sur router.navigate ou navigation.navigate) */
+  onNavigate?: (screen: HomeScreenNavId) => void;
 }
 
 const MENU_OPTIONS = [
@@ -219,7 +234,7 @@ const MENU_OPTIONS = [
 // Configure le handler au chargement du module (une seule fois)
 setupNotificationHandler();
 
-export default function HomeScreen({ studioId = null }: HomeScreenProps) {
+export default function HomeScreen({ studioId = null, onNavigate }: HomeScreenProps) {
   const [toggleOn, setToggleOn] = useState(true);
   const [dismissOrange, setDismissOrange] = useState(false);
   const [dismissBlue, setDismissBlue] = useState(false);
@@ -268,8 +283,10 @@ export default function HomeScreen({ studioId = null }: HomeScreenProps) {
   const handleMenuOption = useCallback((id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     closeBottomSheet();
-    // TODO: navigation vers l'écran correspondant
-  }, [closeBottomSheet]);
+    if (id === 'rdv') onNavigate?.('new-appointment');
+    else if (id === 'flash') onNavigate?.('flash');
+    else if (id === 'creneau') onNavigate?.('block-slot');
+  }, [closeBottomSheet, onNavigate]);
 
   const renderBackdrop = useCallback(
     (props: object) => (
@@ -380,7 +397,7 @@ export default function HomeScreen({ studioId = null }: HomeScreenProps) {
         <View className="flex-row flex-wrap gap-3 px-5 mt-6">
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onNavigate?.('new-appointment'); }}
             style={{
               backgroundColor: COLORS.buttonPrimary,
               paddingVertical: 12,
@@ -400,7 +417,7 @@ export default function HomeScreen({ studioId = null }: HomeScreenProps) {
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onNavigate?.('requests'); }}
             style={{
               backgroundColor: COLORS.cardBg,
               paddingVertical: 12,
@@ -420,7 +437,7 @@ export default function HomeScreen({ studioId = null }: HomeScreenProps) {
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onNavigate?.('vitrine'); }}
             style={{
               backgroundColor: COLORS.cardBg,
               paddingVertical: 12,
@@ -440,7 +457,7 @@ export default function HomeScreen({ studioId = null }: HomeScreenProps) {
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onNavigate?.('widget'); }}
             style={{
               backgroundColor: COLORS.cardBg,
               paddingVertical: 12,
@@ -511,6 +528,7 @@ export default function HomeScreen({ studioId = null }: HomeScreenProps) {
               </View>
               <TouchableOpacity
                 activeOpacity={0.8}
+                onPress={() => onNavigate?.('appointments')}
                 style={{
                   backgroundColor: COLORS.orangeButtonBg,
                   paddingVertical: 12,
@@ -549,6 +567,7 @@ export default function HomeScreen({ studioId = null }: HomeScreenProps) {
               </View>
               <TouchableOpacity
                 activeOpacity={0.8}
+                onPress={() => onNavigate?.('appointments')}
                 style={{
                   backgroundColor: COLORS.blueButtonBg,
                   paddingVertical: 12,
@@ -579,15 +598,15 @@ export default function HomeScreen({ studioId = null }: HomeScreenProps) {
               </TouchableOpacity>
             </View>
             <ScrollView style={drawerStyles.menu} contentContainerStyle={{ paddingVertical: 16 }}>
-              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); }}>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); onNavigate?.('overview'); }}>
                 <LayoutGrid size={20} color={COLORS.textPrimary} strokeWidth={2} />
                 <Text style={drawerStyles.menuLabel}>Vue d'ensemble</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); }}>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); onNavigate?.('requests'); }}>
                 <Inbox size={20} color={COLORS.textPrimary} strokeWidth={2} />
                 <Text style={drawerStyles.menuLabel}>Demandes</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); }}>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); onNavigate?.('appointments'); }}>
                 <Calendar size={20} color={COLORS.textPrimary} strokeWidth={2} />
                 <Text style={drawerStyles.menuLabel}>Rendez-vous</Text>
               </TouchableOpacity>
@@ -595,15 +614,15 @@ export default function HomeScreen({ studioId = null }: HomeScreenProps) {
                 <Plus size={20} color={COLORS.buttonPrimary} strokeWidth={2} />
                 <Text style={[drawerStyles.menuLabel, { color: COLORS.buttonPrimary }]}>Nouveau RDV</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); }}>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); onNavigate?.('flash'); }}>
                 <ImageIcon size={20} color={COLORS.textPrimary} strokeWidth={2} />
                 <Text style={drawerStyles.menuLabel}>Galerie Flash</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); }}>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); onNavigate?.('clients'); }}>
                 <User size={20} color={COLORS.textPrimary} strokeWidth={2} />
                 <Text style={drawerStyles.menuLabel}>Clients</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); }}>
+              <TouchableOpacity style={drawerStyles.menuItem} onPress={() => { setDrawerOpen(false); onNavigate?.('settings'); }}>
                 <Settings size={20} color={COLORS.textPrimary} strokeWidth={2} />
                 <Text style={drawerStyles.menuLabel}>Paramètres</Text>
               </TouchableOpacity>
@@ -635,11 +654,11 @@ export default function HomeScreen({ studioId = null }: HomeScreenProps) {
           }),
         }}
       >
-        <TouchableOpacity className="items-center gap-1 flex-1">
+        <TouchableOpacity className="items-center gap-1 flex-1" onPress={() => onNavigate?.('overview')}>
           <LayoutGrid size={24} color={COLORS.tabActive} strokeWidth={2} />
           <Text style={{ fontSize: 11, fontWeight: '600', color: COLORS.tabActive }}>Accueil</Text>
         </TouchableOpacity>
-        <TouchableOpacity className="items-center gap-1 flex-1">
+        <TouchableOpacity className="items-center gap-1 flex-1" onPress={() => onNavigate?.('appointments')}>
           <Calendar size={24} color={COLORS.tabInactive} strokeWidth={2} />
           <Text style={{ fontSize: 11, color: COLORS.tabInactive }}>Agenda</Text>
         </TouchableOpacity>
@@ -663,11 +682,11 @@ export default function HomeScreen({ studioId = null }: HomeScreenProps) {
             <Plus size={28} color="#FFFFFF" strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity className="items-center gap-1 flex-1">
+        <TouchableOpacity className="items-center gap-1 flex-1" onPress={() => onNavigate?.('requests')}>
           <Inbox size={24} color={COLORS.tabInactive} strokeWidth={2} />
           <Text style={{ fontSize: 11, color: COLORS.tabInactive }}>Demandes</Text>
         </TouchableOpacity>
-        <TouchableOpacity className="items-center gap-1 flex-1">
+        <TouchableOpacity className="items-center gap-1 flex-1" onPress={() => onNavigate?.('settings')}>
           <User size={24} color={COLORS.tabInactive} strokeWidth={2} />
           <Text style={{ fontSize: 11, color: COLORS.tabInactive }}>Profil</Text>
         </TouchableOpacity>

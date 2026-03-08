@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/generate-sitemap.mjs",
+    "prebuild": "node scripts/generate-sitemap.mjs && node scripts/optimize-hero-image.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "generate-pwa-assets": "pwa-assets-generator",
@@ -14,12 +14,16 @@
     "email:embed-hero": "node scripts/embed-email-hero.mjs",
     "seed:mockup": "node --env-file=.env.local scripts/seed-mockup-data.mjs",
     "seed:demo": "node --env-file=.env.local scripts/seed-demo-marketing.mjs",
-    "seed:demo:clean": "node --env-file=.env.local scripts/seed-demo-marketing.mjs --clean"
+    "seed:demo:clean": "node --env-file=.env.local scripts/seed-demo-marketing.mjs --clean",
+    "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > types/database.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/playfair-display": "^5.2.8",
+    "@fontsource/plus-jakarta-sans": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
     "@react-email/components": "^0.0.29",
     "@sentry/nextjs": "^10.42.0",

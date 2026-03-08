@@ -1,15 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { EnhanceAINavbar } from './EnhanceAINavbar';
 import { EnhanceAIHero } from './EnhanceAIHero';
-import { EnhanceAISocialProof } from './EnhanceAISocialProof';
-import { EnhanceAIFeaturesDetail } from './EnhanceAIFeaturesDetail';
-import { EnhanceAIHowInkflow } from './EnhanceAIHowInkflow';
-import { ProcessSection } from '../ProcessSection';
-import { EnhanceAITestimonials } from './EnhanceAITestimonials';
-import { EnhanceAIFAQ } from './EnhanceAIFAQ';
-import { EnhanceAIFooter } from './EnhanceAIFooter';
-import { PricingSection } from '../PricingSection';
 import { SEO, organizationSchema, websiteSchema } from '../SEO';
+
+const EnhanceAISocialProof = lazy(() => import('./EnhanceAISocialProof').then(m => ({ default: m.EnhanceAISocialProof })));
+const EnhanceAIFeaturesDetail = lazy(() => import('./EnhanceAIFeaturesDetail').then(m => ({ default: m.EnhanceAIFeaturesDetail })));
+const EnhanceAIHowInkflow = lazy(() => import('./EnhanceAIHowInkflow').then(m => ({ default: m.EnhanceAIHowInkflow })));
+const ProcessSection = lazy(() => import('../ProcessSection').then(m => ({ default: m.ProcessSection })));
+const PricingSection = lazy(() => import('../PricingSection').then(m => ({ default: m.PricingSection })));
+const EnhanceAITestimonials = lazy(() => import('./EnhanceAITestimonials').then(m => ({ default: m.EnhanceAITestimonials })));
+const EnhanceAIFAQ = lazy(() => import('./EnhanceAIFAQ').then(m => ({ default: m.EnhanceAIFAQ })));
+const EnhanceAIFooter = lazy(() => import('./EnhanceAIFooter').then(m => ({ default: m.EnhanceAIFooter })));
 
 /**
  * Landing page style EnhanceAI — design ultra-premium, mode clair,
@@ -32,14 +33,16 @@ export const LandingEnhanceAI: React.FC = () => {
     <EnhanceAINavbar />
     <main>
       <EnhanceAIHero />
-      <EnhanceAISocialProof />
-      <EnhanceAIFeaturesDetail />
-      <EnhanceAIHowInkflow />
-      <ProcessSection />
-      <PricingSection />
-      <EnhanceAITestimonials />
-      <EnhanceAIFAQ />
-      <EnhanceAIFooter />
+      <Suspense fallback={<div className="min-h-[200px]" aria-hidden />}>
+        <EnhanceAISocialProof />
+        <EnhanceAIFeaturesDetail />
+        <EnhanceAIHowInkflow />
+        <ProcessSection />
+        <PricingSection />
+        <EnhanceAITestimonials />
+        <EnhanceAIFAQ />
+        <EnhanceAIFooter />
+      </Suspense>
     </main>
   </div>
   );

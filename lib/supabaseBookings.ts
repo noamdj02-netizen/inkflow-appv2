@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import type { Booking, BookingStatus, VitrineBookingFormData } from '../types';
 
 export function mapBookingFromDb(row: Record<string, unknown>): Booking {
+  const refImages = row.reference_images;
   return {
     id: row.id as string,
     studioId: row.studio_id as string,
@@ -11,6 +12,7 @@ export function mapBookingFromDb(row: Record<string, unknown>): Booking {
     requestedDate: row.requested_date as string,
     requestedTime: (row.requested_time as string) ?? null,
     status: (row.status as BookingStatus) || 'pending',
+    referenceImages: Array.isArray(refImages) ? (refImages as string[]) : undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -78,6 +80,35 @@ export async function getBookingsFromSupabase(studioId: string): Promise<Booking
   return (data || []).map(mapBookingFromDb);
 }
 
+const BUCKET_BOOKING_REFS = 'inkflow-assets';
+const FOLDER_BOOKING_REFS = 'booking-refs';
+
+/**
+ * Upload des images de référence vers Supabase Storage (bucket inkflow-assets/booking-refs).
+ * Retourne les URLs publiques des fichiers uploadés.
+ */
+export async function uploadBookingReferenceImages(
+  studioId: string,
+  files: File[]
+): Promise<string[]> {
+  if (files.length === 0) return [];
+  const prefix = `${studioId}_${Date.now()}`;
+  const urls: string[] = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const safeExt = ['jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'jpg';
+    const path = `${FOLDER_BOOKING_REFS}/${prefix}_${i}.${safeExt}`;
+    const { data, error } = await supabase.storage
+      .from(BUCKET_BOOKING_REFS)
+      .upload(path, file, { upsert: false });
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from(BUCKET_BOOKING_REFS).getPublicUrl(data.path);
+    urls.push(urlData.publicUrl);
+  }
+  return urls;
+}
+
 /**
  * Crée une demande de RDV depuis la vitrine (INSERT public autorisé par RLS).
  * La prévention des doublons (créneau déjà confirmé) est gérée côté dashboard à la confirmation.
@@ -94,6 +125,7 @@ export async function createBooking(data: VitrineBookingFormData, studioId: stri
     requested_date: data.requestedDate,
     requested_time: data.requestedTime?.trim() || null,
     status: 'pending',
+    reference_images: data.referenceImages ?? [],
     created_at: now,
     updated_at: now,
   };
