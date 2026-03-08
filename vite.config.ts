@@ -56,7 +56,7 @@ export default defineConfig(({ mode }) => {
           },
           injectManifest: {
             globPatterns: ['**/*.{js,html,ico,png,svg,woff2}'],
-            globIgnores: ['**/node_modules/**', '**/sw.js', '**/workbox-*.js', '**/*.map', '**/*.css'],
+            globIgnores: ['**/node_modules/**', '**/sw.js', '**/workbox-*.js', '**/*.map', '**/*.css', '**/index.html'],
             maximumFileSizeToCacheInBytes: 3 * 1024 * 1024 // 3 MB (images landing > 2 MB)
           }
         })

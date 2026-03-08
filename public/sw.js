@@ -5,6 +5,10 @@ import { CacheFirst, NetworkFirst } from 'workbox-strategies';
 
 precacheAndRoute(self.__WB_MANIFEST);
 
+// Nouveau SW s’active tout de suite après déploi (évite ancienne version en cache)
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+
 registerRoute(
   ({ url }) => url.hostname.includes('supabase.co'),
   new NetworkFirst({
