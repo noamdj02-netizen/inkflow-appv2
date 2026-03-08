@@ -35,7 +35,8 @@ Deno.serve(async (req: Request) => {
         );
       }
       const redirectUri = `${SITE_URL}/instagram/callback`;
-      const scopes = ["instagram_basic", "instagram_manage_messages", "pages_manage_metadata", "pages_messaging"].join(",");
+      // Facebook Login : uniquement scopes Pages (instagram_basic / instagram_manage_messages invalides depuis 2025)
+      const scopes = ["pages_show_list", "pages_manage_metadata", "pages_messaging"].join(",");
       const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&response_type=code&state=${encodeURIComponent(studioId || "")}`;
       return new Response(
         JSON.stringify({ authUrl }),
@@ -65,25 +66,44 @@ Deno.serve(async (req: Request) => {
       }
       const { access_token } = await tokenRes.json();
 
-      const pagesRes = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${access_token}`);
+      const pagesRes = await fetch(`https://graph.facebook.com/v18.0/me/accounts?access_token=${access_token}&fields=id,name,access_token,instagram_business_account`);
       const pagesData = await pagesRes.json();
       const pages = pagesData.data || [];
-      const page = pages[0];
-      if (!page) {
+      if (!pages.length) {
         return new Response(
-          JSON.stringify({ error: "Aucune Page Facebook liée. Lie ton Instagram à une Page." }),
+          JSON.stringify({ error: "Aucune Page Facebook trouvée. Crée une Page puis relie-la à ton Instagram." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const igRes = await fetch(
-        `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`
-      );
-      const igData = await igRes.json();
-      const igAccountId = igData.instagram_business_account?.id;
-      if (!igAccountId) {
+      // Trouver la première Page qui a un compte Instagram lié (tu peux avoir plusieurs Pages)
+      let page: { id: string; access_token: string } | null = null;
+      let igAccountId: string | null = null;
+      for (const p of pages) {
+        const id = p.instagram_business_account?.id;
+        if (id) {
+          igAccountId = id;
+          page = { id: p.id, access_token: p.access_token };
+          break;
+        }
+      }
+      if (!page || !igAccountId) {
+        for (const p of pages) {
+          const igRes = await fetch(
+            `https://graph.facebook.com/v18.0/${p.id}?fields=instagram_business_account&access_token=${p.access_token}`
+          );
+          const igData = await igRes.json();
+          const id = igData.instagram_business_account?.id;
+          if (id) {
+            igAccountId = id;
+            page = { id: p.id, access_token: p.access_token };
+            break;
+          }
+        }
+      }
+      if (!page || !igAccountId) {
         return new Response(
-          JSON.stringify({ error: "Compte Instagram non lié à cette Page." }),
+          JSON.stringify({ error: "Aucune de tes Pages n'a Instagram lié. Sur Instagram : Paramètres → Compte → Partenaires autorisés → Page Facebook → connecte ta Page. Puis réessaie." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
