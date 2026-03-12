@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Menu, X, ArrowRight } from 'lucide-react';
 import { Logo } from './Logo';
+import { LANDING_URL, LANDING_PRICING_URL } from '../lib/urls';
 
 interface NavbarProps {
   scrolled?: boolean;
@@ -9,9 +10,9 @@ interface NavbarProps {
 
 const navLinks = [
   { href: '/demo', label: 'Démo' },
-  { href: '/#features', label: 'Fonctionnalités' },
-  { href: '/#pricing', label: 'Tarifs' },
-  { href: '/#faq', label: 'FAQ' },
+  { href: `${LANDING_URL}/#features`, label: 'Fonctionnalités' },
+  { href: LANDING_PRICING_URL, label: 'Tarifs' },
+  { href: `${LANDING_URL}/#faq`, label: 'FAQ' },
 ];
 
 export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
@@ -53,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({ variant = 'default' }) => {
       >
         <div className="flex items-center justify-between gap-3">
           {/* Logo — gauche, contraint h-8, invert pour fond blanc / normal pour fond sombre */}
-          <a href="/" className="flex items-center gap-2 min-w-0 shrink-0 active:opacity-80 transition-opacity">
+          <a href={LANDING_URL} className="flex items-center gap-2 min-w-0 shrink-0 active:opacity-80 transition-opacity" target="_blank" rel="noopener noreferrer">
             <Logo size="sm" className={isLandingDark ? 'invert' : 'invert dark:invert-0'} />
             <span className={`text-base font-bold tracking-tight truncate hidden sm:inline ${isLandingDark ? 'text-white' : 'text-neutral-900 dark:text-white'}`}>
               InkFlow

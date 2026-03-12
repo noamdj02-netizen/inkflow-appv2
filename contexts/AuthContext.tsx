@@ -3,6 +3,7 @@ import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { ensureStudio } from '../lib/supabaseDashboard';
 import { clearAllInkflowStorage } from '../lib/clearAuthStorage';
+import { LANDING_URL } from '../lib/urls';
 import { useSupabaseEnabled } from '../hooks/useSupabaseEnabled';
 import { DEMO_ACCOUNT_EMAIL } from '../data/demoData';
 
@@ -213,6 +214,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
     clearAllInkflowStorage();
     if (isSupabaseAuthEnabled) supabase.auth.signOut();
+    if (typeof window !== 'undefined') window.location.href = LANDING_URL;
   }, [isSupabaseAuthEnabled]);
 
   const updateUser = useCallback((updates: Partial<User>) => {

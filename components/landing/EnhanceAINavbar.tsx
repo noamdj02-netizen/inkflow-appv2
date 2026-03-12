@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { LANDING_URL, LANDING_PRICING_URL } from '../../lib/urls';
 
 const navLinksConfig = [
-  { href: '/#fonctionnalites', key: 'nav.features' },
-  { href: '/#pricing', key: 'nav.pricing' },
-  { href: '/#avis', key: 'nav.reviews' },
+  { href: `${LANDING_URL}/#fonctionnalites`, key: 'nav.features' },
+  { href: LANDING_PRICING_URL, key: 'nav.pricing' },
+  { href: `${LANDING_URL}/#avis`, key: 'nav.reviews' },
 ];
 
 export const EnhanceAINavbar: React.FC = () => {
@@ -38,7 +39,7 @@ export const EnhanceAINavbar: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <a href="/" className="flex items-center gap-2 shrink-0">
+            <a href={LANDING_URL} className="flex items-center gap-2 shrink-0" target="_blank" rel="noopener noreferrer">
               <Logo size="sm" className="invert-0" />
               <span className="text-lg font-bold text-neutral-900 tracking-tight">Inkflow</span>
             </a>

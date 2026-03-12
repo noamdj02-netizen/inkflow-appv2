@@ -51,6 +51,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { ThemeToggle } from '../ThemeToggle';
 import { useTheme } from 'next-themes';
 import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
+import { LANDING_URL, LANDING_PRICING_URL } from '../../lib/urls';
 import { safeJsonParse } from '../../lib/utils';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
@@ -597,7 +598,7 @@ export const DashboardPro: React.FC = () => {
           <div className="absolute inset-0 z-0" style={{ backgroundColor: effectiveTheme === 'dark' ? '#09090b' : '#ffffff' }} aria-hidden />
           {/* Zone logo — compacte et premium */}
           <div className="relative z-10 px-4 py-4 border-b border-[var(--border)]/60 flex items-center justify-between safe-top">
-            <a href="/" className="flex items-center gap-3 min-w-0 group" aria-label="Retour à l'accueil">
+            <a href={LANDING_URL} className="flex items-center gap-3 min-w-0 group" aria-label="Retour à l'accueil">
               <Logo size="lg" className="rounded-xl group-hover:opacity-90 transition-opacity" />
               <div className="min-w-0">
                 <span className="block text-base font-semibold tracking-tight text-[var(--text-primary)]">INKFLOW</span>
@@ -819,7 +820,7 @@ export const DashboardPro: React.FC = () => {
           >
           {subscriptionStatus === 'restricted' && !(activeTab === 'settings' && settingsTab === 'billing') ? (
             <PaywallView
-              onChoosePlan={() => { setActiveTab('settings'); setSettingsTab('billing'); }}
+              onChoosePlan={() => { window.location.href = LANDING_PRICING_URL; }}
               onOpenBilling={() => { setActiveTab('settings'); setSettingsTab('billing'); }}
             />
           ) : (
@@ -906,7 +907,7 @@ export const DashboardPro: React.FC = () => {
               useSupabase={useSupabase}
               clientLimitReached={hasReachedLimit('clients_crm', clients.length)}
               clientLimit={getLimit('clients_crm')}
-              onUpgradeClick={() => { setActiveTab('settings'); setSettingsTab('billing'); }}
+              onUpgradeClick={() => { window.location.href = LANDING_PRICING_URL; }}
               openAddModal={openAddClientModal}
               onAddModalClose={() => setOpenAddClientModal(false)}
             />

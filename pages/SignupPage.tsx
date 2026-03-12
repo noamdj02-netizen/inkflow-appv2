@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Logo } from '../components/Logo';
+import { LANDING_URL } from '../lib/urls';
 import { ArrowLeft, Mail, Lock, User, Building2, AlertCircle } from 'lucide-react';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,8 +68,10 @@ export const SignupPage: React.FC = () => {
 
       <header className="p-4 sm:p-6 safe-top">
         <a
-          href="/"
+          href={LANDING_URL}
           className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors"
+          target="_blank"
+          rel="noopener noreferrer"
         >
           <ArrowLeft className="w-5 h-5" />
           <span className="font-medium">Retour</span>

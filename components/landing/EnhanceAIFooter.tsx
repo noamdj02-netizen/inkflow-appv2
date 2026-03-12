@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { LANDING_PRICING_URL } from '../../lib/urls';
 
 const exploreLinksConfig = [
   { href: '/vue-ensemble', label: "Vue d'ensemble" },
@@ -9,7 +10,7 @@ const exploreLinksConfig = [
 ];
 
 const productLinksConfig = [
-  { href: '/#pricing', label: 'Plans & Tarifs' },
+  { href: LANDING_PRICING_URL, label: 'Plans & Tarifs' },
 ];
 
 const galleryLinksConfig = [

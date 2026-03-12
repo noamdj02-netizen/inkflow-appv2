@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Mail, Lock, AlertCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
+import { LANDING_URL } from '../lib/urls';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
 import { loginSchema } from '../lib/authValidation';
@@ -44,8 +45,10 @@ export const LoginPage: React.FC = () => {
     <div className="landing-scroll bg-neutral-50 dark:bg-zinc-900 flex flex-col min-h-screen">
       <header className="p-4 sm:p-6 safe-top">
         <a
-          href="/"
+          href={LANDING_URL}
           className="inline-flex items-center gap-2 text-neutral-600 dark:text-zinc-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+          target="_blank"
+          rel="noopener noreferrer"
         >
           <ArrowLeft className="w-5 h-5" />
           <span className="font-medium">Retour</span>

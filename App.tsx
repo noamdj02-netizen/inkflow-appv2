@@ -1,5 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { ThemeProvider } from 'next-themes';
+import { LANDING_URL } from './lib/urls';
 import { Analytics } from '@vercel/analytics/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -180,8 +181,10 @@ const Router: React.FC = () => {
                 Réessayer
               </button>
               <a
-                href="/"
+                href={LANDING_URL}
                 className="px-6 py-3 border-2 border-[var(--border)] rounded-xl font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 Retour à l&apos;accueil
               </a>
@@ -210,7 +213,7 @@ const NotFoundPage: React.FC = () => (
     <div className="text-center">
       <h1 className="text-6xl font-bold mb-4">404</h1>
       <p className="text-xl text-neutral-600 mb-8">Page non trouvée</p>
-      <a href="/" className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800 transition-colors">
+      <a href={LANDING_URL} className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800 transition-colors" target="_blank" rel="noopener noreferrer">
         Retour à l'accueil
       </a>
     </div>
