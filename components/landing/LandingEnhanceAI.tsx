@@ -1,7 +1,6 @@
 import React, { useEffect, lazy, Suspense } from 'react';
 import { EnhanceAINavbar } from './EnhanceAINavbar';
 import { EnhanceAIHero } from './EnhanceAIHero';
-import { AddToHomeScreenBanner } from './AddToHomeScreenBanner';
 import { SEO, organizationSchema, websiteSchema } from '../SEO';
 
 const EnhanceAIFeaturesDetail = lazy(() => import('./EnhanceAIFeaturesDetail').then(m => ({ default: m.EnhanceAIFeaturesDetail })));
@@ -31,7 +30,6 @@ export const LandingEnhanceAI: React.FC = () => {
       schema={[organizationSchema, websiteSchema]}
     />
     <EnhanceAINavbar />
-    <AddToHomeScreenBanner />
     <main className="bg-white min-h-[60vh]">
       <EnhanceAIHero />
       <Suspense fallback={<div className="min-h-[200px]" aria-hidden />}>

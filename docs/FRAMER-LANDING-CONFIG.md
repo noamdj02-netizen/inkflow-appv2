@@ -53,7 +53,18 @@ Supabase Auth utilise **localStorage** (et non des cookies) pour stocker la sess
 
 ---
 
-## 5. URLs configurées dans le code
+## 5. Mobile : mode app sans barre de tâches
+
+Quand l'utilisateur arrive depuis ink-flow.me (Framer) sur la page Connexion de l'app, une bannière « Ajouter à l'écran d'accueil » s'affiche. Pour une expérience plein écran (sans barre d'adresse) :
+
+1. **iOS** : Menu Safari → « Sur l'écran d'accueil » → l'app s'ouvre en mode standalone
+2. **Android** : Menu Chrome → « Ajouter à l'écran d'accueil » → l'app s'ouvre en mode standalone
+
+L'app doit être ajoutée depuis l'URL de l'app (app.ink-flow.me), pas depuis ink-flow.me. Les notifications push ne fonctionnent qu'en mode app installée sur mobile.
+
+---
+
+## 6. URLs configurées dans le code
 
 | Constante | Valeur |
 |-----------|--------|

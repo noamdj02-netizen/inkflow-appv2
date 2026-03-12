@@ -17,17 +17,30 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return arr;
 }
 
+export type PushSupportReason = 'ok' | 'no_vapid' | 'no_sw' | 'no_https' | 'no_push_api';
+
 export interface UsePushSubscriptionResult {
   /** Demande la permission et enregistre l'abonnement si accordée */
   subscribe: () => Promise<boolean>;
   /** Vérifie si les push sont supportés (SW + VAPID + HTTPS) */
   isSupported: boolean;
+  /** Raison si non supporté (pour affichage ciblé) */
+  supportReason: PushSupportReason;
   /** Permission actuelle : default | granted | denied */
   permission: NotificationPermission | null;
   /** En cours d'abonnement */
   loading: boolean;
   /** Erreur éventuelle */
   error: string | null;
+}
+
+function getSupportReason(): PushSupportReason {
+  if (typeof window === 'undefined') return 'no_sw';
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') return 'no_https';
+  if (!('serviceWorker' in navigator)) return 'no_sw';
+  if (!('PushManager' in window)) return 'no_push_api';
+  if (!VAPID_PUBLIC_KEY) return 'no_vapid';
+  return 'ok';
 }
 
 export function usePushSubscription(studioId: string | null): UsePushSubscriptionResult {
@@ -37,12 +50,8 @@ export function usePushSubscription(studioId: string | null): UsePushSubscriptio
     typeof Notification !== 'undefined' ? Notification.permission : null
   );
 
-  const isSupported =
-    typeof window !== 'undefined' &&
-    'serviceWorker' in navigator &&
-    'PushManager' in window &&
-    !!VAPID_PUBLIC_KEY &&
-    (location.protocol === 'https:' || location.hostname === 'localhost');
+  const supportReason = getSupportReason();
+  const isSupported = supportReason === 'ok';
 
   const subscribe = useCallback(async (): Promise<boolean> => {
     if (!studioId || !isSupported) {
@@ -96,5 +105,5 @@ export function usePushSubscription(studioId: string | null): UsePushSubscriptio
     }
   }, [studioId, isSupported]);
 
-  return { subscribe, isSupported, permission, loading, error };
+  return { subscribe, isSupported, supportReason, permission, loading, error };
 }

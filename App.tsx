@@ -11,6 +11,7 @@ import { LandingEnhanceAI } from './components/landing/LandingEnhanceAI';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CookieConsent } from './components/CookieConsent';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
+import { AddToHomeScreenBanner } from './components/landing/AddToHomeScreenBanner';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -251,6 +252,7 @@ const App: React.FC = () => {
           <AuthProvider>
             <ToastProvider>
               <LanguageProvider>
+                <AddToHomeScreenBanner />
                 <UnhandledRejectionHandler />
                 <Router />
                 <CookieConsent />
