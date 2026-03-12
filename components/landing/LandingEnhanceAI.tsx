@@ -4,14 +4,11 @@ import { EnhanceAIHero } from './EnhanceAIHero';
 import { AddToHomeScreenBanner } from './AddToHomeScreenBanner';
 import { SEO, organizationSchema, websiteSchema } from '../SEO';
 
-const EnhanceAISocialProof = lazy(() => import('./EnhanceAISocialProof').then(m => ({ default: m.EnhanceAISocialProof })));
-const LandingFeaturesKeys = lazy(() => import('./LandingFeaturesKeys').then(m => ({ default: m.LandingFeaturesKeys })));
-const LandingAppSection = lazy(() => import('./LandingAppSection').then(m => ({ default: m.LandingAppSection })));
 const EnhanceAIFeaturesDetail = lazy(() => import('./EnhanceAIFeaturesDetail').then(m => ({ default: m.EnhanceAIFeaturesDetail })));
 const EnhanceAIHowInkflow = lazy(() => import('./EnhanceAIHowInkflow').then(m => ({ default: m.EnhanceAIHowInkflow })));
 const ProcessSection = lazy(() => import('../ProcessSection').then(m => ({ default: m.ProcessSection })));
 const PricingSection = lazy(() => import('../PricingSection').then(m => ({ default: m.PricingSection })));
-const EnhanceAITestimonials = lazy(() => import('./EnhanceAITestimonials').then(m => ({ default: m.EnhanceAITestimonials })));
+const TestimonialsSection = lazy(() => import('./TestimonialsSection').then(m => ({ default: m.TestimonialsSection })));
 const EnhanceAIFAQ = lazy(() => import('./EnhanceAIFAQ').then(m => ({ default: m.EnhanceAIFAQ })));
 const EnhanceAIFooter = lazy(() => import('./EnhanceAIFooter').then(m => ({ default: m.EnhanceAIFooter })));
 
@@ -26,7 +23,7 @@ export const LandingEnhanceAI: React.FC = () => {
   }, []);
 
   return (
-  <div className="landing-scroll min-h-screen bg-white">
+  <div className="landing-scroll min-h-screen min-h-[100dvh] bg-white">
     <SEO
       title="InkFlow | Le logiciel de gestion et réservation pour Tatoueurs"
       description="Révolutionnez votre studio de tatouage. Réservations, paiements Stripe, CRM et assistant IA. Gagnez du temps avec InkFlow."
@@ -35,17 +32,14 @@ export const LandingEnhanceAI: React.FC = () => {
     />
     <EnhanceAINavbar />
     <AddToHomeScreenBanner />
-    <main>
+    <main className="bg-white min-h-[60vh]">
       <EnhanceAIHero />
       <Suspense fallback={<div className="min-h-[200px]" aria-hidden />}>
-        <EnhanceAISocialProof />
-        <LandingFeaturesKeys />
-        <LandingAppSection />
         <EnhanceAIFeaturesDetail />
         <EnhanceAIHowInkflow />
         <ProcessSection />
         <PricingSection />
-        <EnhanceAITestimonials />
+        <TestimonialsSection />
         <EnhanceAIFAQ />
         <EnhanceAIFooter />
       </Suspense>

@@ -6,7 +6,10 @@ type EmptyStateAction =
   | { label: string; href: string; variant?: 'primary' | 'secondary' };
 
 export interface EmptyStateProps {
-  icon: LucideIcon;
+  /** Icône Lucide (ignorée si iconNode est fourni) */
+  icon?: LucideIcon;
+  /** Contenu personnalisé (emoji ou ReactNode) pour l’icône */
+  iconNode?: React.ReactNode;
   title: string;
   description?: string;
   primaryAction?: EmptyStateAction;
@@ -34,20 +37,21 @@ function ActionButton({ action }: { action: EmptyStateAction }) {
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
   icon: Icon,
+  iconNode,
   title,
   description,
   primaryAction,
   secondaryAction,
   className = '',
 }) => (
-  <div className={`text-center py-12 dashboard-widget-card ${className}`}>
-    <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-      <Icon className="text-neutral-400" size={28} />
+  <div className={`flex flex-col items-center justify-center py-12 px-6 text-center ${className}`}>
+    <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4 text-2xl">
+      {iconNode ?? (Icon != null && <Icon className="text-zinc-500 dark:text-zinc-400" size={28} />)}
     </div>
-    <p className="text-lg font-bold text-neutral-900 mb-2">{title}</p>
-    {description && <p className="text-neutral-600 text-sm max-w-md mx-auto">{description}</p>}
+    <h4 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{title}</h4>
+    {description && <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-4 max-w-xs">{description}</p>}
     {(primaryAction || secondaryAction) && (
-      <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
         {primaryAction && <ActionButton action={{ ...primaryAction, variant: 'primary' }} />}
         {secondaryAction && <ActionButton action={{ ...secondaryAction, variant: 'secondary' }} />}
       </div>

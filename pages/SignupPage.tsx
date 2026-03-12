@@ -3,6 +3,7 @@ import { Logo } from '../components/Logo';
 import { ArrowLeft, Mail, Lock, User, Building2, AlertCircle } from 'lucide-react';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth } from '../contexts/AuthContext';
+import { signupSchema } from '../lib/authValidation';
 
 export const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -27,21 +28,20 @@ export const SignupPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
+    const parsed = signupSchema.safeParse({
+      name: formData.name,
+      email: formData.email,
+      studioName: formData.studioName,
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
+    });
+    if (!parsed.success) {
+      setError(parsed.error.errors[0]?.message ?? 'Vérifiez les champs');
       return;
     }
-
-    if (formData.password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
-      return;
-    }
-
     setLoading(true);
-
     try {
-      await signup(formData.email, formData.password, formData.name, formData.studioName);
+      await signup(parsed.data.email, parsed.data.password, parsed.data.name, parsed.data.studioName ?? '');
       const params = new URLSearchParams(window.location.search);
       const plan = params.get('plan');
       const interval = params.get('interval') || 'monthly';

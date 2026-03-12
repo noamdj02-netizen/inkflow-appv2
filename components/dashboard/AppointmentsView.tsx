@@ -139,6 +139,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       {/* Layout: sidebar sombre (calendrier) + zone principale — style calendar.me */}
       <div className="flex flex-col lg:flex-row gap-6">
         <aside
+          data-joyride="demo-rdv-calendrier"
           className={`lg:w-64 flex-shrink-0 order-2 lg:order-1 rounded-2xl overflow-hidden transition-colors ${
             viewMode === 'calendar'
               ? 'bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800'
@@ -157,7 +158,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           />
         </aside>
 
-        <div className="flex-1 min-w-0 order-1 lg:order-2 space-y-4">
+        <div className="flex-1 min-w-0 order-1 lg:order-2 space-y-4" data-joyride="demo-rdv-liste">
           {/* Carrousel de filtres (chips) — mobile : ScrollView horizontal fluide */}
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 scrollbar-hide flex-nowrap md:flex-wrap md:overflow-visible md:mx-0">
             <button
@@ -297,9 +298,9 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                       className="row-clickable w-full text-left p-5 rounded-2xl dashboard-widget-card cursor-pointer"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <div className="relative w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {getAvatar(apt) ? (
-                            <img src={getAvatar(apt)} alt="" className="w-full h-full object-cover" />
+                            <img src={getAvatar(apt)} alt="" className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover" />
                           ) : (
                             <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">{apt.clientName.charAt(0).toUpperCase()}</span>
                           )}
@@ -385,9 +386,9 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                           <tr key={apt.id} className="row-clickable border-b border-[var(--border)] last:border-0">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                <div className="relative w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
                                   {getAvatar(apt) ? (
-                                    <img src={getAvatar(apt)} alt="" className="w-full h-full object-cover" />
+                                    <img src={getAvatar(apt)} alt="" className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover" />
                                   ) : (
                                     <span className="text-blue-600 dark:text-blue-400 font-bold">{apt.clientName.charAt(0).toUpperCase()}</span>
                                   )}

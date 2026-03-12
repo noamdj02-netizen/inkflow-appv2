@@ -25,7 +25,7 @@ const ReservationSuccessPage = lazy(() => import('./pages/public/ReservationSucc
 const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
 const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
 const AidePage = lazy(() => import('./pages/AidePage').then(m => ({ default: m.AidePage })));
-const DemoPage = lazy(() => import('./pages/DemoPage').then(m => ({ default: m.DemoPage })));
+const DemoSandboxPage = lazy(() => import('./pages/DemoSandboxPage').then(m => ({ default: m.DemoSandboxPage })));
 const FeatureDetailPage = lazy(() => import('./pages/features/FeatureDetailPage').then(m => ({ default: m.FeatureDetailPage })));
 const InstagramCallbackPage = lazy(() => import('./pages/InstagramCallbackPage').then(m => ({ default: m.InstagramCallbackPage })));
 
@@ -101,7 +101,7 @@ const Router: React.FC = () => {
     { path: '/login', component: LoginPage },
     { path: '/signup', component: SignupPage },
     { path: '/reset-password', component: ResetPasswordPage },
-    { path: '/demo', component: DemoPage },
+    { path: '/demo', component: DemoSandboxPage },
     { path: /^\/(vue-ensemble|demandes|rendez-vous|galerie-flash|clients|messagerie|portfolio|finance|parametres)\/?$/, component: FeatureDetailPage, getProps: (m) => ({ slug: m[1] }) },
     { path: '/dashboard', component: DashboardPage, requiresAuth: true, needsSupabaseSync: true },
     { path: '/auth/callback', component: AuthCallbackPage },

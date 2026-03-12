@@ -357,6 +357,18 @@ img, video {
   border-color: rgba(255,255,255,0.12);
 }
 
+/* Bento / spatial card — design system (calendrier, messagerie, cartes dashboard) */
+.card-bento {
+  background: var(--bg-card);
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.card-bento:hover {
+  box-shadow: 0 4px 12px var(--shadow-md);
+}
+
 /* Boutons dashboard — Bleu SaaS */
 .pill-primary {
   background: #2563eb; /* blue-600 */

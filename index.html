@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <script>document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');</script>
     <script>
-      (function(){var p=window.location.pathname;if(p==='/'||p===''){document.documentElement.setAttribute('data-theme','light');return;}var t=localStorage.getItem('inkflow-theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark');}else if(t==='light'){document.documentElement.setAttribute('data-theme','light');}else if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.setAttribute('data-theme','dark');}else{document.documentElement.setAttribute('data-theme','light');}})();
+      (function(){var p=window.location.pathname;if(p==='/'||p===''||p.startsWith('/studio/')||p.startsWith('/demo')){document.documentElement.setAttribute('data-theme','light');return;}var t=localStorage.getItem('inkflow-theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark');}else if(t==='light'){document.documentElement.setAttribute('data-theme','light');}else if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.setAttribute('data-theme','dark');}else{document.documentElement.setAttribute('data-theme','light');}})();
     </script>
     <meta name="description" content="Gagnez du temps avec InkFlow. Agenda, acomptes automatisés (Stripe), galerie de flashs et CRM pensés spécifiquement pour les studios de tatouage." />
     <meta name="keywords" content="logiciel tatoueur, agenda tatouage, réservation tatoueur, gestion studio tattoo, SaaS tatouage, application tatoueur" />
@@ -55,7 +55,8 @@
       }
     }
     </script>
-    <link rel="preload" href="/images/mockup-profil.webp" as="image" fetchpriority="high" type="image/webp" />
+    <link rel="preload" href="/icon.svg" as="image" fetchpriority="high" type="image/svg+xml" />
+    <link rel="preload" href="/images/mockup-profil.png" as="image" fetchpriority="high" type="image/png" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/icon.svg" sizes="any" type="image/svg+xml" />
     <!-- iOS : PNG avec 20% padding pour masque arrondi. Généré via npm run generate-pwa-icons -->

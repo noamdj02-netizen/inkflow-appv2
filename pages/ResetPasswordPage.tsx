@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { supabase } from '../lib/supabase';
+import { resetPasswordSchema } from '../lib/authValidation';
 
 export const ResetPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -12,10 +13,15 @@ export const ResetPasswordPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const parsed = resetPasswordSchema.safeParse({ email: email.trim() });
+    if (!parsed.success) {
+      setError(parsed.error.errors[0]?.message ?? 'Email invalide');
+      return;
+    }
     setLoading(true);
     try {
       const redirectTo = `${window.location.origin}/auth/update-password`;
-      const { error: err } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      const { error: err } = await supabase.auth.resetPasswordForEmail(parsed.data.email, { redirectTo });
       if (err) throw err;
       setSent(true);
     } catch (err) {

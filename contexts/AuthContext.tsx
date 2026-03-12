@@ -62,15 +62,17 @@ export const useAuth = () => {
 export const REDIRECT_AFTER_LOGIN_KEY = 'redirectAfterLogin';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(getStoredUser);
+  const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const isSupabaseAuthEnabled = useSupabaseEnabled();
 
   useEffect(() => {
     if (!isSupabaseAuthEnabled) {
+      setUser(getStoredUser());
       setAuthLoading(false);
       return;
     }
+    setUser(getStoredUser());
     setAuthLoading(true);
     const AUTH_SESSION_TIMEOUT_MS = 8000;
     const timeoutId = setTimeout(() => {
@@ -80,8 +82,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       .then(async ({ data: { session } }) => {
         if (session?.user) {
           const { data: { session: refreshed } } = await supabase.auth.refreshSession().catch(() => ({ data: { session } }));
-          const user = refreshed?.user ?? session.user;
-          const appUser = appUserFromSupabase(user);
+          const u = refreshed?.user ?? session.user;
+          const appUser = appUserFromSupabase(u);
           setUser(appUser);
           localStorage.setItem('inkflow_user', JSON.stringify(appUser));
         }
@@ -100,7 +102,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.removeItem('inkflow_user');
       }
     });
-    return () => subscription.unsubscribe();
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user) {
+            supabase.auth.refreshSession().then(({ data: { session: refreshed } }) => {
+              const u = refreshed?.user ?? session.user;
+              const appUser = appUserFromSupabase(u);
+              setUser(appUser);
+              localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+            }).catch(() => {});
+          }
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const loginWithGoogle = useCallback(async () => {

@@ -5,11 +5,21 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { STRIPE_PAYMENT_LINKS } from '../lib/stripePaymentLinks';
 import { useIntersectionAnimation } from '../hooks/useIntersectionAnimation';
 
+const PRO_PLAN_PRICE = 29;
+
 export const PricingSection: React.FC = () => {
   const [isAnnual, setIsAnnual] = useState(false);
+  const [rdvParSemaine, setRdvParSemaine] = useState(8);
+  const [prixMoyen, setPrixMoyen] = useState(150);
   const { isAuthenticated } = useAuth();
   const { t } = useLanguage();
   const { ref, isVisible } = useIntersectionAnimation(0.08);
+
+  const rdvParMois = rdvParSemaine * 4;
+  const gainTemps = rdvParSemaine * 0.5;
+  const noShowEvites = Math.round(rdvParMois * 0.08);
+  const gainNoShow = noShowEvites * (prixMoyen * 0.3);
+  const roi = Math.round(((gainTemps * 20 + gainNoShow) / PRO_PLAN_PRICE) * 10) / 10;
 
   const plans = [
     {
@@ -64,6 +74,75 @@ export const PricingSection: React.FC = () => {
           <p className="text-base sm:text-lg md:text-xl text-neutral-600 mb-8 sm:mb-10 px-2 max-w-2xl mx-auto">
             {t('pricing.subtitle')}
           </p>
+
+          {/* Calculateur ROI */}
+          <div className="mb-12 sm:mb-16 p-6 sm:p-8 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-left max-w-2xl mx-auto">
+            <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">
+              Calculez votre retour sur investissement
+            </h3>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                  Rendez-vous par semaine : <strong>{rdvParSemaine}</strong>
+                </label>
+                <input
+                  type="range"
+                  min={1}
+                  max={30}
+                  value={rdvParSemaine}
+                  onChange={(e) => setRdvParSemaine(Number(e.target.value))}
+                  className="w-full h-2 rounded-full appearance-none bg-zinc-200 dark:bg-zinc-700 accent-blue-600"
+                  aria-valuemin={1}
+                  aria-valuemax={30}
+                  aria-valuenow={rdvParSemaine}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                  Prix moyen par tatouage : <strong>{prixMoyen}€</strong>
+                </label>
+                <input
+                  type="range"
+                  min={50}
+                  max={500}
+                  value={prixMoyen}
+                  onChange={(e) => setPrixMoyen(Number(e.target.value))}
+                  className="w-full h-2 rounded-full appearance-none bg-zinc-200 dark:bg-zinc-700 accent-blue-600"
+                  aria-valuemin={50}
+                  aria-valuemax={500}
+                  aria-valuenow={prixMoyen}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+              <div className="p-4 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase mb-1">Temps gagné</p>
+                <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{gainTemps}h <span className="text-sm font-normal text-zinc-500">/semaine</span></p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">sur l&apos;administratif</p>
+              </div>
+              <div className="p-4 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase mb-1">No-shows évités</p>
+                <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{noShowEvites} <span className="text-sm font-normal text-zinc-500">/mois</span></p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">grâce aux acomptes auto</p>
+              </div>
+              <div className="p-4 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase mb-1">Retour sur investissement</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{roi}x</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">le prix du plan Pro</p>
+              </div>
+            </div>
+            <div className="mt-8 pt-6 border-t border-zinc-200 dark:border-zinc-700 text-center">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                Pour seulement <strong className="text-zinc-900 dark:text-zinc-100">{PRO_PLAN_PRICE}€/mois</strong>, Inkflow vous rapporte en moyenne <strong className="text-blue-600 dark:text-blue-400">{roi}x</strong> son coût.
+              </p>
+              <a
+                href="/signup?plan=pro"
+                className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold text-sm hover:opacity-90 transition-opacity"
+              >
+                Démarrer l&apos;essai gratuit →
+              </a>
+            </div>
+          </div>
 
           <div className="inline-flex items-center gap-1 p-1.5 rounded-2xl bg-neutral-100 border border-neutral-200/80" role="group" aria-label="Choisir la fréquence de facturation">
             <button

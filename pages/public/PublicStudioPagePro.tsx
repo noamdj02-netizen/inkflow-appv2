@@ -3,7 +3,7 @@ import {
   MapPin, Phone, Mail, Clock, Instagram, ChevronRight, CheckCircle, Star,
   MessageCircle, Share2, Heart, Award, Shield, Users, Camera, X,
   Facebook, ExternalLink, Calendar, ArrowRight, Menu,
-  ChevronDown, Send, AlertCircle, Sparkles, Copy
+  ChevronDown, Send, AlertCircle, Sparkles, Copy, ArrowLeft
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { ProjectRequestForm } from '../../components/booking/ProjectRequestForm';
@@ -17,8 +17,18 @@ import { useRealtimeVitrine } from '../../hooks/useRealtimeSync';
 import { useToast } from '../../contexts/ToastContext';
 import type { VitrineData, VitrineFlashDesign } from '../../types/vitrine';
 import type { ProjectRequestFormData } from '../../types';
+import { DemoTour, type TourStep } from '../../components/demo/DemoTour';
 
 const ICON_MAP = { sparkles: Sparkles, award: Award, star: Star, camera: Camera, shield: Shield, heart: Heart, users: Users };
+
+const VITRINE_GUIDE_STEPS: TourStep[] = [
+  { target: '[data-joyride="vitrine-hero"]', title: 'Bienvenue sur votre vitrine', content: "Voici exactement ce que voient vos clients : votre photo, nom du studio, note et avis, adresse. Tout est modifiable depuis Paramètres > Vitrine dans le dashboard." },
+  { target: '[data-joyride="vitrine-reserver"]', title: 'Bouton Réserver', content: "Le CTA principal. Les clients cliquent ici pour choisir un créneau et prendre RDV. En production, ils sont redirigés vers votre calendrier de réservation." },
+  { target: '[data-joyride="vitrine-coordonnees"]', title: 'Adresse et horaires', content: "L'emplacement du studio et les horaires d'ouverture sont affichés ici. Modifiables depuis le dashboard. Le jour actuel est mis en évidence (ex. Lundi 10h-19h)." },
+  { target: '[data-joyride="vitrine-portfolio"]', title: 'Portfolio détaillé', content: "Vos réalisations avec catégorie, description, artiste et nombre de likes. Au survol, le client voit tout. Ajoutez vos photos depuis le dashboard (Portfolio) pour montrer votre style." },
+  { target: '[data-joyride="vitrine-flash"]', title: 'Galerie Flash', content: "Vos flashs disponibles à la réservation. Chaque design affiche prix, durée, emplacements suggérés. En cliquant, le client ouvre la fiche de réservation avec paiement de l'acompte." },
+  { target: '[data-joyride="vitrine-flash-modal"]', title: 'Réservation et acompte', content: "Le client saisit ses coordonnées et paie l'acompte en ligne (Stripe). Son RDV est bloqué à son nom. Une fois payé : email de confirmation au client, notification au tatoueur. Il peut aussi demander un créneau sans payer tout de suite." },
+];
 
 interface PublicStudioPageProProps {
   studioSlug: string;
@@ -53,6 +63,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [flashDepositLoading, setFlashDepositLoading] = useState(false);
   const [flashDepositError, setFlashDepositError] = useState<string | null>(null);
   const [flashDepositUrl, setFlashDepositUrl] = useState<string | null>(null);
+  const [runVitrineTour, setRunVitrineTour] = useState(false);
+  const [vitrineStepIndex, setVitrineStepIndex] = useState(0);
   // Couleur principale bleu (#2563eb) pour boutons Réserver et CTA
   const primaryColor = '#2563eb';
 
@@ -84,6 +96,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   // Live updates: when the tatoueur edits their vitrine, the public page updates instantly
   useRealtimeVitrine(studioSlug, setStudio);
 
+  // Forcer le thème clair sur la vitrine (fond blanc)
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', 'light');
+    return () => {};
+  }, []);
+
   // Afficher un message si le client revient après annulation du paiement (success → /reservation-succes)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -92,6 +110,30 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       window.history.replaceState({}, '', `/studio/${studioSlug}`);
     }
   }, [studioSlug, toast]);
+
+  // Guide vitrine : afficher quand ?guide=1 et slug=demo
+  useEffect(() => {
+    if (studioSlug !== 'demo') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('guide') === '1') {
+      const timer = setTimeout(() => setRunVitrineTour(true), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [studioSlug]);
+
+  // Guide vitrine : aux étapes Flash (4) et modal réservation (5), ouvrir un flash pour montrer le flux
+  useEffect(() => {
+    if (studioSlug !== 'demo' || !runVitrineTour || !studio) return;
+    if (vitrineStepIndex >= 4) {
+      const firstAvailable = studio.flashDesigns?.find((f) => f.available) ?? studio.flashDesigns?.[0];
+      if (firstAvailable) {
+        const timer = setTimeout(() => setSelectedFlash(firstAvailable), vitrineStepIndex === 4 ? 400 : 0);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setSelectedFlash(null);
+    }
+  }, [studioSlug, runVitrineTour, vitrineStepIndex, studio]);
 
   const selectedFlashId = selectedFlash?.id;
   useEffect(() => {
@@ -314,7 +356,10 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   });
 
   return (
-    <div className="landing-scroll bg-neutral-50" style={{ ['--vitrine-primary']: primaryColor } as React.CSSProperties}>
+    <div
+      className="landing-scroll min-h-[100dvh] bg-neutral-50"
+      style={{ ['--vitrine-primary']: primaryColor } as React.CSSProperties}
+    >
       <SEO
         title={`${studioName} | Tatoueur & Prise de RDV - InkFlow`}
         description={`Découvrez les flashs et prenez rendez-vous avec ${studioName}. Réservez votre prochain tatouage facilement en ligne.`}
@@ -327,6 +372,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
             <div className="flex items-center gap-3">
+              {studioSlug === 'demo' && (
+                <a href="/" className="flex items-center gap-2 px-3 py-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors text-sm font-medium">
+                  <ArrowLeft className="w-4 h-4" />
+                  Retour à l&apos;accueil
+                </a>
+              )}
               <Logo />
               <div className="hidden sm:block">
                 <div className="font-bold text-lg text-black">{studioDisplay.name}</div>
@@ -357,7 +408,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 <MessageCircle className="w-5 h-5" />
                 <span className="text-sm font-medium">Contact</span>
               </button>
-              <a href={`/book/${studioSlug}`} className="bg-[var(--vitrine-primary)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center">
+              <a href={`/book/${studioSlug}`} data-joyride="vitrine-reserver" className="bg-[var(--vitrine-primary)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                 <span>Réserver</span>
               </a>
@@ -390,7 +441,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       </header>
 
       {/* Hero Cover */}
-      <div className="relative h-[65vh] sm:h-[70vh] md:h-[80vh] overflow-hidden mt-16 sm:mt-20">
+      <div className="relative h-[65vh] sm:h-[70vh] md:h-[80vh] overflow-hidden mt-16 sm:mt-20" data-joyride="vitrine-hero">
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${studioDisplay.coverImage})` }} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-12 safe-bottom">
@@ -435,8 +486,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         </div>
       </div>
 
-      {/* Stats Banner */}
-      <div className="bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white py-4 sm:py-6 relative overflow-hidden">
+      {/* Stats Banner — padding-bottom safe area pour éviter que le tooltip ou le contenu soit coupé */}
+      <div className="bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white py-4 sm:py-6 relative overflow-hidden pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-0 left-1/4 w-64 h-64 bg-white rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white rounded-full blur-3xl" />
@@ -463,8 +514,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 safe-bottom">
+      {/* Main Content — safe-bottom pour éviter contenu coupé sur mobile */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 pb-[max(2rem,env(safe-area-inset-bottom))]">
         <div className="grid lg:grid-cols-3 gap-8 sm:gap-12">
           <div className="lg:col-span-2 space-y-10 sm:space-y-16 relative z-10">
             {/* About */}
@@ -596,7 +647,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             </section>
 
             {/* Portfolio */}
-            <section id="portfolio" className="scroll-mt-24 sm:scroll-mt-32">
+            <section id="portfolio" className="scroll-mt-24 sm:scroll-mt-32" data-joyride="vitrine-portfolio">
               <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
                 <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-6 sm:mb-10 flex items-center gap-3">
                   <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
@@ -607,8 +658,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                   {studioDisplay.portfolio.map((item, idx) => (
                     <div key={idx} className="group relative aspect-square rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl transition-all" onClick={() => setSelectedImage(item.url)}>
-                      <img src={item.url} alt={item.description || 'Portfolio'} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <img src={item.url} alt={item.description || 'Portfolio'} loading="lazy" className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-500" />
+                      <div className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent transition-opacity ${(runVitrineTour && vitrineStepIndex === 3 && idx === 0) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                         <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                           <div className="text-xs font-semibold mb-2 opacity-90">{item.category}</div>
                           <div className="font-bold mb-1">{item.description}</div>
@@ -633,7 +684,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             </section>
 
             {/* Flash */}
-            <section id="flash" className="scroll-mt-24 sm:scroll-mt-32">
+            <section id="flash" className="scroll-mt-24 sm:scroll-mt-32" data-joyride="vitrine-flash">
               <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-10">
                   <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 flex items-center gap-3">
@@ -646,11 +697,11 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                     {studioDisplay.flashDesigns.filter(f => f.available).length} disponibles
                   </span>
                 </div>
-                <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                   {studioDisplay.flashDesigns.map((flash) => (
-                    <div key={flash.id} className={`group relative rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all ${!flash.available ? 'opacity-75' : ''}`}>
-                      <div className="aspect-square relative cursor-pointer" onClick={() => setSelectedFlash(flash)}>
-                        <img src={flash.imageUrl} alt={flash.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <div key={flash.id} className={`group relative aspect-square rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all ${!flash.available ? 'opacity-75' : ''}`}>
+                      <div className="absolute inset-0 cursor-pointer" onClick={() => setSelectedFlash(flash)}>
+                        <img src={flash.imageUrl} alt={flash.title} loading="lazy" className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                           <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-8 text-white">
                             <div className="flex items-center gap-2 mb-3">
@@ -760,7 +811,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6 lg:space-y-6 lg:self-start">
+          <div className="space-y-6 lg:space-y-6 lg:self-start" data-joyride="vitrine-coordonnees">
             <div className="flex flex-col bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border-2 border-neutral-200">
               <div className="mb-4 sm:mb-6">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -882,8 +933,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-neutral-900 text-white mt-24 py-16">
+      {/* Footer — safe-bottom pour éviter coupure sur mobile */}
+      <footer className="bg-neutral-900 text-white mt-24 py-16 pb-[max(4rem,env(safe-area-inset-bottom))]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
             <div className="md:col-span-2">
@@ -935,9 +986,9 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
       {/* Image Lightbox */}
       {selectedImage && (
-        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4" onClick={() => setSelectedImage(null)}>
-          <button onClick={() => setSelectedImage(null)} className="absolute top-6 right-6 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
-            <X className="w-6 h-6 text-white" />
+        <div className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedImage(null)}>
+          <button onClick={() => setSelectedImage(null)} className="absolute top-6 right-6 w-12 h-12 bg-neutral-200 hover:bg-neutral-300 rounded-full flex items-center justify-center transition-colors">
+            <X className="w-6 h-6 text-neutral-700" />
           </button>
           <img src={selectedImage} alt="Portfolio" className="max-w-full max-h-full object-contain rounded-2xl" onClick={(e) => e.stopPropagation()} />
         </div>
@@ -945,8 +996,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
       {/* Flash Detail Modal */}
       {selectedFlash && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setSelectedFlash(null)}>
-          <div className="bg-white rounded-3xl max-w-4xl w-full my-8" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setSelectedFlash(null)}>
+          <div className="bg-white rounded-3xl max-w-4xl w-full my-8" onClick={(e) => e.stopPropagation()} data-joyride="vitrine-flash-modal">
             <div className="grid md:grid-cols-2 gap-8 p-8">
               <div className="relative aspect-square rounded-2xl overflow-hidden">
                 <img src={selectedFlash.imageUrl} alt={selectedFlash.title} className="w-full h-full object-cover" />
@@ -1113,7 +1164,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
       {/* Booking Form Modal (Demande de RDV) */}
       {showBookingForm && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowBookingForm(false)}>
+        <div className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowBookingForm(false)}>
           <div className="bg-white rounded-3xl max-w-2xl w-full p-8 my-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-bold">Demande de rendez-vous</h3>
@@ -1143,7 +1194,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
       {/* Project Request Form Modal */}
       {showProjectRequestForm && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowProjectRequestForm(false)}>
+        <div className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowProjectRequestForm(false)}>
           <div className="bg-white rounded-3xl max-w-2xl w-full p-8 my-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-bold">Demande de projet</h3>
@@ -1174,7 +1225,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
       {/* Contact Form Modal */}
       {showContactForm && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowContactForm(false)}>
+        <div className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowContactForm(false)}>
           <div className="bg-white rounded-3xl max-w-2xl w-full p-8 my-8" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-3xl font-bold">Nous contacter</h3>
@@ -1225,6 +1276,14 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             </form>
           </div>
         </div>
+      )}
+
+      {runVitrineTour && studioSlug === 'demo' && (
+        <DemoTour
+          steps={VITRINE_GUIDE_STEPS}
+          onStepChange={setVitrineStepIndex}
+          onFinish={() => { setRunVitrineTour(false); setVitrineStepIndex(0); }}
+        />
       )}
     </div>
   );

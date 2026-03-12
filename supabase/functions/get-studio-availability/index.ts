@@ -37,7 +37,8 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { studioId } = (await req.json().catch(() => ({}))) as { studioId?: string };
+    const body = (await req.json().catch(() => ({}))) as { studioId?: string; timezone?: string };
+    const { studioId, timezone } = body;
     if (!studioId?.trim?.()) {
       return new Response(
         JSON.stringify({ error: "studioId requis" }),
@@ -48,7 +49,9 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const busy: Record<string, Set<string>> = {};
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = timezone?.trim?.()
+      ? new Date().toLocaleDateString("en-CA", { timeZone: timezone })
+      : new Date().toISOString().split("T")[0];
 
     const { data: appointments } = await supabase
       .from("inkflow_appointments")

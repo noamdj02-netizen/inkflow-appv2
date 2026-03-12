@@ -279,6 +279,8 @@ export interface MessageThread {
   lastMessageAt: string;
   unreadCount: number;
   projectRequestId?: string;
+  /** Photo de profil (démo / affichage) */
+  avatar?: string;
 }
 
 // Waitlist

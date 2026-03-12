@@ -3,6 +3,7 @@ import { ArrowLeft, Mail, Lock, AlertCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
+import { loginSchema } from '../lib/authValidation';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -15,10 +16,14 @@ export const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const parsed = loginSchema.safeParse({ email: email.trim(), password });
+    if (!parsed.success) {
+      setError(parsed.error.errors[0]?.message ?? 'Vérifiez les champs');
+      return;
+    }
     setLoading(true);
-
     try {
-      await login(email, password);
+      await login(parsed.data.email, parsed.data.password);
       const redirectUrl = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) || '/dashboard';
       try {
         sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
@@ -149,29 +154,9 @@ export const LoginPage: React.FC = () => {
                   disabled={loading || googleLoading}
                   label={googleLoading ? 'Redirection…' : 'Se connecter avec Google'}
                 />
-                <div className="relative my-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-neutral-200 dark:border-zinc-600" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white dark:bg-zinc-800 text-neutral-500 dark:text-zinc-400">ou</span>
-                  </div>
-                </div>
               </>
             )}
 
-            <button
-              onClick={() => {
-                setEmail('demo@inkflow.com');
-                setPassword('demo');
-              }}
-              className="w-full border-2 border-neutral-200 dark:border-zinc-600 dark:bg-zinc-900/50 text-neutral-900 dark:text-zinc-200 py-3 rounded-xl font-semibold hover:border-neutral-900 dark:hover:border-zinc-500 transition-colors"
-            >
-              Utiliser le compte démo
-            </button>
-            <p className="text-center text-xs text-neutral-500 dark:text-zinc-500 mt-2">
-              Compte démo : fausses statistiques, RDV, clients et flash pour captures d&apos;écran.
-            </p>
           </div>
 
           <p className="text-center mt-6 text-neutral-600 dark:text-zinc-400">

@@ -75,7 +75,7 @@ export const InstagramMessagingView: React.FC<InstagramMessagingViewProps> = ({ 
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-120px)] min-h-[400px] dashboard-widget-card overflow-hidden">
+    <div className="card-bento flex flex-col h-[calc(100dvh-120px)] min-h-[400px] dashboard-widget-card overflow-hidden">
       <div className="flex h-full min-h-0">
         {/* Liste conversations */}
         <div

@@ -35,6 +35,13 @@ function getReminderSubject(reminderType: string, studioName: string): string {
 
 Deno.serve(async (_req: Request) => {
   try {
+    if (!RESEND_API_KEY) {
+      console.error("[send-appointment-reminders] RESEND_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "Email service not configured" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const now = new Date();
     const todayStr = now.toISOString().split("T")[0];

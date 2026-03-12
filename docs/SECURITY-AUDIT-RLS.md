@@ -55,3 +55,7 @@
 - **Ne jamais faire confiance à un `studio_id` fourni par l’URL ou le state** pour charger des données sensibles.  
 - Toujours utiliser le `studioId` issu de **`getStudioByEmail(user.email)`** ou le hook **`useSecureStudioId()`** (ID résolu côté backend via JWT). Le dashboard utilise ce pattern via `useSupabaseDashboard` ; pour n'avoir que l'ID studio : `useSecureStudioId()`.  
 - Côté vitrine publique : utiliser **uniquement** `getStudioIdBySlug(slug)` qui s’appuie sur la RPC `get_studio_public_by_slug`.
+
+## 6. Storage (Supabase Storage RLS)
+
+- **Bucket `inkflow-assets`** : **avatars/** : policies restreignent INSERT/UPDATE/DELETE au studio du JWT (path avatars/<studio_id>). **booking-refs/** : INSERT anon pour vitrine. Migration : `20250309110000_storage_rls_avatar_owner.sql`.

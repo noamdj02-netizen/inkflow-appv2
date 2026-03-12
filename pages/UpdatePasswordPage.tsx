@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AlertCircle, CheckCircle, Loader2, Lock } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { supabase } from '../lib/supabase';
+import { updatePasswordSchema } from '../lib/authValidation';
 
 export const UpdatePasswordPage: React.FC = () => {
   const [password, setPassword] = useState('');
@@ -10,27 +11,19 @@ export const UpdatePasswordPage: React.FC = () => {
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string | null>(null);
 
-  const validate = (): string | null => {
-    if (password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.';
-    if (password !== confirm) return 'Les mots de passe ne correspondent pas.';
-    return null;
-  };
-
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
     setStatus('idle');
-
-    const err = validate();
-    if (err) {
+    const parsed = updatePasswordSchema.safeParse({ password, confirm });
+    if (!parsed.success) {
       setStatus('error');
-      setMessage(err);
+      setMessage(parsed.error.errors[0]?.message ?? 'Vérifiez les champs');
       return;
     }
-
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
       if (error) throw error;
       setStatus('success');
       setMessage('');

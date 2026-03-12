@@ -69,6 +69,8 @@ export async function saveVitrineDataAsync(slug: string, data: VitrineData, user
 
 /** Charge les données vitrine par slug depuis Supabase (page publique sans auth). Si le même navigateur a des données en localStorage pour ce slug, on les utilise pour afficher les dernières modifs (ex. après un échec de sync). */
 export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineData> {
+  // Vitrine démo : toujours retourner les données fraîches (images locales, pas de cache)
+  if (slug === 'demo') return defaultVitrineData(slug);
   const defaultData = defaultVitrineData(slug);
   const key = `${STORAGE_PREFIX}${slug}`;
   const localRaw = typeof window !== 'undefined' ? localStorage.getItem(key) : null;

@@ -128,7 +128,7 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
             <p className="text-[var(--text-secondary)] text-sm">Les conversations apparaitront ici quand vous accepterez des demandes de projet.</p>
           </div>
         ) : (
-          <div className="dashboard-widget-card overflow-hidden divide-y divide-[var(--border)]">
+          <div className="card-bento dashboard-widget-card overflow-hidden divide-y divide-[var(--border)]">
             {threads.map(thread => (
               <button
                 key={thread.threadId}
@@ -157,7 +157,7 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-200px)] min-h-[400px] dashboard-widget-card overflow-hidden">
+    <div className="card-bento flex flex-col h-[calc(100dvh-200px)] min-h-[400px] dashboard-widget-card overflow-hidden">
       <div className="px-5 py-4 border-b border-[var(--border)] flex items-center gap-3 bg-[var(--bg-secondary)]/50">
         <button onClick={() => setSelectedThreadId(null)} className="p-2.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors">
           <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />

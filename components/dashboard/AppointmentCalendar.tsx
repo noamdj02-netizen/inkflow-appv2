@@ -96,7 +96,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   };
 
   return (
-    <div className="dashboard-widget-card rounded-2xl overflow-hidden">
+    <div className="card-bento dashboard-widget-card rounded-2xl overflow-hidden">
       {/* Header: Mois, Today, flèches, toggle vue */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-6 border-b border-[var(--border)]">
         <div className="flex items-center gap-2 flex-wrap">
