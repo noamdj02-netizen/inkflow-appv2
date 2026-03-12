@@ -1,10 +1,12 @@
 /**
  * Composant SEO réutilisable (Vite / React SPA).
  * Met à jour title, meta et JSON-LD via le DOM (pas de next/head).
+ * Landing (ink-flow.me) = Framer. App (dashboard, login, etc.) = Vercel.
  */
 import React, { useEffect } from 'react';
+import { LANDING_URL, APP_URL } from '../lib/urls';
 
-const SITE_URL = 'https://ink-flow.me';
+const SITE_URL = LANDING_URL;
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
 
 export interface SEOProps {
@@ -48,7 +50,8 @@ export const SEO: React.FC<SEOProps> = ({
   schema,
 }) => {
   const fullTitle = title.includes('InkFlow') ? title : `${title} | InkFlow`;
-  const fullCanonical = canonical ? `${SITE_URL}${canonical}` : SITE_URL;
+  /** Landing (/) : canonical = SITE_URL (Framer) pour éviter doublon. Pages app : canonical = APP_URL. */
+  const fullCanonical = !canonical || canonical === '/' ? SITE_URL : `${APP_URL}${canonical}`;
   const JSONLD_ID = 'inkflow-jsonld';
 
   useEffect(() => {
@@ -142,7 +145,7 @@ export function createTattooStudioSchema(studio: {
   reviewCount?: number;
   slug?: string;
 }): object {
-  const base = studio.slug ? `${SITE_URL}/studio/${studio.slug}` : `${SITE_URL}/studio/${studio.name.toLowerCase().replace(/\s+/g, '-')}`;
+  const base = studio.slug ? `${APP_URL}/studio/${studio.slug}` : `${APP_URL}/studio/${studio.name.toLowerCase().replace(/\s+/g, '-')}`;
   return {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',

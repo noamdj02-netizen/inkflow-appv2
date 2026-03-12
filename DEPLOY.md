@@ -12,7 +12,7 @@
 
 ## URL de production
 
-**Vercel :** https://inkflow-hlag75vyx-noam-brochets-projects-2ea9c979.vercel.app
+**App :** https://app.ink-flow.me
 
 ---
 
@@ -81,7 +81,7 @@ npx vercel --prod
 ### Domaine par défaut
 
 Ton projet a déjà un domaine Vercel :
-- `inkflow-hlag75vyx-noam-brochets-projects-2ea9c979.vercel.app`
+- `app.ink-flow.me`
 
 ### Ajouter un domaine personnalisé
 
