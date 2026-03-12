@@ -63,5 +63,13 @@ Supabase Auth utilise **localStorage** (et non des cookies) pour stocker la sess
 |-----------|--------|
 | `LANDING_URL` | `https://ink-flow.me` |
 | `LANDING_PRICING_URL` | `https://ink-flow.me/#pricing` |
+| `LANDING_PRIVACY_URL` | `https://ink-flow.me/politique-confidentialite` |
+| `LANDING_TERMS_URL` | `https://ink-flow.me/conditions-utilisation` |
+| `LANDING_LEGAL_URL` | `https://ink-flow.me/mentions-legales` |
 
 Fichier : `lib/urls.ts`
+
+**Important** : Crée ces pages sur Framer pour que les liens fonctionnent :
+- `/politique-confidentialite`
+- `/conditions-utilisation`
+- `/mentions-legales`

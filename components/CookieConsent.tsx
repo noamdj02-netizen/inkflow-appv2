@@ -50,8 +50,10 @@ export const CookieConsent: React.FC = () => {
           <p className="text-sm text-[var(--text-primary)] leading-relaxed mb-4">
             Nous utilisons des cookies pour améliorer votre expérience, analyser notre trafic et sécuriser l&apos;application.{' '}
             <a
-              href="/privacy-policy"
+              href="https://ink-flow.me/politique-confidentialite"
               className="text-blue-600 dark:text-blue-400 hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-[var(--bg-primary)] rounded"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               En savoir plus
             </a>

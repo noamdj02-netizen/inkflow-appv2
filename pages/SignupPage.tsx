@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Logo } from '../components/Logo';
-import { LANDING_URL } from '../lib/urls';
+import { LANDING_URL, LANDING_PRIVACY_URL, LANDING_TERMS_URL } from '../lib/urls';
 import { ArrowLeft, Mail, Lock, User, Building2, AlertCircle } from 'lucide-react';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useAuth } from '../contexts/AuthContext';
@@ -201,12 +201,12 @@ export const SignupPage: React.FC = () => {
                   required
                 />
                 <label htmlFor="terms" className="text-sm text-neutral-600">
-                  J'accepte les{' '}
-                  <a href="/conditions-utilisation" target="_blank" rel="noopener noreferrer" className="font-semibold text-neutral-900 hover:text-neutral-700">
-                    conditions d'utilisation
+                  J&apos;accepte les{' '}
+                  <a href={LANDING_TERMS_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-neutral-900 hover:text-neutral-700">
+                    conditions d&apos;utilisation
                   </a>{' '}
                   et la{' '}
-                  <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="font-semibold text-neutral-900 hover:text-neutral-700">
+                  <a href={LANDING_PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-neutral-900 hover:text-neutral-700">
                     politique de confidentialité
                   </a>
                 </label>

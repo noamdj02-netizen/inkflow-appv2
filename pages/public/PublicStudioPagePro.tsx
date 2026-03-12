@@ -18,6 +18,7 @@ import { useToast } from '../../contexts/ToastContext';
 import type { VitrineData, VitrineFlashDesign } from '../../types/vitrine';
 import type { ProjectRequestFormData } from '../../types';
 import { DemoTour, type TourStep } from '../../components/demo/DemoTour';
+import { LANDING_URL, LANDING_TERMS_URL, LANDING_PRIVACY_URL } from '../../lib/urls';
 
 const ICON_MAP = { sparkles: Sparkles, award: Award, star: Star, camera: Camera, shield: Shield, heart: Heart, users: Users };
 
@@ -373,7 +374,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
           <div className="flex items-center justify-between h-16 sm:h-20">
             <div className="flex items-center gap-3">
               {studioSlug === 'demo' && (
-                <a href="/" className="flex items-center gap-2 px-3 py-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors text-sm font-medium">
+                <a href={LANDING_URL} className="flex items-center gap-2 px-3 py-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors text-sm font-medium">
                   <ArrowLeft className="w-4 h-4" />
                   Retour à l&apos;accueil
                 </a>
@@ -1115,9 +1116,9 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                               />
                               <span className="text-sm text-neutral-700">
                                 J&apos;accepte les{' '}
-                                <a href="/conditions-utilisation" target="_blank" rel="noopener noreferrer" className="underline font-medium">conditions générales de vente</a>
+                                <a href={LANDING_TERMS_URL} target="_blank" rel="noopener noreferrer" className="underline font-medium">conditions générales de vente</a>
                                 {' '}et la{' '}
-                                <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="underline font-medium">politique de confidentialité</a> (RGPD). *
+                                <a href={LANDING_PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="underline font-medium">politique de confidentialité</a> (RGPD). *
                               </span>
                             </label>
                             {flashDepositError && (

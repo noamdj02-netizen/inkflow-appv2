@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { LANDING_PRICING_URL } from '../../lib/urls';
+import { LANDING_PRICING_URL, LANDING_PRIVACY_URL, LANDING_TERMS_URL, LANDING_LEGAL_URL } from '../../lib/urls';
 
 const exploreLinksConfig = [
   { href: '/vue-ensemble', label: "Vue d'ensemble" },
@@ -105,14 +105,18 @@ export const EnhanceAIFooter: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-blue-100">
+          <div className="mt-16 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-blue-100">
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-6 gap-y-2">
-            <a href="/politique-confidentialite" className="hover:text-white transition-colors">
+            <a href={LANDING_PRIVACY_URL} className="hover:text-white transition-colors">
               Politique de confidentialité
             </a>
             <span className="text-blue-300/80 hidden sm:inline">|</span>
-            <a href="/conditions-utilisation" className="hover:text-white transition-colors">
+            <a href={LANDING_TERMS_URL} className="hover:text-white transition-colors">
               Conditions d&apos;utilisation
+            </a>
+            <span className="text-blue-300/80 hidden sm:inline">|</span>
+            <a href={LANDING_LEGAL_URL} className="hover:text-white transition-colors">
+              Mentions légales
             </a>
           </div>
           <p className="text-blue-100/90 font-medium">

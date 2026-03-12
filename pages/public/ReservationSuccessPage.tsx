@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, Calendar, MapPin, Clock, User, Download, Store } from 'lucide-react';
 import { Logo } from '../../components/Logo';
+import { LANDING_URL } from '../../lib/urls';
 import { SEO } from '../../components/SEO';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -123,7 +124,7 @@ export const ReservationSuccessPage: React.FC = () => {
         <Logo size="lg" className="mb-6" />
         <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
           <p className="text-red-600 font-medium mb-4">{error || 'Données introuvables.'}</p>
-          <a href="/" className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800">
+          <a href={LANDING_URL} className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800">
             Retour à l&apos;accueil
           </a>
         </div>
@@ -141,7 +142,7 @@ export const ReservationSuccessPage: React.FC = () => {
         canonical="/reservation-succes"
       />
       <header className="bg-white border-b border-neutral-200 py-4 px-6">
-        <a href="/" className="inline-block">
+        <a href={LANDING_URL} className="inline-block">
           <Logo size="md" />
         </a>
       </header>
@@ -238,7 +239,7 @@ export const ReservationSuccessPage: React.FC = () => {
           )}
 
           <a
-            href="/"
+            href={LANDING_URL}
             className="block w-full text-center py-3.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors"
           >
             Retour à l&apos;accueil

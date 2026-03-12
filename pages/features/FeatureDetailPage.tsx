@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { EnhanceAINavbar } from '../../components/landing/EnhanceAINavbar';
 import { EnhanceAIFooter } from '../../components/landing/EnhanceAIFooter';
+import { LANDING_URL } from '../../lib/urls';
 import { FeaturePreview } from '../../components/features/FeaturePreview';
 
 interface FeatureConfig {
@@ -160,7 +161,7 @@ export const FeatureDetailPage: React.FC<FeatureDetailPageProps> = ({ slug }) =>
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-neutral-800 mb-4">Page non trouvée</h1>
-          <a href="/" className="text-blue-600 hover:underline">Retour à l'accueil</a>
+          <a href={LANDING_URL} className="text-blue-600 hover:underline">Retour à l'accueil</a>
         </div>
       </div>
     );
@@ -209,7 +210,7 @@ export const FeatureDetailPage: React.FC<FeatureDetailPageProps> = ({ slug }) =>
                   <ArrowRight className="w-4 h-4" />
                 </a>
                 <a
-                  href="/"
+                  href={LANDING_URL}
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-neutral-300 text-neutral-700 font-semibold hover:bg-neutral-50 transition-colors"
                 >
                   Retour à l'accueil

@@ -213,7 +213,7 @@ const NotFoundPage: React.FC = () => (
     <div className="text-center">
       <h1 className="text-6xl font-bold mb-4">404</h1>
       <p className="text-xl text-neutral-600 mb-8">Page non trouvée</p>
-      <a href={LANDING_URL} className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800 transition-colors" target="_blank" rel="noopener noreferrer">
+      <a href={LANDING_URL} className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800 transition-colors">
         Retour à l'accueil
       </a>
     </div>

@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Logo } from '../components/Logo';
+import { LANDING_URL } from '../lib/urls';
 import { MiniCalendar } from '../components/dashboard/MiniCalendar';
 import { AppointmentsView } from '../components/dashboard/AppointmentsView';
 import { DemoMessagingView } from '../components/demo/DemoMessagingView';
@@ -1173,7 +1174,7 @@ export const DemoSandboxPage: React.FC = () => {
         >
           <div className="absolute inset-0 z-0 bg-white dark:bg-zinc-950" aria-hidden />
           <div className="relative z-10 px-4 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between safe-top">
-            <a href="/" className="flex items-center gap-3 min-w-0 group" aria-label="Retour à l'accueil">
+            <a href={LANDING_URL} className="flex items-center gap-3 min-w-0 group" aria-label="Retour à l'accueil">
               <Logo size="lg" className="rounded-xl group-hover:opacity-90 transition-opacity" />
               <div className="min-w-0">
                 <span className="block text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">INKFLOW</span>
@@ -1327,7 +1328,7 @@ export const DemoSandboxPage: React.FC = () => {
                 )}
               </div>
               <a
-                href="/"
+                href={LANDING_URL}
                 className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
               >
                 Retour à l&apos;accueil

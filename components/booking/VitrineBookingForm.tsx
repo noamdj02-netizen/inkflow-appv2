@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Mail, FileText, Calendar, Clock, ChevronLeft, ChevronRight, UploadCloud, MapPin, Ruler, X } from 'lucide-react';
 import { createBooking, uploadBookingReferenceImages } from '../../lib/supabaseBookings';
+import { LANDING_TERMS_URL, LANDING_PRIVACY_URL } from '../../lib/urls';
 import { toLocalDateString } from '../../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS } from '../../lib/studioAvailability';
 import type { VitrineBookingFormData } from '../../types';
@@ -444,9 +445,9 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
         />
         <span className="text-sm">
           J&apos;accepte les{' '}
-          <a href="/conditions-utilisation" target="_blank" rel="noopener noreferrer" className="underline font-medium">conditions générales de vente</a>
+          <a href={LANDING_TERMS_URL} target="_blank" rel="noopener noreferrer" className="underline font-medium">conditions générales de vente</a>
           {' '}et la{' '}
-          <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="underline font-medium">politique de confidentialité</a> (RGPD). *
+          <a href={LANDING_PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="underline font-medium">politique de confidentialité</a> (RGPD). *
         </span>
       </label>
       {errors.acceptTerms && (
