@@ -334,6 +334,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche'
   };
 
+  const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+
   if (loading || !studioDisplay) {
     return (
       <div className="landing-scroll bg-neutral-50 flex items-center justify-center">
@@ -487,7 +489,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         </div>
       </div>
 
-      {/* Stats Banner — padding-bottom safe area pour éviter que le tooltip ou le contenu soit coupé */}
+      {/* Stats Banner — masquable via Paramètres > Vitrine > Statistiques */}
+      {studioDisplay.showStatsBanner !== false && (
       <div className="bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white py-4 sm:py-6 relative overflow-hidden pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-0 left-1/4 w-64 h-64 bg-white rounded-full blur-3xl" />
@@ -514,6 +517,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
           </div>
         </div>
       </div>
+      )}
 
       {/* Main Content — safe-bottom pour éviter contenu coupé sur mobile */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 pb-[max(2rem,env(safe-area-inset-bottom))]">
@@ -916,7 +920,9 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 Horaires
               </h3>
               <div className="space-y-3">
-                {Object.entries(studioDisplay.openingHours).map(([day, hours]) => {
+                {DAY_ORDER.map((day) => {
+                  const hours = studioDisplay.openingHours?.[day];
+                  if (!hours) return null;
                   const h = hours as { closed?: boolean; open?: string; close?: string };
                   const isToday = getCurrentDay() === day;
                   return (

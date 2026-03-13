@@ -220,7 +220,14 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
 
         {activeSection === 'stats' && (
           <div className="space-y-6">
-            <h3 className="font-bold text-lg">Statistiques (affichées sur la vitrine)</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-lg">Statistiques (affichées sur la vitrine)</h3>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={data.showStatsBanner !== false} onChange={(e) => update('showStatsBanner', e.target.checked)} className="w-4 h-4 rounded" />
+                <span className="text-sm font-medium">Afficher la bannière statistiques</span>
+              </label>
+            </div>
+            <p className="text-sm text-[var(--text-tertiary)]">Décochez pour masquer entièrement la section (Tatouages réalisés, Satisfaction, etc.) sur votre page vitrine.</p>
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-semibold mb-2">Note (ex: 4.9)</label>

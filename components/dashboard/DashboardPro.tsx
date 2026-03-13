@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
@@ -1002,30 +1002,54 @@ export const DashboardPro: React.FC = () => {
 
           {!loading && activeTab === 'settings' && (
             <div className="space-y-6">
-              <div className="flex gap-2 border-b border-[var(--border)] pb-4 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide flex-nowrap">
-                {([
-                  { id: 'general', label: 'Général' },
-                  { id: 'payments', label: 'Paiements' },
-                  { id: 'billing', label: 'Abonnement' },
-                  { id: 'care', label: 'Soins post-tattoo' },
-                  { id: 'consent', label: 'Consentement' },
-                  { id: 'availability', label: 'Disponibilités' },
-                  { id: 'artists', label: 'Artistes' },
-                  { id: 'waitlist', label: 'Liste d\'attente' },
-                  { id: 'loyalty', label: 'Fidélité' },
-                  { id: 'calendar', label: 'Calendrier' },
-                  { id: 'vitrine', label: 'Page vitrine' },
-                  { id: 'messagerie', label: 'Messagerie' },
-                ] as const).map(tab => (
-                  <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${
-                      settingsTab === tab.id
-                        ? 'bg-blue-600 text-white shadow-sm dark:bg-blue-500 dark:hover:bg-blue-600'
-                        : 'border-2 border-[var(--border)] text-[var(--text-primary)] hover:border-blue-400 hover:bg-blue-50/50 dark:hover:border-blue-500/60 dark:hover:bg-blue-500/10'
-                    }`}>
-                    {tab.label}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 border-b border-[var(--border)] pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    const el = e.currentTarget.nextElementSibling;
+                    if (el) el.scrollBy({ left: -200, behavior: 'smooth' });
+                  }}
+                  className="flex-shrink-0 w-10 h-10 rounded-xl border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+                  aria-label="Défiler à gauche"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide flex gap-2 flex-nowrap pb-1" style={{ scrollBehavior: 'smooth' }}>
+                  {([
+                    { id: 'general', label: 'Général' },
+                    { id: 'payments', label: 'Paiements' },
+                    { id: 'billing', label: 'Abonnement' },
+                    { id: 'care', label: 'Soins post-tattoo' },
+                    { id: 'consent', label: 'Consentement' },
+                    { id: 'availability', label: 'Disponibilités' },
+                    { id: 'artists', label: 'Artistes' },
+                    { id: 'waitlist', label: 'Liste d\'attente' },
+                    { id: 'loyalty', label: 'Fidélité' },
+                    { id: 'calendar', label: 'Calendrier' },
+                    { id: 'vitrine', label: 'Page vitrine' },
+                    { id: 'messagerie', label: 'Messagerie' },
+                  ] as const).map(tab => (
+                    <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
+                        settingsTab === tab.id
+                          ? 'bg-blue-600 text-white shadow-sm dark:bg-blue-500 dark:hover:bg-blue-600'
+                          : 'border-2 border-[var(--border)] text-[var(--text-primary)] hover:border-blue-400 hover:bg-blue-50/50 dark:hover:border-blue-500/60 dark:hover:bg-blue-500/10'
+                      }`}>
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    const el = e.currentTarget.previousElementSibling;
+                    if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
+                  }}
+                  className="flex-shrink-0 w-10 h-10 rounded-xl border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+                  aria-label="Défiler à droite"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
               {settingsTab === 'general' && (
                 <div className="space-y-6 max-w-2xl w-full overflow-hidden">

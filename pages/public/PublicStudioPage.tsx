@@ -203,12 +203,17 @@ export const PublicStudioPage: React.FC<PublicStudioPageProps> = ({ studioSlug }
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-neutral-200">
               <h3 className="text-xl font-bold mb-4">Horaires</h3>
               <div className="space-y-2 text-sm">
-                {Object.entries(studio.openingHours).map(([day, hours]) => (
-                  <div key={day} className="flex justify-between">
-                    <span className="text-neutral-600 capitalize">{day}</span>
-                    <span className="font-semibold text-neutral-900">{hours}</span>
-                  </div>
-                ))}
+                {(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).map((day) => {
+                  const hours = studio.openingHours[day];
+                  if (!hours) return null;
+                  const dayLabels: Record<string, string> = { monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' };
+                  return (
+                    <div key={day} className="flex justify-between">
+                      <span className="text-neutral-600">{dayLabels[day]}</span>
+                      <span className="font-semibold text-neutral-900">{hours}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

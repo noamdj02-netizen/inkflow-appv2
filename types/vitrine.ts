@@ -87,6 +87,8 @@ export interface VitrineData {
   totalTattoos: number;
   satisfactionRate: number;
   repeatClients: number;
+  /** Masquer la bannière statistiques sur la vitrine (Tatouages réalisés, Satisfaction, etc.) */
+  showStatsBanner?: boolean;
   services: VitrineService[];
   openingHours: Record<string, VitrineOpeningHours>;
   artists: VitrineArtist[];
