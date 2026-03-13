@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Calendar, RefreshCw, ExternalLink, Check, X, Link2, Unlink2, CloudOff, Download } from 'lucide-react';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import {
@@ -28,6 +28,8 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
   const [disconnecting, setDisconnecting] = useState(false);
   const [importedEvents, setImportedEvents] = useState<GoogleCalendarEvent[]>([]);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+  const onToastRef = useRef(onToast);
+  onToastRef.current = onToast;
 
   const loadStatus = useCallback(async () => {
     try {
@@ -37,11 +39,11 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
     } catch (err) {
       setGoogleStatus({ connected: false, integration: null });
       const msg = err instanceof Error ? err.message : 'Impossible de vérifier la connexion.';
-      onToast?.(msg, 'error');
+      onToastRef.current?.(msg, 'error');
     } finally {
       setLoading(false);
     }
-  }, [studioId, onToast]);
+  }, [studioId]);
 
   useEffect(() => {
     loadStatus();
@@ -51,13 +53,13 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('error') === 'oauth_failed') {
-      onToast?.('Erreur de connexion à Google Agenda', 'error');
+      onToastRef.current?.('Erreur de connexion à Google Agenda', 'error');
       window.history.replaceState({}, '', window.location.pathname);
     }
     if (params.get('connected') === 'google' || params.get('success') === 'google_connected') {
       loadStatus();
     }
-  }, [onToast, loadStatus]);
+  }, [loadStatus]);
 
   const handleConnectGoogle = async () => {
     try {
@@ -113,7 +115,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
     return (
       <div className="flex items-center justify-center p-12">
         <RefreshCw className="w-5 h-5 animate-spin text-blue-500 dark:text-blue-400" />
-        <span className="ml-3 text-sm text-[var(--foreground-muted)]">Chargement...</span>
+        <span className="ml-3 text-sm text-[var(--text-secondary)]">Chargement...</span>
       </div>
     );
   }
@@ -121,11 +123,11 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
   return (
     <div className="space-y-8 max-w-2xl">
       <div>
-        <h3 className="text-lg font-semibold text-[var(--foreground)] flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
           <Calendar className="w-5 h-5 text-blue-500 dark:text-blue-400" />
           Synchronisation des calendriers
         </h3>
-        <p className="text-sm text-[var(--foreground-muted)] mt-1">
+        <p className="text-sm text-[var(--text-secondary)] mt-1">
           Connectez vos calendriers pour synchroniser vos rendez-vous automatiquement.
         </p>
       </div>
@@ -134,7 +136,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
       <div className="rounded-2xl border-2 border-[var(--border)] p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white shadow-sm border border-gray-200 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-[var(--bg-card)] shadow-sm border border-[var(--border)] flex items-center justify-center">
               <svg viewBox="0 0 24 24" className="w-6 h-6">
                 <path d="M18.316 5.684L24 0H18.316V5.684Z" fill="#1A73E8"/>
                 <path d="M5.684 24L0 18.316V24H5.684Z" fill="#EA4335"/>
@@ -159,7 +161,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
               <Check className="w-3.5 h-3.5" /> Connecté
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--bg-card-secondary)] text-[var(--text-secondary)] text-xs font-medium">
               <CloudOff className="w-3.5 h-3.5" /> Non connecté
             </span>
           )}
@@ -194,7 +196,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
               <button
                 onClick={handlePull}
                 disabled={pulling}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400 font-medium text-sm hover:bg-zinc-200 dark:hover:bg-zinc-500/30 transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[var(--bg-card-secondary)] text-[var(--text-primary)] font-medium text-sm hover:bg-[var(--bg-hover)] transition-colors disabled:opacity-50"
               >
                 <Download className={`w-4 h-4 ${pulling ? 'animate-bounce' : ''}`} />
                 {pulling ? 'Import...' : 'Importer de Google'}
@@ -204,7 +206,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
             <button
               onClick={() => setShowDisconnectConfirm(true)}
               disabled={disconnecting}
-              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border-2 border-zinc-200 text-zinc-600 dark:border-zinc-600 dark:text-zinc-400 font-medium text-sm hover:bg-zinc-100 dark:hover:bg-zinc-500/20 transition-colors disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border-2 border-[var(--border)] text-[var(--text-secondary)] font-medium text-sm hover:bg-[var(--bg-hover)] transition-colors disabled:opacity-50"
             >
               <Unlink2 className="w-4 h-4" />
               {disconnecting ? 'Déconnexion...' : 'Déconnecter'}
@@ -221,8 +223,8 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
               <Calendar className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="font-medium text-[var(--foreground)]">Apple Calendrier & Outlook</div>
-              <div className="text-xs text-[var(--foreground-muted)]">
+              <div className="font-medium text-[var(--text-primary)]">Apple Calendrier & Outlook</div>
+              <div className="text-xs text-[var(--text-secondary)]">
                 Export .ics — compatible Apple Calendrier, Outlook, Google (sans connexion)
               </div>
             </div>

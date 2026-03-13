@@ -87,27 +87,27 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ onSa
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Disponibilités</h2>
-          <p className="text-sm text-neutral-600 mt-1">Configurez vos horaires de travail et vos pauses</p>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)]">Disponibilités</h2>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">Configurez vos horaires de travail et vos pauses</p>
         </div>
         <button
           onClick={handleSave}
-          className="flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save className="w-5 h-5" />
           Enregistrer
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 border border-neutral-200">
-        <h3 className="text-lg font-bold mb-6">Paramètres de réservation</h3>
+      <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
+        <h3 className="text-lg font-bold mb-6 text-[var(--text-primary)]">Paramètres de réservation</h3>
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-semibold mb-2">Durée des créneaux</label>
+            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Durée des créneaux</label>
             <select
               value={bookingSettings.slotDuration}
               onChange={(e) => setBookingSettings({ ...bookingSettings, slotDuration: parseInt(e.target.value) })}
-              className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
+              className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               <option value={30}>30 minutes</option>
               <option value={60}>1 heure</option>
@@ -116,11 +116,11 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ onSa
             </select>
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-2">Temps de pause entre RDV</label>
+            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Temps de pause entre RDV</label>
             <select
               value={bookingSettings.bufferTime}
               onChange={(e) => setBookingSettings({ ...bookingSettings, bufferTime: parseInt(e.target.value) })}
-              className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
+              className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             >
               <option value={0}>Aucun</option>
               <option value={15}>15 minutes</option>
@@ -162,36 +162,36 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ onSa
                   onChange={(e) => setBookingSettings({ ...bookingSettings, requireDeposit: e.target.checked })}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-neutral-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neutral-900" />
+                <div className="w-11 h-6 bg-[var(--border)] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[var(--border)] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
               </label>
             </div>
           </div>
           {bookingSettings.requireDeposit && (
             <div>
-              <label className="block text-sm font-semibold mb-2">Pourcentage d'acompte</label>
+              <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Pourcentage d'acompte</label>
               <div className="relative">
                 <input
                   type="number"
                   value={bookingSettings.depositPercentage}
                   onChange={(e) => setBookingSettings({ ...bookingSettings, depositPercentage: parseInt(e.target.value) })}
-                  className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                  className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   min={10}
                   max={100}
                 />
-                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-neutral-400">%</span>
+                <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-[var(--text-tertiary)]">%</span>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 border border-neutral-200">
-        <h3 className="text-lg font-bold mb-6">Horaires hebdomadaires</h3>
+      <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
+        <h3 className="text-lg font-bold mb-6 text-[var(--text-primary)]">Horaires hebdomadaires</h3>
         <div className="space-y-4">
           {daysOfWeek.map(({ key, label }) => {
             const day = schedule[key as keyof typeof schedule];
             return (
-              <div key={key} className="border border-neutral-200 rounded-xl p-4">
+              <div key={key} className="border border-[var(--border)] rounded-xl p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -201,12 +201,12 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ onSa
                         onChange={(e) => updateDay(key, 'enabled', e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-neutral-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neutral-900" />
+                      <div className="w-11 h-6 bg-[var(--border)] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[var(--border)] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
                     </label>
-                    <span className="font-semibold">{label}</span>
+                    <span className="font-semibold text-[var(--text-primary)]">{label}</span>
                   </div>
                   {day.enabled && (
-                    <button onClick={() => addBreak(key)} className="text-sm text-neutral-600 hover:text-neutral-900 flex items-center gap-1">
+                    <button onClick={() => addBreak(key)} className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1">
                       <Plus className="w-4 h-4" />
                       Ajouter une pause
                     </button>
@@ -216,30 +216,30 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ onSa
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-neutral-600 mb-1">Ouverture</label>
+                        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Ouverture</label>
                         <input
                           type="time"
                           value={day.open}
                           onChange={(e) => updateDay(key, 'open', e.target.value)}
-                          className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                          className="w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-neutral-600 mb-1">Fermeture</label>
+                        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Fermeture</label>
                         <input
                           type="time"
                           value={day.close}
                           onChange={(e) => updateDay(key, 'close', e.target.value)}
-                          className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                          className="w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         />
                       </div>
                     </div>
                     {day.breaks.length > 0 && (
-                      <div className="space-y-2 pt-2 border-t border-neutral-100">
+                      <div className="space-y-2 pt-2 border-t border-[var(--border)]">
                         {day.breaks.map((breakTime, idx) => (
                           <div key={idx} className="grid grid-cols-2 gap-3 items-end">
                             <div>
-                              <label className="block text-xs font-medium text-neutral-600 mb-1">Début pause</label>
+                              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Début pause</label>
                               <input
                                 type="time"
                                 value={breakTime.start}
@@ -248,12 +248,12 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ onSa
                                   newBreaks[idx] = { ...newBreaks[idx], start: e.target.value };
                                   updateDay(key, 'breaks', newBreaks);
                                 }}
-                                className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                                className="w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                               />
                             </div>
                             <div className="flex gap-2">
                               <div className="flex-1">
-                                <label className="block text-xs font-medium text-neutral-600 mb-1">Fin pause</label>
+                                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Fin pause</label>
                                 <input
                                   type="time"
                                   value={breakTime.end}
@@ -262,10 +262,10 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ onSa
                                     newBreaks[idx] = { ...newBreaks[idx], end: e.target.value };
                                     updateDay(key, 'breaks', newBreaks);
                                   }}
-                                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                                  className="w-full px-3 py-2 border border-[var(--border)] rounded-lg text-sm bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                 />
                               </div>
-                              <button onClick={() => removeBreak(key, idx)} className="p-2 h-fit self-end text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-500/20 rounded-lg transition-colors">
+                              <button onClick={() => removeBreak(key, idx)} className="p-2 h-fit self-end text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -281,17 +281,17 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ onSa
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 border border-neutral-200">
-        <h3 className="text-lg font-bold mb-4">Dates de fermeture</h3>
-        <p className="text-sm text-neutral-600 mb-6">Vacances, jours fériés, etc.</p>
+      <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
+        <h3 className="text-lg font-bold mb-4 text-[var(--text-primary)]">Dates de fermeture</h3>
+        <p className="text-sm text-[var(--text-secondary)] mb-6">Vacances, jours fériés, etc.</p>
         <div className="flex gap-3 mb-4">
           <input
             type="date"
             value={newClosedDate}
             onChange={(e) => setNewClosedDate(e.target.value)}
-            className="flex-1 px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
+            className="flex-1 px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           />
-          <button onClick={addClosedDate} className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors flex items-center gap-2">
+          <button onClick={addClosedDate} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors flex items-center gap-2">
             <Plus className="w-5 h-5" />
             Ajouter
           </button>
@@ -299,21 +299,21 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ onSa
         {closedDates.length > 0 ? (
           <div className="space-y-2">
             {closedDates.map((date, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg">
+              <div key={idx} className="flex items-center justify-between p-3 bg-[var(--bg-card-secondary)] rounded-lg">
                 <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-neutral-400" />
-                  <span className="font-medium">
+                  <Calendar className="w-5 h-5 text-[var(--text-tertiary)]" />
+                  <span className="font-medium text-[var(--text-primary)]">
                     {new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                   </span>
                 </div>
-                <button onClick={() => removeClosedDate(date)} className="p-2 text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-500/20 rounded-lg transition-colors">
+                <button onClick={() => removeClosedDate(date)} className="p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] rounded-lg transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-neutral-500">
+          <div className="text-center py-8 text-[var(--text-tertiary)]">
             <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p>Aucune date de fermeture configurée</p>
           </div>

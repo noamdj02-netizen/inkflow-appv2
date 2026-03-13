@@ -122,9 +122,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
     <div className="space-y-6 max-w-4xl w-full overflow-hidden">
       <VitrineLinkButton studioName={studioName} userEmail={userEmail} studioSlug={studioSlugFromDb} />
       {publicUrl && (
-        <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-          <p className="text-sm font-semibold text-neutral-700 mb-1">Votre lien public</p>
-          <p className="text-sm text-neutral-600 break-all font-mono">{publicUrl}</p>
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card-secondary)] p-4">
+          <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">Votre lien public</p>
+          <p className="text-sm text-[var(--text-secondary)] break-all font-mono">{publicUrl}</p>
           {slugConflict && (
             <p className="text-xs text-zinc-700 dark:text-zinc-400 mt-2">
               Ce nom était déjà pris, votre lien unique est ci-dessus.
@@ -139,7 +139,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
         </button>
       </div>
 
-      <div className="flex gap-2 border-b border-neutral-200 pb-4 overflow-x-auto flex-nowrap sm:flex-wrap -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+      <div className="flex gap-2 border-b border-[var(--border)] pb-4 overflow-x-auto flex-nowrap sm:flex-wrap -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
         {sections.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveSection(id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap ${activeSection === id ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:bg-neutral-50'}`}>
@@ -149,23 +149,23 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl p-6 md:p-8 border border-neutral-200">
+      <div className="bg-[var(--bg-card)] rounded-2xl p-6 md:p-8 border border-[var(--border)]">
         {activeSection === 'identity' && (
           <div className="space-y-6">
             <h3 className="font-bold text-lg">Identité du studio</h3>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold mb-2">Nom du studio</label>
-                <input type="text" value={data.name} onChange={(e) => update('name', e.target.value)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                <input type="text" value={data.name} onChange={(e) => update('name', e.target.value)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Slogan / Tagline</label>
-                <input type="text" value={data.tagline} onChange={(e) => update('tagline', e.target.value)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" placeholder="L'art du tatouage depuis 2015" />
+                <input type="text" value={data.tagline} onChange={(e) => update('tagline', e.target.value)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="L'art du tatouage depuis 2015" />
               </div>
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2">Description</label>
-              <textarea value={data.description} onChange={(e) => update('description', e.target.value)} rows={4} className="w-full px-4 py-3 border border-neutral-200 rounded-xl resize-none" />
+              <textarea value={data.description} onChange={(e) => update('description', e.target.value)} rows={4} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none" />
             </div>
             <div className="space-y-6">
               <ImageUploadField
@@ -189,30 +189,30 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
             <h3 className="font-bold text-lg">Coordonnées</h3>
             <div>
               <label className="block text-sm font-semibold mb-2">Adresse</label>
-              <input type="text" value={data.address} onChange={(e) => update('address', e.target.value)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+              <input type="text" value={data.address} onChange={(e) => update('address', e.target.value)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold mb-2">Téléphone</label>
-                <input type="tel" value={data.phone} onChange={(e) => update('phone', e.target.value)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                <input type="tel" value={data.phone} onChange={(e) => update('phone', e.target.value)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Email</label>
-                <input type="email" value={data.email} onChange={(e) => update('email', e.target.value)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                <input type="email" value={data.email} onChange={(e) => update('email', e.target.value)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               </div>
             </div>
             <div className="grid sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-semibold mb-2">Instagram</label>
-                <input type="text" value={data.instagram} onChange={(e) => update('instagram', e.target.value)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" placeholder="@votrestudio" />
+                <input type="text" value={data.instagram} onChange={(e) => update('instagram', e.target.value)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="@votrestudio" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Facebook</label>
-                <input type="text" value={data.facebook} onChange={(e) => update('facebook', e.target.value)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                <input type="text" value={data.facebook} onChange={(e) => update('facebook', e.target.value)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Site web</label>
-                <input type="text" value={data.website} onChange={(e) => update('website', e.target.value)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" placeholder="www.exemple.fr" />
+                <input type="text" value={data.website} onChange={(e) => update('website', e.target.value)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="www.exemple.fr" />
               </div>
             </div>
           </div>
@@ -224,27 +224,27 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-semibold mb-2">Note (ex: 4.9)</label>
-                <input type="number" step="0.1" value={data.rating} onChange={(e) => update('rating', parseFloat(e.target.value) || 0)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                <input type="number" step="0.1" value={data.rating} onChange={(e) => update('rating', parseFloat(e.target.value) || 0)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Nombre d'avis</label>
-                <input type="number" value={data.reviewCount} onChange={(e) => update('reviewCount', parseInt(e.target.value) || 0)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                <input type="number" value={data.reviewCount} onChange={(e) => update('reviewCount', parseInt(e.target.value) || 0)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Années d'expérience</label>
-                <input type="number" value={data.yearsExperience} onChange={(e) => update('yearsExperience', parseInt(e.target.value) || 0)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                <input type="number" value={data.yearsExperience} onChange={(e) => update('yearsExperience', parseInt(e.target.value) || 0)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Tatouages réalisés</label>
-                <input type="number" value={data.totalTattoos} onChange={(e) => update('totalTattoos', parseInt(e.target.value) || 0)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                <input type="number" value={data.totalTattoos} onChange={(e) => update('totalTattoos', parseInt(e.target.value) || 0)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Taux satisfaction %</label>
-                <input type="number" value={data.satisfactionRate} onChange={(e) => update('satisfactionRate', parseInt(e.target.value) || 0)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                <input type="number" value={data.satisfactionRate} onChange={(e) => update('satisfactionRate', parseInt(e.target.value) || 0)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Clients fidèles %</label>
-                <input type="number" value={data.repeatClients} onChange={(e) => update('repeatClients', parseInt(e.target.value) || 0)} className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                <input type="number" value={data.repeatClients} onChange={(e) => update('repeatClients', parseInt(e.target.value) || 0)} className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               </div>
             </div>
           </div>
@@ -254,7 +254,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
           <div className="space-y-6">
             <h3 className="font-bold text-lg">Services</h3>
             {data.services.map((service, idx) => (
-              <div key={idx} className="p-4 border border-neutral-200 rounded-xl space-y-4">
+              <div key={idx} className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold">Service {idx + 1}</span>
                   <button onClick={() => update('services', data.services.filter((_, i) => i !== idx))} className="text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 p-1">
@@ -286,7 +286,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
               </div>
             ))}
             <button onClick={() => update('services', [...data.services, { name: '', price: '', duration: '', description: '', icon: 'sparkles', features: [] }])}
-              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-neutral-300 rounded-xl text-neutral-600 hover:border-neutral-900 hover:text-neutral-900">
+              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]">
               <Plus className="w-4 h-4" /> Ajouter un service
             </button>
           </div>
@@ -296,7 +296,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
           <div className="space-y-6">
             <h3 className="font-bold text-lg">Artistes</h3>
             {data.artists.map((artist, idx) => (
-              <div key={idx} className="p-4 border border-neutral-200 rounded-xl space-y-4">
+              <div key={idx} className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold">Artiste {idx + 1}</span>
                   <button onClick={() => update('artists', data.artists.filter((_, i) => i !== idx))} className="text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 p-1">
@@ -339,7 +339,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
               </div>
             ))}
             <button onClick={() => update('artists', [...data.artists, { name: '', role: '', specialties: [], experience: '', avatar: '', bio: '', instagram: '', portfolio: 0 }])}
-              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-neutral-300 rounded-xl text-neutral-600 hover:border-neutral-900 hover:text-neutral-900">
+              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]">
               <Plus className="w-4 h-4" /> Ajouter un artiste
             </button>
           </div>
@@ -349,7 +349,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
           <div className="space-y-6">
             <h3 className="font-bold text-lg">Portfolio</h3>
             {data.portfolio.map((item, idx) => (
-              <div key={idx} className="p-4 border border-neutral-200 rounded-xl space-y-4">
+              <div key={idx} className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4">
                 <ImageUploadField
                   label="Photo portfolio"
                   value={item.url}
@@ -380,7 +380,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
               </div>
             ))}
             <button onClick={() => update('portfolio', [...data.portfolio, { url: '', category: '', artist: '', likes: 0, description: '' }])}
-              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-neutral-300 rounded-xl text-neutral-600 hover:border-neutral-900 hover:text-neutral-900">
+              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]">
               <Plus className="w-4 h-4" /> Ajouter une photo
             </button>
           </div>
@@ -390,7 +390,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
           <div className="space-y-6">
             <h3 className="font-bold text-lg">Flash disponibles</h3>
             {data.flashDesigns.map((flash, idx) => (
-              <div key={flash.id} className="p-4 border border-neutral-200 rounded-xl space-y-4">
+              <div key={flash.id} className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold">{flash.title || `Flash ${idx + 1}`}</span>
                   <button onClick={() => update('flashDesigns', data.flashDesigns.filter((_, i) => i !== idx))} className="text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 p-1">
@@ -441,7 +441,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
               </div>
             ))}
             <button onClick={() => update('flashDesigns', [...data.flashDesigns, { id: `f${Date.now()}`, title: '', imageUrl: '', price: 0, duration: 60, placement: [], size: '', available: true, description: '', style: '' }])}
-              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-neutral-300 rounded-xl text-neutral-600 hover:border-neutral-900 hover:text-neutral-900">
+              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]">
               <Plus className="w-4 h-4" /> Ajouter un flash
             </button>
           </div>
@@ -451,7 +451,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
           <div className="space-y-6">
             <h3 className="font-bold text-lg">Avis clients</h3>
             {data.testimonials.map((t, idx) => (
-              <div key={idx} className="p-4 border border-neutral-200 rounded-xl space-y-4">
+              <div key={idx} className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold">{t.name || `Avis ${idx + 1}`}</span>
                   <button onClick={() => update('testimonials', data.testimonials.filter((_, i) => i !== idx))} className="text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 p-1">
@@ -495,7 +495,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
               </div>
             ))}
             <button onClick={() => update('testimonials', [...data.testimonials, { name: '', rating: 5, date: '', text: '', avatar: '', tattoo: '', verified: true }])}
-              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-neutral-300 rounded-xl text-neutral-600 hover:border-neutral-900 hover:text-neutral-900">
+              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]">
               <Plus className="w-4 h-4" /> Ajouter un avis
             </button>
           </div>
@@ -505,9 +505,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
           <div className="space-y-6">
             <h3 className="font-bold text-lg">Questions fréquentes</h3>
             {data.faqs.map((faq, idx) => (
-              <div key={idx} className="p-4 border border-neutral-200 rounded-xl space-y-4">
+              <div key={idx} className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold text-sm text-neutral-600">FAQ {idx + 1}</span>
+                  <span className="font-semibold text-sm text-[var(--text-secondary)]">FAQ {idx + 1}</span>
                   <button onClick={() => update('faqs', data.faqs.filter((_, i) => i !== idx))} className="text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 p-1">
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -521,7 +521,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
               </div>
             ))}
             <button onClick={() => update('faqs', [...data.faqs, { q: '', a: '' }])}
-              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-neutral-300 rounded-xl text-neutral-600 hover:border-neutral-900 hover:text-neutral-900">
+              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]">
               <Plus className="w-4 h-4" /> Ajouter une question
             </button>
           </div>
@@ -531,7 +531,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
           <div className="space-y-6">
             <h3 className="font-bold text-lg">Pourquoi nous choisir</h3>
             {data.whyChooseUs.map((item, idx) => (
-              <div key={idx} className="p-4 border border-neutral-200 rounded-xl space-y-4">
+              <div key={idx} className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold">{item.title || `Point ${idx + 1}`}</span>
                   <button onClick={() => update('whyChooseUs', data.whyChooseUs.filter((_, i) => i !== idx))} className="text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 p-1">
@@ -554,7 +554,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
               </div>
             ))}
             <button onClick={() => update('whyChooseUs', [...data.whyChooseUs, { icon: 'award', title: '', description: '' }])}
-              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-neutral-300 rounded-xl text-neutral-600 hover:border-neutral-900 hover:text-neutral-900">
+              className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-[var(--border)] rounded-xl text-[var(--text-secondary)] hover:border-blue-500 hover:text-[var(--text-primary)]">
               <Plus className="w-4 h-4" /> Ajouter un point
             </button>
           </div>
@@ -566,7 +566,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
             {DAYS.map(day => {
               const h = data.openingHours[day] || { open: '10:00', close: '19:00', closed: false };
               return (
-                <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 border border-neutral-200 rounded-xl">
+                <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50">
                   <span className="font-semibold w-28">{DAY_LABELS[day]}</span>
                   <label className="flex items-center gap-2">
                     <input type="checkbox" checked={h.closed} onChange={(e) => {
@@ -579,7 +579,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
                       <input type="time" value={h.open} onChange={(e) => {
                         const oh = { ...data.openingHours }; oh[day] = { ...h, open: e.target.value }; update('openingHours', oh);
                       }} className="px-4 py-2 border rounded-lg" />
-                      <span className="text-neutral-500">-</span>
+                      <span className="text-[var(--text-tertiary)]">-</span>
                       <input type="time" value={h.close} onChange={(e) => {
                         const oh = { ...data.openingHours }; oh[day] = { ...h, close: e.target.value }; update('openingHours', oh);
                       }} className="px-4 py-2 border rounded-lg" />
@@ -593,7 +593,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
       </div>
 
       <a href={`/studio/${slug}`} target="_blank" rel="noopener noreferrer"
-        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-colors ${manualSaving || saving ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed pointer-events-none' : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700'}`}
+        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-colors ${manualSaving || saving ? 'bg-[var(--border)] text-[var(--text-tertiary)] cursor-not-allowed pointer-events-none' : 'bg-blue-600 hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 text-white'}`}
         title={manualSaving || saving ? 'Attendez la fin de l\'enregistrement' : 'Ouvrir la page vitrine dans un nouvel onglet'}>
         <ExternalLink className="w-5 h-5" />
         Prévisualiser la vitrine

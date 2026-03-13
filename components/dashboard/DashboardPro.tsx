@@ -47,6 +47,7 @@ import { ClientPreviewDrawer } from './ClientPreviewDrawer';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
 import { WelcomeOnboardingFlow, shouldShowWelcomeFlow } from '../onboarding/WelcomeOnboardingFlow';
 import { supabase } from '../../lib/supabase';
+import { getWaitlistFromSupabase, addWaitlistEntryToSupabase, updateWaitlistStatusInSupabase, deleteWaitlistEntryFromSupabase } from '../../lib/supabaseDashboard';
 import { createSubscription } from '../../lib/stripeClient';
 import { getStripePaymentLink, STRIPE_PAYMENT_LINKS } from '../../lib/stripePaymentLinks';
 import { useToast } from '../../contexts/ToastContext';
@@ -160,8 +161,10 @@ export const DashboardPro: React.FC = () => {
     if (!user) return;
     const c = safeJsonParse<{ id: string; title: string; content: string }[]>(localStorage.getItem(storageKey('inkflow_consent')), []);
     if (c.length > 0) setConsentTemplates(c);
-    const w = safeJsonParse<WaitlistEntry[]>(localStorage.getItem(storageKey('inkflow_waitlist')), []);
-    if (w.length > 0) setWaitlistEntries(w);
+    if (!useSupabase) {
+      const w = safeJsonParse<WaitlistEntry[]>(localStorage.getItem(storageKey('inkflow_waitlist')), []);
+      if (w.length > 0) setWaitlistEntries(w);
+    }
     const a = safeJsonParse<ArtistAccount[]>(localStorage.getItem(storageKey('inkflow_artists')), []);
     if (a.length > 0) setArtistAccounts(a);
     const defaultLoyalty: LoyaltySettingsType = { enabled: true, pointsPerEuro: 1, referralBonus: 50, tierThresholds: { silver: 200, gold: 500, platinum: 1000 }, rewards: [{ name: '10% sur prochain tattoo', cost: 100 }, { name: 'Retouche gratuite', cost: 200 }, { name: 'Flash offert', cost: 500 }] };
@@ -169,7 +172,15 @@ export const DashboardPro: React.FC = () => {
     if (ly && Object.keys(ly).length > 0) setLoyaltySettings(ly);
     const le = safeJsonParse<LoyaltyEntry[]>(localStorage.getItem(storageKey('inkflow_loyalty_entries')), []);
     if (le.length > 0) setLoyaltyEntries(le);
-  }, [user?.email, studioId]);
+  }, [user?.email, studioId, useSupabase]);
+
+  // Load waitlist from Supabase when useSupabase
+  useEffect(() => {
+    if (!studioId || !useSupabase) return;
+    getWaitlistFromSupabase(studioId)
+      .then(setWaitlistEntries)
+      .catch(() => setWaitlistEntries([]));
+  }, [studioId, useSupabase]);
 
   useEffect(() => {
     if (!user) return;
@@ -178,11 +189,11 @@ export const DashboardPro: React.FC = () => {
     } catch (_) { /* ignore */ }
   }, [consentTemplates, user?.email, studioId]);
   useEffect(() => {
-    if (!user) return;
+    if (!user || useSupabase) return;
     try {
       localStorage.setItem(storageKey('inkflow_waitlist'), JSON.stringify(waitlistEntries));
     } catch (_) { /* ignore */ }
-  }, [waitlistEntries, user?.email, studioId]);
+  }, [waitlistEntries, user?.email, studioId, useSupabase]);
   useEffect(() => {
     if (!user) return;
     try {
@@ -1007,7 +1018,11 @@ export const DashboardPro: React.FC = () => {
                   { id: 'messagerie', label: 'Messagerie' },
                 ] as const).map(tab => (
                   <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${settingsTab === tab.id ? 'bg-blue-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-blue-300 hover:bg-blue-50/50'}`}>
+                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                      settingsTab === tab.id
+                        ? 'bg-blue-600 text-white shadow-sm dark:bg-blue-500 dark:hover:bg-blue-600'
+                        : 'border-2 border-[var(--border)] text-[var(--text-primary)] hover:border-blue-400 hover:bg-blue-50/50 dark:hover:border-blue-500/60 dark:hover:bg-blue-500/10'
+                    }`}>
                     {tab.label}
                   </button>
                 ))}
@@ -1017,19 +1032,19 @@ export const DashboardPro: React.FC = () => {
                   {user?.studioName && (
                     <VitrineLinkButton studioName={user.studioName} userEmail={user.email} studioSlug={studioSlug} />
                   )}
-                  <div className="bg-white rounded-2xl p-6 sm:p-8 border border-neutral-200">
-                  <h3 className="font-bold text-lg mb-6">Paramètres du studio</h3>
+                  <div className="bg-[var(--bg-card)] rounded-2xl p-6 sm:p-8 border border-[var(--border)]">
+                  <h3 className="font-bold text-lg mb-6 text-[var(--text-primary)]">Paramètres du studio</h3>
                   <div className="space-y-6">
                     {/* Photo de profil */}
                     <div>
-                      <label className="block text-sm font-semibold text-neutral-700 mb-3">Photo de profil</label>
+                      <label className="block text-sm font-semibold text-[var(--text-primary)] mb-3">Photo de profil</label>
                       <div className="flex items-center gap-5">
                         <div className="relative group">
                           {user?.avatar ? (
-                            <img src={user.avatar} alt="Avatar" className="w-20 h-20 rounded-full object-cover border-2 border-neutral-200 shadow-sm" />
+                            <img src={user.avatar} alt="Avatar" className="w-20 h-20 rounded-full object-cover border-2 border-[var(--border)] shadow-sm" />
                           ) : (
-                            <div className="w-20 h-20 rounded-full bg-neutral-100 border-2 border-dashed border-neutral-300 flex items-center justify-center">
-                              <Camera className="w-7 h-7 text-neutral-400" />
+                            <div className="w-20 h-20 rounded-full bg-[var(--bg-card-secondary)] border-2 border-dashed border-[var(--border)] flex items-center justify-center">
+                              <Camera className="w-7 h-7 text-[var(--text-tertiary)]" />
                             </div>
                           )}
                           {avatarUploading && (
@@ -1065,7 +1080,7 @@ export const DashboardPro: React.FC = () => {
                               Supprimer
                             </button>
                           )}
-                          <p className="text-xs text-neutral-400">JPG, PNG ou WebP. Max 5 Mo.</p>
+                          <p className="text-xs text-[var(--text-tertiary)]">JPG, PNG ou WebP. Max 5 Mo.</p>
                         </div>
                       </div>
                       <input
@@ -1077,24 +1092,24 @@ export const DashboardPro: React.FC = () => {
                       />
                     </div>
 
-                    <hr className="border-neutral-100" />
+                    <hr className="border-[var(--border)]" />
 
                     <div>
-                      <label className="block text-sm font-semibold text-neutral-700 mb-2">Nom du studio</label>
+                      <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Nom du studio</label>
                       <input
                         type="text"
                         value={generalStudioName}
                         onChange={(e) => { setGeneralStudioName(e.target.value); setGeneralSaved(false); }}
-                        className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-[var(--border-focus)]"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-neutral-700 mb-2">Email</label>
+                      <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Email</label>
                       <input
                         type="email"
                         value={generalEmail}
                         onChange={(e) => { setGeneralEmail(e.target.value); setGeneralSaved(false); }}
-                        className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                        className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-[var(--border-focus)]"
                       />
                     </div>
                     <button
@@ -1128,13 +1143,13 @@ export const DashboardPro: React.FC = () => {
                       className={`px-6 py-3 rounded-xl font-semibold transition-colors touch-target ${
                         generalSaved
                           ? 'bg-blue-600 text-white'
-                          : 'bg-neutral-900 text-white hover:bg-neutral-800'
+                          : 'bg-blue-600 text-white hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600'
                       } disabled:opacity-50`}
                     >
                       {generalSaving ? 'Enregistrement...' : generalSaved ? 'Enregistre !' : 'Enregistrer'}
                     </button>
 
-                    <hr className="border-neutral-100" />
+                    <hr className="border-[var(--border)]" />
                     <PushNotificationsSettings studioId={studioId} />
                   </div>
                   </div>
@@ -1157,10 +1172,66 @@ export const DashboardPro: React.FC = () => {
               {settingsTab === 'waitlist' && (
                 <WaitlistManager
                   entries={waitlistEntries}
-                  onAdd={(e) => setWaitlistEntries(prev => [...prev, { ...e, studioId: studioId || '' }])}
-                  onNotify={(id) => setWaitlistEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'notified' as const, notifiedAt: new Date().toISOString() } : e))}
-                  onRemove={(id) => setWaitlistEntries(prev => prev.filter(e => e.id !== id))}
-                  onBook={(entry) => setWaitlistEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'booked' as const } : e))}
+                  onAdd={async (e) => {
+                    if (useSupabase && studioId) {
+                      try {
+                        const created = await addWaitlistEntryToSupabase(studioId, {
+                          clientName: e.clientName,
+                          clientEmail: e.clientEmail,
+                          desiredService: e.desiredService,
+                          preferredDates: e.preferredDates,
+                          notes: e.notes,
+                          status: 'waiting',
+                        });
+                        setWaitlistEntries(prev => [...prev, created]);
+                        toast.success('Client ajouté à la liste d\'attente');
+                      } catch {
+                        toast.error('Erreur lors de l\'ajout');
+                      }
+                    } else {
+                      setWaitlistEntries(prev => [...prev, { ...e, studioId: studioId || '' }]);
+                    }
+                  }}
+                  onNotify={async (id) => {
+                    if (useSupabase && studioId) {
+                      try {
+                        const now = new Date().toISOString();
+                        await updateWaitlistStatusInSupabase(id, { status: 'notified', notified_at: now });
+                        setWaitlistEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'notified' as const, notifiedAt: now } : e));
+                        toast.success('Client notifié');
+                      } catch {
+                        toast.error('Erreur lors de la notification');
+                      }
+                    } else {
+                      setWaitlistEntries(prev => prev.map(e => e.id === id ? { ...e, status: 'notified' as const, notifiedAt: new Date().toISOString() } : e));
+                    }
+                  }}
+                  onRemove={async (id) => {
+                    if (useSupabase && studioId) {
+                      try {
+                        await deleteWaitlistEntryFromSupabase(id);
+                        setWaitlistEntries(prev => prev.filter(e => e.id !== id));
+                        toast.success('Entrée supprimée');
+                      } catch {
+                        toast.error('Erreur lors de la suppression');
+                      }
+                    } else {
+                      setWaitlistEntries(prev => prev.filter(e => e.id !== id));
+                    }
+                  }}
+                  onBook={async (entry) => {
+                    if (useSupabase && studioId) {
+                      try {
+                        await updateWaitlistStatusInSupabase(entry.id, { status: 'booked' });
+                        setWaitlistEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'booked' as const } : e));
+                        toast.success('Réservation enregistrée');
+                      } catch {
+                        toast.error('Erreur lors de la réservation');
+                      }
+                    } else {
+                      setWaitlistEntries(prev => prev.map(e => e.id === entry.id ? { ...e, status: 'booked' as const } : e));
+                    }
+                  }}
                 />
               )}
               {settingsTab === 'loyalty' && (

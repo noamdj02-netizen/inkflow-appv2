@@ -102,63 +102,65 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold">Formulaires de consentement</h2>
-          <p className="text-neutral-600 text-sm mt-1">Templates de consentement envoyes aux clients avant leur RDV</p>
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">Formulaires de consentement</h2>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Templates de consentement envoyes aux clients avant leur RDV</p>
         </div>
-        <button onClick={addTemplate} disabled={creating} className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-60 disabled:cursor-not-allowed">
+        <button onClick={addTemplate} disabled={creating} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
           {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
           {creating ? 'En cours…' : 'Nouveau'}
         </button>
       </div>
 
       {items.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 border border-neutral-200 text-center">
-          <FileText className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-          <p className="font-semibold mb-2">Aucun formulaire</p>
-          <button onClick={addTemplate} disabled={creating} className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mx-auto">
+        <div className="bg-[var(--bg-card)] rounded-2xl p-12 border border-[var(--border)] text-center">
+          <FileText className="w-16 h-16 text-[var(--text-tertiary)] mx-auto mb-4" />
+          <p className="font-semibold text-[var(--text-primary)] mb-2">Aucun formulaire</p>
+          <button onClick={addTemplate} disabled={creating} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 mx-auto transition-colors">
           {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
           {creating ? 'En cours…' : 'Creer un formulaire'}
         </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
-            <div className="p-4 border-b border-neutral-200"><h3 className="font-semibold">Formulaires</h3></div>
-            <div className="divide-y divide-neutral-200 max-h-[400px] overflow-y-auto">
+          <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] overflow-hidden">
+            <div className="p-4 border-b border-[var(--border)]"><h3 className="font-semibold text-[var(--text-primary)]">Formulaires</h3></div>
+            <div className="divide-y divide-[var(--border)] max-h-[400px] overflow-y-auto">
               {items.map(t => (
                 <button key={t.id} onClick={() => selectTemplate(t.id)}
-                  className={`w-full text-left px-4 py-3 hover:bg-neutral-50 ${selectedId === t.id ? 'bg-neutral-100 border-l-4 border-neutral-900' : ''}`}>
+                  className={`w-full text-left px-4 py-3 transition-colors ${selectedId === t.id
+                    ? 'bg-[var(--bg-hover-strong)] border-l-4 border-blue-500 text-[var(--text-primary)]'
+                    : 'hover:bg-[var(--bg-hover)] text-[var(--text-primary)]'}`}>
                   <div className="font-medium truncate">{t.title}</div>
                 </button>
               ))}
             </div>
           </div>
-          <div className="md:col-span-2 bg-white rounded-2xl p-6 border border-neutral-200">
+          <div className="md:col-span-2 bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
             {selected && !preview && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Titre</label>
+                  <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Titre</label>
                   <input type="text" value={draftTitle} onChange={e => setDraftTitle(e.target.value)}
-                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                    className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-[var(--border-focus)]" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Contenu</label>
+                  <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Contenu</label>
                   <textarea rows={16} value={draftContent} onChange={e => setDraftContent(e.target.value)}
-                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl resize-none font-mono text-sm" />
+                    className="w-full px-4 py-3 border border-[var(--border)] rounded-xl resize-none font-mono text-sm bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-[var(--border-focus)]" />
                 </div>
                 <div className="flex justify-between">
                   <div className="flex gap-2">
                     <button onClick={() => setDeleteConfirmId(selected.id)} disabled={!!deletingId}
-                      className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 dark:border-zinc-600 dark:text-zinc-400 font-medium hover:bg-zinc-100 dark:hover:bg-zinc-500/20 disabled:opacity-60 disabled:cursor-not-allowed">
+                      className="px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] font-medium hover:bg-[var(--bg-hover)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
                       {deletingId === selected.id ? <Loader2 className="w-4 h-4 inline mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 inline mr-2" />}
                       {deletingId === selected.id ? 'Suppression…' : 'Supprimer'}
                     </button>
                     <button onClick={() => setPreview(true)}
-                      className="px-4 py-2 rounded-xl border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50">
+                      className="px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] font-medium hover:bg-[var(--bg-hover)] transition-colors">
                       <Eye className="w-4 h-4 inline mr-2" />Apercu
                     </button>
                   </div>
-                  <button onClick={saveTemplate} disabled={saving} className="flex items-center gap-2 px-6 py-2 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-60 disabled:cursor-not-allowed">
+                  <button onClick={saveTemplate} disabled={saving} className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     {saving ? 'Enregistrement…' : 'Enregistrer'}
                   </button>
@@ -168,10 +170,10 @@ export const ConsentFormEditor: React.FC<ConsentFormEditorProps> = ({ templates,
             {selected && preview && (
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-lg">Apercu : {draftTitle}</h3>
-                  <button onClick={() => setPreview(false)} className="text-sm text-neutral-600 hover:text-neutral-900 underline">Retour a l'edition</button>
+                  <h3 className="font-bold text-lg text-[var(--text-primary)]">Apercu : {draftTitle}</h3>
+                  <button onClick={() => setPreview(false)} className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline transition-colors">Retour a l'edition</button>
                 </div>
-                <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200 whitespace-pre-wrap font-mono text-sm">{draftContent}</div>
+                <div className="bg-[var(--bg-card-secondary)] rounded-xl p-6 border border-[var(--border)] whitespace-pre-wrap font-mono text-sm text-[var(--text-primary)]">{draftContent}</div>
               </div>
             )}
           </div>

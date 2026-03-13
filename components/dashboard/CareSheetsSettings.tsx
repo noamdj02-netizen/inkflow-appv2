@@ -114,66 +114,66 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold">Soins post-tattoo</h2>
-          <p className="text-neutral-600 text-sm mt-1">Templates de consignes de soin pour vos clients</p>
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">Soins post-tattoo</h2>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Templates de consignes de soin pour vos clients</p>
         </div>
         <button onClick={createTemplate}
-          className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800">
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600">
           <Plus className="w-4 h-4" /> Nouveau template
         </button>
       </div>
 
       {templates.length === 0 ? (
-        <div className="bg-white dark:bg-[var(--bg-card)] rounded-2xl p-12 border border-neutral-200 dark:border-neutral-700 text-center">
-          <FileText className="w-16 h-16 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
-          <p className="font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Aucun template</p>
-          <p className="text-neutral-600 dark:text-neutral-400 text-sm mb-4">Créez votre premier template de soins post-tattoo.</p>
+        <div className="bg-[var(--bg-card)] rounded-2xl p-12 border border-[var(--border)] text-center">
+          <FileText className="w-16 h-16 text-[var(--text-tertiary)] mx-auto mb-4" />
+          <p className="font-semibold text-[var(--text-primary)] mb-2">Aucun template</p>
+          <p className="text-[var(--text-secondary)] text-sm mb-4">Créez votre premier template de soins post-tattoo.</p>
           <button onClick={createTemplate}
-            className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800">
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600">
             Créer un template
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-[var(--bg-card)] rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-            <div className="p-4 border-b border-neutral-200 dark:border-neutral-700">
-              <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">Templates</h3>
+          <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border)] overflow-hidden">
+            <div className="p-4 border-b border-[var(--border)]">
+              <h3 className="font-semibold text-[var(--text-primary)]">Templates</h3>
             </div>
-            <div className="divide-y divide-neutral-200 dark:divide-neutral-700 max-h-[400px] overflow-y-auto">
+            <div className="divide-y divide-[var(--border)] max-h-[400px] overflow-y-auto">
               {templates.map(t => (
                 <button
                   key={t.id}
                   onClick={() => setSelectedId(t.id)}
-                  className={`w-full text-left px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors ${selectedId === t.id ? 'bg-neutral-100 dark:bg-neutral-800 border-l-4 border-neutral-900 dark:border-neutral-100' : ''}`}
+                  className={`w-full text-left px-4 py-3 transition-colors ${selectedId === t.id ? 'bg-[var(--bg-hover-strong)] border-l-4 border-blue-500 text-[var(--text-primary)]' : 'hover:bg-[var(--bg-hover)] text-[var(--text-primary)]'}`}
                 >
-                  <div className="font-medium text-neutral-900 dark:text-neutral-100 truncate">{t.title}</div>
-                  <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  <div className="font-medium truncate">{t.title}</div>
+                  <div className="text-xs text-[var(--text-tertiary)] mt-0.5">
                     {new Date(t.updatedAt).toLocaleDateString('fr-FR')}
                   </div>
                 </button>
               ))}
             </div>
           </div>
-          <div className="md:col-span-2 bg-white dark:bg-[var(--bg-card)] rounded-2xl p-6 border border-neutral-200 dark:border-neutral-700">
+          <div className="md:col-span-2 bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
             {selected && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Titre</label>
+                  <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Titre</label>
                   <input type="text" value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)}
-                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                    className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2">Contenu</label>
+                  <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Contenu</label>
                   <textarea rows={12} value={draftContent} onChange={(e) => setDraftContent(e.target.value)}
-                    className="w-full px-4 py-3 border border-neutral-200 rounded-xl resize-none" />
+                    className="w-full px-4 py-3 border border-[var(--border)] rounded-xl resize-none bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
                 </div>
                 <div className="flex justify-between">
                   <button onClick={() => setDeleteConfirmId(selected.id)}
-                    className="px-4 py-2 rounded-xl border border-zinc-200 text-zinc-600 dark:border-zinc-600 dark:text-zinc-400 font-medium hover:bg-zinc-100 dark:hover:bg-zinc-500/20">
+                    className="px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] font-medium hover:bg-[var(--bg-hover)]">
                     <Trash2 className="w-4 h-4 inline mr-2" /> Supprimer
                   </button>
                   <button onClick={saveTemplate} disabled={saving}
-                    className="flex items-center gap-2 px-6 py-2 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-50">
+                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:opacity-50">
                     <Save className="w-4 h-4" /> {saving ? 'Enregistrement...' : 'Enregistrer'}
                   </button>
                 </div>

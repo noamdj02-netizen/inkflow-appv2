@@ -83,49 +83,49 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({ artists, onAdd, on
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold">Artistes</h2>
-          <p className="text-neutral-600 text-sm mt-1">
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">Artistes</h2>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">
             {artists.length} artiste{artists.length > 1 ? 's' : ''}
             {maxArtists !== -1 && ` / ${maxArtists} max`}
           </p>
         </div>
         {canAdd && (
           <button onClick={() => { setShowAdd(true); setEditing(null); }}
-            className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800">
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600">
             <Plus className="w-4 h-4" /> Ajouter
           </button>
         )}
         {!canAdd && (
-          <div className="text-sm text-zinc-600 dark:text-zinc-400 font-medium">Limite atteinte - Passez au plan superieur</div>
+          <div className="text-sm text-[var(--text-secondary)] font-medium">Limite atteinte - Passez au plan superieur</div>
         )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {artists.map(artist => (
-          <div key={artist.id} className={`bg-white rounded-2xl p-6 border border-neutral-200 ${!artist.active ? 'opacity-60' : ''}`}>
+          <div key={artist.id} className={`bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)] ${!artist.active ? 'opacity-60' : ''}`}>
             <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-neutral-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                {artist.avatar ? <img src={artist.avatar} alt={artist.name} loading="lazy" className="w-full h-full object-cover" /> : <User className="w-6 h-6 text-neutral-500" />}
+              <div className="w-14 h-14 rounded-2xl bg-[var(--bg-card-secondary)] flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {artist.avatar ? <img src={artist.avatar} alt={artist.name} loading="lazy" className="w-full h-full object-cover" /> : <User className="w-6 h-6 text-[var(--text-tertiary)]" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold truncate">{artist.name}</h3>
-                  {!artist.active && <span className="text-xs bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">Inactif</span>}
+                  <h3 className="font-bold truncate text-[var(--text-primary)]">{artist.name}</h3>
+                  {!artist.active && <span className="text-xs bg-[var(--bg-card-secondary)] text-[var(--text-tertiary)] px-2 py-0.5 rounded-full">Inactif</span>}
                 </div>
-                <p className="text-sm text-neutral-600 truncate">{artist.email}</p>
+                <p className="text-sm text-[var(--text-secondary)] truncate">{artist.email}</p>
                 <div className="flex flex-wrap gap-1 mt-2">
                   {artist.specialties.map((s, i) => (
-                    <span key={i} className="text-xs bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-full">{s}</span>
+                    <span key={i} className="text-xs bg-[var(--bg-card-secondary)] text-[var(--text-primary)] px-2 py-0.5 rounded-full">{s}</span>
                   ))}
                 </div>
               </div>
               <div className="flex gap-1 flex-shrink-0">
-                <button onClick={() => startEdit(artist)} className="p-2 rounded-lg hover:bg-neutral-100">
-                  <Edit2 className="w-4 h-4 text-neutral-500" />
+                <button onClick={() => startEdit(artist)} className="p-2 rounded-lg hover:bg-[var(--bg-hover)]">
+                  <Edit2 className="w-4 h-4 text-[var(--text-secondary)]" />
                 </button>
                 <button onClick={() => setDeleteConfirmId(artist.id)}
-                  className="p-2 rounded-lg hover:bg-red-50">
-                  <Trash2 className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+                  className="p-2 rounded-lg hover:bg-red-500/10">
+                  <Trash2 className="w-4 h-4 text-[var(--text-secondary)]" />
                 </button>
               </div>
             </div>
@@ -135,28 +135,28 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({ artists, onAdd, on
 
       {(showAdd || editing) && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => { setShowAdd(false); setEditing(null); }}>
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-[var(--bg-card)] rounded-2xl max-w-lg w-full p-6 border border-[var(--border)]" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold">{editing ? 'Modifier l\'artiste' : 'Ajouter un artiste'}</h3>
-              <button onClick={() => { setShowAdd(false); setEditing(null); }} className="p-2 rounded-lg hover:bg-neutral-100"><X className="w-5 h-5" /></button>
+              <h3 className="text-lg font-bold text-[var(--text-primary)]">{editing ? 'Modifier l\'artiste' : 'Ajouter un artiste'}</h3>
+              <button onClick={() => { setShowAdd(false); setEditing(null); }} className="p-2 rounded-lg hover:bg-[var(--bg-hover)]"><X className="w-5 h-5 text-[var(--text-secondary)]" /></button>
             </div>
             <div className="space-y-4">
               <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                placeholder="Nom complet" className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                placeholder="Nom complet" className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                placeholder="Email" className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                placeholder="Email" className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               <input type="text" value={form.specialties} onChange={e => setForm(p => ({ ...p, specialties: e.target.value }))}
-                placeholder="Specialites (separees par virgules)" className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                placeholder="Specialites (separees par virgules)" className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
               <div>
-                <label className="block text-sm font-semibold mb-2">
+                <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">
                   <Shield className="w-4 h-4 inline mr-1" />Permissions
                 </label>
                 <div className="space-y-2">
                   {PERMISSIONS.map(perm => (
-                    <label key={perm.key} className="flex items-center gap-3 text-sm cursor-pointer">
+                    <label key={perm.key} className="flex items-center gap-3 text-sm cursor-pointer text-[var(--text-primary)]">
                       <input type="checkbox" checked={permissions[perm.key] || false}
                         onChange={e => setPermissions(p => ({ ...p, [perm.key]: e.target.checked }))}
-                        className="w-4 h-4 rounded border-neutral-300" />
+                        className="w-4 h-4 rounded border-[var(--border)]" />
                       {perm.label}
                     </label>
                   ))}
@@ -164,7 +164,7 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({ artists, onAdd, on
               </div>
               <button onClick={editing ? handleUpdate : handleAdd}
                 disabled={!form.name.trim() || !form.email.trim()}
-                className="w-full py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-50">
+                className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:opacity-50">
                 {editing ? 'Enregistrer' : 'Ajouter l\'artiste'}
               </button>
             </div>

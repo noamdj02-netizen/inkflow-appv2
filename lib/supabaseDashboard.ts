@@ -1,6 +1,6 @@
 import { supabase, getStudioId } from './supabase';
 import type { VitrineData } from '../types/vitrine';
-import type { Appointment, Client, FlashDesign, Notification, ProjectRequest, ProjectRequestStatus } from '../types';
+import type { Appointment, Client, FlashDesign, Notification, ProjectRequest, ProjectRequestStatus, WaitlistEntry } from '../types';
 import type { DashboardWidget } from '../components/dashboard/DashboardWidgets';
 
 export function getStudioSlug(studioName: string): string {
@@ -294,6 +294,67 @@ export async function saveClientToSupabase(studioId: string, client: Client): Pr
 
 export async function deleteClientFromSupabase(clientId: string): Promise<void> {
   const { error } = await supabase.from('inkflow_clients').delete().eq('id', clientId);
+  if (error) throw error;
+}
+
+// Waitlist
+export function mapWaitlistEntryFromDb(row: Record<string, unknown>): WaitlistEntry {
+  return {
+    id: row.id as string,
+    studioId: row.studio_id as string,
+    clientName: row.client_name as string,
+    clientEmail: row.client_email as string,
+    desiredService: (row.desired_service as string) || undefined,
+    preferredDates: (row.preferred_dates as string) || undefined,
+    notes: (row.notes as string) || undefined,
+    status: (row.status as WaitlistEntry['status']) || 'waiting',
+    notifiedAt: (row.notified_at as string) || undefined,
+    createdAt: (row.created_at as string) || new Date().toISOString(),
+  };
+}
+
+export async function getWaitlistFromSupabase(studioId: string): Promise<WaitlistEntry[]> {
+  const { data, error } = await supabase
+    .from('inkflow_waitlist')
+    .select('*')
+    .eq('studio_id', studioId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(mapWaitlistEntryFromDb);
+}
+
+export async function addWaitlistEntryToSupabase(studioId: string, entry: Omit<WaitlistEntry, 'id' | 'studioId' | 'createdAt'>): Promise<WaitlistEntry> {
+  const id = `wl_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+  const now = new Date().toISOString();
+  const row = {
+    id,
+    studio_id: studioId,
+    client_name: entry.clientName,
+    client_email: entry.clientEmail,
+    desired_service: entry.desiredService || null,
+    preferred_dates: entry.preferredDates || null,
+    notes: entry.notes || null,
+    status: entry.status || 'waiting',
+    notified_at: null,
+    created_at: now,
+  };
+  const { data, error } = await supabase.from('inkflow_waitlist').insert(row).select().single();
+  if (error) throw error;
+  return mapWaitlistEntryFromDb(data);
+}
+
+export async function updateWaitlistStatusInSupabase(
+  id: string,
+  updates: { status: 'notified' | 'booked'; notified_at?: string | null }
+): Promise<void> {
+  const payload: Record<string, unknown> = { status: updates.status };
+  if (updates.notified_at !== undefined) payload.notified_at = updates.notified_at;
+  const { error } = await supabase.from('inkflow_waitlist').update(payload).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteWaitlistEntryFromSupabase(id: string): Promise<void> {
+  const { error } = await supabase.from('inkflow_waitlist').delete().eq('id', id);
   if (error) throw error;
 }
 

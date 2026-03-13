@@ -96,7 +96,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[var(--border)] border-t-[var(--text-primary)] rounded-full animate-spin" />
       </div>
     );
   }
@@ -105,17 +105,17 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold">Abonnement</h2>
-          <p className="text-neutral-600 text-sm mt-1">Gerez votre plan InkFlow</p>
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">Abonnement</h2>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Gerez votre plan InkFlow</p>
         </div>
         <button
           onClick={handleManageSubscription}
           disabled={portalLoading}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-neutral-300 dark:border-neutral-600 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl font-medium text-sm transition-colors disabled:opacity-50 shrink-0"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-[var(--border)] bg-transparent hover:bg-[var(--bg-hover)] rounded-xl font-medium text-sm text-[var(--text-primary)] transition-colors disabled:opacity-50 shrink-0"
         >
           {portalLoading ? (
             <>
-              <span className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-700 dark:border-neutral-600 dark:border-t-neutral-400 rounded-full animate-spin" />
+              <span className="w-4 h-4 border-2 border-[var(--border)] border-t-[var(--text-primary)] rounded-full animate-spin" />
               Ouverture...
             </>
           ) : (
@@ -128,20 +128,20 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
       </div>
 
       {active && subscription && (
-        <div className="bg-white rounded-2xl p-6 border border-neutral-200">
+        <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-500/20">
               <Shield className="w-5 h-5 text-blue-700 dark:text-blue-400" />
             </div>
             <div>
-              <div className="font-semibold">Plan {subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)}</div>
+              <div className="font-semibold text-[var(--text-primary)]">Plan {subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)}</div>
               <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
                 {subscription.status === 'trialing' ? 'Essai gratuit' : 'Actif'}
               </div>
             </div>
           </div>
           {subscription.currentPeriodEnd && (
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-[var(--text-secondary)]">
               {subscription.cancelAtPeriodEnd
                 ? `Se termine le ${new Date(subscription.currentPeriodEnd).toLocaleDateString('fr-FR')}`
                 : `Prochain renouvellement: ${new Date(subscription.currentPeriodEnd).toLocaleDateString('fr-FR')}`}
@@ -151,10 +151,10 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
       )}
 
       {!active && (
-        <div className="bg-zinc-100 dark:bg-zinc-500/20 border border-zinc-200 dark:border-zinc-600 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-zinc-600 dark:text-zinc-400 flex-shrink-0" />
+        <div className="bg-[var(--bg-card-secondary)] border border-[var(--border)] rounded-2xl p-4 flex flex-col sm:flex-row sm:items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-[var(--text-secondary)] flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-zinc-800 dark:text-zinc-200">
+            <p className="text-sm text-[var(--text-primary)]">
               Votre période d&apos;essai de 14 jours se termine bientôt. Abonnez-vous maintenant pour ne pas perdre l&apos;accès à vos fonctionnalités pro.
             </p>
             <TrialCountdown trialEndsAt={trialEndsAt} />
@@ -163,16 +163,16 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
       )}
 
       <div className="flex justify-center mb-4">
-        <div className="inline-flex items-center gap-1 p-1.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700">
+        <div className="inline-flex items-center gap-1 p-1.5 rounded-2xl bg-[var(--bg-card-secondary)] border border-[var(--border)]">
           <button
             onClick={() => setIsAnnual(false)}
-            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${!isAnnual ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-sm border border-neutral-200/80 dark:border-neutral-600' : 'text-neutral-600 dark:text-neutral-400'}`}
+            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${!isAnnual ? 'bg-[var(--bg-card)] text-[var(--text-primary)] shadow-sm border border-[var(--border)]' : 'text-[var(--text-secondary)]'}`}
           >
             Mensuel
           </button>
           <button
             onClick={() => setIsAnnual(true)}
-            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all relative ${isAnnual ? 'bg-neutral-900 text-white shadow-sm' : 'text-neutral-600 dark:text-neutral-400'}`}
+            className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all relative ${isAnnual ? 'bg-blue-600 text-white shadow-sm' : 'text-[var(--text-secondary)]'}`}
           >
             Annuel
             <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-semibold">-20%</span>
@@ -184,26 +184,26 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
         {plans.map(plan => {
           const isCurrent = active && subscription?.plan === plan.id;
           return (
-            <div key={plan.id} className={`bg-white dark:bg-[var(--bg-card)] rounded-2xl p-6 border-2 transition-all ${isCurrent ? 'border-blue-500 shadow-lg' : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600'}`}>
+            <div key={plan.id} className={`bg-[var(--bg-card)] rounded-2xl p-6 border-2 transition-all ${isCurrent ? 'border-blue-500 shadow-lg' : 'border-[var(--border)] hover:border-[var(--border-light)]'}`}>
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-xl bg-neutral-900 text-white">{plan.icon}</div>
+                <div className="p-2 rounded-xl bg-blue-600 text-white">{plan.icon}</div>
                 <div>
-                  <h3 className="font-bold text-lg text-neutral-900 dark:text-neutral-100">{plan.name}</h3>
+                  <h3 className="font-bold text-lg text-[var(--text-primary)]">{plan.name}</h3>
                   {isCurrent && <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 px-2 py-0.5 rounded-full font-semibold">Plan actuel</span>}
                 </div>
               </div>
               <div className="mb-6">
-                <span className="text-4xl font-bold text-neutral-900 dark:text-neutral-100">{isAnnual ? plan.priceAnnual : plan.priceMonthly} EUR</span>
-                <span className="text-neutral-600 dark:text-neutral-400">/mois</span>
+                <span className="text-4xl font-bold text-[var(--text-primary)]">{isAnnual ? plan.priceAnnual : plan.priceMonthly} EUR</span>
+                <span className="text-[var(--text-secondary)]">/mois</span>
                 {isAnnual && (
-                  <div className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Facture {plan.priceAnnual * 12} EUR par an</div>
+                  <div className="text-sm text-[var(--text-tertiary)] mt-1">Facture {plan.priceAnnual * 12} EUR par an</div>
                 )}
               </div>
               <div className="space-y-3 mb-6">
                 {plan.features.map((feature, i) => (
                   <div key={i} className="flex items-center gap-2 text-sm">
                     <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                    <span className="text-neutral-700 dark:text-neutral-300">{feature}</span>
+                    <span className="text-[var(--text-primary)]">{feature}</span>
                   </div>
                 ))}
               </div>
@@ -211,7 +211,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
                 <button
                   onClick={() => handleSubscribe(plan.id)}
                   disabled={!!subscribing}
-                  className="w-full py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   <CreditCard className="w-4 h-4" />
                   {subscribing === plan.id ? 'Redirection...' : 'Choisir ce plan'}
