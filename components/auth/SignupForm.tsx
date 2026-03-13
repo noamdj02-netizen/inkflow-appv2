@@ -12,7 +12,10 @@ import { getAuthErrorMessage } from './LoginForm';
 import { LANDING_TERMS_URL, LANDING_PRIVACY_URL } from '../../lib/urls';
 
 const inputBase =
-  'w-full pl-12 pr-4 py-3.5 min-h-[48px] text-base border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-shadow';
+  'w-full pl-12 pr-4 py-3.5 min-h-[48px] text-base border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all';
+
+const inputReferralActive =
+  'w-full pl-12 pr-4 py-3.5 min-h-[48px] text-base border-2 border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-950/30 text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all font-mono tracking-wider';
 
 export const SignupForm: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -21,12 +24,22 @@ export const SignupForm: React.FC = () => {
     studioName: '',
     password: '',
     confirmPassword: '',
+    referralCode: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const { signup, loginWithGoogle, isGoogleAuthEnabled } = useAuth();
+
+  // Pré-remplir le code de parrainage depuis ?ref= (lien /invite/:code)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref')?.trim().toUpperCase();
+    if (ref) {
+      setFormData((prev) => ({ ...prev, referralCode: ref }));
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -165,14 +178,14 @@ export const SignupForm: React.FC = () => {
           Code de parrainage <span className="font-normal text-zinc-500 dark:text-zinc-400">(optionnel)</span>
         </label>
         <div className="relative">
-          <Gift className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
+          <Gift className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none ${formData.referralCode ? 'text-emerald-500 dark:text-emerald-400' : 'text-zinc-400 dark:text-zinc-500'}`} />
           <input
             id="signup-referralCode"
             name="referralCode"
             type="text"
             value={formData.referralCode}
             onChange={handleChange}
-            className={inputBase}
+            className={formData.referralCode ? inputReferralActive : inputBase}
             placeholder="Ex: ABC123"
             autoComplete="off"
             disabled={loading}
@@ -181,7 +194,7 @@ export const SignupForm: React.FC = () => {
         </div>
       </div>
 
-      <div>
+      <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
         <label htmlFor="signup-password" className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2">
           Mot de passe
         </label>
@@ -256,7 +269,7 @@ export const SignupForm: React.FC = () => {
       <button
         type="submit"
         disabled={loading}
-        className="w-full min-h-[48px] py-3.5 bg-zinc-900 dark:bg-white dark:text-zinc-900 text-white rounded-full font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full min-h-[48px] py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold shadow-lg shadow-blue-600/25 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {loading ? (
           <>
@@ -279,7 +292,7 @@ export const SignupForm: React.FC = () => {
             </div>
           </div>
           <GoogleSignInButton
-            className="dark:bg-zinc-800 dark:border-zinc-700 dark:text-white dark:hover:bg-zinc-700"
+            className="border-zinc-300 hover:border-zinc-400 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white dark:hover:bg-zinc-700"
             onClick={async () => {
               setError('');
               setGoogleLoading(true);

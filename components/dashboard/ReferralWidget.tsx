@@ -6,9 +6,9 @@ import React, { useState, useCallback } from 'react';
 import { Gift, Copy, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
+import { getInviteBaseUrl, APP_URL } from '../../lib/urls';
 
-const INVITE_BASE_URL = 'https://inkflow.me/invite';
-const APP_ORIGIN = typeof window !== 'undefined' ? window.location.origin : 'https://app.ink-flow.me';
+const APP_ORIGIN = typeof window !== 'undefined' ? window.location.origin : APP_URL;
 
 export interface ReferralWidgetProps {
   studioId: string | null;
@@ -53,11 +53,12 @@ export const ReferralWidget: React.FC<ReferralWidgetProps> = ({
     return () => { cancelled = true; };
   }, [studioId, useSupabase, propCode]);
 
-  const inviteUrl = code ? `${INVITE_BASE_URL}/${code}` : `${APP_ORIGIN}/signup`;
-  const fallbackUrl = `${APP_ORIGIN}/invite/${code || 'ABC123'}`;
+  const inviteBase = getInviteBaseUrl();
+  const inviteUrl = code ? `${inviteBase}/${code}` : `${APP_ORIGIN}/signup`;
+  const fallbackUrl = `${inviteBase}/${code || 'ABC123'}`;
 
   const handleCopy = useCallback(async () => {
-    const url = code ? `${INVITE_BASE_URL}/${code}` : fallbackUrl;
+    const url = code ? `${inviteBase}/${code}` : fallbackUrl;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -66,7 +67,7 @@ export const ReferralWidget: React.FC<ReferralWidgetProps> = ({
     } catch {
       toast.error('Impossible de copier le lien');
     }
-  }, [code, fallbackUrl, toast]);
+  }, [code, inviteBase, fallbackUrl, toast]);
 
   return (
     <div className="prodify-card p-5">

@@ -11,11 +11,9 @@ import { useSecureStudioId } from '../hooks/useSecureStudioId';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../contexts/ToastContext';
 import { Logo } from '../components/Logo';
+import { getInviteBaseUrl } from '../lib/urls';
 
 const heroWorkstationImg = '/images/referral-hero-studio.png';
-
-const INVITE_BASE_URL =
-  (typeof window !== 'undefined' ? window.location.origin : 'https://inkflow.me') + '/invite';
 
 /* Icônes brand pour partage */
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -85,14 +83,16 @@ export const ReferralPage: React.FC = () => {
         .select('referral_code')
         .eq('id', studioId)
         .single();
-      setReferralCode(studio?.referral_code ?? 'ABC123');
+      const code = (studio as { referral_code?: string } | null)?.referral_code ?? 'ABC123';
+      setReferralCode(code);
 
       const { data: referrals } = await supabase
         .from('inkflow_referrals')
         .select('id, status')
         .eq('referrer_id', studioId);
-      const completed = referrals?.filter((r) => r.status === 'completed') ?? [];
-      setFriendsInvited(referrals?.length ?? 0);
+      const refs = (referrals ?? []) as { id: string; status?: string }[];
+      const completed = refs.filter((r) => r.status === 'completed');
+      setFriendsInvited(refs.length);
       setMonthsEarned(completed.length);
     } catch {
       setReferralCode('ABC123');
@@ -105,7 +105,7 @@ export const ReferralPage: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  const inviteUrl = referralCode ? `${INVITE_BASE_URL}/${referralCode}` : '';
+  const inviteUrl = referralCode ? `${getInviteBaseUrl()}/${referralCode}` : '';
   const shareMessage = `Yo ! ✌️ Si tu cherches un outil pour gérer ton studio de tatouage, je te recommande InkFlow. Passe par mon lien pour t'inscrire, on gagnera tous les deux 1 mois d'abonnement offert : ${inviteUrl}`;
 
   const handleCopy = useCallback(async () => {
@@ -142,7 +142,7 @@ export const ReferralPage: React.FC = () => {
   if (loading) {
     return (
       <motion.div
-        className="min-h-screen bg-black flex items-center justify-center"
+        className="landing-scroll min-h-screen bg-black flex items-center justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
@@ -162,7 +162,7 @@ export const ReferralPage: React.FC = () => {
 
   return (
     <motion.div
-      className="min-h-screen bg-black"
+      className="landing-scroll min-h-screen bg-black"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}

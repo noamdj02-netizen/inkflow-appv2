@@ -11,7 +11,9 @@ interface InviteRedirectPageProps {
 export const InviteRedirectPage: React.FC<InviteRedirectPageProps> = ({ code }) => {
   useEffect(() => {
     const ref = code?.trim().toUpperCase() || '';
-    const target = ref ? `/signup?ref=${encodeURIComponent(ref)}` : '/signup';
+    const target = ref
+      ? `${window.location.origin}/signup?ref=${encodeURIComponent(ref)}`
+      : `${window.location.origin}/signup`;
     window.location.replace(target);
   }, [code]);
 
