@@ -25,7 +25,7 @@ export const SkeletonCard: React.FC = () => (
 export const SkeletonStats: React.FC = () => (
   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
     {[1, 2, 3].map(i => (
-      <div key={i} className="bg-white rounded-2xl border border-neutral-200 p-6 space-y-3">
+      <div key={i} className="bg-white dark:bg-zinc-950 rounded-2xl border border-neutral-200 dark:border-zinc-800 p-6 space-y-3">
         <SkeletonLine className="w-1/2 h-3" />
         <SkeletonLine className="w-1/3 h-8" />
       </div>
@@ -42,7 +42,7 @@ export const SkeletonTable: React.FC<{ rows?: number }> = ({ rows = 5 }) => (
         ))}
       </div>
     </div>
-    <div className="divide-y divide-neutral-200">
+    <div className="divide-y divide-neutral-200 dark:divide-zinc-800">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="p-4 flex items-center gap-6">
           <div className="skeleton w-9 h-9 rounded-full flex-shrink-0" />
@@ -78,14 +78,24 @@ export const SkeletonMobileCards: React.FC<{ count?: number }> = ({ count = 4 })
 );
 
 export const DashboardLoadingSkeleton: React.FC = () => (
-  <div className="p-4 sm:p-6 md:p-8 space-y-6 animate-in">
+  <div className="p-4 sm:p-6 md:p-8 space-y-6 animate-in fade-in duration-300">
+    {/* Header skeleton */}
+    <div className="space-y-3">
+      <SkeletonLine className="w-32 h-3" />
+      <SkeletonLine className="w-48 h-8" />
+      <div className="flex gap-2 flex-wrap">
+        {[1, 2, 3].map((i) => (
+          <SkeletonLine key={i} className="w-28 h-11 rounded-full" />
+        ))}
+      </div>
+    </div>
     <SkeletonStats />
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-      <div className="xl:col-span-2 bg-white rounded-2xl border border-neutral-200 p-6 space-y-4">
+      <div className="xl:col-span-2 bg-white dark:bg-zinc-950 rounded-2xl border border-neutral-200 dark:border-zinc-800 p-6 space-y-4">
         <SkeletonLine className="w-1/3 h-5" />
         <div className="skeleton w-full h-[200px] rounded-xl" />
       </div>
-      <div className="bg-white rounded-2xl border border-neutral-200 p-6 space-y-4">
+      <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-neutral-200 dark:border-zinc-800 p-6 space-y-4">
         <SkeletonLine className="w-1/2 h-5" />
         <div className="skeleton w-full h-[140px] rounded-xl" />
       </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, User, Phone, Mail, Eye, Tag, UserPlus, ChevronDown, ChevronUp, StickyNote } from 'lucide-react';
+import { Search, User, Phone, Mail, Eye, Tag, UserPlus, ChevronDown, ChevronUp, StickyNote, ArrowUpDown, ArrowDownAZ } from 'lucide-react';
 import { Client } from '../../types';
 import { Modal } from '../ui/Modal';
 import { useToast } from '../../contexts/ToastContext';
@@ -30,6 +30,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'vip' | 'inactive'>('all');
+  const [sortBy, setSortBy] = useState<'recent' | 'alpha'>('recent');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -63,11 +64,17 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
     return matchesSearch && matchesStatus;
   });
 
-  const sortedClients = [...filteredClients].sort((a, b) => {
-    if (!a.lastVisit) return 1;
-    if (!b.lastVisit) return -1;
-    return new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime();
-  });
+  const sortedClients = useMemo(() => {
+    const list = [...filteredClients];
+    if (sortBy === 'alpha') {
+      return list.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+    }
+    return list.sort((a, b) => {
+      if (!a.lastVisit) return 1;
+      if (!b.lastVisit) return -1;
+      return new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime();
+    });
+  }, [filteredClients, sortBy]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -132,15 +139,28 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="flex-1 relative min-w-[200px]">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--text-tertiary)]" />
-            <input type="text" placeholder="Rechercher un client..." value={searchTerm}
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-tertiary)]" />
+            <input
+              type="search"
+              placeholder="Rechercher un client..." value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-dash w-full pl-12 pr-4 py-3" />
+              className="input-dash w-full pl-12 pr-4 py-3 min-h-[48px]"
+              aria-label="Rechercher un client"
+            />
           </div>
+          <button
+            type="button"
+            onClick={() => setSortBy(s => s === 'recent' ? 'alpha' : 'recent')}
+            className="min-h-[48px] px-4 py-2 rounded-xl border-2 border-[var(--border)] hover:border-blue-300 dark:hover:border-blue-500/50 flex items-center gap-2 font-medium transition-all"
+            title={sortBy === 'recent' ? 'Trier par nom (A-Z)' : 'Trier par dernière visite'}
+          >
+            {sortBy === 'recent' ? <ArrowUpDown className="w-4 h-4" /> : <ArrowDownAZ className="w-4 h-4" />}
+            {sortBy === 'recent' ? 'Récent' : 'A-Z'}
+          </button>
           <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 flex-nowrap">
             {(['all', 'active', 'vip', 'inactive'] as const).map(status => (
               <button key={status} onClick={() => setFilterStatus(status)}
-                className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+                className={`min-h-[44px] px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
                   filterStatus === status ? 'bg-blue-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-blue-300 hover:bg-blue-50/50 dark:hover:border-blue-500/50 dark:hover:bg-blue-500/10'
                 }`}>
                 {status === 'all' ? 'Tous' : status === 'vip' ? 'VIP' : status.charAt(0).toUpperCase() + status.slice(1)}
@@ -165,7 +185,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
             <button
               onClick={() => (clientLimitReached ? onUpgradeClick?.() : setShowAddModal(true))}
               disabled={clientLimitReached}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${clientLimitReached ? 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] cursor-not-allowed' : 'btn-primary'}`}
+              className={`flex items-center gap-2 min-h-[48px] px-6 py-3 rounded-xl font-semibold transition-all ${clientLimitReached ? 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] cursor-not-allowed' : 'btn-primary'}`}
             >
               <UserPlus className="w-5 h-5" /> Ajouter un client
             </button>
@@ -176,19 +196,19 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="dashboard-widget-card p-4">
           <div className="text-sm text-[var(--text-secondary)] mb-1">Total clients</div>
-          <div className="text-2xl font-bold">{clients.length}</div>
+          <div className="text-2xl font-bold tabular-nums">{clients.length}</div>
         </div>
         <div className="dashboard-widget-card p-4">
           <div className="text-sm text-[var(--text-secondary)] mb-1">Clients VIP</div>
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{clients.filter(c => c.status === 'vip').length}</div>
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{clients.filter(c => c.status === 'vip').length}</div>
         </div>
         <div className="dashboard-widget-card p-4">
           <div className="text-sm text-[var(--text-secondary)] mb-1">Revenus totaux</div>
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{clients.reduce((sum, c) => sum + c.totalSpent, 0)}€</div>
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{clients.reduce((sum, c) => sum + c.totalSpent, 0)}€</div>
         </div>
         <div className="dashboard-widget-card p-4">
           <div className="text-sm text-[var(--text-secondary)] mb-1">RDV totaux</div>
-          <div className="text-2xl font-bold">{clients.reduce((sum, c) => sum + c.appointmentsCount, 0)}</div>
+          <div className="text-2xl font-bold tabular-nums">{clients.reduce((sum, c) => sum + c.appointmentsCount, 0)}</div>
         </div>
       </div>
 
@@ -294,7 +314,7 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                       </td>
                       <td className="px-6 py-4">
                         <button onClick={() => setSelectedClient(client)}
-                          className="btn-outline inline-flex items-center gap-2 px-3 py-2 text-sm font-medium touch-target">
+                          className="btn-outline inline-flex items-center gap-2 px-3 py-2 min-h-[44px] text-sm font-medium">
                           <Eye className="w-4 h-4" /> Voir
                         </button>
                       </td>
@@ -359,11 +379,26 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
       {selectedClient && (
         <Modal isOpen={!!selectedClient} onClose={closeModalAndSave} title={selectedClient.name} size="lg">
           <div className="space-y-6 min-w-0">
-            <div className="flex flex-wrap gap-2">
-              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border flex-shrink-0 ${getStatusColor(selectedClient.status)}`}>
-                {getStatusIcon(selectedClient.status)}
-                {selectedClient.status === 'vip' ? 'VIP' : selectedClient.status === 'active' ? 'Actif' : selectedClient.status === 'inactive' ? 'Inactif' : selectedClient.status}
-              </span>
+            {/* Vue générale : avatar + contact + tags */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {selectedClient.avatar ? (
+                  <img src={selectedClient.avatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">{selectedClient.name.charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(selectedClient.status)}`}>
+                    {getStatusIcon(selectedClient.status)}
+                    {selectedClient.status === 'vip' ? 'VIP' : selectedClient.status === 'active' ? 'Actif' : selectedClient.status === 'inactive' ? 'Inactif' : selectedClient.status}
+                  </span>
+                  {selectedClient.tags.map(tag => (
+                    <span key={tag} className="px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300">{tag}</span>
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="client-card-body grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0">
               <div className="min-w-0">
@@ -384,19 +419,11 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                 </div>
               </div>
             </div>
-            {selectedClient.tags.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedClient.tags.map(tag => <span key={tag} className="px-3 py-1 bg-neutral-100 rounded-lg text-sm">{tag}</span>)}
-                </div>
-              </div>
-            )}
             <div>
-              <h3 className="text-sm font-semibold text-neutral-600 mb-3 flex items-center gap-2"><StickyNote className="w-4 h-4" /> Notes privées</h3>
+              <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3 flex items-center gap-2"><StickyNote className="w-4 h-4" /> Notes & Cicatrisation</h3>
               <textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={saveNow}
-                placeholder="Ajoutez vos notes sur ce client…"
-                className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-neutral-900" />
+                placeholder="Notes de session, conseils cicatrisation, préférences…"
+                className="w-full px-4 py-3 min-h-[120px] border border-neutral-200 dark:border-zinc-700 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-900" />
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{useSupabase ? 'Sauvegardées automatiquement.' : 'Sauvegardées localement dans votre navigateur.'}</p>
             </div>
             {selectedClient.notes && (
@@ -407,20 +434,51 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
             )}
             {selectedClient.tattoos.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3">Historique des tatouages</h3>
+                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3">Historique des RDV</h3>
                 <div className="space-y-4">
                   {selectedClient.tattoos.map(tattoo => (
-                    <div key={tattoo.id} className="bg-neutral-50 rounded-lg p-4">
+                    <div key={tattoo.id} className="bg-neutral-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-neutral-200 dark:border-zinc-700">
                       <div className="flex justify-between items-start mb-2">
                         <div><h4 className="font-semibold text-neutral-900 dark:text-neutral-100">{tattoo.description}</h4><p className="text-sm text-neutral-600 dark:text-neutral-400">{tattoo.location} • {tattoo.size}</p></div>
-                        <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{tattoo.price}€</span>
+                        <span className="text-sm font-bold text-blue-600 dark:text-blue-400 tabular-nums">{tattoo.price}€</span>
                       </div>
                       <div className="text-xs text-neutral-500 dark:text-neutral-400">{new Date(tattoo.date).toLocaleDateString('fr-FR')} • {tattoo.duration}min</div>
+                      {(tattoo.images?.length ?? 0) > 0 && (
+                        <div className="flex gap-2 mt-3 flex-wrap">
+                          {tattoo.images?.slice(0, 4).map((img, i) => (
+                            <a key={i} href={img} target="_blank" rel="noopener noreferrer" className="block w-16 h-16 rounded-lg overflow-hidden border border-neutral-200 dark:border-zinc-600 hover:opacity-90 transition-opacity">
+                              <img src={img} alt="" className="w-full h-full object-cover" />
+                            </a>
+                          ))}
+                          {tattoo.images && tattoo.images.length > 4 && (
+                            <span className="px-2 py-1 text-xs font-medium text-neutral-500">+{tattoo.images.length - 4}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
             )}
+            <div className="pt-4 border-t border-neutral-200 dark:border-zinc-700">
+              <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3">Galerie privée</h3>
+            {(() => {
+              const allImages = selectedClient.tattoos?.flatMap(t => t.images ?? []) ?? [];
+              if (allImages.length === 0) {
+                return <p className="text-sm text-neutral-500 dark:text-neutral-400 py-4">Aucune photo de tatouage pour le moment.</p>;
+              }
+              return (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {allImages.slice(0, 12).map((img, i) => (
+                    <a key={i} href={img} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-xl overflow-hidden border border-neutral-200 dark:border-zinc-600 hover:opacity-90 transition-opacity">
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    </a>
+                  ))}
+                  {allImages.length > 12 && <span className="px-2 py-1 text-xs font-medium text-neutral-500">+{allImages.length - 12} photos</span>}
+                </div>
+              );
+            })()}
+            </div>
           </div>
         </Modal>
       )}
@@ -431,17 +489,17 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
             <div>
               <label className="block text-sm font-semibold mb-2">Nom</label>
               <input type="text" value={addForm.name} onChange={(e) => setAddForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Jean Dupont" className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                placeholder="Jean Dupont" className="w-full px-4 py-3 min-h-[48px] border border-neutral-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900" />
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2">Email *</label>
               <input type="email" value={addForm.email} onChange={(e) => setAddForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="client@exemple.com" className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                placeholder="client@exemple.com" className="w-full px-4 py-3 min-h-[48px] border border-neutral-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900" />
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2">Téléphone</label>
               <input type="tel" value={addForm.phone} onChange={(e) => setAddForm(f => ({ ...f, phone: e.target.value }))}
-                placeholder="+33 6 12 34 56 78" className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                placeholder="+33 6 12 34 56 78" className="w-full px-4 py-3 min-h-[48px] border border-neutral-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900" />
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2">Notes</label>
@@ -449,11 +507,11 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
                 placeholder="Notes sur ce client…" className="w-full px-4 py-3 border border-neutral-200 rounded-xl resize-none" />
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <button onClick={() => { setShowAddModal(false); onAddModalClose?.(); }} className="px-6 py-3 border-2 border-neutral-200 rounded-xl font-semibold hover:border-neutral-900">
+              <button onClick={() => { setShowAddModal(false); onAddModalClose?.(); }} className="min-h-[44px] px-6 py-3 border-2 border-neutral-200 dark:border-zinc-700 rounded-xl font-semibold hover:border-neutral-900 dark:hover:border-zinc-500">
                 Annuler
               </button>
               <button onClick={handleAddClient} disabled={!addForm.email.trim() || clientLimitReached}
-                className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                className="min-h-[44px] px-6 py-3 bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 dark:hover:bg-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed">
                 Ajouter
               </button>
               {clientLimitReached && (

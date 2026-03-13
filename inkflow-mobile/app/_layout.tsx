@@ -4,7 +4,8 @@ import { Stack } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState, type AppStateStatus, Platform } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
@@ -49,13 +50,16 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
-  // Configuration du handler global (badge activé)
+  // Configuration du handler global (badge activé) — natif uniquement (pas web)
   useEffect(() => {
-    setupNotificationHandler();
+    if (Platform.OS !== 'web') {
+      setupNotificationHandler();
+    }
   }, []);
 
-  // Incrémenter le badge à la réception d'une notification
+  // Incrémenter le badge à la réception d'une notification — natif uniquement
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     const sub = Notifications.addNotificationReceivedListener(async () => {
       const count = await Notifications.getBadgeCountAsync();
       await Notifications.setBadgeCountAsync(count + 1);
@@ -63,8 +67,9 @@ function RootLayoutNav() {
     return () => sub.remove();
   }, []);
 
-  // Réinitialiser le badge quand l'app passe au premier plan
+  // Réinitialiser le badge quand l'app passe au premier plan — natif uniquement
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     const handleAppStateChange = (nextState: AppStateStatus) => {
       if (nextState === 'active') {
         Notifications.setBadgeCountAsync(0);
@@ -76,11 +81,25 @@ function RootLayoutNav() {
   }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="referral"
+            options={{
+              title: 'Programme Partenaire',
+              headerShown: true,
+              headerBackTitle: 'Retour',
+              headerStyle: { backgroundColor: '#FFFFFF' },
+              headerTitleStyle: { fontSize: 17, fontWeight: '600', color: '#000000' },
+              headerShadowVisible: false,
+              headerTintColor: '#2563EB',
+            }}
+          />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        </Stack>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

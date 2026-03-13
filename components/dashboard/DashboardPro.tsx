@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
@@ -32,6 +32,7 @@ const AnalyticsDashboard = lazy(() => import('../analytics/AnalyticsDashboard').
 import { DashboardWidgets, AddWidgetModal, useDashboardWidgets, WidgetCard } from './DashboardWidgets';
 import { SortableOverviewWidgets, type SortableWidgetItem } from './SortableOverviewWidgets';
 import { DashboardOverviewTab } from './DashboardOverviewTab';
+import { PlanningSidebar } from './PlanningSidebar';
 import { WaitlistManager } from './WaitlistManager';
 import { ArtistManager } from './ArtistManager';
 import { PortfolioManager } from './PortfolioManager';
@@ -44,6 +45,7 @@ import type { Client } from '../../types';
 import { ClientPreviewPanel, type ClientPreviewData } from './ClientPreviewPanel';
 import { ClientPreviewDrawer } from './ClientPreviewDrawer';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
+import { WelcomeOnboardingFlow, shouldShowWelcomeFlow } from '../onboarding/WelcomeOnboardingFlow';
 import { supabase } from '../../lib/supabase';
 import { createSubscription } from '../../lib/stripeClient';
 import { getStripePaymentLink, STRIPE_PAYMENT_LINKS } from '../../lib/stripePaymentLinks';
@@ -59,7 +61,7 @@ import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings';
 
 const iconProps = { className: 'w-5 h-5', strokeWidth: 1.5 };
-const tabs: { id: TabId; label: string; icon: React.ReactNode; badge?: 'pending' }[] = [
+const tabs: { id: TabId | 'referral'; label: string; icon: React.ReactNode; badge?: 'pending'; href?: string }[] = [
   { id: 'overview', label: 'Vue d\'ensemble', icon: <LayoutDashboard {...iconProps} /> },
   { id: 'analytics', label: 'Statistiques', icon: <BarChart3 {...iconProps} /> },
   { id: 'requests', label: 'Demandes', icon: <MessageSquare {...iconProps} />, badge: 'pending' },
@@ -69,7 +71,8 @@ const tabs: { id: TabId; label: string; icon: React.ReactNode; badge?: 'pending'
   { id: 'messaging', label: 'Messagerie', icon: <MessageSquare {...iconProps} /> },
   { id: 'portfolio', label: 'Portfolio', icon: <Image {...iconProps} /> },
   { id: 'finance', label: 'Finance', icon: <Wallet {...iconProps} /> },
-  { id: 'settings', label: 'Paramètres', icon: <Settings {...iconProps} /> }
+  { id: 'referral', label: '🎁 Mois offerts', icon: <Gift {...iconProps} />, href: '/referral' },
+  { id: 'settings', label: 'Paramètres', icon: <Settings {...iconProps} /> },
 ];
 
 export const DashboardPro: React.FC = () => {
@@ -118,6 +121,7 @@ export const DashboardPro: React.FC = () => {
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [openMessageThreadId, setOpenMessageThreadId] = useState<string | null>(null);
+  const [welcomeComplete, setWelcomeComplete] = useState(false);
 
   // Sync general settings form when user changes (e.g. from Supabase session or localStorage)
   useEffect(() => {
@@ -526,6 +530,9 @@ export const DashboardPro: React.FC = () => {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [overviewCalendarMonth, setOverviewCalendarMonth] = useState(() => new Date());
+  const [planningSidebarDate, setPlanningSidebarDate] = useState<string | null>(null);
+  const [planningSidebarMonth, setPlanningSidebarMonth] = useState(() => new Date());
+  const [showPlanningSheet, setShowPlanningSheet] = useState(false);
   const visibleAlerts = alerts.filter(a => !dismissedAlerts.has(a.id));
 
   /** Prochain client de la journée (premier RDV à venir aujourd'hui) */
@@ -559,16 +566,6 @@ export const DashboardPro: React.FC = () => {
 
   // sortableOverviewItems removed — KPIs now inline in Prodify layout, custom widgets rendered separately
 
-  const revenueChartData = useMemo(() => {
-    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-    const now = new Date();
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-      const rev = i === 5 ? totalRevenue : Math.round((totalRevenue * (i + 1)) / 6);
-      return { month: months[d.getMonth()], revenue: rev };
-    });
-  }, [totalRevenue]);
-
   const topClients = useMemo(() => {
     return [...clients].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
   }, [clients]);
@@ -581,8 +578,22 @@ export const DashboardPro: React.FC = () => {
       .slice(0, 3);
   }, [appointments]);
 
+  const showWelcome = useSupabase && shouldShowWelcomeFlow() && !welcomeComplete && studioId && studioSlug && user?.email;
+
   return (
-    <div className="app-shell bg-zinc-50 dark:bg-zinc-950">
+    <div className="app-shell bg-zinc-50 dark:bg-black">
+      {showWelcome && (
+        <WelcomeOnboardingFlow
+          studioId={studioId}
+          studioSlug={studioSlug}
+          userEmail={user.email}
+          initialStudioName={user.studioName || generalStudioName || 'Mon studio'}
+          onComplete={(newStudioName) => {
+            setWelcomeComplete(true);
+            if (newStudioName) updateUser({ studioName: newStudioName });
+          }}
+        />
+      )}
       {/* Mobile overlay — backdrop semi-transparent (zone cliquable pour fermer) */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setSidebarOpen(false)} aria-hidden="true" />
@@ -595,7 +606,7 @@ export const DashboardPro: React.FC = () => {
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           }`}
         >
-          <div className="absolute inset-0 z-0" style={{ backgroundColor: effectiveTheme === 'dark' ? '#09090b' : '#ffffff' }} aria-hidden />
+          <div className="absolute inset-0 z-0 bg-white dark:bg-zinc-950" aria-hidden />
           {/* Zone logo — compacte et premium */}
           <div className="relative z-10 px-4 py-4 border-b border-[var(--border)]/60 flex items-center justify-between safe-top">
             <a href={LANDING_URL} className="flex items-center gap-3 min-w-0 group" aria-label="Retour à l'accueil">
@@ -618,13 +629,22 @@ export const DashboardPro: React.FC = () => {
                   ? appointments.filter(a => a.status === 'pending').length + projectRequests.filter(p => p.status === 'PENDING').length
                   : 0;
                 const isActive = activeTab === tab.id;
+                const baseClass = `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-[14px] transition-colors duration-150 ${
+                  isActive ? 'bg-blue-50 text-blue-900 dark:bg-blue-500/10 dark:text-blue-400 [&_svg]:text-blue-600 [&_svg]:dark:text-blue-400' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`;
+                if (tab.href) {
+                  return (
+                    <a key={tab.id} href={tab.href} className={baseClass}>
+                      <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center">{tab.icon}</span>
+                      <span className="flex-1 text-left">{tab.label}</span>
+                    </a>
+                  );
+                }
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-[14px] transition-colors duration-150 ${
-                      isActive ? 'bg-blue-50 text-blue-900 dark:bg-blue-500/10 dark:text-blue-400 [&_svg]:text-blue-600 [&_svg]:dark:text-blue-400' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
-                    }`}
+                    onClick={() => { setActiveTab(tab.id as TabId); setSidebarOpen(false); }}
+                    className={baseClass}
                   >
                     {tab.id === 'requests' ? (
                       <span className="relative flex-shrink-0 ml-0.5">
@@ -676,14 +696,25 @@ export const DashboardPro: React.FC = () => {
             className={`app-shell-header safe-top px-4 sm:px-5 md:px-6 flex items-center justify-between gap-4 transition-all duration-300 shrink-0 overflow-visible ${
               activeTab === 'overview'
                 ? 'h-12 sm:h-14 bg-transparent border-b-0'
-                : `h-14 sm:h-16 border-b ${headerScrolled ? 'bg-white dark:bg-[#0f0f11] border-[var(--border)] shadow-[0_1px_0_0_var(--border)]' : 'bg-white dark:bg-[#0f0f11] border-[var(--border)]'}`
+                : `h-14 sm:h-16 border-b ${headerScrolled ? 'bg-white dark:bg-zinc-950 border-[var(--border)]' : 'bg-white dark:bg-zinc-950 border-[var(--border)]'}`
             }`}
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2.5 -ml-1 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150" aria-label="Ouvrir le menu">
                 <Menu className="w-6 h-6 text-[var(--text-secondary)]" />
               </button>
-              {activeTab !== 'overview' && (
+              {activeTab === 'overview' ? (
+                <>
+                  <div className="flex-1 min-w-0" />
+                  <button
+                    onClick={() => setShowPlanningSheet(true)}
+                    className="xl:hidden p-2.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors touch-target"
+                    aria-label="Ouvrir le planning"
+                  >
+                    <Calendar className="w-5 h-5 text-[var(--text-secondary)]" />
+                  </button>
+                </>
+              ) : (
                 <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)] min-w-0">{tabs.find(t => t.id === activeTab)?.label}</h2>
               )}
             </div>
@@ -714,10 +745,9 @@ export const DashboardPro: React.FC = () => {
               </button>
               {showNotifications && (
                 <div
-                  className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-auto border border-[rgba(107,92,231,0.08)] dark:border-[var(--border)] rounded-2xl shadow-[0_4px_24px_rgba(107,92,231,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 animate-slide-up"
-                  style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}
+                  className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-auto border border-zinc-200 dark:border-zinc-800 rounded-2xl z-50 animate-slide-up bg-white dark:bg-zinc-950"
                 >
-                  <div className="p-4 border-b border-[var(--border)]/60 flex items-center justify-between" style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}>
+                  <div className="p-4 border-b border-[var(--border)]/60 flex items-center justify-between bg-white dark:bg-zinc-950">
                     <h4 className="font-bold text-sm text-[#1A1A2E] dark:text-[var(--text-primary)]">Notifications</h4>
                     {notifications.filter(n => !n.read).length > 0 && (
                       <button
@@ -772,10 +802,9 @@ export const DashboardPro: React.FC = () => {
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowProfileDropdown(false)} aria-hidden />
                   <div
-                    className="absolute right-0 top-full mt-2 w-64 border border-[rgba(107,92,231,0.08)] dark:border-[var(--border)] rounded-2xl shadow-[0_4px_24px_rgba(107,92,231,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] z-50 overflow-hidden animate-slide-up"
-                    style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}
+                    className="absolute right-0 top-full mt-2 w-64 border border-zinc-200 dark:border-zinc-800 rounded-2xl z-50 overflow-hidden animate-slide-up bg-white dark:bg-zinc-950"
                   >
-                    <div className="p-4 border-b border-[#F0EEF9] dark:border-[var(--border)]" style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}>
+                    <div className="p-4 border-b border-[#F0EEF9] dark:border-zinc-800 bg-white dark:bg-zinc-950">
                       <div className="flex items-center gap-3">
                         {user?.avatar ? (
                           <img src={user.avatar} alt="" className="w-12 h-12 rounded-full border-2 border-white object-cover" />
@@ -790,7 +819,7 @@ export const DashboardPro: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="p-2" style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}>
+                    <div className="p-2 bg-white dark:bg-zinc-950">
                       <button
                         onClick={() => { setActiveTab('settings'); setSettingsTab('general'); setShowProfileDropdown(false); }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-zinc-900 dark:text-[var(--text-primary)] hover:bg-zinc-100 dark:hover:bg-[#27272A] font-medium transition-colors duration-150 text-left"
@@ -816,7 +845,7 @@ export const DashboardPro: React.FC = () => {
           {/* ====== SCROLLABLE CONTENT ZONE ====== */}
           <div
             onScroll={(e) => setHeaderScrolled((e.target as HTMLDivElement).scrollTop > 8)}
-            className={`app-shell-content p-4 sm:p-5 md:p-6 ${activeTab === 'overview' ? 'dashboard-overview-bg' : 'dashboard-pages-bg'}`}
+            className={`app-shell-content p-4 sm:p-6 md:p-8 ${activeTab === 'overview' ? 'dashboard-overview-bg' : 'dashboard-pages-bg'}`}
           >
           {subscriptionStatus === 'restricted' && !(activeTab === 'settings' && settingsTab === 'billing') ? (
             <PaywallView
@@ -842,7 +871,6 @@ export const DashboardPro: React.FC = () => {
               topClients={topClients}
               customWidgets={customWidgets}
               setCustomWidgets={setCustomWidgets}
-              revenueChartData={revenueChartData}
               monthlyRevenue={monthlyRevenue}
               totalRevenue={totalRevenue}
               pendingDeposits={pendingDeposits}
@@ -854,6 +882,7 @@ export const DashboardPro: React.FC = () => {
               nextClientOfDay={nextClientOfDay}
               setActiveTab={setActiveTab}
               setSelectedAppointment={setSelectedAppointment}
+              onUpdateAppointment={updateAppointment}
               setShowBookingModal={setShowBookingModal}
               setSelectedFlash={setSelectedFlash}
               setShowWidgetModal={setShowWidgetModal}
@@ -891,11 +920,12 @@ export const DashboardPro: React.FC = () => {
               clients={clients}
               onNewAppointment={() => { setSelectedFlash(null); setShowBookingModal(true); }}
               onSelectAppointment={setSelectedAppointment}
+              onUpdateAppointment={(apt, updates) => updateAppointment(apt.id, updates)}
             />
           )}
 
           {!loading && activeTab === 'flash' && (
-            <FlashGallery designs={flashDesigns} onBook={handleBookFlash} onAddFlash={addFlash} onUpdateFlash={updateFlash} onDeleteFlash={deleteFlash} />
+            <FlashGallery designs={flashDesigns} onBook={handleBookFlash} onAddFlash={addFlash} onUpdateFlash={updateFlash} onDeleteFlash={deleteFlash} studioSlug={studioSlug} />
           )}
 
           {!loading && activeTab === 'clients' && (
@@ -914,7 +944,14 @@ export const DashboardPro: React.FC = () => {
           )}
 
           {!loading && activeTab === 'messaging' && (
-            <MessagingTab studioId={studioId || ''} />
+            <MessagingTab
+              studioId={studioId || ''}
+              messageThreads={messageThreads}
+              initialThreadId={openMessageThreadId}
+              onInitialThreadOpened={() => setOpenMessageThreadId(null)}
+              artistName={user?.name}
+              studioName={user?.studioName}
+            />
           )}
 
           {!loading && activeTab === 'portfolio' && (
@@ -1014,7 +1051,7 @@ export const DashboardPro: React.FC = () => {
                             type="button"
                             onClick={() => avatarInputRef.current?.click()}
                             disabled={avatarUploading}
-                            className="px-4 py-2 text-sm font-medium bg-neutral-900 text-white rounded-xl hover:bg-neutral-800 transition-colors disabled:opacity-50"
+                            className="min-h-[44px] px-4 py-2 text-sm font-medium bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white rounded-xl hover:bg-neutral-800 dark:hover:bg-zinc-100 transition-colors disabled:opacity-50"
                           >
                             {avatarUploading ? 'Upload...' : user?.avatar ? 'Changer la photo' : 'Ajouter une photo'}
                           </button>
@@ -1144,6 +1181,19 @@ export const DashboardPro: React.FC = () => {
           )}
           </div>
         </div>{/* end app-shell-main */}
+
+        {/* Sidebar droite : mini-calendrier + planning du jour — visible lg+ */}
+        <PlanningSidebar
+          appointments={appointments}
+          selectedDate={planningSidebarDate}
+          onSelectDate={setPlanningSidebarDate}
+          onSelectAppointment={setSelectedAppointment}
+          currentMonth={planningSidebarMonth}
+          onPrevMonth={() => setPlanningSidebarMonth(m => { const d = new Date(m); d.setMonth(d.getMonth() - 1); return d; })}
+          onNextMonth={() => setPlanningSidebarMonth(m => { const d = new Date(m); d.setMonth(d.getMonth() + 1); return d; })}
+          onToday={() => { setPlanningSidebarDate(null); setPlanningSidebarMonth(new Date()); }}
+          className="hidden xl:flex"
+        />
       </div>{/* end app-shell-row */}
 
       {showWidgetModal && (
@@ -1279,6 +1329,41 @@ export const DashboardPro: React.FC = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ====== MOBILE: Planning sheet (calendrier + agenda du jour) ====== */}
+      {showPlanningSheet && (
+        <>
+          <div className="fixed inset-0 z-[60] xl:hidden" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setShowPlanningSheet(false)} aria-hidden="true" />
+          <div
+            className="fixed bottom-0 left-0 right-0 z-[70] xl:hidden rounded-t-3xl shadow-2xl border-t border-zinc-200 dark:border-zinc-800 safe-bottom animate-in max-h-[85dvh] overflow-hidden flex flex-col"
+            style={{ backgroundColor: effectiveTheme === 'dark' ? '#09090b' : '#ffffff' }}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0">
+              <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Planning</span>
+              <button
+                onClick={() => setShowPlanningSheet(false)}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 touch-target"
+                aria-label="Fermer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+              <PlanningSidebar
+                appointments={appointments}
+                selectedDate={planningSidebarDate}
+                onSelectDate={setPlanningSidebarDate}
+                onSelectAppointment={(apt) => { setSelectedAppointment(apt); setShowPlanningSheet(false); }}
+                currentMonth={planningSidebarMonth}
+                onPrevMonth={() => setPlanningSidebarMonth(m => { const d = new Date(m); d.setMonth(d.getMonth() - 1); return d; })}
+                onNextMonth={() => setPlanningSidebarMonth(m => { const d = new Date(m); d.setMonth(d.getMonth() + 1); return d; })}
+                onToday={() => { setPlanningSidebarDate(null); setPlanningSidebarMonth(new Date()); }}
+                className="w-full border-0 rounded-none flex"
+              />
             </div>
           </div>
         </>

@@ -14,6 +14,7 @@ interface AppointmentsViewProps {
   clients?: Client[];
   onNewAppointment: () => void;
   onSelectAppointment: (apt: Appointment) => void;
+  onUpdateAppointment?: (apt: Appointment, updates: Partial<Appointment>) => void;
 }
 
 function toDateStr(d: Date): string {
@@ -37,6 +38,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   clients = [],
   onNewAppointment,
   onSelectAppointment,
+  onUpdateAppointment,
 }) => {
   const clientByEmail = useMemo(() => {
     const m = new Map<string, Client>();
@@ -274,6 +276,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               appointments={filteredAppointments}
               onSlotClick={onNewAppointment}
               onAppointmentClick={onSelectAppointment}
+              onUpdateAppointment={onUpdateAppointment}
             />
           ) : (
             <>

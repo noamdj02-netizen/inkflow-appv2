@@ -85,6 +85,11 @@ Deno.serve(async (req: Request) => {
           } else if (studio) {
             console.log("[stripe-webhook] Studio débloqué via checkout.session.completed:", studio.id, studio.studio_name);
           }
+          // Récompense parrainage : +1 mois pour parrain et filleul
+          const { data: refResult } = await supabase.rpc("process_referral_reward", { p_referee_id: studioId });
+          if (refResult?.success) {
+            console.log("[stripe-webhook] Récompense parrainage appliquée:", refResult);
+          }
           break; // Ne pas traiter comme paiement RDV
         }
 
@@ -257,6 +262,11 @@ Deno.serve(async (req: Request) => {
               console.error("[stripe-webhook] Erreur mise à jour studio:", studioErr.message);
             } else if (studio) {
               console.log("[stripe-webhook] Studio débloqué avec succès:", studio.id, studio.studio_name);
+            }
+            // Récompense parrainage : +1 mois pour parrain et filleul
+            const { data: refResult } = await supabase.rpc("process_referral_reward", { p_referee_id: studioId });
+            if (refResult?.success) {
+              console.log("[stripe-webhook] Récompense parrainage appliquée:", refResult);
             }
           }
         } else {

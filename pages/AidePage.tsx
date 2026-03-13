@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ArrowLeft, CreditCard, HelpCircle, Bell } from 'lucide-react';
+import { ArrowLeft, CreditCard, HelpCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { LANDING_URL } from '../lib/urls';
 
@@ -53,21 +53,6 @@ export const AidePage: React.FC = () => {
           <p className="text-neutral-600 text-sm">
             Pour une procédure détaillée, reportez-vous à la documentation du projet (déploiement de l&apos;Edge Function create-checkout-session).
           </p>
-        </section>
-
-        <section id="push" className="scroll-mt-24 mt-12">
-          <h2 className="text-xl font-semibold text-neutral-900 mb-3 flex items-center gap-2">
-            <Bell className="w-6 h-6 text-indigo-600" />
-            Notifications push
-          </h2>
-          <p className="text-neutral-700 mb-4">
-            Les notifications push nécessitent une PWA installée (mode app) ou la clé VAPID configurée.
-          </p>
-          <ul className="list-disc pl-6 space-y-2 text-neutral-700 mb-4">
-            <li><strong>Sur mobile</strong> : « Ajouter à l&apos;écran d&apos;accueil » depuis le navigateur, puis ouvrir InkFlow depuis l&apos;icône. Les push ne fonctionnent qu&apos;en mode app installée (sans barre d&apos;adresse).</li>
-            <li><strong>Clé VAPID</strong> : génère les clés avec <code className="bg-neutral-200 px-1.5 py-0.5 rounded text-sm">npm run vapid:generate</code>. Mets la clé publique dans <code className="bg-neutral-200 px-1.5 py-0.5 rounded text-sm">VITE_VAPID_PUBLIC_KEY</code> (Vercel) et les deux clés dans Supabase Edge Function Secrets.</li>
-            <li><strong>Voir la doc</strong> : <code className="bg-neutral-200 px-1.5 py-0.5 rounded text-sm">docs/WEB-PUSH.md</code></li>
-          </ul>
         </section>
       </main>
     </div>

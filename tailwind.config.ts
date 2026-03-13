@@ -1,11 +1,27 @@
 import type { Config } from 'tailwindcss';
 
+/** Design System aligné Framer (ink-flow.me) ↔ App (app.ink-flow.me) — voir docs/DESIGN_SYSTEM-FRAMER.md */
 export default {
   content: ['**/*.tsx', '**/*.ts'],
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+      },
+      colors: {
+        /* Framer-aligned dark premium */
+        inkflow: {
+          bg: '#000000',
+          card: '#09090b',
+          input: '#18181b',
+          border: '#27272a',
+          'border-light': '#3f3f46',
+        },
+      },
+      borderRadius: {
+        'inkflow-card': '1rem',
+        'inkflow-btn': '9999px',
       },
       height: {
         screen: '100dvh',

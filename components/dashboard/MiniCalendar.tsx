@@ -128,7 +128,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
                   key={dateStr}
                   type="button"
                   onClick={() => onSelectDate(dateStr)}
-                  className={`
+                  className={`min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0
                     aspect-square rounded-lg text-[13px] font-medium flex flex-col items-center justify-center transition-all
                     ${isSelected
                       ? 'bg-blue-600 text-white shadow-sm'
@@ -144,7 +144,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
                 >
                   <span>{day}</span>
                   {hasAppointments && !isSelected && (
-                    <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isDark ? 'bg-blue-400' : 'bg-blue-500'}`} />
+                    <span className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${isDark ? 'bg-blue-400 ring-1 ring-blue-400/30' : 'bg-blue-500 ring-1 ring-blue-500/30'}`} aria-hidden />
                   )}
                 </button>
               );

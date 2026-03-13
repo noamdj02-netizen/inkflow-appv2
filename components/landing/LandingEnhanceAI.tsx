@@ -22,7 +22,7 @@ export const LandingEnhanceAI: React.FC = () => {
   }, []);
 
   return (
-  <div className="landing-scroll min-h-screen min-h-[100dvh] bg-white">
+  <div className="landing-scroll min-h-screen min-h-[100dvh] bg-white w-full max-w-full overflow-x-hidden">
     <SEO
       title="InkFlow | Le logiciel de gestion et réservation pour Tatoueurs"
       description="Révolutionnez votre studio de tatouage. Réservations, paiements Stripe, CRM et assistant IA. Gagnez du temps avec InkFlow."
@@ -30,7 +30,7 @@ export const LandingEnhanceAI: React.FC = () => {
       schema={[organizationSchema, websiteSchema]}
     />
     <EnhanceAINavbar />
-    <main className="bg-white min-h-[60vh]">
+    <main className="bg-white min-h-[60vh] w-full max-w-full overflow-x-hidden">
       <EnhanceAIHero />
       <Suspense fallback={<div className="min-h-[200px]" aria-hidden />}>
         <EnhanceAIFeaturesDetail />

@@ -1,14 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Instagram } from 'lucide-react';
+import { Instagram, MessageCircle } from 'lucide-react';
 import { getInstagramStatus } from '../../lib/instagram';
 import { InstagramMessagingView } from './InstagramMessagingView';
+import { MessageThreadView } from './MessageThread';
+import type { MessageThread } from '../../types';
 
 interface MessagingTabProps {
   studioId: string;
+  messageThreads?: MessageThread[];
+  initialThreadId?: string | null;
+  onInitialThreadOpened?: () => void;
+  artistName?: string;
+  studioName?: string;
 }
 
-/** Onglet Messagerie : Instagram DM si connecté, sinon CTA pour connecter */
-export const MessagingTab: React.FC<MessagingTabProps> = ({ studioId }) => {
+/** Onglet Messagerie : Instagram DM si connecté, sinon threads inkflow ou CTA */
+export const MessagingTab: React.FC<MessagingTabProps> = ({
+  studioId,
+  messageThreads = [],
+  initialThreadId,
+  onInitialThreadOpened,
+  artistName = 'Artiste',
+  studioName,
+}) => {
   const [igConnected, setIgConnected] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -50,7 +64,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({ studioId }) => {
             e.preventDefault();
             window.location.href = '/dashboard?section=messagerie';
           }}
-          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-medium hover:opacity-90 transition-opacity"
+          className="min-h-[48px] inline-flex items-center justify-center bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-medium hover:opacity-90 transition-opacity"
         >
           Connecter Instagram →
         </a>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Smartphone, ExternalLink } from 'lucide-react';
+import { Bell, Smartphone } from 'lucide-react';
 import { usePushSubscription, type PushSupportReason } from '../../hooks/usePushSubscription';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -73,13 +73,14 @@ export const PushNotificationsSettings: React.FC<PushNotificationsSettingsProps>
           </p>
         )}
         {supportReason === 'no_vapid' && (
-          <a
-            href="/aide#push"
-            className="text-xs text-amber-700 dark:text-amber-400 hover:underline pl-8 flex items-center gap-1.5"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Voir la doc Web Push
-          </a>
+          <div className="pl-8 space-y-2">
+            <p className="text-xs font-medium text-amber-800 dark:text-zinc-300">Configuration VAPID :</p>
+            <ol className="text-xs text-amber-700 dark:text-zinc-400 space-y-1 list-decimal list-inside">
+              <li><code className="bg-amber-100 dark:bg-zinc-700 px-1 rounded">npm run vapid:generate</code></li>
+              <li>Clé publique → <code className="bg-amber-100 dark:bg-zinc-700 px-1 rounded">VITE_VAPID_PUBLIC_KEY</code> dans .env et Vercel</li>
+              <li>Clé privée → Supabase Secrets : <code className="bg-amber-100 dark:bg-zinc-700 px-1 rounded">VAPID_PRIVATE_KEY</code></li>
+            </ol>
+          </div>
         )}
       </div>
     );

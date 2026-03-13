@@ -6,11 +6,19 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
+/** Clé VAPID publique (format URL-safe base64). Trim + validation pour éviter les erreurs de config. */
+function getVapidPublicKey(): string {
+  const raw = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+  if (!raw || typeof raw !== 'string') return '';
+  return raw.trim().replace(/\s/g, '');
+}
+
+const VAPID_PUBLIC_KEY = getVapidPublicKey();
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
-  const padding = '='.repeat((4 - (base64.length % 4)) % 4);
-  const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const cleaned = base64.replace(/\s/g, '');
+  const padding = '='.repeat((4 - (cleaned.length % 4)) % 4);
+  const b64 = (cleaned + padding).replace(/-/g, '+').replace(/_/g, '/');
   const raw = atob(b64);
   const arr = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
@@ -69,9 +77,16 @@ export function usePushSubscription(studioId: string | null): UsePushSubscriptio
       }
 
       const reg = await navigator.serviceWorker.ready;
+      let applicationServerKey: Uint8Array;
+      try {
+        applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      } catch {
+        setError('Clé VAPID invalide. Vérifie le format (base64 URL-safe) dans VITE_VAPID_PUBLIC_KEY.');
+        return false;
+      }
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey,
       });
 
       const json = sub.toJSON();

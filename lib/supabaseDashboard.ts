@@ -25,11 +25,13 @@ function uniqueSlugSuffix(id: string): string {
  * Crée ou met à jour le studio de l'utilisateur connecté.
  * Garantit un slug UNIQUE par studio (évite vitrines et réservations partagées).
  * Retourne l'id du studio et le slug à utiliser pour la vitrine (lien public).
+ * Si referralCode est fourni, lie le studio au parrain (referred_by) et crée l'entrée inkflow_referrals.
  */
 export async function ensureStudio(
   email: string,
   name: string,
-  studioName: string
+  studioName: string,
+  referralCode?: string | null
 ): Promise<{ studioId: string; slug: string }> {
   const id = getStudioId(email, studioName);
   const baseSlug = getStudioSlug(studioName);
@@ -50,14 +52,47 @@ export async function ensureStudio(
     finalSlug = `${baseSlug}-${uniqueSlugSuffix(id)}`;
   }
 
-  const { error } = await supabase.from('inkflow_studios').upsert(
-    { id, email, name, studio_name: studioName, slug: finalSlug, updated_at: now },
-    { onConflict: 'id' }
-  );
+  let referredBy: string | null = null;
+  if (referralCode?.trim()) {
+    const code = referralCode.trim().toUpperCase();
+    const { data: referrer } = await supabase
+      .from('inkflow_studios')
+      .select('id')
+      .eq('referral_code', code)
+      .maybeSingle();
+    if (referrer?.id && referrer.id !== id) {
+      referredBy = referrer.id;
+    }
+  }
+
+  const payload: Record<string, unknown> = {
+    id,
+    email,
+    name,
+    studio_name: studioName,
+    slug: finalSlug,
+    updated_at: now,
+  };
+  if (referredBy) payload.referred_by = referredBy;
+
+  const { error } = await supabase.from('inkflow_studios').upsert(payload, { onConflict: 'id' });
   if (error) {
     const msg = error.message || (error as { code?: string }).code || 'Supabase error';
     throw new Error(msg);
   }
+
+  if (referredBy) {
+    const { error: refErr } = await supabase.from('inkflow_referrals').insert({
+      referrer_id: referredBy,
+      referee_id: id,
+      status: 'pending',
+    });
+    if (refErr && refErr.code !== '23505') {
+      // 23505 = unique_violation, ignorer si doublon
+      console.warn('[ensureStudio] referral insert:', refErr.message);
+    }
+  }
+
   return { studioId: id, slug: finalSlug };
 }
 

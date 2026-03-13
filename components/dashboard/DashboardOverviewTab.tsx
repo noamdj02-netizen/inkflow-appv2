@@ -1,7 +1,10 @@
 import React from 'react';
-import { Plus, Inbox, Image, LayoutGrid, Calendar, Target, BarChart3, FolderOpen, UserPlus, MapPin, CreditCard, AlertTriangle, Clock, ChevronRight } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Plus, Inbox, Image, LayoutGrid, Calendar, FolderOpen, UserPlus, MapPin, CreditCard, AlertTriangle, Clock, ChevronRight, Wallet, MessageSquare, Users, DollarSign } from 'lucide-react';
+import { ReferralWidget } from './ReferralWidget';
 import { MiniCalendar } from './MiniCalendar';
+import { KPIStatsGrid } from './KPIStatsGrid';
+import { RevenueChart } from './RevenueChart';
+import { AppointmentDayList } from './AppointmentDayList';
 import { SortableOverviewWidgets } from './SortableOverviewWidgets';
 import { WidgetCard } from './DashboardWidgets';
 import { getVitrineSlug } from '../../lib/vitrineStorage';
@@ -27,7 +30,6 @@ export interface DashboardOverviewTabProps {
   topClients: Client[];
   customWidgets: DashboardWidget[];
   setCustomWidgets: React.Dispatch<React.SetStateAction<DashboardWidget[]>>;
-  revenueChartData: { month: string; revenue: number }[];
   monthlyRevenue: number;
   totalRevenue: number;
   pendingDeposits: number;
@@ -39,6 +41,7 @@ export interface DashboardOverviewTabProps {
   nextClientOfDay: Appointment | null;
   setActiveTab: (tab: TabId) => void;
   setSelectedAppointment: (apt: Appointment | null) => void;
+  onUpdateAppointment?: (apt: Appointment, updates: Partial<Appointment>) => void;
   setShowBookingModal: (show: boolean) => void;
   setSelectedFlash: (f: FlashDesign | null) => void;
   setShowWidgetModal: (show: boolean) => void;
@@ -59,7 +62,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   topClients,
   customWidgets,
   setCustomWidgets,
-  revenueChartData,
   monthlyRevenue,
   totalRevenue,
   pendingDeposits,
@@ -71,6 +73,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   nextClientOfDay,
   setActiveTab,
   setSelectedAppointment,
+  onUpdateAppointment,
   setShowBookingModal,
   setSelectedFlash,
   setShowWidgetModal,
@@ -84,21 +87,34 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   return (
     <div className="prodify-stagger">
       {/* ===== HEADER — date + salutation + sous-titre + boutons SaaS ===== */}
-      <div className="px-2 sm:px-4 pt-4 sm:pt-6 pb-2 sm:pb-4">
+      <div className="px-4 sm:px-6 pt-6 sm:pt-8 pb-4 sm:pb-6">
         <p className="text-[13px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">
           {now.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' })}
         </p>
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">
-          Bonjour{firstName ? ` ${firstName}` : ''} 👋
+        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-zinc-900 dark:text-white mb-1">
+          {(() => {
+            const h = now.getHours();
+            const greeting = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
+            return `${greeting}${firstName ? ` ${firstName}` : ''} 👋`;
+          })()}
         </h1>
         <p className="text-lg sm:text-xl font-medium text-zinc-500 dark:text-zinc-400 mb-5">
           Comment puis-je vous aider aujourd&apos;hui ?
         </p>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button className="pill-primary" onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}>
+        <div className="flex items-center gap-2 flex-wrap gap-y-2">
+          <button
+            className="pill-primary min-h-[44px] px-5 py-2.5 inline-flex items-center gap-2 active:scale-[0.98] transition-transform"
+            onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
+          >
             <Plus className="w-4 h-4" strokeWidth={1.5} /> Nouveau RDV
           </button>
-          <button className="rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 text-sm font-medium transition-colors inline-flex items-center gap-2 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800" onClick={() => setActiveTab('requests')}>
+          <button
+            className="btn-outline min-h-[44px] px-4 py-2.5 text-sm inline-flex items-center gap-2 active:scale-[0.98] transition-transform"
+            onClick={() => setActiveTab('flash')}
+          >
+            <Image className="w-4 h-4" strokeWidth={1.5} /> Nouveau Flash
+          </button>
+          <button className="btn-outline min-h-[44px] px-4 py-2.5 text-sm inline-flex items-center gap-2 active:scale-[0.98] transition-transform" onClick={() => setActiveTab('requests')}>
             <Inbox className="w-4 h-4" strokeWidth={1.5} /> Demandes
             {pendingRequestsCount > 0 && <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[11px] font-bold">{pendingRequestsCount}</span>}
           </button>
@@ -107,12 +123,12 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               href={`${window.location.origin}/studio/${vitrineSlug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 text-sm font-medium transition-colors inline-flex items-center gap-2 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className="btn-outline min-h-[44px] px-4 py-2.5 text-sm inline-flex items-center gap-2 active:scale-[0.98] transition-transform"
             >
               <Image className="w-4 h-4" strokeWidth={1.5} /> Ma vitrine
             </a>
           )}
-          <button className="rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 text-sm font-medium transition-colors inline-flex items-center gap-2 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800" onClick={() => setShowWidgetModal(true)}>
+          <button className="btn-outline min-h-[44px] px-4 py-2.5 text-sm inline-flex items-center gap-2 active:scale-[0.98] transition-transform" onClick={() => setShowWidgetModal(true)}>
             <LayoutGrid className="w-4 h-4" strokeWidth={1.5} /> + Widget
           </button>
         </div>
@@ -120,7 +136,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
       {/* Alerts / banners */}
       {nextAppointmentIn2h && (
-        <div className="mx-2 sm:mx-4 mb-4 flex items-center justify-between gap-4 px-5 py-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+        <div className="mx-2 sm:mx-4 mb-4 flex items-center justify-between gap-4 px-5 py-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0">
               <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" strokeWidth={1.5} />
@@ -141,13 +157,19 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             <button
               key={alert.id}
               type="button"
-              onClick={() => setActiveTab('appointments')}
-              className="flex items-center p-3 rounded-xl bg-white dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-all cursor-pointer group text-left w-full"
+              onClick={() => setActiveTab(alert.type === 'warning' ? 'finance' : 'appointments')}
+              className={`flex items-center p-4 min-h-[56px] rounded-xl border transition-all cursor-pointer group text-left w-full ${
+                alert.type === 'warning'
+                  ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50'
+                  : 'bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900/60'
+              }`}
             >
-              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-500 dark:text-blue-400 shrink-0 mr-3">
-                {alert.type === 'warning' ? <CreditCard className="w-4 h-4" strokeWidth={1.5} /> : <AlertTriangle className="w-4 h-4" strokeWidth={1.5} />}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mr-3 ${
+                alert.type === 'warning' ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-blue-500/10 text-blue-500 dark:text-blue-400'
+              }`}>
+                {alert.type === 'warning' ? <CreditCard className="w-5 h-5" strokeWidth={1.5} /> : <AlertTriangle className="w-5 h-5" strokeWidth={1.5} />}
               </div>
-              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 flex-1 min-w-0 truncate">{alert.msg}</span>
+              <span className={`text-sm font-medium flex-1 min-w-0 truncate ${alert.type === 'warning' ? 'text-amber-900 dark:text-amber-100' : 'text-zinc-800 dark:text-zinc-200'}`}>{alert.msg}</span>
               <div className="flex items-center gap-1 text-xs font-medium text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300 ml-auto shrink-0">
                 <span className="hidden sm:inline">Gérer</span>
                 <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
@@ -158,20 +180,20 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       )}
 
       {/* ===== PRODIFY 2-COLUMN GRID — clients toujours à gauche ===== */}
-      <div className="grid grid-cols-1 md:grid-cols-[420px_1fr] gap-5 px-2 sm:px-4 pb-6">
+      <div className="grid grid-cols-1 md:grid-cols-[420px_1fr] gap-4 sm:gap-6 md:gap-8 px-3 sm:px-4 md:px-6 pb-6 sm:pb-8">
         {/* ====== LEFT COLUMN (420px) — clients, acomptes, calendrier ====== */}
-        <div className="space-y-5 order-1 min-w-0">
+        <div className="space-y-6 order-1 min-w-0">
           {/* Widget: Derniers acomptes (client) */}
           {recentDeposits.length > 0 && (
             <div className="prodify-card p-6">
-              <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-500 uppercase tracking-wider mb-3">Derniers acomptes</h3>
+              <h3 className="text-zinc-400 text-xs font-semibold tracking-wider uppercase mb-3">Derniers acomptes</h3>
               <div className="flex flex-col gap-3">
                 {recentDeposits.map((apt) => (
                   <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="flex items-center gap-3 group cursor-pointer text-left p-2 -m-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                     <div className="flex-shrink-0 items-center justify-center w-7 h-7 rounded-full bg-blue-500/10 text-blue-400 flex">
                       <CreditCard className="w-3.5 h-3.5" />
                     </div>
-                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate min-w-0 flex-1">{apt.clientName || 'Client'}</span>
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-100 truncate min-w-0 flex-1">{apt.clientName || 'Client'}</span>
                     <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex-shrink-0">+{apt.deposit}€</span>
                   </button>
                 ))}
@@ -203,7 +225,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           <span className="text-white text-xs font-bold">{client.name?.charAt(0)}</span>
                         )}
                       </div>
-                      <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 truncate">{client.name}</div>
+                      <div className="text-[14px] font-medium text-zinc-900 dark:text-zinc-100 truncate">{client.name}</div>
                       <div className="text-[12px] text-zinc-500 dark:text-zinc-400">{client.appointmentsCount ?? 0} RDV • {client.totalSpent}€</div>
                     </button>
                   );
@@ -228,153 +250,88 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
         {/* ====== RIGHT COLUMN — RDV, statistiques, graphique ====== */}
         <div className="space-y-5 min-w-0 order-2">
-          {/* Widget: Mes Rendez-vous */}
-          <div className="prodify-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="flex items-center gap-2 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
-                <Calendar className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} /> Mes Rendez-vous
-              </span>
-              <div className="flex items-center gap-1">
+          {/* Widget: Mes Rendez-vous — liste du jour avec quick actions */}
+          <div className="prodify-card p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
+                <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Mes Rendez-vous</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-zinc-500 dark:text-zinc-400">{todayAppointments.length} RDV</span>
                 <button onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="Nouveau RDV">
                   <Plus className="w-4 h-4" strokeWidth={1.5} />
                 </button>
               </div>
             </div>
-            {/* Section AUJOURD'HUI */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="badge-prodify badge-progress">AUJOURD&apos;HUI</span>
-                <span className="text-[13px] text-zinc-500 dark:text-zinc-400">• {todayAppointments.length} RDV</span>
-              </div>
-              {todayAppointments.length > 0 ? (
+            <AppointmentDayList
+              appointments={todayAppointments}
+              clients={clients}
+              onSelectAppointment={setSelectedAppointment}
+              onMarkComplete={onUpdateAppointment ? (apt) => onUpdateAppointment(apt, { status: 'completed' }) : undefined}
+              onEdit={setSelectedAppointment}
+              onMessage={(apt) => { setSelectedAppointment(apt); setActiveTab('messaging'); }}
+            />
+            {/* Section À VENIR */}
+            {appointments.filter(a => a.date > today && ['pending','confirmed'].includes(a.status)).length > 0 && (
+              <div className="mt-6 pt-5 border-t border-zinc-100 dark:border-zinc-800/80">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="badge-prodify badge-upcoming">À VENIR</span>
+                  <span className="text-[13px] text-zinc-500 dark:text-zinc-400">• {appointments.filter(a => a.date > today && ['pending','confirmed'].includes(a.status)).length} RDV</span>
+                </div>
                 <div className="space-y-2">
-                  <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 px-3 py-1.5 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    <span>Nom</span><span>Statut</span><span>Heure</span>
-                  </div>
-                  {todayAppointments.slice(0, 5).map(apt => (
-                    <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="grid grid-cols-[1fr_auto_auto] gap-x-4 items-center w-full px-3 py-2.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 text-left transition-colors">
-                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{apt.clientName}</span>
-                      <span className={`badge-prodify ${apt.status === 'confirmed' ? 'badge-confirmed' : apt.status === 'pending' ? 'badge-pending' : 'badge-completed'}`}>
-                        {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'pending' ? 'En attente' : 'Terminé'}
+                  {appointments.filter(a => a.date > today && ['pending','confirmed'].includes(a.status)).sort((a,b) => a.date.localeCompare(b.date)).slice(0, 3).map(apt => (
+                    <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="flex items-center gap-3 w-full px-1 py-2.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 text-left transition-colors">
+                      <span className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-400 min-w-[3rem]">{new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate flex-1">{apt.clientName}</span>
+                      <span className={`badge-prodify ${apt.status === 'confirmed' ? 'badge-confirmed' : 'badge-pending'}`}>
+                        {apt.status === 'confirmed' ? 'Confirmé' : 'En attente'}
                       </span>
-                      <span className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-400">{apt.time || '—'}</span>
                     </button>
                   ))}
                 </div>
-              ) : (
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 pl-3">Aucun RDV aujourd&apos;hui</p>
-              )}
-            </div>
-            {/* Section À VENIR */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="badge-prodify badge-upcoming">À VENIR</span>
-                <span className="text-[13px] text-zinc-500 dark:text-zinc-400">• {appointments.filter(a => a.date > today && ['pending','confirmed'].includes(a.status)).length} RDV</span>
               </div>
-              {(() => {
-                const upcoming = appointments.filter(a => a.date > today && ['pending','confirmed'].includes(a.status)).sort((a,b) => a.date.localeCompare(b.date)).slice(0, 3);
-                return upcoming.length > 0 ? (
-                  <div className="space-y-2">
-                    {upcoming.map(apt => (
-                      <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="grid grid-cols-[1fr_auto_auto] gap-x-4 items-center w-full px-3 py-2.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 text-left transition-colors">
-                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{apt.clientName}</span>
-                        <span className={`badge-prodify ${apt.status === 'confirmed' ? 'badge-confirmed' : 'badge-pending'}`}>
-                          {apt.status === 'confirmed' ? 'Confirmé' : 'En attente'}
-                        </span>
-                        <span className="text-[13px] text-zinc-500 dark:text-zinc-400">{new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 pl-3">Aucun RDV à venir</p>
-                );
-              })()}
-            </div>
-            <button onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }} className="w-full mt-4 py-2.5 text-[13px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors text-center">
+            )}
+            <button onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }} className="w-full mt-5 py-2.5 text-[13px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors text-center">
               + Ajouter un RDV
             </button>
           </div>
 
-          {/* Widget: Mes Statistiques */}
-          <div className="prodify-card p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <Target className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
-              <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Mes Statistiques</span>
-            </div>
-            <div className="space-y-5">
-              {/* Acomptes reçus */}
-              <div>
-                <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">Acomptes reçus ce mois</div>
-                <div className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">Finance • Mois en cours</div>
-                <div className="flex items-center gap-3">
-                  <div className="progress-bar-prodify"><div className="progress-fill blue" style={{ width: `${Math.min(100, monthlyRevenue > 0 ? (pendingDeposits / monthlyRevenue) * 100 : 0)}%` }} /></div>
-                  <span className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 min-w-[48px] text-right">{pendingDeposits}€</span>
-                </div>
-              </div>
-              {/* Demandes traitées */}
-              <div>
-                <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">Demandes traitées</div>
-                <div className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">Demandes • Ce mois</div>
-                <div className="flex items-center gap-3">
-                  {(() => {
-                    const total = projectRequests.length || 1;
-                    const treated = projectRequests.filter(p => p.status !== 'PENDING').length;
-                    const pct = Math.round((treated / total) * 100);
-                    return (<>
-                      <div className="progress-bar-prodify"><div className="progress-fill blue" style={{ width: `${pct}%` }} /></div>
-                      <span className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 min-w-[48px] text-right">{pct}%</span>
-                    </>);
-                  })()}
-                </div>
-              </div>
-              {/* Clients actifs */}
-              <div>
-                <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">Clients actifs</div>
-                <div className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">CRM • Total</div>
-                <div className="flex items-center gap-3">
-                  <div className="progress-bar-prodify"><div className="progress-fill blue" style={{ width: `${Math.min(100, clients.length * 5)}%` }} /></div>
-                  <span className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 min-w-[48px] text-right">{clients.length}</span>
-                </div>
-              </div>
-              {/* Revenu mensuel */}
-              <div>
-                <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">Revenu mensuel</div>
-                <div className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">Finance • {now.toLocaleDateString('fr-FR', { month: 'long' })}</div>
-                <div className="flex items-center gap-3">
-                  <div className="progress-bar-prodify"><div className="progress-fill blue" style={{ width: `${Math.min(100, monthlyRevenue > 0 ? (monthlyRevenue / Math.max(totalRevenue, 1)) * 100 : 0)}%` }} /></div>
-                  <span className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 min-w-[48px] text-right">{monthlyRevenue}€</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Widget: KPIs — grille de 4 cartes */}
+          <KPIStatsGrid
+            items={[
+              {
+                title: 'Acomptes reçus ce mois',
+                value: `${pendingDeposits}€`,
+                trend: '+8%',
+                icon: Wallet,
+              },
+              {
+                title: 'Demandes traitées',
+                value: `${Math.round((projectRequests.filter(p => p.status !== 'PENDING').length / (projectRequests.length || 1)) * 100)}%`,
+                trend: '+12%',
+                icon: MessageSquare,
+              },
+              {
+                title: 'Clients actifs',
+                value: clients.length,
+                trend: '+5%',
+                icon: Users,
+              },
+              {
+                title: `Revenu ${now.toLocaleDateString('fr-FR', { month: 'long' })}`,
+                value: `${monthlyRevenue}€`,
+                trend: '+18%',
+                icon: DollarSign,
+              },
+            ]}
+          />
 
-          {/* Widget: Évolution du revenu (chart) */}
-          <div className="prodify-card p-6 overflow-hidden">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
-                <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Évolution du revenu</span>
-              </div>
-              <span className="badge-prodify badge-progress">6 mois</span>
-            </div>
-            <div className="-mx-2 sm:mx-0 h-[200px]">
-              <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={Array.isArray(revenueChartData) ? revenueChartData : []} margin={{ top: 0, right: 0, left: -8, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorRevenueOverview" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#2563eb" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
-                  <XAxis dataKey="month" stroke="#71717a" style={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#71717a" style={{ fontSize: 11 }} tickLine={false} axisLine={false} width={32} />
-                  <Tooltip formatter={(v: number) => [`${v}€`, 'Revenu']} contentStyle={{ borderRadius: 12, border: '1px solid #e4e4e7', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }} />
-                  <Area type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} fill="url(#colorRevenueOverview)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          {/* Widget: Parrainage — sous les stats financières */}
+          <ReferralWidget studioId={studioId} useSupabase={useSupabase} />
+
+          {/* Widget: Évolution du revenu (chart interactif) */}
+          <RevenueChart appointments={appointments} totalRevenue={totalRevenue} />
 
           {/* Custom widgets (sortable) */}
           {customWidgets.length > 0 && (
@@ -398,82 +355,17 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           )}
         </div>
 
-        {/* ====== RIGHT COLUMN (420px) — clients et acomptes toujours à droite ====== */}
+        {/* ====== COLONNE DROITE (mobile) / BAS DE PAGE — Event du jour, Demandes, etc. ====== */}
         <div className="space-y-5 order-1 md:order-2">
-          {/* Widget: Derniers acomptes (client) */}
-          {recentDeposits.length > 0 && (
-            <div className="prodify-card p-6">
-              <h3 className="text-xs font-medium text-zinc-500 dark:text-zinc-500 uppercase tracking-wider mb-3">Derniers acomptes</h3>
-              <div className="flex flex-col gap-3">
-                {recentDeposits.map((apt) => (
-                  <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="flex items-center gap-3 group cursor-pointer text-left p-2 -m-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                    <div className="flex-shrink-0 items-center justify-center w-7 h-7 rounded-full bg-blue-500/10 text-blue-400 flex">
-                      <CreditCard className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate min-w-0 flex-1">{apt.clientName || 'Client'}</span>
-                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex-shrink-0">+{apt.deposit}€</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {/* Widget: Clients récents */}
-          <div className="prodify-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <span className="flex items-center gap-2 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
-                <FolderOpen className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} /> Clients récents
-              </span>
-              <button onClick={() => setActiveTab('clients')} className="text-[13px] font-medium text-blue-600 dark:text-blue-400 hover:underline">Voir tout</button>
-            </div>
-            <button onClick={() => setActiveTab('clients')} className="w-full flex items-center gap-3 p-3 mb-3 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-colors text-left">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center"><UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" strokeWidth={1.5} /></div>
-              <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Nouveau client</span>
-            </button>
-            {topClients.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
-                {topClients.slice(0, 4).map((client, i) => {
-                  const colors = ['bg-blue-600', 'bg-blue-500', 'bg-zinc-600', 'bg-zinc-500'];
-                  return (
-                    <button key={client.id} onClick={() => setActiveTab('clients')} className="text-left p-3.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors">
-                      <div className={`w-7 h-7 rounded-lg ${colors[i % 4]} flex items-center justify-center mb-2 overflow-hidden flex-shrink-0`}>
-                        {client.avatar ? (
-                          <img src={client.avatar} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-white text-xs font-bold">{client.name?.charAt(0)}</span>
-                        )}
-                      </div>
-                      <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 truncate">{client.name}</div>
-                      <div className="text-[12px] text-zinc-500 dark:text-zinc-400">{client.appointmentsCount ?? 0} RDV • {client.totalSpent}€</div>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-4">Aucun client pour le moment</p>
-            )}
-          </div>
-
-          {/* Widget: Calendrier (compact week view like Prodify) */}
-          <MiniCalendar
-            selectedDate={null}
-            onSelectDate={() => setActiveTab('appointments')}
-            datesWithAppointments={new Set(appointments.filter(a => ['pending', 'confirmed'].includes(a.status)).map(a => a.date))}
-            currentMonth={overviewCalendarMonth}
-            onPrevMonth={() => setOverviewCalendarMonth(m => new Date(m.getFullYear(), m.getMonth() - 1))}
-            onNextMonth={() => setOverviewCalendarMonth(m => new Date(m.getFullYear(), m.getMonth() + 1))}
-            onToday={() => setOverviewCalendarMonth(new Date())}
-            className=""
-          />
-
           {/* Event du jour (below calendar) */}
           {nextClientOfDay && (
             <div className="prodify-card overflow-hidden">
-              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-700">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-white/5">
                 <div className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{nextClientOfDay.clientName}</div>
                 <div className="text-[13px] text-zinc-500 dark:text-zinc-400">Aujourd&apos;hui • {nextClientOfDay.time || '—'}</div>
               </div>
               <div className="p-4 flex items-center justify-between gap-2 flex-wrap">
-                <span className="flex items-center gap-2 text-[12px] font-medium text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5">
+                <span className="flex items-center gap-2 text-[12px] font-medium text-zinc-500 dark:text-zinc-400 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/5 rounded-lg px-2.5 py-1.5">
                   <MapPin className="w-3.5 h-3.5" strokeWidth={1.5} /> En studio
                 </span>
                 <div className="flex items-center gap-3">

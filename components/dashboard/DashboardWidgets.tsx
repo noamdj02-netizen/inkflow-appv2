@@ -246,7 +246,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { reset(); onClose(); }} />
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-[var(--bg-card)] rounded-2xl shadow-2xl w-full max-w-lg p-6 border border-[var(--border)] animate-slide-up" onClick={e => e.stopPropagation()}>
+        <div className="relative bg-[var(--bg-card)] rounded-2xl w-full max-w-lg p-6 border border-[var(--border)] animate-slide-up" onClick={e => e.stopPropagation()}>
           <h2 className="text-xl font-bold mb-1 flex items-center gap-2 text-[var(--text-primary)]">
             <LayoutGrid className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Ajouter un widget

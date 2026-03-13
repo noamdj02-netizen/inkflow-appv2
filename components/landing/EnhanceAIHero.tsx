@@ -79,7 +79,7 @@ export const EnhanceAIHero: React.FC = () => {
 
   return (
     <section
-      className="relative min-h-0 lg:min-h-[85vh] flex flex-col lg:flex-none lg:flex lg:items-center overflow-hidden bg-[#FAFAFA] pt-20 pb-12 sm:pt-24 sm:pb-16 lg:pt-28 lg:pb-24"
+      className="relative min-h-0 lg:min-h-[85vh] flex flex-col lg:flex-none lg:flex lg:items-center overflow-hidden bg-[#FAFAFA] pt-20 pb-12 sm:pt-24 sm:pb-16 lg:pt-28 lg:pb-24 w-full min-w-0"
       style={{
         backgroundImage: `
           radial-gradient(circle at 1px 1px, rgba(0,0,0,0.04) 1px, transparent 0),
@@ -105,8 +105,8 @@ export const EnhanceAIHero: React.FC = () => {
         }}
       />
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10 lg:gap-12 xl:gap-16">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-w-0">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10 lg:gap-12 xl:gap-16 min-w-0">
           {/* Gauche : badge, titre, sous-titre, features, CTAs, social proof */}
           <motion.div
             className="flex flex-col items-center lg:items-start text-center lg:text-left max-w-2xl lg:max-w-none"
@@ -219,7 +219,7 @@ export const EnhanceAIHero: React.FC = () => {
         </div>
 
         {/* Mobile : main + mockup iPhone centré sous le bloc gauche */}
-        <div className="lg:hidden mt-8 flex justify-center">
+        <div className="lg:hidden mt-8 flex justify-center overflow-hidden min-w-0">
           <HandWithPhone />
         </div>
       </div>

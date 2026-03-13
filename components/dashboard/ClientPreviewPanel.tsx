@@ -112,7 +112,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         tabIndex={onClientClick ? 0 : undefined}
         onClick={onClientClick}
         onKeyDown={onClientClick ? (e) => e.key === 'Enter' && onClientClick() : undefined}
-        className={`rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] shadow-sm overflow-hidden ${onClientClick ? 'cursor-pointer hover:border-blue-300 dark:hover:border-blue-500/50 transition-colors' : ''}`}
+        className={`rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden ${onClientClick ? 'cursor-pointer hover:border-blue-300 dark:hover:border-blue-500/50 transition-colors' : ''}`}
       >
         <div className="p-5">
           <div className="flex items-start gap-4">
@@ -168,7 +168,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
       </div>
 
       {/* Widget Messagerie */}
-      <div className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
+      <div className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden flex flex-col flex-1 min-h-0">
         <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-secondary)]/50">
           <div className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />

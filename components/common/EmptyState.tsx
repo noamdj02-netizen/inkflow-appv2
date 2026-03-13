@@ -45,8 +45,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   className = '',
 }) => (
   <div className={`flex flex-col items-center justify-center py-12 px-6 text-center ${className}`}>
-    <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4 text-2xl">
-      {iconNode ?? (Icon != null && <Icon className="text-zinc-500 dark:text-zinc-400" size={28} />)}
+    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center mb-4 text-2xl ring-1 ring-zinc-200/50 dark:ring-zinc-700/50">
+      {iconNode ?? (Icon != null && <Icon className="text-zinc-500 dark:text-zinc-400" size={32} />)}
     </div>
     <h4 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{title}</h4>
     {description && <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-4 max-w-xs">{description}</p>}

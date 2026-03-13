@@ -12,11 +12,14 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { CookieConsent } from './components/CookieConsent';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { AddToHomeScreenBanner } from './components/landing/AddToHomeScreenBanner';
+import { AppSplashGate } from './components/auth/AppSplashGate';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { InviteRedirectPage } from './pages/InviteRedirectPage';
+import { ReferralPage } from './pages/ReferralPage';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const PublicStudioPagePro = lazy(() => import('./pages/public/PublicStudioPagePro').then(m => ({ default: m.PublicStudioPagePro })));
@@ -102,6 +105,7 @@ const Router: React.FC = () => {
     { path: '/', component: LandingPage },
     { path: '/login', component: LoginPage },
     { path: '/signup', component: SignupPage },
+    { path: /^\/invite\/([a-zA-Z0-9]+)\/?$/, component: InviteRedirectPage, getProps: (m) => ({ code: m[1] }) },
     { path: '/reset-password', component: ResetPasswordPage },
     { path: '/demo', component: DemoSandboxPage },
     { path: /^\/(vue-ensemble|demandes|rendez-vous|galerie-flash|clients|messagerie|portfolio|finance|parametres)\/?$/, component: FeatureDetailPage, getProps: (m) => ({ slug: m[1] }) },
@@ -122,6 +126,7 @@ const Router: React.FC = () => {
     { path: '/conditions-utilisation', component: TermsOfServicePage },
     { path: '/terms', component: TermsOfServicePage },
     { path: '/aide', component: AidePage },
+    { path: '/referral', component: ReferralPage, requiresAuth: true },
   ];
 
   const matchRoute = () => {
@@ -250,15 +255,17 @@ const App: React.FC = () => {
       <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem storageKey="inkflow-theme">
         <div className="app-root">
           <AuthProvider>
-            <ToastProvider>
-              <LanguageProvider>
-                <AddToHomeScreenBanner />
-                <UnhandledRejectionHandler />
-                <Router />
-                <CookieConsent />
-                <PWAUpdatePrompt />
-              </LanguageProvider>
-            </ToastProvider>
+            <AppSplashGate>
+              <ToastProvider>
+                <LanguageProvider>
+                  <AddToHomeScreenBanner />
+                  <UnhandledRejectionHandler />
+                  <Router />
+                  <CookieConsent />
+                  <PWAUpdatePrompt />
+                </LanguageProvider>
+              </ToastProvider>
+            </AppSplashGate>
           </AuthProvider>
         </div>
       </ThemeProvider>

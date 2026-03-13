@@ -40,7 +40,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     onClick={onClick}
     disabled={disabled}
     className={
-      `w-full flex items-center justify-center gap-3 bg-white border-2 border-neutral-200 text-neutral-800 py-3 rounded-xl font-semibold hover:bg-neutral-50 hover:border-neutral-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`.trim()
+      `w-full min-h-[48px] flex items-center justify-center gap-3 bg-white border-2 border-neutral-200 text-neutral-800 py-3 rounded-xl font-semibold hover:bg-neutral-50 hover:border-neutral-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`.trim()
     }
     aria-label={label}
   >

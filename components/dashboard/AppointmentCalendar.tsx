@@ -3,7 +3,7 @@
  * Responsive mobile et PC.
  */
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Clock, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, User, Pencil, XCircle, CheckCircle } from 'lucide-react';
 import { Appointment } from '../../types';
 import { Modal } from '../ui/Modal';
 
@@ -16,6 +16,7 @@ interface AppointmentCalendarProps {
   appointments: Appointment[];
   onSlotClick: () => void;
   onAppointmentClick?: (apt: Appointment) => void;
+  onUpdateAppointment?: (apt: Appointment, updates: Partial<Appointment>) => void;
 }
 
 function toDateStr(d: Date): string {
@@ -44,6 +45,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   appointments,
   onSlotClick,
   onAppointmentClick,
+  onUpdateAppointment,
 }) => {
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
   const [weekStart, setWeekStart] = useState(() => {
@@ -102,7 +104,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={goPrev}
-            className="p-2.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors"
+            className="min-w-[44px] min-h-[44px] p-2.5 rounded-xl hover:bg-[var(--bg-hover)] active:scale-95 transition-all"
             aria-label="Précédent"
           >
             <ChevronLeft className="w-5 h-5 text-[var(--text-secondary)]" />
@@ -112,7 +114,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
           </h2>
           <button
             onClick={goNext}
-            className="p-2.5 rounded-xl hover:bg-[var(--bg-hover)] transition-colors"
+            className="min-w-[44px] min-h-[44px] p-2.5 rounded-xl hover:bg-[var(--bg-hover)] active:scale-95 transition-all"
             aria-label="Suivant"
           >
             <ChevronRight className="w-5 h-5 text-[var(--text-secondary)]" />
@@ -195,7 +197,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                         key={apt.id}
                         type="button"
                         onClick={(e) => handleAppointmentClick(apt, e)}
-                        className={`w-full text-left p-2.5 rounded-xl border shadow-sm hover:shadow transition-all cursor-pointer ${getEventColor(
+                        className={`w-full min-h-[56px] text-left p-3 rounded-xl border shadow-sm hover:shadow-md active:scale-[0.99] transition-all cursor-pointer ${getEventColor(
                           apt.status
                         )}`}
                       >
@@ -257,23 +259,52 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                     ? 'Terminé'
                     : selectedAppointment.status}
             </span>
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setSelectedAppointment(null)}
-                className="flex-1 px-4 py-2.5 rounded-xl border-2 border-[var(--border)] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
-              >
-                Fermer
-              </button>
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              {onUpdateAppointment && selectedAppointment.status !== 'completed' && selectedAppointment.status !== 'cancelled' && (
+                <div className="flex gap-2 order-2 sm:order-1">
+                  {selectedAppointment.status === 'pending' && (
+                    <button
+                      type="button"
+                      onClick={() => { onUpdateAppointment(selectedAppointment, { status: 'confirmed' }); setSelectedAppointment(null); }}
+                      className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle className="w-4 h-4" /> Confirmer
+                    </button>
+                  )}
+                  {selectedAppointment.status === 'confirmed' && (
+                    <button
+                      type="button"
+                      onClick={() => { onUpdateAppointment(selectedAppointment, { status: 'completed' }); setSelectedAppointment(null); }}
+                      className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle className="w-4 h-4" /> Terminé
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { onUpdateAppointment(selectedAppointment, { status: 'cancelled' }); setSelectedAppointment(null); }}
+                    className="min-h-[44px] px-4 py-2.5 rounded-xl border-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center gap-2"
+                  >
+                    <XCircle className="w-4 h-4" /> Annuler
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => {
                   onAppointmentClick?.(selectedAppointment);
                   setSelectedAppointment(null);
                 }}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                className="min-h-[44px] px-4 py-2.5 rounded-xl border-2 border-[var(--border)] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-center justify-center gap-2"
               >
-                Voir le détail
+                <Pencil className="w-4 h-4" /> Modifier
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedAppointment(null)}
+                className="min-h-[44px] px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 font-semibold text-[var(--text-secondary)] hover:bg-zinc-200 dark:hover:bg-zinc-700"
+              >
+                Fermer
               </button>
             </div>
           </div>

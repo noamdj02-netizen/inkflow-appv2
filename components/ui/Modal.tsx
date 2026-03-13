@@ -52,7 +52,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div className="fixed inset-0 bg-black/60" onClick={onClose} aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-3 sm:p-6 safe-top safe-bottom pointer-events-none">
         <div
-          className={`modal-container pointer-events-auto relative bg-[var(--bg-card)] rounded-2xl shadow-2xl w-[90%] max-h-[min(90dvh,100%)] sm:max-h-[85vh] flex flex-col overflow-hidden ${sizeClasses[size]} transform transition-all animate-slide-up border border-[var(--border)]`}
+          className={`modal-container pointer-events-auto relative bg-[var(--bg-card)] rounded-2xl w-[90%] max-h-[min(90dvh,100%)] sm:max-h-[85vh] flex flex-col overflow-hidden ${sizeClasses[size]} transform transition-all animate-slide-up border border-[var(--border)]`}
           style={{ maxWidth: 'min(100%, calc(100vw - 1.5rem))' }}
           onClick={(e) => e.stopPropagation()}
         >

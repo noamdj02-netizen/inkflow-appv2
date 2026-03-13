@@ -253,7 +253,7 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-4 py-2 rounded-xl font-medium text-sm transition-colors ${
+              className={`min-h-[44px] px-4 py-2 rounded-xl font-medium text-sm transition-colors ${
                 period === p
                   ? 'bg-neutral-900 text-white'
                   : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-500/30'
@@ -272,7 +272,7 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="dashboard-widget-card p-4">
               <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Chiffre d'affaires</div>
-              <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{totalCA}€</div>
+              <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 tabular-nums">{totalCA}€</div>
             </div>
             <div className="dashboard-widget-card p-4">
               <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Nombre de clients</div>
@@ -334,7 +334,7 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
           <button
             onClick={generateBilanPdf}
             disabled={isGeneratingPdf}
-            className="flex-1 py-2.5 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 min-h-[48px] py-2.5 bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 dark:hover:bg-zinc-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGeneratingPdf ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> Génération...</>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Clock, DollarSign, CheckCircle, X, Plus, Grid3X3, List, Edit, Trash2, Sparkles, Loader2 } from 'lucide-react';
+import { Search, Filter, Clock, DollarSign, CheckCircle, X, Plus, Grid3X3, List, Edit, Trash2, Sparkles, Loader2, Copy, Check } from 'lucide-react';
 import { FlashDesign } from '../../types';
 import { Modal } from '../ui/Modal';
 import { ImageUploadField } from '../ui/ImageUploadField';
@@ -16,8 +16,10 @@ interface FlashGalleryProps {
   onDeleteFlash?: (id: string) => void;
 }
 
-export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onAddFlash, onUpdateFlash, onDeleteFlash }) => {
+export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onAddFlash, onUpdateFlash, onDeleteFlash, studioSlug }) => {
   const toast = useToast();
+  const [linkCopied, setLinkCopied] = useState(false);
+  const vitrineUrl = studioSlug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/studio/${studioSlug}` : '';
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDesign, setSelectedDesign] = useState<FlashDesign | null>(null);
@@ -285,9 +287,9 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               )}
               {selectedDesign.description && <p className="text-[var(--text-secondary)]">{selectedDesign.description}</p>}
               <div className="grid grid-cols-2 gap-4 py-4 border-y border-[var(--border)]">
-                <div><div className="text-sm text-[var(--text-secondary)] mb-1">Prix</div><div className="text-2xl font-bold text-indigo-600">{selectedDesign.price}€</div></div>
-                <div><div className="text-sm text-[var(--text-secondary)] mb-1">Acompte</div><div className="text-2xl font-bold">{selectedDesign.depositAmount}€</div></div>
-                <div><div className="text-sm text-[var(--text-secondary)] mb-1">Durée</div><div className="text-lg font-semibold">{selectedDesign.estimatedDuration}min</div></div>
+                <div><div className="text-sm text-[var(--text-secondary)] mb-1">Prix</div><div className="text-2xl font-bold text-indigo-600 tabular-nums">{selectedDesign.price}€</div></div>
+                <div><div className="text-sm text-[var(--text-secondary)] mb-1">Acompte</div><div className="text-2xl font-bold tabular-nums">{selectedDesign.depositAmount}€</div></div>
+                <div><div className="text-sm text-[var(--text-secondary)] mb-1">Durée</div><div className="text-lg font-semibold tabular-nums">{selectedDesign.estimatedDuration}min</div></div>
                 <div><div className="text-sm text-[var(--text-secondary)] mb-1">Taille</div><div className="text-lg font-semibold capitalize">{selectedDesign.size}</div></div>
               </div>
               <div>
@@ -299,11 +301,30 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                 </div>
               </div>
               <button onClick={() => handleBookNow(selectedDesign)} disabled={selectedDesign.reserved}
-                className={`w-full py-4 rounded-xl font-semibold text-lg transition-all ${
+                className={`w-full min-h-[48px] py-4 rounded-xl font-semibold text-lg transition-all ${
                   selectedDesign.reserved ? 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] cursor-not-allowed' : 'btn-primary'
                 }`}>
                 {selectedDesign.reserved ? 'Ce flash est réservé' : 'Réserver ce flash'}
               </button>
+              {vitrineUrl && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(vitrineUrl);
+                      setLinkCopied(true);
+                      toast.success('Lien copié !');
+                      setTimeout(() => setLinkCopied(false), 2000);
+                    } catch {
+                      toast.error('Impossible de copier');
+                    }
+                  }}
+                  className="w-full min-h-[44px] py-2.5 rounded-xl border-2 border-[var(--border)] font-semibold flex items-center justify-center gap-2 hover:bg-[var(--bg-hover)] transition-colors"
+                >
+                  {linkCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                  {linkCopied ? 'Lien copié !' : 'Copier le lien vitrine'}
+                </button>
+              )}
               {(onUpdateFlash || onDeleteFlash) && (
                 <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
                   {onUpdateFlash && <button onClick={() => { setSelectedDesign(null); openEditModal(selectedDesign); }} className="btn-outline flex-1"><Edit className="w-4 h-4" /> Modifier</button>}
@@ -321,7 +342,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
             <div>
               <label className="block text-sm font-semibold mb-2">Titre *</label>
               <input type="text" value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
-                className="w-full px-4 py-3 border border-neutral-200 rounded-xl" placeholder="Ex: Dragon Japonais" />
+                className="w-full px-4 py-3 min-h-[48px] border border-neutral-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900" placeholder="Ex: Dragon Japonais" />
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2">Description</label>
@@ -338,7 +359,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               <div>
                 <label className="block text-sm font-semibold mb-2">Prix (€)</label>
                 <input type="number" min="0" value={form.price} onChange={(e) => setForm(f => ({ ...f, price: Number(e.target.value) }))}
-                  className="w-full px-4 py-3 border border-neutral-200 rounded-xl" />
+                  className="w-full px-4 py-3 min-h-[48px] border border-neutral-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900" />
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-2">Acompte (€)</label>
@@ -368,10 +389,10 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               </select>
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <button onClick={() => setShowFormModal(false)} className="px-6 py-3 border-2 border-neutral-200 rounded-xl font-semibold hover:border-neutral-900">
+              <button onClick={() => setShowFormModal(false)} className="min-h-[44px] px-6 py-3 border-2 border-neutral-200 dark:border-zinc-700 rounded-xl font-semibold hover:border-neutral-900 dark:hover:border-zinc-500">
                 Annuler
               </button>
-              <button onClick={handleSaveFlash} disabled={savingFlash} className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              <button onClick={handleSaveFlash} disabled={savingFlash} className="min-h-[44px] px-6 py-3 bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 dark:hover:bg-zinc-100 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 {savingFlash ? <><Loader2 className="w-4 h-4 animate-spin" /> En cours…</> : (editingFlash ? 'Mettre à jour' : 'Créer')}
               </button>
             </div>

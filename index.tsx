@@ -30,16 +30,4 @@ if (typeof window.visualViewport !== 'undefined') {
   window.visualViewport.addEventListener('resize', setAppHeight);
 }
 
-// Hide splash when React has rendered (requestAnimationFrame after first paint)
-const splash = document.getElementById('splash');
-if (splash) {
-  const hideSplash = () => {
-    splash.classList.add('hidden');
-    setTimeout(() => splash.remove(), 350);
-  };
-  if (document.readyState === 'complete') {
-    requestAnimationFrame(() => requestAnimationFrame(hideSplash));
-  } else {
-    window.addEventListener('load', () => requestAnimationFrame(() => requestAnimationFrame(hideSplash)));
-  }
-}
+// Le splash est masqué par AppSplashGate une fois l'auth résolue (évite le flash)

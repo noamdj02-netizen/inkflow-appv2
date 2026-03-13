@@ -42,7 +42,7 @@ interface AuthContextType {
   authLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
-  signup: (email: string, password: string, name: string, studioName: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, studioName: string, referralCode?: string) => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   isAuthenticated: boolean;
@@ -179,19 +179,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('inkflow_user', JSON.stringify(mockUser));
   }, [isSupabaseAuthEnabled]);
 
-  const signup = useCallback(async (email: string, password: string, name: string, studioName: string) => {
+  const signup = useCallback(async (email: string, password: string, name: string, studioName: string, referralCode?: string) => {
     if (isSupabaseAuthEnabled) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { name, studio_name: studioName } }
+        options: { data: { name, studio_name: studioName, referral_code: referralCode || null } }
       });
       if (!error && data?.user) {
         const appUser = appUserFromSupabase(data.user);
         setUser(appUser);
         localStorage.setItem('inkflow_user', JSON.stringify(appUser));
         try {
-          await ensureStudio(email, appUser.name, studioName || appUser.studioName);
+          await ensureStudio(email, appUser.name, studioName || appUser.studioName, referralCode);
         } catch {
           // Ne pas bloquer l'inscription si le studio échoue (ex. table pas encore migrée)
         }

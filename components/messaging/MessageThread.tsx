@@ -133,7 +133,7 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
               <button
                 key={thread.threadId}
                 onClick={() => setSelectedThreadId(thread.threadId)}
-                className="row-clickable w-full text-left px-6 py-4 flex items-center gap-4"
+                className="row-clickable w-full text-left px-6 py-4 min-h-[64px] flex items-center gap-4"
               >
                 <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-bold text-lg">
                   {thread.clientName.charAt(0).toUpperCase()}
@@ -190,6 +190,22 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
       </div>
 
       <div className="p-4 border-t border-[var(--border)] bg-[var(--bg-card)]">
+        <div className="flex flex-wrap gap-2 mb-3">
+          {[
+            'Bonjour, l\'acompte est de 30€. Souhaitez-vous réserver ?',
+            'Votre RDV est confirmé pour le ',
+            'Merci pour votre confiance ! À bientôt.',
+          ].map((template) => (
+            <button
+              key={template}
+              type="button"
+              onClick={() => setNewMessage((prev) => prev ? `${prev} ${template}` : template)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors min-h-[36px]"
+            >
+              {template.slice(0, 30)}…
+            </button>
+          ))}
+        </div>
         <div className="flex gap-2">
           <input
             type="text"
@@ -197,12 +213,12 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
             onChange={e => setNewMessage(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
             placeholder="Écrivez un message..."
-            className="input-dash flex-1 px-4 py-3"
+            className="input-dash flex-1 px-4 py-3 min-h-[48px]"
           />
           <button
             onClick={sendMessage}
             disabled={!newMessage.trim() || sending}
-            className="btn-primary px-5 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary min-h-[48px] px-5 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {sending ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

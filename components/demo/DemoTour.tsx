@@ -32,10 +32,10 @@ interface DemoTourProps {
 const SPOTLIGHT_PADDING = 12;
 const BADGE_SIZE = 28;
 const TOOLTIP_MAX_WIDTH = 380;
-const TOOLTIP_MIN_SPACE = 180;
+const TOOLTIP_MIN_SPACE = 340;
 const MOBILE_BREAKPOINT = 480;
 const TOOLTIP_MOBILE_PADDING = 16;
-const TOOLTIP_MIN_HEIGHT_ESTIMATE = 280;
+const TOOLTIP_MIN_HEIGHT_ESTIMATE = 320;
 const SCROLL_DELAY_MS = 380;
 const TOOLTIP_VISIBLE_DELAY_MS = 380;
 const MASK_TRANSITION = 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
@@ -113,8 +113,9 @@ function getTooltipPosition(
   if (placement === 'bottom') {
     top = rect.y + rect.height + gap;
     arrowPosition = 'top';
-    if (isMobile && top + tooltipH > vh - padding) {
-      top = vh - tooltipH - padding;
+    const maxTop = vh - tooltipH - padding;
+    if (top + tooltipH > vh - padding) {
+      top = Math.max(padding, maxTop);
       arrowPosition = 'top';
     }
   } else if (placement === 'top') {
@@ -135,6 +136,9 @@ function getTooltipPosition(
   }
 
   left = Math.max(padding, Math.min(left, vw - width - padding));
+  /* Clamp top pour éviter que le tooltip soit coupé en bas du viewport */
+  const bottomPadding = padding + 24;
+  top = Math.max(padding, Math.min(top, vh - tooltipH - bottomPadding));
   return { top, left, arrowPosition };
 }
 

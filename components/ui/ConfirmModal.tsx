@@ -55,7 +55,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="flex min-h-full items-center justify-center p-4">
         <div
-          className="relative bg-[var(--bg-card)] rounded-2xl shadow-2xl w-full max-w-md p-6 border border-[var(--border)] animate-slide-up"
+          className="relative bg-[var(--bg-card)] rounded-2xl w-full max-w-md p-6 border border-[var(--border)] animate-slide-up"
           onClick={(e) => e.stopPropagation()}
           role="alertdialog"
           aria-labelledby="confirm-title"

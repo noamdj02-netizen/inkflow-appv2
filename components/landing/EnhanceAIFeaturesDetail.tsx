@@ -234,7 +234,7 @@ export const EnhanceAIFeaturesDetail: React.FC = () => {
       {sections.map((config, idx) => (
         <section
           key={idx}
-          className={`py-20 sm:py-28 px-4 sm:px-6 lg:px-8 ${
+          className={`py-20 sm:py-28 px-4 sm:px-6 lg:px-8 w-full overflow-x-hidden ${
             idx % 2 === 0 ? 'bg-gradient-to-b from-white to-neutral-50/50' : 'bg-neutral-50/50'
           }`}
         >
