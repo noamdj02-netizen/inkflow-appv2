@@ -1,0 +1,72 @@
+---
+description: Conventions InkFlow — React/Next.js SaaS studios de tatouage
+globs: **/*.tsx,**/*.ts
+alwaysApply: true
+---
+
+# Conventions InkFlow — Interfaces SaaS Tatouage
+
+Tu es un expert React/Next.js spécialisé dans les interfaces SaaS pour les studios de tatouage. Respecte scrupuleusement ces conventions :
+
+## Style & UI
+
+- **Tailwind CSS** : arrondis `rounded-2xl` ou `rounded-xl` (éviter `rounded-full` sauf pour avatars/boutons pill)
+- **Mode sombre** : support systématique avec classes `dark:` et variables CSS (`var(--border)`, `var(--text-primary)`, `var(--bg-hover)`)
+- **Contraste** : éviter blanc sur blanc ; privilégier `text-zinc-400` minimum sur fond clair, `text-zinc-200` sur fond sombre
+
+## Icônes & Composants
+
+- **Icônes** : exclusivement `lucide-react` (jamais d'autres librairies)
+- **Feedback** : hook `useToast` pour succès/erreur (`toast.success()`, `toast.error()`)
+
+## État & Typage
+
+- **Hooks** : privilégier `useState`, `useMemo`, `useEffect`, `useCallback`
+- **TypeScript** : typage strict obligatoire ; utiliser les interfaces dans `../../types` ou `../types`
+- **Props** : typer explicitement avec interfaces pour les composants
+
+## Supabase & Persistance
+
+- **Client** : toujours utiliser `supabase` importé de `../../lib/supabase`
+- **studioId** : vérifier la présence de `studioId` avant toute insertion/mise à jour de données studio
+- **Utilitaires** : prioriser les fonctions de `../../lib/supabaseDashboard` (ex: `saveAppointmentToSupabase`)
+- **Mutations** : afficher systématiquement un toast succès/erreur via `useToast` après insert/update
+
+## Formulaires & État
+
+- **État groupé** : `const [form, setForm] = useState({ ... })` pour faciliter la maintenance
+- **Loading** : état `loading` ou `processing` pour désactiver les boutons et éviter les doubles clics
+- **Reset** : `onClose` ou `setShowModal(false)` pour réinitialiser les champs après soumission réussie
+- **Validation** : désactiver le bouton principal si champs obligatoires vides (email, nom, catégorie)
+
+## UX & Accessibilité
+
+- **Feedback tactile** : `active:scale-[0.98]` et `transition-all` sur les éléments cliquables
+- **Modales** : utiliser `<Modal />` de `../ui/Modal` avec `isOpen`, `onClose` et `title`
+
+## Exemples
+
+```tsx
+// ✅ Bon — arrondis, dark, lucide, useToast
+<button className="rounded-xl bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 px-4 py-2">
+  <Copy className="w-5 h-5" />
+</button>
+toast.success('Lien copié !');
+
+// ✅ Bon — variables CSS
+<div className="border border-[var(--border)] bg-white dark:bg-zinc-950" />
+
+// ✅ Bon — Supabase + toast
+if (!studioId) return;
+const { error } = await supabase.from('inkflow_appointments').insert({ ... });
+if (error) { toast.error('Erreur'); return; }
+toast.success('Rendez-vous créé');
+
+// ✅ Bon — formulaire groupé + loading
+const [form, setForm] = useState({ name: '', email: '' });
+const [loading, setLoading] = useState(false);
+<button disabled={loading || !form.email} className="active:scale-[0.98] transition-all">Envoyer</button>
+
+// ✅ Bon — Modal
+<Modal isOpen={show} onClose={() => setShow(false)} title="Nouvelle réservation" />
+```

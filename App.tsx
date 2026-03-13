@@ -33,6 +33,7 @@ const AidePage = lazy(() => import('./pages/AidePage').then(m => ({ default: m.A
 const DemoSandboxPage = lazy(() => import('./pages/DemoSandboxPage').then(m => ({ default: m.DemoSandboxPage })));
 const FeatureDetailPage = lazy(() => import('./pages/features/FeatureDetailPage').then(m => ({ default: m.FeatureDetailPage })));
 const InstagramCallbackPage = lazy(() => import('./pages/InstagramCallbackPage').then(m => ({ default: m.InstagramCallbackPage })));
+const AddToHomeScreenPage = lazy(() => import('./pages/AddToHomeScreenPage').then(m => ({ default: m.AddToHomeScreenPage })));
 
 interface Route {
   path: string | RegExp;
@@ -108,6 +109,7 @@ const Router: React.FC = () => {
     { path: /^\/invite\/([a-zA-Z0-9]+)\/?$/, component: InviteRedirectPage, getProps: (m) => ({ code: m[1] }) },
     { path: '/reset-password', component: ResetPasswordPage },
     { path: '/demo', component: DemoSandboxPage },
+    { path: /^\/installer\/?$/, component: AddToHomeScreenPage },
     { path: /^\/(vue-ensemble|demandes|rendez-vous|galerie-flash|clients|messagerie|portfolio|finance|parametres)\/?$/, component: FeatureDetailPage, getProps: (m) => ({ slug: m[1] }) },
     { path: '/dashboard', component: DashboardPage, requiresAuth: true, needsSupabaseSync: true },
     { path: '/auth/callback', component: AuthCallbackPage },

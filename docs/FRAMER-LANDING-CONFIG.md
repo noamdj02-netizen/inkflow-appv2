@@ -53,7 +53,20 @@ Supabase Auth utilise **localStorage** (et non des cookies) pour stocker la sess
 
 ---
 
-## 5. Mobile : mode app sans barre de tâches
+## 5. Bouton « Installer l'app » sur mobile (écran d'accueil)
+
+Pour permettre aux visiteurs mobiles d'ajouter InkFlow sur leur écran d'accueil, ajoute un bouton visible sur mobile :
+
+1. Dans Framer, crée un bouton (ex. « Installer l'app » ou « Ajouter à l'écran d'accueil »)
+2. **URL** : `https://app.ink-flow.me/installer`
+3. **Affichage** : configure le bouton pour qu'il soit visible uniquement sur mobile (breakpoint Framer) ou place-le dans une section hero visible sur mobile
+4. Au clic, l'utilisateur arrive sur une page dédiée avec les instructions pas à pas pour iPhone (Safari) et Android (Chrome)
+
+**Conseil** : place ce bouton dans le hero ou juste sous le CTA principal sur la vue mobile.
+
+---
+
+## 6. Mobile : mode app sans barre de tâches
 
 Quand l'utilisateur arrive depuis ink-flow.me (Framer) sur la page Connexion de l'app, une bannière « Ajouter à l'écran d'accueil » s'affiche. Pour une expérience plein écran (sans barre d'adresse) :
 
@@ -64,7 +77,7 @@ L'app doit être ajoutée depuis l'URL de l'app (app.ink-flow.me), pas depuis in
 
 ---
 
-## 6. URLs configurées dans le code
+## 7. URLs configurées dans le code
 
 | Constante | Valeur |
 |-----------|--------|

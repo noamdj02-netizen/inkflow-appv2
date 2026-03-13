@@ -20,6 +20,7 @@ https://app.ink-flow.me
 | **Connexion** / **Se connecter** | `https://app.ink-flow.me/login` |
 | **Mon compte** / **Tableau de bord** | `https://app.ink-flow.me/dashboard` |
 | **Démo** | `https://app.ink-flow.me/demo` |
+| **Installer l'app** / **Ajouter à l'écran d'accueil** (mobile) | `https://app.ink-flow.me/installer` |
 
 ---
 
@@ -30,4 +31,7 @@ https://app.ink-flow.me/signup
 https://app.ink-flow.me/login
 https://app.ink-flow.me/dashboard
 https://app.ink-flow.me/demo
+https://app.ink-flow.me/installer
 ```
+
+**Installer l'app (mobile)** : `https://app.ink-flow.me/installer` — page avec instructions pour ajouter InkFlow sur l'écran d'accueil (iPhone & Android).
