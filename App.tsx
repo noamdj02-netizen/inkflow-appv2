@@ -23,7 +23,7 @@ import { ReferralPage } from './pages/ReferralPage';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const PublicStudioPagePro = lazy(() => import('./pages/public/PublicStudioPagePro').then(m => ({ default: m.PublicStudioPagePro })));
-const PublicBookingPagePro = lazy(() => import('./pages/public/PublicBookingPagePro').then(m => ({ default: m.PublicBookingPagePro })));
+const PublicBookingPage = lazy(() => import('./pages/public/PublicBookingPage').then(m => ({ default: m.PublicBookingPage })));
 const ConsentPage = lazy(() => import('./pages/public/ConsentPage').then(m => ({ default: m.ConsentPage })));
 const PublicMessagePage = lazy(() => import('./pages/public/PublicMessagePage').then(m => ({ default: m.PublicMessagePage })));
 const ReservationSuccessPage = lazy(() => import('./pages/public/ReservationSuccessPage').then(m => ({ default: m.ReservationSuccessPage })));
@@ -115,7 +115,7 @@ const Router: React.FC = () => {
     { path: '/auth/update-password', component: UpdatePasswordPage },
     // Vitrine publique : accessible sans connexion (slash final optionnel)
     { path: /^\/studio\/([a-z0-9-]+)\/?$/, component: PublicStudioPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
-    { path: /^\/book\/([a-z0-9-]+)\/?$/, component: PublicBookingPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
+    { path: /^\/book\/([a-z0-9-]+)\/?$/, component: PublicBookingPage, getProps: (m) => ({ studioSlug: m[1] }) },
     { path: /^\/consent\/([a-z0-9_-]+)$/, component: ConsentPage, getProps: (m) => ({ consentId: m[1] }) },
     { path: /^\/messages\/([a-z0-9_.-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) },
     { path: /^\/c\/([a-z0-9_.-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) },
