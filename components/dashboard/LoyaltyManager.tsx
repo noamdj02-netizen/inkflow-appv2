@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Award, Star, Gift, TrendingUp, Settings, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Award, Star, Gift, TrendingUp, Settings, Users, Plus, Pencil, Trash2 } from 'lucide-react';
 import type { LoyaltyEntry, Client, LoyaltyTier } from '../../types';
 
 interface LoyaltyManagerProps {
@@ -49,6 +49,10 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({ entries, clients
   const [draftSettings, setDraftSettings] = useState<LoyaltySettings>(settings || DEFAULT_SETTINGS);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (showSettings) setDraftSettings(settings || DEFAULT_SETTINGS);
+  }, [showSettings, settings]);
+
   const totalPoints = entries.reduce((sum, e) => sum + e.points, 0);
   const totalEarned = entries.reduce((sum, e) => sum + e.totalEarned, 0);
   const tierCounts = entries.reduce<Record<string, number>>((acc, e) => {
@@ -62,7 +66,11 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({ entries, clients
   const saveSettings = () => {
     if (saving) return;
     setSaving(true);
-    onUpdateSettings(draftSettings);
+    const cleaned = {
+      ...draftSettings,
+      rewards: (draftSettings.rewards || []).filter(r => r.name.trim() !== ''),
+    };
+    onUpdateSettings(cleaned);
     setShowSettings(false);
     setTimeout(() => setSaving(false), 400);
   };
@@ -133,24 +141,34 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({ entries, clients
           </div>
         </div>
 
-        <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
-          <h3 className="font-bold mb-4 text-[var(--text-primary)]">Repartition</h3>
+        <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)] shadow-sm">
+          <h3 className="font-bold mb-4 text-[var(--text-primary)] tracking-tight">Répartition</h3>
           <div className="space-y-3">
             {(['platinum', 'gold', 'silver', 'bronze'] as LoyaltyTier[]).map(tier => (
-              <div key={tier} className="flex items-center justify-between">
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${TIER_COLORS[tier]}`}>
+              <div key={tier} className="flex items-center justify-between py-2">
+                <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${TIER_COLORS[tier]}`}>
                   {tier.charAt(0).toUpperCase() + tier.slice(1)}
                 </span>
-                    <span className="font-bold text-sm text-[var(--text-primary)]">{tierCounts[tier] || 0}</span>
+                <span className="font-bold text-sm text-[var(--text-primary)]">{tierCounts[tier] || 0}</span>
               </div>
             ))}
           </div>
 
-          <h3 className="font-bold mt-6 mb-3 text-[var(--text-primary)]">Recompenses disponibles</h3>
+          <div className="flex items-center justify-between mt-6 mb-3">
+            <h3 className="font-bold text-[var(--text-primary)] tracking-tight">Récompenses disponibles</h3>
+            <button
+              type="button"
+              onClick={() => setShowSettings(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Modifier
+            </button>
+          </div>
           <div className="space-y-2">
             {(settings?.rewards || DEFAULT_SETTINGS.rewards).map((reward, i) => (
-              <div key={i} className="flex items-center justify-between text-sm p-3 bg-[var(--bg-card-secondary)] rounded-xl">
-                <span className="text-[var(--text-primary)]">{reward.name}</span>
+              <div key={i} className="flex items-center justify-between text-sm p-3 bg-[var(--bg-card-secondary)] rounded-xl border border-[var(--border)]">
+                <span className="text-[var(--text-primary)] font-medium">{reward.name}</span>
                 <span className="font-bold text-blue-600 dark:text-blue-400">{reward.cost} pts</span>
               </div>
             ))}
@@ -200,6 +218,60 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({ entries, clients
                   </div>
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Récompenses</label>
+                <p className="text-xs text-[var(--text-tertiary)] mb-3">Ajoutez, modifiez ou supprimez les récompenses échangeables contre des points.</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {(draftSettings.rewards || []).map((reward, i) => (
+                    <div key={i} className="flex gap-2 items-center p-2 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border)]">
+                      <input
+                        type="text"
+                        value={reward.name}
+                        onChange={e => {
+                          const next = [...(draftSettings.rewards || [])];
+                          next[i] = { ...next[i], name: e.target.value };
+                          setDraftSettings(p => ({ ...p, rewards: next }));
+                        }}
+                        placeholder="Nom de la récompense"
+                        className="flex-1 min-w-0 px-3 py-2 text-sm border border-[var(--border)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      />
+                      <input
+                        type="number"
+                        value={reward.cost}
+                        onChange={e => {
+                          const next = [...(draftSettings.rewards || [])];
+                          next[i] = { ...next[i], cost: Math.max(0, Number(e.target.value)) };
+                          setDraftSettings(p => ({ ...p, rewards: next }));
+                        }}
+                        min={0}
+                        className="w-20 px-2 py-2 text-sm border border-[var(--border)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      />
+                      <span className="text-xs text-[var(--text-tertiary)] shrink-0">pts</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = (draftSettings.rewards || []).filter((_, j) => j !== i);
+                          setDraftSettings(p => ({ ...p, rewards: next }));
+                        }}
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
+                        aria-label="Supprimer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDraftSettings(p => ({ ...p, rewards: [...(p.rewards || []), { name: '', cost: 100 }] }))}
+                  className="mt-2 w-full py-2.5 rounded-xl border-2 border-dashed border-[var(--border)] text-[var(--text-secondary)] hover:border-blue-500/50 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-500/5 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  Ajouter une récompense
+                </button>
+              </div>
+
               <button onClick={saveSettings} disabled={saving} className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 {saving ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Enregistrement…</> : 'Enregistrer'}
               </button>
