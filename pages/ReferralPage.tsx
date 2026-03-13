@@ -63,6 +63,11 @@ const FAQ_ITEMS = [
 export const ReferralPage: React.FC = () => {
   useAuth();
   const { studioId } = useSecureStudioId();
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', 'light');
+    return () => {};
+  }, []);
   const toast = useToast();
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [friendsInvited, setFriendsInvited] = useState(0);
@@ -142,7 +147,7 @@ export const ReferralPage: React.FC = () => {
   if (loading) {
     return (
       <motion.div
-        className="landing-scroll min-h-screen bg-black flex items-center justify-center"
+        className="landing-scroll min-h-screen bg-neutral-50 flex items-center justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
@@ -153,8 +158,8 @@ export const ReferralPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-          <span className="text-zinc-500">Chargement…</span>
+          <div className="w-10 h-10 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
+          <span className="text-neutral-600">Chargement…</span>
         </motion.div>
       </motion.div>
     );
@@ -162,14 +167,14 @@ export const ReferralPage: React.FC = () => {
 
   return (
     <motion.div
-      className="landing-scroll min-h-screen bg-black"
+      className="landing-scroll min-h-screen bg-neutral-50"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
     >
       {/* Header */}
       <motion.header
-        className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-black/80 backdrop-blur-xl"
+        className="fixed top-0 left-0 right-0 z-50 border-b border-neutral-200 bg-white/95 backdrop-blur-xl"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4, delay: 0.1 }}
@@ -177,14 +182,14 @@ export const ReferralPage: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <motion.a
             href="/dashboard"
-            className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors"
             whileHover={{ x: -2 }}
             whileTap={{ scale: 0.98 }}
           >
             <ArrowLeft className="w-5 h-5" strokeWidth={1.5} />
             <span className="font-medium">Retour au dashboard</span>
           </motion.a>
-          <Logo size="sm" className="rounded-lg opacity-90" />
+          <Logo size="sm" className="rounded-lg" />
         </div>
       </motion.header>
 
@@ -201,21 +206,21 @@ export const ReferralPage: React.FC = () => {
               <motion.span
                 variants={fadeUp}
                 custom={0}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5 text-zinc-300 text-sm font-medium"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-600 text-sm font-medium"
               >
                 ✨ Programme Partenaire
               </motion.span>
               <motion.h1
                 variants={fadeUp}
                 custom={1}
-                className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight leading-[1.1]"
+                className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-neutral-900 tracking-tight leading-[1.1]"
               >
                 Offrez 1 mois, Gagnez 1 mois.
               </motion.h1>
               <motion.p
                 variants={fadeUp}
                 custom={2}
-                className="text-lg sm:text-xl text-zinc-400 max-w-xl leading-relaxed"
+                className="text-lg sm:text-xl text-neutral-600 max-w-xl leading-relaxed"
               >
                 Aidez vos confrères à reprendre le contrôle de leur studio. Partagez InkFlow et
                 gagnez des mois d&apos;abonnement gratuit. Sans limite.
@@ -225,12 +230,12 @@ export const ReferralPage: React.FC = () => {
                 custom={3}
                 className="flex flex-wrap gap-4 pt-2"
               >
-                <div className="flex items-center gap-2 text-zinc-500">
-                  <Gift className="w-5 h-5 text-emerald-400" strokeWidth={1.5} />
+                <div className="flex items-center gap-2 text-neutral-600">
+                  <Gift className="w-5 h-5 text-emerald-600" strokeWidth={1.5} />
                   <span className="text-sm">1 mois offert par filleul</span>
                 </div>
-                <div className="flex items-center gap-2 text-zinc-500">
-                  <Zap className="w-5 h-5 text-amber-400" strokeWidth={1.5} />
+                <div className="flex items-center gap-2 text-neutral-600">
+                  <Zap className="w-5 h-5 text-amber-600" strokeWidth={1.5} />
                   <span className="text-sm">Activation immédiate</span>
                 </div>
               </motion.div>
@@ -242,7 +247,7 @@ export const ReferralPage: React.FC = () => {
               transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
               <motion.div
-                className="relative rounded-2xl overflow-hidden border border-white/5 bg-zinc-900 aspect-[4/3] sm:aspect-square shadow-2xl"
+                className="relative rounded-2xl overflow-hidden border border-neutral-200 bg-white aspect-[4/3] sm:aspect-square shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
                 whileHover={{ scale: 1.02 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 25 }}
               >
@@ -261,7 +266,7 @@ export const ReferralPage: React.FC = () => {
                 />
               </motion.div>
               <div
-                className="absolute -z-10 -inset-4 bg-emerald-500/10 blur-3xl rounded-3xl"
+                className="absolute -z-10 -inset-4 bg-emerald-500/5 blur-3xl rounded-3xl"
                 aria-hidden
               />
             </motion.div>
@@ -278,7 +283,7 @@ export const ReferralPage: React.FC = () => {
         >
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <motion.div
-              className="rounded-2xl border border-white/5 bg-zinc-900/80 p-6 text-center"
+              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6 text-center"
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -290,7 +295,7 @@ export const ReferralPage: React.FC = () => {
               <p className="text-sm text-zinc-400 mt-1">Amis invités</p>
             </motion.div>
             <motion.div
-              className="rounded-2xl border border-white/5 bg-zinc-900/80 p-6 text-center"
+              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6 text-center"
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -302,7 +307,7 @@ export const ReferralPage: React.FC = () => {
               <p className="text-sm text-zinc-400 mt-1">Mois gratuits gagnés</p>
             </motion.div>
             <motion.div
-              className="rounded-2xl border border-white/5 bg-zinc-900/80 p-6 text-center col-span-2 lg:col-span-1"
+              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6 text-center col-span-2 lg:col-span-1"
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -315,15 +320,15 @@ export const ReferralPage: React.FC = () => {
               <p className="text-sm text-zinc-400 mt-1">Économies estimées</p>
             </motion.div>
             <motion.div
-              className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6 text-center col-span-2 lg:col-span-1"
+              className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center col-span-2 lg:col-span-1"
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.18 }}
               whileHover={{ scale: 1.02 }}
             >
-              <p className="text-sm font-medium text-emerald-400">Votre code</p>
-              <p className="text-xl font-bold text-white mt-1 tracking-wider">
+              <p className="text-sm font-medium text-emerald-700">Votre code</p>
+              <p className="text-xl font-bold text-neutral-900 mt-1 tracking-wider">
                 {referralCode ?? '—'}
               </p>
             </motion.div>
@@ -339,7 +344,7 @@ export const ReferralPage: React.FC = () => {
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
           <motion.div
-            className="rounded-2xl border border-white/5 bg-zinc-900 p-6 sm:p-8 space-y-6 hover:border-white/10 transition-colors"
+            className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6 sm:p-8 space-y-6 hover:border-neutral-700 transition-colors"
           >
             <div>
               <h2 className="text-lg font-semibold text-white">Votre lien de parrainage</h2>
@@ -380,7 +385,7 @@ export const ReferralPage: React.FC = () => {
               <div className="flex flex-wrap gap-3">
                 <motion.button
                   onClick={shareWhatsApp}
-                  className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 border border-white/5 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+                  className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/10 border border-white/20 text-zinc-300 hover:bg-white/20 hover:text-white transition-colors"
                   title="Partager sur WhatsApp"
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.95 }}
@@ -389,7 +394,7 @@ export const ReferralPage: React.FC = () => {
                 </motion.button>
                 <motion.button
                   onClick={shareInstagram}
-                  className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 border border-white/5 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+                  className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/10 border border-white/20 text-zinc-300 hover:bg-white/20 hover:text-white transition-colors"
                   title="Copier pour Instagram"
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.95 }}
@@ -398,7 +403,7 @@ export const ReferralPage: React.FC = () => {
                 </motion.button>
                 <motion.button
                   onClick={shareEmail}
-                  className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 border border-white/5 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+                  className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/10 border border-white/20 text-zinc-300 hover:bg-white/20 hover:text-white transition-colors"
                   title="Partager par email"
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.95 }}
@@ -419,7 +424,7 @@ export const ReferralPage: React.FC = () => {
           transition={{ duration: 0.5 }}
         >
           <motion.h2
-            className="text-3xl sm:text-4xl font-bold text-white text-center mb-4"
+            className="text-3xl sm:text-4xl font-extrabold text-neutral-900 text-center mb-4"
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -427,7 +432,7 @@ export const ReferralPage: React.FC = () => {
             Simple. Rapide. Sans limite.
           </motion.h2>
           <motion.p
-            className="text-zinc-400 text-center mb-16 max-w-2xl mx-auto"
+            className="text-neutral-600 text-center mb-16 max-w-2xl mx-auto"
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -443,7 +448,7 @@ export const ReferralPage: React.FC = () => {
             ].map((card, i) => (
             <motion.div
               key={i}
-              className="rounded-2xl border border-white/5 bg-zinc-900 overflow-hidden hover:border-white/10 transition-colors"
+              className="rounded-2xl border border-neutral-700 bg-neutral-900 overflow-hidden hover:border-neutral-600 transition-colors"
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -473,7 +478,7 @@ export const ReferralPage: React.FC = () => {
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.5 }}
         >
-          <div className="rounded-2xl border border-white/5 bg-zinc-900 p-8 sm:p-12 hover:border-white/10 transition-colors">
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-8 sm:p-12 hover:border-neutral-700 transition-colors">
             <h2 className="text-2xl font-bold text-white mb-6">
               Ce que votre confrère gagne en s&apos;inscrivant
             </h2>
@@ -535,7 +540,7 @@ export const ReferralPage: React.FC = () => {
           transition={{ duration: 0.5 }}
         >
           <motion.h2
-            className="text-2xl font-bold text-white text-center mb-12"
+            className="text-2xl font-bold text-neutral-900 text-center mb-12"
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -544,7 +549,7 @@ export const ReferralPage: React.FC = () => {
           </motion.h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <motion.div
-              className="rounded-2xl border border-white/5 bg-zinc-900 p-8 flex flex-col sm:flex-row gap-6"
+              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-8 flex flex-col sm:flex-row gap-6"
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -569,7 +574,7 @@ export const ReferralPage: React.FC = () => {
               </div>
             </motion.div>
             <motion.div
-              className="rounded-2xl border border-white/5 bg-zinc-900 p-8 flex flex-col sm:flex-row gap-6"
+              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-8 flex flex-col sm:flex-row gap-6"
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -604,7 +609,7 @@ export const ReferralPage: React.FC = () => {
           transition={{ duration: 0.5 }}
         >
           <motion.h2
-            className="text-2xl font-bold text-white text-center mb-12"
+            className="text-2xl font-bold text-neutral-900 text-center mb-12"
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -615,7 +620,7 @@ export const ReferralPage: React.FC = () => {
             {FAQ_ITEMS.map((item, i) => (
               <motion.div
                 key={i}
-                className="rounded-xl border border-white/5 bg-zinc-900 overflow-hidden"
+                className="rounded-xl border border-neutral-800 bg-neutral-900 overflow-hidden"
                 initial={{ opacity: 0, y: 12 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -662,7 +667,7 @@ export const ReferralPage: React.FC = () => {
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.5 }}
         >
-          <div className="rounded-2xl border border-white/5 bg-zinc-900 p-8 sm:p-12 text-center hover:border-white/10 transition-colors">
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-8 sm:p-12 text-center hover:border-neutral-700 transition-colors">
             <h2 className="text-2xl font-bold text-white mb-4">
               Prêt à partager ?
             </h2>
@@ -684,7 +689,7 @@ export const ReferralPage: React.FC = () => {
 
       {/* Footer */}
       <motion.footer
-        className="border-t border-white/5 py-6"
+        className="border-t border-neutral-200 bg-white py-6"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
@@ -692,11 +697,11 @@ export const ReferralPage: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <a
             href="/dashboard"
-            className="text-zinc-500 hover:text-white text-sm font-medium transition-colors"
+            className="text-neutral-600 hover:text-neutral-900 text-sm font-medium transition-colors"
           >
             ← Retour au dashboard
           </a>
-          <span className="text-zinc-600 text-sm">
+          <span className="text-neutral-500 text-sm">
             Programme Partenaire InkFlow • Sans engagement
           </span>
         </div>
