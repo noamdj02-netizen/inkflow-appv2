@@ -109,7 +109,7 @@ const Router: React.FC = () => {
     { path: '/signup', component: SignupPage },
     { path: /^\/invite\/([a-zA-Z0-9]+)\/?$/, component: InviteRedirectPage, getProps: (m) => ({ code: m[1] }) },
     { path: '/reset-password', component: ResetPasswordPage },
-    { path: '/demo', component: DemoSandboxPage },
+    { path: '/demo', component: DashboardDemoPage },
     { path: '/dashboard-demo', component: DashboardDemoPage },
     { path: /^\/installer\/?$/, component: AddToHomeScreenPage },
     { path: /^\/(vue-ensemble|demandes|rendez-vous|galerie-flash|clients|messagerie|portfolio|finance|parametres)\/?$/, component: FeatureDetailPage, getProps: (m) => ({ slug: m[1] }) },
