@@ -1,0 +1,114 @@
+/**
+ * Thèmes de la page vitrine — gratuit et premium.
+ * Les thèmes premium nécessitent un abonnement Pro ou supérieur.
+ */
+export interface VitrineTheme {
+  id: string;
+  name: string;
+  premium: boolean;
+  description: string;
+  /** Classes Tailwind pour le conteneur principal (bg, text) */
+  containerClasses: string;
+  /** Couleur accent (CTA, liens actifs) */
+  accentColor: string;
+  /** Mini-aperçu : couleurs pour simuler la page dans le sélecteur */
+  preview: {
+    bg: string;
+    card: string;
+    text: string;
+    accent: string;
+  };
+}
+
+export const VITRINE_THEMES: VitrineTheme[] = [
+  {
+    id: 'classic',
+    name: 'Classic Linktree',
+    premium: false,
+    description: 'Une colonne centrée, style épuré',
+    containerClasses: 'bg-[#0a0a0b] text-neutral-100',
+    accentColor: '#7c3aed',
+    preview: {
+      bg: 'bg-[#0a0a0b]',
+      card: 'bg-neutral-900',
+      text: 'text-neutral-100',
+      accent: 'bg-violet-500',
+    },
+  },
+  {
+    id: 'split',
+    name: 'Split Layout',
+    premium: false,
+    description: '2 colonnes : profil fixe + contenu',
+    containerClasses: 'bg-neutral-950 text-neutral-100',
+    accentColor: '#7c3aed',
+    preview: {
+      bg: 'bg-neutral-950',
+      card: 'bg-neutral-900',
+      text: 'text-neutral-100',
+      accent: 'bg-violet-500',
+    },
+  },
+  {
+    id: 'light',
+    name: 'Minimalist Light',
+    premium: false,
+    description: 'Blanc épuré, élégant et minimaliste',
+    containerClasses: 'bg-[#fafaf9] text-neutral-900',
+    accentColor: '#7c5cfc',
+    preview: {
+      bg: 'bg-[#fafaf9]',
+      card: 'bg-white',
+      text: 'text-neutral-900',
+      accent: 'bg-violet-500',
+    },
+  },
+  {
+    id: 'dark',
+    name: 'Dark Ink',
+    premium: false,
+    description: 'Noir profond, style tatouage',
+    containerClasses: 'bg-neutral-950 text-white',
+    accentColor: '#a78bfa',
+    preview: {
+      bg: 'bg-neutral-950',
+      card: 'bg-neutral-900',
+      text: 'text-white',
+      accent: 'bg-violet-400',
+    },
+  },
+  {
+    id: 'vintage',
+    name: 'Vintage Flash',
+    premium: true,
+    description: 'Papier texturé beige, rétro',
+    containerClasses: 'bg-[#F5F5DC] text-amber-950 font-serif',
+    accentColor: '#b45309',
+    preview: {
+      bg: 'bg-[#F5F5DC]',
+      card: 'bg-amber-50',
+      text: 'text-amber-950',
+      accent: 'bg-amber-600',
+    },
+  },
+  {
+    id: 'neon',
+    name: 'Cyber Neon',
+    premium: true,
+    description: 'Sombre avec accents violets et verts',
+    containerClasses: 'bg-slate-900 text-purple-400',
+    accentColor: '#22d3ee',
+    preview: {
+      bg: 'bg-slate-900',
+      card: 'bg-slate-800',
+      text: 'text-purple-400',
+      accent: 'bg-cyan-400',
+    },
+  },
+];
+
+export const DEFAULT_VITRINE_THEME_ID = 'light';
+
+export function getVitrineTheme(id: string): VitrineTheme | undefined {
+  return VITRINE_THEMES.find((t) => t.id === id);
+}

@@ -40,7 +40,7 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
       artists: 3,
       clients_crm: 300,
     },
-    features: ['galerie_flash', 'app_mobile', 'multi_calendriers', 'stats_avancees'],
+    features: ['galerie_flash', 'app_mobile', 'multi_calendriers', 'stats_avancees', 'themes_premium'],
   },
   studio: {
     id: 'studio',
@@ -56,6 +56,7 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
       'multi_calendriers',
       'stats_avancees',
       'api_access',
+      'themes_premium',
     ],
   },
   enterprise: {
@@ -73,6 +74,7 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
       'stats_avancees',
       'api_access',
       'white_label',
+      'themes_premium',
     ],
   },
 };

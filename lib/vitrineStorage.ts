@@ -1,6 +1,6 @@
 import type { VitrineData } from '../types/vitrine';
 import { defaultVitrineData } from './vitrineStorageDefault';
-import { getVitrineDataFromSupabase, saveVitrineDataToSupabase, getVitrineDataBySlugFromSupabase, ensureStudio, getStudioId } from './supabaseDashboard';
+import { getVitrineDataFromSupabase, saveVitrineDataToSupabase, getVitrineDataBySlugFromSupabase, getStudioPublicBySlug, ensureStudio, getStudioId } from './supabaseDashboard';
 
 const STORAGE_PREFIX = 'inkflow-vitrine-';
 
@@ -69,8 +69,17 @@ export async function saveVitrineDataAsync(slug: string, data: VitrineData, user
 
 /** Charge les données vitrine par slug depuis Supabase (page publique sans auth). Si le même navigateur a des données en localStorage pour ce slug, on les utilise pour afficher les dernières modifs (ex. après un échec de sync). */
 export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineData> {
-  // Vitrine démo : toujours retourner les données fraîches (images locales, pas de cache)
-  if (slug === 'demo') return defaultVitrineData(slug);
+  // Vitrine démo : données fraîches ; ?theme=dark|neon|vintage permet de tester les thèmes
+  if (slug === 'demo') {
+    const data = defaultVitrineData(slug);
+    if (typeof window !== 'undefined') {
+      const theme = new URLSearchParams(window.location.search).get('theme');
+      if (theme && ['dark', 'neon', 'vintage', 'light'].includes(theme)) {
+        return { ...data, theme };
+      }
+    }
+    return data;
+  }
   const defaultData = defaultVitrineData(slug);
   const key = `${STORAGE_PREFIX}${slug}`;
   const localRaw = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
@@ -93,7 +102,8 @@ export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineDa
     // Préférer le draft local (même navigateur) pour que les photos modifiées s'affichent après un échec de sync
     if (localRaw) {
       try {
-        return { ...defaultData, ...(JSON.parse(localRaw) as object), slug } as VitrineData;
+        const localData = { ...defaultData, ...(JSON.parse(localRaw) as object), slug } as VitrineData;
+        return { ...localData, theme: fromDb.theme ?? localData.theme };
       } catch {
         return fromDb;
       }

@@ -267,6 +267,33 @@ export async function sendAftercareEmail(params: SendAftercareEmailParams): Prom
   }
 }
 
+export interface SendReferralNotificationParams {
+  referrerId: string;
+  refereeStudioName: string;
+}
+
+/**
+ * Envoie au parrain un email de félicitations quand un studio s'inscrit via son lien.
+ * Rappelle qu'il gagne 1 mois gratuit.
+ * Non bloquant : en cas d'erreur (ex. Resend non configuré), on ne remonte pas.
+ */
+export async function sendReferralNotification(params: SendReferralNotificationParams): Promise<void> {
+  try {
+    const body = {
+      referrerId: params.referrerId,
+      refereeStudioName: sanitizeText(params.refereeStudioName, MAX_NAME_LENGTH) ?? 'Un studio',
+    };
+    const { error } = await supabase.functions.invoke('send-referral-notification', { body });
+    if (import.meta.env.DEV && error) {
+      console.warn('[InkFlow] send-referral-notification:', error.message);
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('[InkFlow] send-referral-notification error:', err);
+    }
+  }
+}
+
 /**
  * Notifie le studio par email qu'un client a envoyé un message.
  * Non bloquant : en cas d'erreur, on ne remonte pas.

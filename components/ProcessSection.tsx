@@ -191,7 +191,7 @@ export const ProcessSection: React.FC = () => {
               {t('process.cta1')}
             </motion.a>
             <a
-              href="/demo"
+              href="/dashboard-demo"
               className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl border-2 border-neutral-300 bg-white text-neutral-800 font-semibold text-base hover:border-neutral-400 hover:bg-neutral-50 transition-all duration-300"
             >
               {t('process.cta2')}

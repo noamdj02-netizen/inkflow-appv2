@@ -42,7 +42,7 @@ interface AuthContextType {
   authLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
-  signup: (email: string, password: string, name: string, studioName: string, referralCode?: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, studioName: string, referralCode?: string) => Promise<{ needsEmailConfirmation: boolean }>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   isAuthenticated: boolean;
@@ -179,7 +179,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('inkflow_user', JSON.stringify(mockUser));
   }, [isSupabaseAuthEnabled]);
 
-  const signup = useCallback(async (email: string, password: string, name: string, studioName: string, referralCode?: string) => {
+  const signup = useCallback(async (email: string, password: string, name: string, studioName: string, referralCode?: string): Promise<{ needsEmailConfirmation: boolean }> => {
     if (isSupabaseAuthEnabled) {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -187,15 +187,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         options: { data: { name, studio_name: studioName, referral_code: referralCode || null } }
       });
       if (!error && data?.user) {
-        const appUser = appUserFromSupabase(data.user);
-        setUser(appUser);
-        localStorage.setItem('inkflow_user', JSON.stringify(appUser));
-        try {
-          await ensureStudio(email, appUser.name, studioName || appUser.studioName, referralCode);
-        } catch {
-          // Ne pas bloquer l'inscription si le studio échoue (ex. table pas encore migrée)
+        const needsEmailConfirmation = !data.session;
+        if (needsEmailConfirmation) {
+          // Confirmation email requise : la session du parrain (ou autre) peut encore être active.
+          // On se déconnecte pour éviter d'afficher le dashboard du mauvais utilisateur.
+          await supabase.auth.signOut();
+          setUser(null);
+          localStorage.removeItem('inkflow_user');
+          // Le studio sera créé à la première connexion (AuthCallbackPage) avec le referral_code dans user_metadata
+        } else {
+          const appUser = appUserFromSupabase(data.user);
+          setUser(appUser);
+          localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+          try {
+            await ensureStudio(email, appUser.name, studioName || appUser.studioName, referralCode);
+          } catch {
+            // Ne pas bloquer l'inscription si le studio échoue (ex. table pas encore migrée)
+          }
         }
-        return;
+        return { needsEmailConfirmation };
       }
     }
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -208,6 +218,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     setUser(newUser);
     localStorage.setItem('inkflow_user', JSON.stringify(newUser));
+    return { needsEmailConfirmation: false };
   }, [isSupabaseAuthEnabled]);
 
   const logout = useCallback(() => {

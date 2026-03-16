@@ -25,6 +25,7 @@
     "@fontsource/inter": "^5.2.8",
     "@fontsource/playfair-display": "^5.2.8",
     "@fontsource/plus-jakarta-sans": "^5.2.8",
+    "@fontsource/syne": "^5.2.7",
     "@hookform/resolvers": "^5.2.2",
     "@react-email/components": "^0.0.29",
     "@sentry/nextjs": "^10.42.0",

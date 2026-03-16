@@ -39,6 +39,14 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    if (!STRIPE_SECRET_KEY) {
+      console.error("STRIPE_SECRET_KEY non configurée");
+      return new Response(
+        JSON.stringify({ error: "Configuration paiement incomplète" }),
+        { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const payload: SubscriptionPayload = await req.json();
 
     if (!payload.studioId || !payload.email || !payload.plan) {
@@ -50,10 +58,29 @@ Deno.serve(async (req: Request) => {
 
     const priceId = PRICE_IDS[payload.plan]?.[payload.interval || "monthly"];
     if (!priceId) {
+      console.error(`Prix non configuré pour plan=${payload.plan} interval=${payload.interval}`);
       return new Response(
-        JSON.stringify({ error: "Invalid plan or interval, or price not configured" }),
+        JSON.stringify({ error: "Plan ou intervalle invalide, ou prix non configuré" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: studioExists } = await supabase
+      .from("inkflow_studios")
+      .select("id, email")
+      .eq("id", payload.studioId)
+      .single();
+
+    if (!studioExists) {
+      return new Response(
+        JSON.stringify({ error: "Studio introuvable" }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (studioExists.email !== payload.email) {
+      console.warn(`Email mismatch: studio=${studioExists.email} payload=${payload.email}`);
     }
 
     const subscriptionId = `sub_${Date.now()}`;
@@ -93,7 +120,6 @@ Deno.serve(async (req: Request) => {
 
     const session = await stripeRes.json();
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     await supabase.from("inkflow_subscriptions").upsert({
       id: subscriptionId,
       studio_id: payload.studioId,

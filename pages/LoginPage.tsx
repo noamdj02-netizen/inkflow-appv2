@@ -1,10 +1,20 @@
-import React from 'react';
-import { ArrowLeft } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft, Mail } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { LANDING_URL } from '../lib/urls';
 
 export const LoginPage: React.FC = () => {
+  const [checkEmailMessage, setCheckEmailMessage] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('message') === 'check-email') {
+      setCheckEmailMessage(true);
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
+
   return (
     <div className="landing-scroll bg-zinc-50 dark:bg-black flex flex-col min-h-screen">
       <header className="p-4 sm:p-6 safe-top">
@@ -33,6 +43,19 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 shadow-sm">
+            {checkEmailMessage && (
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 mb-6">
+                <Mail className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                    Compte créé ! Vérifiez votre boîte mail.
+                  </p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">
+                    Cliquez sur le lien dans l&apos;email pour activer votre compte, puis connectez-vous ici.
+                  </p>
+                </div>
+              </div>
+            )}
             <LoginForm />
           </div>
 

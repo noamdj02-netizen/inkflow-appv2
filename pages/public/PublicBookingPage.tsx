@@ -3,11 +3,13 @@
  * Tunnel de conversion Mobile-First, Light Mode, optimisé pour le paiement Stripe.
  */
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, Lock, Image, ChevronLeft, ChevronRight, CreditCard, Check } from 'lucide-react';
+import { ArrowLeft, User, Lock, Image, ChevronLeft, ChevronRight, CreditCard, Check, AlertCircle } from 'lucide-react';
 import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
 import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 import { toLocalDateString } from '../../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS } from '../../lib/studioAvailability';
+import { createCheckoutSession } from '../../lib/stripeClient';
+import { supabase } from '../../lib/supabase';
 
 const supabaseEnabled = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
@@ -104,26 +106,91 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     e.target.value = '';
   };
 
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentVerified, setPaymentVerified] = useState<boolean | null>(null);
+
   const handlePay = async () => {
     if (!form.firstName || !form.lastName || !form.email || !form.phone || !form.selectedDate || !form.selectedTime) return;
+    if (!studioId || studioId === 'loading') return;
+    
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1800));
-    setIsSubmitting(false);
-    window.location.href = `/book/${studioSlug}?payment=success`;
+    setPaymentError(null);
+    
+    try {
+      const appointmentId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      const clientName = `${form.firstName} ${form.lastName}`;
+      
+      const result = await createCheckoutSession({
+        studioId: studioId,
+        studioSlug: studioSlug,
+        appointmentId,
+        amount: DEPOSIT_AMOUNT * 100,
+        clientName,
+        clientEmail: form.email,
+        serviceName: form.project || 'Réservation tatouage',
+        type: 'deposit',
+      });
+      
+      if ('error' in result) {
+        setPaymentError(result.error);
+        setIsSubmitting(false);
+        return;
+      }
+      
+      window.location.href = result.url;
+    } catch (err) {
+      setPaymentError('Erreur lors de la création du paiement. Veuillez réessayer.');
+      setIsSubmitting(false);
+    }
   };
 
   const canPay = form.firstName && form.lastName && form.email && form.phone && form.selectedDate && form.selectedTime;
 
-  const paymentStatus = (() => {
-    if (typeof window === 'undefined') return null;
-    const p = new URLSearchParams(window.location.search).get('payment');
-    if (p === 'success') return 'success';
-    return null;
-  })();
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    
+    if (!sessionId) {
+      setPaymentVerified(null);
+      return;
+    }
+    
+    const verifyPayment = async () => {
+      try {
+        const baseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '') || '';
+        const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+        
+        if (!baseUrl || !key) {
+          setPaymentVerified(false);
+          setPaymentError('Configuration Supabase manquante.');
+          return;
+        }
+        
+        const res = await fetch(`${baseUrl}/functions/v1/get-payment-session?session_id=${sessionId}`, {
+          headers: { Authorization: `Bearer ${key}` },
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok || data.error) {
+          setPaymentVerified(false);
+          setPaymentError(data.error || 'Le paiement n\'a pas pu être vérifié.');
+          return;
+        }
+        
+        setPaymentVerified(true);
+      } catch {
+        setPaymentVerified(false);
+        setPaymentError('Erreur de vérification du paiement.');
+      }
+    };
+    
+    verifyPayment();
+  }, []);
 
-  if (paymentStatus === 'success') {
+  if (paymentVerified === true) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-6">
+      <div className="landing-scroll min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-6">
         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-6">
           <Check className="w-8 h-8 text-emerald-600" strokeWidth={2} />
         </div>
@@ -140,10 +207,30 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
       </div>
     );
   }
+  
+  if (paymentVerified === false && new URLSearchParams(window.location.search).has('session_id')) {
+    return (
+      <div className="landing-scroll min-h-screen bg-zinc-50 flex flex-col items-center justify-center p-6">
+        <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-6">
+          <AlertCircle className="w-8 h-8 text-amber-600" strokeWidth={2} />
+        </div>
+        <h2 className="text-xl font-bold text-zinc-900 mb-2">Vérification en cours</h2>
+        <p className="text-zinc-500 text-center text-sm mb-8 max-w-xs">
+          {paymentError || 'Nous vérifions votre paiement. Si vous avez été débité, votre réservation sera confirmée sous peu.'}
+        </p>
+        <a
+          href={`/studio/${studioSlug}`}
+          className="w-full max-w-xs h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors"
+        >
+          Retour au studio
+        </a>
+      </div>
+    );
+  }
 
   if (studioId === 'loading') {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="landing-scroll min-h-screen bg-white flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
       </div>
     );
@@ -151,7 +238,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
   if (supabaseEnabled && studioId === null) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="landing-scroll min-h-screen bg-white flex items-center justify-center p-4">
         <p className="text-zinc-600">Studio introuvable.</p>
       </div>
     );
@@ -160,7 +247,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
   const studio = studioInfo ?? { name: studioSlug, avatar: '' };
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="landing-scroll min-h-screen bg-zinc-50">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-zinc-100 safe-top">
         <div className="max-w-md mx-auto px-4 py-3">
@@ -370,6 +457,12 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             <span className="text-sm font-medium text-zinc-500">Acompte requis</span>
             <span className="text-xl font-bold text-zinc-900">{DEPOSIT_AMOUNT}€</span>
           </div>
+          {paymentError && (
+            <div className="mb-3 p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>{paymentError}</span>
+            </div>
+          )}
           <button
             onClick={handlePay}
             disabled={!canPay || isSubmitting}
@@ -382,7 +475,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             {isSubmitting ? (
               <>
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Traitement en cours...
+                Redirection vers Stripe...
               </>
             ) : (
               <>

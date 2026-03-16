@@ -6,6 +6,9 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
 
+const MIN_AMOUNT_EUR = 1;
+const MAX_AMOUNT_EUR = 10000;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -13,10 +16,8 @@ const corsHeaders = {
 
 interface CheckoutPayload {
   studioId: string;
-  /** Slug public du studio (ex: mon-studio). Si fourni, utilisé pour success_url/cancel_url au lieu de studioId. */
   studioSlug?: string;
   appointmentId: string;
-  /** ID du flash (vitrine) — propagé dans metadata pour le webhook (mise à jour available=false). */
   flashId?: string;
   amount: number;
   clientName: string;
@@ -31,12 +32,41 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    if (!STRIPE_SECRET_KEY) {
+      console.error("STRIPE_SECRET_KEY non configurée");
+      return new Response(
+        JSON.stringify({ error: "Configuration paiement incomplète" }),
+        { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const payload: CheckoutPayload = await req.json();
 
     if (!payload.studioId || !payload.amount || !payload.clientEmail) {
       return new Response(
         JSON.stringify({ error: "studioId, amount et clientEmail sont requis." }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (typeof payload.amount !== "number" || payload.amount < MIN_AMOUNT_EUR || payload.amount > MAX_AMOUNT_EUR) {
+      return new Response(
+        JSON.stringify({ error: `Le montant doit être entre ${MIN_AMOUNT_EUR}€ et ${MAX_AMOUNT_EUR}€` }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: studioExists } = await supabase
+      .from("inkflow_studios")
+      .select("id")
+      .eq("id", payload.studioId)
+      .single();
+
+    if (!studioExists) {
+      return new Response(
+        JSON.stringify({ error: "Studio introuvable" }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
@@ -87,7 +117,6 @@ Deno.serve(async (req: Request) => {
 
     const session = await stripeRes.json();
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     await supabase.from("inkflow_payments").insert({
       id: `pay_${Date.now()}`,
       studio_id: payload.studioId,
@@ -109,8 +138,8 @@ Deno.serve(async (req: Request) => {
     const message = err instanceof Error ? err.message : String(err);
     console.error("Edge function error:", err);
     return new Response(
-      JSON.stringify({ error: message || "Erreur interne. Vérifiez les secrets (STRIPE_SECRET_KEY, SITE_URL) et les logs Supabase." }),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      JSON.stringify({ error: "Erreur lors de la création du paiement" }),
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 });

@@ -35,7 +35,9 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
     try {
       const data = await getBookingsFromSupabase(studioId);
       setBookings(data);
-    } catch {
+    } catch (err) {
+      console.error('[useIncomingBookings] load error:', err);
+      toast.error('Impossible de charger les demandes de réservation');
       setBookings([]);
     } finally {
       setLoading(false);

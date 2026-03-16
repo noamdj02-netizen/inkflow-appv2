@@ -176,31 +176,60 @@
       .splash-screen {
         position: fixed; inset: 0; z-index: 99999;
         background: #000000; display: flex; align-items: center; justify-content: center;
-        transition: opacity 0.3s ease;
+        transition: opacity 0.4s ease;
         isolation: isolate;
       }
       .splash-screen.hidden { opacity: 0; pointer-events: none; }
-      .splash-content { text-align: center; padding: 0 20px; }
+      .splash-content { text-align: center; padding: 0 20px; position: relative; }
+      .splash-logo-wrapper {
+        position: relative;
+        width: 120px; height: 120px; margin: 0 auto;
+      }
+      .splash-glow {
+        position: absolute; inset: -40px;
+        background: radial-gradient(circle, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.15) 30%, rgba(255,255,255,0) 70%);
+        animation: splash-pulse 2s ease-in-out infinite;
+        border-radius: 50%;
+      }
+      .splash-glow-inner {
+        position: absolute; inset: -20px;
+        background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 60%);
+        animation: splash-pulse 2s ease-in-out infinite 0.3s;
+        border-radius: 50%;
+      }
       .splash-logo {
-        width: 80px; height: 80px; margin: 0 auto;
+        position: relative; z-index: 1;
+        width: 120px; height: 120px;
         display: block; object-fit: contain;
-        border-radius: 20px;
+        animation: splash-logo-breathe 2.5s ease-in-out infinite;
+      }
+      @keyframes splash-pulse {
+        0%, 100% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.15); opacity: 1; }
+      }
+      @keyframes splash-logo-breathe {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.03); }
       }
       .splash-loader {
-        width: 200px; height: 4px; margin: 20px auto 0; background: rgba(255,255,255,0.15); border-radius: 4px; overflow: hidden;
+        width: 180px; height: 3px; margin: 32px auto 0; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;
       }
       .splash-loader::after {
-        content: ''; display: block; width: 40%; height: 100%; background: linear-gradient(90deg, #fff 0%, rgba(251,191,36,0.9) 100%); border-radius: 4px;
-        animation: splash-load 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        content: ''; display: block; width: 35%; height: 100%; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.9) 50%, transparent 100%); border-radius: 4px;
+        animation: splash-load 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
       }
-      @keyframes splash-load { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+      @keyframes splash-load { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
     </style>
 </head>
   <body>
     <!-- Critical LCP content: visible before React loads (fixes NO_LCP, FCP) -->
     <div id="splash" class="splash-screen">
       <div class="splash-content">
-        <img src="/icon.svg" alt="InkFlow" class="splash-logo" width="80" height="80" fetchpriority="high" />
+        <div class="splash-logo-wrapper">
+          <div class="splash-glow"></div>
+          <div class="splash-glow-inner"></div>
+          <img src="/logo-inkflow.png" alt="InkFlow" class="splash-logo" width="120" height="120" fetchpriority="high" />
+        </div>
         <div class="splash-loader"></div>
       </div>
     </div>

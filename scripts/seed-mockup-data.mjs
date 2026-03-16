@@ -185,11 +185,11 @@ async function main() {
   }
   console.log('✓', flashDesigns.length, 'flash designs');
 
-  // 5. Bookings (demandes RDV depuis vitrine)
+  // 5. Bookings (demandes RDV depuis vitrine) — avec images de référence
   const bookings = [
-    { id: 'bk_mock_1', client_name: 'Emma Laurent', client_email: 'emma.l@example.com', description: 'Je souhaite un Flash Lune sur l\'avant-bras', requested_date: addDays(today, 5), requested_time: '14:00', status: 'pending' },
-    { id: 'bk_mock_2', client_name: 'Pierre Moreau', client_email: 'pierre.m@example.com', description: 'Consultation pour un dos japonais', requested_date: addDays(today, 10), requested_time: null, status: 'pending' },
-    { id: 'bk_mock_3', client_name: 'Chloé Lefebvre', client_email: 'chloe.l@example.com', description: 'Petit motif fleur de cerisier — 80€', requested_date: addDays(today, 4), requested_time: '11:00', status: 'accepted' },
+    { id: 'bk_mock_1', client_name: 'Emma Laurent', client_email: 'emma.l@example.com', description: 'Je souhaite un Flash Lune sur l\'avant-bras droit. Style minimaliste, lignes fines.', requested_date: addDays(today, 5), requested_time: '14:00', status: 'pending', reference_images: ['https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=400&h=400&fit=crop'] },
+    { id: 'bk_mock_2', client_name: 'Pierre Moreau', client_email: 'pierre.m@example.com', description: 'Consultation pour un dos japonais — carpes koï et vagues. Grande pièce.', requested_date: addDays(today, 10), requested_time: null, status: 'pending', reference_images: ['https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400&h=400&fit=crop'] },
+    { id: 'bk_mock_3', client_name: 'Chloé Lefebvre', client_email: 'chloe.l@example.com', description: 'Petit motif fleur de cerisier — 80€. Zone poignet ou cheville.', requested_date: addDays(today, 4), requested_time: '11:00', status: 'accepted', reference_images: ['https://images.unsplash.com/photo-1611080626919-7cf5a9dbab5b?w=400&h=400&fit=crop'] },
   ];
 
   for (const b of bookings) {
@@ -202,6 +202,7 @@ async function main() {
       requested_date: b.requested_date,
       requested_time: b.requested_time,
       status: b.status,
+      reference_images: b.reference_images || [],
       updated_at: now,
     };
     const { error } = await supabase.from('inkflow_bookings').upsert(row, { onConflict: 'id' });
@@ -209,11 +210,11 @@ async function main() {
   }
   console.log('✓', bookings.length, 'demandes RDV (bookings)');
 
-  // 6. Project requests (demandes de projet)
+  // 6. Project requests (demandes de projet) — avec images Unsplash pour aperçu visuel
   const projectRequests = [
-    { id: 'pr_mock_1', client_name: 'Julie Garnier', client_email: 'julie.g@example.com', client_instagram: '@julie.tattoo', description: 'Je voudrais une manchette japonaise avec carpes koï et cerisiers', placement: 'Bras droit', size: 'Grand', budget: '400-600€', status: 'PENDING', reference_images: [] },
-    { id: 'pr_mock_2', client_name: 'Antoine Roux', client_email: 'antoine.r@example.com', client_instagram: null, description: 'Flash dragon sur l\'épaule', placement: 'Épaule gauche', size: 'Moyen', budget: '200-300€', status: 'PENDING', reference_images: [] },
-    { id: 'pr_mock_3', client_name: 'Marie Simon', client_email: 'marie.s@example.com', client_instagram: '@marie.ink', description: 'Tatouage minimaliste — constellation', placement: 'Poignet', size: 'Petit', budget: '80-120€', status: 'ACCEPTED', reference_images: [] },
+    { id: 'pr_mock_1', client_name: 'Julie Garnier', client_email: 'julie.g@example.com', client_instagram: '@julie.tattoo', description: 'Je voudrais une manchette japonaise avec carpes koï et cerisiers. Style traditionnel, couleurs subtiles.', placement: 'Bras droit', size: '15-25 cm', budget: '400-600€', status: 'PENDING', reference_images: ['https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400&h=400&fit=crop'] },
+    { id: 'pr_mock_2', client_name: 'Antoine Roux', client_email: 'antoine.r@example.com', client_instagram: null, description: 'Flash dragon sur l\'épaule gauche. Style néo-traditionnel, lignes nettes.', placement: 'Épaule gauche', size: '10-15 cm', budget: '200-300€', status: 'PENDING', reference_images: ['https://images.unsplash.com/photo-1590246814883-57c511e76917?w=400&h=400&fit=crop'] },
+    { id: 'pr_mock_3', client_name: 'Marie Simon', client_email: 'marie.s@example.com', client_instagram: '@marie.ink', description: 'Tatouage minimaliste — constellation au poignet. Lignes fines, points discrets.', placement: 'Poignet', size: '5-10 cm', budget: '80-120€', status: 'PENDING', reference_images: ['https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=400&h=400&fit=crop'] },
   ];
 
   for (const p of projectRequests) {

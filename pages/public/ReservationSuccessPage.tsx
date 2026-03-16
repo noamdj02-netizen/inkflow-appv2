@@ -109,7 +109,7 @@ export const ReservationSuccessPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex flex-col items-center justify-center p-6">
+      <div className="landing-scroll min-h-screen bg-neutral-50 flex flex-col items-center justify-center p-6">
         <Logo size="lg" className="mb-6" />
         <div className="w-10 h-10 border-2 border-neutral-300 border-t-neutral-900 rounded-full animate-spin" />
         <p className="mt-4 text-neutral-600">Chargement…</p>
@@ -119,7 +119,7 @@ export const ReservationSuccessPage: React.FC = () => {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex flex-col items-center justify-center p-6">
+      <div className="landing-scroll min-h-screen bg-neutral-50 flex flex-col items-center justify-center p-6">
         <SEO title="Erreur | InkFlow" canonical="/reservation-succes" />
         <Logo size="lg" className="mb-6" />
         <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
@@ -135,7 +135,7 @@ export const ReservationSuccessPage: React.FC = () => {
   const hasAppointment = !!data.appointment;
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex flex-col">
+    <div className="landing-scroll min-h-screen bg-neutral-50 flex flex-col">
       <SEO
         title="Réservation confirmée | InkFlow"
         description="Votre acompte est payé et votre réservation est confirmée."

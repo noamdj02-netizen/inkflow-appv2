@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Store, ChevronRight, ExternalLink, Plus, Trash2, Save, Check } from 'lucide-react';
 import { VitrineLinkButton } from '../dashboard/VitrineLinkButton';
+import { ThemeSelector } from './ThemeSelector';
 import { ImageUploadField } from '../ui/ImageUploadField';
 import { useToast } from '../../contexts/ToastContext';
 import { useAutoSave } from '../../hooks/useAutoSave';
@@ -28,9 +29,11 @@ interface VitrineSettingsProps {
   userEmail?: string;
   /** Slug réel du studio (depuis la BDD) — prioritaire pour isoler les données vitrine par tatoueur. */
   studioSlug?: string | null;
+  /** ID du studio pour le sélecteur de thème. */
+  studioId?: string | null;
 }
 
-export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, userEmail, studioSlug: studioSlugFromDb }) => {
+export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, userEmail, studioSlug: studioSlugFromDb, studioId }) => {
   const toast = useToast();
   const slug = (studioSlugFromDb != null && studioSlugFromDb !== '') ? studioSlugFromDb : getVitrineSlug(studioName);
   const [data, setData] = useState<VitrineData>(() => getVitrineData(slug));
@@ -121,6 +124,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
   return (
     <div className="space-y-6 max-w-4xl w-full overflow-hidden">
       <VitrineLinkButton studioName={studioName} userEmail={userEmail} studioSlug={studioSlugFromDb} />
+      {studioId && <ThemeSelector studioId={studioId} />}
       {publicUrl && (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card-secondary)] p-4">
           <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">Votre lien public</p>

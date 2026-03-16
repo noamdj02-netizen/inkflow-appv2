@@ -66,7 +66,6 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [flashDepositUrl, setFlashDepositUrl] = useState<string | null>(null);
   const [runVitrineTour, setRunVitrineTour] = useState(false);
   const [vitrineStepIndex, setVitrineStepIndex] = useState(0);
-  // Couleur principale bleu (#2563eb) pour boutons Réserver et CTA
   const primaryColor = '#2563eb';
 
   const loadVitrine = React.useCallback(() => {
@@ -81,7 +80,6 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       .finally(() => setLoading(false));
   }, [studioSlug]);
 
-  // Initial load + refetch when page becomes visible (e.g. user saved in another tab)
   useEffect(() => {
     loadVitrine();
   }, [loadVitrine]);
@@ -94,16 +92,13 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, [loadVitrine]);
 
-  // Live updates: when the tatoueur edits their vitrine, the public page updates instantly
   useRealtimeVitrine(studioSlug, setStudio);
 
-  // Forcer le thème clair sur la vitrine (fond blanc)
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'light');
     return () => {};
   }, []);
 
-  // Afficher un message si le client revient après annulation du paiement (success → /reservation-succes)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'cancelled') {
@@ -112,7 +107,6 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     }
   }, [studioSlug, toast]);
 
-  // Guide vitrine : afficher quand ?guide=1 et slug=demo
   useEffect(() => {
     if (studioSlug !== 'demo') return;
     const params = new URLSearchParams(window.location.search);
@@ -122,7 +116,6 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     }
   }, [studioSlug]);
 
-  // Guide vitrine : aux étapes Flash (4) et modal réservation (5), ouvrir un flash pour montrer le flux
   useEffect(() => {
     if (studioSlug !== 'demo' || !runVitrineTour || !studio) return;
     if (vitrineStepIndex >= 4) {
@@ -361,7 +354,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   return (
     <div
       className="landing-scroll min-h-[100dvh] bg-neutral-50"
-      style={{ ['--vitrine-primary']: primaryColor } as React.CSSProperties}
+      style={{ ['--vitrine-primary' as string]: primaryColor }}
     >
       <SEO
         title={`${studioName} | Tatoueur & Prise de RDV - InkFlow`}

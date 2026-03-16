@@ -171,7 +171,7 @@ export const EnhanceAIHero: React.FC = () => {
               className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mb-6 w-full sm:w-auto"
             >
               <motion.a
-                href="/demo"
+                href="/dashboard-demo"
                 className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-zinc-900 text-white font-semibold text-base shadow-lg hover:bg-zinc-800 transition-colors min-h-[48px]"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -180,7 +180,7 @@ export const EnhanceAIHero: React.FC = () => {
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
               </motion.a>
               <motion.a
-                href="/demo"
+                href="/dashboard-demo"
                 className="w-full sm:w-auto inline-flex items-center justify-center px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl border-2 border-zinc-200 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-semibold text-base hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all min-h-[48px]"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

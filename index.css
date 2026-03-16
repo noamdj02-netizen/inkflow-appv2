@@ -8,10 +8,22 @@
 @import '@fontsource/plus-jakarta-sans/latin-600.css';
 @import '@fontsource/plus-jakarta-sans/latin-700.css';
 @import '@fontsource/plus-jakarta-sans/latin-800.css';
+@import '@fontsource/playfair-display/latin-400.css';
+@import '@fontsource/playfair-display/latin-400-italic.css';
 @import '@fontsource/playfair-display/latin-600.css';
 @import '@fontsource/playfair-display/latin-700.css';
+@import '@fontsource/syne/latin-400.css';
+@import '@fontsource/syne/latin-700.css';
+@import '@fontsource/syne/latin-800.css';
 
 @import "tailwindcss";
+
+/* Variables CSS pour thèmes structurels (ClassicTheme, SplitTheme, VintageTheme, BoldTheme) */
+:root {
+  --font-inter: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-playfair: 'Playfair Display', Georgia, serif;
+  --font-syne: 'Syne', sans-serif;
+}
 
 /* Tailwind dark: variant — active when data-theme="dark" on root */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
@@ -788,8 +800,9 @@ input, textarea, select, [contenteditable="true"] {
   padding-bottom: 2rem;
 }
 
-/* 3. LANDING PAGE — Liberation du scroll pour marketing */
-.landing-scroll {
+/* 3. LANDING PAGE & PUBLIC PAGES — Liberation du scroll pour marketing et vitrines */
+.landing-scroll,
+.public-page-scroll {
   position: fixed;
   top: 0;
   left: 0;
@@ -800,9 +813,15 @@ input, textarea, select, [contenteditable="true"] {
   min-height: calc(var(--vh, 1vh) * 100);
   overflow-y: auto;
   overflow-x: hidden;
-  overscroll-behavior-y: none;
+  overscroll-behavior-y: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   background-color: var(--bg-primary);
+}
+/* Public pages (vitrine, booking) — enable scroll on body when these pages are active */
+body:has(.public-page-scroll) {
+  overflow: auto;
+  overscroll-behavior: auto;
 }
 
 /* 4. SAFE AREAS — header padding-top, bottom-nav padding-bottom */
@@ -1039,6 +1058,91 @@ input, select, textarea {
   display: none;
 }
 
+/* Thèmes vitrine — cartes et bordures adaptés au thème actif */
+/* Le conteneur racine a à la fois .landing-scroll et data-vitrine-theme */
+[data-vitrine-theme="dark"].landing-scroll .bg-white {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+[data-vitrine-theme="dark"].landing-scroll .border-neutral-100 {
+  border-color: #27272a !important;
+}
+[data-vitrine-theme="dark"].landing-scroll .text-neutral-900 {
+  color: #fafafa !important;
+}
+[data-vitrine-theme="dark"].landing-scroll .text-neutral-600,
+[data-vitrine-theme="dark"].landing-scroll .text-neutral-500 {
+  color: #a1a1aa !important;
+}
+[data-vitrine-theme="dark"].landing-scroll .text-neutral-700 {
+  color: #d4d4d8 !important;
+}
+[data-vitrine-theme="dark"].landing-scroll .text-neutral-800 {
+  color: #e4e4e7 !important;
+}
+[data-vitrine-theme="dark"].landing-scroll .bg-neutral-50 {
+  background-color: #27272a !important;
+}
+[data-vitrine-theme="dark"].landing-scroll .bg-neutral-100 {
+  background-color: #3f3f46 !important;
+}
+[data-vitrine-theme="dark"].landing-scroll .border-neutral-200 {
+  border-color: #3f3f46 !important;
+}
+[data-vitrine-theme="neon"].landing-scroll .bg-white {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+[data-vitrine-theme="neon"].landing-scroll .border-neutral-100 {
+  border-color: #334155 !important;
+}
+[data-vitrine-theme="neon"].landing-scroll .text-neutral-900 {
+  color: #c4b5fd !important;
+}
+[data-vitrine-theme="neon"].landing-scroll .text-neutral-600,
+[data-vitrine-theme="neon"].landing-scroll .text-neutral-500 {
+  color: #a78bfa !important;
+}
+[data-vitrine-theme="vintage"].landing-scroll .bg-white {
+  background-color: #fefce8 !important;
+  border-color: #fef3c7 !important;
+}
+[data-vitrine-theme="vintage"].landing-scroll .border-neutral-100 {
+  border-color: #fef3c7 !important;
+}
+
+/* Header vitrine — adapté au thème */
+[data-vitrine-theme="dark"].landing-scroll header {
+  background-color: rgba(24, 24, 27, 0.98) !important;
+  border-bottom: 1px solid #27272a;
+}
+[data-vitrine-theme="dark"].landing-scroll header .text-black { color: #fafafa !important; }
+[data-vitrine-theme="dark"].landing-scroll header .text-neutral-700 { color: #a1a1aa !important; }
+[data-vitrine-theme="dark"].landing-scroll header .text-neutral-600 { color: #a1a1aa !important; }
+[data-vitrine-theme="dark"].landing-scroll header .text-neutral-800 { color: #e4e4e7 !important; }
+[data-vitrine-theme="dark"].landing-scroll header .hover\:text-neutral-900:hover { color: #fafafa !important; }
+[data-vitrine-theme="dark"].landing-scroll header .hover\:bg-neutral-100:hover { background-color: #27272a !important; }
+[data-vitrine-theme="dark"].landing-scroll header .border-neutral-200 { border-color: #27272a !important; }
+[data-vitrine-theme="dark"].landing-scroll header .bg-neutral-100 { background-color: #27272a !important; }
+
+[data-vitrine-theme="neon"].landing-scroll header {
+  background-color: rgba(15, 23, 42, 0.98) !important;
+  border-bottom: 1px solid #334155;
+}
+[data-vitrine-theme="neon"].landing-scroll header .text-black { color: #c4b5fd !important; }
+[data-vitrine-theme="neon"].landing-scroll header .text-neutral-700 { color: #a78bfa !important; }
+[data-vitrine-theme="neon"].landing-scroll header .text-neutral-600 { color: #a78bfa !important; }
+[data-vitrine-theme="neon"].landing-scroll header .text-neutral-800 { color: #c4b5fd !important; }
+[data-vitrine-theme="neon"].landing-scroll header .hover\:text-neutral-900:hover { color: #e9d5ff !important; }
+[data-vitrine-theme="neon"].landing-scroll header .hover\:bg-neutral-100:hover { background-color: #334155 !important; }
+[data-vitrine-theme="neon"].landing-scroll header .border-neutral-200 { border-color: #334155 !important; }
+[data-vitrine-theme="neon"].landing-scroll header .bg-neutral-100 { background-color: #334155 !important; }
+
+[data-vitrine-theme="vintage"].landing-scroll header {
+  background-color: rgba(254, 252, 232, 0.98) !important;
+  border-bottom: 1px solid #fef3c7;
+}
+
 /* Stagger delays for hero */
 .stagger-0 { animation-delay: 0s; }
 .stagger-1 { animation-delay: 0.1s; }
@@ -1088,6 +1192,10 @@ input, select, textarea {
 
 .animate-on-scroll-scale.is-visible {
   animation: scale-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Toast animations */

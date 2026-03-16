@@ -12,16 +12,15 @@ export async function createProjectRequest(data: ProjectRequestFormData, studioI
     client_instagram: data.clientInstagram?.trim() || null,
     description: data.description.trim(),
     placement: data.placement || null,
-    size: data.size || null,
+    estimated_size: data.size || null,
     budget: data.budget || null,
-    status: 'PENDING',
+    status: 'pending',
+    project_type: 'custom',
     reference_images: data.referenceImages || []
   };
   const { error } = await supabase.from('inkflow_project_requests').insert(row);
   if (error) throw error;
 
-  // Non-blocking: send email notification to the tattoo artist.
-  // Errors are logged internally but never propagate to the client.
   sendProjectNotification({
     studioId,
     clientName: data.clientName.trim(),

@@ -36,7 +36,7 @@ Le build Vite n’a accès qu’aux variables **préfixées par `VITE_`**. Tout 
 | `SUPABASE_URL` | Toutes les Edge Functions | Injectée automatiquement par Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | stripe-webhook, create-checkout-session, etc. | Injectée automatiquement par Supabase |
 | `SITE_URL` | create-checkout-session, create-subscription | URL de production (ex. `https://inkflow.app`) pour success_url / cancel_url |
-| `RESEND_API_KEY` | send-project-notification, send-aftercare-email, send-appointment-reminders | Envoi d’emails (Resend) |
+| `RESEND_API_KEY` | send-project-notification, send-aftercare-email, send-appointment-reminders, send-referral-notification | Envoi d’emails (Resend) |
 | `GEMINI_API_KEY` | (si utilisé côté Edge Function) | Optionnel |
 | `META_APP_ID` | instagram | ID de l'app Meta (developers.facebook.com) |
 | `META_APP_SECRET` | instagram | Secret de l'app Meta |

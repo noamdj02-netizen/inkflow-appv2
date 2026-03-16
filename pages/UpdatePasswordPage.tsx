@@ -42,7 +42,7 @@ export const UpdatePasswordPage: React.FC = () => {
 
   if (status === 'success') {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+      <div className="landing-scroll min-h-screen bg-neutral-50 flex items-center justify-center">
         <Logo size="lg" className="rounded-2xl" />
       </div>
     );

@@ -503,86 +503,92 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Finance</h1>
-          <p className="text-[var(--text-secondary)] mt-1">Revenus, espèces et paiements</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Finance</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Gérez vos revenus, acomptes et encaissements</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setShowBilan(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 bg-white dark:bg-neutral-800 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 font-medium hover:bg-zinc-50 dark:hover:bg-neutral-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-[0.98]"
           >
-            <FileText className="w-5 h-5" />
+            <FileText className="w-4 h-4" />
             Bilan & Rapports
           </button>
           <button
             onClick={() => setShowAddCash(true)}
-            className="btn-primary"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all active:scale-[0.98]"
           >
-            <Banknote className="w-5 h-5" />
-            Ajouter encaissement espèces
+            <Banknote className="w-4 h-4" />
+            Ajouter espèces
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="dashboard-widget-card p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-neutral-900 text-white">
-              <DollarSign className="w-5 h-5" />
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Total global</span>
+            <div className="p-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900">
+              <DollarSign className="w-4 h-4" />
             </div>
-            <span className="text-sm text-neutral-600 dark:text-neutral-400">Total global</span>
           </div>
-          <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{totalGlobal}€</div>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">RDV + espèces</p>
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{totalGlobal.toLocaleString('fr-FR')}€</div>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">RDV + espèces</p>
         </div>
-        <div className="dashboard-widget-card p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
-              <CreditCard className="w-5 h-5" />
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Revenus RDV</span>
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <CreditCard className="w-4 h-4" />
             </div>
-            <span className="text-sm text-neutral-600 dark:text-neutral-400">Revenus RDV</span>
           </div>
-          <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{totalRevenue}€</div>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Paiements carte / virement</p>
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{totalRevenue.toLocaleString('fr-FR')}€</div>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Carte / virement</p>
         </div>
-        <div className="dashboard-widget-card p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
-              <Banknote className="w-5 h-5" />
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Espèces</span>
+            <div className="p-2 rounded-xl bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400">
+              <Banknote className="w-4 h-4" />
             </div>
-            <span className="text-sm text-neutral-600 dark:text-neutral-400">Espèces</span>
           </div>
-          <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{totalCash}€</div>
+          <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">{totalCash.toLocaleString('fr-FR')}€</div>
           {todayCash > 0 && (
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Dont {todayCash}€ aujourd'hui</p>
+            <p className="text-xs text-green-600 dark:text-green-400 mt-1">+{todayCash}€ aujourd'hui</p>
           )}
         </div>
-        <div className="dashboard-widget-card p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
-              <Receipt className="w-5 h-5" />
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Acomptes reçus</span>
+            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400">
+              <Receipt className="w-4 h-4" />
             </div>
-            <span className="text-sm text-neutral-600 dark:text-neutral-400">Acomptes reçus</span>
           </div>
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalDeposits}€</div>
+          <div className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">{totalDeposits.toLocaleString('fr-FR')}€</div>
         </div>
-        <div className="dashboard-widget-card p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400">
-              <TrendingUp className="w-5 h-5" />
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5 col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">En attente</span>
+            <div className="p-2 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400">
+              <TrendingUp className="w-4 h-4" />
             </div>
-            <span className="text-sm text-neutral-600 dark:text-neutral-400">Acomptes en attente</span>
           </div>
-          <div className="text-2xl font-bold text-zinc-600 dark:text-zinc-400">{pendingDeposits}€</div>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{completedCount} RDV terminés</p>
+          <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400 tabular-nums">{pendingDeposits.toLocaleString('fr-FR')}€</div>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{completedCount} RDV terminés</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-[var(--bg-card)] rounded-2xl p-6 border border-neutral-200 dark:border-neutral-700">
-          <h3 className="font-bold text-lg text-neutral-900 dark:text-neutral-100 mb-4">Évolution des revenus (6 mois)</h3>
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl p-5 sm:p-6 border border-zinc-200 dark:border-zinc-800">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-white">Évolution des revenus</h3>
+            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg">6 mois</span>
+          </div>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={chartData}>
               <defs>
@@ -625,71 +631,91 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white dark:bg-[var(--bg-card)] rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-          <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
-            <h3 className="font-bold text-lg text-neutral-900 dark:text-neutral-100">Caisse espèces</h3>
+        {/* Caisse espèces */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+          <div className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-base text-zinc-900 dark:text-white">Caisse espèces</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Encaissements récents</p>
+            </div>
             <button
               onClick={() => setShowAddCash(true)}
-              className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
+              className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
               aria-label="Ajouter"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
             </button>
           </div>
-          <div className="max-h-64 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
+          <div className="max-h-64 overflow-y-auto">
             {cashEntries.length === 0 ? (
-              <div className="py-8 text-center text-neutral-400 dark:text-neutral-500 text-sm">Aucun encaissement espèces</div>
+              <div className="py-10 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 mx-auto mb-3 flex items-center justify-center">
+                  <Banknote className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
+                </div>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">Aucun encaissement</p>
+              </div>
             ) : (
-              cashEntries
-                .slice()
-                .sort((a, b) => b.date.localeCompare(a.date))
-                .slice(0, 8)
-                .map((e) => (
-                  <div
-                    key={e.id}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-500/10 group"
-                  >
-                    <div className="min-w-0">
-                      <div className="font-medium text-neutral-900 dark:text-neutral-100 truncate">{e.label}</div>
-                      <div className="text-xs text-neutral-500 dark:text-neutral-400">{e.date}</div>
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {cashEntries
+                  .slice()
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .slice(0, 8)
+                  .map((e) => (
+                    <div
+                      key={e.id}
+                      className="flex items-center justify-between px-5 py-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 group transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">{e.label}</div>
+                        <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{e.date}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-green-600 dark:text-green-400">+{e.amount}€</span>
+                        <button
+                          onClick={() => removeCashEntry(e.id)}
+                          className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition-all"
+                          aria-label="Supprimer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-blue-700 dark:text-blue-400">{e.amount}€</span>
-                      <button
-                        onClick={() => removeCashEntry(e.id)}
-                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-zinc-100 text-zinc-600 dark:hover:bg-zinc-500/20 dark:text-zinc-400 transition-opacity"
-                        aria-label="Supprimer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  ))}
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[var(--bg-card)] rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-        <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
-          <h3 className="font-bold text-lg text-neutral-900 dark:text-neutral-100">Dernières transactions</h3>
+      {/* Transactions */}
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+        <div className="px-5 sm:px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-white">Dernières transactions</h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Historique des paiements récents</p>
+          </div>
         </div>
-        <div className="divide-y divide-neutral-200 dark:divide-neutral-700">
+        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
           {transactions.length === 0 ? (
-            <div className="py-12 text-center text-neutral-400 dark:text-neutral-500">Aucune transaction</div>
+            <div className="py-12 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 mx-auto mb-4 flex items-center justify-center">
+                <Receipt className="w-7 h-7 text-zinc-400 dark:text-zinc-500" />
+              </div>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Aucune transaction</p>
+            </div>
           ) : (
             transactions.map((t) => (
-              <div key={t.id} className="flex items-center justify-between px-6 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-500/10">
-                <div className="flex items-center gap-3">
+              <div key={t.id} className="flex items-center justify-between px-5 sm:px-6 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                <div className="flex items-center gap-3 sm:gap-4">
                   <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      t.type === 'cash' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400'
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      t.type === 'cash' ? 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
                     }`}
                   >
                     {t.type === 'cash' ? (
-                      <Banknote className="w-4 h-4" />
+                      <Banknote className="w-5 h-5" />
                     ) : (
-                      <Receipt className="w-4 h-4" />
+                      <Receipt className="w-5 h-5" />
                     )}
                   </div>
                   <div>

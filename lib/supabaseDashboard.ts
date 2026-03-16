@@ -1,4 +1,5 @@
 import { supabase, getStudioId } from './supabase';
+import { sendReferralNotification } from './sendNotification';
 import type { VitrineData } from '../types/vitrine';
 import type { Appointment, Client, FlashDesign, Notification, ProjectRequest, ProjectRequestStatus, WaitlistEntry } from '../types';
 import type { DashboardWidget } from '../components/dashboard/DashboardWidgets';
@@ -90,6 +91,9 @@ export async function ensureStudio(
     if (refErr && refErr.code !== '23505') {
       // 23505 = unique_violation, ignorer si doublon
       console.warn('[ensureStudio] referral insert:', refErr.message);
+    } else if (!refErr) {
+      // Parrainage créé avec succès : notifier le parrain par email (non bloquant)
+      sendReferralNotification({ referrerId: referredBy, refereeStudioName: studioName });
     }
   }
 
@@ -125,6 +129,77 @@ export async function getStudioSlugByStudioId(studioId: string): Promise<string 
   return data.slug;
 }
 
+/** Vérifie si un slug est disponible (non pris par un autre studio). Si excludeStudioId est fourni, le slug est considéré dispo si c'est le nôtre. */
+export async function checkSlugAvailable(slug: string, excludeStudioId?: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: slug });
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row?.id) return true; // pas de conflit
+  if (excludeStudioId && row.id === excludeStudioId) return true; // c'est notre slug
+  return false; // pris par un autre
+}
+
+/** Met à jour le slug du studio. Le slug doit être validé (minuscules, chiffres, tirets) et disponible. */
+export async function updateStudioSlug(studioId: string, newSlug: string): Promise<void> {
+  const { error } = await supabase
+    .from('inkflow_studios')
+    .update({ slug: newSlug, updated_at: new Date().toISOString() })
+    .eq('id', studioId);
+  if (error) throw error;
+}
+
+/** Récupère le thème vitrine du studio. */
+export async function getStudioVitrineTheme(studioId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from('inkflow_studios')
+    .select('vitrine_theme')
+    .eq('id', studioId)
+    .maybeSingle();
+  if (error || !data?.vitrine_theme) return 'light';
+  return data.vitrine_theme as string;
+}
+
+/** Met à jour le thème vitrine du studio. */
+export async function updateStudioVitrineTheme(studioId: string, themeId: string): Promise<void> {
+  const { error } = await supabase
+    .from('inkflow_studios')
+    .update({ vitrine_theme: themeId, updated_at: new Date().toISOString() })
+    .eq('id', studioId);
+  if (error) throw error;
+}
+
+export interface ReferralWithReferee {
+  id: string;
+  refereeStudioName: string | null;
+  status: string;
+  created_at: string;
+}
+
+/** Récupère les parrainages du studio (en tant que parrain) avec les noms des filleuls. */
+export async function getReferralsForReferrer(studioId: string): Promise<ReferralWithReferee[]> {
+  const { data: referrals, error } = await supabase
+    .from('inkflow_referrals')
+    .select('id, referee_id, status, created_at')
+    .eq('referrer_id', studioId)
+    .order('created_at', { ascending: false });
+  if (error || !referrals?.length) return [];
+  const refereeIds = [...new Set((referrals as { referee_id: string }[]).map((r) => r.referee_id))];
+  const { data: studios } = await supabase
+    .from('inkflow_studios')
+    .select('id, studio_name, name')
+    .in('id', refereeIds);
+  const nameByRefereeId = new Map<string, string>();
+  (studios ?? []).forEach((s) => {
+    const name = (s as { studio_name?: string; name?: string }).studio_name ?? (s as { studio_name?: string; name?: string }).name ?? null;
+    if (name) nameByRefereeId.set((s as { id: string }).id, name);
+  });
+  return (referrals as { id: string; referee_id: string; status: string; created_at: string }[]).map((r) => ({
+    id: r.id,
+    refereeStudioName: nameByRefereeId.get(r.referee_id) ?? null,
+    status: r.status,
+    created_at: r.created_at,
+  }));
+}
+
 // Vitrine data
 export async function getVitrineDataFromSupabase(studioId: string, defaultData: VitrineData): Promise<VitrineData> {
   const { data, error } = await supabase.from('inkflow_vitrine_data').select('data').eq('studio_id', studioId).single();
@@ -140,11 +215,23 @@ export async function getStudioIdBySlug(slug: string): Promise<string | null> {
   return row.id as string;
 }
 
-/** Récupère les données vitrine par slug (pour la page publique /studio/:slug) */
+/** Récupère id + vitrine_theme à partir du slug (pour la page publique). */
+export async function getStudioPublicBySlug(slug: string): Promise<{ id: string; vitrineTheme: string } | null> {
+  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: slug });
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row?.id) return null;
+  return {
+    id: row.id as string,
+    vitrineTheme: (row.vitrine_theme as string) || 'light',
+  };
+}
+
+/** Récupère les données vitrine par slug (pour la page publique /studio/:slug). Inclut le thème du studio. */
 export async function getVitrineDataBySlugFromSupabase(slug: string, defaultData: VitrineData): Promise<VitrineData> {
-  const studioId = await getStudioIdBySlug(slug);
-  if (!studioId) return defaultData;
-  return getVitrineDataFromSupabase(studioId, defaultData);
+  const studio = await getStudioPublicBySlug(slug);
+  if (!studio) return defaultData;
+  const data = await getVitrineDataFromSupabase(studio.id, defaultData);
+  return { ...data, theme: studio.vitrineTheme };
 }
 
 export async function saveVitrineDataToSupabase(studioId: string, data: VitrineData): Promise<void> {
@@ -528,10 +615,13 @@ export function mapProjectRequestFromDb(row: Record<string, unknown>): ProjectRe
     clientEmail: row.client_email as string,
     clientInstagram: row.client_instagram as string | undefined,
     description: row.description as string,
+    projectType: (row.project_type as 'flash' | 'custom') || 'custom',
     placement: row.placement as string | undefined,
-    size: row.size as string | undefined,
+    estimatedSize: (row.estimated_size || row.size) as string | undefined,
+    size: (row.size || row.estimated_size) as string | undefined,
     budget: row.budget as string | undefined,
-    status: (row.status as ProjectRequestStatus) || 'PENDING',
+    status: (row.status as ProjectRequestStatus) || 'pending',
+    referenceImageUrl: row.reference_image_url as string | undefined,
     referenceImages: (row.reference_images as string[]) || [],
     createdAt: (row.created_at as string) || new Date().toISOString()
   };

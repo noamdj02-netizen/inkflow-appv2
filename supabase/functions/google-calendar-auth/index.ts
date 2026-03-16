@@ -119,6 +119,13 @@ Deno.serve(async (req: Request) => {
 
     // ─── ACTION: disconnect — remove tokens ───
     if (action === "disconnect") {
+      if (!studioId) {
+        return new Response(
+          JSON.stringify({ error: "studioId requis pour la déconnexion" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
       const { data: studio } = await supabase
@@ -180,8 +187,10 @@ Deno.serve(async (req: Request) => {
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[google-calendar-auth] Erreur:", message);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: message || "Erreur interne" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

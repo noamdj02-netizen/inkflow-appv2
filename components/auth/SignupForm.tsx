@@ -61,7 +61,7 @@ export const SignupForm: React.FC = () => {
     }
     setLoading(true);
     try {
-      await signup(
+      const { needsEmailConfirmation } = await signup(
         parsed.data.email,
         parsed.data.password,
         parsed.data.name,
@@ -69,6 +69,10 @@ export const SignupForm: React.FC = () => {
         formData.referralCode?.trim().toUpperCase() || undefined
       );
       setSuccess(true);
+      if (needsEmailConfirmation) {
+        window.location.href = '/login?message=check-email';
+        return;
+      }
       const params = new URLSearchParams(window.location.search);
       const plan = params.get('plan');
       const interval = params.get('interval') || 'monthly';

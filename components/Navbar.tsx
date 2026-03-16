@@ -9,7 +9,7 @@ interface NavbarProps {
 }
 
 const navLinks = [
-  { href: '/demo', label: 'Démo' },
+  { href: '/dashboard-demo', label: 'Démo' },
   { href: `${LANDING_URL}/#features`, label: 'Fonctionnalités' },
   { href: LANDING_PRICING_URL, label: 'Tarifs' },
   { href: `${LANDING_URL}/#faq`, label: 'FAQ' },

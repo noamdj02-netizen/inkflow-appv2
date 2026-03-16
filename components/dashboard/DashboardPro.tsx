@@ -23,6 +23,7 @@ import { BillingSettings } from './BillingSettings';
 import { PaywallView } from './PaywallView';
 import { AvailabilitySettings } from '../settings/AvailabilitySettings';
 import { VitrineSettings } from '../settings/VitrineSettings';
+import { SlugSettings } from '../settings/SlugSettings';
 import { InstagramConnect } from '../settings/InstagramConnect';
 import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 import { VitrineLinkButton } from './VitrineLinkButton';
@@ -62,17 +63,19 @@ import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings';
 
 const iconProps = { className: 'w-5 h-5', strokeWidth: 1.5 };
+
+// MVP: Core tabs only — V2 features (analytics, messaging, referral) are hidden
 const tabs: { id: TabId | 'referral'; label: string; icon: React.ReactNode; badge?: 'pending'; href?: string }[] = [
   { id: 'overview', label: 'Vue d\'ensemble', icon: <LayoutDashboard {...iconProps} /> },
-  { id: 'analytics', label: 'Statistiques', icon: <BarChart3 {...iconProps} /> },
+  // { id: 'analytics', label: 'Statistiques', icon: <BarChart3 {...iconProps} /> }, // V2
   { id: 'requests', label: 'Demandes', icon: <MessageSquare {...iconProps} />, badge: 'pending' },
   { id: 'appointments', label: 'Rendez-vous', icon: <Calendar {...iconProps} /> },
   { id: 'flash', label: 'Galerie Flash', icon: <Image {...iconProps} /> },
   { id: 'clients', label: 'Clients', icon: <Users {...iconProps} /> },
-  { id: 'messaging', label: 'Messagerie', icon: <MessageSquare {...iconProps} /> },
+  // { id: 'messaging', label: 'Messagerie', icon: <MessageSquare {...iconProps} /> }, // V2
   { id: 'portfolio', label: 'Portfolio', icon: <Image {...iconProps} /> },
   { id: 'finance', label: 'Finance', icon: <Wallet {...iconProps} /> },
-  { id: 'referral', label: '🎁 Mois offerts', icon: <Gift {...iconProps} />, href: '/referral' },
+  // { id: 'referral', label: '🎁 Mois offerts', icon: <Gift {...iconProps} />, href: '/referral' }, // V2
   { id: 'settings', label: 'Paramètres', icon: <Settings {...iconProps} /> },
 ];
 
@@ -83,7 +86,7 @@ export const DashboardPro: React.FC = () => {
   /** Thème effectif — fallback DOM pour mobile/PWA (resolvedTheme peut être undefined avant hydration) */
   const effectiveTheme = resolvedTheme ?? (typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null : null) ?? 'light';
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
-  const { studioId, studioSlug, subscriptionStatus, trialEndsAt, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, retry } = useSupabaseSync();
+  const { studioId, studioSlug, refreshStudioSlug, subscriptionStatus, trialEndsAt, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, retry } = useSupabaseSync();
   const { projectRequests, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
   const { pendingRequestsCount } = useNotificationCounts(studioId);
   const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false);
@@ -96,6 +99,19 @@ export const DashboardPro: React.FC = () => {
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
   const [settingsTab, setSettingsTab] = useState<'general' | 'payments' | 'care' | 'availability' | 'vitrine' | 'billing' | 'consent' | 'artists' | 'waitlist' | 'loyalty' | 'calendar' | 'messagerie'>('general');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarFavTab, setSidebarFavTab] = useState<'favorites' | 'recent'>('favorites');
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
+    finance: false,
+    planning: false,
+    requests: false,
+    clients: false,
+    vitrine: false,
+    settings: false,
+  });
+  const [requestsSubTab, setRequestsSubTab] = useState<'rdv' | 'bookings' | 'projects' | 'history'>('rdv');
+  const [planningView, setPlanningView] = useState<'week' | 'month'>('week');
+  const [financeView, setFinanceView] = useState<'revenus' | 'acomptes' | 'stats'>('revenus');
+  const [clientsView, setClientsView] = useState<'overview' | 'projects' | 'messages'>('overview');
   const [showWidgetModal, setShowWidgetModal] = useState(false);
   const [customWidgets, setCustomWidgets] = useDashboardWidgets(studioId, useSupabase ?? false, {
     onError: () => toast.error('Erreur de sauvegarde des widgets'),
@@ -123,6 +139,8 @@ export const DashboardPro: React.FC = () => {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [openMessageThreadId, setOpenMessageThreadId] = useState<string | null>(null);
   const [welcomeComplete, setWelcomeComplete] = useState(false);
+  /** Onglet initial pour Demandes (ex: 'history' quand on clique sur l'alerte RDV sans acompte) */
+  const [requestsInitialTab, setRequestsInitialTab] = useState<'rdv' | 'bookings' | 'projects' | 'history' | null>(null);
 
   // Sync general settings form when user changes (e.g. from Supabase session or localStorage)
   useEffect(() => {
@@ -591,6 +609,11 @@ export const DashboardPro: React.FC = () => {
 
   const showWelcome = useSupabase && shouldShowWelcomeFlow() && !welcomeComplete && studioId && studioSlug && user?.email;
 
+  // Réinitialiser l'onglet initial des Demandes quand on quitte l'onglet
+  useEffect(() => {
+    if (activeTab !== 'requests') setRequestsInitialTab(null);
+  }, [activeTab]);
+
   return (
     <div className="app-shell bg-zinc-50 dark:bg-black">
       {showWelcome && (
@@ -611,79 +634,341 @@ export const DashboardPro: React.FC = () => {
       )}
 
       <div className="app-shell-row">
-        {/* ====== SIDEBAR — fond 100% opaque (wrapper interne pour mobile WebKit) ====== */}
+        {/* ====== SIDEBAR — Style ByeWind avec Favoris/Récents et sous-menus ====== */}
         <aside
-          className={`fixed lg:static inset-y-0 left-0 z-[60] w-[178px] max-w-[85vw] border-r border-zinc-200 dark:border-zinc-800 flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
+          className={`fixed lg:static inset-y-0 left-0 z-[60] w-[240px] max-w-[85vw] border-r border-zinc-200 dark:border-zinc-800 flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           }`}
         >
           <div className="absolute inset-0 z-0 bg-white dark:bg-zinc-950" aria-hidden />
-          {/* Zone logo — compacte et premium */}
-          <div className="relative z-10 px-4 py-4 border-b border-[var(--border)]/60 flex items-center justify-between safe-top">
+          
+          {/* Zone logo — style ByeWind */}
+          <div className="relative z-10 px-4 py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between safe-top">
             <a href={LANDING_URL} className="flex items-center gap-3 min-w-0 group" aria-label="Retour à l'accueil">
               <Logo size="lg" className="rounded-xl group-hover:opacity-90 transition-opacity" />
               <div className="min-w-0">
-                <span className="block text-base font-semibold tracking-tight text-[var(--text-primary)]">INKFLOW</span>
-                <p className="text-[11px] font-medium text-[var(--text-tertiary)] truncate max-w-[120px] mt-0.5">{user?.studioName}</p>
+                <span className="block text-[15px] font-bold tracking-tight text-zinc-900 dark:text-white">InkFlow</span>
+                <span className="block text-[11px] text-zinc-400 dark:text-zinc-500 truncate">{user?.studioName || 'Mon studio'}</span>
               </div>
             </a>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors duration-150">
-              <X className="w-5 h-5 text-[var(--text-secondary)]" />
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+              <X className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
             </button>
           </div>
-          {/* Navigation — liens compacts, hover fluide */}
-          <nav className="relative z-10 flex-1 px-3 py-4 space-y-0.5 overflow-y-auto overscroll-contain">
-            {tabs
-              .filter(tab => tab.id !== 'analytics' || canAccessFeature('stats_avancees'))
-              .map(tab => {
-                const pendingCount = tab.badge === 'pending'
-                  ? appointments.filter(a => a.status === 'pending').length + projectRequests.filter(p => p.status === 'PENDING').length
-                  : 0;
-                const isActive = activeTab === tab.id;
-                const baseClass = `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-[14px] transition-colors duration-150 ${
-                  isActive ? 'bg-blue-50 text-blue-900 dark:bg-blue-500/10 dark:text-blue-400 [&_svg]:text-blue-600 [&_svg]:dark:text-blue-400' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100'
-                }`;
-                if (tab.href) {
-                  return (
-                    <a key={tab.id} href={tab.href} className={baseClass}>
-                      <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center">{tab.icon}</span>
-                      <span className="flex-1 text-left">{tab.label}</span>
-                    </a>
-                  );
-                }
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => { setActiveTab(tab.id as TabId); setSidebarOpen(false); }}
-                    className={baseClass}
-                  >
-                    {tab.id === 'requests' ? (
-                      <span className="relative flex-shrink-0 ml-0.5">
-                        {tab.icon}
-                        <BadgeNotification count={pendingRequestsCount} />
-                      </span>
-                    ) : (
-                      <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center">{tab.icon}</span>
-                    )}
-                    <span className="flex-1 text-left">{tab.label}</span>
-                    {pendingCount > 0 && (
-                      <span className="min-w-[18px] h-[18px] px-2 py-0.5 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold rounded-full">{pendingCount}</span>
-                    )}
-                  </button>
-                );
-              })}
-          </nav>
-          {/* Déconnexion — zone séparée (Derniers acomptes déplacé dans la colonne droite du dashboard) */}
-          <div className="relative z-10 mt-auto px-3 py-3 border-t border-[var(--border)]/60 safe-bottom">
-            <div className="border-t border-zinc-200 dark:border-zinc-800 pt-4">
-              <button
-                onClick={logout}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] font-medium transition-colors duration-150"
+
+          {/* Favoris & Récents */}
+          <div className="relative z-10 px-4 pt-4 pb-2">
+            <div className="flex items-center gap-3 mb-2">
+              <button 
+                onClick={() => setSidebarFavTab('favorites')}
+                className={`text-xs font-semibold pb-0.5 transition-colors ${
+                  sidebarFavTab === 'favorites' 
+                    ? 'text-zinc-700 dark:text-zinc-200 border-b border-zinc-500 dark:border-zinc-400' 
+                    : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-400'
+                }`}
               >
-                <LogOut className="w-5 h-5 flex-shrink-0" />
-                Déconnexion
+                Favoris
+              </button>
+              <button 
+                onClick={() => setSidebarFavTab('recent')}
+                className={`text-xs font-medium transition-colors ${
+                  sidebarFavTab === 'recent' 
+                    ? 'text-zinc-700 dark:text-zinc-200 border-b border-zinc-500 dark:border-zinc-400' 
+                    : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-400'
+                }`}
+              >
+                Récents
               </button>
             </div>
+            <div className="space-y-0.5">
+              {sidebarFavTab === 'favorites' ? (
+                <>
+                  <button
+                    onClick={() => { setActiveTab('overview'); setSidebarOpen(false); }}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all w-full"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500/50 flex-shrink-0" />
+                    Vue d'ensemble
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('appointments'); setSidebarOpen(false); }}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all w-full"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500/50 flex-shrink-0" />
+                    Rendez-vous
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setActiveTab('clients'); setSidebarOpen(false); }}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all w-full"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400/50 flex-shrink-0" />
+                    Clients
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('requests'); setSidebarOpen(false); }}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all w-full"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400/50 flex-shrink-0" />
+                    Demandes
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="mx-4 border-t border-zinc-100 dark:border-zinc-800/50 my-1" />
+
+          {/* Navigation — Style ByeWind avec sous-menus dépliables */}
+          <nav className="relative z-10 flex-1 px-3 py-2 overflow-y-auto overscroll-contain space-y-4">
+            
+            {/* Section TABLEAUX DE BORD */}
+            <div>
+              <p className="text-[10px] font-semibold tracking-widest text-zinc-400/60 dark:text-zinc-500/60 px-3 mb-1.5 uppercase">Tableaux de bord</p>
+              <div className="space-y-0.5">
+                {/* Vue d'ensemble */}
+                <button
+                  onClick={() => { setActiveTab('overview'); setSidebarOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                    activeTab === 'overview'
+                      ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                  }`}
+                >
+                  <LayoutGrid className="w-4 h-4 flex-shrink-0" />
+                  <span className="flex-1 text-left">Vue d'ensemble</span>
+                </button>
+
+                {/* Finance avec sous-menu */}
+                <div>
+                  <button
+                    onClick={() => setExpandedMenus(prev => ({ ...prev, finance: !prev.finance }))}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                      activeTab === 'finance'
+                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                    }`}
+                  >
+                    <BarChart3 className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">Finance</span>
+                    <ChevronRight className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.finance ? 'rotate-90' : ''}`} />
+                  </button>
+                  {expandedMenus.finance && (
+                    <div className="mt-0.5 space-y-0.5 overflow-hidden">
+                      <button onClick={() => { setActiveTab('finance'); setFinanceView('revenus'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'finance' && financeView === 'revenus' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'finance' && financeView === 'revenus' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Revenus
+                      </button>
+                      <button onClick={() => { setActiveTab('finance'); setFinanceView('acomptes'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'finance' && financeView === 'acomptes' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'finance' && financeView === 'acomptes' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Acomptes
+                      </button>
+                      {/* V2: Analytics/Statistiques avancées masquées pour le MVP */}
+                    </div>
+                  )}
+                </div>
+
+                {/* Planning avec sous-menu */}
+                <div>
+                  <button
+                    onClick={() => setExpandedMenus(prev => ({ ...prev, planning: !prev.planning }))}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                      activeTab === 'appointments'
+                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                    }`}
+                  >
+                    <Calendar className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">Planning</span>
+                    <ChevronRight className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.planning ? 'rotate-90' : ''}`} />
+                  </button>
+                  {expandedMenus.planning && (
+                    <div className="mt-0.5 space-y-0.5 overflow-hidden">
+                      <button onClick={() => { setActiveTab('appointments'); setPlanningView('week'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'appointments' && planningView === 'week' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'appointments' && planningView === 'week' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Vue semaine
+                      </button>
+                      <button onClick={() => { setActiveTab('appointments'); setPlanningView('month'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'appointments' && planningView === 'month' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'appointments' && planningView === 'month' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Vue mois
+                      </button>
+                      <button onClick={() => { setActiveTab('settings'); setSettingsTab('availability'); setSidebarOpen(false); }} className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all">
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600 flex-shrink-0" />
+                        Disponibilités
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Section PAGES */}
+            <div>
+              <p className="text-[10px] font-semibold tracking-widest text-zinc-400/60 dark:text-zinc-500/60 px-3 mb-1.5 uppercase">Pages</p>
+              <div className="space-y-0.5">
+                {/* Demandes avec sous-menu */}
+                <div>
+                  <button
+                    onClick={() => setExpandedMenus(prev => ({ ...prev, requests: !prev.requests }))}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                      activeTab === 'requests'
+                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                    }`}
+                  >
+                    <MessageSquare className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">Demandes</span>
+                    {pendingRequestsCount > 0 && (
+                      <span className="min-w-[18px] h-[18px] px-1.5 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold rounded-full">
+                        {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+                      </span>
+                    )}
+                    <ChevronRight className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.requests ? 'rotate-90' : ''}`} />
+                  </button>
+                  {expandedMenus.requests && (
+                    <div className="mt-0.5 space-y-0.5 overflow-hidden">
+                      <button onClick={() => { setActiveTab('requests'); setRequestsSubTab('rdv'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        En attente
+                      </button>
+                      <button onClick={() => { setActiveTab('requests'); setRequestsSubTab('bookings'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Vitrine
+                      </button>
+                      <button onClick={() => { setActiveTab('requests'); setRequestsSubTab('projects'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Projets
+                      </button>
+                      <button onClick={() => { setActiveTab('requests'); setRequestsSubTab('history'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'history' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'history' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Historique
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Clients avec sous-menu */}
+                <div>
+                  <button
+                    onClick={() => setExpandedMenus(prev => ({ ...prev, clients: !prev.clients }))}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                      activeTab === 'clients'
+                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                    }`}
+                  >
+                    <Users className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">Clients</span>
+                    <ChevronRight className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.clients ? 'rotate-90' : ''}`} />
+                  </button>
+                  {expandedMenus.clients && (
+                    <div className="mt-0.5 space-y-0.5 overflow-hidden">
+                      <button onClick={() => { setActiveTab('clients'); setClientsView('overview'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'overview' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'overview' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Vue d'ensemble
+                      </button>
+                      <button onClick={() => { setActiveTab('clients'); setClientsView('projects'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'projects' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Projets
+                      </button>
+                      {/* V2: Messagerie avancée masquée pour le MVP */}
+                    </div>
+                  )}
+                </div>
+
+                {/* Ma vitrine avec sous-menu */}
+                <div>
+                  <button
+                    onClick={() => setExpandedMenus(prev => ({ ...prev, vitrine: !prev.vitrine }))}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                      activeTab === 'flash' || activeTab === 'portfolio'
+                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                    }`}
+                  >
+                    <FolderOpen className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">Ma vitrine</span>
+                    <ChevronRight className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.vitrine ? 'rotate-90' : ''}`} />
+                  </button>
+                  {expandedMenus.vitrine && (
+                    <div className="mt-0.5 space-y-0.5 overflow-hidden">
+                      <button onClick={() => { setActiveTab('flash'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'flash' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'flash' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Galerie Flash
+                      </button>
+                      <button onClick={() => { setActiveTab('portfolio'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'portfolio' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'portfolio' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Portfolio
+                      </button>
+                      <button onClick={() => { setActiveTab('settings'); setSettingsTab('vitrine'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Personnaliser
+                      </button>
+                      {studioSlug && (
+                        <a href={`/studio/${studioSlug}`} target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all">
+                          <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                          Voir ma vitrine
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Paramètres avec sous-menu */}
+                <div>
+                  <button
+                    onClick={() => setExpandedMenus(prev => ({ ...prev, settings: !prev.settings }))}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                      activeTab === 'settings'
+                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                    }`}
+                  >
+                    <Settings className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">Paramètres</span>
+                    <ChevronRight className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.settings ? 'rotate-90' : ''}`} />
+                  </button>
+                  {expandedMenus.settings && (
+                    <div className="mt-0.5 space-y-0.5 overflow-hidden">
+                      <button onClick={() => { setActiveTab('settings'); setSettingsTab('general'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'general' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'general' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Mon compte
+                      </button>
+                      <button onClick={() => { setActiveTab('settings'); setSettingsTab('billing'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'billing' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'billing' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Abonnement
+                      </button>
+                      <button onClick={() => { setActiveTab('settings'); setSettingsTab('vitrine'); setSidebarOpen(false); }} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Vitrine
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </nav>
+
+          {/* Footer — Déconnexion (Parrainage masqué pour MVP) */}
+          <div className="relative z-10 mt-auto px-3 py-3 border-t border-zinc-100 dark:border-zinc-800/50 safe-bottom space-y-0.5">
+            {/* V2: Parrainage masqué pour le MVP
+            <a
+              href="/referral"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all"
+            >
+              <Gift className="w-4 h-4 flex-shrink-0" />
+              <span>Parrainage</span>
+            </a>
+            */}
+            <button
+              onClick={logout}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all"
+            >
+              <LogOut className="w-4 h-4 flex-shrink-0" />
+              <span>Déconnexion</span>
+            </button>
           </div>
         </aside>
 
@@ -711,26 +996,22 @@ export const DashboardPro: React.FC = () => {
             }`}
           >
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2.5 -ml-1 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150" aria-label="Ouvrir le menu">
+              {/* Hamburger — toujours visible sur mobile/tablette */}
+              <button 
+                onClick={() => setSidebarOpen(true)} 
+                className="lg:hidden p-2.5 -ml-1 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
+                aria-label="Ouvrir le menu"
+              >
                 <Menu className="w-6 h-6 text-[var(--text-secondary)]" />
               </button>
               {activeTab === 'overview' ? (
-                <>
-                  <div className="flex-1 min-w-0" />
-                  <button
-                    onClick={() => setShowPlanningSheet(true)}
-                    className="xl:hidden p-2.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors touch-target"
-                    aria-label="Ouvrir le planning"
-                  >
-                    <Calendar className="w-5 h-5 text-[var(--text-secondary)]" />
-                  </button>
-                </>
+                <div className="flex-1 min-w-0" />
               ) : (
                 <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)] min-w-0">{tabs.find(t => t.id === activeTab)?.label}</h2>
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            {/* Barre de recherche globale (style Command Palette) */}
+            {/* Barre de recherche globale (style Command Palette) — desktop only */}
             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-colors w-64 lg:w-72">
               <Search className="w-4 h-4 text-zinc-500 dark:text-zinc-400 flex-shrink-0" />
               <input
@@ -743,6 +1024,15 @@ export const DashboardPro: React.FC = () => {
                 ⌘K
               </kbd>
             </div>
+            {/* Planning — visible sur mobile/tablette, ouvre le sheet planning */}
+            <button
+              onClick={() => setShowPlanningSheet(true)}
+              className="xl:hidden p-2.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
+              aria-label="Ouvrir le planning"
+            >
+              <Calendar className="w-5 h-5 text-[var(--text-secondary)]" />
+            </button>
+            {/* Theme toggle — toujours visible */}
             <ThemeToggle />
             <div className="relative">
               <button
@@ -795,7 +1085,8 @@ export const DashboardPro: React.FC = () => {
                 </div>
               )}
             </div>
-            <div className="relative flex items-center min-w-0">
+            {/* Avatar/Profil — masqué sur mobile SEULEMENT pour overview car doublon avec Bottom Tab Bar > Réglages */}
+            <div className={`relative flex items-center min-w-0 ${activeTab === 'overview' ? 'hidden md:flex' : ''}`}>
               <button
                 onClick={() => { setShowProfileDropdown(!showProfileDropdown); setShowNotifications(false); }}
                 className="flex items-center gap-2.5 p-1.5 pr-2 sm:pr-3 rounded-full hover:bg-white/60 dark:hover:bg-white/10 transition-colors duration-150 min-h-[44px]"
@@ -892,6 +1183,16 @@ export const DashboardPro: React.FC = () => {
               setOverviewCalendarMonth={setOverviewCalendarMonth}
               nextClientOfDay={nextClientOfDay}
               setActiveTab={setActiveTab}
+              onAlertNavigate={(alert) => {
+                if (alert.id === 'unpaid') {
+                  setRequestsInitialTab('history');
+                  setActiveTab('requests');
+                } else if (alert.type === 'warning') {
+                  setActiveTab('finance');
+                } else {
+                  setActiveTab('appointments');
+                }
+              }}
               setSelectedAppointment={setSelectedAppointment}
               onUpdateAppointment={updateAppointment}
               setShowBookingModal={setShowBookingModal}
@@ -912,6 +1213,7 @@ export const DashboardPro: React.FC = () => {
             <RequestsDashboard
               studioId={studioId}
               studioSlug={studioSlug}
+              initialTab={requestsSubTab}
               appointments={appointments}
               clients={clients}
               onUpdateAppointment={updateAppointment}
@@ -1001,20 +1303,21 @@ export const DashboardPro: React.FC = () => {
           )}
 
           {!loading && activeTab === 'settings' && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-2 border-b border-[var(--border)] pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="space-y-6 animate-fade-in">
+              {/* Navigation tabs améliorée */}
+              <div className="flex items-center gap-3 -mx-4 px-4 sm:mx-0 sm:px-0">
                 <button
                   type="button"
                   onClick={(e) => {
                     const el = e.currentTarget.nextElementSibling;
                     if (el) el.scrollBy({ left: -200, behavior: 'smooth' });
                   }}
-                  className="flex-shrink-0 w-10 h-10 rounded-xl border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+                  className="hidden sm:flex flex-shrink-0 w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 items-center justify-center text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all"
                   aria-label="Défiler à gauche"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
-                <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide flex gap-2 flex-nowrap pb-1" style={{ scrollBehavior: 'smooth' }}>
+                <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide flex gap-1.5 flex-nowrap py-1" style={{ scrollBehavior: 'smooth' }}>
                   {([
                     { id: 'general', label: 'Général' },
                     { id: 'payments', label: 'Paiements' },
@@ -1022,18 +1325,19 @@ export const DashboardPro: React.FC = () => {
                     { id: 'care', label: 'Soins post-tattoo' },
                     { id: 'consent', label: 'Consentement' },
                     { id: 'availability', label: 'Disponibilités' },
-                    { id: 'artists', label: 'Artistes' },
-                    { id: 'waitlist', label: 'Liste d\'attente' },
-                    { id: 'loyalty', label: 'Fidélité' },
+                    // V2: Masqués pour le MVP
+                    // { id: 'artists', label: 'Artistes' },
+                    // { id: 'waitlist', label: 'Liste d\'attente' },
+                    // { id: 'loyalty', label: 'Fidélité' },
                     { id: 'calendar', label: 'Calendrier' },
                     { id: 'vitrine', label: 'Page vitrine' },
-                    { id: 'messagerie', label: 'Messagerie' },
+                    // { id: 'messagerie', label: 'Messagerie' }, // V2
                   ] as const).map(tab => (
                     <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
+                      className={`px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                         settingsTab === tab.id
-                          ? 'bg-blue-600 text-white shadow-sm dark:bg-blue-500 dark:hover:bg-blue-600'
-                          : 'border-2 border-[var(--border)] text-[var(--text-primary)] hover:border-blue-400 hover:bg-blue-50/50 dark:hover:border-blue-500/60 dark:hover:bg-blue-500/10'
+                          ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
+                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white'
                       }`}>
                       {tab.label}
                     </button>
@@ -1045,66 +1349,83 @@ export const DashboardPro: React.FC = () => {
                     const el = e.currentTarget.previousElementSibling;
                     if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
                   }}
-                  className="flex-shrink-0 w-10 h-10 rounded-xl border border-[var(--border)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+                  className="hidden sm:flex flex-shrink-0 w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 items-center justify-center text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all"
                   aria-label="Défiler à droite"
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
               {settingsTab === 'general' && (
                 <div className="space-y-6 max-w-2xl w-full overflow-hidden">
+                  {/* Lien vitrine */}
                   {user?.studioName && (
                     <VitrineLinkButton studioName={user.studioName} userEmail={user.email} studioSlug={studioSlug} />
                   )}
-                  <div className="bg-[var(--bg-card)] rounded-2xl p-6 sm:p-8 border border-[var(--border)]">
-                  <h3 className="font-bold text-lg mb-6 text-[var(--text-primary)]">Paramètres du studio</h3>
-                  <div className="space-y-6">
-                    {/* Photo de profil */}
-                    <div>
-                      <label className="block text-sm font-semibold text-[var(--text-primary)] mb-3">Photo de profil</label>
-                      <div className="flex items-center gap-5">
-                        <div className="relative group">
+                  
+                  {/* Slug personnalisé */}
+                  {studioId && studioSlug && (
+                    <SlugSettings
+                      studioId={studioId}
+                      currentSlug={studioSlug}
+                      onSlugUpdated={refreshStudioSlug}
+                    />
+                  )}
+                  
+                  {/* Carte Profil */}
+                  <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
+                      <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Profil du studio</h3>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">Informations affichées sur votre page publique</p>
+                    </div>
+                    <div className="p-6 space-y-6">
+                      {/* Photo de profil */}
+                      <div className="flex items-start gap-6">
+                        <div className="relative group flex-shrink-0">
                           {user?.avatar ? (
-                            <img src={user.avatar} alt="Avatar" className="w-20 h-20 rounded-full object-cover border-2 border-[var(--border)] shadow-sm" />
+                            <img src={user.avatar} alt="Avatar" className="w-24 h-24 rounded-2xl object-cover border-2 border-zinc-200 dark:border-zinc-700 shadow-sm" />
                           ) : (
-                            <div className="w-20 h-20 rounded-full bg-[var(--bg-card-secondary)] border-2 border-dashed border-[var(--border)] flex items-center justify-center">
-                              <Camera className="w-7 h-7 text-[var(--text-tertiary)]" />
+                            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-700 border-2 border-dashed border-zinc-300 dark:border-zinc-600 flex items-center justify-center">
+                              <Camera className="w-8 h-8 text-zinc-400 dark:text-zinc-500" />
                             </div>
                           )}
                           {avatarUploading && (
-                            <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+                            <div className="absolute inset-0 rounded-2xl bg-black/50 flex items-center justify-center">
                               <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                             </div>
                           )}
                           <button
                             type="button"
                             onClick={() => avatarInputRef.current?.click()}
-                            className="absolute -bottom-1 -right-1 w-8 h-8 bg-neutral-900 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-neutral-700 transition-colors"
+                            className="absolute -bottom-2 -right-2 w-9 h-9 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl flex items-center justify-center shadow-lg hover:bg-zinc-700 dark:hover:bg-zinc-100 transition-colors"
                             title="Changer la photo"
                           >
                             <Camera className="w-4 h-4" />
                           </button>
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <button
-                            type="button"
-                            onClick={() => avatarInputRef.current?.click()}
-                            disabled={avatarUploading}
-                            className="min-h-[44px] px-4 py-2 text-sm font-medium bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white rounded-xl hover:bg-neutral-800 dark:hover:bg-zinc-100 transition-colors disabled:opacity-50"
-                          >
-                            {avatarUploading ? 'Upload...' : user?.avatar ? 'Changer la photo' : 'Ajouter une photo'}
-                          </button>
-                          {user?.avatar && (
+                        <div className="flex-1 min-w-0 pt-1">
+                          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Photo de profil</p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                            Cette image apparaîtra sur votre page vitrine et dans vos communications.
+                          </p>
+                          <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              onClick={handleAvatarRemove}
-                              className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors flex items-center gap-1.5"
+                              onClick={() => avatarInputRef.current?.click()}
+                              disabled={avatarUploading}
+                              className="px-4 py-2 text-sm font-medium bg-zinc-900 dark:bg-white dark:text-zinc-900 text-white rounded-xl hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors disabled:opacity-50"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              Supprimer
+                              {avatarUploading ? 'Upload...' : user?.avatar ? 'Modifier' : 'Ajouter'}
                             </button>
-                          )}
-                          <p className="text-xs text-[var(--text-tertiary)]">JPG, PNG ou WebP. Max 5 Mo.</p>
+                            {user?.avatar && (
+                              <button
+                                type="button"
+                                onClick={handleAvatarRemove}
+                                className="px-3 py-2 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <input
@@ -1114,68 +1435,91 @@ export const DashboardPro: React.FC = () => {
                         onChange={handleAvatarUpload}
                         className="hidden"
                       />
-                    </div>
 
-                    <hr className="border-[var(--border)]" />
+                      <hr className="border-zinc-100 dark:border-zinc-800" />
 
-                    <div>
-                      <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Nom du studio</label>
-                      <input
-                        type="text"
-                        value={generalStudioName}
-                        onChange={(e) => { setGeneralStudioName(e.target.value); setGeneralSaved(false); }}
-                        className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-[var(--border-focus)]"
-                      />
+                      {/* Nom du studio */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Nom du studio</label>
+                        <input
+                          type="text"
+                          value={generalStudioName}
+                          onChange={(e) => { setGeneralStudioName(e.target.value); setGeneralSaved(false); }}
+                          className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                          placeholder="Mon studio de tatouage"
+                        />
+                      </div>
+                      
+                      {/* Email */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Email</label>
+                        <input
+                          type="email"
+                          value={generalEmail}
+                          onChange={(e) => { setGeneralEmail(e.target.value); setGeneralSaved(false); }}
+                          className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                          placeholder="contact@example.com"
+                        />
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">Cet email sera utilisé pour les notifications et la facturation.</p>
+                      </div>
+                      {/* Bouton sauvegarder */}
+                      <div className="pt-2">
+                        <button
+                          onClick={async () => {
+                            if (generalSaving) return;
+                            setGeneralSaving(true);
+                            try {
+                              if (studioId) {
+                                const { error } = await supabase.from('inkflow_studios').update({
+                                  name: generalStudioName,
+                                  studio_name: generalStudioName,
+                                  email: generalEmail,
+                                  updated_at: new Date().toISOString()
+                                }).eq('id', studioId);
+                                if (error) throw error;
+                              }
+                              updateUser({ studioName: generalStudioName, email: generalEmail });
+                              localStorage.setItem('inkflow_studio_name', generalStudioName);
+                              localStorage.setItem('inkflow_email', generalEmail);
+                              setGeneralSaved(true);
+                              toast.success('Paramètres enregistrés');
+                              setTimeout(() => setGeneralSaved(false), 3000);
+                            } catch (err) {
+                              toast.error('Erreur lors de la sauvegarde');
+                            } finally {
+                              setGeneralSaving(false);
+                            }
+                          }}
+                          disabled={generalSaving}
+                          className={`w-full sm:w-auto px-6 py-3 rounded-xl font-semibold transition-all active:scale-[0.98] ${
+                            generalSaved
+                              ? 'bg-green-600 text-white'
+                              : 'bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100'
+                          } disabled:opacity-50`}
+                        >
+                          {generalSaving ? (
+                            <span className="flex items-center gap-2">
+                              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                              Enregistrement...
+                            </span>
+                          ) : generalSaved ? '✓ Enregistré' : 'Enregistrer les modifications'}
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Email</label>
-                      <input
-                        type="email"
-                        value={generalEmail}
-                        onChange={(e) => { setGeneralEmail(e.target.value); setGeneralSaved(false); }}
-                        className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-[var(--border-focus)]"
-                      />
-                    </div>
-                    <button
-                      onClick={async () => {
-                        if (generalSaving) return;
-                        setGeneralSaving(true);
-                        try {
-                          if (studioId) {
-                            const { error } = await supabase.from('inkflow_studios').update({
-                              name: generalStudioName,
-                              studio_name: generalStudioName,
-                              email: generalEmail,
-                              updated_at: new Date().toISOString()
-                            }).eq('id', studioId);
-                            if (error) throw error;
-                          }
-                          // Sync with AuthContext: only studio name and email (do not overwrite user's display name)
-                          updateUser({ studioName: generalStudioName, email: generalEmail });
-                          localStorage.setItem('inkflow_studio_name', generalStudioName);
-                          localStorage.setItem('inkflow_email', generalEmail);
-                          setGeneralSaved(true);
-                          toast.success('Paramètres du studio enregistrés');
-                          setTimeout(() => setGeneralSaved(false), 3000);
-                        } catch (err) {
-                          toast.error('Erreur lors de la sauvegarde');
-                        } finally {
-                          setGeneralSaving(false);
-                        }
-                      }}
-                      disabled={generalSaving}
-                      className={`px-6 py-3 rounded-xl font-semibold transition-colors touch-target ${
-                        generalSaved
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-blue-600 text-white hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600'
-                      } disabled:opacity-50`}
-                    >
-                      {generalSaving ? 'Enregistrement...' : generalSaved ? 'Enregistre !' : 'Enregistrer'}
-                    </button>
-
-                    <hr className="border-[var(--border)]" />
-                    <PushNotificationsSettings studioId={studioId} />
                   </div>
+                  
+                  {/* Notifications Push */}
+                  <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
+                      <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Notifications</h3>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">Configurez vos préférences de notification</p>
+                    </div>
+                    <div className="p-6">
+                      <PushNotificationsSettings studioId={studioId} />
+                    </div>
                   </div>
                 </div>
               )}
@@ -1268,7 +1612,7 @@ export const DashboardPro: React.FC = () => {
                 />
               )}
               {settingsTab === 'calendar' && <CalendarSettings studioId={studioId || ''} appointments={appointments} onToast={(msg, type) => type === 'success' ? toast.success(msg) : toast.error(msg)} />}
-              {settingsTab === 'vitrine' && user?.studioName && <VitrineSettings studioName={user.studioName} userEmail={user.email} studioSlug={studioSlug} />}
+              {settingsTab === 'vitrine' && user?.studioName && <VitrineSettings studioName={user.studioName} userEmail={user.email} studioSlug={studioSlug} studioId={studioId} />}
               {settingsTab === 'messagerie' && studioId && <InstagramConnect studioId={studioId} />}
             </div>
           )}
@@ -1464,58 +1808,55 @@ export const DashboardPro: React.FC = () => {
         </>
       )}
 
-      {/* ====== MOBILE BOTTOM NAVIGATION BAR (style Apple: FAB mis en avant, safe area) ====== */}
+      {/* ====== MOBILE BOTTOM NAVIGATION BAR (style iOS: 5 onglets plats, sans FAB) ====== */}
       <nav className="bottom-nav md:hidden" role="navigation" aria-label="Navigation principale mobile">
-        <div className="flex items-center justify-around px-1 sm:px-2 pt-3 pb-1">
+        <div className="flex items-center justify-around px-1 sm:px-2 pt-2 pb-1">
           {/* Accueil */}
           <button
             onClick={() => { setActiveTab('overview'); setShowFabMenu(false); }}
-            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'overview' ? 'text-neutral-900 dark:text-[var(--text-primary)]' : 'text-neutral-400 dark:text-[var(--text-tertiary)]'}`}
+            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'overview' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400 dark:text-zinc-500'}`}
           >
-            <LayoutDashboard className="w-5 h-5" />
-            <span className="text-[9px] font-semibold">Accueil</span>
+            <LayoutDashboard className="w-6 h-6" />
+            <span className="text-[10px] font-medium">Accueil</span>
           </button>
 
           {/* Agenda */}
           <button
             onClick={() => { setActiveTab('appointments'); setShowFabMenu(false); }}
-            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'appointments' ? 'text-neutral-900 dark:text-[var(--text-primary)]' : 'text-neutral-400 dark:text-[var(--text-tertiary)]'}`}
+            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'appointments' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400 dark:text-zinc-500'}`}
           >
-            <Calendar className="w-5 h-5" />
-            <span className="text-[9px] font-semibold">Agenda</span>
-          </button>
-
-          {/* FAB central - plus grand, ombre marquée */}
-          <button
-            onClick={() => setShowFabMenu(!showFabMenu)}
-            className={`flex items-center justify-center w-16 h-16 -mt-7 rounded-full shadow-xl shadow-neutral-900/30 transition-all min-w-[56px] min-h-[56px] active:scale-95 ${
-              showFabMenu
-                ? 'bg-neutral-700 rotate-45'
-                : 'bg-neutral-900'
-            }`}
-          >
-            <Plus className="w-8 h-8 text-white" />
+            <Calendar className="w-6 h-6" />
+            <span className="text-[10px] font-medium">Agenda</span>
           </button>
 
           {/* Demandes */}
           <button
             onClick={() => { setActiveTab('requests'); setShowFabMenu(false); }}
-            className={`relative flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'requests' ? 'text-neutral-900 dark:text-[var(--text-primary)]' : 'text-neutral-400 dark:text-[var(--text-tertiary)]'}`}
+            className={`relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'requests' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400 dark:text-zinc-500'}`}
           >
             <span className="relative flex flex-col items-center">
-              <Inbox className="w-5 h-5" />
-              <BadgeNotification count={pendingRequestsCount} className="-top-0.5 right-auto left-1/2 -translate-x-1/2" />
+              <Inbox className="w-6 h-6" />
+              <BadgeNotification count={pendingRequestsCount} className="-top-1 -right-2" />
             </span>
-            <span className="text-[9px] font-semibold">Demandes</span>
+            <span className="text-[10px] font-medium">Demandes</span>
           </button>
 
-          {/* Profil / Settings */}
+          {/* Clients */}
+          <button
+            onClick={() => { setActiveTab('clients'); setShowFabMenu(false); }}
+            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'clients' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400 dark:text-zinc-500'}`}
+          >
+            <Users className="w-6 h-6" />
+            <span className="text-[10px] font-medium">Clients</span>
+          </button>
+
+          {/* Réglages */}
           <button
             onClick={() => { setActiveTab('settings'); setShowFabMenu(false); }}
-            className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'settings' ? 'text-neutral-900 dark:text-[var(--text-primary)]' : 'text-neutral-400 dark:text-[var(--text-tertiary)]'}`}
+            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'settings' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400 dark:text-zinc-500'}`}
           >
-            <User className="w-5 h-5" />
-            <span className="text-[9px] font-semibold">Profil</span>
+            <Settings className="w-6 h-6" />
+            <span className="text-[10px] font-medium">Réglages</span>
           </button>
         </div>
       </nav>

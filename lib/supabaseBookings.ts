@@ -13,6 +13,8 @@ export function mapBookingFromDb(row: Record<string, unknown>): Booking {
     requestedTime: (row.requested_time as string) ?? null,
     status: (row.status as BookingStatus) || 'pending',
     referenceImages: Array.isArray(refImages) ? (refImages as string[]) : undefined,
+    placement: row.placement as string | undefined,
+    size: row.size as string | undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };

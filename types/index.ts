@@ -128,7 +128,7 @@ export interface BookingFormData {
   agreedToDeposit: boolean;
 }
 
-export type ProjectRequestStatus = 'PENDING' | 'APPROVED' | 'DEPOSIT_PAID' | 'REJECTED' | 'COMPLETED';
+export type ProjectRequestStatus = 'pending' | 'accepted' | 'rejected';
 
 export interface ProjectRequest {
   id: string;
@@ -137,10 +137,13 @@ export interface ProjectRequest {
   clientEmail: string;
   clientInstagram?: string;
   description: string;
+  projectType?: 'flash' | 'custom';
   placement?: string;
+  estimatedSize?: string;
   size?: string;
   budget?: string;
   status: ProjectRequestStatus;
+  referenceImageUrl?: string;
   referenceImages: string[];
   createdAt: string;
 }
@@ -150,9 +153,12 @@ export interface ProjectRequestFormData {
   clientEmail: string;
   clientInstagram?: string;
   description: string;
+  projectType?: 'flash' | 'custom';
   placement?: string;
+  estimatedSize?: string;
   size?: string;
   budget?: string;
+  referenceImageUrl?: string;
   referenceImages?: string[];
 }
 
@@ -168,6 +174,10 @@ export interface Booking {
   requestedTime: string | null;
   status: BookingStatus;
   referenceImages?: string[];
+  /** Zone du corps (optionnel, depuis formulaire vitrine) */
+  placement?: string;
+  /** Taille estimée (optionnel) */
+  size?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -215,8 +225,8 @@ export interface Payment {
 // Subscriptions & plan-based permissions
 export type SubscriptionPlan = 'solo' | 'pro' | 'studio' | 'enterprise';
 
-/** Statut d'abonnement studio (inkflow_studios.subscription_status) */
-export type SubscriptionStatus = 'trialing' | 'active' | 'restricted' | 'canceled';
+/** Statut d'abonnement studio */
+export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'cancelled' | 'incomplete' | 'restricted';
 
 /** Clés des fonctionnalités gérées par le plan (Stripe) */
 export type PlanFeatureKey =
@@ -225,12 +235,11 @@ export type PlanFeatureKey =
   | 'api_access'
   | 'stats_avancees'
   | 'multi_calendriers'
-  | 'white_label';
+  | 'white_label'
+  | 'themes_premium';
 
 /** Clés des limites (artistes, clients CRM) */
 export type PlanLimitKey = 'artists' | 'clients_crm';
-
-export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'cancelled' | 'incomplete';
 
 export interface Subscription {
   id: string;

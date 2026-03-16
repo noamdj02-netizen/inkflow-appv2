@@ -12,7 +12,10 @@ const corsHeaders = {
 };
 
 async function verifyStripeSignature(payload: string, signature: string, secret: string): Promise<boolean> {
-  if (!secret) return true;
+  if (!secret) {
+    console.error("[stripe-webhook] STRIPE_WEBHOOK_SECRET is empty - rejecting request");
+    return false;
+  }
   try {
     const parts = signature.split(",");
     const timestampPart = parts.find(p => p.startsWith("t="));
@@ -138,10 +141,10 @@ Deno.serve(async (req: Request) => {
         if (studioId) {
           const { data: studio } = await supabase
             .from("inkflow_studios")
-            .select("name, email")
+            .select("studio_name, email")
             .eq("id", studioId)
             .single();
-          if (studio?.name) studioName = studio.name;
+          if (studio?.studio_name) studioName = studio.studio_name;
 
           await supabase.from("inkflow_notifications").insert({
             id: `n_${Date.now()}`,

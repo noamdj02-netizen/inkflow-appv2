@@ -32,7 +32,7 @@ export const InstagramCallbackPage: React.FC = () => {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center p-6">
+      <div className="landing-scroll min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center p-6">
         <Logo size="lg" className="rounded-2xl mb-6" />
         <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
         <p className="mt-4 text-sm text-[var(--text-secondary)]">Connexion Instagram en cours...</p>
@@ -61,7 +61,7 @@ export const InstagramCallbackPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center p-6">
+    <div className="landing-scroll min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center p-6">
       <Logo size="lg" className="rounded-2xl mb-6" />
       <p className="text-sm text-[var(--text-secondary)]">Redirection...</p>
     </div>

@@ -31,6 +31,7 @@ const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage').t
 const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
 const AidePage = lazy(() => import('./pages/AidePage').then(m => ({ default: m.AidePage })));
 const DemoSandboxPage = lazy(() => import('./pages/DemoSandboxPage').then(m => ({ default: m.DemoSandboxPage })));
+const DashboardDemoPage = lazy(() => import('./pages/DashboardDemoPage').then(m => ({ default: m.DashboardDemoPage })));
 const FeatureDetailPage = lazy(() => import('./pages/features/FeatureDetailPage').then(m => ({ default: m.FeatureDetailPage })));
 const InstagramCallbackPage = lazy(() => import('./pages/InstagramCallbackPage').then(m => ({ default: m.InstagramCallbackPage })));
 const AddToHomeScreenPage = lazy(() => import('./pages/AddToHomeScreenPage').then(m => ({ default: m.AddToHomeScreenPage })));
@@ -109,6 +110,7 @@ const Router: React.FC = () => {
     { path: /^\/invite\/([a-zA-Z0-9]+)\/?$/, component: InviteRedirectPage, getProps: (m) => ({ code: m[1] }) },
     { path: '/reset-password', component: ResetPasswordPage },
     { path: '/demo', component: DemoSandboxPage },
+    { path: '/dashboard-demo', component: DashboardDemoPage },
     { path: /^\/installer\/?$/, component: AddToHomeScreenPage },
     { path: /^\/(vue-ensemble|demandes|rendez-vous|galerie-flash|clients|messagerie|portfolio|finance|parametres)\/?$/, component: FeatureDetailPage, getProps: (m) => ({ slug: m[1] }) },
     { path: '/dashboard', component: DashboardPage, requiresAuth: true, needsSupabaseSync: true },

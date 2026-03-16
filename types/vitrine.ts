@@ -71,6 +71,8 @@ export interface VitrineWhyChooseUs {
 export interface VitrineData {
   name: string;
   slug: string;
+  /** Thème de la vitrine : light, dark, vintage, neon */
+  theme?: string;
   tagline: string;
   description: string;
   avatar: string;

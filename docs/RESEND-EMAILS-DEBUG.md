@@ -8,6 +8,7 @@
 - **send-project-notification** : notification nouvelle demande de projet → artiste (lien dashboard)
 - **send-appointment-reminders** : rappels RDV (2h avant, 24h avant)
 - **send-aftercare-email** : soins post-tattoo après un RDV
+- **send-referral-notification** : félicitations au parrain quand un studio s'inscrit via son lien
 
 Les liens Stripe (acompte, abo) et Google Calendar utilisent **APP_URL** ou **SITE_URL** (create-checkout-session, create-subscription, google-calendar-auth).
 

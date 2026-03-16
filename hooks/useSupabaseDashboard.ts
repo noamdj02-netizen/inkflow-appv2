@@ -290,9 +290,14 @@ export const useSupabaseDashboard = () => {
     }
   }, [useSupabase]);
 
+  const refreshStudioSlug = useCallback((newSlug: string) => {
+    setStudioSlug(newSlug);
+  }, []);
+
   return {
     studioId,
     studioSlug,
+    refreshStudioSlug,
     subscriptionStatus,
     trialEndsAt,
     appointments,

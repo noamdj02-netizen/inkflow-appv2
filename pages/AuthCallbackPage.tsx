@@ -41,8 +41,9 @@ export const AuthCallbackPage: React.FC = () => {
       const meta = u.user_metadata ?? {};
       const name = (meta.name as string) || u.email?.split('@')[0] || 'User';
       const studioName = (meta.studio_name as string) || 'Mon studio';
+      const referralCode = (meta.referral_code as string) || undefined;
       try {
-        await ensureStudio(u.email ?? '', name, studioName);
+        await ensureStudio(u.email ?? '', name, studioName, referralCode);
       } catch {
         // Ne pas bloquer la redirection
       }
@@ -81,7 +82,7 @@ export const AuthCallbackPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+    <div className="landing-scroll min-h-screen bg-neutral-50 flex items-center justify-center">
       <Logo size="lg" className="rounded-2xl" />
     </div>
   );

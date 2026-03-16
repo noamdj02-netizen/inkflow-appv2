@@ -34,7 +34,7 @@ const FEATURES: Record<string, FeatureConfig> = {
       'Vue calendrier et liste des rendez-vous',
     ],
     ctaLabel: 'Voir le dashboard',
-    ctaHref: '/demo',
+    ctaHref: '/dashboard-demo',
   },
   demandes: {
     id: 'demandes',
@@ -158,7 +158,7 @@ export const FeatureDetailPage: React.FC<FeatureDetailPageProps> = ({ slug }) =>
   const feature = FEATURES[slug];
   if (!feature) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="landing-scroll min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-neutral-800 mb-4">Page non trouvée</h1>
           <a href={LANDING_URL} className="text-blue-600 hover:underline">Retour à l'accueil</a>

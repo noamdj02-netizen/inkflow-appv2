@@ -34,7 +34,9 @@ export function useProjectRequests(studioId: string | null) {
     try {
       const data = await getProjectRequestsFromSupabase(studioId);
       setProjectRequests(data);
-    } catch {
+    } catch (err) {
+      console.error('[useProjectRequests] load error:', err);
+      toast.error('Impossible de charger les demandes de projet');
       setProjectRequests([]);
     } finally {
       setLoading(false);

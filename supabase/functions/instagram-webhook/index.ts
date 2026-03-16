@@ -57,7 +57,8 @@ Deno.serve(async (req: Request) => {
       }
 
       return new Response(JSON.stringify({ status: "ok" }), { headers: { "Content-Type": "application/json" } });
-    } catch {
+    } catch (err) {
+      console.error("[instagram-webhook] Erreur traitement message:", err instanceof Error ? err.message : String(err));
       return new Response(JSON.stringify({ status: "error" }), { status: 500, headers: { "Content-Type": "application/json" } });
     }
   }

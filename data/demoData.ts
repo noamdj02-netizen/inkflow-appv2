@@ -149,25 +149,117 @@ export function getDemoNotifications(): Notification[] {
   ];
 }
 
-/** Demandes de projet fictives (onglet Demandes) */
+/** Demandes de projet fictives (onglet Demandes) — avec images Unsplash et métadonnées réalistes */
 export function getDemoProjectRequests(): ProjectRequest[] {
   const base = new Date();
   const fmt = (d: Date) => d.toISOString();
   return [
-    { id: 'demo-pr1', studioId: 'demo', clientName: 'Thomas Rousseau', clientEmail: 'thomas@exemple.fr', description: 'Je souhaite un flash dragon sur l\'avant-bras, style japonais. Budget ~200€.', placement: 'Avant-bras', size: 'medium', budget: '200€', status: 'PENDING', referenceImages: [], createdAt: fmt(new Date(base.getTime() - 86400000)) },
-    { id: 'demo-pr2', studioId: 'demo', clientName: 'Julie Moreau', clientEmail: 'julie@exemple.fr', description: 'Demande de devis pour un petit symbole au poignet (infini ou étoile).', placement: 'Poignet', size: 'small', budget: '80-120€', status: 'PENDING', referenceImages: [], createdAt: fmt(new Date(base.getTime() - 172800000)) },
-    { id: 'demo-pr3', studioId: 'demo', clientName: 'Maxime Petit', clientEmail: 'maxime@exemple.fr', description: 'Consultation pour un projet dos complet, thème forêt et animaux. Je peux envoyer des refs.', status: 'APPROVED', referenceImages: [], createdAt: fmt(new Date(base.getTime() - 259200000)) },
+    {
+      id: 'demo-pr1',
+      studioId: 'demo',
+      clientName: 'Thomas Rousseau',
+      clientEmail: 'thomas@exemple.fr',
+      clientInstagram: '@thomas.ink',
+      description: 'Je souhaite un flash dragon sur l\'avant-bras droit, style japonais traditionnel. J\'aime les lignes épurées et les dégradés de noir. Budget ~200€, dispo le week-end.',
+      placement: 'Avant-bras',
+      size: '10-15 cm',
+      budget: '200€',
+      status: 'PENDING',
+      referenceImages: ['https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400&h=400&fit=crop'],
+      createdAt: fmt(new Date(base.getTime() - 86400000)),
+    },
+    {
+      id: 'demo-pr2',
+      studioId: 'demo',
+      clientName: 'Julie Moreau',
+      clientEmail: 'julie@exemple.fr',
+      description: 'Demande de devis pour un petit symbole au poignet gauche — infini ou étoile minimaliste. Style fin et délicat, noir uniquement. Idée de tatouage discret pour un premier tattoo.',
+      placement: 'Poignet',
+      size: '5-10 cm',
+      budget: '80-120€',
+      status: 'PENDING',
+      referenceImages: ['https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=400&h=400&fit=crop'],
+      createdAt: fmt(new Date(base.getTime() - 172800000)),
+    },
+    {
+      id: 'demo-pr3',
+      studioId: 'demo',
+      clientName: 'Léa Bernard',
+      clientEmail: 'lea.bernard@exemple.fr',
+      clientInstagram: '@lea.tattoo',
+      description: 'Projet custom : manchette florale sur le bras complet. Inspirée par les compositions botaniques japonaises (sakura, chrysanthèmes). Je peux envoyer des références Pinterest. Budget 400-600€.',
+      placement: 'Bras',
+      size: '15-25 cm',
+      budget: '400-600€',
+      status: 'PENDING',
+      referenceImages: ['https://images.unsplash.com/photo-1590246814883-57c511e76917?w=400&h=400&fit=crop'],
+      createdAt: fmt(new Date(base.getTime() - 43200000)),
+    },
+    {
+      id: 'demo-pr4',
+      studioId: 'demo',
+      clientName: 'Maxime Petit',
+      clientEmail: 'maxime@exemple.fr',
+      description: 'Flash marguerite ou rose — je n\'ai pas encore choisi. Zone : épaule ou mollet. Style old school, couleurs vives. Disponible en semaine.',
+      placement: 'Épaule',
+      size: '10-15 cm',
+      budget: '150-250€',
+      status: 'PENDING',
+      referenceImages: ['https://images.unsplash.com/photo-1611080626919-7cf5a9dbab5b?w=400&h=400&fit=crop'],
+      createdAt: fmt(new Date(base.getTime() - 259200000)),
+    },
   ];
 }
 
-/** Réservations entrantes fictives (demandes depuis la vitrine) */
+/** Réservations entrantes fictives (demandes depuis la vitrine) — avec images et métadonnées */
 export function getDemoBookings(): Booking[] {
   const base = new Date();
   const fmt = (d: Date) => d.toISOString();
   const nextWeek = new Date(base.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   return [
-    { id: 'demo-b1', studioId: 'demo', clientName: 'Sophie Martin', clientEmail: 'sophie@exemple.fr', description: 'Consultation + projet floral dos', requestedDate: nextWeek, requestedTime: '10:00', status: 'pending', createdAt: fmt(base), updatedAt: fmt(base) },
-    { id: 'demo-b2', studioId: 'demo', clientName: 'Lucas Klein', clientEmail: 'lucas@exemple.fr', description: 'Flash Lune et Étoiles - poignet', requestedDate: nextWeek, requestedTime: '14:00', status: 'pending', createdAt: fmt(new Date(base.getTime() - 3600000)), updatedAt: fmt(base) },
+    {
+      id: 'demo-b1',
+      studioId: 'demo',
+      clientName: 'Sophie Martin',
+      clientEmail: 'sophie@exemple.fr',
+      description: 'Consultation pour un projet floral sur le dos — composition de roses et feuilles, style réaliste. Zone entre les omoplates. Je peux envoyer des photos de référence.',
+      requestedDate: nextWeek,
+      requestedTime: 'morning',
+      status: 'pending',
+      referenceImages: ['https://images.unsplash.com/photo-1611080626919-7cf5a9dbab5b?w=400&h=400&fit=crop'],
+      createdAt: fmt(base),
+      updatedAt: fmt(base),
+    },
+    {
+      id: 'demo-b2',
+      studioId: 'demo',
+      clientName: 'Lucas Klein',
+      clientEmail: 'lucas@exemple.fr',
+      description: 'Flash Lune et Étoiles — poignet gauche. Design minimaliste, lignes fines. Premier tatouage, un peu stressé mais motivé !',
+      requestedDate: nextWeek,
+      requestedTime: 'afternoon',
+      status: 'pending',
+      referenceImages: ['https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=400&h=400&fit=crop'],
+      createdAt: fmt(new Date(base.getTime() - 3600000)),
+      updatedAt: fmt(base),
+      placement: 'Poignet',
+      size: '5-10 cm',
+    },
+    {
+      id: 'demo-b3',
+      studioId: 'demo',
+      clientName: 'Emma Lefebvre',
+      clientEmail: 'emma.lefebvre@exemple.fr',
+      description: 'Carpe Koï sur le mollet — style japonais traditionnel. J\'ai une ref précise à montrer. Zone : mollet droit, taille moyenne.',
+      requestedDate: nextWeek,
+      requestedTime: 'evening',
+      status: 'pending',
+      referenceImages: ['https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400&h=400&fit=crop'],
+      createdAt: fmt(new Date(base.getTime() - 7200000)),
+      updatedAt: fmt(base),
+      placement: 'Mollet',
+      size: '10-15 cm',
+    },
   ];
 }
 

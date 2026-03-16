@@ -136,79 +136,117 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+      {/* Header */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Clients</h1>
+            <p className="text-zinc-500 dark:text-zinc-400 mt-1">Gérez votre base de clients et leur historique</p>
+          </div>
+          {onAddClient && (
+            <button
+              onClick={() => (clientLimitReached ? onUpgradeClick?.() : setShowAddModal(true))}
+              disabled={clientLimitReached}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all active:scale-[0.98] ${
+                clientLimitReached 
+                  ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed' 
+                  : 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100'
+              }`}
+            >
+              <UserPlus className="w-4 h-4" /> Nouveau client
+            </button>
+          )}
+        </div>
+
+        {/* Limite atteinte */}
+        {clientLimitReached && (
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-xl text-sm">
+            <span className="text-orange-800 dark:text-orange-300">
+              Limite atteinte{typeof clientLimit === 'number' && clientLimit > 0 ? ` (${clients.length}/${clientLimit})` : ''}. Passez au plan supérieur.
+            </span>
+            {onUpgradeClick && (
+              <button onClick={onUpgradeClick} className="px-3 py-1.5 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 whitespace-nowrap text-sm">
+                Voir les offres
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Filtres */}
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative min-w-[200px]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-tertiary)]" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input
               type="search"
               placeholder="Rechercher un client..." value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-dash w-full pl-12 pr-4 py-3 min-h-[48px]"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-sm"
               aria-label="Rechercher un client"
             />
           </div>
-          <button
-            type="button"
-            onClick={() => setSortBy(s => s === 'recent' ? 'alpha' : 'recent')}
-            className="min-h-[48px] px-4 py-2 rounded-xl border-2 border-[var(--border)] hover:border-blue-300 dark:hover:border-blue-500/50 flex items-center gap-2 font-medium transition-all"
-            title={sortBy === 'recent' ? 'Trier par nom (A-Z)' : 'Trier par dernière visite'}
-          >
-            {sortBy === 'recent' ? <ArrowUpDown className="w-4 h-4" /> : <ArrowDownAZ className="w-4 h-4" />}
-            {sortBy === 'recent' ? 'Récent' : 'A-Z'}
-          </button>
-          <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 flex-nowrap">
-            {(['all', 'active', 'vip', 'inactive'] as const).map(status => (
-              <button key={status} onClick={() => setFilterStatus(status)}
-                className={`min-h-[44px] px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
-                  filterStatus === status ? 'bg-blue-600 text-white shadow-sm' : 'border-2 border-[var(--border)] hover:border-blue-300 hover:bg-blue-50/50 dark:hover:border-blue-500/50 dark:hover:bg-blue-500/10'
-                }`}>
-                {status === 'all' ? 'Tous' : status === 'vip' ? 'VIP' : status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setSortBy(s => s === 'recent' ? 'alpha' : 'recent')}
+              className="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium transition-all text-sm"
+              title={sortBy === 'recent' ? 'Trier par nom (A-Z)' : 'Trier par dernière visite'}
+            >
+              {sortBy === 'recent' ? <ArrowUpDown className="w-4 h-4" /> : <ArrowDownAZ className="w-4 h-4" />}
+              {sortBy === 'recent' ? 'Récent' : 'A-Z'}
+            </button>
+            <div className="flex gap-1.5">
+              {(['all', 'active', 'vip', 'inactive'] as const).map(status => (
+                <button key={status} onClick={() => setFilterStatus(status)}
+                  className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                    filterStatus === status 
+                      ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' 
+                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                  }`}>
+                  {status === 'all' ? 'Tous' : status === 'vip' ? 'VIP' : status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-        {onAddClient && (
-          <>
-            {clientLimitReached && (
-              <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-zinc-100 dark:bg-zinc-500/20 border border-zinc-200 dark:border-zinc-600 rounded-xl text-sm">
-                <span className="text-zinc-800 dark:text-zinc-200">
-                  Limite atteinte{typeof clientLimit === 'number' && clientLimit > 0 ? ` (${clients.length} / ${clientLimit} clients)` : ''}. Passez au plan Studio pour en ajouter plus.
-                </span>
-                {onUpgradeClick && (
-                  <button onClick={onUpgradeClick} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 whitespace-nowrap">
-                    Voir les offres
-                  </button>
-                )}
-              </div>
-            )}
-            <button
-              onClick={() => (clientLimitReached ? onUpgradeClick?.() : setShowAddModal(true))}
-              disabled={clientLimitReached}
-              className={`flex items-center gap-2 min-h-[48px] px-6 py-3 rounded-xl font-semibold transition-all ${clientLimitReached ? 'bg-[var(--bg-hover)] text-[var(--text-tertiary)] cursor-not-allowed' : 'btn-primary'}`}
-            >
-              <UserPlus className="w-5 h-5" /> Ajouter un client
-            </button>
-          </>
-        )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="dashboard-widget-card p-4">
-          <div className="text-sm text-[var(--text-secondary)] mb-1">Total clients</div>
-          <div className="text-2xl font-bold tabular-nums">{clients.length}</div>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Total clients</span>
+            <div className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800">
+              <User className="w-4 h-4 text-zinc-600 dark:text-zinc-400" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{clients.length}</div>
         </div>
-        <div className="dashboard-widget-card p-4">
-          <div className="text-sm text-[var(--text-secondary)] mb-1">Clients VIP</div>
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{clients.filter(c => c.status === 'vip').length}</div>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">VIP</span>
+            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-500/10">
+              <Tag className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">{clients.filter(c => c.status === 'vip').length}</div>
         </div>
-        <div className="dashboard-widget-card p-4">
-          <div className="text-sm text-[var(--text-secondary)] mb-1">Revenus totaux</div>
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{clients.reduce((sum, c) => sum + c.totalSpent, 0)}€</div>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Revenus</span>
+            <div className="p-2 rounded-xl bg-green-50 dark:bg-green-500/10">
+              <User className="w-4 h-4 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">{clients.reduce((sum, c) => sum + c.totalSpent, 0).toLocaleString('fr-FR')}€</div>
         </div>
-        <div className="dashboard-widget-card p-4">
-          <div className="text-sm text-[var(--text-secondary)] mb-1">RDV totaux</div>
-          <div className="text-2xl font-bold tabular-nums">{clients.reduce((sum, c) => sum + c.appointmentsCount, 0)}</div>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">RDV totaux</span>
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10">
+              <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{clients.reduce((sum, c) => sum + c.appointmentsCount, 0)}</div>
         </div>
       </div>
 

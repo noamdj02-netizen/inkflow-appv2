@@ -1,21 +1,17 @@
 import React, { useMemo } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 
-const WEEKDAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+const WEEKDAYS_SHORT = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 
 interface MiniCalendarProps {
-  /** Date sélectionnée (YYYY-MM-DD) ou null */
   selectedDate: string | null;
   onSelectDate: (date: string) => void;
-  /** Ensemble des dates qui ont au moins un RDV (YYYY-MM-DD) */
   datesWithAppointments: Set<string>;
-  /** Mois affiché (objet Date) */
   currentMonth: Date;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onToday: () => void;
   className?: string;
-  /** Variante sombre pour la sidebar calendrier (style calendar.me) */
   variant?: 'default' | 'dark';
 }
 
@@ -39,6 +35,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
 }) => {
   const isDark = variant === 'dark';
   const todayStr = toDateStr(new Date());
+  const isTodaySelected = selectedDate === todayStr || selectedDate === null;
 
   const { weeks, monthLabel } = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -64,103 +61,162 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
     return { weeks, monthLabel };
   }, [currentMonth]);
 
+  const appointmentsThisMonth = useMemo(() => {
+    let count = 0;
+    datesWithAppointments.forEach(dateStr => {
+      const d = new Date(dateStr);
+      if (d.getFullYear() === currentMonth.getFullYear() && d.getMonth() === currentMonth.getMonth()) {
+        count++;
+      }
+    });
+    return count;
+  }, [datesWithAppointments, currentMonth]);
+
   return (
     <div
-      className={`overflow-hidden p-5 ${className} ${
+      className={`${className} ${
         isDark
           ? 'bg-transparent'
-          : 'rounded-2xl dashboard-widget-card'
+          : 'bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]'
       }`}
-      style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
-      <div className={`flex items-center justify-between px-1 py-2 border-b mb-4 ${
-        isDark ? 'border-zinc-700' : 'border-zinc-200 dark:border-zinc-800'
+      {/* Header */}
+      <div className={`px-4 py-3 flex items-center justify-between ${
+        isDark ? 'border-b border-zinc-700' : 'border-b border-slate-100 dark:border-zinc-800'
       }`}>
         <button
           type="button"
           onClick={onPrevMonth}
-          className={`p-2 rounded-lg transition-colors ${
+          className={`p-2 rounded-xl transition-colors ${
             isDark
               ? 'hover:bg-zinc-800 text-zinc-400 hover:text-white'
-              : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+              : 'hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
           }`}
           aria-label="Mois précédent"
         >
-          <ChevronLeft className="w-5 h-5" strokeWidth={1.5} />
+          <ChevronLeft className="w-4 h-4" />
         </button>
-        <span className={`text-[15px] font-semibold capitalize ${
-          isDark ? 'text-zinc-100' : 'text-zinc-900 dark:text-[var(--text-primary)]'
-        }`}>
-          {monthLabel}
-        </span>
+        <div className="text-center">
+          <span className={`text-sm font-semibold capitalize ${
+            isDark ? 'text-zinc-100' : 'text-slate-900 dark:text-white'
+          }`}>
+            {monthLabel}
+          </span>
+          {appointmentsThisMonth > 0 && (
+            <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-slate-500 dark:text-zinc-500'}`}>
+              {appointmentsThisMonth} jours avec RDV
+            </p>
+          )}
+        </div>
         <button
           type="button"
           onClick={onNextMonth}
-          className={`p-2 rounded-lg transition-colors ${
+          className={`p-2 rounded-xl transition-colors ${
             isDark
               ? 'hover:bg-zinc-800 text-zinc-400 hover:text-white'
-              : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+              : 'hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
           }`}
           aria-label="Mois suivant"
         >
-          <ChevronRight className="w-5 h-5" strokeWidth={1.5} />
+          <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-      <div>
-        <div className="grid grid-cols-7 gap-1 text-center">
-          {WEEKDAYS.map((wd) => (
-            <div key={wd} className={`py-2 text-[11px] font-semibold uppercase tracking-wide ${
-              isDark ? 'text-zinc-500' : 'text-zinc-500 dark:text-zinc-400'
-            }`}>
+
+      {/* Calendar Grid */}
+      <div className="p-3">
+        {/* Weekday headers */}
+        <div className="grid grid-cols-7 mb-2">
+          {WEEKDAYS_SHORT.map((wd, i) => (
+            <div 
+              key={wd + i} 
+              className={`py-2 text-[10px] font-semibold uppercase tracking-wider text-center ${
+                i === 0 || i === 6 
+                  ? isDark ? 'text-zinc-600' : 'text-slate-400 dark:text-zinc-600'
+                  : isDark ? 'text-zinc-500' : 'text-slate-500 dark:text-zinc-500'
+              }`}
+            >
               {wd}
             </div>
           ))}
+        </div>
+
+        {/* Days grid */}
+        <div className="grid grid-cols-7 gap-1">
           {weeks.flatMap((row, ri) =>
             row.map((day, ci) => {
               if (day === null) return <div key={`e-${ri}-${ci}`} className="aspect-square" />;
+              
               const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
               const dateStr = toDateStr(d);
               const isSelected = selectedDate === dateStr;
               const isToday = dateStr === todayStr;
               const hasAppointments = datesWithAppointments.has(dateStr);
+              const isWeekend = ci === 0 || ci === 6;
+              const isPast = dateStr < todayStr;
+
               return (
                 <button
                   key={dateStr}
                   type="button"
                   onClick={() => onSelectDate(dateStr)}
-                  className={`min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0
-                    aspect-square rounded-lg text-[13px] font-medium flex flex-col items-center justify-center transition-all
+                  className={`
+                    relative aspect-square rounded-xl text-xs font-medium flex items-center justify-center transition-all
                     ${isSelected
-                      ? 'bg-blue-600 text-white shadow-sm'
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                       : isToday
                         ? isDark
-                          ? 'bg-emerald-500/30 text-emerald-300 font-semibold ring-1 ring-emerald-500/50'
-                          : 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold ring-1 ring-blue-200 dark:ring-blue-500/30'
-                        : isDark
-                          ? 'text-zinc-300 hover:bg-zinc-800'
-                          : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                          ? 'bg-emerald-500/20 text-emerald-300 font-bold ring-2 ring-emerald-500/30'
+                          : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold ring-2 ring-blue-500/30'
+                        : isPast
+                          ? isDark
+                            ? 'text-zinc-600 hover:bg-zinc-800/50'
+                            : 'text-slate-400 dark:text-zinc-600 hover:bg-slate-50 dark:hover:bg-zinc-800/50'
+                          : isWeekend
+                            ? isDark
+                              ? 'text-zinc-500 hover:bg-zinc-800'
+                              : 'text-slate-500 dark:text-zinc-500 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                            : isDark
+                              ? 'text-zinc-300 hover:bg-zinc-800'
+                              : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800'
                     }
+                    ${hasAppointments && !isSelected ? 'font-semibold' : ''}
                   `}
                 >
                   <span>{day}</span>
+                  {/* Appointment indicator */}
                   {hasAppointments && !isSelected && (
-                    <span className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${isDark ? 'bg-blue-400 ring-1 ring-blue-400/30' : 'bg-blue-500 ring-1 ring-blue-500/30'}`} aria-hidden />
+                    <span className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
+                      isDark ? 'bg-emerald-400' : 'bg-blue-500'
+                    }`} />
+                  )}
+                  {/* Today indicator */}
+                  {isToday && !isSelected && (
+                    <span className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full ${
+                      isDark ? 'bg-emerald-500' : 'bg-blue-600'
+                    }`} />
                   )}
                 </button>
               );
             })
           )}
         </div>
+
+        {/* Today button */}
         <button
           type="button"
           onClick={onToday}
-          className={`w-full mt-4 py-2.5 rounded-lg text-[13px] font-semibold transition-colors ${
-            isDark
-              ? 'text-emerald-400 border border-emerald-500/50 bg-transparent hover:bg-emerald-500/10'
-              : 'text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-600 bg-transparent hover:bg-blue-50 dark:hover:bg-blue-500/10'
+          className={`w-full mt-3 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 ${
+            isTodaySelected
+              ? isDark
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
+                : 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+              : isDark
+                ? 'text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10'
+                : 'text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-500/10'
           }`}
         >
-          Aujourd&apos;hui
+          <Calendar className="w-3.5 h-3.5" />
+          Aujourd'hui
         </button>
       </div>
     </div>

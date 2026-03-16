@@ -18,7 +18,7 @@ export const InviteRedirectPage: React.FC<InviteRedirectPageProps> = ({ code }) 
   }, [code]);
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
+    <div className="landing-scroll min-h-screen bg-white flex items-center justify-center">
       <p className="text-zinc-500">Redirection…</p>
     </div>
   );
