@@ -968,29 +968,29 @@ export const DashboardDemoPage: React.FC = () => {
 
         {/* Page Content */}
         <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto bg-zinc-50 dark:bg-black">
-          {/* Demo Banner */}
-          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <Sparkles className="w-5 h-5" />
+          {/* Demo Banner — compact sur mobile */}
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div>
-                <p className="font-semibold">Mode Démonstration</p>
-                <p className="text-sm text-blue-100">Explorez le dashboard InkFlow librement</p>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm sm:text-base">Mode Démonstration</p>
+                <p className="text-xs sm:text-sm text-blue-100 truncate">Explorez le dashboard InkFlow librement</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => { setOnboardingStep(0); setShowOnboarding(true); }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/20 text-white font-medium hover:bg-white/30 transition-colors text-sm"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl bg-white/20 text-white font-medium hover:bg-white/30 transition-colors text-xs sm:text-sm"
               >
-                <Play className="w-4 h-4" /> Revoir le guide
+                <Play className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" /> Revoir le guide
               </button>
               <a
                 href="/signup"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-blue-600 font-semibold hover:bg-blue-50 transition-colors text-sm"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-5 sm:py-2.5 rounded-lg sm:rounded-xl bg-white text-blue-600 font-semibold hover:bg-blue-50 transition-colors text-xs sm:text-sm"
               >
-                Créer mon compte <ArrowUpRight className="w-4 h-4" />
+                Créer mon compte <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
               </a>
             </div>
           </div>

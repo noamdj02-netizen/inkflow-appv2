@@ -42,6 +42,10 @@ export interface VitrinePortfolioItem {
   artist: string;
   likes: number;
   description: string;
+  /** Photo "avant" pour avant/après (optionnel) */
+  beforeUrl?: string;
+  /** ID du RDV associé (optionnel) */
+  appointmentId?: string;
 }
 
 export interface VitrineFlashDesign {

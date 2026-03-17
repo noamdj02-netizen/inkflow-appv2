@@ -2,11 +2,13 @@
  * Synchronise les notifications avec le dashboard, le planning et le calendrier.
  * Écoute Supabase Realtime (bookings, appointments) et affiche des Web Notifications
  * quand une nouvelle demande arrive ou qu'un acompte est reçu.
+ * Crée également des notifications in-app dans Supabase.
  */
 import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { mapBookingFromDb } from '../lib/supabaseBookings';
-import { mapAppointmentFromDb } from '../lib/supabaseDashboard';
+import { mapAppointmentFromDb, mapProjectRequestFromDb } from '../lib/supabaseDashboard';
+import { notifyNewBookingRequest, notifyDepositReceived, createInAppNotification } from '../lib/sendNotification';
 
 const NOTIFICATION_TITLE_PREFIX = 'InkFlow';
 
@@ -63,6 +65,12 @@ export function useNotificationSync(studioId: string | null, enabled: boolean): 
                 'Nouvelle demande',
                 `${booking.clientName} a réservé : ${booking.description.slice(0, 50)}${booking.description.length > 50 ? '…' : ''}`,
                 `booking-${booking.id}`
+              );
+              notifyNewBookingRequest(
+                studioId!,
+                booking.clientName,
+                booking.description,
+                booking.requestedDate
               );
             }
           } catch {
@@ -121,6 +129,48 @@ export function useNotificationSync(studioId: string | null, enabled: boolean): 
                 `${apt.clientName} a payé ${amount}€`,
                 `deposit-${apt.id}`
               );
+              notifyDepositReceived(studioId!, apt.clientName, amount);
+            }
+          } catch {
+            // ignore
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [enabled, studioId]);
+
+  // Project Requests : nouvelle demande de projet vitrine
+  useEffect(() => {
+    if (!enabled || !studioId) return;
+
+    const channelName = `notif-inkflow_project_requests-${studioId}`;
+    const filter = `studio_id=eq.${studioId}`;
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'inkflow_project_requests', filter },
+        (payload) => {
+          try {
+            const request = mapProjectRequestFromDb(payload.new as Record<string, unknown>);
+            if (initialLoadDone.current) {
+              showWebNotification(
+                'Nouvelle demande de projet',
+                `${request.clientName} — ${request.description.slice(0, 50)}${request.description.length > 50 ? '…' : ''}`,
+                `project-${request.id}`
+              );
+              createInAppNotification({
+                studioId: studioId!,
+                type: 'booking',
+                title: `${request.clientName} souhaite un projet`,
+                message: request.description.slice(0, 100) + (request.description.length > 100 ? '…' : ''),
+                actionUrl: '/requests',
+              });
             }
           } catch {
             // ignore

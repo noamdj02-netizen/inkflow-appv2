@@ -15,12 +15,16 @@ export const KPI_WIDGET_IDS = ['kpi-revenue', 'kpi-deposits', 'kpi-clients', 'kp
 export const MAIN_WIDGET_IDS = [
   'revenue-chart',
   'appointments-list', 
-  'clients-recent',
-  'deposits-recent',
+  'clients-deposits',
   'requests-pending',
   'next-client',
-  // 'referral-widget', // V2: Masqué pour le MVP
 ] as const;
+
+/** IDs obsolètes → nouveaux (migration) */
+const LEGACY_WIDGET_MAP: Record<string, string> = {
+  'clients-recent': 'clients-deposits',
+  'deposits-recent': 'clients-deposits',
+};
 
 /** Tous les IDs de widgets fixes */
 export const FIXED_WIDGET_IDS = [...KPI_WIDGET_IDS] as const;
@@ -36,8 +40,8 @@ export interface DashboardLayout {
 }
 
 export const DEFAULT_LAYOUT: DashboardLayout = {
-  leftColumn: ['revenue-chart', 'appointments-list'], // V2: referral-widget retiré pour MVP
-  rightColumn: ['clients-recent', 'deposits-recent', 'requests-pending', 'next-client'],
+  leftColumn: ['revenue-chart', 'appointments-list'],
+  rightColumn: ['next-client', 'clients-deposits', 'requests-pending'],
   kpiOrder: [...KPI_WIDGET_IDS],
 };
 
@@ -64,6 +68,19 @@ export function setWidgetOrderToStorage(order: string[]): void {
   }
 }
 
+function migrateLayoutIds(ids: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const id of ids) {
+    const migrated = LEGACY_WIDGET_MAP[id] ?? id;
+    if (!seen.has(migrated)) {
+      seen.add(migrated);
+      result.push(migrated);
+    }
+  }
+  return result;
+}
+
 export function getLayoutFromStorage(): DashboardLayout {
   try {
     const raw = localStorage.getItem(LAYOUT_STORAGE_KEY);
@@ -74,7 +91,18 @@ export function getLayoutFromStorage(): DashboardLayout {
     if (!Array.isArray(layout.leftColumn) || !Array.isArray(layout.rightColumn) || !Array.isArray(layout.kpiOrder)) {
       return { ...DEFAULT_LAYOUT };
     }
-    return layout;
+    const migrated: DashboardLayout = {
+      kpiOrder: migrateLayoutIds(layout.kpiOrder),
+      leftColumn: migrateLayoutIds(layout.leftColumn),
+      rightColumn: migrateLayoutIds(layout.rightColumn),
+    };
+    const hadEmpty = migrated.kpiOrder.length === 0 || migrated.leftColumn.length === 0 || migrated.rightColumn.length === 0;
+    if (migrated.kpiOrder.length === 0) migrated.kpiOrder = [...KPI_WIDGET_IDS];
+    if (migrated.leftColumn.length === 0) migrated.leftColumn = [...DEFAULT_LAYOUT.leftColumn];
+    if (migrated.rightColumn.length === 0) migrated.rightColumn = [...DEFAULT_LAYOUT.rightColumn];
+    const hadLegacyIds = [...layout.kpiOrder, ...layout.leftColumn, ...layout.rightColumn].some(id => LEGACY_WIDGET_MAP[id]);
+    if (hadLegacyIds || hadEmpty) setLayoutToStorage(migrated);
+    return migrated;
   } catch {
     return { ...DEFAULT_LAYOUT };
   }

@@ -40,6 +40,13 @@
 body {
   overflow-x: hidden;
 }
+
+/* Scroll fluide iOS/Android — évite saccades et améliore le scroll dans les modales */
+.overflow-y-auto,
+.overflow-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
 :root[data-theme="dark"] body {
   background-color: #000000;
 }

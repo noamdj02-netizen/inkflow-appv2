@@ -88,7 +88,48 @@ npx supabase secrets set VAPID_PUBLIC_KEY=BNx...  VAPID_PRIVATE_KEY=xxx...
 
 ---
 
-## 5. Format du payload push
+## 5. Notifications quand l'app est fermée (Database Webhooks)
+
+Pour recevoir des push **même quand l'app est fermée (mobile ou desktop)**, il faut configurer des **Database Webhooks** qui déclenchent l'Edge Function `notification-webhook` à chaque INSERT/UPDATE pertinent.
+
+### Déployer et configurer
+
+1. Déployer la fonction :
+
+   ```bash
+   npx supabase functions deploy notification-webhook
+   npx supabase functions deploy send-push-notification
+   ```
+
+2. Créer les webhooks dans **Supabase Dashboard** : **Database → Webhooks** (ou **Project Settings → Integrations → Webhooks**).
+
+3. Pour chaque webhook ci-dessous, utiliser l’URL :
+
+   ```
+   https://<PROJECT_REF>.supabase.co/functions/v1/notification-webhook
+   ```
+
+   Remplace `<PROJECT_REF>` par l’ID de ton projet Supabase (ex. `abcdefgh`).
+
+4. Webhooks à créer :
+
+   | Table | Événement | Description |
+   |-------|-----------|-------------|
+   | `inkflow_bookings` | INSERT | Nouvelle demande RDV vitrine |
+   | `inkflow_project_requests` | INSERT | Nouvelle demande de projet |
+   | `inkflow_appointments` | INSERT | Nouveau RDV créé |
+   | `inkflow_appointments` | UPDATE | Acompte reçu (deposit_paid) |
+
+5. Les paiements Stripe déclenchent déjà un push directement depuis le webhook Stripe (pas besoin de webhook DB sur `inkflow_notifications`).
+
+### Résumé
+
+- **App ouverte** : Realtime + Web Notifications (navigateur).
+- **App fermée** : Database Webhooks → `notification-webhook` → `send-push-notification` → push sur le device.
+
+---
+
+## 6. Format du payload push
 
 Le Service Worker attend un JSON :
 
@@ -107,3 +148,14 @@ Le Service Worker attend un JSON :
 
 - `data.url` : ouverture au clic sur la notification
 - `tag` : regroupe les notifications (une seule affichée par tag)
+
+---
+
+## 7. Activation côté utilisateur
+
+Le tatoueur active les notifications push dans **Paramètres → Notifications** (section « Notifications push »). Il doit :
+
+1. Utiliser HTTPS (ou localhost en dev)
+2. Installer l’app en PWA (Add to Home Screen sur mobile)
+3. Accepter la permission « Notifications » dans le navigateur
+4. Avoir `VITE_VAPID_PUBLIC_KEY` configuré dans le build frontend

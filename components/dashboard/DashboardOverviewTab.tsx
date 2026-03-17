@@ -1,8 +1,29 @@
-import React, { useMemo, useState } from 'react';
-import { Plus, Inbox, Image, LayoutGrid, Calendar, UserPlus, CreditCard, Clock, ChevronRight, Wallet, Users, DollarSign, TrendingUp, ArrowUpRight, Star, ExternalLink, AlertCircle, CalendarCheck, Phone, MessageCircle, Home, Settings, Zap } from 'lucide-react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { Plus, Inbox, Image, LayoutGrid, Calendar, UserPlus, CreditCard, Clock, ChevronRight, Wallet, Users, DollarSign, TrendingUp, ArrowUpRight, Star, ExternalLink, AlertCircle, CalendarCheck, Phone, MessageCircle, Home, Settings, Zap, Grip, Move, GripVertical, X, Target, Sparkles, BarChart3, Gift, Heart, Award, Percent, Bell, FileText, MapPin, Share2, Check } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { RevenueChart } from './RevenueChart';
 import { AppointmentDayList } from './AppointmentDayList';
 import { getVitrineSlug } from '../../lib/vitrineStorage';
+import { getLayoutFromStorage, setLayoutToStorage, DEFAULT_LAYOUT, type DashboardLayout } from '../../lib/dashboardWidgetOrder';
 import type { Appointment, Client, FlashDesign, ProjectRequest } from '../../types';
 import type { DashboardWidget } from './DashboardWidgets';
 
@@ -88,6 +109,111 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
   const [rightPanelTab, setRightPanelTab] = useState<'clients' | 'deposits'>('clients');
   const [mobileTab, setMobileTab] = useState<'home' | 'calendar' | 'requests' | 'clients' | 'settings'>('home');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [showWidgetPicker, setShowWidgetPicker] = useState(false);
+  
+  const [layout, setLayout] = useState<DashboardLayout>(() => getLayoutFromStorage());
+
+  const AVAILABLE_WIDGETS = useMemo(() => [
+    { id: 'kpi-revenue', name: 'Revenu mensuel', icon: DollarSign, color: 'emerald', category: 'kpi', description: 'Affiche le revenu du mois en cours' },
+    { id: 'kpi-deposits', name: 'Acomptes', icon: Wallet, color: 'violet', category: 'kpi', description: 'Total des acomptes reçus' },
+    { id: 'kpi-clients', name: 'Clients', icon: Users, color: 'blue', category: 'kpi', description: 'Nombre total de clients' },
+    { id: 'kpi-appointments', name: 'RDV du mois', icon: Calendar, color: 'orange', category: 'kpi', description: 'Nombre de RDV ce mois' },
+    { id: 'revenue-chart', name: 'Graphique revenus', icon: BarChart3, color: 'blue', category: 'main', description: 'Évolution des revenus sur 6 mois' },
+    { id: 'appointments-list', name: 'RDV du jour', icon: Calendar, color: 'indigo', category: 'main', description: 'Liste des rendez-vous aujourd\'hui' },
+    { id: 'next-client', name: 'Prochain client', icon: UserPlus, color: 'blue', category: 'sidebar', description: 'Carte du prochain client' },
+    { id: 'clients-deposits', name: 'Clients / Acomptes', icon: Users, color: 'zinc', category: 'sidebar', description: 'Liste des clients et acomptes récents' },
+    { id: 'requests-pending', name: 'Demandes en attente', icon: Inbox, color: 'violet', category: 'sidebar', description: 'Demandes de RDV en attente' },
+    { id: 'quick-stats', name: 'Stats rapides', icon: TrendingUp, color: 'emerald', category: 'main', description: 'Statistiques clés du studio' },
+    { id: 'upcoming-week', name: 'Semaine à venir', icon: CalendarCheck, color: 'sky', category: 'main', description: 'Aperçu des 7 prochains jours' },
+    { id: 'top-services', name: 'Services populaires', icon: Award, color: 'amber', category: 'sidebar', description: 'Vos services les plus demandés' },
+    { id: 'goals-progress', name: 'Objectifs', icon: Target, color: 'rose', category: 'sidebar', description: 'Progression vers vos objectifs' },
+    { id: 'recent-reviews', name: 'Avis récents', icon: Star, color: 'yellow', category: 'sidebar', description: 'Derniers avis clients' },
+    { id: 'flash-promo', name: 'Flash promos', icon: Zap, color: 'amber', category: 'sidebar', description: 'Vos flash designs en promo' },
+    { id: 'loyalty-program', name: 'Programme fidélité', icon: Gift, color: 'pink', category: 'sidebar', description: 'Aperçu du programme fidélité' },
+  ], []);
+
+  const activeWidgets = useMemo(() => {
+    return [...layout.kpiOrder, ...layout.leftColumn, ...layout.rightColumn];
+  }, [layout]);
+
+  const availableToAdd = useMemo(() => {
+    return AVAILABLE_WIDGETS.filter(w => !activeWidgets.includes(w.id));
+  }, [AVAILABLE_WIDGETS, activeWidgets]);
+
+  const handleAddWidget = useCallback((widgetId: string) => {
+    const widget = AVAILABLE_WIDGETS.find(w => w.id === widgetId);
+    if (!widget) return;
+
+    setLayout(prev => {
+      const newLayout = { ...prev };
+      if (widget.category === 'kpi') {
+        newLayout.kpiOrder = [...prev.kpiOrder, widgetId];
+      } else if (widget.category === 'main') {
+        newLayout.leftColumn = [...prev.leftColumn, widgetId];
+      } else {
+        newLayout.rightColumn = [...prev.rightColumn, widgetId];
+      }
+      setLayoutToStorage(newLayout);
+      return newLayout;
+    });
+    setShowWidgetPicker(false);
+  }, [AVAILABLE_WIDGETS]);
+
+  const handleRemoveWidget = useCallback((widgetId: string) => {
+    setLayout(prev => {
+      const newLayout = {
+        kpiOrder: prev.kpiOrder.filter(id => id !== widgetId),
+        leftColumn: prev.leftColumn.filter(id => id !== widgetId),
+        rightColumn: prev.rightColumn.filter(id => id !== widgetId),
+      };
+      setLayoutToStorage(newLayout);
+      return newLayout;
+    });
+  }, []);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    
+    if (!over || active.id === over.id) return;
+    
+    const activeIdStr = active.id as string;
+    const overIdStr = over.id as string;
+    
+    setLayout(prev => {
+      const newLayout = { ...prev };
+      
+      if (prev.kpiOrder.includes(activeIdStr) && prev.kpiOrder.includes(overIdStr)) {
+        const oldIndex = prev.kpiOrder.indexOf(activeIdStr);
+        const newIndex = prev.kpiOrder.indexOf(overIdStr);
+        newLayout.kpiOrder = arrayMove(prev.kpiOrder, oldIndex, newIndex);
+      }
+      else if (prev.leftColumn.includes(activeIdStr) && prev.leftColumn.includes(overIdStr)) {
+        const oldIndex = prev.leftColumn.indexOf(activeIdStr);
+        const newIndex = prev.leftColumn.indexOf(overIdStr);
+        newLayout.leftColumn = arrayMove(prev.leftColumn, oldIndex, newIndex);
+      }
+      else if (prev.rightColumn.includes(activeIdStr) && prev.rightColumn.includes(overIdStr)) {
+        const oldIndex = prev.rightColumn.indexOf(activeIdStr);
+        const newIndex = prev.rightColumn.indexOf(overIdStr);
+        newLayout.rightColumn = arrayMove(prev.rightColumn, oldIndex, newIndex);
+      }
+      
+      setLayoutToStorage(newLayout);
+      return newLayout;
+    });
+  }, []);
 
   const nextClient = todayAppointments[0] || null;
 
@@ -95,6 +221,145 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     const h = now.getHours();
     return h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
   })();
+
+  const SortableWidget: React.FC<{ id: string; children: React.ReactNode; className?: string; canRemove?: boolean }> = ({ id, children, className = '', canRemove = true }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !isEditMode });
+    
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+      zIndex: isDragging ? 50 : 'auto',
+    };
+    
+    return (
+      <div ref={setNodeRef} style={style} className={`relative group ${className}`}>
+        {isEditMode && (
+          <div className="absolute -top-2 -right-2 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div 
+              {...attributes} 
+              {...listeners}
+              className="p-1.5 rounded-lg bg-blue-600 text-white cursor-grab active:cursor-grabbing shadow-lg"
+            >
+              <GripVertical className="w-3.5 h-3.5" />
+            </div>
+            {canRemove && (
+              <button
+                onClick={() => handleRemoveWidget(id)}
+                className="p-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+        <div className={isEditMode ? 'ring-2 ring-blue-500/50 ring-offset-2 dark:ring-offset-zinc-950 rounded-2xl' : ''}>
+          {children}
+        </div>
+      </div>
+    );
+  };
+
+  const SortableKpiWidget: React.FC<{ id: string; children: React.ReactNode; canRemove?: boolean }> = ({ id, children, canRemove = true }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !isEditMode });
+    
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+      zIndex: isDragging ? 50 : 'auto',
+    };
+    
+    return (
+      <div ref={setNodeRef} style={style} className="relative group">
+        {isEditMode && (
+          <div className="absolute -top-2 -right-2 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div 
+              {...attributes} 
+              {...listeners}
+              className="p-1.5 rounded-lg bg-blue-600 text-white cursor-grab active:cursor-grabbing shadow-lg"
+            >
+              <GripVertical className="w-3.5 h-3.5" />
+            </div>
+            {canRemove && (
+              <button
+                onClick={() => handleRemoveWidget(id)}
+                className="p-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+        <div className={isEditMode ? 'ring-2 ring-blue-500/50 ring-offset-2 dark:ring-offset-zinc-950 rounded-2xl' : ''}>
+          {children}
+        </div>
+      </div>
+    );
+  };
+
+  const renderKpiWidget = (widgetId: string) => {
+    switch (widgetId) {
+      case 'kpi-revenue':
+        return (
+          <SortableKpiWidget key={widgetId} id={widgetId}>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
+                  <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Revenu</span>
+              </div>
+              <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{monthlyRevenue.toLocaleString('fr-FR')}€</p>
+            </div>
+          </SortableKpiWidget>
+        );
+      case 'kpi-deposits':
+        return (
+          <SortableKpiWidget key={widgetId} id={widgetId}>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-500/10">
+                  <Wallet className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Acomptes</span>
+              </div>
+              <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{pendingDeposits.toLocaleString('fr-FR')}€</p>
+            </div>
+          </SortableKpiWidget>
+        );
+      case 'kpi-clients':
+        return (
+          <SortableKpiWidget key={widgetId} id={widgetId}>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                  <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Clients</span>
+              </div>
+              <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{clients.length}</p>
+            </div>
+          </SortableKpiWidget>
+        );
+      case 'kpi-appointments':
+        return (
+          <SortableKpiWidget key={widgetId} id={widgetId}>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-xl bg-orange-50 dark:bg-orange-500/10">
+                  <Calendar className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                </div>
+                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">RDV</span>
+              </div>
+              <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{appointmentsThisMonth}</p>
+            </div>
+          </SortableKpiWidget>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <>
@@ -172,35 +437,35 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         {/* Main Content */}
         <div className="px-4 space-y-4">
           
-          {/* Next Client Widget — iOS Widget Style */}
+          {/* Next Client Widget — iOS Widget Style, compact sur mobile */}
           {nextClient && (
-            <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 rounded-[28px] p-5 text-white shadow-lg shadow-blue-500/30 relative overflow-hidden">
+            <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 rounded-2xl sm:rounded-[28px] p-4 sm:p-5 text-white shadow-lg shadow-blue-500/30 relative overflow-hidden">
               <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl translate-x-1/4 -translate-y-1/4" />
+                <div className="absolute top-0 right-0 w-20 h-20 sm:w-24 sm:h-24 bg-white/10 rounded-full blur-2xl translate-x-1/4 -translate-y-1/4" />
               </div>
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Prochain client</span>
-                  <span className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm text-[11px] font-bold">{nextClient.time || '--:--'}</span>
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-white/70">Prochain client</span>
+                  <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-white/20 backdrop-blur-sm text-[10px] sm:text-[11px] font-bold">{nextClient.time || '--:--'}</span>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
                   <img 
                     src={nextClient.clientAvatar || '/images/avatar-client-default.png'} 
                     alt={nextClient.clientName || 'Client'} 
-                    className="w-14 h-14 rounded-2xl object-cover border-2 border-white/30"
+                    className="w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl object-cover border-2 border-white/30"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-lg font-bold truncate">{nextClient.clientName}</p>
-                    <p className="text-sm text-white/80">{nextClient.service || 'Tatouage'}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-white/70">
-                      {nextClient.duration && <span><Clock className="w-3 h-3 inline mr-1" />{nextClient.duration}min</span>}
+                    <p className="text-base sm:text-lg font-bold truncate">{nextClient.clientName}</p>
+                    <p className="text-xs sm:text-sm text-white/80 truncate">{nextClient.service || 'Tatouage'}</p>
+                    <div className="flex items-center gap-2 sm:gap-3 mt-0.5 sm:mt-1 text-[11px] sm:text-xs text-white/70">
+                      {nextClient.duration && <span><Clock className="w-3 h-3 inline mr-0.5" />{nextClient.duration}min</span>}
                       {nextClient.price && <span className="font-bold text-white">{nextClient.price}€</span>}
                     </div>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedAppointment(nextClient)}
-                  className="w-full mt-4 py-3 rounded-2xl bg-white text-blue-600 text-sm font-bold active:scale-[0.98] transition-transform"
+                  className="w-full mt-3 sm:mt-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-white text-blue-600 text-xs sm:text-sm font-bold active:scale-[0.98] transition-transform"
                 >
                   Voir le RDV
                 </button>
@@ -408,6 +673,17 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             {/* Right: Action Buttons */}
             <div className="flex items-center gap-2 flex-wrap">
               <button
+                onClick={() => setIsEditMode(!isEditMode)}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98] shadow-sm ${
+                  isEditMode 
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/20' 
+                    : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                {isEditMode ? 'Terminer' : 'Widgets'}
+              </button>
+              <button
                 onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all active:scale-[0.98] shadow-lg shadow-zinc-900/10"
               >
@@ -433,364 +709,681 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           </div>
         </div>
 
+        {/* Edit Mode Banner */}
+        {isEditMode && (
+          <div className="px-5 sm:px-8 lg:px-10 mb-4">
+            <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-500/20">
+                    <Move className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">Mode personnalisation</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">Glissez les widgets ou ajoutez-en de nouveaux</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowWidgetPicker(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+                >
+                  <Plus className="w-4 h-4" />
+                  Ajouter un widget
+                </button>
+              </div>
+              <button
+                onClick={() => setIsEditMode(false)}
+                className="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+              >
+                Terminer
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Widget Picker Modal */}
+        {showWidgetPicker && (
+          <>
+            <div className="fixed inset-0 bg-black/50 z-50 animate-fade-in" onClick={() => setShowWidgetPicker(false)} />
+            <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[600px] max-h-[80vh] bg-white dark:bg-zinc-900 rounded-3xl z-50 shadow-2xl overflow-hidden animate-slide-up">
+              {/* Header */}
+              <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Ajouter un widget</h2>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Personnalisez votre dashboard avec de nouveaux widgets</p>
+                  </div>
+                  <button
+                    onClick={() => setShowWidgetPicker(false)}
+                    className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  >
+                    <X className="w-5 h-5 text-zinc-500" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Content */}
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                {availableToAdd.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+                      <Check className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <p className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Tous les widgets sont actifs</p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">Vous avez déjà ajouté tous les widgets disponibles</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* KPI Widgets */}
+                    {availableToAdd.filter(w => w.category === 'kpi').length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Indicateurs clés</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          {availableToAdd.filter(w => w.category === 'kpi').map(widget => {
+                            const Icon = widget.icon;
+                            return (
+                              <button
+                                key={widget.id}
+                                onClick={() => handleAddWidget(widget.id)}
+                                className="flex items-start gap-3 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left group"
+                              >
+                                <div className={`p-2.5 rounded-xl bg-${widget.color}-100 dark:bg-${widget.color}-500/20 group-hover:scale-110 transition-transform`}>
+                                  <Icon className={`w-5 h-5 text-${widget.color}-600 dark:text-${widget.color}-400`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{widget.name}</p>
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">{widget.description}</p>
+                                </div>
+                                <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Main Widgets */}
+                    {availableToAdd.filter(w => w.category === 'main').length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Widgets principaux</h3>
+                        <div className="space-y-3">
+                          {availableToAdd.filter(w => w.category === 'main').map(widget => {
+                            const Icon = widget.icon;
+                            return (
+                              <button
+                                key={widget.id}
+                                onClick={() => handleAddWidget(widget.id)}
+                                className="w-full flex items-center gap-4 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left group"
+                              >
+                                <div className={`p-3 rounded-xl bg-${widget.color}-100 dark:bg-${widget.color}-500/20 group-hover:scale-110 transition-transform`}>
+                                  <Icon className={`w-6 h-6 text-${widget.color}-600 dark:text-${widget.color}-400`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">{widget.name}</p>
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{widget.description}</p>
+                                </div>
+                                <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors" />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sidebar Widgets */}
+                    {availableToAdd.filter(w => w.category === 'sidebar').length > 0 && (
+                      <div>
+                        <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Widgets latéraux</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          {availableToAdd.filter(w => w.category === 'sidebar').map(widget => {
+                            const Icon = widget.icon;
+                            return (
+                              <button
+                                key={widget.id}
+                                onClick={() => handleAddWidget(widget.id)}
+                                className="flex items-start gap-3 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left group"
+                              >
+                                <div className={`p-2.5 rounded-xl bg-${widget.color}-100 dark:bg-${widget.color}-500/20 group-hover:scale-110 transition-transform`}>
+                                  <Icon className={`w-5 h-5 text-${widget.color}-600 dark:text-${widget.color}-400`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{widget.name}</p>
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">{widget.description}</p>
+                                </div>
+                                <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
         {/* ===== MAIN GRID ===== */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
         <div className="px-5 sm:px-8 lg:px-10 pb-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             {/* ====== LEFT COLUMN (8/12) ====== */}
             <div className="lg:col-span-8 space-y-6">
               
-              {/* KPI Row — Compact */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
-                      <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Revenu</span>
-                  </div>
-                  <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{monthlyRevenue.toLocaleString('fr-FR')}€</p>
+              {/* KPI Row — Sortable */}
+              <SortableContext items={layout.kpiOrder} strategy={horizontalListSortingStrategy}>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {layout.kpiOrder.map(widgetId => renderKpiWidget(widgetId))}
                 </div>
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-500/10">
-                      <Wallet className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                    </div>
-                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Acomptes</span>
-                  </div>
-                  <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{pendingDeposits.toLocaleString('fr-FR')}€</p>
-                </div>
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10">
-                      <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Clients</span>
-                  </div>
-                  <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{clients.length}</p>
-                </div>
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 rounded-xl bg-orange-50 dark:bg-orange-500/10">
-                      <Calendar className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                    </div>
-                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">RDV</span>
-                  </div>
-                  <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{appointmentsThisMonth}</p>
-                </div>
-              </div>
+              </SortableContext>
 
-              {/* Revenue Chart — Clean, no grid lines */}
-              <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Évolution du revenu</p>
-                    <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{totalRevenue.toLocaleString('fr-FR')}€</p>
-                  </div>
-                  <button 
-                    onClick={() => setActiveTab('finance')} 
-                    className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 transition-colors"
-                  >
-                    Détails <ArrowUpRight className="w-3 h-3" />
-                  </button>
-                </div>
-                <RevenueChart appointments={appointments} totalRevenue={totalRevenue} />
-              </div>
+              {/* Left Column Widgets — Sortable */}
+              <SortableContext items={layout.leftColumn} strategy={verticalListSortingStrategy}>
+                <div className="space-y-6">
+                  {layout.leftColumn.map(widgetId => {
+                    if (widgetId === 'revenue-chart') {
+                      return (
+                        <SortableWidget key={widgetId} id={widgetId}>
+                          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                            <div className="flex items-center justify-between mb-4">
+                              <div>
+                                <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Évolution du revenu</p>
+                                <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{totalRevenue.toLocaleString('fr-FR')}€</p>
+                              </div>
+                              <button 
+                                onClick={() => setActiveTab('finance')} 
+                                className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 transition-colors"
+                              >
+                                Détails <ArrowUpRight className="w-3 h-3" />
+                              </button>
+                            </div>
+                            <RevenueChart appointments={appointments} totalRevenue={totalRevenue} />
+                          </div>
+                        </SortableWidget>
+                      );
+                    }
+                    if (widgetId === 'appointments-list') {
+                      return (
+                        <SortableWidget key={widgetId} id={widgetId}>
+                          <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden">
+                            <div className="px-6 py-5 flex items-center justify-between">
+                              <div>
+                                <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Aujourd'hui</p>
+                                <p className="text-lg font-semibold text-zinc-900 dark:text-white mt-0.5">
+                                  {todayAppointments.length} rendez-vous
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
+                                className="p-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                              >
+                                <Plus className="w-5 h-5" />
+                              </button>
+                            </div>
+                            
+                            <div className="px-6 pb-6">
+                              {todayAppointments.length > 0 ? (
+                                <div className="space-y-3">
+                                  {todayAppointments.map((apt) => (
+                                    <button
+                                      key={apt.id}
+                                      onClick={() => setSelectedAppointment(apt)}
+                                      className="w-full flex items-center gap-4 p-4 rounded-2xl bg-zinc-50/80 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all text-left group"
+                                    >
+                                      <div className="flex-shrink-0 w-12 text-center">
+                                        <p className="text-lg font-bold text-zinc-900 dark:text-white tabular-nums">{apt.time?.split(':')[0] || '--'}</p>
+                                        <p className="text-[10px] font-medium text-zinc-400 uppercase">:{apt.time?.split(':')[1] || '00'}</p>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{apt.clientName}</p>
+                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{apt.service || 'Tatouage'}</p>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {apt.price && (
+                                          <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-300 tabular-nums">{apt.price}€</span>
+                                        )}
+                                        <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-center py-10">
+                                  <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                                    <Calendar className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
+                                  </div>
+                                  <p className="text-sm font-medium text-zinc-500 dark:text-zinc-500 mb-3">Aucun RDV aujourd'hui</p>
+                                  <button
+                                    onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
+                                    className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                                  >
+                                    + Ajouter un RDV
+                                  </button>
+                                </div>
+                              )}
+                            </div>
 
-              {/* Appointments List — More breathing room */}
-              <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden">
-                <div className="px-6 py-5 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Aujourd'hui</p>
-                    <p className="text-lg font-semibold text-zinc-900 dark:text-white mt-0.5">
-                      {todayAppointments.length} rendez-vous
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-                    className="p-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-                
-                <div className="px-6 pb-6">
-                  {todayAppointments.length > 0 ? (
-                    <div className="space-y-3">
-                      {todayAppointments.map((apt, idx) => (
-                        <button
-                          key={apt.id}
-                          onClick={() => setSelectedAppointment(apt)}
-                          className="w-full flex items-center gap-4 p-4 rounded-2xl bg-zinc-50/80 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all text-left group"
-                        >
-                          <div className="flex-shrink-0 w-12 text-center">
-                            <p className="text-lg font-bold text-zinc-900 dark:text-white tabular-nums">{apt.time?.split(':')[0] || '--'}</p>
-                            <p className="text-[10px] font-medium text-zinc-400 uppercase">:{apt.time?.split(':')[1] || '00'}</p>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{apt.clientName}</p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{apt.service || 'Tatouage'}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {apt.price && (
-                              <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-300 tabular-nums">{apt.price}€</span>
+                            {upcomingAppointments.length > 0 && (
+                              <div className="px-6 py-5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20">
+                                <div className="flex items-center justify-between mb-4">
+                                  <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">À venir</span>
+                                  <button onClick={() => setActiveTab('appointments')} className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
+                                    Voir tout
+                                  </button>
+                                </div>
+                                <div className="space-y-2">
+                                  {upcomingAppointments.slice(0, 3).map(apt => (
+                                    <button
+                                      key={apt.id}
+                                      onClick={() => setSelectedAppointment(apt)}
+                                      className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white dark:hover:bg-zinc-800 transition-colors text-left"
+                                    >
+                                      <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 min-w-[3.5rem]">
+                                        {new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                                      </span>
+                                      <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate flex-1">{apt.clientName}</span>
+                                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold ${
+                                        apt.status === 'confirmed'
+                                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+                                          : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                                      }`}>
+                                        {apt.status === 'confirmed' ? '✓' : '?'}
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                             )}
-                            <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
                           </div>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-10">
-                      <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                        <Calendar className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
-                      </div>
-                      <p className="text-sm font-medium text-zinc-500 dark:text-zinc-500 mb-3">Aucun RDV aujourd'hui</p>
-                      <button
-                        onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-                        className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        + Ajouter un RDV
-                      </button>
-                    </div>
-                  )}
-                </div>
+                        </SortableWidget>
+                      );
+                    }
+                    
+                    if (widgetId === 'quick-stats') {
+                      const confirmedApts = appointments.filter(a => a.status === 'confirmed').length;
+                      const pendingApts = appointments.filter(a => a.status === 'pending').length;
+                      const avgPrice = appointments.length > 0 
+                        ? Math.round(appointments.reduce((sum, a) => sum + (a.price || 0), 0) / appointments.length)
+                        : 0;
+                      
+                      return (
+                        <SortableWidget key={widgetId} id={widgetId}>
+                          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                            <div className="flex items-center justify-between mb-5">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-500/20">
+                                  <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                </div>
+                                <p className="text-sm font-semibold text-zinc-900 dark:text-white">Stats rapides</p>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                              <div className="text-center p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10">
+                                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{confirmedApts}</p>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Confirmés</p>
+                              </div>
+                              <div className="text-center p-3 rounded-2xl bg-amber-50 dark:bg-amber-500/10">
+                                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{pendingApts}</p>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">En attente</p>
+                              </div>
+                              <div className="text-center p-3 rounded-2xl bg-blue-50 dark:bg-blue-500/10">
+                                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{avgPrice}€</p>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Prix moy.</p>
+                              </div>
+                            </div>
+                          </div>
+                        </SortableWidget>
+                      );
+                    }
 
-                {/* Upcoming */}
-                {upcomingAppointments.length > 0 && (
-                  <div className="px-6 py-5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">À venir</span>
-                      <button onClick={() => setActiveTab('appointments')} className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
-                        Voir tout
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {upcomingAppointments.slice(0, 3).map(apt => (
-                        <button
-                          key={apt.id}
-                          onClick={() => setSelectedAppointment(apt)}
-                          className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white dark:hover:bg-zinc-800 transition-colors text-left"
-                        >
-                          <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 min-w-[3.5rem]">
-                            {new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                          </span>
-                          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate flex-1">{apt.clientName}</span>
-                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold ${
-                            apt.status === 'confirmed'
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
-                              : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
-                          }`}>
-                            {apt.status === 'confirmed' ? '✓' : '?'}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+                    if (widgetId === 'upcoming-week') {
+                      const next7Days = Array.from({ length: 7 }, (_, i) => {
+                        const date = new Date(now);
+                        date.setDate(date.getDate() + i);
+                        const dateStr = date.toISOString().slice(0, 10);
+                        const dayApts = appointments.filter(a => a.date === dateStr);
+                        return {
+                          date: dateStr,
+                          dayName: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
+                          dayNum: date.getDate(),
+                          count: dayApts.length,
+                          revenue: dayApts.reduce((sum, a) => sum + (a.price || 0), 0),
+                        };
+                      });
+
+                      return (
+                        <SortableWidget key={widgetId} id={widgetId}>
+                          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                            <div className="flex items-center justify-between mb-5">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-sky-100 dark:bg-sky-500/20">
+                                  <CalendarCheck className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                                </div>
+                                <p className="text-sm font-semibold text-zinc-900 dark:text-white">7 prochains jours</p>
+                              </div>
+                              <button 
+                                onClick={() => setActiveTab('appointments')}
+                                className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                              >
+                                Voir tout
+                              </button>
+                            </div>
+                            <div className="flex gap-2">
+                              {next7Days.map((day, i) => (
+                                <div 
+                                  key={day.date}
+                                  className={`flex-1 text-center p-3 rounded-xl transition-colors ${
+                                    i === 0 
+                                      ? 'bg-blue-600 text-white' 
+                                      : day.count > 0 
+                                        ? 'bg-zinc-100 dark:bg-zinc-800' 
+                                        : 'bg-zinc-50 dark:bg-zinc-800/50'
+                                  }`}
+                                >
+                                  <p className={`text-[10px] uppercase font-semibold ${i === 0 ? 'text-white/70' : 'text-zinc-400 dark:text-zinc-500'}`}>
+                                    {day.dayName}
+                                  </p>
+                                  <p className={`text-lg font-bold ${i === 0 ? '' : 'text-zinc-900 dark:text-white'}`}>
+                                    {day.dayNum}
+                                  </p>
+                                  {day.count > 0 && (
+                                    <p className={`text-[10px] font-semibold mt-1 ${i === 0 ? 'text-white/80' : 'text-blue-600 dark:text-blue-400'}`}>
+                                      {day.count} RDV
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </SortableWidget>
+                      );
+                    }
+
+                    return null;
+                  })}
+                </div>
+              </SortableContext>
             </div>
 
             {/* ====== RIGHT COLUMN (4/12) ====== */}
+            <SortableContext items={layout.rightColumn} strategy={verticalListSortingStrategy}>
             <div className="lg:col-span-4 space-y-6">
-              
-              {/* NEXT CLIENT — Hero Card (Most Important!) */}
-              {nextClient ? (
-                <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-500 rounded-3xl p-6 text-white shadow-2xl shadow-blue-600/30 relative overflow-hidden">
-                  {/* Decorative elements */}
-                  <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl translate-x-1/3 -translate-y-1/3" />
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl -translate-x-1/3 translate-y-1/3" />
-                  </div>
-                  
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-5">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/70">Prochain client</span>
-                      <span className="px-2.5 py-1 rounded-full bg-white/20 text-[10px] font-semibold">{nextClient.time || '--:--'}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 mb-6">
-                      <img 
-                        src={nextClient.clientAvatar || '/gallery/photo-handsome-unshaven-guy-looks-with-pleasant-expression-directly-camera.jpg'} 
-                        alt={nextClient.clientName || 'Client'} 
-                        className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border-2 border-white/30 shadow-lg"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xl font-bold truncate mb-1">{nextClient.clientName}</p>
-                        <p className="text-sm text-white/70">{nextClient.service || 'Tatouage'}</p>
-                        <div className="flex items-center gap-3 mt-2 text-xs">
-                          {nextClient.duration && (
-                            <span className="flex items-center gap-1 text-white/70">
-                              <Clock className="w-3 h-3" /> {nextClient.duration}min
-                            </span>
-                          )}
-                          {nextClient.price && (
-                            <span className="font-bold text-white">{nextClient.price}€</span>
-                          )}
+              {layout.rightColumn.map(widgetId => {
+                if (widgetId === 'next-client') {
+                  return nextClient ? (
+                    <SortableWidget key={widgetId} id={widgetId}>
+                      <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-500 rounded-3xl p-6 text-white shadow-2xl shadow-blue-600/30 relative overflow-hidden">
+                        <div className="absolute inset-0 pointer-events-none">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl translate-x-1/3 -translate-y-1/3" />
+                          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl -translate-x-1/3 translate-y-1/3" />
+                        </div>
+                        <div className="relative z-10">
+                          <div className="flex items-center justify-between mb-5">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/70">Prochain client</span>
+                            <span className="px-2.5 py-1 rounded-full bg-white/20 text-[10px] font-semibold">{nextClient.time || '--:--'}</span>
+                          </div>
+                          <div className="flex items-center gap-4 mb-6">
+                            <img 
+                              src={nextClient.clientAvatar || '/gallery/photo-handsome-unshaven-guy-looks-with-pleasant-expression-directly-camera.jpg'} 
+                              alt={nextClient.clientName || 'Client'} 
+                              className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border-2 border-white/30 shadow-lg"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xl font-bold truncate mb-1">{nextClient.clientName}</p>
+                              <p className="text-sm text-white/70">{nextClient.service || 'Tatouage'}</p>
+                              <div className="flex items-center gap-3 mt-2 text-xs">
+                                {nextClient.duration && <span className="flex items-center gap-1 text-white/70"><Clock className="w-3 h-3" /> {nextClient.duration}min</span>}
+                                {nextClient.price && <span className="font-bold text-white">{nextClient.price}€</span>}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => setSelectedAppointment(nextClient)} className="flex-1 px-5 py-3.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-black/10 active:scale-[0.98]">Voir le RDV</button>
+                            <button onClick={() => { setSelectedAppointment(nextClient); setActiveTab('messaging'); }} className="p-3.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/20 hover:bg-white/30 transition-colors" title="Envoyer un message"><MessageCircle className="w-5 h-5" /></button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setSelectedAppointment(nextClient)}
-                        className="flex-1 px-5 py-3.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-black/10 active:scale-[0.98]"
-                      >
-                        Voir le RDV
-                      </button>
-                      <button
-                        onClick={() => { setSelectedAppointment(nextClient); setActiveTab('messaging'); }}
-                        className="p-3.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/20 hover:bg-white/30 transition-colors"
-                        title="Envoyer un message"
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                    <Calendar className="w-6 h-6 text-zinc-400" />
-                  </div>
-                  <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">Pas de RDV aujourd'hui</p>
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500">Profitez de votre journée libre !</p>
-                </div>
-              )}
-
-              {/* Combined Widget: Clients / Deposits (Tabs) */}
-              <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden">
-                {/* Tab Header */}
-                <div className="px-5 pt-5 pb-0">
-                  <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800">
-                    <button
-                      onClick={() => setRightPanelTab('clients')}
-                      className={`flex-1 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                        rightPanelTab === 'clients'
-                          ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
-                          : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
-                      }`}
-                    >
-                      Clients
-                    </button>
-                    <button
-                      onClick={() => setRightPanelTab('deposits')}
-                      className={`flex-1 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                        rightPanelTab === 'deposits'
-                          ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
-                          : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
-                      }`}
-                    >
-                      Acomptes
-                    </button>
-                  </div>
-                </div>
-
-                {/* Tab Content */}
-                <div className="p-5">
-                  {rightPanelTab === 'clients' ? (
-                    <>
-                      <button
-                        onClick={() => setActiveTab('clients')}
-                        className="w-full flex items-center gap-3 p-3 mb-3 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all"
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                          <UserPlus className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                        </div>
-                        <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Nouveau client</span>
-                      </button>
-                      {topClients.length > 0 ? (
-                        <div className="space-y-1">
-                          {topClients.slice(0, 5).map((client) => (
-                            <button
-                              key={client.id}
-                              onClick={() => setActiveTab('clients')}
-                              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors text-left"
-                            >
-                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-700 dark:to-zinc-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                {client.avatar ? (
-                                  <img src={client.avatar} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <span className="text-zinc-600 dark:text-zinc-300 text-sm font-semibold">{client.name?.charAt(0)}</span>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-sm font-medium text-zinc-900 dark:text-white truncate">{client.name}</span>
-                                  {(client.totalSpent ?? 0) >= 500 && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
-                                </div>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-500">{client.totalSpent}€</span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-zinc-400 text-center py-6">Aucun client</p>
-                      )}
-                    </>
+                    </SortableWidget>
                   ) : (
-                    <>
-                      {recentDeposits.length > 0 ? (
-                        <div className="space-y-2">
-                          {recentDeposits.slice(0, 5).map((apt) => (
-                            <button
-                              key={apt.id}
-                              onClick={() => setSelectedAppointment(apt)}
-                              className="w-full flex items-center gap-3 p-3 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors text-left"
-                            >
-                              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                                <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                              </div>
-                              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate flex-1">{apt.clientName || 'Client'}</span>
-                              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">+{apt.deposit}€</span>
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
-                            <Wallet className="w-5 h-5 text-zinc-400" />
+                    <SortableWidget key={widgetId} id={widgetId}>
+                      <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] text-center">
+                        <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4"><Calendar className="w-6 h-6 text-zinc-400" /></div>
+                        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">Pas de RDV aujourd'hui</p>
+                        <p className="text-xs text-zinc-400 dark:text-zinc-500">Profitez de votre journée libre !</p>
+                      </div>
+                    </SortableWidget>
+                  );
+                }
+
+                if (widgetId === 'clients-deposits') {
+                  return (
+                    <SortableWidget key={widgetId} id={widgetId}>
+                      <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden">
+                        <div className="px-5 pt-5 pb-0">
+                          <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800">
+                            <button onClick={() => setRightPanelTab('clients')} className={`flex-1 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${rightPanelTab === 'clients' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400'}`}>Clients</button>
+                            <button onClick={() => setRightPanelTab('deposits')} className={`flex-1 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${rightPanelTab === 'deposits' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400'}`}>Acomptes</button>
                           </div>
-                          <p className="text-sm text-zinc-400">Aucun acompte récent</p>
                         </div>
-                      )}
-                    </>
-                  )}
-                </div>
+                        <div className="p-5">
+                          {rightPanelTab === 'clients' ? (
+                            <>
+                              <button onClick={() => setActiveTab('clients')} className="w-full flex items-center gap-3 p-3 mb-3 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all">
+                                <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center"><UserPlus className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /></div>
+                                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Nouveau client</span>
+                              </button>
+                              {topClients.length > 0 ? (
+                                <div className="space-y-1">
+                                  {topClients.slice(0, 5).map((client) => (
+                                    <button key={client.id} onClick={() => setActiveTab('clients')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors text-left">
+                                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-700 dark:to-zinc-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                        {client.avatar ? <img src={client.avatar} alt="" className="w-full h-full object-cover" /> : <span className="text-zinc-600 dark:text-zinc-300 text-sm font-semibold">{client.name?.charAt(0)}</span>}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5"><span className="text-sm font-medium text-zinc-900 dark:text-white truncate">{client.name}</span>{(client.totalSpent ?? 0) >= 500 && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}</div>
+                                        <span className="text-xs text-zinc-500 dark:text-zinc-500">{client.totalSpent}€</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : <p className="text-sm text-zinc-400 text-center py-6">Aucun client</p>}
+                            </>
+                          ) : (
+                            <>
+                              {recentDeposits.length > 0 ? (
+                                <div className="space-y-2">
+                                  {recentDeposits.slice(0, 5).map((apt) => (
+                                    <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="w-full flex items-center gap-3 p-3 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors text-left">
+                                      <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center flex-shrink-0"><CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /></div>
+                                      <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate flex-1">{apt.clientName || 'Client'}</span>
+                                      <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">+{apt.deposit}€</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-center py-8">
+                                  <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3"><Wallet className="w-5 h-5 text-zinc-400" /></div>
+                                  <p className="text-sm text-zinc-400">Aucun acompte récent</p>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        <div className="px-5 pb-5">
+                          <button onClick={() => setActiveTab(rightPanelTab === 'clients' ? 'clients' : 'finance')} className="w-full py-2.5 rounded-xl text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">Voir tout →</button>
+                        </div>
+                      </div>
+                    </SortableWidget>
+                  );
+                }
 
-                {/* View All Link */}
-                <div className="px-5 pb-5">
-                  <button
-                    onClick={() => setActiveTab(rightPanelTab === 'clients' ? 'clients' : 'finance')}
-                    className="w-full py-2.5 rounded-xl text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-                  >
-                    Voir tout →
-                  </button>
-                </div>
-              </div>
+                if (widgetId === 'requests-pending') {
+                  return pendingRequestsCount > 0 ? (
+                    <SortableWidget key={widgetId} id={widgetId}>
+                      <button onClick={() => !isEditMode && setActiveTab('requests')} className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] transition-all text-left group">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-violet-100 dark:bg-violet-500/10"><Inbox className="w-5 h-5 text-violet-600 dark:text-violet-400" /></div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-zinc-900 dark:text-white">{pendingRequestsCount} demandes</p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-500">En attente de réponse</p>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
+                        </div>
+                      </button>
+                    </SortableWidget>
+                  ) : (
+                    <SortableWidget key={widgetId} id={widgetId}>
+                      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-500/10"><Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /></div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-zinc-900 dark:text-white">Aucune demande</p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-500">Tout est à jour !</p>
+                          </div>
+                        </div>
+                      </div>
+                    </SortableWidget>
+                  );
+                }
 
-              {/* Pending Requests — Compact */}
-              {pendingRequestsCount > 0 && (
-                <button
-                  onClick={() => setActiveTab('requests')}
-                  className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] transition-all text-left group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-violet-100 dark:bg-violet-500/10">
-                      <Inbox className="w-5 h-5 text-violet-600 dark:text-violet-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">{pendingRequestsCount} demandes</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-500">En attente de réponse</p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
-                  </div>
-                </button>
-              )}
+                if (widgetId === 'top-services') {
+                  const serviceStats = appointments.reduce((acc, apt) => {
+                    const service = apt.service || 'Tatouage';
+                    acc[service] = (acc[service] || 0) + 1;
+                    return acc;
+                  }, {} as Record<string, number>);
+                  const topServices = Object.entries(serviceStats)
+                    .sort((a, b) => (b[1] as number) - (a[1] as number))
+                    .slice(0, 3);
 
+                  return (
+                    <SortableWidget key={widgetId} id={widgetId}>
+                      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-500/20">
+                            <Award className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <p className="text-sm font-semibold text-zinc-900 dark:text-white">Services populaires</p>
+                        </div>
+                        {topServices.length > 0 ? (
+                          <div className="space-y-2">
+                            {topServices.map(([service, count], i) => (
+                              <div key={service} className="flex items-center gap-3">
+                                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
+                                  i === 0 ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' :
+                                  i === 1 ? 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300' :
+                                  'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400'
+                                }`}>{i + 1}</span>
+                                <span className="flex-1 text-sm text-zinc-700 dark:text-zinc-300 truncate">{service}</span>
+                                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">{count} RDV</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-zinc-400 text-center py-4">Pas encore de données</p>
+                        )}
+                      </div>
+                    </SortableWidget>
+                  );
+                }
+
+                if (widgetId === 'goals-progress') {
+                  const monthlyGoal = 5000;
+                  const progress = Math.min((monthlyRevenue / monthlyGoal) * 100, 100);
+
+                  return (
+                    <SortableWidget key={widgetId} id={widgetId}>
+                      <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-5 text-white shadow-lg shadow-rose-500/20">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2.5 rounded-xl bg-white/20">
+                            <Target className="w-5 h-5" />
+                          </div>
+                          <p className="text-sm font-semibold">Objectif mensuel</p>
+                        </div>
+                        <div className="mb-3">
+                          <div className="flex items-end justify-between mb-2">
+                            <span className="text-2xl font-bold">{monthlyRevenue.toLocaleString('fr-FR')}€</span>
+                            <span className="text-sm text-white/70">/ {monthlyGoal.toLocaleString('fr-FR')}€</span>
+                          </div>
+                          <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-white rounded-full transition-all duration-500"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        </div>
+                        <p className="text-xs text-white/70">{Math.round(progress)}% de l'objectif atteint</p>
+                      </div>
+                    </SortableWidget>
+                  );
+                }
+
+                if (widgetId === 'flash-promo') {
+                  return (
+                    <SortableWidget key={widgetId} id={widgetId}>
+                      <button 
+                        onClick={() => setActiveTab('flash')}
+                        className="w-full bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-5 text-white shadow-lg shadow-amber-500/20 text-left group"
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="p-2.5 rounded-xl bg-white/20">
+                            <Zap className="w-5 h-5" />
+                          </div>
+                          <p className="text-sm font-semibold">Flash Designs</p>
+                        </div>
+                        <p className="text-2xl font-bold mb-1">{customWidgets.length || 0} designs</p>
+                        <p className="text-xs text-white/70">Gérez vos flash disponibles →</p>
+                      </button>
+                    </SortableWidget>
+                  );
+                }
+
+                if (widgetId === 'loyalty-program') {
+                  const vipCount = clients.filter(c => (c.totalSpent ?? 0) >= 500).length;
+
+                  return (
+                    <SortableWidget key={widgetId} id={widgetId}>
+                      <div className="bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg shadow-pink-500/20">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="p-2.5 rounded-xl bg-white/20">
+                            <Gift className="w-5 h-5" />
+                          </div>
+                          <p className="text-sm font-semibold">Programme fidélité</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <p className="text-3xl font-bold">{vipCount}</p>
+                            <p className="text-xs text-white/70">Clients VIP</p>
+                          </div>
+                          <div className="flex-1 flex justify-end">
+                            <div className="flex -space-x-2">
+                              {topClients.slice(0, 3).map((c, i) => (
+                                <div key={c.id} className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/30 flex items-center justify-center text-sm font-bold">
+                                  {c.name?.charAt(0)}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </SortableWidget>
+                  );
+                }
+
+                return null;
+              })}
             </div>
+            </SortableContext>
           </div>
         </div>
+        </DndContext>
       </div>
     </>
   );

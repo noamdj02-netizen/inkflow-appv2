@@ -1,5 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, X, Filter, Image as ImageIcon, Plus, Pencil, Trash2, Sparkles } from 'lucide-react';
+import { Upload, X, Filter, Image as ImageIcon, Plus, Pencil, Trash2, Sparkles, Camera, Share2, Loader2, Wand2, Copy, Download, ChevronDown } from 'lucide-react';
+import { uploadPortfolioImage, dataUrlToBlob } from '../../lib/supabasePortfolio';
+import { analyzePortfolioPhoto, isGeminiConfigured } from '../../lib/geminiAI';
+import { useToast } from '../../contexts/ToastContext';
+import type { Appointment } from '../../types';
 
 interface PortfolioItem {
   id: string;
@@ -11,6 +15,7 @@ interface PortfolioItem {
   beforeUrl?: string;
   likes: number;
   createdAt: string;
+  appointmentId?: string;
 }
 
 interface PortfolioManagerProps {
@@ -19,16 +24,26 @@ interface PortfolioManagerProps {
   onDeleteItem: (id: string) => void;
   onEditItem?: (item: PortfolioItem) => void;
   artists: string[];
+  studioId?: string | null;
+  studioSlug?: string | null;
+  studioName?: string | null;
+  appointments?: Appointment[];
 }
 
 const CATEGORIES = ['Realisme', 'Traditionnel', 'Neo-traditionnel', 'Japonais', 'Minimaliste', 'Geometrique', 'Aquarelle', 'Dotwork', 'Lettering', 'Autre'];
 
-export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAddItem, onDeleteItem, onEditItem, artists }) => {
+export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAddItem, onDeleteItem, onEditItem, artists, studioId, studioSlug, studioName, appointments = [] }) => {
+  const toast = useToast();
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterArtist, setFilterArtist] = useState('all');
   const [showUpload, setShowUpload] = useState(false);
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [aiGenerating, setAiGenerating] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const beforeRef = useRef<HTMLInputElement>(null);
 
   const [newItem, setNewItem] = useState({
@@ -38,14 +53,32 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
     artist: artists[0] || '',
     description: '',
     tags: '',
+    appointmentId: '',
   });
   const [dragOver, setDragOver] = useState(false);
+
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const recentAppointments = appointments
+    .filter(a => a.status !== 'cancelled' && a.date >= thirtyDaysAgo.toISOString().slice(0, 10))
+    .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`))
+    .slice(0, 10);
 
   const filtered = items.filter(item => {
     if (filterCategory !== 'all' && item.category !== filterCategory) return false;
     if (filterArtist !== 'all' && item.artist !== filterArtist) return false;
     return true;
   });
+
+  useEffect(() => {
+    if (!selectedItem) setShowShareMenu(false);
+  }, [selectedItem]);
+
+  useEffect(() => {
+    if (showUpload) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [showUpload]);
 
   useEffect(() => {
     filtered.forEach((item) => {
@@ -78,21 +111,128 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
     }
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newItem.url || !newItem.category) return;
-    onAddItem({
-      id: `p_${Date.now()}`,
-      url: newItem.url,
-      beforeUrl: newItem.beforeUrl || undefined,
-      category: newItem.category,
-      artist: newItem.artist,
-      description: newItem.description,
-      tags: newItem.tags.split(',').map(t => t.trim()).filter(Boolean),
-      likes: 0,
-      createdAt: new Date().toISOString(),
-    });
-    setNewItem({ url: '', beforeUrl: '', category: '', artist: artists[0] || '', description: '', tags: '' });
-    setShowUpload(false);
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      let finalUrl = newItem.url;
+      let finalBeforeUrl = newItem.beforeUrl || undefined;
+
+      if (studioId && newItem.url.startsWith('data:')) {
+        const blob = dataUrlToBlob(newItem.url);
+        finalUrl = await uploadPortfolioImage(studioId, blob, undefined, studioSlug);
+        if (newItem.beforeUrl?.startsWith('data:')) {
+          const beforeBlob = dataUrlToBlob(newItem.beforeUrl);
+          finalBeforeUrl = await uploadPortfolioImage(studioId, beforeBlob, `before_${Date.now()}`, studioSlug);
+        }
+      }
+
+      onAddItem({
+        id: `p_${Date.now()}`,
+        url: finalUrl,
+        beforeUrl: finalBeforeUrl,
+        category: newItem.category,
+        artist: newItem.artist,
+        description: newItem.description,
+        tags: newItem.tags.split(',').map(t => t.trim()).filter(Boolean),
+        likes: 0,
+        createdAt: new Date().toISOString(),
+        appointmentId: newItem.appointmentId || undefined,
+      });
+      setNewItem({ url: '', beforeUrl: '', category: '', artist: artists[0] || '', description: '', tags: '', appointmentId: '' });
+      setShowUpload(false);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Erreur lors de l\'upload');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleGenerateWithAI = async () => {
+    if (!newItem.url || !newItem.url.startsWith('data:')) return;
+    setAiGenerating(true);
+    setUploadError(null);
+    try {
+      const result = await analyzePortfolioPhoto(newItem.url);
+      setNewItem(prev => ({
+        ...prev,
+        category: result.category,
+        description: result.description,
+        tags: result.tags,
+      }));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'L\'IA n\'a pas pu analyser la photo');
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  /** Légende prête pour Instagram (description + hashtags) */
+  const getInstagramCaption = (item: PortfolioItem): string => {
+    const parts: string[] = [];
+    if (item.description) parts.push(item.description);
+    if (studioName) parts.push(`\n📍 ${studioName}`);
+    const tags = item.tags?.length ? item.tags : [item.category];
+    const hashtags = tags.map(t => `#${t.replace(/\s/g, '')}`).join(' ');
+    if (hashtags) parts.push(`\n${hashtags}`);
+    return parts.join('').trim();
+  };
+
+  const handleShare = async (item: PortfolioItem) => {
+    try {
+      if (navigator.share && item.url.startsWith('http')) {
+        await navigator.share({
+          title: item.description || item.category,
+          text: getInstagramCaption(item),
+          url: item.url,
+        });
+        toast.success('Partage lancé — choisissez Instagram dans le menu');
+        setShowShareMenu(false);
+      } else {
+        handleDownload(item);
+      }
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+      handleDownload(item);
+    }
+  };
+
+  const handleCopyLink = async (item: PortfolioItem) => {
+    if (!item.url.startsWith('http')) {
+      toast.warning('Lien disponible après publication sur la vitrine');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(item.url);
+      toast.success('Lien copié dans le presse-papier');
+      setShowShareMenu(false);
+    } catch {
+      toast.error('Impossible de copier le lien');
+    }
+  };
+
+  const handleCopyCaption = async (item: PortfolioItem) => {
+    const caption = getInstagramCaption(item);
+    try {
+      await navigator.clipboard.writeText(caption);
+      toast.success('Légende copiée — collez-la dans Instagram');
+      setShowShareMenu(false);
+    } catch {
+      toast.error('Impossible de copier la légende');
+    }
+  };
+
+  const handleDownload = (item: PortfolioItem) => {
+    const link = document.createElement('a');
+    link.href = item.url;
+    link.download = `portfolio-${item.category}-${Date.now()}.jpg`;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.click();
+    toast.success('Téléchargement lancé');
+    setShowShareMenu(false);
   };
 
   return (
@@ -100,9 +240,9 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Portfolio</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Portfolio & Vitrine</h2>
           <p className="text-sm text-slate-500 mt-1">
-            {items.length} {items.length > 1 ? 'réalisations' : 'réalisation'} dans votre galerie
+            {items.length} {items.length > 1 ? 'réalisations' : 'réalisation'} — Prenez une photo, elle apparaît sur votre vitrine et peut être partagée sur Instagram
           </p>
         </div>
         <button
@@ -228,14 +368,18 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
         </div>
       )}
 
-      {/* Upload modal */}
+      {/* Upload modal — opaque (pas de blur iOS), scrollable, safe-area */}
       {showUpload && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowUpload(false)}>
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/95 flex justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
+          onClick={() => setShowUpload(false)}
+          style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        >
           <div
-            className="bg-white dark:bg-zinc-900 rounded-2xl max-w-lg w-full p-6 border border-slate-200/80 dark:border-zinc-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            className="bg-white dark:bg-zinc-900 rounded-2xl max-w-lg w-full my-auto p-6 border border-slate-200/80 dark:border-zinc-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 flex-shrink-0">
               <div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">Ajouter au portfolio</h3>
                 <p className="text-sm text-slate-500 mt-0.5">Partagez votre dernière réalisation</p>
@@ -271,15 +415,76 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                   </div>
                 ) : (
                   <>
-                    <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
-                      <Upload className="w-6 h-6 text-slate-400 dark:text-zinc-500" />
+                    <div className="flex items-center justify-center gap-4 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => cameraRef.current?.click()}
+                        className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-blue-100 dark:bg-blue-500/20 hover:bg-blue-200 dark:hover:bg-blue-500/30 transition-colors"
+                      >
+                        <Camera className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                        <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Prendre en photo</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileRef.current?.click()}
+                        className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors"
+                      >
+                        <Upload className="w-8 h-8 text-slate-500 dark:text-zinc-400" />
+                        <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">Galerie</span>
+                      </button>
                     </div>
                     <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Glissez une image ici</p>
-                    <p className="text-xs text-slate-500">ou cliquez pour parcourir</p>
+                    <p className="text-xs text-slate-500">ou utilisez l'appareil photo / la galerie</p>
                   </>
                 )}
                 <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'url')} />
+                <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFileSelect(e, 'url')} />
               </div>
+
+              {newItem.url && isGeminiConfigured() && (
+                <button
+                  type="button"
+                  onClick={handleGenerateWithAI}
+                  disabled={aiGenerating}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold hover:from-violet-700 hover:to-purple-700 disabled:opacity-60 transition-all"
+                >
+                  {aiGenerating ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Analyse en cours...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-5 h-5" />
+                      Générer description, style et tags avec l'IA
+                    </>
+                  )}
+                </button>
+              )}
+
+              {uploadError && (
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm">
+                  {uploadError}
+                </div>
+              )}
+
+              {recentAppointments.length > 0 && (
+                <div className="p-3 bg-slate-50 dark:bg-zinc-800/50 rounded-xl">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Lier à un RDV (optionnel)</label>
+                  <select
+                    value={newItem.appointmentId}
+                    onChange={e => setNewItem(p => ({ ...p, appointmentId: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-300 text-sm"
+                  >
+                    <option value="">Aucun</option>
+                    {recentAppointments.map(apt => (
+                      <option key={apt.id} value={apt.id}>
+                        {apt.date} — {apt.clientName} — {apt.service || 'Tatouage'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-zinc-800/50 rounded-xl">
                 <div>
@@ -336,26 +541,84 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
 
               <button
                 onClick={handleAdd}
-                disabled={!newItem.url || !newItem.category}
-                className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-semibold hover:bg-slate-800 dark:hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+                disabled={!newItem.url || !newItem.category || uploading}
+                className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-semibold hover:bg-slate-800 dark:hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
-                Ajouter au portfolio
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Upload en cours...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-5 h-5" />
+                    Ajouter au portfolio & vitrine
+                  </>
+                )}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Lightbox */}
+      {/* Lightbox — opaque, scrollable sur mobile, boutons fixés */}
       {selectedItem && (
-        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" onClick={() => setSelectedItem(null)} style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
           <button
             onClick={() => setSelectedItem(null)}
-            className="absolute top-6 right-6 w-12 h-12 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/20 transition-colors z-10"
+            className="fixed top-6 right-6 w-12 h-12 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors z-10"
+            style={{ top: 'max(1.5rem, env(safe-area-inset-top))' }}
           >
             <X className="w-6 h-6 text-white" />
           </button>
-          <div className="max-w-5xl w-full animate-in fade-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+          <div className="fixed top-6 right-24 z-10" style={{ top: 'max(1.5rem, env(safe-area-inset-top))' }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowShareMenu(v => !v); }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full text-sm font-semibold hover:opacity-90 transition-opacity shadow-lg"
+            >
+              <Share2 className="w-4 h-4" />
+              Partager (Instagram)
+              <ChevronDown className={`w-4 h-4 transition-transform ${showShareMenu ? 'rotate-180' : ''}`} />
+            </button>
+            {showShareMenu && (
+              <>
+                <div className="absolute inset-0 -z-10" onClick={(e) => { e.stopPropagation(); setShowShareMenu(false); }} aria-hidden />
+                <div className="absolute top-full right-0 mt-2 w-56 py-2 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-xl">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleShare(selectedItem); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                  >
+                    <Share2 className="w-4 h-4 text-purple-500" />
+                    Partager (menu système)
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleCopyCaption(selectedItem); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                  >
+                    <Copy className="w-4 h-4 text-purple-500" />
+                    Copier la légende
+                  </button>
+                  {selectedItem.url.startsWith('http') && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleCopyLink(selectedItem); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                    >
+                      <Copy className="w-4 h-4 text-purple-500" />
+                      Copier le lien
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDownload(selectedItem); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                  >
+                    <Download className="w-4 h-4 text-purple-500" />
+                    Télécharger
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          <div className="max-w-5xl w-full mx-auto p-4 pt-20 animate-in fade-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
             {selectedItem.beforeUrl ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="text-center">

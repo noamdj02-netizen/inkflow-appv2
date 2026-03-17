@@ -155,6 +155,27 @@ Deno.serve(async (req: Request) => {
             read: false,
             action_url: "/dashboard",
           });
+
+          // Push notification (app fermée ou en arrière-plan)
+          try {
+            const pushUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-push-notification`;
+            await fetch(pushUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              },
+              body: JSON.stringify({
+                studioId,
+                title: type === "deposit" ? "Acompte reçu" : "Paiement reçu",
+                body: `${clientName} a payé ${amountPaid.toFixed(2)}€`,
+                url: "/dashboard?tab=finance",
+                tag: "inkflow-payment",
+              }),
+            });
+          } catch (pushErr) {
+            console.error("[stripe-webhook] send-push-notification error:", pushErr);
+          }
         }
 
         if (flashId) {

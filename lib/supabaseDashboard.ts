@@ -529,6 +529,18 @@ export async function deleteAppointmentFromSupabase(aptId: string): Promise<void
   if (error) throw error;
 }
 
+export async function markDepositAsPaid(aptId: string, studioId: string): Promise<void> {
+  const { error } = await supabase
+    .from('inkflow_appointments')
+    .update({ 
+      deposit_paid: true,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', aptId)
+    .eq('studio_id', studioId);
+  if (error) throw error;
+}
+
 // Flash designs
 export function mapFlashFromDb(row: Record<string, unknown>): FlashDesign {
   return {

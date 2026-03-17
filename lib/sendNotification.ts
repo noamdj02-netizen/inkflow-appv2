@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { Notification } from '../types';
 
 const MAX_TEXT_LENGTH = 2000;
 const MAX_EMAIL_LENGTH = 255;
@@ -312,4 +313,93 @@ export async function sendMessageNotificationToStudio(params: SendMessageNotific
   } catch {
     // ignore
   }
+}
+
+export interface CreateInAppNotificationParams {
+  studioId: string;
+  type: Notification['type'];
+  title: string;
+  message: string;
+  actionUrl?: string;
+}
+
+/**
+ * Crée une notification in-app dans Supabase (table inkflow_notifications).
+ * Cette notification apparaîtra dans le dropdown et la page de notifications du studio.
+ * Non bloquant : les erreurs sont ignorées.
+ */
+export async function createInAppNotification(params: CreateInAppNotificationParams): Promise<void> {
+  try {
+    const payload = {
+      studio_id: params.studioId,
+      type: params.type,
+      title: sanitizeText(params.title, 200) ?? '',
+      message: sanitizeText(params.message, 500) ?? '',
+      action_url: params.actionUrl ? sanitizeText(params.actionUrl, 500) : null,
+      read: false,
+      created_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('inkflow_notifications').insert(payload as never);
+    if (import.meta.env.DEV && error) {
+      console.warn('[InkFlow] createInAppNotification:', error.message);
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('[InkFlow] createInAppNotification error:', err);
+    }
+  }
+}
+
+/**
+ * Crée une notification de nouvelle demande de réservation
+ */
+export async function notifyNewBookingRequest(
+  studioId: string,
+  clientName: string,
+  description: string,
+  requestedDate?: string
+): Promise<void> {
+  const dateStr = requestedDate 
+    ? ` le ${new Date(requestedDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+    : '';
+  await createInAppNotification({
+    studioId,
+    type: 'booking',
+    title: `${clientName} souhaite un RDV${dateStr}`,
+    message: description.slice(0, 100) + (description.length > 100 ? '…' : ''),
+    actionUrl: '/requests',
+  });
+}
+
+/**
+ * Crée une notification de paiement d'acompte reçu
+ */
+export async function notifyDepositReceived(
+  studioId: string,
+  clientName: string,
+  amount: number
+): Promise<void> {
+  await createInAppNotification({
+    studioId,
+    type: 'payment',
+    title: `Acompte de ${amount}€ reçu`,
+    message: `${clientName} a payé son acompte de ${amount}€`,
+    actionUrl: '/finance',
+  });
+}
+
+/**
+ * Crée une notification de rappel (RDV demain, acomptes en attente, etc.)
+ */
+export async function notifyReminder(
+  studioId: string,
+  title: string,
+  message: string
+): Promise<void> {
+  await createInAppNotification({
+    studioId,
+    type: 'reminder',
+    title,
+    message,
+  });
 }

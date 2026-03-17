@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
@@ -29,6 +29,7 @@ import { PushNotificationsSettings } from '../settings/PushNotificationsSettings
 import { VitrineLinkButton } from './VitrineLinkButton';
 
 const FinanceDashboard = lazy(() => import('./FinanceDashboard').then(m => ({ default: m.FinanceDashboard })));
+const DepositsPage = lazy(() => import('./DepositsPage').then(m => ({ default: m.DepositsPage })));
 const AnalyticsDashboard = lazy(() => import('../analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
 import { DashboardWidgets, AddWidgetModal, useDashboardWidgets, WidgetCard } from './DashboardWidgets';
 import { SortableOverviewWidgets, type SortableWidgetItem } from './SortableOverviewWidgets';
@@ -39,6 +40,7 @@ import { ArtistManager } from './ArtistManager';
 import { PortfolioManager } from './PortfolioManager';
 import { LoyaltyManager, type LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
 import { MessagingTab } from '../messaging/MessagingTab';
+import { NotificationsPage } from './NotificationsPage';
 import { ConsentFormEditor } from '../consent/ConsentFormEditor';
 import { CalendarSettings } from './CalendarSettings';
 import { Appointment, FlashDesign, BookingFormData, WaitlistEntry, ArtistAccount, LoyaltyEntry, MessageThread } from '../../types';
@@ -60,11 +62,11 @@ import { safeJsonParse } from '../../lib/utils';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
-type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings';
+type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings' | 'notifications';
 
 const iconProps = { className: 'w-5 h-5', strokeWidth: 1.5 };
 
-// MVP: Core tabs only — V2 features (analytics, messaging, referral) are hidden
+// MVP: Core tabs
 const tabs: { id: TabId | 'referral'; label: string; icon: React.ReactNode; badge?: 'pending'; href?: string }[] = [
   { id: 'overview', label: 'Vue d\'ensemble', icon: <LayoutDashboard {...iconProps} /> },
   // { id: 'analytics', label: 'Statistiques', icon: <BarChart3 {...iconProps} /> }, // V2
@@ -72,7 +74,7 @@ const tabs: { id: TabId | 'referral'; label: string; icon: React.ReactNode; badg
   { id: 'appointments', label: 'Rendez-vous', icon: <Calendar {...iconProps} /> },
   { id: 'flash', label: 'Galerie Flash', icon: <Image {...iconProps} /> },
   { id: 'clients', label: 'Clients', icon: <Users {...iconProps} /> },
-  // { id: 'messaging', label: 'Messagerie', icon: <MessageSquare {...iconProps} /> }, // V2
+  { id: 'messaging', label: 'Messagerie', icon: <Inbox {...iconProps} /> },
   { id: 'portfolio', label: 'Portfolio', icon: <Image {...iconProps} /> },
   { id: 'finance', label: 'Finance', icon: <Wallet {...iconProps} /> },
   // { id: 'referral', label: '🎁 Mois offerts', icon: <Gift {...iconProps} />, href: '/referral' }, // V2
@@ -365,12 +367,14 @@ export const DashboardPro: React.FC = () => {
     return list.map((p: VitrinePortfolioItem, i: number) => ({
       id: `p_${i}`,
       url: p.url,
+      beforeUrl: p.beforeUrl,
       category: p.category,
       artist: p.artist,
       description: p.description,
       tags: [],
       likes: p.likes,
       createdAt: '',
+      appointmentId: p.appointmentId,
     }));
   }, [vitrineData?.portfolio]);
 
@@ -1045,44 +1049,124 @@ export const DashboardPro: React.FC = () => {
                 )}
               </button>
               {showNotifications && (
-                <div
-                  className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-auto border border-zinc-200 dark:border-zinc-800 rounded-2xl z-50 animate-slide-up bg-white dark:bg-zinc-950"
-                >
-                  <div className="p-4 border-b border-[var(--border)]/60 flex items-center justify-between bg-white dark:bg-zinc-950">
-                    <h4 className="font-bold text-sm text-[#1A1A2E] dark:text-[var(--text-primary)]">Notifications</h4>
-                    {notifications.filter(n => !n.read).length > 0 && (
-                      <button
-                        onClick={() => { notifications.filter(n => !n.read).forEach(n => markNotificationAsRead(n.id)); }}
-                        className="text-xs text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
-                      >
-                        Tout marquer comme lu
-                      </button>
+                <>
+                  <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowNotifications(false)} aria-hidden />
+                  <div className="absolute right-0 top-full mt-2 w-96 max-h-[480px] border border-zinc-200 dark:border-zinc-800 rounded-2xl z-50 animate-slide-up bg-white dark:bg-black shadow-xl shadow-black/10 overflow-hidden">
+                    {/* Header */}
+                    <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-black">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          <h4 className="font-bold text-sm text-zinc-900 dark:text-white">Notifications</h4>
+                          {notifications.filter(n => !n.read).length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold">
+                              {notifications.filter(n => !n.read).length}
+                            </span>
+                          )}
+                        </div>
+                        {notifications.filter(n => !n.read).length > 0 && (
+                          <button
+                            onClick={() => { notifications.filter(n => !n.read).forEach(n => markNotificationAsRead(n.id)); }}
+                            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors"
+                          >
+                            <MailOpen className="w-3.5 h-3.5" />
+                            Tout lire
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Content */}
+                    <div className="max-h-[340px] overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                            <Bell className="w-6 h-6 text-zinc-400" />
+                          </div>
+                          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Aucune notification</p>
+                          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Vous serez notifié des nouvelles réservations</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                          {notifications.slice(0, 10).map(notif => {
+                            const iconMap: Record<string, React.ReactNode> = {
+                              booking: <Calendar className="w-4 h-4 text-blue-500" />,
+                              payment: <CreditCard className="w-4 h-4 text-emerald-500" />,
+                              reminder: <Clock className="w-4 h-4 text-amber-500" />,
+                              cancellation: <AlertTriangle className="w-4 h-4 text-red-500" />,
+                              review: <Star className="w-4 h-4 text-violet-500" />,
+                            };
+                            const bgMap: Record<string, string> = {
+                              booking: 'bg-blue-100 dark:bg-blue-500/20',
+                              payment: 'bg-emerald-100 dark:bg-emerald-500/20',
+                              reminder: 'bg-amber-100 dark:bg-amber-500/20',
+                              cancellation: 'bg-red-100 dark:bg-red-500/20',
+                              review: 'bg-violet-100 dark:bg-violet-500/20',
+                            };
+                            
+                            const formatTimeAgo = (dateStr: string) => {
+                              const date = new Date(dateStr);
+                              const now = new Date();
+                              const diffMs = now.getTime() - date.getTime();
+                              const diffMins = Math.floor(diffMs / 60000);
+                              const diffHours = Math.floor(diffMs / 3600000);
+                              const diffDays = Math.floor(diffMs / 86400000);
+                              
+                              if (diffMins < 1) return "À l'instant";
+                              if (diffMins < 60) return `${diffMins}min`;
+                              if (diffHours < 24) return `${diffHours}h`;
+                              if (diffDays < 7) return `${diffDays}j`;
+                              return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+                            };
+                            
+                            return (
+                              <button
+                                key={notif.id}
+                                onClick={() => { markNotificationAsRead(notif.id); setShowNotifications(false); setActiveTab('requests'); }}
+                                className={`w-full text-left p-4 transition-colors duration-150 group ${!notif.read ? 'bg-blue-50/60 dark:bg-blue-500/10 hover:bg-blue-50 dark:hover:bg-blue-500/15' : 'bg-zinc-50/80 dark:bg-zinc-900/70 hover:bg-zinc-100 dark:hover:bg-zinc-800/80'}`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className={`p-2 rounded-xl flex-shrink-0 ${bgMap[notif.type] || 'bg-zinc-100 dark:bg-zinc-800'}`}>
+                                    {iconMap[notif.type] || <Bell className="w-4 h-4 text-zinc-500" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <p className={`text-sm font-medium line-clamp-1 ${!notif.read ? 'text-zinc-900 dark:text-white' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                                        {notif.title}
+                                      </p>
+                                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500 whitespace-nowrap font-medium">
+                                        {formatTimeAgo(notif.createdAt)}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">
+                                      {notif.message}
+                                    </p>
+                                  </div>
+                                  {!notif.read && (
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1" />
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Footer */}
+                    {notifications.length > 0 && (
+                      <div className="p-3 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900">
+                        <button
+                          onClick={() => { setShowNotifications(false); setActiveTab('notifications'); }}
+                          className="w-full py-2.5 rounded-xl text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center justify-center gap-2"
+                        >
+                          Voir toutes les notifications
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
                     )}
                   </div>
-                  {notifications.length === 0 ? (
-                    <div className="p-6 text-center text-sm text-[#8B8BA7]">Aucune notification</div>
-                  ) : (
-                    <div className="divide-y divide-[var(--border)]">
-                      {notifications.slice(0, 20).map(notif => (
-                        <button
-                          key={notif.id}
-                          onClick={() => { markNotificationAsRead(notif.id); setShowNotifications(false); setActiveTab('requests'); }}
-                          className={`w-full text-left p-4 hover:bg-zinc-50 dark:hover:bg-[#27272A] transition-colors duration-150 ${!notif.read ? 'bg-blue-50/50 dark:bg-[#1e3a5f]' : ''}`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${!notif.read ? 'bg-blue-600' : 'bg-transparent'}`} />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-[#1A1A2E] dark:text-[var(--text-primary)] truncate">{notif.message}</p>
-                              <p className="text-xs text-[#9CA3AF] mt-1">
-                                {new Date(notif.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                </>
               )}
             </div>
             {/* Avatar/Profil — masqué sur mobile SEULEMENT pour overview car doublon avec Bottom Tab Bar > Réglages */}
@@ -1102,7 +1186,7 @@ export const DashboardPro: React.FC = () => {
               </button>
               {showProfileDropdown && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowProfileDropdown(false)} aria-hidden />
+                  <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowProfileDropdown(false)} aria-hidden />
                   <div
                     className="absolute right-0 top-full mt-2 w-64 border border-zinc-200 dark:border-zinc-800 rounded-2xl z-50 overflow-hidden animate-slide-up bg-white dark:bg-zinc-950"
                   >
@@ -1267,18 +1351,44 @@ export const DashboardPro: React.FC = () => {
             />
           )}
 
+          {!loading && activeTab === 'notifications' && (
+            <NotificationsPage
+              studioId={studioId}
+              notifications={notifications}
+              markNotificationAsRead={markNotificationAsRead}
+              onNavigate={(notif) => {
+                if (notif.type === 'booking') setActiveTab('requests');
+                else if (notif.type === 'payment') setActiveTab('finance');
+                else setActiveTab('overview');
+              }}
+            />
+          )}
+
           {!loading && activeTab === 'portfolio' && (
             <PortfolioManager
               items={portfolioItemsFromVitrine}
+              studioId={studioId}
+              studioSlug={studioSlug}
+              studioName={user?.studioName}
+              appointments={appointments}
               onAddItem={(item) => {
                 if (!vitrineData || !user?.email || !user?.studioName) return;
-                const v: VitrinePortfolioItem = { url: item.url, category: item.category, artist: item.artist, likes: item.likes, description: item.description };
+                const v: VitrinePortfolioItem = {
+                  url: item.url,
+                  beforeUrl: item.beforeUrl,
+                  category: item.category,
+                  artist: item.artist,
+                  likes: item.likes,
+                  description: item.description,
+                  appointmentId: item.appointmentId,
+                };
                 const newData: VitrineData = { ...vitrineData, portfolio: [...(vitrineData.portfolio ?? []), v] };
                 setVitrineData(newData);
                 const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user.studioName);
                 saveVitrineDataAsync(slug, newData, user.email, user.studioName).catch((err) => {
                   toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
                 });
+                toast.success('Photo ajoutée au portfolio et à la vitrine !');
               }}
               onDeleteItem={(id) => {
                 if (!vitrineData || !user?.email || !user?.studioName) return;
@@ -1298,7 +1408,14 @@ export const DashboardPro: React.FC = () => {
 
           {!loading && activeTab === 'finance' && (
             <Suspense fallback={<DashboardLoadingSkeleton />}>
-              <FinanceDashboard appointments={appointments} />
+              {financeView === 'acomptes' ? (
+                <DepositsPage 
+                  appointments={appointments}
+                  onDepositUpdated={retry}
+                />
+              ) : (
+                <FinanceDashboard appointments={appointments} />
+              )}
             </Suspense>
           )}
 
@@ -1631,6 +1748,7 @@ export const DashboardPro: React.FC = () => {
           onPrevMonth={() => setPlanningSidebarMonth(m => { const d = new Date(m); d.setMonth(d.getMonth() - 1); return d; })}
           onNextMonth={() => setPlanningSidebarMonth(m => { const d = new Date(m); d.setMonth(d.getMonth() + 1); return d; })}
           onToday={() => { setPlanningSidebarDate(null); setPlanningSidebarMonth(new Date()); }}
+          onNewAppointment={() => setShowNewAppointmentModal(true)}
           className="hidden xl:flex"
         />
       </div>{/* end app-shell-row */}
@@ -1801,6 +1919,7 @@ export const DashboardPro: React.FC = () => {
                 onPrevMonth={() => setPlanningSidebarMonth(m => { const d = new Date(m); d.setMonth(d.getMonth() - 1); return d; })}
                 onNextMonth={() => setPlanningSidebarMonth(m => { const d = new Date(m); d.setMonth(d.getMonth() + 1); return d; })}
                 onToday={() => { setPlanningSidebarDate(null); setPlanningSidebarMonth(new Date()); }}
+                onNewAppointment={() => { setShowPlanningSheet(false); setShowNewAppointmentModal(true); }}
                 className="w-full border-0 rounded-none flex"
               />
             </div>

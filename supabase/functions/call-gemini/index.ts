@@ -4,7 +4,7 @@
  */
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || "";
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,7 +29,9 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "No authorization header" }), { status: 401, headers: jsonHeaders });
     }
 
-    const { prompt } = await req.json();
+    const body = await req.json();
+    const { prompt, imageBase64, imageMimeType } = body;
+
     if (typeof prompt !== "string" || !prompt.trim()) {
       return new Response(JSON.stringify({ error: "Prompt is required" }), { status: 400, headers: jsonHeaders });
     }
@@ -39,16 +41,26 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "Gemini API not configured" }), { status: 500, headers: jsonHeaders });
     }
 
-    // Timeout 15 secondes
+    const parts: unknown[] = [{ text: prompt }];
+    if (imageBase64 && typeof imageBase64 === "string") {
+      const mime = imageMimeType || "image/jpeg";
+      parts.push({
+        inline_data: {
+          mime_type: mime,
+          data: imageBase64.replace(/^data:image\/\w+;base64,/, ""),
+        },
+      });
+    }
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+        contents: [{ parts }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1024, responseMimeType: body.responseMimeType },
       }),
       signal: controller.signal,
     });
@@ -57,13 +69,15 @@ Deno.serve(async (req: Request) => {
 
     if (!res.ok) {
       const errBody = await res.text();
+      let errMsg = "Gemini API failed";
       try {
-        const errJson = JSON.parse(errBody);
+        const errJson = JSON.parse(errBody) as { error?: { message?: string }; message?: string };
+        errMsg = errJson?.error?.message || errJson?.message || (errBody ? String(errBody).slice(0, 200) : "") || errMsg;
         console.error("[call-gemini] Gemini API error:", errJson);
       } catch {
         console.error("[call-gemini] Gemini API error:", res.status, errBody);
       }
-      return new Response(JSON.stringify({ error: "Gemini API failed" }), { status: 502, headers: jsonHeaders });
+      return new Response(JSON.stringify({ error: errMsg }), { status: 502, headers: jsonHeaders });
     }
 
     const data = await res.json();
