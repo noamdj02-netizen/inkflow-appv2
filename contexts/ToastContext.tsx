@@ -79,7 +79,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     <ToastContext.Provider value={value}>
       {children}
       {/* Toast container — positioned at top, below safe area, pointer-events-none so it never blocks navigation */}
-      <div className="fixed top-0 left-0 right-0 z-[9999] flex flex-col items-center pointer-events-none safe-top pt-2 px-4">
+      <div className="fixed top-0 left-0 right-0 z-[9999] flex flex-col items-center pointer-events-none safe-top pt-2 px-4" aria-live="polite" aria-atomic="true" role="status">
         {currentToast && (
           <div
             key={currentToast.id}

@@ -1060,7 +1060,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                               <button
                                 type="button"
                                 onClick={() => {
-                                  navigator.clipboard.writeText(flashDepositUrl ?? '').then(() => toast.success('Lien copié')).catch(() => {});
+                                  navigator.clipboard.writeText(flashDepositUrl ?? '').then(() => toast.success('Lien copié')).catch(() => { toast.error('Impossible de copier le lien'); });
                                 }}
                                 className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-neutral-900 text-white text-sm font-semibold hover:bg-neutral-800 shrink-0"
                               >

@@ -108,8 +108,21 @@ Deno.serve(async (req: Request) => {
     if (!stripeRes.ok) {
       const errBody = await stripeRes.text();
       console.error("Stripe error:", stripeRes.status, errBody);
+      let userMsg = "Stripe checkout failed";
+      try {
+        const parsed = JSON.parse(errBody);
+        const code = parsed?.error?.code;
+        const stripeMsg = parsed?.error?.message || "";
+        if (code === "secret_key_required" || stripeMsg.toLowerCase().includes("publishable")) {
+          userMsg = "Clé secrète Stripe requise : configure STRIPE_SECRET_KEY (sk_...) dans Supabase Secrets puis redéploie la fonction.";
+        } else if (stripeMsg) {
+          userMsg = stripeMsg;
+        }
+      } catch {
+        userMsg = errBody.slice(0, 200) || userMsg;
+      }
       return new Response(
-        JSON.stringify({ error: "Stripe checkout failed", details: errBody }),
+        JSON.stringify({ error: userMsg, details: errBody }),
         { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }

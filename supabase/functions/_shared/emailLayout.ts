@@ -8,7 +8,8 @@ export function escapeHtml(str: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 export interface EmailLayoutOptions {
@@ -95,7 +96,7 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
     ${linkHintHtml}
     <div style="margin-top:64px;padding-top:40px;border-top:1px solid ${BORDER};text-align:center;">
       <p style="margin:0 0 12px;font-size:13px;color:${TEXT_MUTED};"><a href="mailto:contact@ink-flow.me" style="color:${LINK_COLOR};text-decoration:underline;">Une question ? contact@ink-flow.me</a></p>
-      <p style="margin:0 0 24px;font-size:13px;color:${TEXT_MUTED};">Pour gérer vos notifications, <a href="#" style="color:${LINK_COLOR};text-decoration:underline;">cliquez ici</a>.</p>
+      <p style="margin:0 0 24px;font-size:13px;color:${TEXT_MUTED};">Pour gérer vos notifications, <a href="https://app.ink-flow.me/aide" style="color:${LINK_COLOR};text-decoration:underline;">cliquez ici</a>.</p>
       <p style="margin:0 0 16px;font-size:14px;font-weight:600;color:${TEXT_DARK};">Retrouvez InkFlow sur mobile</p>
       <p style="margin:0 0 20px;font-size:13px;color:${TEXT_MUTED};">Téléchargez l'application</p>
       <table style="margin:0 auto;border-collapse:collapse;"><tr>

@@ -27,7 +27,6 @@ function buildToClientHtml(recipientName: string, studioName: string, senderName
       <p style="color:#525252;font-size:15px;line-height:1.6;margin:0 0 16px;"><strong>${safeStudio}</strong> (${safeSender}) vous a envoyé un message :</p>
       ${emailInfoBox(`<p style="color:#171717;font-size:14px;line-height:1.5;margin:0;">${safePreview}</p>`)}`;
   return wrapEmailLayout({
-    tag: "NOUVEAU MESSAGE",
     title: "Nouveau message",
     bodyHtml,
     button: { text: "Voir la conversation", url: conversationUrl },
@@ -40,7 +39,6 @@ function buildToStudioHtml(senderName: string, messagePreview: string, conversat
   const bodyHtml = `<p style="color:#171717;font-size:16px;line-height:1.55;margin:0 0 12px;"><strong>${safeSender}</strong> vous a répondu dans la messagerie.</p>
       ${emailInfoBox(`<p style="color:#171717;font-size:14px;line-height:1.5;margin:0;">${safePreview}</p>`)}`;
   return wrapEmailLayout({
-    tag: "NOUVEAU MESSAGE CLIENT",
     title: "Nouveau message client",
     bodyHtml,
     button: { text: "Ouvrir la messagerie", url: conversationUrl },

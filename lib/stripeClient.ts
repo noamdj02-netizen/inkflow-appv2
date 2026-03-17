@@ -7,6 +7,7 @@ interface CreateCheckoutParams {
   appointmentId: string;
   /** ID du flash (vitrine) — utilisé pour mettre available=false à l'acompte payé. */
   flashId?: string;
+  /** Montant en euros (ex: 50 pour 50€). Le backend convertit en centimes pour Stripe. */
   amount: number;
   clientName: string;
   clientEmail: string;
@@ -44,6 +45,19 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
       return { error: data?.error || data?.details || 'La fonction n\'a pas renvoyé de lien.' };
     }
     const msg = data?.error || data?.details || data?.message || `Erreur ${res.status}`;
+    if (res.status === 502 && typeof data?.details === 'string') {
+      const details = data.details;
+      if (details.includes('secret_key_required') || details.includes('publishable')) {
+        return {
+          error: 'Clé Stripe incorrecte : utilise la clé secrète (sk_live_ ou sk_test_) dans Supabase → Edge Functions → Secrets → STRIPE_SECRET_KEY, puis redéploie la fonction.',
+        };
+      }
+      if (details.includes('Invalid API Key') || details.includes('invalid_request_error')) {
+        return {
+          error: 'Clé Stripe invalide. Vérifie STRIPE_SECRET_KEY dans Supabase Secrets (sk_...) et redéploie : npx supabase functions deploy create-checkout-session',
+        };
+      }
+    }
     if (res.status === 404 || res.status === 502) {
       return {
         error: `${msg} — Projet Supabase peut être en pause ou la fonction non déployée : restaure le projet puis exécute « npx supabase functions deploy create-checkout-session ».`,

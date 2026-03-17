@@ -1,6 +1,6 @@
 /**
  * CORS headers pour les Edge Functions Supabase.
- * En production, seul ink-flow.me et ses sous-domaines sont autorisés.
+ * En production : ink-flow.me, inkflow.me et Vercel.
  * En développement local, localhost est également autorisé.
  */
 
@@ -8,6 +8,10 @@ const ALLOWED_ORIGINS = [
   'https://ink-flow.me',
   'https://www.ink-flow.me',
   'https://app.ink-flow.me',
+  'https://inkflow.me',
+  'https://www.inkflow.me',
+  'https://app.inkflow.me',
+  'https://inkdlow.vercel.app',
 ];
 
 const DEV_ORIGINS = [
@@ -31,6 +35,11 @@ function getAllowedOrigin(origin?: string | null): string {
   
   // Production origins
   if (ALLOWED_ORIGINS.includes(origin)) {
+    return origin;
+  }
+  
+  // Vercel previews (*.vercel.app)
+  if (origin.endsWith('.vercel.app')) {
     return origin;
   }
   

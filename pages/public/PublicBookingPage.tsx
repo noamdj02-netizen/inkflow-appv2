@@ -13,7 +13,7 @@ import { supabase } from '../../lib/supabase';
 
 const supabaseEnabled = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
-const DEPOSIT_AMOUNT = 50;
+const DEFAULT_DEPOSIT = 50;
 const WEEKDAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
@@ -24,6 +24,7 @@ interface PublicBookingPageProps {
 export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug }) => {
   const [studioId, setStudioId] = useState<string | null | 'loading'>('loading');
   const [studioInfo, setStudioInfo] = useState<{ name: string; avatar: string } | null>(null);
+  const [vitrineData, setVitrineData] = useState<{ flashDesigns?: Array<{ id: string; price?: number; depositAmount?: number }> } | null>(null);
   const [busySlots, setBusySlots] = useState<Record<string, string[]>>({});
   const [availabilityLoading, setAvailabilityLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
@@ -93,6 +94,12 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
   const availableDates = getAvailableDates();
   const availableSlots = form.selectedDate ? getAvailableSlotsForDate(form.selectedDate) : [];
 
+  const flashIdFromUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('flash') : null;
+  const selectedFlash = flashIdFromUrl && vitrineData?.flashDesigns?.find((f) => f.id === flashIdFromUrl);
+  const depositAmount = selectedFlash
+    ? ((selectedFlash as { depositAmount?: number }).depositAmount ?? (Math.round((selectedFlash.price ?? 0) * 0.3) || 30))
+    : DEFAULT_DEPOSIT;
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
@@ -124,10 +131,11 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         studioId: studioId,
         studioSlug: studioSlug,
         appointmentId,
-        amount: DEPOSIT_AMOUNT * 100,
+        amount: depositAmount,
+        flashId: flashIdFromUrl || undefined,
         clientName,
         clientEmail: form.email,
-        serviceName: form.project || 'Réservation tatouage',
+        serviceName: form.project || selectedFlash?.title || 'Réservation tatouage',
         type: 'deposit',
       });
       
@@ -480,7 +488,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             ) : (
               <>
                 <CreditCard className="w-5 h-5" strokeWidth={1.5} />
-                Payer {DEPOSIT_AMOUNT}€ et Réserver
+                Payer {depositAmount}€ et Réserver
               </>
             )}
           </button>

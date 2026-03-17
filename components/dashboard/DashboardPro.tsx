@@ -491,7 +491,9 @@ export const DashboardPro: React.FC = () => {
           updated_at: new Date().toISOString()
         }).eq('id', studioId);
         await supabase.storage.from('inkflow-assets').remove([`avatars/${studioId}.jpg`]);
-      } catch {}
+      } catch {
+        toast.error('Erreur lors de la suppression de l\'avatar');
+      }
     }
   };
 
