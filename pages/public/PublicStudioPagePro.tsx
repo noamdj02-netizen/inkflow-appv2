@@ -936,6 +936,11 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       {/* Footer — safe-bottom pour éviter coupure sur mobile */}
       <footer className="bg-neutral-900 text-white mt-24 py-16 pb-[max(4rem,env(safe-area-inset-bottom))]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {studioDisplay.siret && (
+            <p className="text-neutral-500 text-sm mb-6">
+              SIRET : {studioDisplay.siret.replace(/\s/g, '').replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, '$1 $2 $3 $4')}
+            </p>
+          )}
           <div className="grid md:grid-cols-4 gap-12 mb-12">
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-6">

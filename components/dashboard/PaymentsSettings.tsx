@@ -41,7 +41,7 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({ userEmail, s
         setSettings(merged);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
       }
-    }).catch(() => {});
+    }).catch(() => { toast.error('Une erreur est survenue'); });
   }, [studioId, useSupabase]);
 
   // Auto-save with debounce (replaces manual useEffect + setTimeout pattern)

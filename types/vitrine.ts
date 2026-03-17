@@ -103,4 +103,6 @@ export interface VitrineData {
   flashDesigns: VitrineFlashDesign[];
   faqs: VitrineFaq[];
   whyChooseUs: VitrineWhyChooseUs[];
+  /** SIRET du studio (mentions légales) */
+  siret?: string | null;
 }

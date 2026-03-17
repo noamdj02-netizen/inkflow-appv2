@@ -6,13 +6,13 @@ import {
 } from 'lucide-react';
 import { Appointment } from '../../types';
 import { Modal } from '../ui/Modal';
-import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { markDepositAsPaid } from '../../lib/supabaseDashboard';
 import { createCheckoutSession } from '../../lib/stripeClient';
 
 interface DepositsPageProps {
   appointments: Appointment[];
+  studioId: string | null;
   onDepositUpdated?: () => void;
 }
 
@@ -20,9 +20,9 @@ type FilterTab = 'all' | 'received' | 'pending';
 
 export const DepositsPage: React.FC<DepositsPageProps> = ({
   appointments,
+  studioId,
   onDepositUpdated,
 }) => {
-  const { studioId } = useAuth();
   const toast = useToast();
   
   const [activeTab, setActiveTab] = useState<FilterTab>('all');

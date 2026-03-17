@@ -4,6 +4,7 @@ import { Logo } from '../../components/Logo';
 import { VitrineBookingForm } from '../../components/booking/VitrineBookingForm';
 import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
 import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
+import { useToast } from '../../contexts/ToastContext';
 
 const supabaseEnabled = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
@@ -12,6 +13,7 @@ interface PublicBookingPageProProps {
 }
 
 export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ studioSlug }) => {
+  const toast = useToast();
   const [studioId, setStudioId] = useState<string | null | 'loading'>('loading');
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
@@ -49,7 +51,9 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
           });
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        toast.error('Impossible de charger les informations du studio');
+      });
   }, [studioSlug]);
 
   const studio = studioInfo ?? { name: studioSlug, address: '', avatar: '', instagram: '', rating: 0, reviewCount: 0 };

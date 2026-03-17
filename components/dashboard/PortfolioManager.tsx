@@ -28,11 +28,14 @@ interface PortfolioManagerProps {
   studioSlug?: string | null;
   studioName?: string | null;
   appointments?: Appointment[];
+  /** Si studioId est null, appelé avant l'upload pour garantir que le studio existe */
+  onEnsureStudio?: () => Promise<{ studioId: string; studioSlug: string } | null>;
 }
 
 const CATEGORIES = ['Realisme', 'Traditionnel', 'Neo-traditionnel', 'Japonais', 'Minimaliste', 'Geometrique', 'Aquarelle', 'Dotwork', 'Lettering', 'Autre'];
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 Mo
 
-export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAddItem, onDeleteItem, onEditItem, artists, studioId, studioSlug, studioName, appointments = [] }) => {
+export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAddItem, onDeleteItem, onEditItem, artists, studioId, studioSlug, studioName, appointments = [], onEnsureStudio }) => {
   const toast = useToast();
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterArtist, setFilterArtist] = useState('all');
@@ -40,6 +43,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [aiGenerating, setAiGenerating] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -94,10 +98,24 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
+    if (imageLoading) return;
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        toast.error('Image trop lourde (max 5 Mo)');
+        return;
+      }
+      setImageLoading(true);
+      setUploadError(null);
       const reader = new FileReader();
-      reader.onload = (ev) => setNewItem(prev => ({ ...prev, url: ev.target?.result as string }));
+      reader.onload = (ev) => {
+        setNewItem(prev => ({ ...prev, url: ev.target?.result as string }));
+        setImageLoading(false);
+      };
+      reader.onerror = () => {
+        toast.error('Impossible de charger l\'image');
+        setImageLoading(false);
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -105,10 +123,24 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, field: 'url' | 'beforeUrl') => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        toast.error('Image trop lourde (max 5 Mo)');
+        return;
+      }
+      if (field === 'url') setImageLoading(true);
+      setUploadError(null);
       const reader = new FileReader();
-      reader.onload = (ev) => setNewItem(prev => ({ ...prev, [field]: ev.target?.result as string }));
+      reader.onload = (ev) => {
+        setNewItem(prev => ({ ...prev, [field]: ev.target?.result as string }));
+        if (field === 'url') setImageLoading(false);
+      };
+      reader.onerror = () => {
+        toast.error('Impossible de charger l\'image');
+        if (field === 'url') setImageLoading(false);
+      };
       reader.readAsDataURL(file);
     }
+    e.target.value = '';
   };
 
   const handleAdd = async () => {
@@ -120,13 +152,34 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
       let finalUrl = newItem.url;
       let finalBeforeUrl = newItem.beforeUrl || undefined;
 
-      if (studioId && newItem.url.startsWith('data:')) {
-        const blob = dataUrlToBlob(newItem.url);
-        finalUrl = await uploadPortfolioImage(studioId, blob, undefined, studioSlug);
-        if (newItem.beforeUrl?.startsWith('data:')) {
-          const beforeBlob = dataUrlToBlob(newItem.beforeUrl);
-          finalBeforeUrl = await uploadPortfolioImage(studioId, beforeBlob, `before_${Date.now()}`, studioSlug);
+      let sid = studioId;
+      let slug = studioSlug;
+      if (!sid && onEnsureStudio) {
+        const ensured = await onEnsureStudio();
+        if (ensured) {
+          sid = ensured.studioId;
+          slug = ensured.studioSlug;
         }
+      }
+
+      if (sid && newItem.url.startsWith('data:')) {
+        try {
+          const blob = dataUrlToBlob(newItem.url);
+          finalUrl = await uploadPortfolioImage(sid, blob, undefined, slug ?? undefined);
+          if (newItem.beforeUrl?.startsWith('data:')) {
+            const beforeBlob = dataUrlToBlob(newItem.beforeUrl);
+            finalBeforeUrl = await uploadPortfolioImage(sid, beforeBlob, `before_${Date.now()}`, slug ?? undefined);
+          }
+        } catch (uploadErr) {
+          const msg = uploadErr instanceof Error ? uploadErr.message : 'Erreur upload';
+          setUploadError(msg);
+          toast.error(`Impossible d'enregistrer l'image : ${msg}`);
+          return;
+        }
+      } else if (newItem.url.startsWith('data:') && !sid) {
+        setUploadError('Studio non chargé. Réessayez dans quelques secondes.');
+        toast.error('Studio non chargé. Réessayez dans quelques secondes.');
+        return;
       }
 
       onAddItem({
@@ -142,6 +195,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
         appointmentId: newItem.appointmentId || undefined,
       });
       setNewItem({ url: '', beforeUrl: '', category: '', artist: artists[0] || '', description: '', tags: '', appointmentId: '' });
+      setImageLoading(false);
       setShowUpload(false);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Erreur lors de l\'upload');
@@ -372,7 +426,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
       {showUpload && (
         <div
           className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/95 flex justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
-          onClick={() => setShowUpload(false)}
+          onClick={() => { setShowUpload(false); setImageLoading(false); }}
           style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
         >
           <div
@@ -385,7 +439,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                 <p className="text-sm text-slate-500 mt-0.5">Partagez votre dernière réalisation</p>
               </div>
               <button
-                onClick={() => setShowUpload(false)}
+                onClick={() => { setShowUpload(false); setImageLoading(false); }}
                 className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
               >
                 <X className="w-5 h-5 text-slate-500" />
@@ -403,7 +457,12 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                     : 'border-slate-300 dark:border-zinc-700 hover:border-slate-400 dark:hover:border-zinc-600 hover:bg-slate-50 dark:hover:bg-zinc-800/50'
                 }`}
               >
-                {newItem.url ? (
+                {imageLoading ? (
+                  <div className="flex flex-col items-center gap-3 py-8">
+                    <Loader2 className="w-10 h-10 text-slate-400 animate-spin" />
+                    <p className="text-sm text-slate-500">Chargement de l'image...</p>
+                  </div>
+                ) : newItem.url ? (
                   <div className="relative inline-block">
                     <img src={newItem.url} alt="Aperçu" className="w-40 h-40 object-cover rounded-xl mx-auto shadow-lg" />
                     <button
@@ -541,7 +600,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
 
               <button
                 onClick={handleAdd}
-                disabled={!newItem.url || !newItem.category || uploading}
+                disabled={!newItem.url || !newItem.category || uploading || imageLoading}
                 className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-semibold hover:bg-slate-800 dark:hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 {uploading ? (
@@ -564,61 +623,81 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
       {/* Lightbox — opaque, scrollable sur mobile, boutons fixés */}
       {selectedItem && (
         <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" onClick={() => setSelectedItem(null)} style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-          <button
-            onClick={() => setSelectedItem(null)}
-            className="fixed top-6 right-6 w-12 h-12 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors z-10"
-            style={{ top: 'max(1.5rem, env(safe-area-inset-top))' }}
+          {/* Barre supérieure : Fermer + Partager — responsive mobile */}
+          <div
+            className="fixed left-0 right-0 top-0 z-20 flex items-center justify-between px-4 py-3 gap-3"
+            style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+            onClick={e => e.stopPropagation()}
           >
-            <X className="w-6 h-6 text-white" />
-          </button>
-          <div className="fixed top-6 right-24 z-10" style={{ top: 'max(1.5rem, env(safe-area-inset-top))' }}>
             <button
               onClick={(e) => { e.stopPropagation(); setShowShareMenu(v => !v); }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full text-sm font-semibold hover:opacity-90 transition-opacity shadow-lg"
+              className="flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full text-sm font-semibold hover:opacity-90 transition-opacity shadow-lg active:scale-[0.98] min-h-[44px] touch-manipulation"
             >
-              <Share2 className="w-4 h-4" />
-              Partager (Instagram)
-              <ChevronDown className={`w-4 h-4 transition-transform ${showShareMenu ? 'rotate-180' : ''}`} />
+              <Share2 className="w-5 h-5 shrink-0" />
+              <span className="hidden sm:inline">Partager (Instagram)</span>
+              <span className="sm:hidden">Partager</span>
+              <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${showShareMenu ? 'rotate-180' : ''}`} />
             </button>
-            {showShareMenu && (
-              <>
-                <div className="absolute inset-0 -z-10" onClick={(e) => { e.stopPropagation(); setShowShareMenu(false); }} aria-hidden />
-                <div className="absolute top-full right-0 mt-2 w-56 py-2 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-xl">
+            <button
+              onClick={() => setSelectedItem(null)}
+              className="w-12 h-12 sm:w-12 sm:h-12 min-w-[44px] min-h-[44px] bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors touch-manipulation"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+          </div>
+
+          {/* Menu partage — mobile : bottom sheet, desktop : dropdown */}
+          {showShareMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-30 bg-black/50"
+                onClick={(e) => { e.stopPropagation(); setShowShareMenu(false); }}
+                aria-hidden
+              />
+              <div
+                className="fixed left-0 right-0 bottom-0 z-40 bg-white dark:bg-zinc-900 rounded-t-2xl border-t border-zinc-200 dark:border-zinc-700 shadow-2xl sm:bottom-auto sm:left-auto sm:right-4 sm:top-14 sm:rounded-2xl sm:border sm:border-t sm:w-64 sm:pb-4"
+                style={{
+                  paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="sm:hidden w-12 h-1 bg-zinc-300 dark:bg-zinc-600 rounded-full mx-auto mt-3 mb-2" />
+                <div className="py-2 px-4 sm:px-0">
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleShare(selectedItem); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                    onClick={(e) => { e.stopPropagation(); handleShare(selectedItem); setShowShareMenu(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 sm:py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:bg-zinc-100 dark:active:bg-zinc-800 transition-colors rounded-xl min-h-[48px] touch-manipulation"
                   >
-                    <Share2 className="w-4 h-4 text-purple-500" />
-                    Partager (menu système)
+                    <Share2 className="w-5 h-5 shrink-0 text-purple-500" />
+                    Partager (menu système / Instagram)
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleCopyCaption(selectedItem); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                    onClick={(e) => { e.stopPropagation(); handleCopyCaption(selectedItem); setShowShareMenu(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 sm:py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:bg-zinc-100 dark:active:bg-zinc-800 transition-colors rounded-xl min-h-[48px] touch-manipulation"
                   >
-                    <Copy className="w-4 h-4 text-purple-500" />
+                    <Copy className="w-5 h-5 shrink-0 text-purple-500" />
                     Copier la légende
                   </button>
                   {selectedItem.url.startsWith('http') && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleCopyLink(selectedItem); }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); handleCopyLink(selectedItem); setShowShareMenu(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-3.5 sm:py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:bg-zinc-100 dark:active:bg-zinc-800 transition-colors rounded-xl min-h-[48px] touch-manipulation"
                     >
-                      <Copy className="w-4 h-4 text-purple-500" />
+                      <Copy className="w-5 h-5 shrink-0 text-purple-500" />
                       Copier le lien
                     </button>
                   )}
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleDownload(selectedItem); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                    onClick={(e) => { e.stopPropagation(); handleDownload(selectedItem); setShowShareMenu(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 sm:py-2.5 text-left text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:bg-zinc-100 dark:active:bg-zinc-800 transition-colors rounded-xl min-h-[48px] touch-manipulation"
                   >
-                    <Download className="w-4 h-4 text-purple-500" />
+                    <Download className="w-5 h-5 shrink-0 text-purple-500" />
                     Télécharger
                   </button>
                 </div>
-              </>
-            )}
-          </div>
-          <div className="max-w-5xl w-full mx-auto p-4 pt-20 animate-in fade-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+              </div>
+            </>
+          )}
+          <div className="max-w-5xl w-full mx-auto p-4 pt-24 sm:pt-20 animate-in fade-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
             {selectedItem.beforeUrl ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="text-center">

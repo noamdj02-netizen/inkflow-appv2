@@ -31,6 +31,7 @@ Le build Vite n’a accès qu’aux variables **préfixées par `VITE_`**. Tout 
 
 | Variable | Utilisée par | Description |
 |----------|--------------|-------------|
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Frontend (Vercel) | Clé publique Stripe `pk_live_xxx` (optionnel) |
 | `STRIPE_SECRET_KEY` | create-checkout-session, create-subscription | Clé secrète Stripe (mode Live en prod) |
 | `STRIPE_WEBHOOK_SECRET` | stripe-webhook | Secret de signature du webhook Stripe (obligatoire en prod) |
 | `SUPABASE_URL` | Toutes les Edge Functions | Injectée automatiquement par Supabase |
@@ -48,7 +49,58 @@ En **production** :
 
 ---
 
+## Déploiement du webhook Stripe
+
+**Important** : Le webhook Stripe doit être déployé sans vérification JWT car Stripe ne peut pas envoyer de token Supabase.
+
+```bash
+npx supabase functions deploy stripe-webhook --no-verify-jwt
+```
+
+### Configurer le webhook dans Stripe Dashboard
+
+1. Aller sur [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks)
+2. Cliquer sur "Add endpoint"
+3. URL : `https://<project-ref>.supabase.co/functions/v1/stripe-webhook`
+4. Événements à écouter :
+   - `checkout.session.completed`
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+   - `invoice.payment_failed`
+5. Copier le "Signing secret" (commence par `whsec_`)
+6. L'ajouter comme secret Supabase : `STRIPE_WEBHOOK_SECRET`
+
+---
+
 ## Vérification rapide
 
 - **Frontend (Vite)** : seules `import.meta.env.VITE_*` sont utilisées (voir `lib/supabase.ts`, `lib/geminiAI.ts`, `contexts/AuthContext.tsx`, etc.).
 - **Edge Functions** : les clés Stripe, Resend, etc. sont lues via `Deno.env.get("...")` et ne sont jamais exposées au client.
+
+---
+
+## Checklist de déploiement MVP (29 mars)
+
+### Supabase Secrets (obligatoires)
+- [ ] `STRIPE_SECRET_KEY` — clé live `sk_live_...`
+- [ ] `STRIPE_WEBHOOK_SECRET` — copié depuis Stripe Dashboard
+- [ ] `SITE_URL` — `https://ink-flow.me`
+- [ ] `RESEND_API_KEY` — pour les emails
+
+### Vercel Environment Variables (obligatoires)
+- [ ] `VITE_SUPABASE_URL`
+- [ ] `VITE_SUPABASE_ANON_KEY`
+
+### Stripe Dashboard
+- [ ] Créer le webhook endpoint en mode Live
+- [ ] Copier le signing secret vers Supabase
+
+### Déploiement Edge Functions
+```bash
+npx supabase functions deploy stripe-webhook --no-verify-jwt
+npx supabase functions deploy create-checkout-session
+npx supabase functions deploy create-subscription
+npx supabase functions deploy create-portal-session
+npx supabase functions deploy get-payment-session
+```

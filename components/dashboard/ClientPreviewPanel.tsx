@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, MessageCircle, Calendar, Euro, Mail, Phone } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../contexts/ToastContext';
 import type { Appointment, Client, MessageThread, Message } from '../../types';
 
 export interface ClientPreviewData {
@@ -32,6 +33,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
   onOpenMessaging,
   onClientClick,
 }) => {
+  const toast = useToast();
   const { appointment, client, thread } = data;
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -95,6 +97,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
       if (error) throw error;
       setNewMessage('');
     } catch (err) {
+      toast.error("Erreur lors de l'envoi du message");
     } finally {
       setSending(false);
     }

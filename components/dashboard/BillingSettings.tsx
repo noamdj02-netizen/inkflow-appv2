@@ -79,7 +79,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
     if (!studioId) { setLoading(false); return; }
     getSubscription(studioId)
       .then(setSubscription)
-      .catch(() => {})
+      .catch(() => { toast.error('Une erreur est survenue'); })
       .finally(() => setLoading(false));
   }, [studioId]);
 

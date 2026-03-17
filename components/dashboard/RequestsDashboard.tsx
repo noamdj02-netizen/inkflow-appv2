@@ -33,11 +33,11 @@ interface RequestsDashboardProps {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Nouvelle',
-  APPROVED: 'Acceptée',
-  DEPOSIT_PAID: 'Acompte payé',
-  REJECTED: 'Refusée',
-  COMPLETED: 'Terminée'
+  pending: 'Nouvelle',
+  accepted: 'Acceptée',
+  deposit_paid: 'Acompte payé',
+  rejected: 'Refusée',
+  completed: 'Terminée'
 };
 
 const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
@@ -142,7 +142,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     .filter(a => !['pending'].includes(a.status))
     .sort((a, b) => (a.createdAt && b.createdAt ? byCreatedAtDesc(a, b) : 0));
   const pendingProjects = projectRequests
-    .filter(p => p.status === 'PENDING')
+    .filter(p => p.status === 'pending')
     .sort(byCreatedAtDesc);
   const pendingBookings = bookings.filter(b => b.status === 'pending');
   const bookingsChronological = [...bookings].sort(byCreatedAtDesc);
@@ -191,7 +191,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         toast.error('Impossible de créer la conversation');
         return;
       }
-      await onUpdateProjectRequest?.(pr.id, 'APPROVED');
+      await onUpdateProjectRequest?.(pr.id, 'accepted');
       toast.success('Demande acceptée — conversation créée');
       onOpenMessageThread?.(threadId);
       const link = `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${threadId}`;
@@ -205,12 +205,12 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         toast.success('Un email avec le lien de conversation a été envoyé au client.');
       } else if (result.unauthorized) {
         if (navigator.clipboard?.writeText) {
-          navigator.clipboard.writeText(link).catch(() => {});
+          navigator.clipboard.writeText(link).catch(() => { toast.error('Impossible de copier le lien'); });
         }
         toast.warning('Lien copié. L\'envoi automatique de l\'email a échoué — envoyez le lien au client vous-même (DM Instagram, SMS, etc.).');
       } else {
         if (navigator.clipboard?.writeText) {
-          navigator.clipboard.writeText(link).catch(() => {});
+          navigator.clipboard.writeText(link).catch(() => { toast.error('Impossible de copier le lien'); });
         }
         if (result.errorDetails) {
           toast.warning(result.errorDetails, { duration: 8000 });
@@ -226,7 +226,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
 
   const handleRejectProject = async (pr: ProjectRequest) => {
     try {
-      await onUpdateProjectRequest?.(pr.id, 'REJECTED');
+      await onUpdateProjectRequest?.(pr.id, 'rejected');
       sendBookingRefusal({
         clientEmail: pr.clientEmail,
         clientName: pr.clientName,
@@ -503,7 +503,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             description: newApt.service,
             paymentLink: result.url,
           });
-          await onUpdateProjectRequest?.(depositModalProject.id, 'APPROVED');
+          await onUpdateProjectRequest?.(depositModalProject.id, 'accepted');
           toast.success('RDV créé, lien généré et email envoyé au client avec le lien de paiement.');
         } else {
           setDepositError(result.error || 'stripe_config');

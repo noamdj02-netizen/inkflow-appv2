@@ -100,11 +100,11 @@ export async function ensureStudio(
   return { studioId: id, slug: finalSlug };
 }
 
-/** Récupère le studio (id + slug + subscription_status + trial_ends_at) pour cet email (le plus récemment mis à jour). */
-export async function getStudioByEmail(email: string): Promise<{ id: string; slug: string; subscription_status?: string; trial_ends_at?: string | null } | null> {
+/** Récupère le studio (id + slug + subscription_status + trial_ends_at + siret) pour cet email (le plus récemment mis à jour). */
+export async function getStudioByEmail(email: string): Promise<{ id: string; slug: string; subscription_status?: string; trial_ends_at?: string | null; siret?: string | null } | null> {
   const { data, error } = await supabase
     .from('inkflow_studios')
-    .select('id, slug, subscription_status, trial_ends_at')
+    .select('id, slug, subscription_status, trial_ends_at, siret')
     .eq('email', email)
     .order('updated_at', { ascending: false })
     .limit(1)
@@ -115,6 +115,7 @@ export async function getStudioByEmail(email: string): Promise<{ id: string; slu
     slug: (data.slug as string) ?? getStudioSlug('Mon studio'),
     subscription_status: data.subscription_status as string | undefined,
     trial_ends_at: data.trial_ends_at as string | null | undefined,
+    siret: (data.siret as string | null) ?? null,
   };
 }
 
@@ -215,23 +216,24 @@ export async function getStudioIdBySlug(slug: string): Promise<string | null> {
   return row.id as string;
 }
 
-/** Récupère id + vitrine_theme à partir du slug (pour la page publique). */
-export async function getStudioPublicBySlug(slug: string): Promise<{ id: string; vitrineTheme: string } | null> {
+/** Récupère id + vitrine_theme + siret à partir du slug (pour la page publique). */
+export async function getStudioPublicBySlug(slug: string): Promise<{ id: string; vitrineTheme: string; siret?: string | null } | null> {
   const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: slug });
   const row = Array.isArray(data) ? data[0] : data;
   if (error || !row?.id) return null;
   return {
     id: row.id as string,
     vitrineTheme: (row.vitrine_theme as string) || 'light',
+    siret: (row.siret as string | null) ?? null,
   };
 }
 
-/** Récupère les données vitrine par slug (pour la page publique /studio/:slug). Inclut le thème du studio. */
+/** Récupère les données vitrine par slug (pour la page publique /studio/:slug). Inclut le thème et SIRET du studio. */
 export async function getVitrineDataBySlugFromSupabase(slug: string, defaultData: VitrineData): Promise<VitrineData> {
   const studio = await getStudioPublicBySlug(slug);
   if (!studio) return defaultData;
   const data = await getVitrineDataFromSupabase(studio.id, defaultData);
-  return { ...data, theme: studio.vitrineTheme };
+  return { ...data, theme: studio.vitrineTheme, siret: studio.siret ?? undefined };
 }
 
 export async function saveVitrineDataToSupabase(studioId: string, data: VitrineData): Promise<void> {

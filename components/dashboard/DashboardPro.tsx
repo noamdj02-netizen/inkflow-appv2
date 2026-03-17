@@ -50,13 +50,14 @@ import { ClientPreviewDrawer } from './ClientPreviewDrawer';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
 import { WelcomeOnboardingFlow, shouldShowWelcomeFlow } from '../onboarding/WelcomeOnboardingFlow';
 import { supabase } from '../../lib/supabase';
-import { getWaitlistFromSupabase, addWaitlistEntryToSupabase, updateWaitlistStatusInSupabase, deleteWaitlistEntryFromSupabase } from '../../lib/supabaseDashboard';
+import { getWaitlistFromSupabase, addWaitlistEntryToSupabase, updateWaitlistStatusInSupabase, deleteWaitlistEntryFromSupabase, ensureStudio } from '../../lib/supabaseDashboard';
 import { createSubscription } from '../../lib/stripeClient';
 import { getStripePaymentLink, STRIPE_PAYMENT_LINKS } from '../../lib/stripePaymentLinks';
 import { useToast } from '../../contexts/ToastContext';
 import { ThemeToggle } from '../ThemeToggle';
 import { useTheme } from 'next-themes';
 import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
+import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
 import { LANDING_URL, LANDING_PRICING_URL } from '../../lib/urls';
 import { safeJsonParse } from '../../lib/utils';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
@@ -121,6 +122,7 @@ export const DashboardPro: React.FC = () => {
 
   // New feature states — portfolio synced with vitrine (single source of truth)
   const [vitrineData, setVitrineData] = useState<VitrineData | null>(null);
+  const [vitrineLoading, setVitrineLoading] = useState(false);
   const [messageThreads, setMessageThreads] = useState<MessageThread[]>([]);
   const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>([]);
   const [artistAccounts, setArtistAccounts] = useState<ArtistAccount[]>([]);
@@ -133,6 +135,7 @@ export const DashboardPro: React.FC = () => {
   const [consentTemplates, setConsentTemplates] = useState<{ id: string; title: string; content: string }[]>([]);
   const [generalStudioName, setGeneralStudioName] = useState(user?.studioName || '');
   const [generalEmail, setGeneralEmail] = useState(user?.email || '');
+  const [generalSiret, setGeneralSiret] = useState('');
   const [generalSaving, setGeneralSaving] = useState(false);
   const [generalSaved, setGeneralSaved] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
@@ -149,6 +152,13 @@ export const DashboardPro: React.FC = () => {
     if (user?.studioName != null) setGeneralStudioName(user.studioName);
     if (user?.email != null) setGeneralEmail(user.email);
   }, [user?.studioName, user?.email]);
+
+  // Load SIRET from studio when studioId is available
+  useEffect(() => {
+    if (!studioId || !useSupabase) return;
+    supabase.from('inkflow_studios').select('siret').eq('id', studioId).maybeSingle()
+      .then(({ data }) => setGeneralSiret((data?.siret as string) || ''));
+  }, [studioId, useSupabase]);
 
   // Handle Google Calendar OAuth callback: ?code=...&state=studioId
   useEffect(() => {
@@ -285,8 +295,11 @@ export const DashboardPro: React.FC = () => {
   // Load vitrine data so Portfolio tab and Paramètres > Vitrine share the same portfolio (slug depuis la BDD pour isoler par tatoueur)
   useEffect(() => {
     if (!user?.email || !user?.studioName || activeTab !== 'portfolio') return;
+    setVitrineLoading(true);
     const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user.studioName);
-    getVitrineDataAsync(slug, user.email, user.studioName).then(setVitrineData);
+    getVitrineDataAsync(slug, user.email, user.studioName)
+      .then((data) => { setVitrineData(data); setVitrineLoading(false); })
+      .catch(() => setVitrineLoading(false));
   }, [user?.email, user?.studioName, studioSlug, activeTab]);
 
   useEffect(() => {
@@ -388,11 +401,11 @@ export const DashboardPro: React.FC = () => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Veuillez sélectionner une image (JPG, PNG, WebP)');
+      toast.error('Veuillez sélectionner une image (JPG, PNG, WebP)');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image trop lourde (max 5 Mo)');
+      toast.error('Image trop lourde (max 5 Mo)');
       return;
     }
 
@@ -445,8 +458,10 @@ export const DashboardPro: React.FC = () => {
                   }).eq('id', studioId);
                 }
               } else {
+                toast.error('Erreur lors de l\'upload de l\'avatar');
               }
             } catch (err) {
+              toast.error('Erreur lors de l\'upload de l\'avatar');
             }
           }
 
@@ -458,6 +473,7 @@ export const DashboardPro: React.FC = () => {
       };
       reader.readAsDataURL(file);
     } catch (err) {
+      toast.error('Erreur lors du traitement de l\'image');
       setAvatarUploading(false);
     }
 
@@ -1365,14 +1381,26 @@ export const DashboardPro: React.FC = () => {
           )}
 
           {!loading && activeTab === 'portfolio' && (
+            vitrineLoading ? (
+              <DashboardLoadingSkeleton />
+            ) : (
             <PortfolioManager
               items={portfolioItemsFromVitrine}
               studioId={studioId}
               studioSlug={studioSlug}
               studioName={user?.studioName}
               appointments={appointments}
+              onEnsureStudio={useSupabase && user?.email && user?.studioName ? async () => {
+                try {
+                  const r = await ensureStudio(user.email!, user.name || 'User', user.studioName!);
+                  return { studioId: r.studioId, studioSlug: r.slug };
+                } catch {
+                  return null;
+                }
+              } : undefined}
               onAddItem={(item) => {
-                if (!vitrineData || !user?.email || !user?.studioName) return;
+                if (!user?.email || !user?.studioName) return;
+                const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user.studioName);
                 const v: VitrinePortfolioItem = {
                   url: item.url,
                   beforeUrl: item.beforeUrl,
@@ -1382,11 +1410,13 @@ export const DashboardPro: React.FC = () => {
                   description: item.description,
                   appointmentId: item.appointmentId,
                 };
-                const newData: VitrineData = { ...vitrineData, portfolio: [...(vitrineData.portfolio ?? []), v] };
-                setVitrineData(newData);
-                const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user.studioName);
-                saveVitrineDataAsync(slug, newData, user.email, user.studioName).catch((err) => {
-                  toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
+                setVitrineData(prev => {
+                  const base = prev ?? defaultVitrineData(slug);
+                  const newData: VitrineData = { ...base, portfolio: [...(base.portfolio ?? []), v] };
+                  saveVitrineDataAsync(slug, newData, user.email, user.studioName).catch(() => {
+                    toast.warning('Sauvegardé localement. Synchronisation serveur échouée.');
+                  });
+                  return newData;
                 });
                 toast.success('Photo ajoutée au portfolio et à la vitrine !');
               }}
@@ -1404,6 +1434,7 @@ export const DashboardPro: React.FC = () => {
               }}
               artists={portfolioArtistNames}
             />
+            )
           )}
 
           {!loading && activeTab === 'finance' && (
@@ -1411,6 +1442,7 @@ export const DashboardPro: React.FC = () => {
               {financeView === 'acomptes' ? (
                 <DepositsPage 
                   appointments={appointments}
+                  studioId={studioId}
                   onDepositUpdated={retry}
                 />
               ) : (
@@ -1579,6 +1611,22 @@ export const DashboardPro: React.FC = () => {
                         />
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">Cet email sera utilisé pour les notifications et la facturation.</p>
                       </div>
+
+                      {/* SIRET */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">SIRET</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9\s]*"
+                          maxLength={14}
+                          value={generalSiret}
+                          onChange={(e) => { setGeneralSiret(e.target.value.replace(/\D/g, '').slice(0, 14)); setGeneralSaved(false); }}
+                          className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                          placeholder="123 456 789 00012"
+                        />
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">Obligatoire pour la facturation et les mentions légales sur votre vitrine.</p>
+                      </div>
                       {/* Bouton sauvegarder */}
                       <div className="pt-2">
                         <button
@@ -1591,6 +1639,7 @@ export const DashboardPro: React.FC = () => {
                                   name: generalStudioName,
                                   studio_name: generalStudioName,
                                   email: generalEmail,
+                                  siret: generalSiret.trim() || null,
                                   updated_at: new Date().toISOString()
                                 }).eq('id', studioId);
                                 if (error) throw error;

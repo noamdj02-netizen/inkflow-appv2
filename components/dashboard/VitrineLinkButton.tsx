@@ -80,7 +80,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
         setSettings(merged);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
       }
-    }).catch(() => {});
+    }).catch(() => { toast.error('Une erreur est survenue'); });
   }, [studioId, useSupabase]);
 
   useEffect(() => {

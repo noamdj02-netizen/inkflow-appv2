@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { Instagram, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import { getInstagramStatus, getInstagramAuthUrl, disconnectInstagram } from '../../lib/instagram';
+import { useToast } from '../../contexts/ToastContext';
 
 interface InstagramConnectProps {
   studioId: string;
 }
 
 export const InstagramConnect: React.FC<InstagramConnectProps> = ({ studioId }) => {
+  const toast = useToast();
   const [connected, setConnected] = useState(false);
   const [igUsername, setIgUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -23,7 +25,7 @@ export const InstagramConnect: React.FC<InstagramConnectProps> = ({ studioId }) 
           setIgUsername(data.username ?? null);
         }
       })
-      .catch(() => {});
+      .catch(() => { toast.error('Une erreur est survenue'); });
   }, [studioId]);
 
   const handleConnect = async () => {

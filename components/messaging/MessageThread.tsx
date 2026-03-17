@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, ArrowLeft, User, MessageCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { sendMessageNotificationToClient } from '../../lib/sendNotification';
+import { useToast } from '../../contexts/ToastContext';
 import type { Message, MessageThread as ThreadType } from '../../types';
 
 interface MessageThreadProps {
@@ -101,6 +102,7 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
       }
       setNewMessage('');
     } catch (err) {
+      toast.error("Erreur lors de l'envoi du message");
     } finally {
       setSending(false);
     }

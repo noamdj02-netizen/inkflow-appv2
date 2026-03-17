@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Smartphone, ArrowRight } from 'lucide-react';
-import { EnhanceAINavbar } from '../components/landing/EnhanceAINavbar';
-import { EnhanceAIFooter } from '../components/landing/EnhanceAIFooter';
+import { InstallerNavbar } from '../components/landing/InstallerNavbar';
+import { InstallerFooter } from '../components/landing/InstallerFooter';
 import { SEO } from '../components/SEO';
+import { APP_URL } from '../lib/urls';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -14,6 +15,8 @@ const fadeUp = {
   }),
 };
 
+const appHost = typeof window !== 'undefined' ? window.location.host : new URL(APP_URL).host;
+
 export const AddToHomeScreenPage: React.FC = () => {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'light');
@@ -21,14 +24,14 @@ export const AddToHomeScreenPage: React.FC = () => {
   }, []);
 
   const iosSteps = [
-    'Ouvrez Safari et allez sur app.ink-flow.me',
+    `Ouvrez Safari et allez sur ${appHost}`,
     'Appuyez sur l\'icône Partager (carré avec flèche vers le haut) en bas de l\'écran',
     'Faites défiler et sélectionnez « Sur l\'écran d\'accueil »',
     'Appuyez sur « Ajouter » en haut à droite',
   ];
 
   const androidSteps = [
-    'Ouvrez Chrome et allez sur app.ink-flow.me',
+    `Ouvrez Chrome et allez sur ${appHost}`,
     'Appuyez sur le menu (trois points) en haut à droite',
     'Sélectionnez « Ajouter à l\'écran d\'accueil » ou « Installer l\'application »',
     'Confirmez en appuyant sur « Ajouter » ou « Installer »',
@@ -41,7 +44,7 @@ export const AddToHomeScreenPage: React.FC = () => {
         description="Ajoutez InkFlow sur votre écran d'accueil pour y accéder comme une application. Instructions pour iPhone (Safari) et Android (Chrome)."
         canonical="/installer"
       />
-      <EnhanceAINavbar />
+      <InstallerNavbar />
 
       <main className="min-h-[60vh] w-full max-w-full overflow-x-hidden">
         {/* Hero — Style Apple/Framer */}
@@ -77,12 +80,12 @@ export const AddToHomeScreenPage: React.FC = () => {
             </motion.p>
 
             <motion.a
-              href="/"
+              href="/dashboard"
               variants={fadeUp}
               custom={2}
               className="group mt-12 inline-flex items-center justify-center gap-2 px-10 py-4 rounded-xl bg-neutral-900 text-white font-semibold text-base hover:bg-neutral-800 transition-colors"
             >
-              Ouvrir l&apos;application
+              Ouvrir le tableau de bord
               <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
             </motion.a>
           </div>
@@ -162,7 +165,7 @@ export const AddToHomeScreenPage: React.FC = () => {
           </div>
         </section>
 
-        <EnhanceAIFooter />
+        <InstallerFooter />
       </main>
     </div>
   );

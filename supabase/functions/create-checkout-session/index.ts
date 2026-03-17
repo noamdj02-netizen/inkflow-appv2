@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -8,11 +9,6 @@ const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/
 
 const MIN_AMOUNT_EUR = 1;
 const MAX_AMOUNT_EUR = 10000;
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 interface CheckoutPayload {
   studioId: string;
@@ -27,8 +23,11 @@ interface CheckoutPayload {
 }
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return corsResponse(origin);
   }
 
   try {

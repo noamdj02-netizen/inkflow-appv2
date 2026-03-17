@@ -7,6 +7,7 @@ import { createBooking, uploadBookingReferenceImages } from '../../lib/supabaseB
 import { LANDING_TERMS_URL, LANDING_PRIVACY_URL } from '../../lib/urls';
 import { toLocalDateString } from '../../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS } from '../../lib/studioAvailability';
+import { useToast } from '../../contexts/ToastContext';
 import type { VitrineBookingFormData } from '../../types';
 
 const BODY_PLACEMENT_OPTIONS = [
@@ -198,6 +199,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
   submitError = null,
   variant = 'light',
 }) => {
+  const toast = useToast();
   const isDark = variant === 'dark';
   const inputCls = `${inputBase} ${isDark ? inputDark : inputLight}`;
   const labelCls = `block text-sm font-semibold mb-2 ${isDark ? 'text-zinc-300' : ''}`;
@@ -244,7 +246,12 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
     setAvailabilityLoading(true);
     fetchStudioAvailability(studioId)
       .then(({ busySlots }) => { if (!cancelled) setBusySlots(busySlots); })
-      .catch(() => { if (!cancelled) setBusySlots({}); })
+      .catch(() => {
+        if (!cancelled) {
+          setBusySlots({});
+          toast.error('Impossible de charger les créneaux disponibles');
+        }
+      })
       .finally(() => { if (!cancelled) setAvailabilityLoading(false); });
     return () => { cancelled = true; };
   }, [studioId]);

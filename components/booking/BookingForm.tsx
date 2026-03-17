@@ -3,7 +3,7 @@ import { Calendar, Clock, User, Mail, Phone, MapPin, DollarSign } from 'lucide-r
 import { BookingFormData } from '../../types';
 
 interface BookingFormProps {
-  onSubmit: (data: BookingFormData) => void;
+  onSubmit: (data: BookingFormData) => void | Promise<void>;
   onCancel: () => void;
   preselectedFlash?: { id: string; title: string; price: number };
 }
@@ -14,6 +14,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   preselectedFlash
 }) => {
   const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<BookingFormData>>({
     tattooType: preselectedFlash ? 'flash' : 'custom',
     flashId: preselectedFlash?.id,
@@ -33,10 +34,23 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   const handleNext = () => { if (step < 3) setStep(step + 1); };
   const handleBack = () => { if (step > 1) setStep(step - 1); };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const service = formData.tattooType === 'flash' && preselectedFlash ? preselectedFlash.title : (formData.description || '');
-    onSubmit({ ...formData, service } as BookingFormData);
+    const data = { ...formData, service } as BookingFormData;
+    // Validation stricte
+    if (!data.clientName?.trim() || !data.clientEmail?.trim() || !data.clientPhone?.trim() || !data.location || !data.size || !data.date || !data.time || !data.agreedToDeposit) {
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = onSubmit(data);
+      if (result && typeof (result as Promise<unknown>).then === 'function') {
+        await (result as Promise<unknown>);
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const calculateDeposit = () => {
@@ -212,8 +226,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           </button>
         ) : (
           <button type="submit"
-            className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors">
-            Confirmer la réservation
+            disabled={submitting}
+            className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+            {submitting ? 'Envoi en cours...' : 'Confirmer la réservation'}
           </button>
         )}
       </div>

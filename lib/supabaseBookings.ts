@@ -84,16 +84,26 @@ export async function getBookingsFromSupabase(studioId: string): Promise<Booking
 
 const BUCKET_BOOKING_REFS = 'inkflow-assets';
 const FOLDER_BOOKING_REFS = 'booking-refs';
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 Mo
 
 /**
  * Upload des images de référence vers Supabase Storage (bucket inkflow-assets/booking-refs).
  * Retourne les URLs publiques des fichiers uploadés.
+ * @throws Error si un fichier dépasse 5 Mo
  */
 export async function uploadBookingReferenceImages(
   studioId: string,
   files: File[]
 ): Promise<string[]> {
   if (files.length === 0) return [];
+  
+  // Validation de la taille des fichiers (max 5 Mo)
+  for (const file of files) {
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      throw new Error(`L'image "${file.name}" dépasse la taille maximale autorisée (5 Mo)`);
+    }
+  }
+  
   const prefix = `${studioId}_${Date.now()}`;
   const urls: string[] = [];
   for (let i = 0; i < files.length; i++) {

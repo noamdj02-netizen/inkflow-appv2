@@ -251,7 +251,7 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({ userEmai
           setSelectedId(list[0].id);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
         }
-      }).catch(() => {});
+      }).catch(() => { toast.error('Une erreur est survenue'); });
     } else {
       try {
         const stored = localStorage.getItem(STORAGE_KEY);

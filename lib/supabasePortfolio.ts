@@ -22,7 +22,13 @@ export async function uploadPortfolioImage(
     : 'jpg';
   const safeExt = ALLOWED_EXT.includes(ext) ? ext : 'jpg';
   const name = filename || `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-  const pathSegment = (studioSlug && /^[a-z0-9-]+$/.test(studioSlug)) ? studioSlug : studioId;
+  // Toujours utiliser un slug valide (a-z0-9-) : studioSlug ou partie après :: de studioId
+  const slugFromId = studioId.includes('::') ? studioId.split('::')[1] : null;
+  const pathSegment = (studioSlug && /^[a-z0-9-]+$/.test(studioSlug))
+    ? studioSlug
+    : (slugFromId && /^[a-z0-9-]+$/.test(slugFromId))
+      ? slugFromId
+      : studioId.replace(/[^a-z0-9-]/gi, '-').toLowerCase() || 'portfolio';
   const path = `${FOLDER}/${pathSegment}/${name}.${safeExt}`;
 
   const { data, error } = await supabase.storage
