@@ -1,5 +1,7 @@
 import React, { type ComponentType } from 'react';
-import { ClassicTheme, SplitTheme, VintageTheme } from './index';
+import { ClassicTheme } from './ClassicTheme';
+import { SplitTheme } from './SplitTheme';
+import { VintageTheme } from './VintageTheme';
 import { SEO } from '../SEO';
 import type { StudioThemeProps } from '../../types/studio-theme';
 import type { VitrineData } from '../../types/vitrine';
