@@ -2,9 +2,13 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+    <!-- PWA iOS — mode standalone (supprime barre Safari quand ajouté à l'écran d'accueil) -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <script>
       /* Auto-clear stale SW on localhost — évite le splash bloqué en dev */
       (function(){
@@ -42,9 +46,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="InkFlow - Connexion" />
     <meta name="twitter:description" content="Connectez-vous à votre espace InkFlow. Gestion de rendez-vous, paiements et CRM pour tatoueurs." />
-    <meta name="theme-color" content="#ddd6f7" />
     <meta name="apple-mobile-web-app-title" content="InkFlow" />
-    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="msapplication-TileColor" content="#000000" />
     <meta name="msapplication-tap-highlight" content="no" />
