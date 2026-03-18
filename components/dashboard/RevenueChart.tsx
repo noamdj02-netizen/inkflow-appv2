@@ -26,6 +26,7 @@ interface RevenueChartProps {
   hideGrid?: boolean;
   compact?: boolean;
   height?: number;
+  onPeriodChange?: (total: number, trend: number | null) => void;
 }
 
 function computeChartData(appointments: Appointment[], period: RevenuePeriod, totalRevenue: number): { month: string; monthFull: string; revenue: number }[] {
@@ -47,7 +48,7 @@ function computeChartData(appointments: Appointment[], period: RevenuePeriod, to
       weeks.push({
         month: `S${4 - i}`,
         monthFull: `${start.getDate()}/${start.getMonth() + 1} - ${end.getDate()}/${end.getMonth() + 1}`,
-        revenue: rev || Math.round((totalRevenue * (4 - i)) / 16),
+        revenue: rev,
       });
     }
     return weeks;
@@ -63,7 +64,7 @@ function computeChartData(appointments: Appointment[], period: RevenuePeriod, to
     return {
       month: MONTH_LABELS[d.getMonth()],
       monthFull: d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
-      revenue: rev || Math.round((totalRevenue * (i + 1)) / monthsCount),
+      revenue: rev,
     };
   });
 }
@@ -79,18 +80,35 @@ function CustomTooltip({ active, payload }: TooltipProps<number, string>) {
   );
 }
 
-export const RevenueChart: React.FC<RevenueChartProps> = ({ 
-  appointments, 
-  totalRevenue, 
+const formatYAxis = (v: number) => {
+  if (v >= 1000) return `${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k€`;
+  return `${v}€`;
+};
+
+export const RevenueChart: React.FC<RevenueChartProps> = ({
+  appointments,
+  totalRevenue,
   hideGrid = false,
   compact = false,
   height = 200,
+  onPeriodChange,
 }) => {
   const [period, setPeriod] = useState<RevenuePeriod>('6M');
 
   const chartData = useMemo(() => {
     return computeChartData(appointments, period, totalRevenue);
   }, [appointments, totalRevenue, period]);
+
+  // Notifie le parent du total de la période et de la tendance
+  React.useEffect(() => {
+    if (!onPeriodChange) return;
+    const total = chartData.reduce((s, d) => s + d.revenue, 0);
+    const half = Math.floor(chartData.length / 2);
+    const firstHalf = chartData.slice(0, half).reduce((s, d) => s + d.revenue, 0);
+    const secondHalf = chartData.slice(half).reduce((s, d) => s + d.revenue, 0);
+    const trend = firstHalf > 0 ? Math.round(((secondHalf - firstHalf) / firstHalf) * 100) : null;
+    onPeriodChange(total, trend);
+  }, [chartData, onPeriodChange]);
 
   const periodLabels: { key: RevenuePeriod; label: string }[] = [
     { key: '1M', label: '1M' },
@@ -195,8 +213,8 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
               style={{ fontSize: 11, fontWeight: 500 }}
               tickLine={false}
               axisLine={false}
-              width={50}
-              tickFormatter={(v) => `${v}€`}
+              width={48}
+              tickFormatter={formatYAxis}
               domain={[0, maxRevenue * 1.1]}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '4 4' }} />

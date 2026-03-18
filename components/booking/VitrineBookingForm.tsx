@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { User, Mail, FileText, Calendar, Clock, ChevronLeft, ChevronRight, UploadCloud, MapPin, Ruler, X } from 'lucide-react';
+import { User, Mail, FileText, Calendar, Clock, ChevronLeft, ChevronRight, MapPin, Ruler } from 'lucide-react';
+import { ReferenceImageUpload } from './ReferenceImageUpload';
 import { createBooking, uploadBookingReferenceImages } from '../../lib/supabaseBookings';
 import { LANDING_TERMS_URL, LANDING_PRIVACY_URL } from '../../lib/urls';
 import { toLocalDateString } from '../../lib/utils';
@@ -210,7 +211,6 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
   const [availabilityLoading, setAvailabilityLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [referenceImages, setReferenceImages] = useState<File[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
 
   const {
     register,
@@ -290,23 +290,6 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
 
   const handleTimeClick = (time: string) => {
     setValue('requestedTime', time);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
-    setReferenceImages((prev) => [...prev, ...files].slice(0, 10));
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
-    setReferenceImages((prev) => [...prev, ...files].slice(0, 10));
-    e.target.value = '';
-  };
-
-  const removeImage = (index: number) => {
-    setReferenceImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleNextStep = async () => {
@@ -424,40 +407,14 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
 
           <div>
             <label className={labelCls}>Images de référence</label>
-            <div
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={handleDrop}
-              onClick={() => document.getElementById('ref-images-input')?.click()}
-              className={`border-2 border-dashed rounded-xl p-5 text-center transition-colors cursor-pointer ${
-                isDark
-                  ? 'border-zinc-700 bg-zinc-900/50 hover:bg-zinc-800'
-                  : 'border-neutral-300 bg-neutral-50 hover:bg-neutral-100'
-              } ${isDragging ? (isDark ? 'bg-zinc-800 border-zinc-500' : 'bg-neutral-100 border-neutral-400') : ''}`}
-            >
-              <input id="ref-images-input" type="file" accept="image/*" multiple onChange={handleFileSelect} className="hidden" />
-              <UploadCloud className={`w-9 h-9 mx-auto mb-2.5 ${isDark ? 'text-zinc-500' : 'text-neutral-400'}`} strokeWidth={1.5} />
-              <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-neutral-500'}`}>
-                Glissez vos images ici ou{' '}
-                <span className={`font-semibold underline ${isDark ? 'text-zinc-300' : 'text-neutral-700'}`}>cliquez pour parcourir</span>
-              </p>
-              <p className={`text-xs mt-1 ${isDark ? 'text-zinc-600' : 'text-neutral-400'}`}>Optionnel · 10 images max</p>
-            </div>
-            {referenceImages.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {referenceImages.map((file, i) => (
-                  <div
-                    key={i}
-                    className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm ${isDark ? 'bg-zinc-800 text-zinc-300' : 'bg-neutral-100 text-neutral-700'}`}
-                  >
-                    <span className="truncate max-w-[120px]">{file.name}</span>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(i); }} className="p-0.5 rounded hover:bg-red-500/20 text-red-400" aria-label="Supprimer">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <ReferenceImageUpload
+              value={referenceImages}
+              onChange={setReferenceImages}
+              variant={isDark ? 'dark' : 'light'}
+              label="Glissez vos images ici ou cliquez pour parcourir"
+              inputId="ref-images-vitrine"
+              className="mt-2"
+            />
           </div>
 
           <div className={`flex items-center gap-3 pt-4 border-t ${isDark ? 'border-zinc-700' : 'border-neutral-200'}`}>

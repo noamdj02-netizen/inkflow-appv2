@@ -95,6 +95,33 @@ Deno.serve(async (req: Request) => {
           break; // Ne pas traiter comme paiement RDV
         }
 
+        // Achat thème PRO (2,99 €) : ajouter le thème à unlocked_themes
+        const metaType = session.metadata?.type;
+        if (metaType === "theme_purchase" && studioId && session.payment_status === "paid") {
+          const themeId = session.metadata?.theme_id;
+          if (themeId) {
+            const { data: studio } = await supabase
+              .from("inkflow_studios")
+              .select("unlocked_themes")
+              .eq("id", studioId)
+              .single();
+            const current = (studio?.unlocked_themes as string[]) || [];
+            if (!current.includes(themeId)) {
+              const updated = [...current, themeId];
+              const { error: updErr } = await supabase
+                .from("inkflow_studios")
+                .update({ unlocked_themes: updated, updated_at: new Date().toISOString() })
+                .eq("id", studioId);
+              if (updErr) {
+                console.error("[stripe-webhook] Erreur déblocage thème:", updErr.message);
+              } else {
+                console.log("[stripe-webhook] Thème débloqué:", themeId, "pour studio", studioId);
+              }
+            }
+          }
+          break;
+        }
+
         const flashId = session.metadata?.flash_id;
         const type = (session.metadata?.type || "deposit") as "deposit" | "full_payment";
         const amountPaid = (session.amount_total || 0) / 100;

@@ -21,7 +21,7 @@ export interface CalendarIntegrationStatus {
 function toUserFriendlyMessage(fnName: string, raw: string): string {
   const lower = raw.toLowerCase();
   if (lower.includes('failed to send') || lower.includes('edge function') || lower.includes('fetch') || lower.includes('network')) {
-    return `Impossible de contacter le serveur (fonction ${fnName}). Vérifiez votre connexion et que le projet Supabase est actif. Déployez la fonction si besoin : npx supabase functions deploy ${fnName}.`;
+    return `Google Agenda indisponible. Vérifiez votre connexion ou contactez le support.`;
   }
   return raw;
 }

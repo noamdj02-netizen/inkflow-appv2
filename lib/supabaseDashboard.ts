@@ -100,22 +100,35 @@ export async function ensureStudio(
   return { studioId: id, slug: finalSlug };
 }
 
-/** Récupère le studio (id + slug + subscription_status + trial_ends_at + siret) pour cet email (le plus récemment mis à jour). */
+/** Récupère le studio (id + slug + subscription_status + trial_ends_at + siret) pour cet email.
+ * Privilégie le studio avec le plus de clients et RDV (évite studio vide si plusieurs studios). */
 export async function getStudioByEmail(email: string): Promise<{ id: string; slug: string; subscription_status?: string; trial_ends_at?: string | null; siret?: string | null } | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabase.rpc('get_studio_by_email_with_data', { p_email: email });
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!error && row?.id) {
+    return {
+      id: row.id as string,
+      slug: (row.slug as string) ?? getStudioSlug('Mon studio'),
+      subscription_status: row.subscription_status as string | undefined,
+      trial_ends_at: row.trial_ends_at as string | null | undefined,
+      siret: (row.siret as string | null) ?? null,
+    };
+  }
+  // Fallback si la RPC n'existe pas encore (migration non appliquée)
+  const { data: fallback, error: fallbackError } = await supabase
     .from('inkflow_studios')
     .select('id, slug, subscription_status, trial_ends_at, siret')
     .eq('email', email)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error || !data?.id) return null;
+  if (fallbackError || !fallback?.id) return null;
   return {
-    id: data.id,
-    slug: (data.slug as string) ?? getStudioSlug('Mon studio'),
-    subscription_status: data.subscription_status as string | undefined,
-    trial_ends_at: data.trial_ends_at as string | null | undefined,
-    siret: (data.siret as string | null) ?? null,
+    id: fallback.id,
+    slug: (fallback.slug as string) ?? getStudioSlug('Mon studio'),
+    subscription_status: fallback.subscription_status as string | undefined,
+    trial_ends_at: fallback.trial_ends_at as string | null | undefined,
+    siret: (fallback.siret as string | null) ?? null,
   };
 }
 
@@ -157,6 +170,18 @@ export async function getStudioVitrineTheme(studioId: string): Promise<string> {
     .maybeSingle();
   if (error || !data?.vitrine_theme) return 'light';
   return data.vitrine_theme as string;
+}
+
+/** Récupère les IDs des thèmes PRO débloqués par achat pour le studio. */
+export async function getStudioUnlockedThemes(studioId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('inkflow_studios')
+    .select('unlocked_themes')
+    .eq('id', studioId)
+    .maybeSingle();
+  if (error || !data?.unlocked_themes) return [];
+  const arr = data.unlocked_themes as unknown;
+  return Array.isArray(arr) ? (arr as string[]) : [];
 }
 
 /** Met à jour le thème vitrine du studio. */

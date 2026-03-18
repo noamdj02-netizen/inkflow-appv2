@@ -69,7 +69,7 @@ const Router: React.FC = () => {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const anchor = target.closest('a');
-      if (anchor && anchor.href.startsWith(window.location.origin)) {
+      if (anchor && anchor.href.startsWith(window.location.origin) && !anchor.target) {
         e.preventDefault();
         const url = new URL(anchor.href);
         const fullUrl = url.pathname + url.search + (url.hash || '');

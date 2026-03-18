@@ -78,15 +78,23 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {/* Toast container — positioned at top, below safe area, pointer-events-none so it never blocks navigation */}
-      <div className="fixed top-0 left-0 right-0 z-[9999] flex flex-col items-center pointer-events-none safe-top pt-2 px-4" aria-live="polite" aria-atomic="true" role="status">
+      {/* Toast container — top center on desktop, bottom center on mobile to avoid covering tabs */}
+      <div
+        className="fixed z-[9999] flex flex-col items-center pointer-events-none px-4
+          bottom-20 left-0 right-0
+          sm:bottom-auto sm:top-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-auto sm:right-auto sm:left-auto"
+        style={{ left: 0, right: 0 }}
+        aria-live="polite"
+        aria-atomic="true"
+        role="status"
+      >
         {currentToast && (
           <div
             key={currentToast.id}
-            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg animate-slide-down max-w-[min(400px,calc(100vw-2rem))] w-full ${BG[currentToast.type]}`}
+            className={`pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl border shadow-lg animate-slide-down w-full max-w-[min(380px,calc(100vw-2rem))] ${BG[currentToast.type]}`}
           >
-            {ICONS[currentToast.type]}
-            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-100 flex-1">{currentToast.message}</span>
+            <span className="mt-0.5 shrink-0">{ICONS[currentToast.type]}</span>
+            <span className="text-sm font-medium text-neutral-800 dark:text-neutral-100 flex-1 line-clamp-3">{currentToast.message}</span>
             <button
               onClick={removeToast}
               className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 shrink-0"

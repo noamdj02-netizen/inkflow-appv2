@@ -19,6 +19,10 @@ import type { VitrineData, VitrineFlashDesign } from '../../types/vitrine';
 import type { ProjectRequestFormData } from '../../types';
 import { DemoTour, type TourStep } from '../../components/demo/DemoTour';
 import { LANDING_URL, LANDING_TERMS_URL, LANDING_PRIVACY_URL } from '../../lib/urls';
+import { getVitrineTheme } from '../../lib/themes';
+import { StudioThemeRouter } from '../../components/studio-themes/StudioThemeRouter';
+
+const STRUCTURAL_THEMES = ['classic', 'split', 'vintage'] as const;
 
 const ICON_MAP = { sparkles: Sparkles, award: Award, star: Star, camera: Camera, shield: Shield, heart: Heart, users: Users };
 
@@ -66,7 +70,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [flashDepositUrl, setFlashDepositUrl] = useState<string | null>(null);
   const [runVitrineTour, setRunVitrineTour] = useState(false);
   const [vitrineStepIndex, setVitrineStepIndex] = useState(0);
-  const primaryColor = '#2563eb';
+  const activeTheme = getVitrineTheme(studio?.theme ?? 'light') ?? getVitrineTheme('light')!;
+  const primaryColor = activeTheme?.accentColor ?? '#2563eb';
 
   const loadVitrine = React.useCallback(() => {
     setLoading(true);
@@ -95,9 +100,10 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   useRealtimeVitrine(studioSlug, setStudio);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'light');
-    return () => {};
-  }, []);
+    const isDark = ['classic', 'split', 'dark', 'neon'].includes(studio?.theme ?? 'light');
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    return () => { document.documentElement.setAttribute('data-theme', 'light'); };
+  }, [studio?.theme]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -278,6 +284,19 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     }
   };
 
+  /** Navigation SPA explicite — garantit que les liens Réserver / book fonctionnent. */
+  const navigateTo = (path: string) => {
+    const full = path.startsWith('http') ? path : `${window.location.origin}${path.startsWith('/') ? path : `/${path}`}`;
+    if (full.startsWith(window.location.origin)) {
+      const url = new URL(full);
+      const targetPath = url.pathname + url.search;
+      window.history.pushState({}, '', targetPath);
+      window.dispatchEvent(new CustomEvent('inkflow-navigate'));
+    } else {
+      window.location.href = full;
+    }
+  };
+
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
@@ -340,6 +359,11 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     );
   }
 
+  // Route structural themes (classic, split, vintage) to their dedicated layout components
+  if (studio && STRUCTURAL_THEMES.includes(studio.theme as typeof STRUCTURAL_THEMES[number])) {
+    return <StudioThemeRouter data={studio} fallback={null} />;
+  }
+
   const studioName = studioDisplay.name || studioSlug.replace(/-/g, ' ');
   const studioSchema = createTattooStudioSchema({
     name: studioDisplay.name,
@@ -353,7 +377,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
   return (
     <div
-      className="landing-scroll min-h-[100dvh] bg-neutral-50"
+      className={`landing-scroll min-h-[100dvh] ${activeTheme?.containerClasses ?? 'bg-neutral-50'}`}
       style={{ ['--vitrine-primary' as string]: primaryColor }}
     >
       <SEO
@@ -404,7 +428,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 <MessageCircle className="w-5 h-5" />
                 <span className="text-sm font-medium">Contact</span>
               </button>
-              <a href={`/book/${studioSlug}`} data-joyride="vitrine-reserver" className="bg-[var(--vitrine-primary)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center">
+              <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} data-joyride="vitrine-reserver" className="bg-[var(--vitrine-primary)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center cursor-pointer">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                 <span>Réserver</span>
               </a>
@@ -585,7 +609,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                           </div>
                           <div className="flex-shrink-0 text-right md:text-center">
                             <div className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">{service.price}</div>
-                            <a href={`/book/${studioSlug}`} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-[var(--vitrine-primary)] text-white rounded-xl font-semibold hover:opacity-90 transition-all text-sm sm:text-base w-full md:w-auto">
+                            <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-[var(--vitrine-primary)] text-white rounded-xl font-semibold hover:opacity-90 transition-all text-sm sm:text-base w-full md:w-auto cursor-pointer">
                               Réserver
                               <ArrowRight className="w-4 h-4" />
                             </a>
@@ -773,7 +797,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 <div className="mt-6 sm:mt-10 text-center bg-[var(--vitrine-primary)] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-white">
                   <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">Rejoignez nos clients satisfaits</h3>
                   <p className="mb-4 sm:mb-6 opacity-90">Plus de {studioDisplay.satisfactionRate}% de satisfaction</p>
-                  <a href={`/book/${studioSlug}`} className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-[var(--vitrine-primary)] rounded-xl font-semibold hover:opacity-90 transition-all w-full sm:w-auto min-h-[44px]">
+                  <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-[var(--vitrine-primary)] rounded-xl font-semibold hover:opacity-90 transition-all w-full sm:w-auto min-h-[44px] cursor-pointer">
                     Réserver maintenant
                     <ArrowRight className="w-5 h-5" />
                   </a>
@@ -828,7 +852,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 </div>
                 <p className="text-neutral-800 text-sm">Réservez votre session en quelques clics</p>
               </div>
-              <a href={`/book/${studioSlug}`} className="block w-full bg-[var(--vitrine-primary)] text-white text-center py-4 rounded-xl font-bold text-lg hover:opacity-90 hover:shadow-xl transition-all mb-3">
+              <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="block w-full bg-[var(--vitrine-primary)] text-white text-center py-4 rounded-xl font-bold text-lg hover:opacity-90 hover:shadow-xl transition-all mb-3 cursor-pointer">
                 Prendre rendez-vous
               </a>
               <button onClick={() => setShowProjectRequestForm(true)} className="block w-full bg-white border-2 border-blue-600 text-blue-600 text-center py-3 rounded-xl font-bold hover:bg-blue-50 transition-all mb-3">
@@ -1150,7 +1174,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                             </button>
                           </div>
                           <p className="text-center text-sm text-neutral-500">ou</p>
-                          <a href={`/book/${studioSlug}?flash=${selectedFlash.id}`} className="block w-full border-2 border-neutral-900 text-neutral-900 text-center py-3 rounded-xl font-semibold hover:bg-neutral-50 transition-all">
+                          <a href={`/book/${studioSlug}?flash=${selectedFlash.id}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}?flash=${selectedFlash.id}`); }} className="block w-full border-2 border-neutral-900 text-neutral-900 text-center py-3 rounded-xl font-semibold hover:bg-neutral-50 transition-all cursor-pointer">
                             Demander un créneau sans payer maintenant
                           </a>
                         </>

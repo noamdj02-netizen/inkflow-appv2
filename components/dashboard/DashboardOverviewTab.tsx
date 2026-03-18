@@ -112,6 +112,29 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showWidgetPicker, setShowWidgetPicker] = useState(false);
+  const [periodRevenue, setPeriodRevenue] = useState<number | null>(null);
+  const [periodTrend, setPeriodTrend] = useState<number | null>(null);
+
+  // Comparaison mois précédent pour les trends KPI
+  const lastMonthStr = useMemo(() => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }, [now]);
+  const currentMonthStr = now.toISOString().slice(0, 7);
+  const lastMonthRevenue = useMemo(() =>
+    appointments.filter(a => a.date.startsWith(lastMonthStr) && (a.depositPaid || a.status === 'completed'))
+      .reduce((s, a) => s + (a.depositPaid ? (a.deposit || 0) : (a.price || 0)), 0),
+    [appointments, lastMonthStr]);
+  const lastMonthAppointments = useMemo(() =>
+    appointments.filter(a => a.date.startsWith(lastMonthStr)).length,
+    [appointments, lastMonthStr]);
+  const trendRevenue = lastMonthRevenue > 0 ? Math.round(((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100) : null;
+  const trendAppointments = lastMonthAppointments > 0 ? Math.round(((appointmentsThisMonth - lastMonthAppointments) / lastMonthAppointments) * 100) : null;
+
+  const handlePeriodChange = useCallback((total: number, trend: number | null) => {
+    setPeriodRevenue(total);
+    setPeriodTrend(trend);
+  }, []);
   
   const [layout, setLayout] = useState<DashboardLayout>(() => getLayoutFromStorage());
 
@@ -311,6 +334,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Revenu</span>
               </div>
               <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{monthlyRevenue.toLocaleString('fr-FR')}€</p>
+              {trendRevenue !== null && (
+                <p className={`text-xs font-semibold mt-1.5 ${trendRevenue >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                  {trendRevenue >= 0 ? '▲' : '▼'} {Math.abs(trendRevenue)}% vs mois dernier
+                </p>
+              )}
             </div>
           </SortableKpiWidget>
         );
@@ -325,6 +353,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Acomptes</span>
               </div>
               <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{pendingDeposits.toLocaleString('fr-FR')}€</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1.5">reçus ce mois</p>
             </div>
           </SortableKpiWidget>
         );
@@ -339,6 +368,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Clients</span>
               </div>
               <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{clients.length}</p>
+              {vipClients > 0 && (
+                <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">⭐ {vipClients} VIP</p>
+              )}
             </div>
           </SortableKpiWidget>
         );
@@ -353,6 +385,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">RDV</span>
               </div>
               <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{appointmentsThisMonth}</p>
+              {trendAppointments !== null && (
+                <p className={`text-xs font-semibold mt-1.5 ${trendAppointments >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                  {trendAppointments >= 0 ? '▲' : '▼'} {Math.abs(trendAppointments)}% vs mois dernier
+                </p>
+              )}
             </div>
           </SortableKpiWidget>
         );
@@ -369,15 +406,28 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       <div className="md:hidden min-h-screen bg-[#F2F2F7] dark:bg-black pb-28">
         
         {/* iOS Large Title Header */}
-        <div className="px-4 pt-6 pb-2 safe-top">
-          <p className="text-[13px] font-medium text-zinc-500 dark:text-zinc-500 mb-1">
-            {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </p>
-          <h1 className="text-[34px] font-bold tracking-tight text-zinc-900 dark:text-white leading-tight">
-            {greeting}{firstName ? `, ${firstName}` : ''}
-          </h1>
-          
-          {/* Alert Pills — repositionnées sous le titre */}
+        <div className="px-4 pt-8 pb-3 safe-top">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-medium text-zinc-500 dark:text-zinc-500 mb-0.5 capitalize">
+                {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+              <h1 className="text-[32px] font-bold tracking-tight text-zinc-900 dark:text-white leading-tight">
+                {greeting}{firstName ? `,` : ''}<br />{firstName || ''}
+              </h1>
+            </div>
+            {/* Avatar / Profile button */}
+            <button
+              onClick={() => setActiveTab('settings')}
+              className="mt-1 w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md active:scale-90 transition-transform duration-150 flex-shrink-0"
+            >
+              <span className="text-[15px] font-bold text-white">
+                {firstName ? firstName[0].toUpperCase() : '?'}
+              </span>
+            </button>
+          </div>
+
+          {/* Alert Pills — sous le titre */}
           {(unpaidCount > 0 || todayOrTomorrowCount > 0) && (
             <div className="flex flex-wrap gap-2 mt-3">
               {unpaidCount > 0 && (
@@ -399,38 +449,69 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           )}
         </div>
 
-        {/* Quick Action Pills (Horizontal Scroll) */}
-        <div className="flex overflow-x-auto gap-2.5 px-4 py-4 no-scrollbar snap-x">
+        {/* Quick Actions — Native iOS App Icon Grid */}
+        <div className="grid grid-cols-4 gap-3 px-4 pt-3 pb-1">
+          {/* Nouveau RDV */}
           <button
             onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-600 text-white text-sm font-semibold whitespace-nowrap snap-start active:scale-95 transition-transform"
+            className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform duration-150"
           >
-            <Plus className="w-4 h-4" /> Nouveau RDV
+            <div className="w-14 h-14 rounded-[18px] bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <Plus className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 text-center leading-tight">Nouveau RDV</span>
           </button>
+
+          {/* Flash */}
           <button
             onClick={() => setActiveTab('flash')}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm font-semibold whitespace-nowrap snap-start active:scale-95 transition-transform"
+            className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform duration-150"
           >
-            <Zap className="w-4 h-4" /> Flash
+            <div className="w-14 h-14 rounded-[18px] bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 text-center leading-tight">Flash</span>
           </button>
-          {vitrineSlug && (
+
+          {/* Vitrine */}
+          {vitrineSlug ? (
             <a
               href={`/studio/${vitrineSlug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm font-semibold whitespace-nowrap snap-start active:scale-95 transition-transform"
+              className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform duration-150"
             >
-              <ExternalLink className="w-4 h-4" /> Vitrine
+              <div className="w-14 h-14 rounded-[18px] bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                <ExternalLink className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 text-center leading-tight">Vitrine</span>
             </a>
+          ) : (
+            <button
+              onClick={() => setActiveTab('settings')}
+              className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform duration-150"
+            >
+              <div className="w-14 h-14 rounded-[18px] bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                <ExternalLink className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 text-center leading-tight">Vitrine</span>
+            </button>
           )}
+
+          {/* Demandes */}
           <button
             onClick={() => setActiveTab('requests')}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-200/80 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm font-semibold whitespace-nowrap snap-start active:scale-95 transition-transform"
+            className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform duration-150 relative"
           >
-            <Inbox className="w-4 h-4" /> Demandes
-            {pendingRequestsCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">{pendingRequestsCount}</span>
-            )}
+            <div className="w-14 h-14 rounded-[18px] bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 relative">
+              <Inbox className="w-6 h-6 text-white" />
+              {pendingRequestsCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-[#F2F2F7] dark:border-black">
+                  {pendingRequestsCount}
+                </span>
+              )}
+            </div>
+            <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 text-center leading-tight">Demandes</span>
           </button>
         </div>
 
@@ -473,44 +554,65 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             </div>
           )}
 
-          {/* KPIs — iOS Card Style (2x2 Grid) */}
-          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-2 divide-x divide-y divide-zinc-100 dark:divide-zinc-800">
+          {/* KPIs — iOS Widget Style (2x2 Grid) */}
+          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl overflow-hidden shadow-sm">
+            <div className="px-4 pt-3.5 pb-1 flex items-center justify-between">
+              <span className="text-[12px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Ce mois</span>
+              <button onClick={() => setActiveTab('analytics')} className="text-[12px] font-semibold text-blue-600 dark:text-blue-400">Voir tout</button>
+            </div>
+            <div className="grid grid-cols-2 divide-x divide-y divide-zinc-100 dark:divide-zinc-800/80">
+              {/* Revenu */}
               <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-1.5">
                   <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-500/20">
-                    <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <span className="text-[11px] font-medium text-zinc-500">Revenu</span>
                 </div>
-                <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{monthlyRevenue.toLocaleString('fr-FR')}€</p>
+                <p className="text-[22px] font-bold text-zinc-900 dark:text-white tabular-nums leading-none">{monthlyRevenue.toLocaleString('fr-FR')}€</p>
+                <div className="flex items-center gap-1 mt-1.5">
+                  <ArrowUpRight className="w-3 h-3 text-emerald-500" />
+                  <span className="text-[11px] font-semibold text-emerald-500">ce mois</span>
+                </div>
               </div>
+              {/* Acomptes */}
               <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-1.5">
                   <div className="p-1.5 rounded-lg bg-violet-100 dark:bg-violet-500/20">
-                    <Wallet className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                    <Wallet className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
                   </div>
                   <span className="text-[11px] font-medium text-zinc-500">Acomptes</span>
                 </div>
-                <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{pendingDeposits.toLocaleString('fr-FR')}€</p>
+                <p className="text-[22px] font-bold text-zinc-900 dark:text-white tabular-nums leading-none">{pendingDeposits.toLocaleString('fr-FR')}€</p>
+                <div className="flex items-center gap-1 mt-1.5">
+                  <span className="text-[11px] font-medium text-zinc-400">en attente</span>
+                </div>
               </div>
+              {/* Clients */}
               <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-1.5">
                   <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-500/20">
-                    <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <span className="text-[11px] font-medium text-zinc-500">Clients</span>
                 </div>
-                <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{clients.length}</p>
-              </div>
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-500/20">
-                    <Calendar className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <span className="text-[11px] font-medium text-zinc-500">RDV ce mois</span>
+                <p className="text-[22px] font-bold text-zinc-900 dark:text-white tabular-nums leading-none">{clients.length}</p>
+                <div className="flex items-center gap-1 mt-1.5">
+                  <span className="text-[11px] font-medium text-zinc-400">total</span>
                 </div>
-                <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{appointmentsThisMonth}</p>
+              </div>
+              {/* RDV */}
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-500/20">
+                    <Calendar className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <span className="text-[11px] font-medium text-zinc-500">RDV</span>
+                </div>
+                <p className="text-[22px] font-bold text-zinc-900 dark:text-white tabular-nums leading-none">{appointmentsThisMonth}</p>
+                <div className="flex items-center gap-1 mt-1.5">
+                  <span className="text-[11px] font-medium text-zinc-400">ce mois</span>
+                </div>
               </div>
             </div>
           </div>
@@ -895,16 +997,25 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                             <div className="flex items-center justify-between mb-4">
                               <div>
                                 <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Évolution du revenu</p>
-                                <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{totalRevenue.toLocaleString('fr-FR')}€</p>
+                                <div className="flex items-baseline gap-2 flex-wrap">
+                                  <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
+                                    {(periodRevenue ?? totalRevenue).toLocaleString('fr-FR')}€
+                                  </p>
+                                  {periodTrend !== null && (
+                                    <span className={`text-sm font-semibold ${periodTrend >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                                      {periodTrend >= 0 ? '+' : ''}{periodTrend}%
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                              <button 
-                                onClick={() => setActiveTab('finance')} 
+                              <button
+                                onClick={() => setActiveTab('finance')}
                                 className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 transition-colors"
                               >
                                 Détails <ArrowUpRight className="w-3 h-3" />
                               </button>
                             </div>
-                            <RevenueChart appointments={appointments} totalRevenue={totalRevenue} />
+                            <RevenueChart appointments={appointments} totalRevenue={totalRevenue} onPeriodChange={handlePeriodChange} />
                           </div>
                         </SortableWidget>
                       );

@@ -17,6 +17,8 @@ interface CreateCheckoutParams {
 
 export type CreateCheckoutResult = { url: string } | { error: string };
 
+export type CreateThemeCheckoutResult = { url: string } | { error: string };
+
 const getSupabaseConfig = () => {
   const url = import.meta.env.VITE_SUPABASE_URL || '';
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -68,6 +70,41 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
     const message = err instanceof Error ? err.message : String(err);
     return {
       error: `${message} — Vérifie la connexion et que l'Edge Function est déployée (npx supabase functions deploy create-checkout-session).`,
+    };
+  }
+}
+
+/** Crée une session Stripe Checkout pour l'achat d'un thème PRO (2,99 €). Redirige vers Stripe. */
+export async function createThemeCheckoutSession(params: {
+  studioId: string;
+  themeId: string;
+  userEmail: string;
+}): Promise<CreateThemeCheckoutResult> {
+  const { url: baseUrl, key } = getSupabaseConfig();
+  if (!baseUrl || !key) {
+    return { error: 'Supabase non configuré (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).' };
+  }
+  const fnUrl = `${baseUrl.replace(/\/$/, '')}/functions/v1/create-theme-checkout-session`;
+  try {
+    const res = await fetch(fnUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify(params),
+    });
+    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string };
+    if (res.ok) {
+      if (data?.url) return { url: data.url };
+      return { error: data?.error || data?.details || 'La fonction n\'a pas renvoyé de lien.' };
+    }
+    const msg = data?.error || data?.details || data?.message || `Erreur ${res.status}`;
+    return { error: msg };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      error: `${message} — Vérifie la connexion et que l'Edge Function create-theme-checkout-session est déployée.`,
     };
   }
 }

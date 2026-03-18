@@ -124,7 +124,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
   return (
     <div className="space-y-6 max-w-4xl w-full overflow-hidden">
       <VitrineLinkButton studioName={studioName} userEmail={userEmail} studioSlug={studioSlugFromDb} />
-      {studioId && <ThemeSelector studioId={studioId} />}
+      {studioId && <ThemeSelector studioId={studioId} userEmail={userEmail} />}
       {publicUrl && (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card-secondary)] p-4">
           <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">Votre lien public</p>
@@ -176,12 +176,14 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
                 label="Logo / Avatar"
                 value={data.avatar}
                 onChange={(v) => update('avatar', v)}
+                shape="round"
                 previewSize="md"
               />
               <ImageUploadField
                 label="Image de couverture"
                 value={data.coverImage}
                 onChange={(v) => update('coverImage', v)}
+                shape="cover"
                 previewSize="lg"
               />
             </div>
@@ -328,6 +330,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
                   onChange={(v) => {
                     const a = [...data.artists]; a[idx] = { ...a[idx], avatar: v }; update('artists', a);
                   }}
+                  shape="round"
                   previewSize="sm"
                 />
                 <input value={artist.experience} onChange={(e) => {
@@ -489,6 +492,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
                   onChange={(v) => {
                     const x = [...data.testimonials]; x[idx] = { ...x[idx], avatar: v }; update('testimonials', x);
                   }}
+                  shape="round"
                   previewSize="sm"
                 />
                 <div>

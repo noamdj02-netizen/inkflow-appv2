@@ -3,7 +3,8 @@
  * Tunnel de conversion Mobile-First, Light Mode, optimisé pour le paiement Stripe.
  */
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, Lock, Image, ChevronLeft, ChevronRight, CreditCard, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, User, Lock, ChevronLeft, ChevronRight, CreditCard, Check, AlertCircle } from 'lucide-react';
+import { ReferenceImageUpload } from '../../components/booking/ReferenceImageUpload';
 import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
 import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 import { toLocalDateString } from '../../lib/utils';
@@ -29,7 +30,6 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
   const [availabilityLoading, setAvailabilityLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [referenceImages, setReferenceImages] = useState<File[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [form, setForm] = useState({
@@ -55,6 +55,12 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
       .then((data) => setStudioInfo({ name: data.name, avatar: data.avatar || '' }))
       .catch(() => setStudioInfo({ name: studioSlug, avatar: '' }));
   }, [studioSlug]);
+
+  useEffect(() => {
+    const name = studioInfo?.name || studioSlug;
+    document.title = `Réservation — ${name} | InkFlow`;
+    return () => { document.title = 'InkFlow'; };
+  }, [studioInfo?.name, studioSlug]);
 
   useEffect(() => {
     if (!studioId || studioId === 'loading') return;
@@ -99,19 +105,6 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
   const depositAmount = selectedFlash
     ? ((selectedFlash as { depositAmount?: number }).depositAmount ?? (Math.round((selectedFlash.price ?? 0) * 0.3) || 30))
     : DEFAULT_DEPOSIT;
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
-    setReferenceImages((prev) => [...prev, ...files].slice(0, 10));
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith('image/'));
-    setReferenceImages((prev) => [...prev, ...files].slice(0, 10));
-    e.target.value = '';
-  };
 
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentVerified, setPaymentVerified] = useState<boolean | null>(null);
@@ -300,22 +293,13 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               rows={4}
               className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors resize-none text-sm"
             />
-            <div
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={handleDrop}
-              onClick={() => document.getElementById('ref-upload')?.click()}
-              className={`mt-3 border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
-                isDragging ? 'border-zinc-400 bg-zinc-50' : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/50'
-              }`}
-            >
-              <input id="ref-upload" type="file" accept="image/*" multiple onChange={handleFileSelect} className="hidden" />
-              <Image className="w-8 h-8 mx-auto text-zinc-400 mb-2" strokeWidth={1.5} />
-              <p className="text-xs font-medium text-zinc-500">Ajouter des photos de référence</p>
-            </div>
-            {referenceImages.length > 0 && (
-              <p className="mt-2 text-xs text-zinc-500">{referenceImages.length} photo(s) sélectionnée(s)</p>
-            )}
+            <ReferenceImageUpload
+              value={referenceImages}
+              onChange={setReferenceImages}
+              variant="light"
+              inputId="ref-upload-book"
+              className="mt-3"
+            />
           </div>
         </section>
 
@@ -463,7 +447,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-zinc-500">Acompte requis</span>
-            <span className="text-xl font-bold text-zinc-900">{DEPOSIT_AMOUNT}€</span>
+            <span className="text-xl font-bold text-zinc-900">{depositAmount}€</span>
           </div>
           {paymentError && (
             <div className="mb-3 p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm flex items-start gap-2">

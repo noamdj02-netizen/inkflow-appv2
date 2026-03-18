@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Image as ImageIcon } from 'lucide-react';
+import { Upload, Pencil, Trash2 } from 'lucide-react';
 
 const MAX_SIZE = 800;
 const QUALITY = 0.8;
@@ -44,7 +44,8 @@ interface ImageUploadFieldProps {
   value: string;
   onChange: (value: string) => void;
   label?: string;
-  placeholder?: string;
+  /** Forme de la miniature : square (carré), round (avatar), cover (bannière rectangulaire) */
+  shape?: 'square' | 'round' | 'cover';
   previewSize?: 'sm' | 'md' | 'lg';
   className?: string;
 }
@@ -53,7 +54,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   value,
   onChange,
   label,
-  placeholder = 'URL ou glissez une image ici',
+  shape = 'square',
   previewSize = 'md',
   className = ''
 }) => {
@@ -92,62 +93,99 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
 
   const handleDragLeave = () => setIsDragging(false);
 
+  const triggerFileInput = () => inputRef.current?.click();
+
+  const hasImage = Boolean(value && value.trim());
+
+  // Tailles pour square/round
   const sizeClasses = {
-    sm: 'w-16 h-16',
-    md: 'w-24 h-24',
-    lg: 'w-32 h-32'
+    sm: 'w-20 h-20',
+    md: 'w-28 h-28',
+    lg: 'w-36 h-36'
   };
+
+  const shapeClasses = {
+    square: 'rounded-xl',
+    round: 'rounded-full',
+    cover: 'rounded-xl aspect-[3/1] w-full max-w-md'
+  };
+
+  const thumbnailCls = shape === 'cover'
+    ? `overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-[var(--border)] ${shapeClasses[shape]}`
+    : `${sizeClasses[previewSize]} overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-[var(--border)] flex-shrink-0 ${shapeClasses[shape]}`;
 
   return (
     <div className={className}>
       {label && (
-        <label className="block text-sm font-semibold mb-2">{label}</label>
+        <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">{label}</label>
       )}
-      <div className="flex gap-4 items-start">
-        <div className={`${sizeClasses[previewSize]} rounded-xl border-2 border-neutral-200 overflow-hidden bg-neutral-100 flex-shrink-0 flex items-center justify-center`}>
-          {value ? (
-            <img src={value} alt="Aperçu" className="w-full h-full object-cover" />
-          ) : (
-            <ImageIcon className="w-8 h-8 text-neutral-400" />
-          )}
-        </div>
-        <div className="flex-1 min-w-0 space-y-2">
-          <div
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            className={`flex flex-col sm:flex-row gap-2 p-3 rounded-xl border-2 border-dashed transition-colors ${
-              isDragging ? 'border-neutral-900 bg-neutral-100' : 'border-neutral-200 hover:border-neutral-300'
-            }`}
-          >
-            <input
-              type="text"
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={placeholder}
-              className="flex-1 min-w-0 px-3 py-2 border border-neutral-200 rounded-lg text-sm bg-white"
-            />
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-900 text-white hover:bg-neutral-800 rounded-lg font-medium text-sm whitespace-nowrap transition-colors"
-            >
-              <Upload className="w-4 h-4" />
-              Ajouter une photo
-            </button>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic"
+        onChange={handleFileChange}
+        className="sr-only"
+        aria-hidden
+      />
+
+      {!hasImage ? (
+        /* ═══ État vide : zone placeholder cliquable ═══ */
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={triggerFileInput}
+          onKeyDown={(e) => e.key === 'Enter' && triggerFileInput()}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          aria-label="Ajouter une photo"
+          className={`flex flex-col items-center justify-center gap-3 min-h-[120px] rounded-xl border-2 border-dashed p-6 cursor-pointer transition-all active:scale-[0.99] touch-manipulation ${
+            isDragging
+              ? 'border-neutral-900 dark:border-zinc-400 bg-zinc-100 dark:bg-zinc-800'
+              : 'border-zinc-200 dark:border-zinc-600 hover:border-zinc-300 dark:hover:border-zinc-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50'
+          }`}
+        >
+          <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center">
+            <Upload className="w-6 h-6 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
           </div>
-          <p className="text-xs text-neutral-500">
-            Collez une URL, glissez une image ici ou cliquez sur « Ajouter une photo ».
+          <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+            Ajouter une photo
+          </span>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">
+            Glissez une image ou cliquez pour parcourir
           </p>
         </div>
-      </div>
+      ) : (
+        /* ═══ État rempli : miniature + boutons Modifier / Supprimer ═══ */
+        <div className="space-y-3">
+          <div className={thumbnailCls}>
+            <img
+              src={value}
+              alt="Aperçu"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={triggerFileInput}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm bg-neutral-900 dark:bg-zinc-700 text-white hover:bg-neutral-800 dark:hover:bg-zinc-600 transition-colors active:scale-[0.98]"
+            >
+              <Pencil className="w-4 h-4" strokeWidth={2} />
+              Modifier
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange('')}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors active:scale-[0.98]"
+            >
+              <Trash2 className="w-4 h-4" strokeWidth={2} />
+              Supprimer
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
