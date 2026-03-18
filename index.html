@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <script>
+      /* Auto-clear stale SW on localhost — évite le splash bloqué en dev */
+      (function(){
+        if('serviceWorker' in navigator && (location.hostname==='localhost'||location.hostname==='127.0.0.1')) {
+          navigator.serviceWorker.getRegistrations().then(function(regs){
+            if(regs.length===0) return;
+            var cleared = sessionStorage.getItem('_sw_clear');
+            if(cleared) return;
+            sessionStorage.setItem('_sw_clear','1');
+            Promise.all([
+              Promise.all(regs.map(function(r){return r.unregister();})),
+              caches.keys().then(function(keys){return Promise.all(keys.map(function(k){return caches.delete(k);}));})
+            ]).then(function(){ window.location.reload(); });
+          });
+        }
+      })();
+    </script>
     <script>document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');</script>
     <script>
       (function(){var p=window.location.pathname;if(p==='/'||p===''||p.startsWith('/studio/')||p.startsWith('/demo')){document.documentElement.setAttribute('data-theme','light');return;}var t=localStorage.getItem('inkflow-theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark');}else if(t==='light'){document.documentElement.setAttribute('data-theme','light');}else if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.setAttribute('data-theme','dark');}else{document.documentElement.setAttribute('data-theme','light');}})();
