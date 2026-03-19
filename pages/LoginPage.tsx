@@ -2,12 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
-import { LANDING_URL } from '../lib/urls';
+import { LANDING_URL, APP_URL } from '../lib/urls';
 import loginHeroImg from '../src/assets/login-hero.jpg';
 
+const LOGIN_HERO_FALLBACK = '/images/login-hero.jpg';
+const LOGIN_HERO_ABSOLUTE = `${APP_URL}/images/login-hero.jpg`;
 
 export const LoginPage: React.FC = () => {
   const [checkEmailMessage, setCheckEmailMessage] = useState(false);
+  const [heroSrc, setHeroSrc] = useState(loginHeroImg);
+  const handleHeroError = () => {
+    setHeroSrc((prev) => {
+      if (prev === loginHeroImg) return LOGIN_HERO_FALLBACK;
+      if (prev === LOGIN_HERO_FALLBACK) return LOGIN_HERO_ABSOLUTE;
+      return prev;
+    });
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -84,11 +94,12 @@ export const LoginPage: React.FC = () => {
       <div className="hidden lg:flex lg:w-[520px] xl:w-[600px] min-h-screen h-screen flex-shrink-0 relative overflow-hidden">
         {/* Photo étirée pleine hauteur, ancrée en bas, responsive */}
         <img
-          src={loginHeroImg}
+          src={heroSrc}
           alt="Tatoueur"
           className="absolute inset-0 w-full min-h-full object-cover object-bottom"
           loading="eager"
           fetchPriority="high"
+          onError={handleHeroError}
         />
 
         {/* Texte en overlay par-dessus la photo */}
