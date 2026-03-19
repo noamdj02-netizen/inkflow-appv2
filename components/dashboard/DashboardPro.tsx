@@ -43,6 +43,7 @@ import { MessagingTab } from '../messaging/MessagingTab';
 import { NotificationsPage } from './NotificationsPage';
 import { ConsentFormEditor } from '../consent/ConsentFormEditor';
 import { CalendarSettings } from './CalendarSettings';
+import { AccountPage } from './AccountPage';
 import { Appointment, FlashDesign, BookingFormData, WaitlistEntry, ArtistAccount, LoyaltyEntry, MessageThread } from '../../types';
 import type { Client } from '../../types';
 import { ClientPreviewPanel, type ClientPreviewData } from './ClientPreviewPanel';
@@ -63,7 +64,7 @@ import { safeJsonParse } from '../../lib/utils';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
-type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings' | 'notifications';
+type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings' | 'notifications' | 'account';
 
 const iconProps = { className: 'w-5 h-5', strokeWidth: 1.5 };
 
@@ -989,8 +990,8 @@ export const DashboardPro: React.FC = () => {
                   </button>
                   {expandedMenus.settings && (
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
-                      <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('general'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'general' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'general' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                      <button onClick={() => handleSidebarNav(() => { setActiveTab('account'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'account' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'account' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Mon compte
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('billing'); setSidebarOpen(false); }, true)} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'billing' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
@@ -1033,13 +1034,18 @@ export const DashboardPro: React.FC = () => {
         <div className="app-shell-main">
           {/* Bandeau hors-ligne / erreur de connexion */}
           {useSupabase && (!isOnline || connectionError) && (
-            <div className="bg-blue-600 text-white px-4 py-2 flex items-center justify-between gap-4 text-sm font-medium">
-              <span className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                {!isOnline ? 'Vous êtes hors ligne.' : 'Erreur de connexion.'}
-                {connectionError?.message && <span className="opacity-90 truncate">{connectionError.message}</span>}
+            <div className="bg-amber-50 dark:bg-amber-500/10 border-b border-amber-200 dark:border-amber-500/25 text-amber-800 dark:text-amber-400 px-4 py-2 flex items-center justify-between gap-4 text-xs sm:text-sm font-medium flex-shrink-0">
+              <span className="flex items-center gap-2 min-w-0">
+                <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="truncate">
+                  {!isOnline ? 'Hors ligne — les données affichées sont en cache.' : 'Erreur de connexion au serveur.'}
+                </span>
+                {connectionError?.message && <span className="opacity-70 truncate hidden sm:inline">{connectionError.message}</span>}
               </span>
-              <button onClick={retry} className="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 font-semibold">
+              <button
+                onClick={retry}
+                className="px-3 py-1 rounded-lg bg-amber-100 dark:bg-amber-500/20 hover:bg-amber-200 dark:hover:bg-amber-500/30 text-amber-800 dark:text-amber-300 font-semibold text-xs transition-colors flex-shrink-0"
+              >
                 Réessayer
               </button>
             </div>
@@ -1064,7 +1070,7 @@ export const DashboardPro: React.FC = () => {
               {activeTab === 'overview' ? (
                 <div className="flex-1 min-w-0" />
               ) : (
-                <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)] min-w-0">{tabs.find(t => t.id === activeTab)?.label}</h2>
+                <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)] min-w-0">{activeTab === 'account' ? 'Mon compte' : tabs.find(t => t.id === activeTab)?.label}</h2>
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
@@ -1104,12 +1110,12 @@ export const DashboardPro: React.FC = () => {
               {showNotifications && (
                 <>
                   <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowNotifications(false)} aria-hidden />
-                  <div className="absolute right-0 top-full mt-2 w-96 max-h-[480px] border border-zinc-200 dark:border-zinc-800 rounded-2xl z-50 animate-slide-up bg-white dark:bg-black shadow-xl shadow-black/10 overflow-hidden">
+                  <div className="fixed sm:absolute inset-x-2 sm:inset-x-auto sm:right-0 top-[4.25rem] sm:top-full sm:mt-2 sm:w-96 max-h-[78svh] sm:max-h-[480px] border border-zinc-200 dark:border-zinc-800 rounded-2xl z-50 animate-slide-up bg-white dark:bg-black shadow-xl shadow-black/10 overflow-hidden flex flex-col">
                     {/* Header */}
-                    <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-black">
-                      <div className="flex items-center justify-between mb-1">
+                    <div className="p-3 sm:p-4 border-b border-zinc-100 dark:border-zinc-800 bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-black flex-shrink-0">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
                           <h4 className="font-bold text-sm text-zinc-900 dark:text-white">Notifications</h4>
                           {notifications.filter(n => !n.read).length > 0 && (
                             <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold">
@@ -1127,10 +1133,29 @@ export const DashboardPro: React.FC = () => {
                           </button>
                         )}
                       </div>
+                      {/* Statut connexion + Push rapide */}
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isOnline ? 'bg-emerald-400' : 'bg-red-400 animate-pulse'}`} />
+                        <span className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-none">
+                          {!isOnline
+                            ? 'Hors ligne — données en cache'
+                            : typeof Notification !== 'undefined' && Notification.permission === 'granted'
+                              ? 'Temps réel · Push activées'
+                              : 'Temps réel · Push désactivées'}
+                        </span>
+                        {isOnline && typeof Notification !== 'undefined' && Notification.permission === 'default' && (
+                          <button
+                            onClick={() => { setShowNotifications(false); handleSidebarNav(() => setActiveTab('notifications')); }}
+                            className="ml-auto text-[10px] font-semibold text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors whitespace-nowrap"
+                          >
+                            Activer →
+                          </button>
+                        )}
+                      </div>
                     </div>
                     
                     {/* Content */}
-                    <div className="max-h-[340px] overflow-y-auto">
+                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
                       {notifications.length === 0 ? (
                         <div className="p-8 text-center">
                           <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
@@ -1176,7 +1201,7 @@ export const DashboardPro: React.FC = () => {
                               <button
                                 key={notif.id}
                                 onClick={() => { markNotificationAsRead(notif.id); setShowNotifications(false); handleSidebarNav(() => setActiveTab('requests')); }}
-                                className={`w-full text-left p-4 transition-colors duration-150 group ${!notif.read ? 'bg-blue-50/60 dark:bg-blue-500/10 hover:bg-blue-50 dark:hover:bg-blue-500/15' : 'bg-zinc-50/80 dark:bg-zinc-900/70 hover:bg-zinc-100 dark:hover:bg-zinc-800/80'}`}
+                                className={`w-full text-left p-3 sm:p-4 transition-colors duration-150 group ${!notif.read ? 'bg-blue-50/60 dark:bg-blue-500/10 hover:bg-blue-50 dark:hover:bg-blue-500/15' : 'bg-zinc-50/80 dark:bg-zinc-900/70 hover:bg-zinc-100 dark:hover:bg-zinc-800/80'}`}
                               >
                                 <div className="flex items-start gap-3">
                                   <div className={`p-2 rounded-xl flex-shrink-0 ${bgMap[notif.type] || 'bg-zinc-100 dark:bg-zinc-800'}`}>
@@ -1208,7 +1233,7 @@ export const DashboardPro: React.FC = () => {
                     
                     {/* Footer */}
                     {notifications.length > 0 && (
-                      <div className="p-3 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900">
+                      <div className="p-3 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900 flex-shrink-0">
                         <button
                           onClick={() => { setShowNotifications(false); handleSidebarNav(() => setActiveTab('notifications')); }}
                           className="w-full py-2.5 rounded-xl text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center justify-center gap-2"
@@ -1260,11 +1285,11 @@ export const DashboardPro: React.FC = () => {
                     </div>
                     <div className="p-2 bg-white dark:bg-zinc-950">
                       <button
-                        onClick={() => { handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab(isRestricted ? 'billing' : 'general'); setShowProfileDropdown(false); }, true); }}
+                        onClick={() => { handleSidebarNav(() => { setActiveTab(isRestricted ? 'settings' : 'account'); if (isRestricted) setSettingsTab('billing'); setShowProfileDropdown(false); }, isRestricted); }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-zinc-900 dark:text-[var(--text-primary)] hover:bg-zinc-100 dark:hover:bg-[#27272A] font-medium transition-colors duration-150 text-left"
                       >
-                        <Settings className="w-5 h-5 text-[#9CA3AF]" />
-                        Paramètres
+                        <User className="w-5 h-5 text-[#9CA3AF]" />
+                        Mon compte
                       </button>
                       <button
                         onClick={() => { logout(); setShowProfileDropdown(false); }}
@@ -1614,13 +1639,7 @@ export const DashboardPro: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <input
-                        ref={avatarInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={handleAvatarUpload}
-                        className="hidden"
-                      />
+                      {/* file input moved to permanent location below settings block */}
 
                       <hr className="border-zinc-100 dark:border-zinc-800" />
 
@@ -1836,8 +1855,76 @@ export const DashboardPro: React.FC = () => {
               {settingsTab === 'messagerie' && studioId && <InstagramConnect studioId={studioId} />}
             </div>
           )}
+
+          {!loading && activeTab === 'account' && (
+            <div className="animate-fade-in px-0">
+              <AccountPage
+                user={user}
+                studioId={studioId}
+                studioName={generalStudioName}
+                email={generalEmail}
+                siret={generalSiret}
+                onStudioNameChange={(v) => { setGeneralStudioName(v); setGeneralSaved(false); }}
+                onEmailChange={(v) => { setGeneralEmail(v); setGeneralSaved(false); }}
+                onSiretChange={(v) => { setGeneralSiret(v); setGeneralSaved(false); }}
+                saving={generalSaving}
+                saved={generalSaved}
+                onSave={async () => {
+                  if (generalSaving) return;
+                  setGeneralSaving(true);
+                  try {
+                    if (studioId) {
+                      const { error: mainError } = await supabase
+                        .from('inkflow_studios')
+                        .update({ name: generalStudioName, studio_name: generalStudioName, email: generalEmail, updated_at: new Date().toISOString() })
+                        .eq('id', studioId);
+                      if (mainError) throw mainError;
+                      if (generalSiret.trim()) {
+                        await supabase.from('inkflow_studios').update({ siret: generalSiret.trim() }).eq('id', studioId);
+                      }
+                    } else if (useSupabase) {
+                      throw new Error('Studio non initialisé. Rechargez la page.');
+                    }
+                    updateUser({ studioName: generalStudioName, email: generalEmail });
+                    localStorage.setItem('inkflow_studio_name', generalStudioName);
+                    localStorage.setItem('inkflow_email', generalEmail);
+                    setGeneralSaved(true);
+                    toast.success('Paramètres enregistrés');
+                    setTimeout(() => setGeneralSaved(false), 3000);
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde');
+                  } finally {
+                    setGeneralSaving(false);
+                  }
+                }}
+                avatarInputRef={avatarInputRef}
+                avatarUploading={avatarUploading}
+                onAvatarClick={() => avatarInputRef.current?.click()}
+                onAvatarRemove={handleAvatarRemove}
+                artists={artistAccounts}
+                onAddArtist={(a) => setArtistAccounts(prev => [...prev, { ...a, studioId: studioId || '' }])}
+                onUpdateArtist={(a) => setArtistAccounts(prev => prev.map(x => x.id === a.id ? a : x))}
+                onDeleteArtist={(id) => setArtistAccounts(prev => prev.filter(x => x.id !== id))}
+                maxArtists={5}
+                onGoToBilling={() => { setActiveTab('settings'); setSettingsTab('billing'); }}
+                onGoToNotifications={() => { setActiveTab('settings'); setSettingsTab('general'); }}
+                onLogout={logout}
+                subscriptionStatus={subscriptionStatus ?? undefined}
+                trialEndsAt={trialEndsAt}
+              />
+            </div>
+          )}
           </>
           )}
+          {/* Hidden avatar file input — always mounted so ref is always available */}
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleAvatarUpload}
+            className="hidden"
+            aria-hidden="true"
+          />
           </div>
         </div>{/* end app-shell-main */}
 

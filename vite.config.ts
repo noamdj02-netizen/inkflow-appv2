@@ -31,20 +31,20 @@ export default defineConfig(({ mode }) => {
           strategies: 'injectManifest',
           srcDir: 'public',
           filename: 'sw.js',
-          registerType: 'prompt',
+          registerType: 'autoUpdate',
           includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon-180x180.png', 'icon-ios-1024.png', 'images/mockup-profil.webp'],
           manifest: {
             name: 'InkFlow - Assistant Tatoueur',
             short_name: 'InkFlow',
             description: 'La plateforme tout-en-un pour tatoueurs. Réservations, paiements, galerie Flash, CRM, messagerie, IA.',
-            theme_color: '#6328d4',
-            background_color: '#ddd6f7',
+            theme_color: '#0a0a0a',
+            background_color: '#0a0a0a',
             display: 'standalone',
-            display_override: ['standalone', 'fullscreen', 'minimal-ui', 'browser'],
+            display_override: ['standalone', 'minimal-ui', 'browser'],
             orientation: 'portrait',
             scope: '/',
-            start_url: '/',
-            id: '/',
+            start_url: '/dashboard',
+            id: '/dashboard',
             categories: ['business', 'productivity'],
             lang: 'fr-FR',
             dir: 'ltr',
@@ -87,7 +87,7 @@ export default defineConfig(({ mode }) => {
         },
       },
       optimizeDeps: {
-        include: ['tslib', '@supabase/supabase-js'],
+        include: ['tslib', '@supabase/supabase-js', 'motion-dom', 'framer-motion'],
       }
     };
 });
