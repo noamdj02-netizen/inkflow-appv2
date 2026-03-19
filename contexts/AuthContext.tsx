@@ -75,12 +75,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     setUser(getStoredUser());
     setAuthLoading(true);
-    const AUTH_SESSION_TIMEOUT_MS = 8000;
+    const AUTH_SESSION_TIMEOUT_MS = 3500;
     const timeoutId = setTimeout(() => {
       setAuthLoading(false);
     }, AUTH_SESSION_TIMEOUT_MS);
-    supabase.auth.getSession()
-      .then(async ({ data: { session } }) => {
+    const sessionPromise = supabase.auth.getSession();
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('auth_timeout')), AUTH_SESSION_TIMEOUT_MS)
+    );
+    Promise.race([sessionPromise, timeoutPromise])
+      .then(async (result: Awaited<typeof sessionPromise>) => {
+        const { data: { session } } = result;
         if (session?.user) {
           const { data: { session: refreshed } } = await supabase.auth.refreshSession().catch(() => ({ data: { session } }));
           const u = refreshed?.user ?? session.user;
@@ -89,6 +94,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           localStorage.setItem('inkflow_user', JSON.stringify(appUser));
         }
       })
+      .catch(() => { /* timeout ou erreur : on reste déconnecté */ })
       .finally(() => {
         clearTimeout(timeoutId);
         setAuthLoading(false);

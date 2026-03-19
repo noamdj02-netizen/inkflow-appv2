@@ -72,6 +72,7 @@ export default defineConfig(({ mode }) => {
       build: {
         sourcemap: !!sentryAuthToken,
         target: 'es2020',
+        chunkSizeWarningLimit: 650,
         commonjsOptions: {
           transformMixedEsModules: true,
         },
