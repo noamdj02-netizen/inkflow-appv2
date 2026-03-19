@@ -115,7 +115,6 @@ export const LoginPage: React.FC = () => {
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        {/* Photo étirée pleine hauteur, ancrée en bas, responsive */}
         <img
           src={heroSrc}
           alt="Tatoueur"
@@ -125,7 +124,6 @@ export const LoginPage: React.FC = () => {
           onError={handleHeroError}
         />
 
-        {/* Texte en overlay par-dessus la photo */}
         <div className="absolute bottom-0 left-0 right-0 z-10 px-10 pb-10 pt-16 pointer-events-none">
           <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
             Gérez votre studio.
