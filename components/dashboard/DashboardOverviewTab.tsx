@@ -323,76 +323,145 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
   const renderKpiWidget = (widgetId: string) => {
     switch (widgetId) {
+
+      /* ── Revenue — dark card (comme Donezo) ── */
       case 'kpi-revenue':
         return (
           <SortableKpiWidget key={widgetId} id={widgetId}>
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
-                  <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Revenu</span>
+            <div className="bg-zinc-900 dark:bg-[#0f0f0f] rounded-2xl p-5 shadow-lg h-full flex flex-col justify-between min-h-[130px]">
+              <div className="flex items-start justify-between">
+                <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest">Revenu du mois</span>
+                <button
+                  onClick={() => setActiveTab('finance')}
+                  className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors flex-shrink-0"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5 text-white" />
+                </button>
               </div>
-              <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{monthlyRevenue.toLocaleString('fr-FR')}€</p>
-              {trendRevenue !== null && (
-                <p className={`text-xs font-semibold mt-1.5 ${trendRevenue >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-                  {trendRevenue >= 0 ? '▲' : '▼'} {Math.abs(trendRevenue)}% vs mois dernier
+              <div>
+                <p className="text-3xl font-bold text-white tabular-nums tracking-tight mt-2">
+                  {monthlyRevenue.toLocaleString('fr-FR')}€
                 </p>
-              )}
+                <div className="mt-3">
+                  {trendRevenue !== null ? (
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      trendRevenue >= 0
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      {trendRevenue >= 0 ? '↑' : '↓'} {Math.abs(trendRevenue)}% vs mois dernier
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-zinc-400">
+                      Ce mois
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </SortableKpiWidget>
         );
+
+      /* ── Acomptes ── */
       case 'kpi-deposits':
         return (
           <SortableKpiWidget key={widgetId} id={widgetId}>
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-500/10">
-                  <Wallet className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                </div>
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Acomptes</span>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px]">
+              <div className="flex items-start justify-between">
+                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Acomptes</span>
+                <button
+                  onClick={() => setActiveTab('finance')}
+                  className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                </button>
               </div>
-              <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{pendingDeposits.toLocaleString('fr-FR')}€</p>
-              <p className="text-xs text-zinc-400 dark:text-zinc-600 mt-1.5">reçus ce mois</p>
+              <div>
+                <p className="text-3xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
+                  {pendingDeposits.toLocaleString('fr-FR')}€
+                </p>
+                <div className="mt-3">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                    En attente
+                  </span>
+                </div>
+              </div>
             </div>
           </SortableKpiWidget>
         );
+
+      /* ── Clients ── */
       case 'kpi-clients':
         return (
           <SortableKpiWidget key={widgetId} id={widgetId}>
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10">
-                  <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                </div>
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">Clients</span>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px]">
+              <div className="flex items-start justify-between">
+                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Clients</span>
+                <button
+                  onClick={() => setActiveTab('clients')}
+                  className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                </button>
               </div>
-              <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{clients.length}</p>
-              {vipClients > 0 && (
-                <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">⭐ {vipClients} VIP</p>
-              )}
+              <div>
+                <p className="text-3xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
+                  {clients.length}
+                </p>
+                <div className="mt-3">
+                  {vipClients > 0 ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                      ⭐ {vipClients} VIP
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                      Total
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </SortableKpiWidget>
         );
+
+      /* ── RDV ── */
       case 'kpi-appointments':
         return (
           <SortableKpiWidget key={widgetId} id={widgetId}>
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-xl bg-orange-50 dark:bg-orange-500/10">
-                  <Calendar className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                </div>
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">RDV</span>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px]">
+              <div className="flex items-start justify-between">
+                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">RDV ce mois</span>
+                <button
+                  onClick={() => setActiveTab('appointments')}
+                  className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                </button>
               </div>
-              <p className="text-xl font-bold text-zinc-900 dark:text-white tabular-nums">{appointmentsThisMonth}</p>
-              {trendAppointments !== null && (
-                <p className={`text-xs font-semibold mt-1.5 ${trendAppointments >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-                  {trendAppointments >= 0 ? '▲' : '▼'} {Math.abs(trendAppointments)}% vs mois dernier
+              <div>
+                <p className="text-3xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
+                  {appointmentsThisMonth}
                 </p>
-              )}
+                <div className="mt-3">
+                  {trendAppointments !== null ? (
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      trendAppointments >= 0
+                        ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'
+                    }`}>
+                      {trendAppointments >= 0 ? '↑' : '↓'} {Math.abs(trendAppointments)}% vs dernier mois
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                      Ce mois
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </SortableKpiWidget>
         );
+
       default:
         return null;
     }
@@ -419,11 +488,17 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             {/* Avatar / Profile button */}
             <button
               onClick={() => setActiveTab('settings')}
-              className="mt-1 w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md active:scale-90 transition-transform duration-150 flex-shrink-0"
+              className="mt-1 w-11 h-11 rounded-full flex-shrink-0 active:scale-90 transition-transform duration-150 overflow-hidden shadow-md"
             >
-              <span className="text-[15px] font-bold text-white">
-                {firstName ? firstName[0].toUpperCase() : '?'}
-              </span>
+              {user?.avatar ? (
+                <img src={user.avatar} alt="" className="w-full h-full object-cover rounded-full" />
+              ) : (
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                  <span className="text-[15px] font-bold text-white">
+                    {firstName ? firstName[0].toUpperCase() : '?'}
+                  </span>
+                </div>
+              )}
             </button>
           </div>
 
@@ -449,70 +524,71 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           )}
         </div>
 
-        {/* Quick Actions — Native iOS App Icon Grid */}
-        <div className="grid grid-cols-4 gap-3 px-4 pt-3 pb-1">
-          {/* Nouveau RDV */}
-          <button
-            onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-            className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform duration-150"
-          >
-            <div className="w-14 h-14 rounded-[18px] bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <Plus className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 text-center leading-tight">Nouveau RDV</span>
-          </button>
+        {/* Quick Actions — Framer minimal style */}
+        <div className="px-4 pt-3 pb-1">
+          <div className="grid grid-cols-4 gap-2">
 
-          {/* Flash */}
-          <button
-            onClick={() => setActiveTab('flash')}
-            className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform duration-150"
-          >
-            <div className="w-14 h-14 rounded-[18px] bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 text-center leading-tight">Flash</span>
-          </button>
-
-          {/* Vitrine */}
-          {vitrineSlug ? (
-            <a
-              href={`/studio/${vitrineSlug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform duration-150"
-            >
-              <div className="w-14 h-14 rounded-[18px] bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-                <ExternalLink className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 text-center leading-tight">Vitrine</span>
-            </a>
-          ) : (
+            {/* Nouveau RDV */}
             <button
-              onClick={() => setActiveTab('settings')}
-              className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform duration-150"
+              onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
+              className="flex flex-col items-center gap-2 py-3 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-100 dark:border-zinc-800 shadow-sm active:scale-95 transition-all duration-150"
             >
-              <div className="w-14 h-14 rounded-[18px] bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
-                <ExternalLink className="w-6 h-6 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                <Plus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               </div>
-              <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 text-center leading-tight">Vitrine</span>
+              <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 text-center leading-tight px-1">Nouveau RDV</span>
             </button>
-          )}
 
-          {/* Demandes */}
-          <button
-            onClick={() => setActiveTab('requests')}
-            className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform duration-150 relative"
-          >
-            <div className="w-14 h-14 rounded-[18px] bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 relative">
-              <Inbox className="w-6 h-6 text-white" />
+            {/* Flash */}
+            <button
+              onClick={() => setActiveTab('flash')}
+              className="flex flex-col items-center gap-2 py-3 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-100 dark:border-zinc-800 shadow-sm active:scale-95 transition-all duration-150"
+            >
+              <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+              </div>
+              <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 text-center leading-tight px-1">Flash</span>
+            </button>
+
+            {/* Vitrine */}
+            {vitrineSlug ? (
+              <a
+                href={`/studio/${vitrineSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center gap-2 py-3 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-100 dark:border-zinc-800 shadow-sm active:scale-95 transition-all duration-150"
+              >
+                <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center">
+                  <ExternalLink className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 text-center leading-tight px-1">Vitrine</span>
+              </a>
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-3 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-100 dark:border-zinc-800 shadow-sm opacity-40">
+                <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center">
+                  <ExternalLink className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 text-center leading-tight px-1">Vitrine</span>
+              </div>
+            )}
+
+            {/* Demandes */}
+            <button
+              onClick={() => setActiveTab('requests')}
+              className="relative flex flex-col items-center gap-2 py-3 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-100 dark:border-zinc-800 shadow-sm active:scale-95 transition-all duration-150"
+            >
               {pendingRequestsCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-[#F2F2F7] dark:border-black">
+                <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
                   {pendingRequestsCount}
                 </span>
               )}
-            </div>
-            <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 text-center leading-tight">Demandes</span>
-          </button>
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+                <Inbox className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 text-center leading-tight px-1">Demandes</span>
+            </button>
+
+          </div>
         </div>
 
         {/* Main Content */}
@@ -772,41 +848,45 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               </div>
             </div>
 
-            {/* Right: Action Buttons */}
+            {/* Right: Action Buttons — pill style */}
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => setIsEditMode(!isEditMode)}
-                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98] shadow-sm ${
-                  isEditMode 
-                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/20' 
-                    : 'bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all active:scale-[0.98] ${
+                  isEditMode
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                 }`}
               >
-                <LayoutGrid className="w-4 h-4" />
+                <LayoutGrid className="w-3.5 h-3.5" />
                 {isEditMode ? 'Terminer' : 'Widgets'}
               </button>
-              <button
-                onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all active:scale-[0.98] shadow-lg shadow-zinc-900/10"
-              >
-                <Plus className="w-4 h-4" /> Nouveau RDV
-              </button>
+
+              {/* Séparateur */}
+              <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700" />
+
               <button
                 onClick={() => setActiveTab('flash')}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
               >
-                <Image className="w-4 h-4" /> Flash
+                <Image className="w-3.5 h-3.5" /> Flash
               </button>
               {vitrineSlug && (
                 <a
                   href={`/studio/${vitrineSlug}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-sm"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                 >
-                  <ExternalLink className="w-4 h-4" /> Vitrine
+                  <ExternalLink className="w-3.5 h-3.5" /> Vitrine
                 </a>
               )}
+              <button
+                onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:bg-zinc-700 dark:hover:bg-zinc-100 transition-all active:scale-[0.98] shadow-md"
+              >
+                <Plus className="w-4 h-4" /> Nouveau RDV
+              </button>
             </div>
           </div>
         </div>

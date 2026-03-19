@@ -212,7 +212,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               <div className="relative aspect-[4/5] overflow-hidden bg-slate-100 dark:bg-zinc-800">
                 <img src={design.imageUrl} alt={design.title} loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
                 {design.reserved ? (
                   <div className="absolute top-3 right-3 bg-slate-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow">Réservé</div>
                 ) : (

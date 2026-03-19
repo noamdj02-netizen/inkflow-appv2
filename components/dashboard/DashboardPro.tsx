@@ -43,6 +43,7 @@ import { MessagingTab } from '../messaging/MessagingTab';
 import { NotificationsPage } from './NotificationsPage';
 import { ConsentFormEditor } from '../consent/ConsentFormEditor';
 import { CalendarSettings } from './CalendarSettings';
+import { AccountPage } from './AccountPage';
 import { Appointment, FlashDesign, BookingFormData, WaitlistEntry, ArtistAccount, LoyaltyEntry, MessageThread } from '../../types';
 import type { Client } from '../../types';
 import { ClientPreviewPanel, type ClientPreviewData } from './ClientPreviewPanel';
@@ -63,7 +64,7 @@ import { safeJsonParse } from '../../lib/utils';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
-type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings' | 'notifications';
+type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings' | 'notifications' | 'account';
 
 const iconProps = { className: 'w-5 h-5', strokeWidth: 1.5 };
 
@@ -989,8 +990,8 @@ export const DashboardPro: React.FC = () => {
                   </button>
                   {expandedMenus.settings && (
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
-                      <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('general'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'general' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'general' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                      <button onClick={() => handleSidebarNav(() => { setActiveTab('account'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'account' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'account' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Mon compte
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('billing'); setSidebarOpen(false); }, true)} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'billing' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
@@ -1064,7 +1065,7 @@ export const DashboardPro: React.FC = () => {
               {activeTab === 'overview' ? (
                 <div className="flex-1 min-w-0" />
               ) : (
-                <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)] min-w-0">{tabs.find(t => t.id === activeTab)?.label}</h2>
+                <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)] min-w-0">{activeTab === 'account' ? 'Mon compte' : tabs.find(t => t.id === activeTab)?.label}</h2>
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
@@ -1260,11 +1261,11 @@ export const DashboardPro: React.FC = () => {
                     </div>
                     <div className="p-2 bg-white dark:bg-zinc-950">
                       <button
-                        onClick={() => { handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab(isRestricted ? 'billing' : 'general'); setShowProfileDropdown(false); }, true); }}
+                        onClick={() => { handleSidebarNav(() => { setActiveTab(isRestricted ? 'settings' : 'account'); if (isRestricted) setSettingsTab('billing'); setShowProfileDropdown(false); }, isRestricted); }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-zinc-900 dark:text-[var(--text-primary)] hover:bg-zinc-100 dark:hover:bg-[#27272A] font-medium transition-colors duration-150 text-left"
                       >
-                        <Settings className="w-5 h-5 text-[#9CA3AF]" />
-                        Paramètres
+                        <User className="w-5 h-5 text-[#9CA3AF]" />
+                        Mon compte
                       </button>
                       <button
                         onClick={() => { logout(); setShowProfileDropdown(false); }}
@@ -1614,13 +1615,7 @@ export const DashboardPro: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <input
-                        ref={avatarInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={handleAvatarUpload}
-                        className="hidden"
-                      />
+                      {/* file input moved to permanent location below settings block */}
 
                       <hr className="border-zinc-100 dark:border-zinc-800" />
 
@@ -1836,8 +1831,76 @@ export const DashboardPro: React.FC = () => {
               {settingsTab === 'messagerie' && studioId && <InstagramConnect studioId={studioId} />}
             </div>
           )}
+
+          {!loading && activeTab === 'account' && (
+            <div className="animate-fade-in px-0">
+              <AccountPage
+                user={user}
+                studioId={studioId}
+                studioName={generalStudioName}
+                email={generalEmail}
+                siret={generalSiret}
+                onStudioNameChange={(v) => { setGeneralStudioName(v); setGeneralSaved(false); }}
+                onEmailChange={(v) => { setGeneralEmail(v); setGeneralSaved(false); }}
+                onSiretChange={(v) => { setGeneralSiret(v); setGeneralSaved(false); }}
+                saving={generalSaving}
+                saved={generalSaved}
+                onSave={async () => {
+                  if (generalSaving) return;
+                  setGeneralSaving(true);
+                  try {
+                    if (studioId) {
+                      const { error: mainError } = await supabase
+                        .from('inkflow_studios')
+                        .update({ name: generalStudioName, studio_name: generalStudioName, email: generalEmail, updated_at: new Date().toISOString() })
+                        .eq('id', studioId);
+                      if (mainError) throw mainError;
+                      if (generalSiret.trim()) {
+                        await supabase.from('inkflow_studios').update({ siret: generalSiret.trim() }).eq('id', studioId);
+                      }
+                    } else if (useSupabase) {
+                      throw new Error('Studio non initialisé. Rechargez la page.');
+                    }
+                    updateUser({ studioName: generalStudioName, email: generalEmail });
+                    localStorage.setItem('inkflow_studio_name', generalStudioName);
+                    localStorage.setItem('inkflow_email', generalEmail);
+                    setGeneralSaved(true);
+                    toast.success('Paramètres enregistrés');
+                    setTimeout(() => setGeneralSaved(false), 3000);
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde');
+                  } finally {
+                    setGeneralSaving(false);
+                  }
+                }}
+                avatarInputRef={avatarInputRef}
+                avatarUploading={avatarUploading}
+                onAvatarClick={() => avatarInputRef.current?.click()}
+                onAvatarRemove={handleAvatarRemove}
+                artists={artistAccounts}
+                onAddArtist={(a) => setArtistAccounts(prev => [...prev, { ...a, studioId: studioId || '' }])}
+                onUpdateArtist={(a) => setArtistAccounts(prev => prev.map(x => x.id === a.id ? a : x))}
+                onDeleteArtist={(id) => setArtistAccounts(prev => prev.filter(x => x.id !== id))}
+                maxArtists={5}
+                onGoToBilling={() => { setActiveTab('settings'); setSettingsTab('billing'); }}
+                onGoToNotifications={() => { setActiveTab('settings'); setSettingsTab('general'); }}
+                onLogout={logout}
+                subscriptionStatus={subscriptionStatus ?? undefined}
+                trialEndsAt={trialEndsAt}
+              />
+            </div>
+          )}
           </>
           )}
+          {/* Hidden avatar file input — always mounted so ref is always available */}
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleAvatarUpload}
+            className="hidden"
+            aria-hidden="true"
+          />
           </div>
         </div>{/* end app-shell-main */}
 
