@@ -83,7 +83,7 @@ export const LoginPage: React.FC = () => {
       <div className="hidden lg:flex lg:w-[520px] xl:w-[600px] min-h-screen h-screen flex-shrink-0 relative overflow-hidden">
         {/* Photo étirée pleine hauteur, ancrée en bas, responsive */}
         <img
-          src="/images/login-hero.jpg"
+          src="/images/login-hero.jpg?v=2"
           alt="Tatoueur"
           className="absolute inset-0 w-full min-h-full object-cover object-bottom"
           loading="eager"
