@@ -17,6 +17,8 @@ export interface Database {
           updated_at: string;
           trial_ends_at: string | null;
           subscription_status: 'trialing' | 'active' | 'restricted' | 'canceled';
+          /** Google Place ID — avis vitrine (Places API côté serveur uniquement) */
+          google_place_id?: string | null;
         };
         Insert: Omit<Database['public']['Tables']['inkflow_studios']['Row'], 'created_at' | 'updated_at'> & {
           created_at?: string;

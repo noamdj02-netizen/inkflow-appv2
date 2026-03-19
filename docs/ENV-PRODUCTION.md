@@ -42,6 +42,7 @@ Le build Vite n’a accès qu’aux variables **préfixées par `VITE_`**. Tout 
 | `META_APP_ID` | instagram | ID de l'app Meta (developers.facebook.com) |
 | `META_APP_SECRET` | instagram | Secret de l'app Meta |
 | `META_WEBHOOK_VERIFY_TOKEN` | instagram-webhook | Token de vérification du webhook Meta |
+| `GOOGLE_PLACES_API_KEY` ou `GOOGLE_MAPS_API_KEY` | `google-places` | Clé Places API (avis vitrine + recherche établissement) — **jamais** en `VITE_` |
 
 En **production** :
 - Définir **obligatoirement** `STRIPE_WEBHOOK_SECRET` (sinon le webhook renvoie 501).
@@ -56,6 +57,16 @@ En **production** :
 ```bash
 npx supabase functions deploy stripe-webhook --no-verify-jwt
 ```
+
+### Edge Function `google-places` (avis publics sans JWT)
+
+L’action `public_reviews` est appelée depuis la vitrine sans session. Déployer avec :
+
+```bash
+npx supabase functions deploy google-places --no-verify-jwt
+```
+
+Configurer le secret `GOOGLE_PLACES_API_KEY` (ou `GOOGLE_MAPS_API_KEY`) dans Supabase.
 
 ### Configurer le webhook dans Stripe Dashboard
 

@@ -21,6 +21,9 @@ import { DemoTour, type TourStep } from '../../components/demo/DemoTour';
 import { LANDING_URL, LANDING_TERMS_URL, LANDING_PRIVACY_URL } from '../../lib/urls';
 import { getVitrineTheme } from '../../lib/themes';
 import { StudioThemeRouter } from '../../components/studio-themes/StudioThemeRouter';
+import { GoogleReviews } from '../../components/vitrine/GoogleReviews';
+import { fetchPublicGoogleReviews } from '../../lib/googlePlaces';
+import type { GoogleReviewsPayload } from '../../types/googlePlaces';
 
 const STRUCTURAL_THEMES = ['classic', 'split', 'vintage'] as const;
 
@@ -70,6 +73,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [flashDepositUrl, setFlashDepositUrl] = useState<string | null>(null);
   const [runVitrineTour, setRunVitrineTour] = useState(false);
   const [vitrineStepIndex, setVitrineStepIndex] = useState(0);
+  const [googleReviewsPayload, setGoogleReviewsPayload] = useState<GoogleReviewsPayload | null>(null);
   const activeTheme = getVitrineTheme(studio?.theme ?? 'light') ?? getVitrineTheme('light')!;
   const primaryColor = activeTheme?.accentColor ?? '#2563eb';
 
@@ -88,6 +92,26 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   useEffect(() => {
     loadVitrine();
   }, [loadVitrine]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchPublicGoogleReviews(studioSlug).then((res) => {
+      if (cancelled || !res || !res.configured) {
+        if (!cancelled) setGoogleReviewsPayload(null);
+        return;
+      }
+      if (!cancelled) {
+        setGoogleReviewsPayload({
+          rating: res.rating,
+          userRatingsTotal: res.userRatingsTotal,
+          reviews: res.reviews,
+        });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [studioSlug]);
 
   useEffect(() => {
     const onVisibilityChange = () => {
@@ -361,7 +385,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
   // Route structural themes (classic, split, vintage) to their dedicated layout components
   if (studio && STRUCTURAL_THEMES.includes(studio.theme as typeof STRUCTURAL_THEMES[number])) {
-    return <StudioThemeRouter data={studio} fallback={null} />;
+    return <StudioThemeRouter data={studio} fallback={null} googleReviews={googleReviewsPayload} />;
   }
 
   const studioName = studioDisplay.name || studioSlug.replace(/-/g, ' ');
@@ -796,6 +820,11 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                     </div>
                   ))}
                 </div>
+                {googleReviewsPayload && (
+                  <div className="mt-8 sm:mt-10">
+                    <GoogleReviews data={googleReviewsPayload} />
+                  </div>
+                )}
                 <div className="mt-6 sm:mt-10 text-center bg-[var(--vitrine-primary)] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-white">
                   <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">Rejoignez nos clients satisfaits</h3>
                   <p className="mb-4 sm:mb-6 opacity-90">Plus de {studioDisplay.satisfactionRate}% de satisfaction</p>

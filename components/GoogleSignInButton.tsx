@@ -29,6 +29,11 @@ interface GoogleSignInButtonProps {
   className?: string;
 }
 
+const googleBtnBase =
+  'w-full min-h-[48px] flex items-center justify-center gap-3 py-3 rounded-2xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ' +
+  'bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 ' +
+  'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:border-zinc-400 dark:hover:border-zinc-600';
+
 export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   onClick,
   disabled = false,
@@ -39,9 +44,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className={
-      `w-full min-h-[48px] flex items-center justify-center gap-3 bg-white border-2 border-neutral-200 text-neutral-800 py-3 rounded-xl font-semibold hover:bg-neutral-50 hover:border-neutral-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`.trim()
-    }
+    className={`${googleBtnBase} ${className}`.trim()}
     aria-label={label}
   >
     <GoogleLogo />

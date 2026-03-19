@@ -1,12 +1,13 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import type { StudioThemeProps } from '../../types/studio-theme';
+import { GoogleReviews } from '../vitrine/GoogleReviews';
 
 /**
  * ClassicTheme — Layout Linktree épuré, 1 colonne centrée.
  * Police Inter, palette sombre neutre (#0a0a0b), accents violet.
  */
-export const ClassicTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, portfolioItems }) => {
+export const ClassicTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, portfolioItems, googleReviews }) => {
   const bookingUrl = studio.bookingUrl ?? `/book/${studio.slug}`;
 
   return (
@@ -87,6 +88,12 @@ export const ClassicTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, p
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {googleReviews && (
+          <section className="mt-12">
+            <GoogleReviews data={googleReviews} className="border-neutral-800" />
           </section>
         )}
       </main>

@@ -1,3 +1,5 @@
+import type { GoogleReviewsPayload } from './googlePlaces';
+
 /**
  * Contrat TypeScript partagé pour les thèmes structurels de la vitrine studio.
  * Tous les thèmes (ClassicTheme, SplitTheme, VintageTheme, etc.) acceptent cette interface.
@@ -29,4 +31,6 @@ export interface StudioThemeProps {
   };
   flashItems: FlashItem[];
   portfolioItems: PortfolioItem[];
+  /** Avis Google (chargés côté page publique via Edge Function) */
+  googleReviews?: GoogleReviewsPayload | null;
 }

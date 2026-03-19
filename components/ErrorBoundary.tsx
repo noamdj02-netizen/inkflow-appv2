@@ -4,6 +4,8 @@ import * as Sentry from '@sentry/react';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  /** Si défini, affiche le message « tableau de bord » (sinon message page générique) */
+  errorContext?: 'dashboard';
 }
 
 interface State {
@@ -37,8 +39,10 @@ export class ErrorBoundary extends Component<Props, State> {
               <span className="text-2xl" aria-hidden>⚠️</span>
             </div>
             <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">Une erreur s&apos;est produite</h1>
-            <p className="text-neutral-600 text-sm mb-6">
-              Le tableau de bord n&apos;a pas pu s&apos;afficher. Réessayez ou déconnectez-vous.
+            <p className="text-neutral-600 dark:text-neutral-300 text-sm mb-6">
+              {props.errorContext === 'dashboard'
+                ? "Le tableau de bord n'a pas pu s'afficher. Réessayez ou déconnectez-vous."
+                : "Cette page n'a pas pu s'afficher. Réessayez ou rechargez la page."}
             </p>
             {isDev && errMsg && (
               <p className="text-left text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-500/20 p-3 rounded-lg mb-6 font-mono break-all">

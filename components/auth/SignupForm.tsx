@@ -56,7 +56,7 @@ export const SignupForm: React.FC = () => {
       confirmPassword: formData.confirmPassword,
     });
     if (!parsed.success) {
-      setError(parsed.error.errors[0]?.message ?? 'Vérifiez les champs');
+      setError(parsed.error.issues[0]?.message ?? 'Vérifiez les champs');
       return;
     }
     setLoading(true);

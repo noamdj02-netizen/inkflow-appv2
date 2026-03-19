@@ -15,7 +15,7 @@ export const ResetPasswordPage: React.FC = () => {
     setError(null);
     const parsed = resetPasswordSchema.safeParse({ email: email.trim() });
     if (!parsed.success) {
-      setError(parsed.error.errors[0]?.message ?? 'Email invalide');
+      setError(parsed.error.issues[0]?.message ?? 'Email invalide');
       return;
     }
     setLoading(true);

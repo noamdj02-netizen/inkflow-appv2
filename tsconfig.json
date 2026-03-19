@@ -17,5 +17,5 @@
     "noEmit": true
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "dist", "supabase/functions"]
+  "exclude": ["node_modules", "dist", "supabase/functions", "app", "inkflow-mobile"]
 }

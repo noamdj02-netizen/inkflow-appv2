@@ -1,6 +1,7 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import type { StudioThemeProps } from '../../types/studio-theme';
+import { GoogleReviews } from '../vitrine/GoogleReviews';
 
 /**
  * VintageTheme — Élégance tatouage old-school / studio parisien.
@@ -104,6 +105,15 @@ export const VintageTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, p
               ))}
             </div>
           </section>
+        )}
+
+        {googleReviews && (
+          <>
+            <hr className="border-stone-300 my-12" />
+            <section className="max-w-xl mx-auto">
+              <GoogleReviews data={googleReviews} />
+            </section>
+          </>
         )}
       </main>
     </div>

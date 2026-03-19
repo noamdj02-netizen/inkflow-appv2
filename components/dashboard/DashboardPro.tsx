@@ -138,6 +138,7 @@ export const DashboardPro: React.FC = () => {
   const [generalStudioName, setGeneralStudioName] = useState(user?.studioName || '');
   const [generalEmail, setGeneralEmail] = useState(user?.email || '');
   const [generalSiret, setGeneralSiret] = useState('');
+  const [generalGooglePlaceId, setGeneralGooglePlaceId] = useState<string | null>(null);
   const [generalSaving, setGeneralSaving] = useState(false);
   const [generalSaved, setGeneralSaved] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
@@ -164,17 +165,34 @@ export const DashboardPro: React.FC = () => {
     action();
   }, [isRestricted, toast]);
 
+  const handleSaveGooglePlaceId = useCallback(async (placeId: string | null) => {
+    if (!studioId) throw new Error('Studio manquant');
+    const { error } = await supabase
+      .from('inkflow_studios')
+      .update({
+        google_place_id: placeId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', studioId);
+    if (error) throw error;
+    setGeneralGooglePlaceId(placeId);
+  }, [studioId]);
+
   // Sync general settings form when user changes (e.g. from Supabase session or localStorage)
   useEffect(() => {
     if (user?.studioName != null) setGeneralStudioName(user.studioName);
     if (user?.email != null) setGeneralEmail(user.email);
   }, [user?.studioName, user?.email]);
 
-  // Load SIRET from studio when studioId is available
+  // Load SIRET & Google Place ID from studio when studioId is available
   useEffect(() => {
     if (!studioId || !useSupabase) return;
-    supabase.from('inkflow_studios').select('siret').eq('id', studioId).maybeSingle()
-      .then(({ data }) => setGeneralSiret((data?.siret as string) || ''));
+    supabase.from('inkflow_studios').select('siret, google_place_id').eq('id', studioId).maybeSingle()
+      .then(({ data }) => {
+        setGeneralSiret((data?.siret as string) || '');
+        const gid = data?.google_place_id;
+        setGeneralGooglePlaceId(typeof gid === 'string' && gid.trim() ? gid.trim() : null);
+      });
   }, [studioId, useSupabase]);
 
   // Handle Google Calendar OAuth callback: ?code=...&state=studioId
@@ -1917,6 +1935,9 @@ export const DashboardPro: React.FC = () => {
                 email={generalEmail}
                 user={user}
                 artists={artistAccounts}
+                googlePlaceId={generalGooglePlaceId}
+                useSupabase={useSupabase ?? false}
+                onSaveGooglePlaceId={handleSaveGooglePlaceId}
                 onSaveIdentity={async (form) => {
                   if (generalSaving) return;
                   setGeneralSaving(true);

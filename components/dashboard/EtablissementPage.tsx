@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2, User, Hash, Palette, Shield, Plus, Trash2, Save,
   Check, Loader2, ChevronRight, CreditCard, FileText, Upload,
-  Crown, Hammer, GraduationCap, X, AlertCircle,
+  Crown, Hammer, GraduationCap, X, AlertCircle, MapPin, Search,
 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import type { ArtistAccount } from '../../types';
+import { searchGooglePlaces } from '../../lib/googlePlaces';
+import type { GooglePlaceSearchResultDTO } from '../../types/googlePlaces';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +40,10 @@ interface EtablissementPageProps {
   onGoToBilling: () => void;
   subscriptionStatus?: string;
   trialEndsAt?: string | null;
+  /** Place ID Google (avis sur la vitrine) — persistance Supabase */
+  googlePlaceId?: string | null;
+  useSupabase?: boolean;
+  onSaveGooglePlaceId?: (placeId: string | null) => Promise<void>;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -75,6 +81,9 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
   onGoToBilling,
   subscriptionStatus,
   trialEndsAt,
+  googlePlaceId = null,
+  useSupabase = false,
+  onSaveGooglePlaceId,
 }) => {
   const toast = useToast();
 
@@ -147,6 +156,73 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
   const trialDaysLeft = trialEndsAt
     ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
     : 0;
+
+  // ── Google Place (avis vitrine) ─────────────────────────────────────────
+  const [placeSearch, setPlaceSearch] = useState('');
+  const [debouncedPlaceQuery, setDebouncedPlaceQuery] = useState('');
+  const [placeResults, setPlaceResults] = useState<GooglePlaceSearchResultDTO[]>([]);
+  const [searchingPlaces, setSearchingPlaces] = useState(false);
+  const [savingGooglePlace, setSavingGooglePlace] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedPlaceQuery(placeSearch.trim()), 450);
+    return () => clearTimeout(t);
+  }, [placeSearch]);
+
+  useEffect(() => {
+    if (!useSupabase || !onSaveGooglePlaceId || debouncedPlaceQuery.length < 2) {
+      if (debouncedPlaceQuery.length < 2) setPlaceResults([]);
+      return;
+    }
+    let cancelled = false;
+    setSearchingPlaces(true);
+    searchGooglePlaces(debouncedPlaceQuery)
+      .then((r) => {
+        if (!cancelled) setPlaceResults(r);
+      })
+      .catch((err: Error) => {
+        if (!cancelled) {
+          setPlaceResults([]);
+          toast.error(err.message || 'Recherche Google indisponible');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setSearchingPlaces(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedPlaceQuery, useSupabase, onSaveGooglePlaceId, toast]);
+
+  const handlePickGooglePlace = async (placeId: string) => {
+    if (!onSaveGooglePlaceId) return;
+    setSavingGooglePlace(true);
+    try {
+      await onSaveGooglePlaceId(placeId);
+      toast.success('Fiche Google enregistrée — les avis s’affichent sur la vitrine');
+      setPlaceSearch('');
+      setPlaceResults([]);
+    } catch {
+      toast.error('Impossible d’enregistrer');
+    } finally {
+      setSavingGooglePlace(false);
+    }
+  };
+
+  const handleClearGooglePlace = async () => {
+    if (!onSaveGooglePlaceId) return;
+    setSavingGooglePlace(true);
+    try {
+      await onSaveGooglePlaceId(null);
+      toast.success('Lien Google retiré');
+      setPlaceSearch('');
+      setPlaceResults([]);
+    } catch {
+      toast.error('Impossible de retirer le lien');
+    } finally {
+      setSavingGooglePlace(false);
+    }
+  };
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -283,6 +359,94 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
               )}
             </button>
           </div>
+        </div>
+      </section>
+
+      {/* ══ Avis Google Maps (vitrine) ══ */}
+      <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+            <MapPin className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">Google Maps — avis vitrine</h2>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">
+              Liez votre fiche pour afficher note et avis (clé API uniquement côté serveur).
+            </p>
+          </div>
+        </div>
+        <div className="p-5 space-y-4">
+          {!useSupabase || !studioId ? (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Connectez-vous avec Supabase activé pour associer une fiche Google à votre studio.
+            </p>
+          ) : !onSaveGooglePlaceId ? (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Configuration indisponible.</p>
+          ) : (
+            <>
+              {googlePlaceId ? (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 px-4 py-3 bg-zinc-50 dark:bg-zinc-800/40">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Place ID</p>
+                    <p className="text-sm text-zinc-800 dark:text-zinc-200 font-mono truncate" title={googlePlaceId}>
+                      {googlePlaceId}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearGooglePlace}
+                    disabled={savingGooglePlace}
+                    className="shrink-0 px-4 py-2 rounded-xl text-sm font-medium border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
+                  >
+                    Retirer
+                  </button>
+                </div>
+              ) : null}
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
+                  <span className="flex items-center gap-1.5">
+                    <Search className="w-3.5 h-3.5" />
+                    Rechercher votre établissement
+                  </span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={placeSearch}
+                    onChange={(e) => setPlaceSearch(e.target.value)}
+                    placeholder="Ex : Studio Tattoo Paris"
+                    disabled={savingGooglePlace}
+                    className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400/30 focus:border-zinc-400 transition-all"
+                  />
+                  {searchingPlaces && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 animate-spin" />
+                  )}
+                </div>
+                <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1.5">
+                  Au moins 2 caractères. Choisissez le bon résultat dans la liste.
+                </p>
+              </div>
+
+              {placeResults.length > 0 && (
+                <ul className="rounded-xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden">
+                  {placeResults.map((r) => (
+                    <li key={r.placeId}>
+                      <button
+                        type="button"
+                        disabled={savingGooglePlace}
+                        onClick={() => handlePickGooglePlace(r.placeId)}
+                        className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all active:scale-[0.99] disabled:opacity-50"
+                      >
+                        <p className="text-sm font-medium text-zinc-900 dark:text-white">{r.name}</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">{r.formattedAddress}</p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
         </div>
       </section>
 

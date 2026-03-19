@@ -1,12 +1,13 @@
 import React from 'react';
 import { ExternalLink, Instagram } from 'lucide-react';
 import type { StudioThemeProps } from '../../types/studio-theme';
+import { GoogleReviews } from '../vitrine/GoogleReviews';
 
 /**
  * SplitTheme — 2 colonnes : gauche sticky (profil), droite scroll (contenu).
  * Police Inter. Mobile : 1 colonne.
  */
-export const SplitTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, portfolioItems }) => {
+export const SplitTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, portfolioItems, googleReviews }) => {
   const bookingUrl = studio.bookingUrl ?? `/book/${studio.slug}`;
   const instagramUrl = studio.instagramHandle
     ? `https://instagram.com/${studio.instagramHandle.replace('@', '')}`
@@ -108,6 +109,12 @@ export const SplitTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, por
                   </div>
                 ))}
               </div>
+            </section>
+          )}
+
+          {googleReviews && (
+            <section className="mt-12">
+              <GoogleReviews data={googleReviews} className="border-neutral-800" />
             </section>
           )}
         </main>

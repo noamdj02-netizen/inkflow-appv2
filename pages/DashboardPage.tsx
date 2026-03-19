@@ -31,7 +31,7 @@ export const DashboardPage: React.FC = () => {
   }
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary errorContext="dashboard">
       <SEO title="Tableau de bord" noindex />
       <DashboardPro />
     </ErrorBoundary>

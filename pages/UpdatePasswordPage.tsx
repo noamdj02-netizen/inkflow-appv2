@@ -18,7 +18,7 @@ export const UpdatePasswordPage: React.FC = () => {
     const parsed = updatePasswordSchema.safeParse({ password, confirm });
     if (!parsed.success) {
       setStatus('error');
-      setMessage(parsed.error.errors[0]?.message ?? 'Vérifiez les champs');
+      setMessage(parsed.error.issues[0]?.message ?? 'Vérifiez les champs');
       return;
     }
     setLoading(true);

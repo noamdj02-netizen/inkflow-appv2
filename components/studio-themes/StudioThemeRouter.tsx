@@ -5,6 +5,7 @@ import { VintageTheme } from './VintageTheme';
 import { SEO } from '../SEO';
 import type { StudioThemeProps } from '../../types/studio-theme';
 import type { VitrineData } from '../../types/vitrine';
+import type { GoogleReviewsPayload } from '../../types/googlePlaces';
 
 /**
  * Map des thèmes structurels. Pour ajouter un nouveau thème (ex: BentoTheme, NeonTheme) :
@@ -59,13 +60,14 @@ interface StudioThemeRouterProps {
   data: VitrineData;
   /** Composant à rendre si le thème n'est pas structurel (light, dark, neon) */
   fallback: React.ReactNode;
+  googleReviews?: GoogleReviewsPayload | null;
 }
 
 /**
  * Routeur de thèmes structurels. Si le studio a un thème classic/split/vintage,
  * rend le composant correspondant. Sinon rend le fallback (PublicStudioPagePro).
  */
-export const StudioThemeRouter: React.FC<StudioThemeRouterProps> = ({ data, fallback }) => {
+export const StudioThemeRouter: React.FC<StudioThemeRouterProps> = ({ data, fallback, googleReviews }) => {
   const themeId = data.theme ?? 'light';
 
   if (!isStructuralTheme(themeId)) {
@@ -74,7 +76,7 @@ export const StudioThemeRouter: React.FC<StudioThemeRouterProps> = ({ data, fall
 
   const ThemeComponent = themeMap[themeId] ?? themeMap.classic;
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const props = vitrineToStudioThemeProps(data, baseUrl);
+  const props: StudioThemeProps = { ...vitrineToStudioThemeProps(data, baseUrl), googleReviews: googleReviews ?? null };
 
   return (
     <div className="landing-scroll">
