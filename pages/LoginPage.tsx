@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
@@ -28,8 +29,12 @@ export const LoginPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex bg-white dark:bg-black">
-
+    <motion.div
+      className="min-h-screen flex bg-white dark:bg-black"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
       {/* ── LEFT — Login Form ── */}
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="p-4 sm:p-6 safe-top flex-shrink-0">
@@ -45,7 +50,12 @@ export const LoginPage: React.FC = () => {
         </header>
 
         <div className="flex-1 flex items-center justify-center px-6 sm:px-10 py-8 safe-bottom">
-          <div className="w-full max-w-sm">
+          <motion.div
+            className="w-full max-w-sm"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+          >
             {/* Logo + Title */}
             <div className="mb-8">
               <div className="inline-flex items-center gap-2 mb-6">
@@ -86,12 +96,17 @@ export const LoginPage: React.FC = () => {
                 Créer un compte
               </a>
             </p>
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* ── RIGHT — Hero Photo Panel (desktop only, 100vh) ── */}
-      <div className="hidden lg:flex lg:w-[520px] xl:w-[600px] min-h-screen h-screen flex-shrink-0 relative overflow-hidden">
+      <motion.div
+        className="hidden lg:flex lg:w-[520px] xl:w-[600px] min-h-screen h-screen flex-shrink-0 relative overflow-hidden"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
         {/* Photo étirée pleine hauteur, ancrée en bas, responsive */}
         <img
           src={heroSrc}
@@ -109,7 +124,7 @@ export const LoginPage: React.FC = () => {
           </h2>
           <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">Libérez votre art.</p>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
