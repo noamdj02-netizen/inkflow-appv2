@@ -1,0 +1,444 @@
+import React, { useState } from 'react';
+import {
+  ChevronRight, ChevronLeft, User, Mail, Hash, Camera, Trash2,
+  Users, CreditCard, Bell, LogOut, Check, Building2, Shield,
+} from 'lucide-react';
+import { ArtistManager } from './ArtistManager';
+import { BillingSettings } from './BillingSettings';
+import type { ArtistAccount } from '../../types';
+
+type AccountView = 'home' | 'profil' | 'equipe' | 'facturation';
+
+interface AccountPageProps {
+  // User
+  user: { name?: string; email?: string; avatar?: string; studioName?: string } | null;
+  studioId: string | null;
+  // Profile form state (lifted from DashboardPro)
+  studioName: string;
+  email: string;
+  siret: string;
+  onStudioNameChange: (v: string) => void;
+  onEmailChange: (v: string) => void;
+  onSiretChange: (v: string) => void;
+  saving: boolean;
+  saved: boolean;
+  onSave: () => void;
+  // Avatar
+  avatarInputRef: React.RefObject<HTMLInputElement>;
+  avatarUploading: boolean;
+  onAvatarClick: () => void;
+  onAvatarRemove: () => void;
+  // Team
+  artists: ArtistAccount[];
+  onAddArtist: (a: ArtistAccount) => void;
+  onUpdateArtist: (a: ArtistAccount) => void;
+  onDeleteArtist: (id: string) => void;
+  maxArtists: number;
+  // Navigation
+  onGoToBilling: () => void;
+  onGoToNotifications: () => void;
+  onLogout: () => void;
+  // Subscription
+  subscriptionStatus?: string;
+  trialEndsAt?: string | null;
+}
+
+// ─── Row atom ─────────────────────────────────────────────────────────────────
+interface RowProps {
+  icon: React.ReactNode;
+  label: string;
+  value?: string;
+  onClick?: () => void;
+  danger?: boolean;
+  accent?: boolean;
+  badge?: string;
+  disabled?: boolean;
+}
+
+const Row: React.FC<RowProps> = ({ icon, label, value, onClick, danger, accent, badge, disabled }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`
+      w-full flex items-center gap-3.5 px-4 py-3.5 text-left
+      transition-colors duration-150 active:opacity-70
+      disabled:opacity-40 disabled:cursor-not-allowed
+      ${danger
+        ? 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'
+        : accent
+        ? 'text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10'
+        : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/60'
+      }
+    `}
+  >
+    {/* Icon container */}
+    <span className={`
+      w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm
+      ${danger
+        ? 'bg-red-100 dark:bg-red-500/15 text-red-500 dark:text-red-400'
+        : accent
+        ? 'bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400'
+        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+      }
+    `}>
+      {icon}
+    </span>
+
+    {/* Label */}
+    <span className="flex-1 text-[15px] font-medium">{label}</span>
+
+    {/* Badge */}
+    {badge && (
+      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
+        {badge}
+      </span>
+    )}
+
+    {/* Value */}
+    {value && !badge && (
+      <span className="text-sm text-zinc-400 dark:text-zinc-500 truncate max-w-[120px]">{value}</span>
+    )}
+
+    {/* Chevron */}
+    {onClick && !danger && (
+      <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600 flex-shrink-0 -mr-1" />
+    )}
+  </button>
+);
+
+// ─── Section wrapper ───────────────────────────────────────────────────────────
+const Section: React.FC<{ title?: string; children: React.ReactNode }> = ({ title, children }) => (
+  <div className="space-y-0">
+    {title && (
+      <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+        {title}
+      </p>
+    )}
+    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+      {children}
+    </div>
+  </div>
+);
+
+// ─── Sub-page header ───────────────────────────────────────────────────────────
+const SubPageHeader: React.FC<{ title: string; onBack: () => void }> = ({ title, onBack }) => (
+  <div className="flex items-center gap-3 mb-6">
+    <button
+      onClick={onBack}
+      className="w-10 h-10 rounded-xl flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors flex-shrink-0"
+    >
+      <ChevronLeft className="w-5 h-5" />
+    </button>
+    <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{title}</h2>
+  </div>
+);
+
+// ─── Field ────────────────────────────────────────────────────────────────────
+const Field: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  placeholder?: string;
+  hint?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+  maxLength?: number;
+  pattern?: string;
+}> = ({ icon, label, value, onChange, type = 'text', placeholder, hint, inputMode, maxLength, pattern }) => (
+  <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 px-4 py-3.5">
+    <div className="flex items-center gap-3 mb-2">
+      <span className="text-zinc-400 dark:text-zinc-500">{icon}</span>
+      <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{label}</label>
+    </div>
+    <input
+      type={type}
+      inputMode={inputMode}
+      maxLength={maxLength}
+      pattern={pattern}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full bg-transparent text-[16px] font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
+    />
+    {hint && <p className="mt-1.5 text-xs text-zinc-400 dark:text-zinc-500">{hint}</p>}
+  </div>
+);
+
+// ─── Main component ────────────────────────────────────────────────────────────
+export const AccountPage: React.FC<AccountPageProps> = ({
+  user, studioId,
+  studioName, email, siret,
+  onStudioNameChange, onEmailChange, onSiretChange,
+  saving, saved, onSave,
+  avatarInputRef, avatarUploading, onAvatarClick, onAvatarRemove,
+  artists, onAddArtist, onUpdateArtist, onDeleteArtist, maxArtists,
+  onGoToBilling, onGoToNotifications, onLogout,
+  subscriptionStatus, trialEndsAt,
+}) => {
+  const [view, setView] = useState<AccountView>('home');
+  const firstName = user?.name?.split(' ')[0] || user?.studioName || 'Tatoueur';
+  const displayName = user?.studioName || user?.name || 'Mon Studio';
+  const displayEmail = user?.email || email || '';
+
+  const planLabel = subscriptionStatus === 'active'
+    ? 'Plan Pro actif'
+    : subscriptionStatus === 'trialing'
+    ? 'Période d\'essai'
+    : 'Plan gratuit';
+
+  // ── HOME ──────────────────────────────────────────────────────────────────
+  if (view === 'home') {
+    return (
+      <div className="w-full max-w-lg mx-auto space-y-5 px-1 pb-24">
+        {/* Profile header card */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col items-center gap-3 relative">
+          {/* Edit button */}
+          <button
+            onClick={() => setView('profil')}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-lg hover:bg-amber-400 transition-colors active:scale-95"
+            aria-label="Modifier le profil"
+          >
+            <Camera className="w-4 h-4" />
+          </button>
+
+          {/* Avatar */}
+          <div className="relative">
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={displayName}
+                className="w-20 h-20 rounded-full object-cover ring-4 ring-white dark:ring-zinc-900 shadow"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center ring-4 ring-white dark:ring-zinc-900 shadow">
+                <span className="text-2xl font-bold text-white">
+                  {firstName.slice(0, 1).toUpperCase()}
+                </span>
+              </div>
+            )}
+            {avatarUploading && (
+              <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+
+          {/* Name + email */}
+          <div className="text-center">
+            <p className="text-lg font-bold text-zinc-900 dark:text-white">{displayName}</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{displayEmail}</p>
+          </div>
+
+          {/* Plan badge */}
+          <span className={`
+            px-3 py-1 rounded-full text-xs font-semibold
+            ${subscriptionStatus === 'active'
+              ? 'bg-green-50 dark:bg-green-500/15 text-green-700 dark:text-green-400'
+              : subscriptionStatus === 'trialing'
+              ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400'
+              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+            }
+          `}>
+            {planLabel}
+          </span>
+        </div>
+
+        {/* Mon compte */}
+        <Section title="Mon compte">
+          <Row
+            icon={<User className="w-4 h-4" />}
+            label="Informations du studio"
+            value={siret ? `SIRET ${siret.slice(0, 6)}…` : 'Compléter'}
+            onClick={() => setView('profil')}
+          />
+          <Row
+            icon={<CreditCard className="w-4 h-4" />}
+            label="Abonnement & Factures"
+            value={planLabel}
+            onClick={() => setView('facturation')}
+            accent={subscriptionStatus !== 'active'}
+          />
+        </Section>
+
+        {/* Mon studio */}
+        <Section title="Mon studio">
+          <Row
+            icon={<Users className="w-4 h-4" />}
+            label="Mon équipe"
+            value={`${artists.length} artiste${artists.length !== 1 ? 's' : ''}`}
+            onClick={() => setView('equipe')}
+          />
+          <Row
+            icon={<Bell className="w-4 h-4" />}
+            label="Notifications"
+            onClick={onGoToNotifications}
+          />
+        </Section>
+
+        {/* Déconnexion */}
+        <Section>
+          <Row
+            icon={<LogOut className="w-4 h-4" />}
+            label="Déconnexion"
+            onClick={onLogout}
+            danger
+          />
+        </Section>
+      </div>
+    );
+  }
+
+  // ── PROFIL ────────────────────────────────────────────────────────────────
+  if (view === 'profil') {
+    return (
+      <div className="w-full max-w-lg mx-auto pb-24 space-y-4 px-1">
+        <SubPageHeader title="Mon profil" onBack={() => setView('home')} />
+
+        {/* Avatar section */}
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 flex items-center gap-4">
+          <div className="relative flex-shrink-0">
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={displayName}
+                className="w-16 h-16 rounded-full object-cover ring-2 ring-zinc-200 dark:ring-zinc-700"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                <span className="text-xl font-bold text-white">{firstName.slice(0, 1).toUpperCase()}</span>
+              </div>
+            )}
+            {avatarUploading && (
+              <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <button
+              onClick={onAvatarClick}
+              className="absolute -bottom-1 -right-1 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center shadow hover:bg-amber-400 transition-colors"
+            >
+              <Camera className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{displayName}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{displayEmail}</p>
+          </div>
+          {user?.avatar && (
+            <button
+              onClick={onAvatarRemove}
+              className="p-2 text-zinc-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10"
+              title="Supprimer la photo"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Fields */}
+        <div className="space-y-3">
+          <Field
+            icon={<Building2 className="w-4 h-4" />}
+            label="Nom du studio"
+            value={studioName}
+            onChange={onStudioNameChange}
+            placeholder="Mon studio de tatouage"
+          />
+          <Field
+            icon={<Mail className="w-4 h-4" />}
+            label="Email"
+            value={email}
+            onChange={onEmailChange}
+            type="email"
+            placeholder="contact@example.com"
+            hint="Utilisé pour les notifications et la facturation."
+          />
+          <Field
+            icon={<Hash className="w-4 h-4" />}
+            label="N° SIRET"
+            value={siret}
+            onChange={(v) => onSiretChange(v.replace(/\D/g, '').slice(0, 14))}
+            inputMode="numeric"
+            pattern="[0-9\s]*"
+            maxLength={14}
+            placeholder="12345678900012"
+            hint="Obligatoire pour la facturation et les mentions légales."
+          />
+        </div>
+
+        {/* Save button */}
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className={`
+            w-full py-4 rounded-2xl text-base font-bold transition-all active:scale-[0.98]
+            disabled:opacity-50 disabled:cursor-not-allowed
+            ${saved
+              ? 'bg-green-500 text-white'
+              : 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100'
+            }
+          `}
+        >
+          {saving ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Enregistrement…
+            </span>
+          ) : saved ? (
+            <span className="flex items-center justify-center gap-2">
+              <Check className="w-5 h-5" />
+              Enregistré !
+            </span>
+          ) : (
+            'Enregistrer les modifications'
+          )}
+        </button>
+      </div>
+    );
+  }
+
+  // ── ÉQUIPE ────────────────────────────────────────────────────────────────
+  if (view === 'equipe') {
+    return (
+      <div className="w-full max-w-2xl mx-auto pb-24 px-1">
+        <SubPageHeader title="Mon équipe" onBack={() => setView('home')} />
+
+        {/* Info banner */}
+        <div className="mb-5 px-4 py-3.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl flex items-start gap-3">
+          <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            Les membres de l'équipe peuvent contrôler certaines fonctionnalités selon leurs permissions.
+          </p>
+        </div>
+
+        <ArtistManager
+          artists={artists}
+          onAdd={onAddArtist}
+          onUpdate={onUpdateArtist}
+          onDelete={onDeleteArtist}
+          maxArtists={maxArtists}
+        />
+      </div>
+    );
+  }
+
+  // ── FACTURATION ──────────────────────────────────────────────────────────
+  if (view === 'facturation') {
+    return (
+      <div className="w-full max-w-3xl mx-auto pb-24 px-1">
+        <SubPageHeader title="Abonnement & Factures" onBack={() => setView('home')} />
+        <BillingSettings
+          studioId={studioId}
+          userEmail={email}
+          trialEndsAt={trialEndsAt}
+        />
+      </div>
+    );
+  }
+
+  return null;
+};
