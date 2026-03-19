@@ -294,7 +294,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     };
     
     return (
-      <div ref={setNodeRef} style={style} className="relative group">
+      <div ref={setNodeRef} style={style} className="relative group h-full min-h-[130px]">
         {isEditMode && (
           <div className="absolute -top-2 -right-2 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
             <div 
@@ -314,7 +314,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             )}
           </div>
         )}
-        <div className={isEditMode ? 'ring-2 ring-blue-500/50 ring-offset-2 dark:ring-offset-zinc-950 rounded-2xl' : ''}>
+        <div className={`h-full ${isEditMode ? 'ring-2 ring-blue-500/50 ring-offset-2 dark:ring-offset-zinc-950 rounded-2xl' : ''}`}>
           {children}
         </div>
       </div>
@@ -324,35 +324,35 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   const renderKpiWidget = (widgetId: string) => {
     switch (widgetId) {
 
-      /* ── Revenue — dark card (comme Donezo) ── */
+      /* ── Revenue — même thème que les autres cartes ── */
       case 'kpi-revenue':
         return (
           <SortableKpiWidget key={widgetId} id={widgetId}>
-            <div className="bg-zinc-900 dark:bg-[#0f0f0f] rounded-2xl p-5 shadow-lg h-full flex flex-col justify-between min-h-[130px]">
-              <div className="flex items-start justify-between">
-                <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest">Revenu du mois</span>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px] min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">Revenu du mois</span>
                 <button
                   onClick={() => setActiveTab('finance')}
-                  className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors flex-shrink-0"
+                  className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0"
                 >
-                  <ArrowUpRight className="w-3.5 h-3.5 text-white" />
+                  <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 </button>
               </div>
-              <div>
-                <p className="text-3xl font-bold text-white tabular-nums tracking-tight mt-2">
+              <div className="min-w-0 flex-1 flex flex-col">
+                <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
                   {monthlyRevenue.toLocaleString('fr-FR')}€
                 </p>
-                <div className="mt-3">
+                <div className="mt-2 min-h-[24px] flex items-end">
                   {trendRevenue !== null ? (
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       trendRevenue >= 0
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-red-500/20 text-red-400'
+                        ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'
                     }`}>
                       {trendRevenue >= 0 ? '↑' : '↓'} {Math.abs(trendRevenue)}% vs mois dernier
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-zinc-400">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
                       Ce mois
                     </span>
                   )}
@@ -366,9 +366,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       case 'kpi-deposits':
         return (
           <SortableKpiWidget key={widgetId} id={widgetId}>
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px]">
-              <div className="flex items-start justify-between">
-                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Acomptes</span>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px] min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">Acomptes</span>
                 <button
                   onClick={() => setActiveTab('finance')}
                   className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0"
@@ -376,11 +376,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 </button>
               </div>
-              <div>
-                <p className="text-3xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
+              <div className="min-w-0 flex-1 flex flex-col">
+                <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
                   {pendingDeposits.toLocaleString('fr-FR')}€
                 </p>
-                <div className="mt-3">
+                <div className="mt-2 min-h-[24px] flex items-end">
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400">
                     En attente
                   </span>
@@ -394,9 +394,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       case 'kpi-clients':
         return (
           <SortableKpiWidget key={widgetId} id={widgetId}>
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px]">
-              <div className="flex items-start justify-between">
-                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">Clients</span>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px] min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">Clients</span>
                 <button
                   onClick={() => setActiveTab('clients')}
                   className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0"
@@ -404,11 +404,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 </button>
               </div>
-              <div>
-                <p className="text-3xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
+              <div className="min-w-0 flex-1 flex flex-col">
+                <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
                   {clients.length}
                 </p>
-                <div className="mt-3">
+                <div className="mt-2 min-h-[24px] flex items-end">
                   {vipClients > 0 ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
                       ⭐ {vipClients} VIP
@@ -428,9 +428,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       case 'kpi-appointments':
         return (
           <SortableKpiWidget key={widgetId} id={widgetId}>
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px]">
-              <div className="flex items-start justify-between">
-                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">RDV ce mois</span>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px] min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">RDV ce mois</span>
                 <button
                   onClick={() => setActiveTab('appointments')}
                   className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0"
@@ -438,11 +438,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
                 </button>
               </div>
-              <div>
-                <p className="text-3xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
+              <div className="min-w-0 flex-1 flex flex-col">
+                <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
                   {appointmentsThisMonth}
                 </p>
-                <div className="mt-3">
+                <div className="mt-2 min-h-[24px] flex items-end">
                   {trendAppointments !== null ? (
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       trendAppointments >= 0
@@ -1061,7 +1061,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               
               {/* KPI Row — Sortable */}
               <SortableContext items={layout.kpiOrder} strategy={horizontalListSortingStrategy}>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 items-stretch">
                   {layout.kpiOrder.map(widgetId => renderKpiWidget(widgetId))}
                 </div>
               </SortableContext>
