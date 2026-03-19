@@ -89,12 +89,17 @@ export const SignupPage: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* ── RIGHT — Hero Photo Panel (desktop, 100vh) ── */}
-      <div className="hidden md:flex md:w-[480px] lg:w-[520px] xl:w-[600px] min-h-screen h-screen flex-shrink-0 relative overflow-hidden">
+      <motion.div
+        className="hidden md:flex md:w-[480px] lg:w-[520px] xl:w-[600px] min-h-screen h-screen flex-shrink-0 relative overflow-hidden"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
         {/* Photo étirée pleine hauteur, ancrée en bas, responsive */}
         <img
           src="/images/referral-hero-studio.png"
