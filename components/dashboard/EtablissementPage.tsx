@@ -1,0 +1,523 @@
+import React, { useState } from 'react';
+import {
+  Building2, User, Hash, Palette, Shield, Plus, Trash2, Save,
+  Check, Loader2, ChevronRight, CreditCard, FileText, Upload,
+  Crown, Hammer, GraduationCap, X, AlertCircle,
+} from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext';
+import type { ArtistAccount } from '../../types';
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+type TeamRole = 'admin' | 'tatoueur' | 'apprenti';
+
+const ROLES: { id: TeamRole; label: string; icon: React.ReactNode; color: string; desc: string }[] = [
+  { id: 'admin',     label: 'Admin',    icon: <Crown className="w-3.5 h-3.5" />,     color: 'text-amber-600 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400',    desc: 'Accès complet — gère les abonnements et l\'équipe' },
+  { id: 'tatoueur',  label: 'Tatoueur', icon: <Hammer className="w-3.5 h-3.5" />,    color: 'text-violet-600 bg-violet-50 dark:bg-violet-500/10 dark:text-violet-400', desc: 'Gère son planning, ses clients et flashs' },
+  { id: 'apprenti',  label: 'Apprenti', icon: <GraduationCap className="w-3.5 h-3.5" />, color: 'text-blue-600 bg-blue-50 dark:bg-blue-500/10 dark:text-blue-400',  desc: 'Accès limité — lecture seule sur les RDV' },
+];
+
+interface IdentityForm {
+  studioName: string;
+  artistName: string;
+  firstName: string;
+  lastName: string;
+  siret: string;
+}
+
+interface EtablissementPageProps {
+  studioId: string | null;
+  studioName: string;
+  siret?: string | null;
+  email: string;
+  user: { avatar?: string; studioName?: string; email?: string } | null;
+  artists: ArtistAccount[];
+  onSaveIdentity: (form: IdentityForm) => Promise<void>;
+  onAddArtist: (a: Omit<ArtistAccount, 'id' | 'createdAt' | 'studioId'>) => void;
+  onDeleteArtist: (id: string) => void;
+  onGoToBilling: () => void;
+  subscriptionStatus?: string;
+  trialEndsAt?: string | null;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function validateSiret(s: string): boolean {
+  const clean = s.replace(/\s/g, '');
+  if (clean.length !== 14 || !/^\d{14}$/.test(clean)) return false;
+  // Luhn-like check (Somme des chiffres * alternance)
+  let sum = 0;
+  for (let i = 0; i < 14; i++) {
+    let n = parseInt(clean[i], 10);
+    if (i % 2 === 0) { n *= 2; if (n > 9) n -= 9; }
+    sum += n;
+  }
+  return sum % 10 === 0;
+}
+
+function formatSiret(v: string): string {
+  const digits = v.replace(/\D/g, '').slice(0, 14);
+  return digits.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export const EtablissementPage: React.FC<EtablissementPageProps> = ({
+  studioId,
+  studioName,
+  siret,
+  email,
+  user,
+  artists,
+  onSaveIdentity,
+  onAddArtist,
+  onDeleteArtist,
+  onGoToBilling,
+  subscriptionStatus,
+  trialEndsAt,
+}) => {
+  const toast = useToast();
+
+  // ── Section 1 — Identity ──────────────────────────────────────────────────
+  const [identity, setIdentity] = useState<IdentityForm>({
+    studioName: studioName || '',
+    artistName: '',
+    firstName: '',
+    lastName: '',
+    siret: siret ? formatSiret(siret) : '',
+  });
+  const [savingIdentity, setSavingIdentity] = useState(false);
+  const [savedIdentity, setSavedIdentity] = useState(false);
+  const siretClean = identity.siret.replace(/\s/g, '');
+  const siretValid = siretClean.length === 0 || validateSiret(siretClean);
+
+  const handleSaveIdentity = async () => {
+    if (savingIdentity) return;
+    if (siretClean && !validateSiret(siretClean)) {
+      toast.error('Numéro SIRET invalide (14 chiffres)');
+      return;
+    }
+    setSavingIdentity(true);
+    try {
+      await onSaveIdentity({ ...identity, siret: siretClean });
+      setSavedIdentity(true);
+      toast.success('Identité enregistrée');
+      setTimeout(() => setSavedIdentity(false), 3000);
+    } catch {
+      toast.error('Erreur lors de la sauvegarde');
+    } finally {
+      setSavingIdentity(false);
+    }
+  };
+
+  // ── Section 2 — Team ─────────────────────────────────────────────────────
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newMember, setNewMember] = useState({ name: '', email: '', role: 'tatoueur' as TeamRole });
+  const [addingMember, setAddingMember] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const handleAddMember = () => {
+    if (!newMember.name.trim() || !newMember.email.trim()) {
+      toast.error('Nom et email requis');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newMember.email)) {
+      toast.error('Adresse email invalide');
+      return;
+    }
+    setAddingMember(true);
+    onAddArtist({
+      name: newMember.name.trim(),
+      email: newMember.email.trim(),
+      role: newMember.role,
+      specialties: [],
+      permissions: {},
+      active: true,
+      avatar: undefined,
+    });
+    setNewMember({ name: '', email: '', role: 'tatoueur' });
+    setShowAddMember(false);
+    toast.success('Collaborateur ajouté');
+    setTimeout(() => setAddingMember(false), 400);
+  };
+
+  // ── Section 3 — Billing / Plan ────────────────────────────────────────────
+  const isActive = subscriptionStatus === 'active';
+  const inTrial = !isActive && !!trialEndsAt && new Date(trialEndsAt) > new Date();
+  const trialDaysLeft = trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
+    : 0;
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  return (
+    <div className="animate-fade-in w-full max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+      <div className="mb-2">
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Établissement</h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+          Gérez l'identité professionnelle, l'équipe et la facturation de votre studio.
+        </p>
+      </div>
+
+      {/* ══ Section 1 — Identité Professionnelle ══ */}
+      <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="w-8 h-8 rounded-xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center">
+            <Building2 className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">Identité professionnelle</h2>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">Informations légales et artistiques du studio</p>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Studio name */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
+              <span className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" />Nom du studio</span>
+            </label>
+            <input
+              type="text"
+              value={identity.studioName}
+              onChange={e => setIdentity(p => ({ ...p, studioName: e.target.value }))}
+              placeholder="Ex: Studio Noir & Encre"
+              className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+            />
+          </div>
+
+          {/* First / Last name */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
+                <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />Prénom</span>
+              </label>
+              <input
+                type="text"
+                value={identity.firstName}
+                onChange={e => setIdentity(p => ({ ...p, firstName: e.target.value }))}
+                placeholder="Jade"
+                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
+                Nom
+              </label>
+              <input
+                type="text"
+                value={identity.lastName}
+                onChange={e => setIdentity(p => ({ ...p, lastName: e.target.value }))}
+                placeholder="Torres"
+                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+              />
+            </div>
+          </div>
+
+          {/* Artist name */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
+              <span className="flex items-center gap-1.5"><Palette className="w-3.5 h-3.5" />Nom d'artiste</span>
+            </label>
+            <input
+              type="text"
+              value={identity.artistName}
+              onChange={e => setIdentity(p => ({ ...p, artistName: e.target.value }))}
+              placeholder="Ex: @jadeinktattoo"
+              className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+            />
+          </div>
+
+          {/* SIRET */}
+          <div>
+            <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
+              <span className="flex items-center gap-1.5"><Hash className="w-3.5 h-3.5" />Numéro SIRET <span className="text-red-400">*</span></span>
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={identity.siret}
+                onChange={e => setIdentity(p => ({ ...p, siret: formatSiret(e.target.value) }))}
+                placeholder="123 456 789 00012"
+                maxLength={17}
+                className={`w-full px-4 py-2.5 rounded-xl border text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 transition-all bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white ${
+                  !siretValid && siretClean.length > 0
+                    ? 'border-red-400 dark:border-red-500 focus:ring-red-500/20'
+                    : siretClean.length === 14 && siretValid
+                    ? 'border-emerald-400 dark:border-emerald-500 focus:ring-emerald-500/20'
+                    : 'border-zinc-200 dark:border-zinc-700 focus:ring-violet-500/30 focus:border-violet-400'
+                }`}
+              />
+              {siretClean.length === 14 && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {siretValid
+                    ? <Check className="w-4 h-4 text-emerald-500" />
+                    : <AlertCircle className="w-4 h-4 text-red-500" />}
+                </div>
+              )}
+            </div>
+            {!siretValid && siretClean.length > 0 && (
+              <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5" />
+                SIRET invalide — 14 chiffres requis
+              </p>
+            )}
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1.5">
+              Obligatoire pour l'émission de factures légales.
+            </p>
+          </div>
+
+          {/* Save button */}
+          <div className="flex justify-end pt-1">
+            <button
+              onClick={handleSaveIdentity}
+              disabled={savingIdentity || (!siretValid && siretClean.length > 0)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+            >
+              {savingIdentity ? (
+                <><Loader2 className="w-4 h-4 animate-spin" />Enregistrement…</>
+              ) : savedIdentity ? (
+                <><Check className="w-4 h-4 text-emerald-400" />Enregistré</>
+              ) : (
+                <><Save className="w-4 h-4" />Enregistrer</>
+              )}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ══ Section 2 — Gestion d'Équipe ══ */}
+      <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">Gestion d'équipe</h2>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500">{artists.length} collaborateur{artists.length !== 1 ? 's' : ''}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowAddMember(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Ajouter
+          </button>
+        </div>
+
+        {/* Add member form */}
+        {showAddMember && (
+          <div className="px-5 py-4 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-100 dark:border-zinc-800">
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  value={newMember.name}
+                  onChange={e => setNewMember(p => ({ ...p, name: e.target.value }))}
+                  placeholder="Nom complet"
+                  className="px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                />
+                <input
+                  type="email"
+                  value={newMember.email}
+                  onChange={e => setNewMember(p => ({ ...p, email: e.target.value }))}
+                  placeholder="email@exemple.com"
+                  className="px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                />
+              </div>
+
+              {/* Role selector */}
+              <div className="grid grid-cols-3 gap-2">
+                {ROLES.map(r => (
+                  <button
+                    key={r.id}
+                    onClick={() => setNewMember(p => ({ ...p, role: r.id }))}
+                    className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border text-xs font-medium transition-all ${
+                      newMember.role === r.id
+                        ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                        : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-600'
+                    }`}
+                  >
+                    <span className={`p-1 rounded-lg ${newMember.role === r.id ? r.color : ''}`}>{r.icon}</span>
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                {ROLES.find(r => r.id === newMember.role)?.desc}
+              </p>
+
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => { setShowAddMember(false); setNewMember({ name: '', email: '', role: 'tatoueur' }); }}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleAddMember}
+                  disabled={addingMember}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 transition-all active:scale-[0.98]"
+                >
+                  {addingMember ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  Confirmer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Members list */}
+        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          {artists.length === 0 && !showAddMember && (
+            <div className="px-5 py-8 text-center">
+              <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                <Shield className="w-5 h-5 text-zinc-400" />
+              </div>
+              <p className="text-sm text-zinc-400 dark:text-zinc-500">Aucun collaborateur pour l'instant</p>
+              <button
+                onClick={() => setShowAddMember(true)}
+                className="mt-3 text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline"
+              >
+                + Inviter un collaborateur
+              </button>
+            </div>
+          )}
+          {artists.map(artist => {
+            const role = ROLES.find(r => r.id === (artist.role as TeamRole)) ?? ROLES[1];
+            const initials = artist.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            return (
+              <div key={artist.id} className="flex items-center gap-3 px-5 py-3.5">
+                {/* Avatar */}
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-300 to-zinc-400 dark:from-zinc-600 dark:to-zinc-700 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white overflow-hidden">
+                  {artist.avatar
+                    ? <img src={artist.avatar} alt="" className="w-full h-full object-cover" />
+                    : initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{artist.name}</p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate">{artist.email}</p>
+                </div>
+                <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold flex-shrink-0 ${role.color}`}>
+                  {role.icon}{role.label}
+                </span>
+                {deleteConfirmId === artist.id ? (
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => { onDeleteArtist(artist.id); setDeleteConfirmId(null); toast.success('Collaborateur retiré'); }}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-red-600 text-white hover:bg-red-700 transition-all"
+                    >
+                      Confirmer
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmId(null)}
+                      className="p-1.5 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setDeleteConfirmId(artist.id)}
+                    className="p-1.5 rounded-lg text-zinc-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all flex-shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ══ Section 3 — Facturation & Documents ══ */}
+      <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+            <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">Facturation & Abonnement</h2>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">Gérer votre plan et vos factures</p>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Plan status */}
+          <div className={`flex items-center justify-between p-4 rounded-xl border ${
+            isActive
+              ? 'border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10'
+              : inTrial
+              ? 'border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10'
+              : 'border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10'
+          }`}>
+            <div>
+              <p className={`text-sm font-bold ${
+                isActive ? 'text-emerald-700 dark:text-emerald-400'
+                : inTrial ? 'text-amber-700 dark:text-amber-400'
+                : 'text-red-700 dark:text-red-400'
+              }`}>
+                {isActive ? '✓ Abonnement actif' : inTrial ? `⏳ Essai — ${trialDaysLeft}j restants` : '⚠ Accès restreint'}
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                {isActive ? 'Plan Solo — renouvellement mensuel' : inTrial ? 'Passez à un plan payant pour continuer' : 'Abonnez-vous pour débloquer l\'accès'}
+              </p>
+            </div>
+            <button
+              onClick={onGoToBilling}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-100 transition-all active:scale-[0.98]"
+            >
+              Gérer <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Invoices placeholder */}
+          <div>
+            <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5" />Factures récentes
+            </p>
+            <div className="space-y-2">
+              {[
+                { date: 'Mars 2026', amount: '29€', status: 'Payée' },
+                { date: 'Fév. 2026',  amount: '29€', status: 'Payée' },
+                { date: 'Jan. 2026',  amount: '29€', status: 'Payée' },
+              ].map((inv, i) => (
+                <div key={i} className="flex items-center justify-between py-2.5 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                  <span className="text-sm text-zinc-600 dark:text-zinc-400">{inv.date}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                      {inv.status}
+                    </span>
+                    <span className="text-sm font-semibold text-zinc-900 dark:text-white">{inv.amount}</span>
+                    <button className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all">
+                      <FileText className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-2">
+              L'historique complet est disponible depuis le portail Stripe.
+            </p>
+          </div>
+
+          {/* Documents upload */}
+          <div>
+            <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+              <Upload className="w-3.5 h-3.5" />Documents légaux
+            </p>
+            <button className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:border-violet-400 dark:hover:border-violet-500 hover:text-violet-600 dark:hover:text-violet-400 transition-all text-sm font-medium active:scale-[0.98]">
+              <Upload className="w-4 h-4" />
+              Déposer un document (PDF, max 5 Mo)
+            </button>
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-2">
+              Contrats de consentement, Kbis, assurance RC Pro…
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
