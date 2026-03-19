@@ -4,9 +4,14 @@
 User-Agent: *
 Allow: /
 
-# Bloquer l'indexation du dashboard privé (connexion requise)
+# Zones privées ou techniques (connexion / tokens / callbacks)
 Disallow: /dashboard/
 Disallow: /dashboard
+Disallow: /auth/
+Disallow: /instagram/
+Disallow: /referral
+Disallow: /reset-password
+Disallow: /auth/update-password
 
 # Sitemap
 Sitemap: https://ink-flow.me/sitemap.xml

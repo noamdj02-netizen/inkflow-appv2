@@ -5,6 +5,7 @@
  */
 import React, { useEffect } from 'react';
 import { LANDING_URL, APP_URL } from '../lib/urls';
+import { toAbsoluteUrl } from '../lib/seoUtils';
 
 const SITE_URL = LANDING_URL;
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
@@ -14,8 +15,12 @@ export interface SEOProps {
   description?: string;
   canonical?: string;
   ogImage?: string;
+  /** Texte alternatif pour og:image (accessibilité + réseaux sociaux) */
+  ogImageAlt?: string;
   ogType?: 'website' | 'article' | 'profile';
   noindex?: boolean;
+  /** Meta keywords (usage secondaire, cohérence sémantique) */
+  keywords?: string;
   /** Schema.org JSON-LD : objet unique ou tableau d'objets */
   schema?: object | object[];
 }
@@ -45,13 +50,16 @@ export const SEO: React.FC<SEOProps> = ({
   description = 'Gérez vos rendez-vous, clients et portfolio de tatouage en un seul endroit. La solution professionnelle pour les artistes tatoueurs.',
   canonical,
   ogImage = DEFAULT_OG_IMAGE,
+  ogImageAlt = 'InkFlow — logiciel de gestion pour tatoueurs et studios',
   ogType = 'website',
   noindex = false,
+  keywords,
   schema,
 }) => {
   const fullTitle = title.includes('InkFlow') ? title : `${title} | InkFlow`;
   /** Landing (/) : canonical = SITE_URL (Framer) pour éviter doublon. Pages app : canonical = APP_URL. */
-  const fullCanonical = !canonical || canonical === '/' ? SITE_URL : `${APP_URL}${canonical}`;
+  const fullCanonical = !canonical || canonical === '/' ? SITE_URL : `${APP_URL.replace(/\/$/, '')}${canonical.startsWith('/') ? canonical : `/${canonical}`}`;
+  const absoluteOgImage = toAbsoluteUrl(ogImage, DEFAULT_OG_IMAGE);
   const JSONLD_ID = 'inkflow-jsonld';
 
   useEffect(() => {
@@ -59,20 +67,28 @@ export const SEO: React.FC<SEOProps> = ({
 
     setMeta('description', description);
     setMeta('robots', noindex ? 'noindex, nofollow' : 'index, follow');
+    const kwEl = document.querySelector('meta[name="keywords"]') as HTMLMetaElement | null;
+    if (keywords) {
+      setMeta('keywords', keywords);
+    } else if (kwEl) {
+      kwEl.remove();
+    }
     setMeta('og:type', ogType, 'property');
     setMeta('og:url', fullCanonical, 'property');
     setMeta('og:title', fullTitle, 'property');
     setMeta('og:description', description, 'property');
-    setMeta('og:image', ogImage, 'property');
+    setMeta('og:image', absoluteOgImage, 'property');
     setMeta('og:image:width', '1200', 'property');
     setMeta('og:image:height', '630', 'property');
+    setMeta('og:image:alt', ogImageAlt, 'property');
     setMeta('og:site_name', 'InkFlow', 'property');
     setMeta('og:locale', 'fr_FR', 'property');
     setMeta('twitter:card', 'summary_large_image');
     setMeta('twitter:url', fullCanonical);
     setMeta('twitter:title', fullTitle);
     setMeta('twitter:description', description);
-    setMeta('twitter:image', ogImage);
+    setMeta('twitter:image', absoluteOgImage);
+    setMeta('twitter:image:alt', ogImageAlt);
     setMeta('author', 'InkFlow');
     setMeta('language', 'fr-FR');
 
@@ -87,8 +103,11 @@ export const SEO: React.FC<SEOProps> = ({
       const data = Array.isArray(schema) ? schema : [schema];
       script.textContent = JSON.stringify(data.length === 1 ? data[0] : data);
       document.head.appendChild(script);
+    } else {
+      const existing = document.getElementById(JSONLD_ID);
+      if (existing) existing.remove();
     }
-  }, [fullTitle, description, fullCanonical, ogImage, ogType, noindex, schema]);
+  }, [fullTitle, description, fullCanonical, absoluteOgImage, ogImageAlt, ogType, noindex, keywords, schema]);
 
   useEffect(() => {
     return () => {
@@ -107,31 +126,107 @@ export const organizationSchema: object = {
   '@type': 'Organization',
   name: 'InkFlow',
   url: SITE_URL,
-  logo: `${SITE_URL}/logo.png`,
-  description: 'Logiciel de gestion pour tatoueurs professionnels',
-  sameAs: [
-    'https://www.facebook.com/inkflow',
-    'https://www.instagram.com/inkflow',
-    'https://twitter.com/inkflow',
-  ],
+  logo: `${SITE_URL}/og-image.png`,
+  description: 'Logiciel SaaS de gestion, réservations en ligne et CRM pour tatoueurs et studios de tatouage en France.',
   contactPoint: {
     '@type': 'ContactPoint',
-    contactType: 'Customer Service',
+    contactType: 'customer support',
     email: 'contact@ink-flow.me',
+    availableLanguage: ['French'],
   },
 };
 
+/** Pas de SearchAction fictif : évite les données structurées trompeuses pour Google. */
 export const websiteSchema: object = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'InkFlow',
   url: SITE_URL,
-  potentialAction: {
-    '@type': 'SearchAction',
-    target: `${SITE_URL}/search?q={search_term_string}`,
-    'query-input': 'required name=search_term_string',
-  },
+  description: 'Réservations, paiements Stripe, vitrine et agenda pour studios de tatouage.',
+  inLanguage: 'fr-FR',
+  publisher: { '@type': 'Organization', name: 'InkFlow', url: SITE_URL },
 };
+
+/** Données honnêtes — ne pas inclure d’AggregateRating sans avis réels vérifiables. */
+export const softwareApplicationSchema: object = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'InkFlow',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  browserRequirements: 'Requires JavaScript',
+  offers: {
+    '@type': 'AggregateOffer',
+    lowPrice: '24',
+    highPrice: '99',
+    priceCurrency: 'EUR',
+    offerCount: '3',
+    availability: 'https://schema.org/InStock',
+  },
+  description:
+    'Plateforme tout-en-un : agenda tatouage, réservation en ligne, acomptes Stripe, galerie flash, CRM clients.',
+};
+
+/** FAQ — type éligible aux « résultats enrichis » FAQ dans Google (contrairement à SoftwareApplication seul). */
+export const faqPageSchemaFr: object = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: "Qu'est-ce que l'assistant IA Inkflow ?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "L'assistant IA Inkflow vous aide à répondre aux demandes de réservation instantanément, à suggérer des créneaux et à personnaliser les réponses selon le type de tatouage. Il apprend de vos habitudes pour optimiser vos réponses.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Comment fonctionnent les paiements Stripe ?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "Inkflow s'intègre directement avec Stripe. Vos clients paient l'acompte en ligne lors de la réservation. Les fonds arrivent sur votre compte Stripe en quelques jours. Aucune configuration complexe.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Quelle est la différence entre le plan Solo et Studio ?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Le plan Solo est conçu pour les tatoueurs indépendants (1 artiste, 100 clients CRM). Le plan Studio inclut plusieurs artistes, des clients CRM illimités et des statistiques avancées par artiste.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Puis-je gérer mon propre portail client ?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "Oui. Chaque client dispose d'un espace personnel pour voir ses rendez-vous, ses messages et l'historique de ses tatouages. Vous contrôlez les accès depuis votre dashboard.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Comment est gérée la galerie flash unique ?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "Publiez vos flashs avec photos et prix. Une fois qu'un client paie l'acompte pour un flash, il est automatiquement bloqué et retiré de la galerie publique. Plus de double réservation.",
+      },
+    },
+  ],
+};
+
+export function createBreadcrumbSchema(items: { name: string; url: string }[]): object {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  };
+}
 
 export function createTattooStudioSchema(studio: {
   name: string;
@@ -145,7 +240,8 @@ export function createTattooStudioSchema(studio: {
   reviewCount?: number;
   slug?: string;
 }): object {
-  const base = studio.slug ? `${APP_URL}/studio/${studio.slug}` : `${APP_URL}/studio/${studio.name.toLowerCase().replace(/\s+/g, '-')}`;
+  const appBase = APP_URL.replace(/\/$/, '');
+  const base = studio.slug ? `${appBase}/studio/${studio.slug}` : `${appBase}/studio/${studio.name.toLowerCase().replace(/\s+/g, '-')}`;
   return {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',

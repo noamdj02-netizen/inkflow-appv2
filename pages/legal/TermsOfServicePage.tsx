@@ -2,11 +2,19 @@ import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { Footer } from '../../components/Footer';
+import { SEO } from '../../components/SEO';
 import { LANDING_URL } from '../../lib/urls';
 
 export const TermsOfServicePage: React.FC = () => {
   return (
     <div className="landing-scroll bg-white min-h-screen flex flex-col">
+      <SEO
+        title="Conditions d'utilisation"
+        description="Conditions générales d'utilisation du service InkFlow : abonnement, responsabilités, propriété intellectuelle et résiliation."
+        canonical="/conditions-utilisation"
+        keywords="InkFlow, CGU, conditions d'utilisation"
+        ogImageAlt="Conditions d'utilisation InkFlow"
+      />
       <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-neutral-200/80 safe-top">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <a href={LANDING_URL} className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors">

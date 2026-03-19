@@ -59,18 +59,23 @@ async function fetchStudioSlugs() {
   }
 }
 
+/** @typedef {{ path: string; priority?: string; changefreq?: string }} SitemapEntry */
+
 /** Génère le XML du sitemap */
-function buildSitemapXml(urls) {
+function buildSitemapXml(entries) {
   const lastmod = new Date().toISOString().split('T')[0];
-  const urlEntries = urls
-    .map(
-      (path) => `  <url>
+  const urlEntries = entries
+    .map((entry) => {
+      const path = typeof entry === 'string' ? entry : entry.path;
+      const priority = typeof entry === 'string' ? (path === '/' ? '1.0' : '0.8') : entry.priority ?? '0.75';
+      const changefreq = typeof entry === 'string' ? 'weekly' : entry.changefreq ?? 'monthly';
+      return `  <url>
     <loc>${SITE_URL}${path}</loc>
     <lastmod>${lastmod}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>${path === '/' ? '1.0' : '0.8'}</priority>
-  </url>`
-    )
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>
+  </url>`;
+    })
     .join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -79,19 +84,46 @@ ${urlEntries}
 }
 
 async function main() {
-  const baseUrls = [
-    '/',
-    '/demo',
-    '/politique-confidentialite',
-    '/conditions-utilisation',
-    '/aide',
+  /** Pages marketing & conversion (alignées routes App.tsx) */
+  const staticEntries = [
+    { path: '/', priority: '1.0', changefreq: 'weekly' },
+    { path: '/login', priority: '0.7', changefreq: 'monthly' },
+    { path: '/signup', priority: '0.9', changefreq: 'monthly' },
+    { path: '/demo', priority: '0.8', changefreq: 'weekly' },
+    { path: '/dashboard-demo', priority: '0.75', changefreq: 'weekly' },
+    { path: '/politique-confidentialite', priority: '0.5', changefreq: 'yearly' },
+    { path: '/conditions-utilisation', priority: '0.5', changefreq: 'yearly' },
+    { path: '/aide', priority: '0.65', changefreq: 'monthly' },
+    ...[
+      'vue-ensemble',
+      'demandes',
+      'rendez-vous',
+      'galerie-flash',
+      'clients',
+      'messagerie',
+      'portfolio',
+      'finance',
+      'parametres',
+    ].map((slug) => ({
+      path: `/${slug}`,
+      priority: '0.75',
+      changefreq: 'monthly',
+    })),
   ];
 
   const studioSlugs = await fetchStudioSlugs();
-  const studioUrls = studioSlugs.map((slug) => `/studio/${slug}`);
-  const bookUrls = studioSlugs.map((slug) => `/book/${slug}`);
+  const studioUrls = studioSlugs.map((slug) => ({
+    path: `/studio/${slug}`,
+    priority: '0.85',
+    changefreq: 'weekly',
+  }));
+  const bookUrls = studioSlugs.map((slug) => ({
+    path: `/book/${slug}`,
+    priority: '0.85',
+    changefreq: 'weekly',
+  }));
 
-  const allPaths = [...baseUrls, ...studioUrls, ...bookUrls];
+  const allPaths = [...staticEntries, ...studioUrls, ...bookUrls];
   const xml = buildSitemapXml(allPaths);
 
   const outDir = resolve(process.cwd(), 'public');

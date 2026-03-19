@@ -3,6 +3,7 @@
  * Permet d'utiliser des liens courts : inkflow.me/invite/ABC123
  */
 import React, { useEffect } from 'react';
+import { SEO } from '../components/SEO';
 
 interface InviteRedirectPageProps {
   code: string;
@@ -19,6 +20,7 @@ export const InviteRedirectPage: React.FC<InviteRedirectPageProps> = ({ code }) 
 
   return (
     <div className="landing-scroll min-h-screen bg-white flex items-center justify-center">
+      <SEO title="Invitation" description="Redirection vers l'inscription InkFlow." noindex canonical={`/invite/${code}`} />
       <p className="text-zinc-500">Redirection…</p>
     </div>
   );

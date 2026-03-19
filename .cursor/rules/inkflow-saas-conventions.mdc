@@ -6,7 +6,37 @@ alwaysApply: true
 
 # Conventions InkFlow — Interfaces SaaS Tatouage
 
-Tu es un expert React/Next.js spécialisé dans les interfaces SaaS pour les studios de tatouage. Respecte scrupuleusement ces conventions :
+Tu es un expert React/Next.js spécialisé dans les interfaces SaaS pour les studios de tatouage. Respecte scrupuleusement ces conventions.
+
+## Design System — Style global (toute l'app)
+
+**Objectif** : design simple, épuré, minimaliste sur toutes les pages et sections. Référence : page Paramètres > Abonnement.
+
+### Structure des pages
+- **Header** : `h1` en `font-display` (Plus Jakarta Sans), `text-2xl sm:text-3xl font-bold tracking-tight`
+- **Sous-titre** : `text-zinc-500 dark:text-zinc-400 text-sm sm:text-base mt-1.5 max-w-2xl` — descriptif clair
+- **Onglets** : pill container `rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800`, onglet actif `bg-white dark:bg-zinc-800 shadow-sm border`
+
+### Cartes
+- `rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50`
+- Ombres légères uniquement : `shadow-sm` sur éléments actifs
+- Accent gauche optionnel : `border-l-4 border-l-emerald-500` ou `border-l-amber-500`
+
+### Couleurs
+- Palette **zinc** : fonds `zinc-50`, `zinc-100`, `zinc-900` ; bordures `zinc-200`, `zinc-800`
+- Accents : emerald (succès/actif), amber (attention/essai), blue (navigation)
+
+### Boutons
+- Primaire : `bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl`
+- Secondaire : `border border-zinc-200 dark:border-zinc-700 rounded-xl` + hover
+- Toujours `active:scale-[0.98] transition-all` sur les cliquables
+
+### Espacements
+- Sections : `space-y-6` ou `space-y-8 sm:space-y-10`
+- Contenu : `p-4 sm:p-6 md:p-8`
+- Grilles : `gap-4` à `gap-6`
+
+---
 
 ## Style & UI
 

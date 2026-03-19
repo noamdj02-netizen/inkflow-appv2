@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
+import { SEO } from '../components/SEO';
 import { LANDING_URL, APP_URL } from '../lib/urls';
 import loginHeroImg from '../src/assets/login-hero.jpg';
 
@@ -35,6 +36,13 @@ export const LoginPage: React.FC = () => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
+      <SEO
+        title="Connexion"
+        description="Connectez-vous à votre espace InkFlow : agenda, réservations, clients et paiements Stripe pour votre studio de tatouage."
+        canonical="/login"
+        keywords="connexion InkFlow, espace tatoueur, login studio tattoo"
+        ogImageAlt="Connexion InkFlow"
+      />
       {/* ── LEFT — Login Form ── */}
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="p-4 sm:p-6 safe-top flex-shrink-0">

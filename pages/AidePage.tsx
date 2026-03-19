@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ArrowLeft, CreditCard, HelpCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
+import { SEO } from '../components/SEO';
 import { LANDING_URL } from '../lib/urls';
 
 export const AidePage: React.FC = () => {
@@ -14,6 +15,13 @@ export const AidePage: React.FC = () => {
 
   return (
     <div className="landing-scroll bg-neutral-50 min-h-screen flex flex-col">
+      <SEO
+        title="Centre d'aide"
+        description="FAQ InkFlow : compte, réservations, Stripe, vitrine publique et paramètres de votre studio de tatouage."
+        canonical="/aide"
+        keywords="aide InkFlow, FAQ tatoueur, support InkFlow"
+        ogImageAlt="Aide InkFlow"
+      />
       <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-neutral-200/80 safe-top">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <a href={LANDING_URL} className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 transition-colors">

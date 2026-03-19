@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase';
 import { useToast } from '../contexts/ToastContext';
 import { Logo } from '../components/Logo';
 import { getInviteBaseUrl } from '../lib/urls';
+import { SEO } from '../components/SEO';
 
 const heroWorkstationImg = '/images/referral-hero-studio.png';
 
@@ -172,6 +173,13 @@ export const ReferralPage: React.FC = () => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
     >
+      <SEO
+        title="Programme parrainage"
+        description="Parrainez d'autres studios InkFlow et offrez-vous des mois d'abonnement. Réservé aux comptes connectés."
+        canonical="/referral"
+        noindex
+        ogImageAlt="Parrainage InkFlow"
+      />
       {/* Header */}
       <motion.header
         className="fixed top-0 left-0 right-0 z-50 border-b border-neutral-200 bg-white/95 backdrop-blur-xl"

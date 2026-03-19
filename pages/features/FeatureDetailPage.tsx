@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import { EnhanceAINavbar } from '../../components/landing/EnhanceAINavbar';
 import { EnhanceAIFooter } from '../../components/landing/EnhanceAIFooter';
-import { LANDING_URL } from '../../lib/urls';
+import { SEO, createBreadcrumbSchema } from '../../components/SEO';
+import { APP_URL, LANDING_URL } from '../../lib/urls';
 import { FeaturePreview } from '../../components/features/FeaturePreview';
 
 interface FeatureConfig {
@@ -159,6 +160,7 @@ export const FeatureDetailPage: React.FC<FeatureDetailPageProps> = ({ slug }) =>
   if (!feature) {
     return (
       <div className="landing-scroll min-h-screen bg-white flex items-center justify-center">
+        <SEO title="Fonctionnalité introuvable" description="Cette page n'existe pas." noindex canonical={`/${slug}`} />
         <div className="text-center">
           <h1 className="text-2xl font-bold text-neutral-800 mb-4">Page non trouvée</h1>
           <a href={LANDING_URL} className="text-blue-600 hover:underline">Retour à l'accueil</a>
@@ -168,9 +170,23 @@ export const FeatureDetailPage: React.FC<FeatureDetailPageProps> = ({ slug }) =>
   }
 
   const Icon = feature.icon;
+  const appBase = APP_URL.replace(/\/$/, '');
+  const pagePath = `/${slug}`;
+  const metaDesc = `${feature.description.slice(0, 155)}${feature.description.length > 155 ? '…' : ''}`;
 
   return (
     <div className="landing-scroll min-h-screen bg-white">
+      <SEO
+        title={`${feature.title} — ${feature.subtitle}`}
+        description={metaDesc}
+        canonical={pagePath}
+        keywords={`InkFlow, ${feature.title.toLowerCase()}, logiciel tatoueur, SaaS tatouage`}
+        ogImageAlt={`InkFlow — ${feature.title}`}
+        schema={createBreadcrumbSchema([
+          { name: 'Accueil', url: LANDING_URL },
+          { name: feature.title, url: `${appBase}${pagePath}` },
+        ])}
+      />
       <EnhanceAINavbar />
       <main className="pt-24 pb-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

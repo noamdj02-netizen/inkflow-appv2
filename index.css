@@ -671,6 +671,16 @@ img, video {
   background: #000000;
 }
 
+/* Page Paramètres — style landing Framer (respiration, typo, cartes) */
+.settings-page-landing {
+  max-width: 72rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+.settings-page-landing .space-y-6 > * + * {
+  margin-top: 1.5rem;
+}
+
 /* Sidebar/Drawer — fond opaque + isolation pour éviter transparence mobile/PWA */
 .app-shell-sidebar {
   isolation: isolate;

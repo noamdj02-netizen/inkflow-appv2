@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Gift } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { SignupForm } from '../components/auth/SignupForm';
+import { SEO } from '../components/SEO';
 import { LANDING_URL } from '../lib/urls';
 
 export const SignupPage: React.FC = () => {
@@ -18,6 +19,13 @@ export const SignupPage: React.FC = () => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
+      <SEO
+        title="Créer un compte gratuit"
+        description="Inscrivez-vous sur InkFlow : 14 jours d'essai, réservations en ligne, CRM tatoueur, acomptes Stripe et vitrine personnalisée."
+        canonical="/signup"
+        keywords="inscription InkFlow, essai gratuit tatoueur, créer compte studio tattoo"
+        ogImageAlt="Inscription InkFlow"
+      />
       {/* ── LEFT — Signup Form ── */}
       <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
         <header className="p-4 sm:p-6 safe-top flex-shrink-0">

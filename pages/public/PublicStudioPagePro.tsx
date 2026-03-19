@@ -385,6 +385,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         description={`Découvrez les flashs et prenez rendez-vous avec ${studioName}. Réservez votre prochain tatouage facilement en ligne.`}
         canonical={`/studio/${studioSlug}`}
         ogImage={studioDisplay.coverImage || studioDisplay.avatar}
+        ogImageAlt={`Vitrine ${studioName} — studio de tatouage sur InkFlow`}
+        keywords={`${studioName}, tatoueur, réservation tatouage, studio tattoo, InkFlow`}
         schema={studioSchema}
       />
       {/* Sticky Header */}

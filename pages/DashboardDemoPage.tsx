@@ -10,6 +10,7 @@ import {
   Home, Inbox, Wallet, DollarSign, AlertCircle, CalendarCheck
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
+import { SEO } from '../components/SEO';
 import { getDemoAppointments, getDemoClients, getDemoProjectRequests, getDemoFlash } from '../data/demoData';
 
 const DEMO_AVATARS = [
@@ -836,6 +837,13 @@ export const DashboardDemoPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black flex">
+      <SEO
+        title="Démo interactive du tableau de bord"
+        description="Découvrez InkFlow sans compte : agenda fictif, clients, demandes, finance et navigation comme dans l'app réelle."
+        canonical="/demo"
+        keywords="démo InkFlow, essai logiciel tatouage, tableau de bord tattoo"
+        ogImageAlt="Démo InkFlow — tableau de bord tatoueur"
+      />
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div 

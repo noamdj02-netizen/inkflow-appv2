@@ -30,48 +30,69 @@
     <script>
       (function(){var p=window.location.pathname;if(p==='/'||p===''||p.startsWith('/studio/')||p.startsWith('/demo')){document.documentElement.setAttribute('data-theme','light');return;}var t=localStorage.getItem('inkflow-theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark');}else if(t==='light'){document.documentElement.setAttribute('data-theme','light');}else if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.setAttribute('data-theme','dark');}else{document.documentElement.setAttribute('data-theme','light');}})();
     </script>
-    <meta name="description" content="Connectez-vous à votre espace InkFlow. Gestion de rendez-vous, paiements et CRM pour tatoueurs." />
-    <meta name="keywords" content="logiciel tatoueur, agenda tatouage, réservation tatoueur, gestion studio tattoo, SaaS tatouage, application tatoueur" />
+    <meta name="description" content="InkFlow — logiciel de gestion pour tatoueurs : réservations en ligne, agenda, acomptes Stripe, CRM et vitrine studio. Essayez gratuitement." />
+    <meta name="keywords" content="logiciel tatoueur, agenda tatouage, réservation tatoueur, SaaS tatouage, CRM studio tattoo, gestion rendez-vous tatouage" />
     <meta name="author" content="InkFlow" />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="InkFlow - Connexion" />
-    <meta property="og:description" content="Connectez-vous à votre espace InkFlow. Gestion de rendez-vous, paiements et CRM pour tatoueurs." />
+    <meta property="og:title" content="InkFlow | Logiciel de gestion et réservation pour tatoueurs" />
+    <meta property="og:description" content="Réservations en ligne, paiements Stripe, CRM et vitrine pour votre studio de tatouage. Gagnez du temps avec InkFlow." />
     <meta property="og:url" content="https://ink-flow.me" />
     <meta property="og:site_name" content="InkFlow" />
     <meta property="og:locale" content="fr_FR" />
     <meta property="og:image" content="https://ink-flow.me/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="InkFlow — logiciel de gestion pour tatoueurs" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="InkFlow - Connexion" />
-    <meta name="twitter:description" content="Connectez-vous à votre espace InkFlow. Gestion de rendez-vous, paiements et CRM pour tatoueurs." />
+    <meta name="twitter:title" content="InkFlow | Logiciel de gestion et réservation pour tatoueurs" />
+    <meta name="twitter:description" content="Réservations en ligne, paiements Stripe, CRM et vitrine pour votre studio de tatouage." />
+    <meta name="twitter:image" content="https://ink-flow.me/og-image.png" />
+    <meta name="twitter:image:alt" content="InkFlow — logiciel de gestion pour tatoueurs" />
     <meta name="apple-mobile-web-app-title" content="InkFlow" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="msapplication-TileColor" content="#000000" />
     <meta name="msapplication-tap-highlight" content="no" />
     <link rel="canonical" href="https://ink-flow.me" />
-    <title>InkFlow - Connexion</title>
+    <title>InkFlow | Logiciel de gestion et réservation pour tatoueurs</title>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "InkFlow",
-      "description": "Plateforme de gestion tout-en-un pour tatoueurs et studios de tatouage",
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
-      "offers": {
-        "@type": "AggregateOffer",
-        "lowPrice": "29",
-        "highPrice": "79",
-        "priceCurrency": "EUR",
-        "offerCount": "2"
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "500"
-      }
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://ink-flow.me/#organization",
+          "name": "InkFlow",
+          "url": "https://ink-flow.me",
+          "logo": { "@type": "ImageObject", "url": "https://ink-flow.me/og-image.png" },
+          "description": "Logiciel SaaS pour tatoueurs et studios de tatouage"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://ink-flow.me/#website",
+          "name": "InkFlow",
+          "url": "https://ink-flow.me",
+          "inLanguage": "fr-FR",
+          "publisher": { "@id": "https://ink-flow.me/#organization" }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "InkFlow",
+          "url": "https://ink-flow.me",
+          "description": "Plateforme de gestion : agenda, réservations en ligne, acomptes Stripe, CRM, galerie flash.",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "browserRequirements": "Requires JavaScript",
+          "offers": {
+            "@type": "AggregateOffer",
+            "lowPrice": "24",
+            "highPrice": "99",
+            "priceCurrency": "EUR",
+            "offerCount": "3",
+            "availability": "https://schema.org/InStock"
+          }
+        }
+      ]
     }
     </script>
     <link rel="preload" href="/icon.svg" as="image" fetchpriority="high" type="image/svg+xml" />

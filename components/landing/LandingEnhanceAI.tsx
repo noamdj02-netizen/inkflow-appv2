@@ -1,7 +1,7 @@
 import React, { useEffect, lazy, Suspense } from 'react';
 import { EnhanceAINavbar } from './EnhanceAINavbar';
 import { EnhanceAIHero } from './EnhanceAIHero';
-import { SEO, organizationSchema, websiteSchema } from '../SEO';
+import { SEO, faqPageSchemaFr } from '../SEO';
 
 const EnhanceAIFeaturesDetail = lazy(() => import('./EnhanceAIFeaturesDetail').then(m => ({ default: m.EnhanceAIFeaturesDetail })));
 const EnhanceAIHowInkflow = lazy(() => import('./EnhanceAIHowInkflow').then(m => ({ default: m.EnhanceAIHowInkflow })));
@@ -27,7 +27,9 @@ export const LandingEnhanceAI: React.FC = () => {
       title="InkFlow | Le logiciel de gestion et réservation pour Tatoueurs"
       description="Révolutionnez votre studio de tatouage. Réservations, paiements Stripe, CRM et assistant IA. Gagnez du temps avec InkFlow."
       canonical="/"
-      schema={[organizationSchema, websiteSchema]}
+      keywords="logiciel tatoueur, agenda tatouage, réservation tatoueur, SaaS tatouage, CRM studio tattoo, acompte Stripe tatouage, vitrine tatoueur"
+      ogImageAlt="InkFlow — application de gestion pour tatoueurs"
+      schema={faqPageSchemaFr}
     />
     <EnhanceAINavbar />
     <main className="bg-white min-h-[60vh] w-full max-w-full overflow-x-hidden">

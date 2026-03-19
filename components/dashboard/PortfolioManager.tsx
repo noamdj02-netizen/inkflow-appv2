@@ -84,8 +84,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
     return () => { document.body.style.overflow = ''; };
   }, [showUpload]);
 
+  // Préchargement léger : uniquement les 6 premières images visibles (évite surcharge réseau)
   useEffect(() => {
-    filtered.forEach((item) => {
+    const toPreload = filtered.slice(0, 6);
+    toPreload.forEach((item) => {
       const img = new window.Image();
       img.src = item.url;
       if (item.beforeUrl) {

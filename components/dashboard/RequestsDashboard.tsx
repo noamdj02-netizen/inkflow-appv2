@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { MessageSquare, CheckCircle, XCircle, Calendar, FileText, Mail, Clock, CreditCard, Copy, Loader2, AlertTriangle, MapPin, Ruler, Sparkles } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
 import { Appointment, ProjectRequest, Booking, BookingStatus, Client } from '../../types';
@@ -91,6 +91,13 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   };
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'rdv' | 'bookings' | 'projects' | 'history'>(initialTab ?? 'rdv');
+
+  // Synchroniser l'onglet quand la sidebar change (ex: clic sur Projets)
+  useEffect(() => {
+    if (initialTab && initialTab !== activeTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Modale « Générer lien acompte » Stripe (RDV existant)
   const [depositModalAppointment, setDepositModalAppointment] = useState<Appointment | null>(null);

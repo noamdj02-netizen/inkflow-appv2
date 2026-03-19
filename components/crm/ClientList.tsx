@@ -24,6 +24,8 @@ interface ClientListProps {
   openAddModal?: boolean;
   /** Appelé quand le modal d'ajout est fermé */
   onAddModalClose?: () => void;
+  /** Vue depuis la sidebar : 'overview' = liste clients, 'projects' = demandes projet par client */
+  view?: 'overview' | 'projects';
 }
 
 export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient, onAddClient, loadClientNotes, saveClientNotes, useSupabase, clientLimitReached, clientLimit, onUpgradeClick, openAddModal, onAddModalClose }) => {
@@ -133,6 +135,29 @@ export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient,
     setAddForm({ name: '', email: '', phone: '', notes: '' });
     toast.success('Client ajouté avec succès');
   };
+
+  if (view === 'projects') {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Projets par client</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Demandes de projet personnalisé regroupées par client</p>
+        </div>
+        <div className="dashboard-widget-card rounded-2xl p-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Vue Projets — bientôt</h3>
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-sm mx-auto">
+            Cette vue affichera les demandes de projet personnalisé regroupées par client. Elle sera disponible dans une prochaine mise à jour.
+          </p>
+          <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-4">
+            En attendant, consultez les demandes dans <strong>Demandes → Projets</strong>.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

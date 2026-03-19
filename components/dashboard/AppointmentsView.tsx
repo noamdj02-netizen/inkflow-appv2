@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { Calendar, Plus, ChevronRight, Search, ExternalLink, Download, CalendarDays, Clock, Users } from 'lucide-react';
 import { Appointment, Client } from '../../types';
@@ -15,6 +15,8 @@ interface AppointmentsViewProps {
   onNewAppointment: () => void;
   onSelectAppointment: (apt: Appointment) => void;
   onUpdateAppointment?: (apt: Appointment, updates: Partial<Appointment>) => void;
+  /** Vue initiale depuis la sidebar : 'week' = liste semaine, 'month' = calendrier mois */
+  planningView?: 'week' | 'month';
 }
 
 function toDateStr(d: Date): string {
@@ -48,6 +50,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   onNewAppointment,
   onSelectAppointment,
   onUpdateAppointment,
+  planningView = 'week',
 }) => {
   const clientByEmail = useMemo(() => {
     const m = new Map<string, Client>();
@@ -58,12 +61,22 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
     (apt.clientId && clients.find((c) => c.id === apt.clientId)?.avatar) ||
     clientByEmail.get(apt.clientEmail?.toLowerCase() || '')?.avatar;
   const { resolvedTheme } = useTheme();
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>(planningView === 'month' ? 'calendar' : 'list');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [dateRangeChip, setDateRangeChip] = useState<'today' | 'week' | null>(null);
+  const [dateRangeChip, setDateRangeChip] = useState<'today' | 'week' | null>(planningView === 'week' ? 'week' : null);
   const [miniCalendarMonth, setMiniCalendarMonth] = useState(() => new Date());
+
+  useEffect(() => {
+    if (planningView === 'month') {
+      setViewMode('calendar');
+      setDateRangeChip(null);
+    } else {
+      setViewMode('list');
+      setDateRangeChip('week');
+    }
+  }, [planningView]);
 
   const datesWithAppointments = useMemo(() => {
     const set = new Set<string>();

@@ -2,6 +2,8 @@
 
 Objectif : **zéro cassure visuelle** entre la landing (ink-flow.me) et l'app (app.ink-flow.me).
 
+**Style global** : design simple, épuré, minimaliste sur **toutes les pages et sections** de l'application. Référence : Paramètres > Abonnement.
+
 ---
 
 ## 1. Typographie

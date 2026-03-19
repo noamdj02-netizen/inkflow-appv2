@@ -91,9 +91,10 @@ function SortableWidget({
     disabled,
   });
 
-  const style = {
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
+    ...(isDragging && { willChange: 'transform' }),
   };
 
   return (
@@ -119,7 +120,7 @@ function SortableWidget({
       <div className={disabled ? '' : 'pr-9'}>{children}</div>
     </div>
   );
-}
+});
 
 export const SortableOverviewWidgets: React.FC<SortableOverviewWidgetsProps> = ({
   items,

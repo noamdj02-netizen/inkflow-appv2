@@ -11,6 +11,7 @@ import { toLocalDateString } from '../../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS } from '../../lib/studioAvailability';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { supabase } from '../../lib/supabase';
+import { SEO } from '../../components/SEO';
 
 const supabaseEnabled = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
@@ -55,12 +56,6 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
       .then((data) => setStudioInfo({ name: data.name, avatar: data.avatar || '' }))
       .catch(() => setStudioInfo({ name: studioSlug, avatar: '' }));
   }, [studioSlug]);
-
-  useEffect(() => {
-    const name = studioInfo?.name || studioSlug;
-    document.title = `Réservation — ${name} | InkFlow`;
-    return () => { document.title = 'InkFlow'; };
-  }, [studioInfo?.name, studioSlug]);
 
   useEffect(() => {
     if (!studioId || studioId === 'loading') return;
@@ -249,6 +244,14 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
   return (
     <div className="landing-scroll min-h-screen bg-zinc-50">
+      <SEO
+        title={`Réserver chez ${studio.name}`}
+        description={`Prenez rendez-vous en ligne chez ${studio.name}. Choisissez la date, décrivez votre projet et réglez l'acompte en toute sécurité.`}
+        canonical={`/book/${studioSlug}`}
+        ogImage={studio.avatar || undefined}
+        ogImageAlt={`Réservation tatouage — ${studio.name}`}
+        keywords={`réservation tatouage, ${studio.name}, RDV tattoo, acompte tatouage`}
+      />
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-zinc-100 safe-top">
         <div className="max-w-md mx-auto px-4 py-3">

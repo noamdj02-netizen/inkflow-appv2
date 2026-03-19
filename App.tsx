@@ -1,6 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { LANDING_URL } from './lib/urls';
+import { SEO } from './components/SEO';
 import { Analytics } from '@vercel/analytics/react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
@@ -11,7 +12,6 @@ import { LandingEnhanceAI } from './components/landing/LandingEnhanceAI';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CookieConsent } from './components/CookieConsent';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
-import { AddToHomeScreenBanner } from './components/landing/AddToHomeScreenBanner';
 import { AppSplashGate } from './components/auth/AppSplashGate';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
@@ -220,6 +220,13 @@ const Router: React.FC = () => {
 
 const NotFoundPage: React.FC = () => (
   <div className="landing-scroll bg-neutral-50 flex items-center justify-center px-4">
+    <SEO
+      title="Page non trouvée (404)"
+      description="La page demandée n'existe pas sur InkFlow."
+      noindex
+      canonical="/404"
+      ogImageAlt="InkFlow"
+    />
     <div className="text-center">
       <h1 className="text-6xl font-bold mb-4">404</h1>
       <p className="text-xl text-neutral-600 mb-8">Page non trouvée</p>
@@ -262,7 +269,6 @@ const App: React.FC = () => {
             <AppSplashGate>
               <ToastProvider>
                 <LanguageProvider>
-                  <AddToHomeScreenBanner />
                   <UnhandledRejectionHandler />
                   <Router />
                   <CookieConsent />

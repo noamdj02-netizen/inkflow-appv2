@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,12 +12,8 @@ import { BadgeNotification } from '../ui/BadgeNotification';
 import { useSubscriptionPermissions } from '../../hooks/useSubscriptionPermissions';
 import { Modal } from '../ui/Modal';
 import { BookingForm } from '../booking/BookingForm';
-import { FlashGallery } from '../flash/FlashGallery';
-import { ClientList } from '../crm/ClientList';
 import { AppointmentCalendar } from './AppointmentCalendar';
-import { AppointmentsView } from './AppointmentsView';
 import { MiniCalendar } from './MiniCalendar';
-import { RequestsDashboard } from './RequestsDashboard';
 import { CareSheetsSettings } from './CareSheetsSettings';
 import { PaymentsSettings } from './PaymentsSettings';
 import { BillingSettings } from './BillingSettings';
@@ -31,15 +28,19 @@ import { VitrineLinkButton } from './VitrineLinkButton';
 const FinanceDashboard = lazy(() => import('./FinanceDashboard').then(m => ({ default: m.FinanceDashboard })));
 const DepositsPage = lazy(() => import('./DepositsPage').then(m => ({ default: m.DepositsPage })));
 const AnalyticsDashboard = lazy(() => import('../analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
+const FlashGallery = lazy(() => import('../flash/FlashGallery').then(m => ({ default: m.FlashGallery })));
+const ClientList = lazy(() => import('../crm/ClientList').then(m => ({ default: m.ClientList })));
+const RequestsDashboard = lazy(() => import('./RequestsDashboard').then(m => ({ default: m.RequestsDashboard })));
+const MessagingTab = lazy(() => import('../messaging/MessagingTab').then(m => ({ default: m.MessagingTab })));
+const PortfolioManager = lazy(() => import('./PortfolioManager').then(m => ({ default: m.PortfolioManager })));
+const AppointmentsView = lazy(() => import('./AppointmentsView').then(m => ({ default: m.AppointmentsView })));
 import { DashboardWidgets, AddWidgetModal, useDashboardWidgets, WidgetCard } from './DashboardWidgets';
 import { SortableOverviewWidgets, type SortableWidgetItem } from './SortableOverviewWidgets';
 import { DashboardOverviewTab } from './DashboardOverviewTab';
 import { PlanningSidebar } from './PlanningSidebar';
 import { WaitlistManager } from './WaitlistManager';
 import { ArtistManager } from './ArtistManager';
-import { PortfolioManager } from './PortfolioManager';
 import { LoyaltyManager, type LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
-import { MessagingTab } from '../messaging/MessagingTab';
 import { NotificationsPage } from './NotificationsPage';
 import { ConsentFormEditor } from '../consent/ConsentFormEditor';
 import { CalendarSettings } from './CalendarSettings';
@@ -664,6 +665,12 @@ export const DashboardPro: React.FC = () => {
   // Réinitialiser l'onglet initial des Demandes quand on quitte l'onglet
   useEffect(() => {
     if (activeTab !== 'requests') setRequestsInitialTab(null);
+  }, [activeTab]);
+
+  // Scroll to top au changement d'onglet (fluidité UX)
+  useEffect(() => {
+    const el = document.querySelector('.app-shell-content');
+    if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);
 
   return (
@@ -1324,7 +1331,9 @@ export const DashboardPro: React.FC = () => {
           ) : (
           <>
           {loading && <DashboardLoadingSkeleton />}
+          <AnimatePresence mode="wait">
           {!loading && activeTab === 'overview' && (
+            <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
             <DashboardOverviewTab
               now={now}
               firstName={firstName}
@@ -1368,15 +1377,20 @@ export const DashboardPro: React.FC = () => {
               pendingRequestsCount={pendingRequestsCount}
               recentDeposits={recentDeposits}
             />
+            </motion.div>
           )}
 
           {!loading && activeTab === 'analytics' && (
+            <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
             <Suspense fallback={<DashboardLoadingSkeleton />}>
               <AnalyticsDashboard appointments={appointments} clients={clients} />
             </Suspense>
+            </motion.div>
           )}
 
           {!loading && activeTab === 'requests' && (
+            <motion.div key="requests" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <Suspense fallback={<DashboardLoadingSkeleton />}>
             <RequestsDashboard
               studioId={studioId}
               studioSlug={studioSlug}
@@ -1392,23 +1406,36 @@ export const DashboardPro: React.FC = () => {
               onUpdateBookingStatus={updateBookingStatus}
               bookingsLoading={bookingsLoading}
             />
+            </Suspense>
+            </motion.div>
           )}
 
-              {!loading && activeTab === 'appointments' && (
+          {!loading && activeTab === 'appointments' && (
+            <motion.div key="appointments" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <Suspense fallback={<DashboardLoadingSkeleton />}>
             <AppointmentsView
               appointments={appointments}
               clients={clients}
               onNewAppointment={() => { setSelectedFlash(null); setShowBookingModal(true); }}
               onSelectAppointment={setSelectedAppointment}
               onUpdateAppointment={(apt, updates) => updateAppointment(apt.id, updates)}
+              planningView={planningView}
             />
+            </Suspense>
+            </motion.div>
           )}
 
           {!loading && activeTab === 'flash' && (
+            <motion.div key="flash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <Suspense fallback={<DashboardLoadingSkeleton />}>
             <FlashGallery designs={flashDesigns} onBook={handleBookFlash} onAddFlash={addFlash} onUpdateFlash={updateFlash} onDeleteFlash={deleteFlash} studioSlug={studioSlug} />
+            </Suspense>
+            </motion.div>
           )}
 
           {!loading && activeTab === 'clients' && (
+            <motion.div key="clients" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <Suspense fallback={<DashboardLoadingSkeleton />}>
             <ClientList
               clients={clients}
               onAddClient={addClient}
@@ -1420,10 +1447,15 @@ export const DashboardPro: React.FC = () => {
               onUpgradeClick={() => { window.location.href = LANDING_PRICING_URL; }}
               openAddModal={openAddClientModal}
               onAddModalClose={() => setOpenAddClientModal(false)}
+              view={clientsView}
             />
+            </Suspense>
+            </motion.div>
           )}
 
           {!loading && activeTab === 'messaging' && (
+            <motion.div key="messaging" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <Suspense fallback={<DashboardLoadingSkeleton />}>
             <MessagingTab
               studioId={studioId || ''}
               messageThreads={messageThreads}
@@ -1432,9 +1464,12 @@ export const DashboardPro: React.FC = () => {
               artistName={user?.name}
               studioName={user?.studioName}
             />
+            </Suspense>
+            </motion.div>
           )}
 
           {!loading && activeTab === 'notifications' && (
+            <motion.div key="notifications" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
             <NotificationsPage
               studioId={studioId}
               notifications={notifications}
@@ -1445,12 +1480,15 @@ export const DashboardPro: React.FC = () => {
                 else setActiveTab('overview');
               }}
             />
+            </motion.div>
           )}
 
           {!loading && activeTab === 'portfolio' && (
-            vitrineLoading ? (
+            <motion.div key="portfolio" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            {vitrineLoading ? (
               <DashboardLoadingSkeleton />
             ) : (
+            <Suspense fallback={<DashboardLoadingSkeleton />}>
             <PortfolioManager
               items={portfolioItemsFromVitrine}
               studioId={studioId}
@@ -1501,10 +1539,13 @@ export const DashboardPro: React.FC = () => {
               }}
               artists={portfolioArtistNames}
             />
-            )
+            </Suspense>
+            )}
+            </motion.div>
           )}
 
           {!loading && activeTab === 'finance' && (
+            <motion.div key="finance" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
             <Suspense fallback={<DashboardLoadingSkeleton />}>
               {financeView === 'acomptes' ? (
                 <DepositsPage 
@@ -1516,12 +1557,21 @@ export const DashboardPro: React.FC = () => {
                 <FinanceDashboard appointments={appointments} />
               )}
             </Suspense>
+            </motion.div>
           )}
 
           {!loading && activeTab === 'settings' && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Navigation tabs améliorée */}
-              <div className="flex items-center gap-3 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="settings-page-landing">
+              {/* Header style landing */}
+              <div className="mb-8">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white font-display">Paramètres</h1>
+                <p className="text-zinc-500 dark:text-zinc-400 mt-1.5 text-sm sm:text-base max-w-2xl">
+                  Personnalisez votre studio, configurez vos réservations, paiements, disponibilités et page vitrine. Tous vos réglages au même endroit.
+                </p>
+              </div>
+              {/* Navigation tabs style pill */}
+              <div className="flex items-center gap-2 -mx-4 px-4 sm:mx-0 sm:px-0 mb-8">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -1533,7 +1583,7 @@ export const DashboardPro: React.FC = () => {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide flex gap-1.5 flex-nowrap py-1" style={{ scrollBehavior: 'smooth' }}>
+                <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide flex gap-1 flex-nowrap py-1.5 px-1 rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800" style={{ scrollBehavior: 'smooth' }}>
                   {([
                     { id: 'general', label: 'Général' },
                     { id: 'payments', label: 'Paiements' },
@@ -1541,19 +1591,14 @@ export const DashboardPro: React.FC = () => {
                     { id: 'care', label: 'Soins post-tattoo' },
                     { id: 'consent', label: 'Consentement' },
                     { id: 'availability', label: 'Disponibilités' },
-                    // V2: Masqués pour le MVP
-                    // { id: 'artists', label: 'Artistes' },
-                    // { id: 'waitlist', label: 'Liste d\'attente' },
-                    // { id: 'loyalty', label: 'Fidélité' },
                     { id: 'calendar', label: 'Calendrier' },
                     { id: 'vitrine', label: 'Page vitrine' },
-                    // { id: 'messagerie', label: 'Messagerie' }, // V2
                   ] as const).map(tab => (
                     <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
                       className={`px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
                         settingsTab === tab.id
-                          ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm'
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white'
+                          ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
+                          : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-800/50'
                       }`}>
                       {tab.label}
                     </button>
@@ -1859,9 +1904,11 @@ export const DashboardPro: React.FC = () => {
               {settingsTab === 'vitrine' && user?.studioName && <VitrineSettings studioName={user.studioName} userEmail={user.email} studioSlug={studioSlug} studioId={studioId} />}
               {settingsTab === 'messagerie' && studioId && <InstagramConnect studioId={studioId} />}
             </div>
+            </motion.div>
           )}
 
           {!loading && activeTab === 'etablissement' && (
+            <motion.div key="etablissement" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
             <div className="animate-fade-in">
               <EtablissementPage
                 studioId={studioId}
@@ -1903,9 +1950,11 @@ export const DashboardPro: React.FC = () => {
                 trialEndsAt={trialEndsAt}
               />
             </div>
+            </motion.div>
           )}
 
           {!loading && activeTab === 'account' && (
+            <motion.div key="account" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
             <div className="animate-fade-in px-0">
               <AccountPage
                 user={user}
@@ -1962,7 +2011,9 @@ export const DashboardPro: React.FC = () => {
                 trialEndsAt={trialEndsAt}
               />
             </div>
+            </motion.div>
           )}
+          </AnimatePresence>
           </>
           )}
           {/* Hidden avatar file input — always mounted so ref is always available */}

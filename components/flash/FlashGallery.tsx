@@ -115,14 +115,14 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
   };
 
   return (
-    <div className="min-h-full bg-slate-50/50 dark:bg-black">
+    <div className="min-h-full bg-zinc-50/50 dark:bg-zinc-950">
       <div className="space-y-6 animate-fade-in p-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white mb-2">
             Galerie de flashs
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Parcourez et gérez vos designs disponibles à la réservation
           </p>
         </div>
@@ -131,21 +131,21 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row gap-3 flex-1">
             <div className="flex-1 relative min-w-[200px]">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 transform -tranzinc-y-1/2 w-5 h-5 text-zinc-400" />
               <input type="text" placeholder="Rechercher un design..." value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                className="w-full pl-12 pr-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
             </div>
             <div className="flex gap-2">
               <button onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-xl text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]">
+                className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]">
                 <Filter className="w-5 h-5" /> Filtres
               </button>
-              <div className="flex rounded-xl border border-slate-200/80 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900">
-                <button onClick={() => setViewMode('grid')} className={`p-3 transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}>
+              <div className="flex rounded-xl border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900">
+                <button onClick={() => setViewMode('grid')} className={`p-3 transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}>
                   <Grid3X3 className="w-5 h-5" />
                 </button>
-                <button onClick={() => setViewMode('list')} className={`p-3 transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-zinc-800'}`}>
+                <button onClick={() => setViewMode('list')} className={`p-3 transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'}`}>
                   <List className="w-5 h-5" />
                 </button>
               </div>
@@ -159,15 +159,15 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
         </div>
 
         {showFilters && (
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] p-5 animate-slide-up">
-            <h3 className="font-semibold mb-3 text-slate-900 dark:text-white">Catégories</h3>
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] p-5 animate-slide-up">
+            <h3 className="font-semibold mb-3 text-zinc-900 dark:text-white">Catégories</h3>
             <div className="flex flex-wrap gap-2">
               {categories.map(category => (
                 <button key={category} onClick={() => setSelectedCategory(category)}
                   className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 active:scale-[0.98] ${
                     selectedCategory === category 
                       ? 'bg-blue-600 text-white shadow-sm' 
-                      : 'bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 text-slate-700 dark:text-slate-300 hover:border-blue-300 dark:hover:border-blue-500/50 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                      : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-blue-300 dark:hover:border-blue-500/50 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                   }`}>
                   {category === 'all' ? 'Tous' : category}
                 </button>
@@ -176,19 +176,19 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
           </div>
         )}
 
-        <div className="text-sm text-slate-500">
+        <div className="text-sm text-zinc-500 dark:text-zinc-400">
           {filteredDesigns.length} design{filteredDesigns.length > 1 ? 's' : ''} disponible{filteredDesigns.length > 1 ? 's' : ''}
         </div>
 
         {filteredDesigns.length === 0 ? (
-          <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]">
+          <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]">
             <div className="w-20 h-20 bg-blue-50 dark:bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Sparkles className="text-blue-600 dark:text-blue-400" size={36} />
             </div>
-            <p className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+            <p className="text-lg font-bold text-zinc-900 dark:text-white mb-2">
               {designs.length === 0 ? 'Aucun flash pour le moment' : 'Aucun résultat'}
             </p>
-            <p className="text-slate-500 text-sm max-w-md mx-auto mb-6">
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-md mx-auto mb-6">
               {designs.length === 0
                 ? 'Ajoutez votre premier design pour que vos clients puissent le réserver en ligne.'
                 : 'Essayez de modifier vos filtres ou votre recherche.'}
@@ -199,7 +199,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               </button>
             )}
             {(designs.length > 0 || !onAddFlash) && (
-              <button onClick={() => { setSearchTerm(''); setSelectedCategory('all'); }} className="px-5 py-3 bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-xl text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]">
+              <button onClick={() => { setSearchTerm(''); setSelectedCategory('all'); }} className="px-5 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]">
                 Réinitialiser les filtres
               </button>
             )}
@@ -209,11 +209,11 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
           {filteredDesigns.map(design => viewMode === 'grid' ? (
             /* ── Grid card — image pure, info en dessous ── */
             <div key={design.id}
-              className="group bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 overflow-hidden cursor-pointer hover:border-slate-300 dark:hover:border-zinc-700 transition-all duration-200 active:scale-[0.98]"
+              className="group bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 overflow-hidden cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200 active:scale-[0.98]"
               onClick={() => setSelectedDesign(design)}>
 
               {/* Image — aucun texte superposé */}
-              <div className="relative aspect-square overflow-hidden bg-slate-100 dark:bg-zinc-800">
+              <div className="relative aspect-square overflow-hidden bg-zinc-100 dark:bg-zinc-800">
                 <img src={design.imageUrl} alt={design.title} loading="lazy"
                   className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 ease-out" />
 
@@ -230,7 +230,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                     {onUpdateFlash && (
                       <button onClick={(e) => { e.stopPropagation(); openEditModal(design); }}
                         className="p-1.5 bg-white/90 backdrop-blur rounded-lg shadow-sm hover:bg-white active:scale-90 transition-all">
-                        <Edit className="w-3.5 h-3.5 text-slate-700" />
+                        <Edit className="w-3.5 h-3.5 text-zinc-700" />
                       </button>
                     )}
                     {onDeleteFlash && (
@@ -246,14 +246,14 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               {/* Info block — totalement hors de l'image */}
               <div className="p-3">
                 <div className="flex items-start justify-between gap-2 mb-1.5">
-                  <h3 className="font-semibold text-sm text-slate-900 dark:text-white leading-tight line-clamp-1">
+                  <h3 className="font-semibold text-sm text-zinc-900 dark:text-white leading-tight line-clamp-1">
                     {design.title}
                   </h3>
-                  <span className="font-bold text-sm text-slate-900 dark:text-white tabular-nums flex-shrink-0">
+                  <span className="font-bold text-sm text-zinc-900 dark:text-white tabular-nums flex-shrink-0">
                     {design.price}€
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-zinc-500 mb-3">
+                <div className="flex items-center gap-2 text-xs text-zinc-400 dark:text-zinc-500 mb-3">
                   <span className="flex items-center gap-0.5"><Clock className="w-3 h-3" />{design.estimatedDuration}min</span>
                   <span>·</span>
                   <span>{design.category}</span>
@@ -261,26 +261,26 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                 <button onClick={(e) => { e.stopPropagation(); handleBookNow(design); }} disabled={design.reserved}
                   className={`w-full py-2 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] ${
                     design.reserved
-                      ? 'bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 cursor-not-allowed'
-                      : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-zinc-100'
+                      ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed'
+                      : 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-100'
                   }`}>
                   {design.reserved ? 'Réservé' : 'Réserver'}
                 </button>
               </div>
             </div>
           ) : (
-            <div key={design.id} className="flex items-center gap-5 p-5 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_4px_20px_-5px_rgba(6,81,237,0.1)] transition-all cursor-pointer">
-              <div className="relative w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-slate-100 dark:bg-zinc-800">
+            <div key={design.id} className="flex items-center gap-5 p-5 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_4px_20px_-5px_rgba(6,81,237,0.1)] transition-all cursor-pointer">
+              <div className="relative w-28 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-zinc-100 dark:bg-zinc-800">
                 <img src={design.imageUrl} alt={design.title} loading="lazy" className="w-full h-full object-cover" />
                 {design.reserved && (
-                  <div className="absolute inset-0 bg-slate-500/30 flex items-center justify-center">
-                    <span className="bg-slate-600 text-white px-2 py-0.5 rounded text-xs font-bold">Réservé</span>
+                  <div className="absolute inset-0 bg-zinc-500/30 flex items-center justify-center">
+                    <span className="bg-zinc-600 text-white px-2 py-0.5 rounded text-xs font-bold">Réservé</span>
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-lg text-slate-900 dark:text-white">{design.title}</h3>
-                <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500 mt-1">
+                <h3 className="font-bold text-lg text-zinc-900 dark:text-white">{design.title}</h3>
+                <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400 mt-1">
                   <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{design.estimatedDuration}min</span>
                   <span className="font-bold text-blue-600">{design.price}€</span>
                   <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-500/10 rounded-lg text-xs text-blue-600 dark:text-blue-400">{design.category}</span>
@@ -289,12 +289,12 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               <div className="flex items-center gap-2 flex-shrink-0">
                 {(onUpdateFlash || onDeleteFlash) && (
                   <>
-                    {onUpdateFlash && <button onClick={() => openEditModal(design)} className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]"><Edit className="w-4 h-4 text-slate-500" /></button>}
-                    {onDeleteFlash && <button onClick={() => handleDeleteFlash(design.id)} className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-500 transition-all active:scale-[0.98]"><Trash2 className="w-4 h-4" /></button>}
+                    {onUpdateFlash && <button onClick={() => openEditModal(design)} className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]"><Edit className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /></button>}
+                    {onDeleteFlash && <button onClick={() => handleDeleteFlash(design.id)} className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 transition-all active:scale-[0.98]"><Trash2 className="w-4 h-4" /></button>}
                   </>
                 )}
                 <button onClick={() => handleBookNow(design)} disabled={design.reserved}
-                  className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all active:scale-[0.98] ${design.reserved ? 'bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                  className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all active:scale-[0.98] ${design.reserved ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                   {design.reserved ? 'Réservé' : 'Réserver'}
                 </button>
               </div>
@@ -306,12 +306,12 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
         {selectedDesign && (
           <Modal isOpen={!!selectedDesign} onClose={() => setSelectedDesign(null)} title={selectedDesign.title} size="lg">
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="relative aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-zinc-800 ring-1 ring-slate-200/80 dark:ring-zinc-700">
+              <div className="relative aspect-square rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 ring-1 ring-zinc-200/80 dark:ring-zinc-700">
                 <img src={selectedDesign.imageUrl} alt={selectedDesign.title} loading="lazy" className="w-full h-full object-cover" />
               </div>
               <div className="space-y-4">
                 {selectedDesign.reserved ? (
-                  <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-400 px-4 py-2 rounded-full font-semibold">
+                  <div className="inline-flex items-center gap-2 bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 px-4 py-2 rounded-full font-semibold">
                     <X className="w-4 h-4" /> Réservé
                   </div>
                 ) : (
@@ -319,15 +319,15 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                     <CheckCircle className="w-4 h-4" /> Disponible
                   </div>
                 )}
-                {selectedDesign.description && <p className="text-slate-500">{selectedDesign.description}</p>}
-                <div className="grid grid-cols-2 gap-4 py-4 border-y border-slate-200/80 dark:border-zinc-800">
-                  <div><div className="text-sm text-slate-500 mb-1">Prix</div><div className="text-2xl font-bold text-blue-600 tabular-nums">{selectedDesign.price}€</div></div>
-                  <div><div className="text-sm text-slate-500 mb-1">Acompte</div><div className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">{selectedDesign.depositAmount}€</div></div>
-                  <div><div className="text-sm text-slate-500 mb-1">Durée</div><div className="text-lg font-semibold text-slate-900 dark:text-white tabular-nums">{selectedDesign.estimatedDuration}min</div></div>
-                  <div><div className="text-sm text-slate-500 mb-1">Taille</div><div className="text-lg font-semibold text-slate-900 dark:text-white capitalize">{selectedDesign.size}</div></div>
+                {selectedDesign.description && <p className="text-zinc-500 dark:text-zinc-400">{selectedDesign.description}</p>}
+                <div className="grid grid-cols-2 gap-4 py-4 border-y border-zinc-200 dark:border-zinc-800 dark:border-zinc-800">
+                  <div><div className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">Prix</div><div className="text-2xl font-bold text-blue-600 tabular-nums">{selectedDesign.price}€</div></div>
+                  <div><div className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">Acompte</div><div className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{selectedDesign.depositAmount}€</div></div>
+                  <div><div className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">Durée</div><div className="text-lg font-semibold text-zinc-900 dark:text-white tabular-nums">{selectedDesign.estimatedDuration}min</div></div>
+                  <div><div className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">Taille</div><div className="text-lg font-semibold text-zinc-900 dark:text-white capitalize">{selectedDesign.size}</div></div>
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-slate-900 dark:text-white mb-2">Emplacements suggérés</div>
+                  <div className="text-sm font-semibold text-zinc-900 dark:text-white mb-2">Emplacements suggérés</div>
                   <div className="flex flex-wrap gap-2">
                     {selectedDesign.placement.map(place => (
                       <span key={place} className="px-3 py-1 bg-blue-50 dark:bg-blue-500/10 rounded-lg text-sm text-blue-700 dark:text-blue-300">{place}</span>
@@ -336,7 +336,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                 </div>
                 <button onClick={() => handleBookNow(selectedDesign)} disabled={selectedDesign.reserved}
                   className={`w-full min-h-[48px] py-4 rounded-xl font-semibold text-lg transition-all active:scale-[0.98] ${
-                    selectedDesign.reserved ? 'bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
+                    selectedDesign.reserved ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}>
                   {selectedDesign.reserved ? 'Ce flash est réservé' : 'Réserver ce flash'}
                 </button>
@@ -353,15 +353,15 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                         toast.error('Impossible de copier');
                       }
                     }}
-                    className="w-full min-h-[44px] py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]"
+                    className="w-full min-h-[44px] py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 font-semibold text-zinc-700 dark:text-zinc-300 flex items-center justify-center gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]"
                   >
                     {linkCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                     {linkCopied ? 'Lien copié !' : 'Copier le lien vitrine'}
                   </button>
                 )}
                 {(onUpdateFlash || onDeleteFlash) && (
-                  <div className="flex gap-2 pt-4 border-t border-slate-200/80 dark:border-zinc-800">
-                    {onUpdateFlash && <button onClick={() => { setSelectedDesign(null); openEditModal(selectedDesign); }} className="flex-1 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"><Edit className="w-4 h-4" /> Modifier</button>}
+                  <div className="flex gap-2 pt-4 border-t border-zinc-200 dark:border-zinc-800 dark:border-zinc-800">
+                    {onUpdateFlash && <button onClick={() => { setSelectedDesign(null); openEditModal(selectedDesign); }} className="flex-1 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"><Edit className="w-4 h-4" /> Modifier</button>}
                     {onDeleteFlash && <button onClick={() => handleDeleteFlash(selectedDesign.id)} className="flex-1 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 font-semibold hover:bg-red-100 dark:hover:bg-red-950/50 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"><Trash2 className="w-4 h-4" /> Supprimer</button>}
                   </div>
                 )}
@@ -374,14 +374,14 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
           <Modal isOpen={showFormModal} onClose={() => setShowFormModal(false)} title={editingFlash ? 'Modifier le flash' : 'Nouveau flash'} size="lg">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">Titre *</label>
+                <label className="block text-sm font-semibold text-zinc-900 dark:text-white mb-2">Titre *</label>
                 <input type="text" value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
-                  className="w-full px-4 py-3 min-h-[48px] border border-slate-200/80 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="Ex: Dragon Japonais" />
+                  className="w-full px-4 py-3 min-h-[48px] border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="Ex: Dragon Japonais" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">Description</label>
+                <label className="block text-sm font-semibold text-zinc-900 dark:text-white mb-2">Description</label>
                 <textarea value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
-                  className="w-full px-4 py-3 border border-slate-200/80 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white placeholder:text-slate-400 min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="Description du design" />
+                  className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder:text-zinc-400 min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="Description du design" />
               </div>
               <ImageUploadField
                 label="Image du flash"
@@ -391,39 +391,39 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
               />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">Prix (€)</label>
+                  <label className="block text-sm font-semibold text-zinc-900 dark:text-white mb-2">Prix (€)</label>
                   <input type="number" min="0" value={form.price} onChange={(e) => setForm(f => ({ ...f, price: Number(e.target.value) }))}
-                    className="w-full px-4 py-3 min-h-[48px] border border-slate-200/80 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                    className="w-full px-4 py-3 min-h-[48px] border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">Acompte (€)</label>
+                  <label className="block text-sm font-semibold text-zinc-900 dark:text-white mb-2">Acompte (€)</label>
                   <input type="number" min="0" value={form.depositAmount} onChange={(e) => setForm(f => ({ ...f, depositAmount: Number(e.target.value) }))}
-                    className="w-full px-4 py-3 min-h-[48px] border border-slate-200/80 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                    className="w-full px-4 py-3 min-h-[48px] border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">Durée (min)</label>
+                  <label className="block text-sm font-semibold text-zinc-900 dark:text-white mb-2">Durée (min)</label>
                   <input type="number" min="1" value={form.estimatedDuration} onChange={(e) => setForm(f => ({ ...f, estimatedDuration: Number(e.target.value) }))}
-                    className="w-full px-4 py-3 min-h-[48px] border border-slate-200/80 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                    className="w-full px-4 py-3 min-h-[48px] border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">Catégorie</label>
+                  <label className="block text-sm font-semibold text-zinc-900 dark:text-white mb-2">Catégorie</label>
                   <select value={form.category} onChange={(e) => setForm(f => ({ ...f, category: e.target.value }))}
-                    className="w-full px-4 py-3 min-h-[48px] border border-slate-200/80 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                    className="w-full px-4 py-3 min-h-[48px] border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
                     {STYLE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">Taille</label>
+                <label className="block text-sm font-semibold text-zinc-900 dark:text-white mb-2">Taille</label>
                 <select value={form.size} onChange={(e) => setForm(f => ({ ...f, size: e.target.value as 'small' | 'medium' | 'large' }))}
-                  className="w-full px-4 py-3 min-h-[48px] border border-slate-200/80 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                  className="w-full px-4 py-3 min-h-[48px] border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
                   <option value="small">Petit</option>
                   <option value="medium">Moyen</option>
                   <option value="large">Grand</option>
                 </select>
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <button onClick={() => setShowFormModal(false)} className="min-h-[44px] px-6 py-3 bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-xl font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]">
+                <button onClick={() => setShowFormModal(false)} className="min-h-[44px] px-6 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]">
                   Annuler
                 </button>
                 <button onClick={handleSaveFlash} disabled={savingFlash || !form.title.trim()} className="min-h-[44px] px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all active:scale-[0.98]">

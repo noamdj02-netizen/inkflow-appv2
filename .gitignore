@@ -35,6 +35,10 @@ dist-ssr
 # Cursor (docs)
 docs/.cursor
 
+# Claude / outils locaux
+.claude/
+loop-contexts/
+
 # Supabase CLI local
 supabase/.temp
 
