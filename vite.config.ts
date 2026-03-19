@@ -87,7 +87,7 @@ export default defineConfig(({ mode }) => {
         },
       },
       optimizeDeps: {
-        include: ['tslib', '@supabase/supabase-js'],
+        include: ['tslib', '@supabase/supabase-js', 'motion-dom', 'framer-motion'],
       }
     };
 });
