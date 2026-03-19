@@ -81,7 +81,7 @@ export const LoginForm: React.FC = () => {
       <div className="space-y-1.5">
         <label
           htmlFor="login-email"
-          className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-widest"
+          className="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-500 uppercase tracking-widest"
         >
           Email
         </label>
@@ -92,10 +92,10 @@ export const LoginForm: React.FC = () => {
           onChange={(e) => setEmail(e.target.value)}
           className="
             w-full px-4 py-3.5 min-h-[50px] text-[15px]
-            bg-zinc-900 border border-zinc-800
-            text-white placeholder:text-zinc-600
+            bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800
+            text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500
             rounded-2xl
-            focus:outline-none focus:ring-1 focus:ring-white/20 focus:border-zinc-600
+            focus:outline-none focus:ring-2 focus:ring-zinc-900/15 dark:focus:ring-white/20 focus:border-zinc-400 dark:focus:border-zinc-600
             transition-all duration-150
             disabled:opacity-40
           "
