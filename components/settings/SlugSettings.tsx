@@ -8,6 +8,18 @@ const SLUG_REGEX = /^[a-z0-9-]+$/;
 const SLUG_MIN_LENGTH = 3;
 const SLUG_MAX_LENGTH = 50;
 
+// Slugs système réservés — un tatoueur ne peut pas les usurper
+const RESERVED_SLUGS = new Set([
+  'demo', 'admin', 'api', 'app', 'auth', 'billing', 'blog', 'callback',
+  'dashboard', 'help', 'inkflow', 'login', 'logout', 'mail', 'me', 'pricing',
+  'privacy', 'profile', 'public', 'register', 'reset', 'settings', 'signup',
+  'status', 'studio', 'support', 'terms', 'test', 'user', 'users', 'www',
+]);
+
+function isReservedSlug(s: string): boolean {
+  return RESERVED_SLUGS.has(s.toLowerCase());
+}
+
 function sanitizeSlugInput(value: string): string {
   return value
     .toLowerCase()
@@ -78,6 +90,12 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
   useEffect(() => {
     if (!slug || slug.length < SLUG_MIN_LENGTH || !SLUG_REGEX.test(slug)) return;
     if (slug === currentSlug) return;
+    // Block reserved system slugs immediately, no network call needed
+    if (isReservedSlug(slug)) {
+      setAvailability('taken');
+      setSuggestions(generateCandidates(slug).slice(0, 3));
+      return;
+    }
     let cancelled = false;
     const t = setTimeout(async () => {
       setChecking(true);
@@ -122,6 +140,11 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
 
   const handleSave = async () => {
     if (!canSave || !slug) return;
+    // Double guard — refuse reserved slugs even if canSave somehow passed
+    if (isReservedSlug(slug)) {
+      toast.error('Ce slug est réservé par le système.');
+      return;
+    }
     setSaving(true);
     try {
       await updateStudioSlug(studioId, slug);
@@ -217,7 +240,7 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
               <div className="space-y-3">
                 <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1.5 font-medium">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  Ce slug est déjà pris par un autre studio
+                  {isReservedSlug(slug) ? 'Ce slug est réservé par le système InkFlow' : 'Ce slug est déjà pris par un autre studio'}
                 </p>
 
                 {/* Suggestions */}
