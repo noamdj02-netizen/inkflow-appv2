@@ -3,7 +3,6 @@ import { ArrowLeft, Mail } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { LANDING_URL } from '../lib/urls';
-import loginHeroImg from '../src/assets/login-hero.jpg';
 
 
 export const LoginPage: React.FC = () => {
@@ -84,7 +83,7 @@ export const LoginPage: React.FC = () => {
       <div className="hidden lg:flex lg:w-[520px] xl:w-[600px] min-h-screen h-screen flex-shrink-0 relative overflow-hidden">
         {/* Photo étirée pleine hauteur, ancrée en bas, responsive */}
         <img
-          src={loginHeroImg}
+          src="/images/login-hero.jpg"
           alt="Tatoueur"
           className="absolute inset-0 w-full min-h-full object-cover object-bottom"
           loading="eager"
