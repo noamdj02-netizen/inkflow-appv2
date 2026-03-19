@@ -83,12 +83,20 @@ export const LoginPage: React.FC = () => {
       </div>
 
       {/* ── RIGHT — Hero photo ── */}
+      {/* → Remplace /images/login-hero.jpg par ta photo dans public/images/ */}
       <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
         <img
           src="/images/login-hero.jpg"
           alt="Tatoueur InkFlow"
           className="absolute inset-0 w-full h-full object-cover object-center"
           fetchPriority="high"
+          onError={(e) => {
+            // Fallback Unsplash tant que la photo locale n'est pas uploadée
+            const t = e.currentTarget;
+            if (!t.src.includes('unsplash')) {
+              t.src = 'https://images.unsplash.com/photo-1590246814883-55516d489e9a?w=1200&q=85&auto=format&fit=crop';
+            }
+          }}
         />
         {/* Left-edge gradient so form blends into photo */}
         <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-black to-transparent" />
