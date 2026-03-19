@@ -27,12 +27,15 @@ import { getLayoutFromStorage, setLayoutToStorage, DEFAULT_LAYOUT, type Dashboar
 import type { Appointment, Client, FlashDesign, ProjectRequest } from '../../types';
 import type { DashboardWidget } from './DashboardWidgets';
 
+/** Image d’en-tête mobile si aucune image vitrine (fichier dans /public) */
+const MOBILE_OVERVIEW_HEADER_BG_FALLBACK = '/images/hero-tattoo-artist.png';
+
 export type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings';
 
 export interface DashboardOverviewTabProps {
   now: Date;
   firstName: string;
-  user: { studioName?: string } | null;
+  user: { studioName?: string; avatar?: string } | null;
   studioSlug?: string | null;
   studioId?: string | null;
   useSupabase?: boolean;
@@ -62,6 +65,8 @@ export interface DashboardOverviewTabProps {
   setShowWidgetModal: (show: boolean) => void;
   pendingRequestsCount: number;
   recentDeposits: Appointment[];
+  /** Image de couverture vitrine (Paramètres → Vitrine) ; sinon image par défaut ci-dessus */
+  overviewHeaderBgUrl?: string | null;
 }
 
 export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
@@ -93,7 +98,23 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   studioId,
   useSupabase = false,
   recentDeposits = [],
+  overviewHeaderBgUrl,
 }) => {
+  const mobileHeaderBgUrl =
+    typeof overviewHeaderBgUrl === 'string' && overviewHeaderBgUrl.trim() !== ''
+      ? overviewHeaderBgUrl.trim()
+      : MOBILE_OVERVIEW_HEADER_BG_FALLBACK;
+
+  /** Évite les IDs sortables dupliqués (un seul arbre KPI / widgets draggables selon la largeur) */
+  const [isMdUp, setIsMdUp] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const apply = () => setIsMdUp(mq.matches);
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
   const vitrineSlug = (studioSlug != null && studioSlug !== '') ? studioSlug : (user?.studioName ? getVitrineSlug(user.studioName) : '');
   const upcomingAppointments = appointments.filter(a => a.date > today && ['pending', 'confirmed'].includes(a.status)).sort((a, b) => a.date.localeCompare(b.date));
   const vipClients = clients.filter(c => (c.totalSpent ?? 0) >= 500).length;
@@ -262,7 +283,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             <div 
               {...attributes} 
               {...listeners}
-              className="p-1.5 rounded-lg bg-blue-600 text-white cursor-grab active:cursor-grabbing shadow-lg"
+              className="p-1.5 rounded-lg bg-sky-600 dark:bg-sky-500 text-white cursor-grab active:cursor-grabbing shadow-lg"
             >
               <GripVertical className="w-3.5 h-3.5" />
             </div>
@@ -283,6 +304,26 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     );
   };
 
+  /** Desktop KPI (inchangé) vs mobile — Human Interface : grouped, plat, Footnote / Title styles */
+  const desktopKpiShell =
+    'bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px] min-w-0';
+  const desktopKpiCaption =
+    'text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0';
+  const desktopKpiIconBtn =
+    'w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0';
+  const iosKpiShell =
+    'h-full min-w-0 flex flex-col justify-between rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1C1C1E] p-4 shadow-sm';
+  const iosKpiCaption = 'text-[13px] font-normal text-zinc-500 dark:text-zinc-400 leading-snug pr-1';
+  /** Chiffres KPI mobile — rendu type Apple : SF hérité, medium, tabulaires, crénage serré */
+  const iosKpiMetricWrap =
+    'mt-0.5 inline-flex items-baseline gap-0.5 flex-wrap min-w-0';
+  const iosKpiMetricValue =
+    'text-[32px] font-medium tabular-nums tracking-[-0.03em] text-zinc-900 dark:text-white leading-none';
+  const iosKpiMetricSuffix =
+    'text-[15px] font-medium text-zinc-400 dark:text-zinc-500 leading-none tabular-nums select-none';
+  const iosKpiIconBtn =
+    'shrink-0 w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center active:opacity-60 transition-opacity';
+
   const SortableKpiWidget: React.FC<{ id: string; children: React.ReactNode; canRemove?: boolean }> = ({ id, children, canRemove = true }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !isEditMode });
     
@@ -294,13 +335,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     };
     
     return (
-      <div ref={setNodeRef} style={style} className="relative group h-full min-h-[130px]">
+      <div ref={setNodeRef} style={style} className={`relative group h-full ${isMdUp ? 'min-h-[130px]' : 'min-h-[120px]'}`}>
         {isEditMode && (
           <div className="absolute -top-2 -right-2 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
             <div 
               {...attributes} 
               {...listeners}
-              className="p-1.5 rounded-lg bg-blue-600 text-white cursor-grab active:cursor-grabbing shadow-lg"
+              className="p-1.5 rounded-lg bg-sky-600 dark:bg-sky-500 text-white cursor-grab active:cursor-grabbing shadow-lg"
             >
               <GripVertical className="w-3.5 h-3.5" />
             </div>
@@ -328,33 +369,68 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       case 'kpi-revenue':
         return (
           <SortableKpiWidget key={widgetId} id={widgetId}>
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px] min-w-0">
+            <div className={isMdUp ? desktopKpiShell : iosKpiShell}>
               <div className="flex items-start justify-between gap-2">
-                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">Revenu du mois</span>
+                <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>Revenu du mois</span>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('finance')}
-                  className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0"
+                  className={isMdUp ? desktopKpiIconBtn : iosKpiIconBtn}
+                  aria-label="Finances"
                 >
-                  <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                  <ArrowUpRight
+                    className={
+                      isMdUp ? 'w-3.5 h-3.5 text-sky-600 dark:text-sky-400' : 'w-4 h-4 text-sky-600 dark:text-sky-400'
+                    }
+                  />
                 </button>
               </div>
-              <div className="min-w-0 flex-1 flex flex-col">
-                <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
-                  {monthlyRevenue.toLocaleString('fr-FR')}€
-                </p>
-                <div className="mt-2 min-h-[24px] flex items-end">
-                  {trendRevenue !== null ? (
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      trendRevenue >= 0
-                        ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'
-                    }`}>
-                      {trendRevenue >= 0 ? '↑' : '↓'} {Math.abs(trendRevenue)}% vs mois dernier
-                    </span>
+              <div className={`min-w-0 flex-1 flex flex-col ${isMdUp ? '' : 'justify-end'}`}>
+                <p
+                  className={
+                    isMdUp
+                      ? 'text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2'
+                      : iosKpiMetricWrap
+                  }
+                >
+                  {isMdUp ? (
+                    <>{monthlyRevenue.toLocaleString('fr-FR')}€</>
                   ) : (
+                    <>
+                      <span className={iosKpiMetricValue}>{monthlyRevenue.toLocaleString('fr-FR')}</span>
+                      <span className={iosKpiMetricSuffix}>€</span>
+                    </>
+                  )}
+                </p>
+                <div className={`${isMdUp ? 'mt-2 min-h-[24px]' : 'mt-1 min-h-[20px]'} flex items-end`}>
+                  {trendRevenue !== null ? (
+                    isMdUp ? (
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          trendRevenue >= 0
+                            ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                            : 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400'
+                        }`}
+                      >
+                        {trendRevenue >= 0 ? '↑' : '↓'} {Math.abs(trendRevenue)}% vs mois dernier
+                      </span>
+                    ) : (
+                      <p
+                        className={`text-[13px] font-normal ${
+                          trendRevenue >= 0
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-rose-600 dark:text-rose-400'
+                        }`}
+                      >
+                        {trendRevenue >= 0 ? '↑' : '↓'} {Math.abs(trendRevenue)}% vs mois dernier
+                      </p>
+                    )
+                  ) : isMdUp ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
                       Ce mois
                     </span>
+                  ) : (
+                    <p className="text-[13px] text-zinc-500 dark:text-zinc-400">Ce mois</p>
                   )}
                 </div>
               </div>
@@ -366,25 +442,50 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       case 'kpi-deposits':
         return (
           <SortableKpiWidget key={widgetId} id={widgetId}>
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px] min-w-0">
+            <div className={isMdUp ? desktopKpiShell : iosKpiShell}>
               <div className="flex items-start justify-between gap-2">
-                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">Acomptes</span>
+                <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>Acomptes</span>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('finance')}
-                  className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0"
+                  className={isMdUp ? desktopKpiIconBtn : iosKpiIconBtn}
+                  aria-label="Finances"
                 >
-                  <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                  <ArrowUpRight
+                    className={
+                      isMdUp
+                        ? 'w-3.5 h-3.5 text-violet-600 dark:text-violet-400'
+                        : 'w-4 h-4 text-violet-600 dark:text-violet-400'
+                    }
+                  />
                 </button>
               </div>
-              <div className="min-w-0 flex-1 flex flex-col">
-                <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
-                  {pendingDeposits.toLocaleString('fr-FR')}€
+              <div className={`min-w-0 flex-1 flex flex-col ${isMdUp ? '' : 'justify-end'}`}>
+                <p
+                  className={
+                    isMdUp
+                      ? 'text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2'
+                      : iosKpiMetricWrap
+                  }
+                >
+                  {isMdUp ? (
+                    <>{pendingDeposits.toLocaleString('fr-FR')}€</>
+                  ) : (
+                    <>
+                      <span className={iosKpiMetricValue}>{pendingDeposits.toLocaleString('fr-FR')}</span>
+                      <span className={iosKpiMetricSuffix}>€</span>
+                    </>
+                  )}
                 </p>
-                <div className="mt-2 min-h-[24px] flex items-end">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                    En attente
-                  </span>
-                </div>
+                {isMdUp ? (
+                  <div className="mt-2 min-h-[24px] flex items-end">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300">
+                      En attente
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-violet-600 dark:text-violet-400 mt-1">En attente</p>
+                )}
               </div>
             </div>
           </SortableKpiWidget>
@@ -394,31 +495,60 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       case 'kpi-clients':
         return (
           <SortableKpiWidget key={widgetId} id={widgetId}>
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px] min-w-0">
+            <div className={isMdUp ? desktopKpiShell : iosKpiShell}>
               <div className="flex items-start justify-between gap-2">
-                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">Clients</span>
+                <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>Clients</span>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('clients')}
-                  className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0"
+                  className={isMdUp ? desktopKpiIconBtn : iosKpiIconBtn}
+                  aria-label="Clients"
                 >
-                  <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                  <ArrowUpRight
+                    className={
+                      isMdUp
+                        ? 'w-3.5 h-3.5 text-amber-600 dark:text-amber-400'
+                        : 'w-4 h-4 text-amber-600 dark:text-amber-400'
+                    }
+                  />
                 </button>
               </div>
-              <div className="min-w-0 flex-1 flex flex-col">
-                <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
-                  {clients.length}
-                </p>
-                <div className="mt-2 min-h-[24px] flex items-end">
-                  {vipClients > 0 ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                      ⭐ {vipClients} VIP
-                    </span>
+              <div className={`min-w-0 flex-1 flex flex-col ${isMdUp ? '' : 'justify-end'}`}>
+                <p
+                  className={
+                    isMdUp
+                      ? 'text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2'
+                      : iosKpiMetricWrap
+                  }
+                >
+                  {isMdUp ? (
+                    clients.length
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    <span className={iosKpiMetricValue}>{clients.length}</span>
+                  )}
+                </p>
+                {vipClients > 0 ? (
+                  isMdUp ? (
+                    <div className="mt-2 min-h-[24px] flex items-end">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300">
+                        ⭐ {vipClients} VIP
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1 inline-flex items-center gap-1">
+                      <Star className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                      {vipClients} VIP
+                    </p>
+                  )
+                ) : isMdUp ? (
+                  <div className="mt-2 min-h-[24px] flex items-end">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 dark:bg-sky-500/15 text-sky-800 dark:text-sky-300">
                       Total
                     </span>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1">Total</p>
+                )}
               </div>
             </div>
           </SortableKpiWidget>
@@ -428,33 +558,67 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       case 'kpi-appointments':
         return (
           <SortableKpiWidget key={widgetId} id={widgetId}>
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px] min-w-0">
+            <div className={isMdUp ? desktopKpiShell : iosKpiShell}>
               <div className="flex items-start justify-between gap-2">
-                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0">RDV ce mois</span>
+                <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>RDV ce mois</span>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('appointments')}
-                  className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0"
+                  className={isMdUp ? desktopKpiIconBtn : iosKpiIconBtn}
+                  aria-label="Agenda"
                 >
-                  <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />
+                  <ArrowUpRight
+                    className={
+                      isMdUp
+                        ? 'w-3.5 h-3.5 text-teal-600 dark:text-teal-400'
+                        : 'w-4 h-4 text-teal-600 dark:text-teal-400'
+                    }
+                  />
                 </button>
               </div>
-              <div className="min-w-0 flex-1 flex flex-col">
-                <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2">
-                  {appointmentsThisMonth}
-                </p>
-                <div className="mt-2 min-h-[24px] flex items-end">
-                  {trendAppointments !== null ? (
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      trendAppointments >= 0
-                        ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'
-                    }`}>
-                      {trendAppointments >= 0 ? '↑' : '↓'} {Math.abs(trendAppointments)}% vs dernier mois
-                    </span>
+              <div className={`min-w-0 flex-1 flex flex-col ${isMdUp ? '' : 'justify-end'}`}>
+                <p
+                  className={
+                    isMdUp
+                      ? 'text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2'
+                      : iosKpiMetricWrap
+                  }
+                >
+                  {isMdUp ? (
+                    appointmentsThisMonth
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                    <span className={iosKpiMetricValue}>{appointmentsThisMonth}</span>
+                  )}
+                </p>
+                <div className={`${isMdUp ? 'mt-2 min-h-[24px]' : 'mt-1 min-h-[20px]'} flex items-end`}>
+                  {trendAppointments !== null ? (
+                    isMdUp ? (
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          trendAppointments >= 0
+                            ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                            : 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400'
+                        }`}
+                      >
+                        {trendAppointments >= 0 ? '↑' : '↓'} {Math.abs(trendAppointments)}% vs dernier mois
+                      </span>
+                    ) : (
+                      <p
+                        className={`text-[13px] font-normal ${
+                          trendAppointments >= 0
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-rose-600 dark:text-rose-400'
+                        }`}
+                      >
+                        {trendAppointments >= 0 ? '↑' : '↓'} {Math.abs(trendAppointments)}% vs mois dernier
+                      </p>
+                    )
+                  ) : isMdUp ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 dark:bg-orange-500/15 text-orange-800 dark:text-orange-300">
                       Ce mois
                     </span>
+                  ) : (
+                    <p className="text-[13px] text-zinc-500 dark:text-zinc-400">Ce mois</p>
                   )}
                 </div>
               </div>
@@ -469,160 +633,212 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
   return (
     <>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
       {/* =====================================================
           MOBILE LAYOUT (< md) — iOS Native Style
           ===================================================== */}
-      <div className="md:hidden min-h-screen bg-[#F2F2F7] dark:bg-black pb-28">
+      <div className="md:hidden min-h-screen bg-[#F2F2F7] dark:bg-black pb-28 antialiased [-webkit-font-smoothing:antialiased] [font-family:system-ui,-apple-system,'SF_Pro_Text','Segoe_UI',sans-serif]">
         
         {/* iOS Large Title Header */}
-        <div className="px-4 pt-8 pb-3 safe-top">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-zinc-500 dark:text-zinc-500 mb-0.5 capitalize">
-                {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-              </p>
-              <h1 className="text-[32px] font-bold tracking-tight text-zinc-900 dark:text-white leading-tight">
-                {greeting}{firstName ? `,` : ''}<br />{firstName || ''}
-              </h1>
-            </div>
-            {/* Avatar / Profile button */}
-            <button
-              onClick={() => setActiveTab('settings')}
-              className="mt-1 w-11 h-11 rounded-full flex-shrink-0 active:scale-90 transition-transform duration-150 overflow-hidden shadow-md"
-            >
-              {user?.avatar ? (
-                <img src={user.avatar} alt="" className="w-full h-full object-cover rounded-full" />
-              ) : (
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                  <span className="text-[15px] font-bold text-white">
-                    {firstName ? firstName[0].toUpperCase() : '?'}
-                  </span>
+        <div className="px-4 pt-6 pb-3 safe-top">
+          <div className="relative rounded-2xl overflow-hidden border border-zinc-200/80 dark:border-zinc-800 shadow-md min-h-[140px]">
+            {/* Image de fond (statique) */}
+            <div
+              className="absolute inset-0 bg-cover bg-center scale-105"
+              style={{ backgroundImage: `url(${mobileHeaderBgUrl})` }}
+              aria-hidden
+            />
+            {/* Voile pour lisibilité du texte */}
+            <div
+              className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/65 dark:from-black/55 dark:via-black/45 dark:to-black/75"
+              aria-hidden
+            />
+            <div className="relative z-10 p-4 pt-5 pb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-white/80 mb-0.5 capitalize drop-shadow-sm">
+                    {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </p>
+                  <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight text-white leading-tight font-display [text-shadow:0_2px_12px_rgba(0,0,0,0.35)]">
+                    {greeting}{firstName ? `,` : ''}
+                    <br />
+                    {firstName || ''}
+                  </h1>
+                  {user?.studioName && (
+                    <p className="text-sm font-medium text-white/85 mt-1 truncate [text-shadow:0_1px_8px_rgba(0,0,0,0.4)]">
+                      {user.studioName}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('settings')}
+                  className="mt-0.5 w-12 h-12 rounded-2xl flex-shrink-0 overflow-hidden shadow-lg ring-2 ring-white/40 active:scale-95 transition-transform"
+                  aria-label="Paramètres"
+                >
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <span className="text-lg font-bold text-white">
+                        {firstName ? firstName[0].toUpperCase() : '?'}
+                      </span>
+                    </div>
+                  )}
+                </button>
+              </div>
+
+              {(unpaidCount > 0 || todayOrTomorrowCount > 0) && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {unpaidCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('requests')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/95 text-amber-950 text-xs font-semibold whitespace-nowrap active:scale-95 transition-transform shadow-sm"
+                    >
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {unpaidCount} sans acompte
+                    </button>
+                  )}
+                  {todayOrTomorrowCount > 0 && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-400/95 text-white text-xs font-semibold whitespace-nowrap shadow-sm">
+                      <CalendarCheck className="w-3.5 h-3.5" />
+                      {todayOrTomorrowCount} RDV bientôt
+                    </span>
+                  )}
                 </div>
               )}
-            </button>
-          </div>
-
-          {/* Alert Pills — sous le titre */}
-          {(unpaidCount > 0 || todayOrTomorrowCount > 0) && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {unpaidCount > 0 && (
-                <button
-                  onClick={() => setActiveTab('requests')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-semibold whitespace-nowrap active:scale-95 transition-transform"
-                >
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  {unpaidCount} sans acompte
-                </button>
-              )}
-              {todayOrTomorrowCount > 0 && (
-                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 text-xs font-semibold whitespace-nowrap">
-                  <CalendarCheck className="w-3.5 h-3.5" />
-                  {todayOrTomorrowCount} RDV bientôt
-                </span>
-              )}
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Quick Actions — Framer minimal style */}
+        {/* Actions rapides — grille 4 colonnes, version compacte / minimaliste */}
         <div className="px-4 pt-3 pb-1">
           <div className="grid grid-cols-4 gap-2">
-
-            {/* Nouveau RDV */}
             <button
+              type="button"
               onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-              className="flex flex-col items-center gap-2 py-3 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-100 dark:border-zinc-800 shadow-sm active:scale-95 transition-all duration-150"
+              className="flex flex-col items-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm active:opacity-70 transition-opacity"
             >
-              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
-                <Plus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 text-center leading-tight px-1">Nouveau RDV</span>
+              <Plus className="w-5 h-5 text-sky-600 dark:text-sky-400" strokeWidth={2} />
+              <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center leading-tight">Nouveau RDV</span>
             </button>
-
-            {/* Flash */}
             <button
+              type="button"
               onClick={() => setActiveTab('flash')}
-              className="flex flex-col items-center gap-2 py-3 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-100 dark:border-zinc-800 shadow-sm active:scale-95 transition-all duration-150"
+              className="flex flex-col items-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm active:opacity-70 transition-opacity"
             >
-              <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
-                <Zap className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-              </div>
-              <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 text-center leading-tight px-1">Flash</span>
+              <Zap className="w-5 h-5 text-amber-500 dark:text-amber-400" strokeWidth={2} />
+              <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center leading-tight">Flash</span>
             </button>
-
-            {/* Vitrine */}
             {vitrineSlug ? (
               <a
                 href={`/studio/${vitrineSlug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col items-center gap-2 py-3 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-100 dark:border-zinc-800 shadow-sm active:scale-95 transition-all duration-150"
+                className="flex flex-col items-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm active:opacity-70 transition-opacity"
               >
-                <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center">
-                  <ExternalLink className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                </div>
-                <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 text-center leading-tight px-1">Vitrine</span>
+                <ExternalLink className="w-5 h-5 text-violet-500 dark:text-violet-400" strokeWidth={2} />
+                <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center leading-tight">Vitrine</span>
               </a>
             ) : (
-              <div className="flex flex-col items-center gap-2 py-3 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-100 dark:border-zinc-800 shadow-sm opacity-40">
-                <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center">
-                  <ExternalLink className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                </div>
-                <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 text-center leading-tight px-1">Vitrine</span>
+              <div className="flex flex-col items-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white/60 dark:bg-zinc-900/50 border border-zinc-200/50 dark:border-zinc-800 opacity-45 pointer-events-none">
+                <ExternalLink className="w-5 h-5 text-zinc-400" strokeWidth={2} />
+                <span className="text-[10px] font-medium text-zinc-400 text-center leading-tight">Vitrine</span>
               </div>
             )}
-
-            {/* Demandes */}
             <button
+              type="button"
               onClick={() => setActiveTab('requests')}
-              className="relative flex flex-col items-center gap-2 py-3 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-100 dark:border-zinc-800 shadow-sm active:scale-95 transition-all duration-150"
+              className="relative flex flex-col items-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm active:opacity-70 transition-opacity"
             >
               {pendingRequestsCount > 0 && (
-                <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
-                  {pendingRequestsCount}
+                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 text-[9px] font-bold flex items-center justify-center tabular-nums leading-none">
+                  {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
                 </span>
               )}
-              <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
-                <Inbox className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 text-center leading-tight px-1">Demandes</span>
+              <Inbox className="w-5 h-5 text-zinc-600 dark:text-zinc-300" strokeWidth={2} />
+              <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center leading-tight">Demandes</span>
             </button>
-
           </div>
         </div>
+
+        {/* Mode widgets — même logique que desktop (KPI réordonnables) */}
+        {isEditMode && (
+          <div className="px-4 mt-3 mb-1">
+            <div className="bg-sky-50/90 dark:bg-sky-950/30 border border-sky-200/80 dark:border-sky-800/50 rounded-2xl p-3 flex flex-col gap-2">
+              <div className="flex items-start gap-2">
+                <div className="p-1.5 rounded-xl bg-sky-100 dark:bg-sky-900/50 shrink-0">
+                  <Move className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-sky-950 dark:text-sky-100">Personnaliser le tableau</p>
+                  <p className="text-xs text-sky-800/80 dark:text-sky-300/90 mt-0.5">
+                    Glissez les blocs « Ce mois ». Les graphiques et colonnes latérales restent visibles sur grand écran.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowWidgetPicker(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-600 text-white dark:bg-sky-500 text-xs font-semibold hover:bg-sky-700 dark:hover:bg-sky-400 transition-colors active:scale-[0.98]"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Ajouter un widget
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditMode(false)}
+                  className="px-3 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-semibold hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors active:scale-[0.98]"
+                >
+                  Terminer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Main Content */}
         <div className="px-4 space-y-4">
           
-          {/* Next Client Widget — iOS Widget Style, compact sur mobile */}
+          {/* Prochain client — accent bleu doux */}
           {nextClient && (
-            <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 rounded-2xl sm:rounded-[28px] p-4 sm:p-5 text-white shadow-lg shadow-blue-500/30 relative overflow-hidden">
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-0 right-0 w-20 h-20 sm:w-24 sm:h-24 bg-white/10 rounded-full blur-2xl translate-x-1/4 -translate-y-1/4" />
-              </div>
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-white/70">Prochain client</span>
-                  <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-white/20 backdrop-blur-sm text-[10px] sm:text-[11px] font-bold">{nextClient.time || '--:--'}</span>
+            <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-sky-600 to-blue-700 dark:from-sky-700 dark:to-blue-900 text-white shadow-md border border-sky-500/30 dark:border-sky-600/40">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[13px] font-normal text-white/90">Prochain client</span>
+                  <span className="text-[15px] font-semibold tabular-nums">{nextClient.time || '--:--'}</span>
                 </div>
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <img 
-                    src={nextClient.clientAvatar || '/images/avatar-client-default.png'} 
-                    alt={nextClient.clientName || 'Client'} 
-                    className="w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl object-cover border-2 border-white/30"
+                <div className="flex items-center gap-3">
+                  <img
+                    src={nextClient.clientAvatar || '/images/avatar-client-default.png'}
+                    alt={nextClient.clientName || 'Client'}
+                    className="w-12 h-12 rounded-xl object-cover bg-white/20"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-base sm:text-lg font-bold truncate">{nextClient.clientName}</p>
-                    <p className="text-xs sm:text-sm text-white/80 truncate">{nextClient.service || 'Tatouage'}</p>
-                    <div className="flex items-center gap-2 sm:gap-3 mt-0.5 sm:mt-1 text-[11px] sm:text-xs text-white/70">
-                      {nextClient.duration && <span><Clock className="w-3 h-3 inline mr-0.5" />{nextClient.duration}min</span>}
-                      {nextClient.price && <span className="font-bold text-white">{nextClient.price}€</span>}
+                    <p className="text-[17px] font-semibold leading-snug truncate">{nextClient.clientName}</p>
+                    <p className="text-[15px] text-white/85 truncate mt-0.5">{nextClient.service || 'Tatouage'}</p>
+                    <div className="flex items-center gap-3 mt-1 text-[13px] text-white/80">
+                      {nextClient.duration && (
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 opacity-90" />
+                          {nextClient.duration} min
+                        </span>
+                      )}
+                      {nextClient.price && <span className="font-semibold tabular-nums">{nextClient.price}€</span>}
                     </div>
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setSelectedAppointment(nextClient)}
-                  className="w-full mt-3 sm:mt-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-white text-blue-600 text-xs sm:text-sm font-bold active:scale-[0.98] transition-transform"
+                  className="w-full mt-4 py-2.5 rounded-xl bg-white text-sky-700 dark:text-sky-800 text-[17px] font-semibold active:scale-[0.98] transition-all"
                 >
                   Voir le RDV
                 </button>
@@ -630,90 +846,66 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             </div>
           )}
 
-          {/* KPIs — iOS Widget Style (2x2 Grid) */}
-          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl overflow-hidden shadow-sm">
-            <div className="px-4 pt-3.5 pb-1 flex items-center justify-between">
-              <span className="text-[12px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Ce mois</span>
-              <button onClick={() => setActiveTab('analytics')} className="text-[12px] font-semibold text-blue-600 dark:text-blue-400">Voir tout</button>
-            </div>
-            <div className="grid grid-cols-2 divide-x divide-y divide-zinc-100 dark:divide-zinc-800/80">
-              {/* Revenu */}
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-500/20">
-                    <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <span className="text-[11px] font-medium text-zinc-500">Revenu</span>
-                </div>
-                <p className="text-[22px] font-bold text-zinc-900 dark:text-white tabular-nums leading-none">{monthlyRevenue.toLocaleString('fr-FR')}€</p>
-                <div className="flex items-center gap-1 mt-1.5">
-                  <ArrowUpRight className="w-3 h-3 text-emerald-500" />
-                  <span className="text-[11px] font-semibold text-emerald-500">ce mois</span>
-                </div>
+          {/* KPIs — grille type widgets iOS */}
+          <div>
+            <div className="px-0.5 pt-1 pb-3 flex items-end justify-between gap-3">
+              <div>
+                <h2 className="text-[22px] font-bold tracking-tight text-zinc-900 dark:text-white leading-tight">Ce mois</h2>
+                <p className="text-[15px] text-zinc-500 dark:text-zinc-400 mt-0.5">Indicateurs clés</p>
               </div>
-              {/* Acomptes */}
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="p-1.5 rounded-lg bg-violet-100 dark:bg-violet-500/20">
-                    <Wallet className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
-                  </div>
-                  <span className="text-[11px] font-medium text-zinc-500">Acomptes</span>
-                </div>
-                <p className="text-[22px] font-bold text-zinc-900 dark:text-white tabular-nums leading-none">{pendingDeposits.toLocaleString('fr-FR')}€</p>
-                <div className="flex items-center gap-1 mt-1.5">
-                  <span className="text-[11px] font-medium text-zinc-400">en attente</span>
-                </div>
-              </div>
-              {/* Clients */}
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-500/20">
-                    <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <span className="text-[11px] font-medium text-zinc-500">Clients</span>
-                </div>
-                <p className="text-[22px] font-bold text-zinc-900 dark:text-white tabular-nums leading-none">{clients.length}</p>
-                <div className="flex items-center gap-1 mt-1.5">
-                  <span className="text-[11px] font-medium text-zinc-400">total</span>
-                </div>
-              </div>
-              {/* RDV */}
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="p-1.5 rounded-lg bg-orange-100 dark:bg-orange-500/20">
-                    <Calendar className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <span className="text-[11px] font-medium text-zinc-500">RDV</span>
-                </div>
-                <p className="text-[22px] font-bold text-zinc-900 dark:text-white tabular-nums leading-none">{appointmentsThisMonth}</p>
-                <div className="flex items-center gap-1 mt-1.5">
-                  <span className="text-[11px] font-medium text-zinc-400">ce mois</span>
-                </div>
+              <div className="flex items-center gap-2 shrink-0 pb-0.5">
+                <button
+                  type="button"
+                  onClick={() => setIsEditMode((v) => !v)}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[15px] font-medium transition-colors active:opacity-70 ${
+                    isEditMode
+                      ? 'bg-sky-600 text-white dark:bg-sky-500'
+                      : 'bg-white dark:bg-[#1C1C1E] text-sky-600 dark:text-sky-400 border border-black/[0.06] dark:border-white/[0.08]'
+                  }`}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  {isEditMode ? 'OK' : 'Widgets'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('analytics')}
+                  className="text-[17px] font-normal text-sky-600 dark:text-sky-400 px-1 py-1"
+                >
+                  Tout
+                </button>
               </div>
             </div>
+            {!isMdUp ? (
+              <SortableContext items={layout.kpiOrder} strategy={horizontalListSortingStrategy}>
+                <div className="grid grid-cols-2 gap-3 items-stretch">
+                  {layout.kpiOrder.map((widgetId) => renderKpiWidget(widgetId))}
+                </div>
+              </SortableContext>
+            ) : null}
           </div>
 
-          {/* Today's Appointments — iOS List Style */}
-          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl overflow-hidden">
-            <div className="px-4 py-3 flex items-center justify-between">
-              <span className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Aujourd'hui</span>
-              <span className="text-[13px] font-bold text-zinc-900 dark:text-white">{todayAppointments.length} RDV</span>
+          {/* Aujourd&apos;hui — groupe iOS */}
+          <div className="rounded-2xl overflow-hidden border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1C1C1E] shadow-sm">
+            <div className="px-4 py-3 flex items-baseline justify-between border-b border-zinc-200/80 dark:border-zinc-800">
+              <span className="text-[22px] font-bold text-zinc-900 dark:text-white">Aujourd&apos;hui</span>
+              <span className="text-[15px] text-zinc-500 dark:text-zinc-400 tabular-nums">{todayAppointments.length} RDV</span>
             </div>
             {todayAppointments.length > 0 ? (
-              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <div className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
                 {todayAppointments.slice(0, 4).map((apt) => (
                   <button
                     key={apt.id}
+                    type="button"
                     onClick={() => setSelectedAppointment(apt)}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-zinc-50 dark:active:bg-zinc-800 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 min-h-[52px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left"
                   >
                     <div className="w-11 text-center flex-shrink-0">
-                      <p className="text-base font-bold text-zinc-900 dark:text-white tabular-nums">{apt.time?.split(':')[0]}</p>
-                      <p className="text-[10px] font-medium text-zinc-400">:{apt.time?.split(':')[1] || '00'}</p>
+                      <p className="text-[17px] font-semibold text-zinc-900 dark:text-white tabular-nums leading-none">{apt.time?.split(':')[0]}</p>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">:{apt.time?.split(':')[1] || '00'}</p>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[15px] font-semibold text-zinc-900 dark:text-white truncate">{apt.clientName}</p>
-                      <p className="text-[13px] text-zinc-500 truncate">{apt.service || 'Tatouage'}</p>
+                      <p className="text-[17px] font-normal text-zinc-900 dark:text-white truncate">{apt.clientName}</p>
+                      <p className="text-[15px] text-zinc-500 dark:text-zinc-400 truncate">{apt.service || 'Tatouage'}</p>
                     </div>
                     <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 flex-shrink-0" />
                   </button>
@@ -731,32 +923,36 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
           {/* Upcoming Appointments */}
           {upcomingAppointments.length > 0 && (
-            <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 flex items-center justify-between">
-                <span className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">À venir</span>
-                <button 
+            <div className="rounded-2xl overflow-hidden border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1C1C1E] shadow-sm">
+              <div className="px-4 py-3 flex items-baseline justify-between border-b border-zinc-200/80 dark:border-zinc-800">
+                <span className="text-[22px] font-bold text-zinc-900 dark:text-white">À venir</span>
+                <button
+                  type="button"
                   onClick={() => setActiveTab('appointments')}
-                  className="text-[13px] font-semibold text-blue-600 dark:text-blue-400"
+                  className="text-[17px] font-normal text-sky-600 dark:text-sky-400"
                 >
-                  Voir tout
+                  Tout
                 </button>
               </div>
-              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <div className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
                 {upcomingAppointments.slice(0, 3).map(apt => (
                   <button
                     key={apt.id}
+                    type="button"
                     onClick={() => setSelectedAppointment(apt)}
-                    className="w-full flex items-center gap-3 px-4 py-3 active:bg-zinc-50 dark:active:bg-zinc-800 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 min-h-[48px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left"
                   >
-                    <span className="text-[13px] font-semibold text-zinc-400 dark:text-zinc-500 min-w-[3.5rem]">
+                    <span className="text-[15px] text-zinc-500 dark:text-zinc-400 min-w-[3.25rem] tabular-nums">
                       {new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                     </span>
-                    <span className="text-[15px] font-medium text-zinc-900 dark:text-white truncate flex-1">{apt.clientName}</span>
-                    <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
-                      apt.status === 'confirmed'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
-                        : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
-                    }`}>
+                    <span className="text-[17px] font-normal text-zinc-900 dark:text-white truncate flex-1">{apt.clientName}</span>
+                    <span
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
+                        apt.status === 'confirmed'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'
+                      }`}
+                    >
                       {apt.status === 'confirmed' ? '✓' : '?'}
                     </span>
                   </button>
@@ -765,26 +961,28 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             </div>
           )}
 
-          {/* Top Clients — iOS List Style */}
-          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl overflow-hidden">
-            <div className="px-4 py-3 flex items-center justify-between">
-              <span className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Top clients</span>
-              <button 
+          {/* Top clients */}
+          <div className="rounded-2xl overflow-hidden border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1C1C1E] shadow-sm">
+            <div className="px-4 py-3 flex items-baseline justify-between border-b border-zinc-200/80 dark:border-zinc-800">
+              <span className="text-[22px] font-bold text-zinc-900 dark:text-white">Top clients</span>
+              <button
+                type="button"
                 onClick={() => setActiveTab('clients')}
-                className="text-[13px] font-semibold text-blue-600 dark:text-blue-400"
+                className="text-[17px] font-normal text-sky-600 dark:text-sky-400"
               >
-                Voir tout
+                Tout
               </button>
             </div>
             {topClients.length > 0 ? (
-              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <div className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
                 {topClients.slice(0, 4).map((client) => (
                   <button
                     key={client.id}
+                    type="button"
                     onClick={() => setActiveTab('clients')}
-                    className="w-full flex items-center gap-3 px-4 py-3 active:bg-zinc-50 dark:active:bg-zinc-800 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 min-h-[52px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-700 dark:to-zinc-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-200/80 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {client.avatar ? (
                         <img src={client.avatar} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -793,10 +991,12 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[15px] font-semibold text-zinc-900 dark:text-white truncate">{client.name}</span>
-                        {(client.totalSpent ?? 0) >= 500 && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
+                        <span className="text-[17px] font-normal text-zinc-900 dark:text-white truncate">{client.name}</span>
+                        {(client.totalSpent ?? 0) >= 500 && (
+                          <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 dark:text-amber-400 dark:fill-amber-400 shrink-0" />
+                        )}
                       </div>
-                      <span className="text-[13px] text-zinc-500">{client.totalSpent}€ dépensés</span>
+                      <span className="text-[15px] text-zinc-500 dark:text-zinc-400">{client.totalSpent}€ dépensés</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 flex-shrink-0" />
                   </button>
@@ -814,7 +1014,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
       {/* =====================================================
           DESKTOP LAYOUT (>= md) — Original Design
+          (monté seulement si ≥ md pour ne pas dupliquer les IDs @dnd-kit avec la vue mobile)
           ===================================================== */}
+      {isMdUp && (
       <div className="hidden md:block min-h-full bg-zinc-50/30 dark:bg-black">
 
         {/* ===== HEADER — Compact avec alertes en pills ===== */}
@@ -923,136 +1125,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           </div>
         )}
 
-        {/* Widget Picker Modal */}
-        {showWidgetPicker && (
-          <>
-            <div className="fixed inset-0 bg-black/50 z-50 animate-fade-in" onClick={() => setShowWidgetPicker(false)} />
-            <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[600px] max-h-[80vh] bg-white dark:bg-zinc-900 rounded-3xl z-50 shadow-2xl overflow-hidden animate-slide-up">
-              {/* Header */}
-              <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Ajouter un widget</h2>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Personnalisez votre dashboard avec de nouveaux widgets</p>
-                  </div>
-                  <button
-                    onClick={() => setShowWidgetPicker(false)}
-                    className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                  >
-                    <X className="w-5 h-5 text-zinc-500" />
-                  </button>
-                </div>
-              </div>
-              
-              {/* Content */}
-              <div className="p-6 overflow-y-auto max-h-[60vh]">
-                {availableToAdd.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                      <Check className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <p className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Tous les widgets sont actifs</p>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">Vous avez déjà ajouté tous les widgets disponibles</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* KPI Widgets */}
-                    {availableToAdd.filter(w => w.category === 'kpi').length > 0 && (
-                      <div className="mb-6">
-                        <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Indicateurs clés</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          {availableToAdd.filter(w => w.category === 'kpi').map(widget => {
-                            const Icon = widget.icon;
-                            return (
-                              <button
-                                key={widget.id}
-                                onClick={() => handleAddWidget(widget.id)}
-                                className="flex items-start gap-3 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left group"
-                              >
-                                <div className={`p-2.5 rounded-xl bg-${widget.color}-100 dark:bg-${widget.color}-500/20 group-hover:scale-110 transition-transform`}>
-                                  <Icon className={`w-5 h-5 text-${widget.color}-600 dark:text-${widget.color}-400`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{widget.name}</p>
-                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">{widget.description}</p>
-                                </div>
-                                <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors flex-shrink-0" />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Main Widgets */}
-                    {availableToAdd.filter(w => w.category === 'main').length > 0 && (
-                      <div className="mb-6">
-                        <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Widgets principaux</h3>
-                        <div className="space-y-3">
-                          {availableToAdd.filter(w => w.category === 'main').map(widget => {
-                            const Icon = widget.icon;
-                            return (
-                              <button
-                                key={widget.id}
-                                onClick={() => handleAddWidget(widget.id)}
-                                className="w-full flex items-center gap-4 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left group"
-                              >
-                                <div className={`p-3 rounded-xl bg-${widget.color}-100 dark:bg-${widget.color}-500/20 group-hover:scale-110 transition-transform`}>
-                                  <Icon className={`w-6 h-6 text-${widget.color}-600 dark:text-${widget.color}-400`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">{widget.name}</p>
-                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{widget.description}</p>
-                                </div>
-                                <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors" />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Sidebar Widgets */}
-                    {availableToAdd.filter(w => w.category === 'sidebar').length > 0 && (
-                      <div>
-                        <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Widgets latéraux</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          {availableToAdd.filter(w => w.category === 'sidebar').map(widget => {
-                            const Icon = widget.icon;
-                            return (
-                              <button
-                                key={widget.id}
-                                onClick={() => handleAddWidget(widget.id)}
-                                className="flex items-start gap-3 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left group"
-                              >
-                                <div className={`p-2.5 rounded-xl bg-${widget.color}-100 dark:bg-${widget.color}-500/20 group-hover:scale-110 transition-transform`}>
-                                  <Icon className={`w-5 h-5 text-${widget.color}-600 dark:text-${widget.color}-400`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{widget.name}</p>
-                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">{widget.description}</p>
-                                </div>
-                                <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors flex-shrink-0" />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-
         {/* ===== MAIN GRID ===== */}
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
         <div className="px-5 sm:px-8 lg:px-10 pb-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
@@ -1574,8 +1647,131 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             </SortableContext>
           </div>
         </div>
-        </DndContext>
       </div>
+      )}
+    </DndContext>
+
+      {/* Widget Picker — hors DnD (mobile + desktop) */}
+      {showWidgetPicker && (
+        <>
+          <div className="fixed inset-0 bg-black/50 z-50 animate-fade-in" onClick={() => setShowWidgetPicker(false)} />
+          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[600px] max-h-[80vh] bg-white dark:bg-zinc-900 rounded-3xl z-50 shadow-2xl overflow-hidden animate-slide-up">
+            <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Ajouter un widget</h2>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Personnalisez votre dashboard avec de nouveaux widgets</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowWidgetPicker(false)}
+                  className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  <X className="w-5 h-5 text-zinc-500" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {availableToAdd.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+                    <Check className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <p className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Tous les widgets sont actifs</p>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">Vous avez déjà ajouté tous les widgets disponibles</p>
+                </div>
+              ) : (
+                <>
+                  {availableToAdd.filter(w => w.category === 'kpi').length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Indicateurs clés</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        {availableToAdd.filter(w => w.category === 'kpi').map(widget => {
+                          const Icon = widget.icon;
+                          return (
+                            <button
+                              key={widget.id}
+                              type="button"
+                              onClick={() => handleAddWidget(widget.id)}
+                              className="flex items-start gap-3 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left group"
+                            >
+                              <div className={`p-2.5 rounded-xl bg-${widget.color}-100 dark:bg-${widget.color}-500/20 group-hover:scale-110 transition-transform`}>
+                                <Icon className={`w-5 h-5 text-${widget.color}-600 dark:text-${widget.color}-400`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{widget.name}</p>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">{widget.description}</p>
+                              </div>
+                              <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {availableToAdd.filter(w => w.category === 'main').length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Widgets principaux</h3>
+                      <div className="space-y-3">
+                        {availableToAdd.filter(w => w.category === 'main').map(widget => {
+                          const Icon = widget.icon;
+                          return (
+                            <button
+                              key={widget.id}
+                              type="button"
+                              onClick={() => handleAddWidget(widget.id)}
+                              className="w-full flex items-center gap-4 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left group"
+                            >
+                              <div className={`p-3 rounded-xl bg-${widget.color}-100 dark:bg-${widget.color}-500/20 group-hover:scale-110 transition-transform`}>
+                                <Icon className={`w-6 h-6 text-${widget.color}-600 dark:text-${widget.color}-400`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-zinc-900 dark:text-white">{widget.name}</p>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{widget.description}</p>
+                              </div>
+                              <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {availableToAdd.filter(w => w.category === 'sidebar').length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Widgets latéraux</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        {availableToAdd.filter(w => w.category === 'sidebar').map(widget => {
+                          const Icon = widget.icon;
+                          return (
+                            <button
+                              key={widget.id}
+                              type="button"
+                              onClick={() => handleAddWidget(widget.id)}
+                              className="flex items-start gap-3 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left group"
+                            >
+                              <div className={`p-2.5 rounded-xl bg-${widget.color}-100 dark:bg-${widget.color}-500/20 group-hover:scale-110 transition-transform`}>
+                                <Icon className={`w-5 h-5 text-${widget.color}-600 dark:text-${widget.color}-400`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{widget.name}</p>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">{widget.description}</p>
+                              </div>
+                              <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 };

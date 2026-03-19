@@ -17,7 +17,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getWidgetOrderFromStorage, syncWidgetOrderToApi, FIXED_WIDGET_IDS } from '../../lib/dashboardWidgetOrder';
+import { syncWidgetOrderToApi, FIXED_WIDGET_IDS } from '../../lib/dashboardWidgetOrder';
 
 export interface SortableWidgetItem {
   id: string;
@@ -28,6 +28,8 @@ interface SortableOverviewWidgetsProps {
   items: SortableWidgetItem[];
   customWidgetIds: string[];
   onOrderChange?: (order: string[]) => void;
+  studioId?: string | null;
+  useSupabase?: boolean;
   /** Désactive le drag sur mobile (< 768px) */
   disabled?: boolean;
   /** Élément à afficher en fin de grille */
@@ -51,7 +53,7 @@ function getStoredOrder(): string[] {
 }
 
 function mergeOrder(stored: string[], customIds: string[]): string[] {
-  const fixedIds = new Set(FIXED_WIDGET_IDS);
+  const fixedIds = new Set<string>([...FIXED_WIDGET_IDS]);
   const seen = new Set<string>();
   const result: string[] = [];
   for (const id of stored) {
@@ -120,7 +122,7 @@ function SortableWidget({
       <div className={disabled ? '' : 'pr-9'}>{children}</div>
     </div>
   );
-});
+}
 
 export const SortableOverviewWidgets: React.FC<SortableOverviewWidgetsProps> = ({
   items,
@@ -174,9 +176,9 @@ export const SortableOverviewWidgets: React.FC<SortableOverviewWidgetsProps> = (
         const oldIndex = prev.indexOf(String(active.id));
         const newIndex = prev.indexOf(String(over.id));
         if (oldIndex === -1 || newIndex === -1) return prev;
-        const next = arrayMove(prev, oldIndex, newIndex);
-        if (studioId && useSupabase) syncWidgetOrderToApi(studioId, next);
-        else syncWidgetOrderToApi('', next); // localStorage only when no studioId
+        const next = arrayMove(prev, oldIndex, newIndex) as string[];
+        if (studioId && useSupabase) void syncWidgetOrderToApi(studioId, next);
+        else void syncWidgetOrderToApi('', next); // localStorage only when no studioId
         onOrderChange?.(next);
         return next;
       });
@@ -218,10 +220,12 @@ export const SortableOverviewWidgets: React.FC<SortableOverviewWidgetsProps> = (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={order} strategy={rectSortingStrategy}>
         <div className={`grid grid-cols-2 gap-4 ${gridCols === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-4'}`}>
-          {sortedItems.map(item => (
-            <SortableWidget key={item.id} id={item.id} disabled={dragDisabled}>
-              {item.node}
-            </SortableWidget>
+          {sortedItems.map((item) => (
+            <div key={item.id} className="min-w-0">
+              <SortableWidget id={item.id} disabled={dragDisabled}>
+                {item.node}
+              </SortableWidget>
+            </div>
           ))}
           {appendNode}
         </div>

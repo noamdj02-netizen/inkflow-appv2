@@ -28,7 +28,20 @@ interface ClientListProps {
   view?: 'overview' | 'projects';
 }
 
-export const ClientList: React.FC<ClientListProps> = ({ clients, onSelectClient, onAddClient, loadClientNotes, saveClientNotes, useSupabase, clientLimitReached, clientLimit, onUpgradeClick, openAddModal, onAddModalClose }) => {
+export const ClientList: React.FC<ClientListProps> = ({
+  clients,
+  onSelectClient,
+  onAddClient,
+  loadClientNotes,
+  saveClientNotes,
+  useSupabase,
+  clientLimitReached,
+  clientLimit,
+  onUpgradeClick,
+  openAddModal,
+  onAddModalClose,
+  view = 'overview',
+}) => {
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'vip' | 'inactive'>('all');

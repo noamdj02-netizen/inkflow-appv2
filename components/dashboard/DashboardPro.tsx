@@ -35,7 +35,6 @@ const MessagingTab = lazy(() => import('../messaging/MessagingTab').then(m => ({
 const PortfolioManager = lazy(() => import('./PortfolioManager').then(m => ({ default: m.PortfolioManager })));
 const AppointmentsView = lazy(() => import('./AppointmentsView').then(m => ({ default: m.AppointmentsView })));
 import { DashboardWidgets, AddWidgetModal, useDashboardWidgets, WidgetCard } from './DashboardWidgets';
-import { SortableOverviewWidgets, type SortableWidgetItem } from './SortableOverviewWidgets';
 import { DashboardOverviewTab } from './DashboardOverviewTab';
 import { PlanningSidebar } from './PlanningSidebar';
 import { WaitlistManager } from './WaitlistManager';
@@ -1376,6 +1375,7 @@ export const DashboardPro: React.FC = () => {
               setShowWidgetModal={setShowWidgetModal}
               pendingRequestsCount={pendingRequestsCount}
               recentDeposits={recentDeposits}
+              overviewHeaderBgUrl={vitrineData?.coverImage ?? null}
             />
             </motion.div>
           )}
@@ -2038,7 +2038,7 @@ export const DashboardPro: React.FC = () => {
           onPrevMonth={() => setPlanningSidebarMonth(m => { const d = new Date(m); d.setMonth(d.getMonth() - 1); return d; })}
           onNextMonth={() => setPlanningSidebarMonth(m => { const d = new Date(m); d.setMonth(d.getMonth() + 1); return d; })}
           onToday={() => { setPlanningSidebarDate(null); setPlanningSidebarMonth(new Date()); }}
-          onNewAppointment={() => setShowNewAppointmentModal(true)}
+          onNewAppointment={() => setShowBookingModal(true)}
           className="hidden xl:flex"
         />
       </div>{/* end app-shell-row */}
@@ -2213,7 +2213,7 @@ export const DashboardPro: React.FC = () => {
                 onPrevMonth={() => setPlanningSidebarMonth(m => { const d = new Date(m); d.setMonth(d.getMonth() - 1); return d; })}
                 onNextMonth={() => setPlanningSidebarMonth(m => { const d = new Date(m); d.setMonth(d.getMonth() + 1); return d; })}
                 onToday={() => { setPlanningSidebarDate(null); setPlanningSidebarMonth(new Date()); }}
-                onNewAppointment={() => { setShowPlanningSheet(false); setShowNewAppointmentModal(true); }}
+                onNewAppointment={() => { setShowPlanningSheet(false); setShowBookingModal(true); }}
                 className="w-full border-0 rounded-none flex"
               />
             </div>
