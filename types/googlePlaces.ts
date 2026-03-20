@@ -17,3 +17,24 @@ export interface GooglePlaceSearchResultDTO {
   name: string;
   formattedAddress: string;
 }
+
+/** Avis renvoyé par l'API Google Business Profile (tous les avis, pas seulement les 5 derniers). */
+export interface GoogleBusinessReview {
+  authorName: string;
+  rating: number;
+  text: string;
+  relativeTimeDescription: string;
+  createTime?: string;
+}
+
+export interface GoogleBusinessReviewsPayload {
+  reviews: GoogleBusinessReview[];
+  averageRating: number | null;
+  totalReviewCount: number;
+}
+
+export interface GoogleBusinessStatus {
+  connected: boolean;
+  locationName: string | null;
+  needsLocationSelection: boolean;
+}

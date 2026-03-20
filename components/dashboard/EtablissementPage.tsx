@@ -3,12 +3,14 @@ import {
   Building2, User, Hash, Palette, Shield, Plus, Trash2, Save,
   Check, Loader2, ChevronRight, CreditCard, FileText, Upload,
   Crown, Hammer, GraduationCap, X, AlertCircle, MapPin, Search,
+  Link2, Link2Off, Star,
 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import type { ArtistAccount } from '../../types';
 import { searchGooglePlaces } from '../../lib/googlePlaces';
 import { looksLikeShortMapsShareLink, parsePlaceIdFromPaste } from '../../lib/parseGooglePlaceId';
 import type { GooglePlaceSearchResultDTO } from '../../types/googlePlaces';
+import { GooglePlaceMapPreview } from './GooglePlaceMapPreview';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,6 +47,15 @@ interface EtablissementPageProps {
   googlePlaceId?: string | null;
   useSupabase?: boolean;
   onSaveGooglePlaceId?: (placeId: string | null) => Promise<void>;
+  /** Google Business Profile OAuth */
+  googleBusinessConnected?: boolean;
+  googleBusinessLocationName?: string | null;
+  googleBusinessNeedsLocationSelection?: boolean;
+  onConnectGoogleBusiness?: () => Promise<void>;
+  onDisconnectGoogleBusiness?: () => Promise<void>;
+  onSelectGoogleBusinessLocation?: (locationName: string) => Promise<void>;
+  googleBusinessLocations?: { name: string; title: string; accountName: string }[];
+  loadingGoogleBusinessLocations?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -85,6 +96,14 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
   googlePlaceId = null,
   useSupabase = false,
   onSaveGooglePlaceId,
+  googleBusinessConnected = false,
+  googleBusinessLocationName = null,
+  googleBusinessNeedsLocationSelection = false,
+  onConnectGoogleBusiness,
+  onDisconnectGoogleBusiness,
+  onSelectGoogleBusinessLocation,
+  googleBusinessLocations = [],
+  loadingGoogleBusinessLocations = false,
 }) => {
   const toast = useToast();
 
@@ -167,6 +186,35 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
   const [manualPlaceId, setManualPlaceId] = useState('');
   /** Évite un toast à chaque frappe si la recherche échoue en boucle */
   const lastGooglePlacesErrorToastAt = useRef(0);
+
+  // ── Google Business OAuth ─────────────────────────────────────────────────
+  const [connectingBusiness, setConnectingBusiness] = useState(false);
+  const [disconnectingBusiness, setDisconnectingBusiness] = useState(false);
+
+  const handleConnectBusiness = async () => {
+    if (!onConnectGoogleBusiness) return;
+    setConnectingBusiness(true);
+    try {
+      await onConnectGoogleBusiness();
+    } catch (err) {
+      toast.error((err as Error).message || 'Impossible de lancer la connexion Google Business');
+    } finally {
+      setConnectingBusiness(false);
+    }
+  };
+
+  const handleDisconnectBusiness = async () => {
+    if (!onDisconnectGoogleBusiness) return;
+    setDisconnectingBusiness(true);
+    try {
+      await onDisconnectGoogleBusiness();
+      toast.success('Compte Google Business déconnecté');
+    } catch {
+      toast.error('Impossible de déconnecter');
+    } finally {
+      setDisconnectingBusiness(false);
+    }
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedPlaceQuery(placeSearch.trim()), 450);
@@ -418,21 +466,24 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
           ) : (
             <>
               {googlePlaceId ? (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 px-4 py-3 bg-zinc-50 dark:bg-zinc-800/40">
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Place ID</p>
-                    <p className="text-sm text-zinc-800 dark:text-zinc-200 font-mono truncate" title={googlePlaceId}>
-                      {googlePlaceId}
-                    </p>
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 px-4 py-3 bg-zinc-50 dark:bg-zinc-800/40">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Place ID</p>
+                      <p className="text-sm text-zinc-800 dark:text-zinc-200 font-mono truncate" title={googlePlaceId}>
+                        {googlePlaceId}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleClearGooglePlace}
+                      disabled={savingGooglePlace}
+                      className="shrink-0 px-4 py-2 rounded-xl text-sm font-medium border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
+                    >
+                      Retirer
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleClearGooglePlace}
-                    disabled={savingGooglePlace}
-                    className="shrink-0 px-4 py-2 rounded-xl text-sm font-medium border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
-                  >
-                    Retirer
-                  </button>
+                  <GooglePlaceMapPreview placeId={googlePlaceId} />
                 </div>
               ) : null}
 
@@ -477,6 +528,99 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
                     </li>
                   ))}
                 </ul>
+              )}
+
+              {/* ── Google Business OAuth ── */}
+              {useSupabase && studioId && (onConnectGoogleBusiness || googleBusinessConnected) && (
+                <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Star className="w-3.5 h-3.5 text-amber-500" />
+                    <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wide">
+                      Connexion directe Google Business
+                    </p>
+                    <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                      Tous les avis
+                    </span>
+                  </div>
+
+                  {googleBusinessConnected ? (
+                    <div className="space-y-3">
+                      <div className="flex items-start sm:items-center justify-between gap-3 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                            <Link2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Compte connecté</p>
+                            {googleBusinessLocationName ? (
+                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate font-mono" title={googleBusinessLocationName}>
+                                {googleBusinessLocationName.split('/').slice(-1)[0] || googleBusinessLocationName}
+                              </p>
+                            ) : (
+                              <p className="text-[11px] text-amber-600 dark:text-amber-400">Sélectionnez une fiche ci-dessous</p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleDisconnectBusiness}
+                          disabled={disconnectingBusiness}
+                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 transition-all"
+                        >
+                          {disconnectingBusiness
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <Link2Off className="w-3.5 h-3.5" />}
+                          Déconnecter
+                        </button>
+                      </div>
+
+                      {/* Multi-location picker */}
+                      {googleBusinessNeedsLocationSelection && (
+                        <div>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">
+                            Plusieurs fiches détectées — choisissez la bonne :
+                          </p>
+                          {loadingGoogleBusinessLocations ? (
+                            <div className="flex items-center gap-2 text-xs text-zinc-400">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />Chargement des fiches…
+                            </div>
+                          ) : (
+                            <ul className="rounded-xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden">
+                              {googleBusinessLocations.map((loc) => (
+                                <li key={loc.name}>
+                                  <button
+                                    type="button"
+                                    onClick={() => onSelectGoogleBusinessLocation?.(loc.name)}
+                                    className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all active:scale-[0.99]"
+                                  >
+                                    <p className="text-sm font-medium text-zinc-900 dark:text-white">{loc.title}</p>
+                                    <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{loc.accountName}</p>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                        Connectez votre compte Google Business pour afficher <strong>tous</strong> vos avis sur la vitrine (pas seulement les 5 derniers de Google Maps).
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleConnectBusiness}
+                        disabled={connectingBusiness || !useSupabase}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:border-zinc-400 dark:hover:border-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
+                      >
+                        {connectingBusiness
+                          ? <><Loader2 className="w-4 h-4 animate-spin" />Redirection…</>
+                          : <><Link2 className="w-4 h-4" />Connecter mon compte Google Business</>}
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
 
               <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">

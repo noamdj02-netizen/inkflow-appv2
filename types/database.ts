@@ -19,6 +19,11 @@ export interface Database {
           subscription_status: 'trialing' | 'active' | 'restricted' | 'canceled';
           /** Google Place ID — avis vitrine (Places API côté serveur uniquement) */
           google_place_id?: string | null;
+          /** Google Business Profile OAuth — jamais exposé côté client */
+          google_business_access_token?: string | null;
+          google_business_refresh_token?: string | null;
+          google_business_token_expiry?: number | null;
+          google_business_location_name?: string | null;
         };
         Insert: Omit<Database['public']['Tables']['inkflow_studios']['Row'], 'created_at' | 'updated_at'> & {
           created_at?: string;

@@ -2,8 +2,9 @@
  * Google Places — clé API uniquement ici (GOOGLE_PLACES_API_KEY), jamais côté client.
  *
  * Actions (POST JSON) :
- * - public_reviews : { action, slug } — sans JWT ; retourne avis si le studio a un google_place_id
- * - text_search    : { action, query } — JWT requis ; recherche d’établissements
+ * - public_reviews          : { action, slug } — sans JWT ; retourne avis via Places API (5 max)
+ * - business_public_reviews : { action, slug } — sans JWT ; retourne TOUS les avis via Business Profile OAuth
+ * - text_search             : { action, query } — JWT requis ; recherche d’établissements
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
@@ -13,6 +14,10 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const GOOGLE_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY") || "";
+const GOOGLE_CLIENT_ID     = Deno.env.get("GOOGLE_CLIENT_ID") || "";
+const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET") || "";
+
+const BUSINESS_REVIEWS_BASE = "https://mybusiness.googleapis.com/v4";
 
 const PLACES_DETAILS = "https://maps.googleapis.com/maps/api/place/details/json";
 const PLACES_TEXTSEARCH = "https://maps.googleapis.com/maps/api/place/textsearch/json";
@@ -203,6 +208,134 @@ Deno.serve(async (req: Request) => {
 
       const details = await fetchPlaceDetails(placeId);
       return json(origin, { ...details, configured: true });
+    }
+
+    if (action === "business_public_reviews") {
+      const slug = String(payload.slug || "").trim().toLowerCase();
+      if (!/^[a-z0-9-]+$/.test(slug) || slug.length > 120) {
+        return json(origin, { error: "slug invalide" }, 400);
+      }
+
+      const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: row, error: rowErr } = await admin
+        .from("inkflow_studios")
+        .select("id, google_business_access_token, google_business_refresh_token, google_business_token_expiry, google_business_location_name")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (rowErr) return json(origin, { error: "Studio introuvable" }, 404);
+
+      const refreshToken    = (row?.google_business_refresh_token as string | null)?.trim();
+      const locationName    = (row?.google_business_location_name as string | null)?.trim();
+      const studioId        = row?.id as string | undefined;
+
+      if (!refreshToken || !locationName || !studioId) {
+        return json(origin, { reviews: [], averageRating: null, totalReviewCount: 0, configured: false });
+      }
+
+      // Refresh access token if needed
+      let accessToken = (row?.google_business_access_token as string | null) || "";
+      const tokenExpiry = (row?.google_business_token_expiry as number | null) ?? null;
+
+      if (!accessToken || (tokenExpiry && Date.now() >= tokenExpiry - 60_000)) {
+        const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            client_id: GOOGLE_CLIENT_ID,
+            client_secret: GOOGLE_CLIENT_SECRET,
+            refresh_token: refreshToken,
+            grant_type: "refresh_token",
+          }),
+        });
+        if (refreshRes.ok) {
+          const newTokens = await refreshRes.json() as { access_token?: string; expires_in?: number };
+          accessToken = newTokens.access_token || "";
+          const newExpiry = Date.now() + (newTokens.expires_in || 3600) * 1000;
+          await admin.from("inkflow_studios").update({
+            google_business_access_token: accessToken,
+            google_business_token_expiry: newExpiry,
+          }).eq("id", studioId);
+        } else {
+          console.error("[google-places] refresh business token:", await refreshRes.text());
+          return json(origin, { error: "Token Google Business expiré — reconnectez votre compte" }, 401);
+        }
+      }
+
+      // Fetch all reviews (paginated)
+      const allReviews: {
+        authorName: string;
+        rating: number;
+        text: string;
+        relativeTimeDescription: string;
+        createTime?: string;
+      }[] = [];
+
+      let pageToken: string | undefined;
+      let averageRating: number | null = null;
+      let totalReviewCount = 0;
+      let page = 0;
+      const MAX_PAGES = 10; // safety cap (100 reviews per page → 1000 max)
+
+      do {
+        const url = new URL(`${BUSINESS_REVIEWS_BASE}/${locationName}/reviews`);
+        url.searchParams.set("pageSize", "100");
+        if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+        const reviewsRes = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        if (!reviewsRes.ok) {
+          const errText = await reviewsRes.text();
+          console.error("[google-places] Business reviews:", reviewsRes.status, errText.slice(0, 200));
+          break;
+        }
+
+        const reviewsBody = await reviewsRes.json() as {
+          reviews?: {
+            reviewer?: { displayName?: string };
+            starRating?: string;
+            comment?: string;
+            createTime?: string;
+            updateTime?: string;
+            relativePublishTimeDescription?: string;
+          }[];
+          averageRating?: number;
+          totalReviewCount?: number;
+          nextPageToken?: string;
+        };
+
+        if (page === 0) {
+          averageRating    = typeof reviewsBody.averageRating === "number" ? reviewsBody.averageRating : null;
+          totalReviewCount = typeof reviewsBody.totalReviewCount === "number" ? reviewsBody.totalReviewCount : 0;
+        }
+
+        const starMap: Record<string, number> = {
+          ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5,
+        };
+
+        for (const r of reviewsBody.reviews || []) {
+          allReviews.push({
+            authorName: r.reviewer?.displayName || "Anonyme",
+            rating: starMap[r.starRating || ""] ?? 0,
+            text: (r.comment || "").trim(),
+            relativeTimeDescription: r.relativePublishTimeDescription || "",
+            createTime: r.createTime,
+          });
+        }
+
+        pageToken = reviewsBody.nextPageToken;
+        page++;
+      } while (pageToken && page < MAX_PAGES);
+
+      return json(origin, {
+        reviews: allReviews,
+        averageRating,
+        totalReviewCount,
+        configured: true,
+        source: "business",
+      });
     }
 
     if (action === "text_search") {
