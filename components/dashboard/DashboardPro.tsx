@@ -1415,10 +1415,6 @@ export const DashboardPro: React.FC = () => {
               overviewHeaderBgUrl={vitrineData?.coverImage ?? null}
               onAvatarClick={() => avatarInputRef.current?.click()}
               avatarUploading={avatarUploading}
-              onEditCoverClick={() => {
-                setActiveTab('settings');
-                setSettingsTab('vitrine');
-              }}
             />
             </motion.div>
           )}

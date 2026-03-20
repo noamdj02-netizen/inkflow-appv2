@@ -70,8 +70,6 @@ export interface DashboardOverviewTabProps {
   /** Clic sur l’avatar mobile : photo de **profil** compte (fichier caché dans DashboardPro) */
   onAvatarClick?: () => void;
   avatarUploading?: boolean;
-  /** Bannière d’en-tête = image **vitrine** (couverture), pas l’avatar — ouvre Paramètres → Vitrine */
-  onEditCoverClick?: () => void;
 }
 
 export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
@@ -106,7 +104,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   overviewHeaderBgUrl,
   onAvatarClick,
   avatarUploading = false,
-  onEditCoverClick,
 }) => {
   const mobileHeaderBgUrl =
     typeof overviewHeaderBgUrl === 'string' && overviewHeaderBgUrl.trim() !== ''
@@ -650,11 +647,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       {/* =====================================================
           MOBILE LAYOUT (< md) — iOS Native Style
           ===================================================== */}
-      <div className="md:hidden min-h-screen bg-[#F2F2F7] dark:bg-black pb-28 antialiased [-webkit-font-smoothing:antialiased] [font-family:system-ui,-apple-system,'SF_Pro_Text','Segoe_UI',sans-serif]">
+      <div className="md:hidden min-h-screen max-w-full overflow-x-hidden bg-[#F2F2F7] dark:bg-black pb-[calc(7rem+env(safe-area-inset-bottom,0px))] antialiased [-webkit-font-smoothing:antialiased] [font-family:system-ui,-apple-system,'SF_Pro_Text','Segoe_UI',sans-serif]">
         
         {/* iOS Large Title Header */}
-        <div className="px-4 pt-6 pb-3 safe-top">
-          <div className="relative rounded-2xl overflow-hidden border border-zinc-200/80 dark:border-zinc-800 shadow-md min-h-[140px]">
+        <div className="px-3 min-[400px]:px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-2.5 sm:pt-6 sm:pb-3 safe-top">
+          <div className="relative rounded-2xl overflow-hidden border border-zinc-200/80 dark:border-zinc-800 shadow-md min-h-[128px] sm:min-h-[140px]">
             {/* Image de fond = couverture vitrine (pas l’avatar compte) */}
             <div
               className="absolute inset-0 bg-cover bg-center scale-105"
@@ -666,13 +663,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/65 dark:from-black/55 dark:via-black/45 dark:to-black/75"
               aria-hidden
             />
-            <div className="relative z-10 p-4 pt-5 pb-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium text-white/80 mb-0.5 capitalize drop-shadow-sm">
+            <div className="relative z-10 p-3 pt-4 pb-3 min-[400px]:p-4 min-[400px]:pt-5 min-[400px]:pb-4">
+              <div className="flex items-start justify-between gap-2 sm:gap-3">
+                <div className="flex-1 min-w-0 pr-1">
+                  <p className="text-[12px] min-[400px]:text-[13px] font-medium text-white/80 mb-0.5 capitalize drop-shadow-sm line-clamp-2">
             {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
-                  <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight text-white leading-tight font-display [text-shadow:0_2px_12px_rgba(0,0,0,0.35)]">
+                  <h1 className="text-[clamp(1.375rem,5.8vw,1.875rem)] sm:text-[28px] font-bold tracking-tight text-white leading-[1.15] font-display [text-shadow:0_2px_12px_rgba(0,0,0,0.35)]">
                     {greeting}{firstName ? `,` : ''}
                     <br />
                     {firstName || ''}
@@ -693,7 +690,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                   disabled={avatarUploading}
-                  className="relative mt-0.5 w-12 h-12 rounded-2xl flex-shrink-0 overflow-hidden shadow-lg ring-2 ring-white/40 active:scale-95 transition-transform touch-manipulation disabled:opacity-70"
+                  className="relative mt-0.5 w-11 h-11 min-[400px]:w-12 min-[400px]:h-12 rounded-2xl flex-shrink-0 overflow-hidden shadow-lg ring-2 ring-white/40 active:scale-95 transition-transform touch-manipulation disabled:opacity-70"
                   aria-label={onAvatarClick ? 'Changer la photo de profil (compte)' : 'Paramètres'}
                   title={onAvatarClick ? 'Photo de profil — pas la bannière' : undefined}
                 >
@@ -718,22 +715,21 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 </button>
         </div>
 
-              {onEditCoverClick && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onEditCoverClick();
-                  }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="mt-2 flex w-fit items-center gap-1.5 rounded-xl bg-white/15 backdrop-blur-sm px-2.5 py-1.5 text-[11px] font-semibold text-white ring-1 ring-white/25 active:scale-[0.98] transition-all touch-manipulation"
-                  aria-label="Modifier la bannière vitrine (Paramètres)"
-                >
-                  <Image className="w-3.5 h-3.5 opacity-95" strokeWidth={2} aria-hidden />
-                  Bannière vitrine
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setActiveTab('appointments');
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="mt-2 flex w-fit items-center gap-1.5 rounded-xl bg-white/15 backdrop-blur-sm px-2.5 py-1.5 text-[11px] font-semibold text-white ring-1 ring-white/25 active:scale-[0.98] transition-all touch-manipulation"
+                aria-label={`${todayAppointments.length} rendez-vous aujourd’hui, ouvrir l’agenda`}
+              >
+                <Calendar className="w-3.5 h-3.5 opacity-95 shrink-0" strokeWidth={2} aria-hidden />
+                <span className="tabular-nums">{todayAppointments.length}</span>
+                <span className="font-medium text-white/90">RDV aujourd’hui</span>
+              </button>
 
               {(unpaidCount > 0 || todayOrTomorrowCount > 0) && (
                 <div className="flex flex-wrap gap-2 mt-3">
@@ -759,60 +755,60 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           </div>
         </div>
 
-        {/* Actions rapides — grille 4 colonnes, version compacte / minimaliste */}
-        <div className="px-4 pt-3 pb-1">
-          <div className="grid grid-cols-4 gap-2">
+        {/* Actions rapides — grille 4 colonnes, tactile + très petits écrans */}
+        <div className="px-3 min-[400px]:px-4 pt-2 pb-1 sm:pt-3">
+          <div className="grid grid-cols-4 gap-1.5 min-[400px]:gap-2 min-w-0">
             <button
               type="button"
             onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-              className="flex flex-col items-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm active:opacity-70 transition-opacity"
+              className="flex min-w-0 flex-col items-center gap-0.5 min-[400px]:gap-1 py-2 min-[400px]:py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm active:scale-[0.98] active:opacity-90 transition-all touch-manipulation"
           >
-              <Plus className="w-5 h-5 text-sky-600 dark:text-sky-400" strokeWidth={2} />
-              <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center leading-tight">Nouveau RDV</span>
+              <Plus className="w-[1.125rem] h-[1.125rem] min-[400px]:w-5 min-[400px]:h-5 text-sky-600 dark:text-sky-400 shrink-0" strokeWidth={2} />
+              <span className="text-[9px] min-[400px]:text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center leading-tight px-0.5">Nouveau RDV</span>
           </button>
           <button
               type="button"
             onClick={() => setActiveTab('flash')}
-              className="flex flex-col items-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm active:opacity-70 transition-opacity"
+              className="flex min-w-0 flex-col items-center gap-0.5 min-[400px]:gap-1 py-2 min-[400px]:py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm active:scale-[0.98] active:opacity-90 transition-all touch-manipulation"
           >
-              <Zap className="w-5 h-5 text-amber-500 dark:text-amber-400" strokeWidth={2} />
-              <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center leading-tight">Flash</span>
+              <Zap className="w-[1.125rem] h-[1.125rem] min-[400px]:w-5 min-[400px]:h-5 text-amber-500 dark:text-amber-400 shrink-0" strokeWidth={2} />
+              <span className="text-[9px] min-[400px]:text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center leading-tight">Flash</span>
           </button>
             {vitrineSlug ? (
             <a
               href={`/studio/${vitrineSlug}`}
               target="_blank"
               rel="noopener noreferrer"
-                className="flex flex-col items-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm active:opacity-70 transition-opacity"
+                className="flex min-w-0 flex-col items-center gap-0.5 min-[400px]:gap-1 py-2 min-[400px]:py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm active:scale-[0.98] active:opacity-90 transition-all touch-manipulation"
             >
-                <ExternalLink className="w-5 h-5 text-violet-500 dark:text-violet-400" strokeWidth={2} />
-                <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center leading-tight">Vitrine</span>
+                <ExternalLink className="w-[1.125rem] h-[1.125rem] min-[400px]:w-5 min-[400px]:h-5 text-violet-500 dark:text-violet-400 shrink-0" strokeWidth={2} />
+                <span className="text-[9px] min-[400px]:text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center leading-tight">Vitrine</span>
             </a>
             ) : (
-              <div className="flex flex-col items-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white/60 dark:bg-zinc-900/50 border border-zinc-200/50 dark:border-zinc-800 opacity-45 pointer-events-none">
-                <ExternalLink className="w-5 h-5 text-zinc-400" strokeWidth={2} />
-                <span className="text-[10px] font-medium text-zinc-400 text-center leading-tight">Vitrine</span>
+              <div className="flex min-w-0 flex-col items-center gap-0.5 min-[400px]:gap-1 py-2 min-[400px]:py-2.5 px-0.5 rounded-2xl bg-white/60 dark:bg-zinc-900/50 border border-zinc-200/50 dark:border-zinc-800 opacity-45 pointer-events-none">
+                <ExternalLink className="w-[1.125rem] h-[1.125rem] min-[400px]:w-5 min-[400px]:h-5 text-zinc-400 shrink-0" strokeWidth={2} />
+                <span className="text-[9px] min-[400px]:text-[10px] font-medium text-zinc-400 text-center leading-tight">Vitrine</span>
               </div>
           )}
           <button
               type="button"
             onClick={() => setActiveTab('requests')}
-              className="relative flex flex-col items-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm active:opacity-70 transition-opacity"
+              className="relative flex min-w-0 flex-col items-center gap-0.5 min-[400px]:gap-1 py-2 min-[400px]:py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] shadow-sm active:scale-[0.98] active:opacity-90 transition-all touch-manipulation"
           >
             {pendingRequestsCount > 0 && (
                 <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 text-[9px] font-bold flex items-center justify-center tabular-nums leading-none">
                   {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
                 </span>
             )}
-              <Inbox className="w-5 h-5 text-zinc-600 dark:text-zinc-300" strokeWidth={2} />
-              <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center leading-tight">Demandes</span>
+              <Inbox className="w-[1.125rem] h-[1.125rem] min-[400px]:w-5 min-[400px]:h-5 text-zinc-600 dark:text-zinc-300 shrink-0" strokeWidth={2} />
+              <span className="text-[9px] min-[400px]:text-[10px] font-medium text-zinc-500 dark:text-zinc-400 text-center leading-tight">Demandes</span>
           </button>
           </div>
         </div>
 
         {/* Mode widgets — même logique que desktop (KPI réordonnables) */}
         {isEditMode && (
-          <div className="px-4 mt-3 mb-1">
+          <div className="px-3 min-[400px]:px-4 mt-2 sm:mt-3 mb-1">
             <div className="bg-sky-50/90 dark:bg-sky-950/30 border border-sky-200/80 dark:border-sky-800/50 rounded-2xl p-3 flex flex-col gap-2">
               <div className="flex items-start gap-2">
                 <div className="p-1.5 rounded-xl bg-sky-100 dark:bg-sky-900/50 shrink-0">
@@ -847,71 +843,63 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         )}
 
         {/* Main Content */}
-        <div className="px-4 space-y-4">
+        <div className="px-3 min-[400px]:px-4 space-y-3 sm:space-y-4">
           
-          {/* Prochain client — accent bleu doux */}
+          {/* Prochain client — une seule zone cliquable, infos fusionnées (moins de blocs) */}
           {nextClient && (
-            <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-sky-600 to-blue-700 dark:from-sky-700 dark:to-blue-900 text-white shadow-md border border-sky-500/30 dark:border-sky-600/40">
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[13px] font-normal text-white/90">Prochain client</span>
-                  <span className="text-[15px] font-semibold tabular-nums">{nextClient.time || '--:--'}</span>
-              </div>
-                <div className="flex items-center gap-3">
-                  <img 
-                    src={nextClient.clientAvatar || '/images/avatar-client-default.png'} 
-                    alt={nextClient.clientName || 'Client'} 
-                    className="w-12 h-12 rounded-xl object-cover bg-white/20"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[17px] font-semibold leading-snug truncate">{nextClient.clientName}</p>
-                    <p className="text-[15px] text-white/85 truncate mt-0.5">{nextClient.service || 'Tatouage'}</p>
-                    <div className="flex items-center gap-3 mt-1 text-[13px] text-white/80">
-                      {nextClient.duration && (
-                        <span className="inline-flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 opacity-90" />
-                          {nextClient.duration} min
-                        </span>
-                      )}
-                      {nextClient.price && <span className="font-semibold tabular-nums">{nextClient.price}€</span>}
-                    </div>
-                  </div>
+            <button
+              type="button"
+              onClick={() => setSelectedAppointment(nextClient)}
+              className="w-full rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1C1C1E] shadow-sm p-2.5 flex items-center gap-2.5 text-left active:scale-[0.99] transition-transform touch-manipulation min-h-[52px]"
+              aria-label={`Ouvrir le rendez-vous de ${nextClient.clientName || 'client'} à ${nextClient.time || ''}`}
+            >
+              <img
+                src={nextClient.clientAvatar || '/images/avatar-client-default.png'}
+                alt=""
+                className="w-9 h-9 rounded-xl object-cover bg-zinc-100 dark:bg-zinc-800 shrink-0 border border-zinc-200/80 dark:border-zinc-700"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{nextClient.clientName}</p>
+                  <span className="text-xs font-semibold tabular-nums text-zinc-500 dark:text-zinc-400 shrink-0">{nextClient.time || '--:--'}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedAppointment(nextClient)}
-                  className="w-full mt-4 py-2.5 rounded-xl bg-white text-sky-700 dark:text-sky-800 text-[17px] font-semibold active:scale-[0.98] transition-all"
-                >
-                  Voir le RDV
-                </button>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5 leading-snug">
+                  {[
+                    nextClient.service,
+                    nextClient.duration ? `${nextClient.duration} min` : null,
+                  ]
+                    .filter((x): x is string => Boolean(x))
+                    .join(' · ') || 'Tatouage'}
+                </p>
               </div>
-            </div>
+              <ChevronRight className="w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0" strokeWidth={2} aria-hidden />
+            </button>
           )}
 
           {/* KPIs — grille type widgets iOS */}
           <div>
-            <div className="px-0.5 pt-1 pb-3 flex items-end justify-between gap-3">
-              <div>
-                <h2 className="text-[22px] font-bold tracking-tight text-zinc-900 dark:text-white leading-tight">Ce mois</h2>
-                <p className="text-[15px] text-zinc-500 dark:text-zinc-400 mt-0.5">Indicateurs clés</p>
+            <div className="px-0.5 pt-1 pb-2 sm:pb-3 flex flex-col gap-2 min-[380px]:flex-row min-[380px]:items-end min-[380px]:justify-between min-[380px]:gap-3">
+              <div className="min-w-0">
+                <h2 className="text-xl min-[400px]:text-[22px] font-bold tracking-tight text-zinc-900 dark:text-white leading-tight">Ce mois</h2>
+                <p className="text-sm min-[400px]:text-[15px] text-zinc-500 dark:text-zinc-400 mt-0.5">Indicateurs clés</p>
                   </div>
-              <div className="flex items-center gap-2 shrink-0 pb-0.5">
+              <div className="flex items-center gap-2 shrink-0 min-[380px]:pb-0.5 self-stretch min-[380px]:self-auto justify-end">
                 <button
                   type="button"
                   onClick={() => setIsEditMode((v) => !v)}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[15px] font-medium transition-colors active:opacity-70 ${
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-sm min-[400px]:text-[15px] font-medium transition-colors active:scale-[0.98] touch-manipulation ${
                     isEditMode
                       ? 'bg-sky-600 text-white dark:bg-sky-500'
                       : 'bg-white dark:bg-[#1C1C1E] text-sky-600 dark:text-sky-400 border border-black/[0.06] dark:border-white/[0.08]'
                   }`}
                 >
-                  <LayoutGrid className="w-4 h-4" />
+                  <LayoutGrid className="w-4 h-4 shrink-0" />
                   {isEditMode ? 'OK' : 'Widgets'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('analytics')}
-                  className="text-[17px] font-normal text-sky-600 dark:text-sky-400 px-1 py-1"
+                  className="text-sm min-[400px]:text-[17px] font-normal text-sky-600 dark:text-sky-400 px-2 py-1.5 min-[400px]:px-1 min-[400px]:py-1 rounded-xl active:opacity-70 touch-manipulation"
                 >
                   Tout
                 </button>
@@ -919,7 +907,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               </div>
             {!isMdUp ? (
               <SortableContext items={layout.kpiOrder} strategy={horizontalListSortingStrategy}>
-                <div className="grid grid-cols-2 gap-3 items-stretch">
+                <div className="grid grid-cols-2 gap-2 min-[400px]:gap-3 items-stretch min-w-0">
                   {layout.kpiOrder.map((widgetId) => renderKpiWidget(widgetId))}
                   </div>
               </SortableContext>
