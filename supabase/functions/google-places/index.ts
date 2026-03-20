@@ -16,6 +16,86 @@ const GOOGLE_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY") || Deno.env.get("GOOGLE
 
 const PLACES_DETAILS = "https://maps.googleapis.com/maps/api/place/details/json";
 const PLACES_TEXTSEARCH = "https://maps.googleapis.com/maps/api/place/textsearch/json";
+const PLACES_NEW_SEARCH = "https://places.googleapis.com/v1/places:searchText";
+
+type SearchHit = { placeId: string; name: string; formattedAddress: string };
+
+function mapLegacyResults(results: unknown[]): SearchHit[] {
+  return (results || []).slice(0, 8).map((p: { place_id?: string; name?: string; formatted_address?: string }) => ({
+    placeId: String(p.place_id || ""),
+    name: String(p.name || ""),
+    formattedAddress: String(p.formatted_address || ""),
+  })).filter((p: SearchHit) => p.placeId.length > 0);
+}
+
+/** Fallback si l’API Text Search « classique » est désactivée (souvent seule Places API (New) est activée). */
+async function textSearchPlacesNew(query: string): Promise<SearchHit[]> {
+  const res = await fetch(PLACES_NEW_SEARCH, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": GOOGLE_KEY,
+      "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress",
+    },
+    body: JSON.stringify({ textQuery: query, languageCode: "fr" }),
+  });
+  const body = (await res.json()) as {
+    places?: { id?: string; displayName?: { text?: string }; formattedAddress?: string }[];
+    error?: { message?: string; status?: string };
+  };
+  if (!res.ok) {
+    const msg = body?.error?.message || (await res.text()).slice(0, 200);
+    throw new Error(`Places API (New): ${res.status} ${msg}`);
+  }
+  if (body.error?.message) {
+    throw new Error(body.error.message);
+  }
+  const places = Array.isArray(body.places) ? body.places : [];
+  return places.slice(0, 8).map((p) => {
+    const id = String(p.id || "");
+    const placeId = id.startsWith("places/") ? id.slice(7) : id;
+    const name = typeof p.displayName === "object" && p.displayName?.text
+      ? String(p.displayName.text)
+      : "";
+    return {
+      placeId,
+      name,
+      formattedAddress: String(p.formattedAddress || ""),
+    };
+  }).filter((p) => p.placeId.length > 0);
+}
+
+async function textSearchPlaces(query: string): Promise<SearchHit[]> {
+  const params = new URLSearchParams({
+    query,
+    key: GOOGLE_KEY,
+    language: "fr",
+  });
+  const res = await fetch(`${PLACES_TEXTSEARCH}?${params}`);
+  const data = await res.json() as {
+    status?: string;
+    error_message?: string;
+    results?: unknown[];
+  };
+
+  if (data.status === "OK" || data.status === "ZERO_RESULTS") {
+    return mapLegacyResults(data.results || []);
+  }
+
+  const denied =
+    data.status === "REQUEST_DENIED" ||
+    data.status === "INVALID_REQUEST" ||
+    (typeof data.error_message === "string" &&
+      (data.error_message.toLowerCase().includes("not enabled") ||
+        data.error_message.toLowerCase().includes("denied")));
+
+  if (denied) {
+    console.warn("[google-places] Legacy Text Search:", data.status, data.error_message, "→ Places API (New)");
+    return await textSearchPlacesNew(query);
+  }
+
+  throw new Error(data.error_message || `Text Search: ${data.status}`);
+}
 
 interface PlaceReviewRaw {
   author_name?: string;
@@ -139,24 +219,7 @@ Deno.serve(async (req: Request) => {
         return json(origin, { error: "Requête trop longue" }, 400);
       }
 
-      const params = new URLSearchParams({
-        query,
-        key: GOOGLE_KEY,
-        language: "fr",
-      });
-      const res = await fetch(`${PLACES_TEXTSEARCH}?${params}`);
-      const data = await res.json();
-
-      if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-        throw new Error(data.error_message || `Text Search: ${data.status}`);
-      }
-
-      const results = (data.results || []).slice(0, 8).map((p: { place_id?: string; name?: string; formatted_address?: string }) => ({
-        placeId: String(p.place_id || ""),
-        name: String(p.name || ""),
-        formattedAddress: String(p.formatted_address || ""),
-      })).filter((p: { placeId: string }) => p.placeId.length > 0);
-
+      const results = await textSearchPlaces(query);
       return json(origin, { results });
     }
 

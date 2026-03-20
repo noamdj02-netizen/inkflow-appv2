@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Building2, User, Hash, Palette, Shield, Plus, Trash2, Save,
   Check, Loader2, ChevronRight, CreditCard, FileText, Upload,
@@ -7,6 +7,7 @@ import {
 import { useToast } from '../../contexts/ToastContext';
 import type { ArtistAccount } from '../../types';
 import { searchGooglePlaces } from '../../lib/googlePlaces';
+import { looksLikeShortMapsShareLink, parsePlaceIdFromPaste } from '../../lib/parseGooglePlaceId';
 import type { GooglePlaceSearchResultDTO } from '../../types/googlePlaces';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -163,6 +164,9 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
   const [placeResults, setPlaceResults] = useState<GooglePlaceSearchResultDTO[]>([]);
   const [searchingPlaces, setSearchingPlaces] = useState(false);
   const [savingGooglePlace, setSavingGooglePlace] = useState(false);
+  const [manualPlaceId, setManualPlaceId] = useState('');
+  /** Évite un toast à chaque frappe si la recherche échoue en boucle */
+  const lastGooglePlacesErrorToastAt = useRef(0);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedPlaceQuery(placeSearch.trim()), 450);
@@ -183,7 +187,11 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
       .catch((err: Error) => {
         if (!cancelled) {
           setPlaceResults([]);
-          toast.error(err.message || 'Recherche Google indisponible');
+          const now = Date.now();
+          if (now - lastGooglePlacesErrorToastAt.current > 12_000) {
+            lastGooglePlacesErrorToastAt.current = now;
+            toast.error(err.message || 'Recherche Google indisponible');
+          }
         }
       })
       .finally(() => {
@@ -202,6 +210,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
       toast.success('Fiche Google enregistrée — les avis s’affichent sur la vitrine');
       setPlaceSearch('');
       setPlaceResults([]);
+      setManualPlaceId('');
     } catch {
       toast.error('Impossible d’enregistrer');
     } finally {
@@ -217,11 +226,35 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
       toast.success('Lien Google retiré');
       setPlaceSearch('');
       setPlaceResults([]);
+      setManualPlaceId('');
     } catch {
       toast.error('Impossible de retirer le lien');
     } finally {
       setSavingGooglePlace(false);
     }
+  };
+
+  const handleSaveManualPlaceId = async () => {
+    if (!onSaveGooglePlaceId) return;
+    const idRaw = manualPlaceId.trim();
+    if (!idRaw) {
+      toast.error('Collez d’abord un Place ID ou une URL Maps');
+      return;
+    }
+    if (looksLikeShortMapsShareLink(idRaw)) {
+      toast.error(
+        'Les liens « Partager » courts ne contiennent pas le Place ID. Ouvrez le lien dans le navigateur, puis copiez l’URL de la barre d’adresse ou utilisez le Place ID Finder Google.'
+      );
+      return;
+    }
+    const parsed = parsePlaceIdFromPaste(idRaw);
+    if (!parsed) {
+      toast.error(
+        'Place ID non reconnu. Attendu : texte du type ChIJ… ou une URL avec place_id= / query_place_id=.'
+      );
+      return;
+    }
+    await handlePickGooglePlace(parsed);
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -445,6 +478,46 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
                   ))}
                 </ul>
               )}
+
+              <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">
+                  Ou coller un Place ID
+                </p>
+                <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mb-3">
+                  Ne collez pas le lien court <code className="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">share.google/…</code> — ouvrez-le dans le navigateur et copiez l’URL complète. Le Place ID apparaît souvent après{' '}
+                  <code className="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">place_id=</code>
+                  {' '}ou{' '}
+                  <code className="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">query_place_id=</code>
+                  . Sinon utilisez le{' '}
+                  <a
+                    href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-zinc-600 dark:text-zinc-300 underline underline-offset-2"
+                  >
+                    Place ID Finder
+                  </a>
+                  {' '}Google.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={manualPlaceId}
+                    onChange={(e) => setManualPlaceId(e.target.value)}
+                    placeholder="Ex : ChIJN1t_tDeuEmsRUsoyG83frY4"
+                    disabled={savingGooglePlace || !!googlePlaceId}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm font-mono placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400/30 focus:border-zinc-400 transition-all disabled:opacity-50"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveManualPlaceId}
+                    disabled={savingGooglePlace || !!googlePlaceId || !manualPlaceId.trim()}
+                    className="shrink-0 px-4 py-2.5 rounded-xl text-sm font-semibold bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:opacity-50 transition-all active:scale-[0.98]"
+                  >
+                    Enregistrer ce Place ID
+                  </button>
+                </div>
+              </div>
             </>
           )}
         </div>

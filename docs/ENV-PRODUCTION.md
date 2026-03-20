@@ -42,7 +42,7 @@ Le build Vite n’a accès qu’aux variables **préfixées par `VITE_`**. Tout 
 | `META_APP_ID` | instagram | ID de l'app Meta (developers.facebook.com) |
 | `META_APP_SECRET` | instagram | Secret de l'app Meta |
 | `META_WEBHOOK_VERIFY_TOKEN` | instagram-webhook | Token de vérification du webhook Meta |
-| `GOOGLE_PLACES_API_KEY` ou `GOOGLE_MAPS_API_KEY` | `google-places` | Clé Places API (avis vitrine + recherche établissement) — **jamais** en `VITE_` |
+| `GOOGLE_PLACES_API_KEY` ou `GOOGLE_MAPS_API_KEY` | `google-places` | Clé Places API (avis vitrine + recherche établissement) — **jamais** en `VITE_`. Dans Google Cloud : activer **Places API** (legacy) et/ou **Places API (New)** ; la fonction tente les deux pour la recherche texte. |
 
 En **production** :
 - Définir **obligatoirement** `STRIPE_WEBHOOK_SECRET` (sinon le webhook renvoie 501).
@@ -67,6 +67,8 @@ npx supabase functions deploy google-places --no-verify-jwt
 ```
 
 Configurer le secret `GOOGLE_PLACES_API_KEY` (ou `GOOGLE_MAPS_API_KEY`) dans Supabase.
+
+**Erreur navigateur « Failed to send a request to the Edge Function »** : en général la fonction n’est pas déployée, le secret Google manque, ou **CORS** : le fichier partagé `supabase/functions/_shared/cors.ts` autorise désormais tout origine **HTTPS** valide ; après modification, redéployer au moins `google-places` pour prendre effet.
 
 ### Configurer le webhook dans Stripe Dashboard
 

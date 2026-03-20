@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { Plus, Inbox, Image, LayoutGrid, Calendar, UserPlus, CreditCard, Clock, ChevronRight, Wallet, Users, DollarSign, TrendingUp, ArrowUpRight, Star, ExternalLink, AlertCircle, CalendarCheck, Phone, MessageCircle, Home, Settings, Zap, Grip, Move, GripVertical, X, Target, Sparkles, BarChart3, Gift, Heart, Award, Percent, Bell, FileText, MapPin, Share2, Check } from 'lucide-react';
+import { Plus, Inbox, Image, LayoutGrid, Calendar, UserPlus, CreditCard, Clock, ChevronRight, Wallet, Users, DollarSign, TrendingUp, ArrowUpRight, Star, ExternalLink, AlertCircle, CalendarCheck, Phone, MessageCircle, Home, Settings, Zap, Grip, Move, GripVertical, X, Target, Sparkles, BarChart3, Gift, Heart, Award, Percent, Bell, FileText, MapPin, Share2, Check, Loader2, Camera } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -67,6 +67,11 @@ export interface DashboardOverviewTabProps {
   recentDeposits: Appointment[];
   /** Image de couverture vitrine (Paramètres → Vitrine) ; sinon image par défaut ci-dessus */
   overviewHeaderBgUrl?: string | null;
+  /** Clic sur l’avatar mobile : photo de **profil** compte (fichier caché dans DashboardPro) */
+  onAvatarClick?: () => void;
+  avatarUploading?: boolean;
+  /** Bannière d’en-tête = image **vitrine** (couverture), pas l’avatar — ouvre Paramètres → Vitrine */
+  onEditCoverClick?: () => void;
 }
 
 export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
@@ -99,6 +104,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   useSupabase = false,
   recentDeposits = [],
   overviewHeaderBgUrl,
+  onAvatarClick,
+  avatarUploading = false,
+  onEditCoverClick,
 }) => {
   const mobileHeaderBgUrl =
     typeof overviewHeaderBgUrl === 'string' && overviewHeaderBgUrl.trim() !== ''
@@ -647,7 +655,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         {/* iOS Large Title Header */}
         <div className="px-4 pt-6 pb-3 safe-top">
           <div className="relative rounded-2xl overflow-hidden border border-zinc-200/80 dark:border-zinc-800 shadow-md min-h-[140px]">
-            {/* Image de fond (statique) */}
+            {/* Image de fond = couverture vitrine (pas l’avatar compte) */}
             <div
               className="absolute inset-0 bg-cover bg-center scale-105"
               style={{ backgroundImage: `url(${mobileHeaderBgUrl})` }}
@@ -677,21 +685,55 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('settings')}
-                  className="mt-0.5 w-12 h-12 rounded-2xl flex-shrink-0 overflow-hidden shadow-lg ring-2 ring-white/40 active:scale-95 transition-transform"
-                  aria-label="Paramètres"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (onAvatarClick) onAvatarClick();
+                    else setActiveTab('settings');
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  disabled={avatarUploading}
+                  className="relative mt-0.5 w-12 h-12 rounded-2xl flex-shrink-0 overflow-hidden shadow-lg ring-2 ring-white/40 active:scale-95 transition-transform touch-manipulation disabled:opacity-70"
+                  aria-label={onAvatarClick ? 'Changer la photo de profil (compte)' : 'Paramètres'}
+                  title={onAvatarClick ? 'Photo de profil — pas la bannière' : undefined}
                 >
                   {user?.avatar ? (
                     <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                      <span className="text-lg font-bold text-white">
-                        {firstName ? firstName[0].toUpperCase() : '?'}
-                      </span>
+                      {onAvatarClick ? (
+                        <Camera className="w-5 h-5 text-white/90" strokeWidth={2} aria-hidden />
+                      ) : (
+                        <span className="text-lg font-bold text-white">
+                          {firstName ? firstName[0].toUpperCase() : '?'}
+                        </span>
+                      )}
                     </div>
+                  )}
+                  {avatarUploading && (
+                    <span className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <Loader2 className="w-5 h-5 text-white animate-spin" aria-hidden />
+                    </span>
                   )}
                 </button>
         </div>
+
+              {onEditCoverClick && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onEditCoverClick();
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="mt-2 flex w-fit items-center gap-1.5 rounded-xl bg-white/15 backdrop-blur-sm px-2.5 py-1.5 text-[11px] font-semibold text-white ring-1 ring-white/25 active:scale-[0.98] transition-all touch-manipulation"
+                  aria-label="Modifier la bannière vitrine (Paramètres)"
+                >
+                  <Image className="w-3.5 h-3.5 opacity-95" strokeWidth={2} aria-hidden />
+                  Bannière vitrine
+                </button>
+              )}
 
               {(unpaidCount > 0 || todayOrTomorrowCount > 0) && (
                 <div className="flex flex-wrap gap-2 mt-3">

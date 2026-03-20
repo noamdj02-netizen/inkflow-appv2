@@ -340,15 +340,20 @@ export const DashboardPro: React.FC = () => {
     }
   }, [toast]);
 
-  // Load vitrine data so Portfolio tab and Paramètres > Vitrine share the same portfolio (slug depuis la BDD pour isoler par tatoueur)
+  // Vitrine (cover + portfolio) : charger sur aperçu (bannière mobile), portfolio et Paramètres → Vitrine
   useEffect(() => {
-    if (!user?.email || !user?.studioName || activeTab !== 'portfolio') return;
-    setVitrineLoading(true);
+    if (!user?.email || !user?.studioName) return;
+    const needVitrine =
+      activeTab === 'overview' ||
+      activeTab === 'portfolio' ||
+      (activeTab === 'settings' && settingsTab === 'vitrine');
+    if (!needVitrine) return;
+    setVitrineLoading(activeTab === 'portfolio');
     const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user.studioName);
     getVitrineDataAsync(slug, user.email, user.studioName)
       .then((data) => { setVitrineData(data); setVitrineLoading(false); })
       .catch(() => setVitrineLoading(false));
-  }, [user?.email, user?.studioName, studioSlug, activeTab]);
+  }, [user?.email, user?.studioName, studioSlug, activeTab, settingsTab]);
 
   useEffect(() => {
     if (!studioId || !useSupabase) return;
@@ -1097,7 +1102,21 @@ export const DashboardPro: React.FC = () => {
                 <Menu className="w-6 h-6 text-[var(--text-secondary)]" />
               </button>
               {activeTab === 'overview' ? (
-                <div className="flex-1 min-w-0" />
+                <>
+                  {/* Mobile / tablette : marque visible sur l’écran d’accueil (desktop : logo dans la sidebar) */}
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 lg:hidden">
+                    <Logo size="sm" className="rounded-xl flex-shrink-0 shadow-sm ring-1 ring-black/5 dark:ring-white/10" />
+                    <div className="min-w-0 flex flex-col justify-center leading-tight">
+                      <span className="font-bold text-[17px] sm:text-lg tracking-tight text-zinc-900 dark:text-white truncate">
+                        InkFlow
+                      </span>
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 truncate">
+                        Accueil
+                      </span>
+                    </div>
+                  </div>
+                  <div className="hidden lg:block flex-1 min-w-0" aria-hidden />
+                </>
               ) : (
                 <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)] min-w-0">{activeTab === 'account' ? 'Mon compte' : tabs.find(t => t.id === activeTab)?.label}</h2>
               )}
@@ -1394,6 +1413,12 @@ export const DashboardPro: React.FC = () => {
               pendingRequestsCount={pendingRequestsCount}
               recentDeposits={recentDeposits}
               overviewHeaderBgUrl={vitrineData?.coverImage ?? null}
+              onAvatarClick={() => avatarInputRef.current?.click()}
+              avatarUploading={avatarUploading}
+              onEditCoverClick={() => {
+                setActiveTab('settings');
+                setSettingsTab('vitrine');
+              }}
             />
             </motion.div>
           )}

@@ -1,11 +1,33 @@
 import { supabase } from './supabase';
 import type { GooglePlaceSearchResultDTO, GoogleReviewsPayload } from '../types/googlePlaces';
 
-function friendlyError(fn: string, raw: string): string {
-  if (raw.toLowerCase().includes('fetch') || raw.toLowerCase().includes('network')) {
-    return 'Service Google temporairement indisponible.';
+function friendlyError(_fn: string, raw: string): string {
+  const lower = raw.toLowerCase();
+  if (
+    lower.includes('failed to send') ||
+    lower.includes('edge function') ||
+    lower.includes('functionsrelayerror')
+  ) {
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn(
+        '[google-places] Vérifiez : fonction google-places déployée, secret GOOGLE_PLACES_API_KEY, domaine autorisé (CORS). Voir docs/ENV-PRODUCTION.md'
+      );
+    }
+    return 'Connexion à la recherche Google impossible (serveur). Vérifiez que la fonction Supabase « google-places » est déployée et que le secret GOOGLE_PLACES_API_KEY est défini.';
   }
-  return raw;
+  if (lower.includes('non authentifié') || lower.includes('401')) {
+    return 'Session expirée : reconnectez-vous puis réessayez la recherche.';
+  }
+  if (lower.includes('configuration serveur') || lower.includes('503')) {
+    return 'Recherche Google non configurée côté serveur (clé API manquante). Contactez l’administrateur.';
+  }
+  if (lower.includes('request_denied') || lower.includes('not authorized') || lower.includes('api key')) {
+    return 'Clé Google ou API Places refusée : vérifiez la clé et l’activation « Places API » / « Places API (New) » dans Google Cloud.';
+  }
+  if (lower.includes('fetch') || lower.includes('network')) {
+    return 'Service Google temporairement indisponible (réseau).';
+  }
+  return raw.length > 180 ? `${raw.slice(0, 177)}…` : raw;
 }
 
 /** Avis publics pour une vitrine (slug). Pas de clé API côté navigateur. */

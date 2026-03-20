@@ -52,7 +52,28 @@ function getAllowedOrigin(origin?: string | null): string {
   if (origin.includes('supabase.co') || origin.includes('supabase.in')) {
     return origin;
   }
-  
+
+  // Netlify previews / prod
+  if (origin.endsWith('.netlify.app')) {
+    return origin;
+  }
+
+  // Tout domaine HTTPS valide (domaine Vercel custom, sous-domaine client, etc.)
+  // Sinon le navigateur bloque supabase.functions.invoke → "Failed to send request to Edge Function"
+  try {
+    const u = new URL(origin);
+    if (
+      u.protocol === 'https:' &&
+      u.hostname.length > 0 &&
+      !u.hostname.includes('..') &&
+      u.hostname !== 'localhost'
+    ) {
+      return origin;
+    }
+  } catch {
+    /* ignore */
+  }
+
   // Default to primary production origin
   return ALLOWED_ORIGINS[0];
 }
