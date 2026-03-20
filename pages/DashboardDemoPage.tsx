@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { SEO } from '../components/SEO';
+import { DemoMobilePhoneGuide } from '../components/demo/DemoMobilePhoneGuide';
 import { getDemoAppointments, getDemoClients, getDemoProjectRequests, getDemoFlash } from '../data/demoData';
 
 const DEMO_AVATARS = [
@@ -987,7 +988,13 @@ export const DashboardDemoPage: React.FC = () => {
                 <p className="text-xs sm:text-sm text-blue-100 truncate">Explorez le dashboard InkFlow librement</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+              <a
+                href="#demo-mobile-maquette"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl bg-white/15 text-white font-medium hover:bg-white/25 transition-colors text-xs sm:text-sm border border-white/20"
+              >
+                Maquette mobile
+              </a>
               <button
                 onClick={() => { setOnboardingStep(0); setShowOnboarding(true); }}
                 className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl bg-white/20 text-white font-medium hover:bg-white/30 transition-colors text-xs sm:text-sm"
@@ -1006,6 +1013,20 @@ export const DashboardDemoPage: React.FC = () => {
           {/* Conditional Content Based on activeId */}
           {activeId === 'overview' && (
             <>
+              <DemoMobilePhoneGuide
+                greetingName="Studio Demo"
+                studioLabel="Mon studio"
+                dateLine={now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                firstToday={todayAppointments[0] ?? null}
+                todayCount={todayAppointments.length}
+                unpaidCount={unpaidCount}
+                monthlyRevenue={monthlyRevenue}
+                pendingDeposits={pendingDeposits}
+                clientsCount={demoClients.length}
+                appointmentsThisMonth={appointmentsThisMonth}
+                getAvatar={getAvatarByName}
+              />
+
               {/* ===== HEADER — Same style as real dashboard ===== */}
               <div className="mb-6">
                 <p className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-1">
