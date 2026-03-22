@@ -25,5 +25,5 @@ DROP POLICY IF EXISTS "Owner update availability_settings" ON inkflow_studios;
 CREATE POLICY "Owner update availability_settings"
   ON inkflow_studios
   FOR UPDATE
-  USING (auth.uid() = id)
-  WITH CHECK (auth.uid() = id);
+  USING (auth.uid()::text = id::text)
+  WITH CHECK (auth.uid()::text = id::text);
