@@ -29,6 +29,126 @@ import type { DashboardWidget } from './DashboardWidgets';
 /** Image d’en-tête mobile si aucune image vitrine (fichier dans /public) */
 const MOBILE_OVERVIEW_HEADER_BG_FALLBACK = '/images/hero-tattoo-artist.png';
 
+/** Composants sortables au niveau module : évite de recréer un type de composant à chaque rendu
+ * (React #310 / hooks + @dnd-kit + Framer Motion en prod). */
+interface OverviewSortableWidgetProps {
+  id: string;
+  children: React.ReactNode;
+  className?: string;
+  canRemove?: boolean;
+  isEditMode: boolean;
+  onRemoveWidget: (widgetId: string) => void;
+}
+
+function OverviewSortableWidget({
+  id,
+  children,
+  className = '',
+  canRemove = true,
+  isEditMode,
+  onRemoveWidget,
+}: OverviewSortableWidgetProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: !isEditMode,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 80 : 'auto',
+  } as const;
+  return (
+    <div ref={setNodeRef} style={style} className={`relative group min-w-0 ${className}`}>
+      {isEditMode && (
+        <div className="absolute -top-2 -right-2 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div
+            {...attributes}
+            {...listeners}
+            className="p-1.5 rounded-lg bg-sky-600 dark:bg-sky-500 text-white cursor-grab active:cursor-grabbing shadow-lg"
+          >
+            <GripVertical className="w-3.5 h-3.5" />
+          </div>
+          {canRemove && (
+            <button
+              type="button"
+              onClick={() => onRemoveWidget(id)}
+              className="p-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+      <div className={isEditMode ? 'ring-2 ring-blue-500/50 ring-offset-2 dark:ring-offset-zinc-950 rounded-2xl' : ''}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+interface OverviewSortableKpiProps {
+  id: string;
+  children: React.ReactNode;
+  canRemove?: boolean;
+  isEditMode: boolean;
+  onRemoveWidget: (widgetId: string) => void;
+  isMdUp: boolean;
+}
+
+function OverviewSortableKpi({
+  id,
+  children,
+  canRemove = true,
+  isEditMode,
+  onRemoveWidget,
+  isMdUp,
+}: OverviewSortableKpiProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: !isEditMode,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 80 : 'auto',
+  } as const;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`relative group h-full min-w-0 ${isMdUp ? 'min-h-[130px]' : 'min-h-[120px]'}`}
+    >
+      {isEditMode && (
+        <div className="absolute -top-2 -right-2 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div
+            {...attributes}
+            {...listeners}
+            className="p-1.5 rounded-lg bg-sky-600 dark:bg-sky-500 text-white cursor-grab active:cursor-grabbing shadow-lg"
+          >
+            <GripVertical className="w-3.5 h-3.5" />
+          </div>
+          {canRemove && (
+            <button
+              type="button"
+              onClick={() => onRemoveWidget(id)}
+              className="p-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+      <div
+        className={`h-full ${isEditMode ? 'ring-2 ring-blue-500/50 ring-offset-2 dark:ring-offset-zinc-950 rounded-2xl' : ''}`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings';
 
 export interface DashboardOverviewTabProps {
@@ -273,44 +393,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     return h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
   })();
 
-  const SortableWidget: React.FC<{ id: string; children: React.ReactNode; className?: string; canRemove?: boolean }> = ({ id, children, className = '', canRemove = true }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !isEditMode });
-    
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.5 : 1,
-      zIndex: isDragging ? 80 : 'auto',
-    };
-
-  return (
-      <div ref={setNodeRef} style={style} className={`relative group min-w-0 ${className}`}>
-        {isEditMode && (
-          <div className="absolute -top-2 -right-2 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div 
-              {...attributes} 
-              {...listeners}
-              className="p-1.5 rounded-lg bg-sky-600 dark:bg-sky-500 text-white cursor-grab active:cursor-grabbing shadow-lg"
-            >
-              <GripVertical className="w-3.5 h-3.5" />
-            </div>
-            {canRemove && (
-              <button
-                onClick={() => handleRemoveWidget(id)}
-                className="p-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        )}
-        <div className={isEditMode ? 'ring-2 ring-blue-500/50 ring-offset-2 dark:ring-offset-zinc-950 rounded-2xl' : ''}>
-          {children}
-        </div>
-      </div>
-    );
-  };
-
   /** Desktop KPI (inchangé) vs mobile — Human Interface : grouped, plat, Footnote / Title styles */
   const desktopKpiShell =
     'bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px] min-w-0';
@@ -331,51 +413,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   const iosKpiIconBtn =
     'shrink-0 w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center active:opacity-60 transition-opacity';
 
-  const SortableKpiWidget: React.FC<{ id: string; children: React.ReactNode; canRemove?: boolean }> = ({ id, children, canRemove = true }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !isEditMode });
-    
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.5 : 1,
-      zIndex: isDragging ? 80 : 'auto',
-    };
-    
-    return (
-      <div ref={setNodeRef} style={style} className={`relative group h-full min-w-0 ${isMdUp ? 'min-h-[130px]' : 'min-h-[120px]'}`}>
-        {isEditMode && (
-          <div className="absolute -top-2 -right-2 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div 
-              {...attributes} 
-              {...listeners}
-              className="p-1.5 rounded-lg bg-sky-600 dark:bg-sky-500 text-white cursor-grab active:cursor-grabbing shadow-lg"
-            >
-              <GripVertical className="w-3.5 h-3.5" />
-            </div>
-            {canRemove && (
-              <button
-                onClick={() => handleRemoveWidget(id)}
-                className="p-1.5 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        )}
-        <div className={`h-full ${isEditMode ? 'ring-2 ring-blue-500/50 ring-offset-2 dark:ring-offset-zinc-950 rounded-2xl' : ''}`}>
-          {children}
-        </div>
-      </div>
-    );
-  };
-
   const renderKpiWidget = (widgetId: string) => {
     switch (widgetId) {
 
       /* ── Revenue — même thème que les autres cartes ── */
       case 'kpi-revenue':
         return (
-          <SortableKpiWidget key={widgetId} id={widgetId}>
+          <OverviewSortableKpi key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget} isMdUp={isMdUp}>
             <div className={isMdUp ? desktopKpiShell : iosKpiShell}>
               <div className="flex items-start justify-between gap-2">
                 <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>Revenu du mois</span>
@@ -442,13 +486,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 </div>
               </div>
             </div>
-          </SortableKpiWidget>
+          </OverviewSortableKpi>
         );
 
       /* ── Acomptes ── */
       case 'kpi-deposits':
         return (
-          <SortableKpiWidget key={widgetId} id={widgetId}>
+          <OverviewSortableKpi key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget} isMdUp={isMdUp}>
             <div className={isMdUp ? desktopKpiShell : iosKpiShell}>
               <div className="flex items-start justify-between gap-2">
                 <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>Acomptes</span>
@@ -495,13 +539,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 )}
               </div>
             </div>
-          </SortableKpiWidget>
+          </OverviewSortableKpi>
         );
 
       /* ── Clients ── */
       case 'kpi-clients':
         return (
-          <SortableKpiWidget key={widgetId} id={widgetId}>
+          <OverviewSortableKpi key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget} isMdUp={isMdUp}>
             <div className={isMdUp ? desktopKpiShell : iosKpiShell}>
               <div className="flex items-start justify-between gap-2">
                 <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>Clients</span>
@@ -558,13 +602,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 )}
               </div>
             </div>
-          </SortableKpiWidget>
+          </OverviewSortableKpi>
         );
 
       /* ── RDV ── */
       case 'kpi-appointments':
         return (
-          <SortableKpiWidget key={widgetId} id={widgetId}>
+          <OverviewSortableKpi key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget} isMdUp={isMdUp}>
             <div className={isMdUp ? desktopKpiShell : iosKpiShell}>
               <div className="flex items-start justify-between gap-2">
                 <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>RDV ce mois</span>
@@ -630,7 +674,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 </div>
               </div>
             </div>
-          </SortableKpiWidget>
+          </OverviewSortableKpi>
         );
 
       default:
@@ -1176,7 +1220,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   {layout.leftColumn.map(widgetId => {
                     if (widgetId === 'revenue-chart') {
                       return (
-                        <SortableWidget key={widgetId} id={widgetId}>
+                        <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
               <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -1201,12 +1245,12 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 </div>
                             <RevenueChart appointments={appointments} totalRevenue={totalRevenue} onPeriodChange={handlePeriodChange} />
               </div>
-                        </SortableWidget>
+                        </OverviewSortableWidget>
                       );
                     }
                     if (widgetId === 'appointments-list') {
                       return (
-                        <SortableWidget key={widgetId} id={widgetId}>
+                        <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
               <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden">
                 <div className="px-6 py-5 flex items-center justify-between">
                   <div>
@@ -1297,7 +1341,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   </div>
                 )}
               </div>
-                        </SortableWidget>
+                        </OverviewSortableWidget>
                       );
                     }
                     
@@ -1309,7 +1353,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         : 0;
                       
                       return (
-                        <SortableWidget key={widgetId} id={widgetId}>
+                        <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
                           <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
                             <div className="flex items-center justify-between mb-5">
                               <div className="flex items-center gap-3">
@@ -1334,7 +1378,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                               </div>
                             </div>
                           </div>
-                        </SortableWidget>
+                        </OverviewSortableWidget>
                       );
                     }
 
@@ -1354,7 +1398,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       });
 
                       return (
-                        <SortableWidget key={widgetId} id={widgetId}>
+                        <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
                           <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
                             <div className="flex items-center justify-between mb-5">
                               <div className="flex items-center gap-3">
@@ -1397,7 +1441,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                               ))}
                             </div>
                           </div>
-                        </SortableWidget>
+                        </OverviewSortableWidget>
                       );
                     }
 
@@ -1413,7 +1457,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               {layout.rightColumn.map(widgetId => {
                 if (widgetId === 'next-client') {
                   return nextClient ? (
-                    <SortableWidget key={widgetId} id={widgetId}>
+                    <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
                 <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-500 rounded-3xl p-6 text-white shadow-2xl shadow-blue-600/30 relative overflow-hidden">
                   <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl translate-x-1/3 -translate-y-1/3" />
@@ -1445,21 +1489,21 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     </div>
                   </div>
                 </div>
-                    </SortableWidget>
+                    </OverviewSortableWidget>
               ) : (
-                    <SortableWidget key={widgetId} id={widgetId}>
+                    <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
                 <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] text-center">
                         <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4"><Calendar className="w-6 h-6 text-zinc-400" /></div>
                   <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">Pas de RDV aujourd'hui</p>
                   <p className="text-xs text-zinc-400 dark:text-zinc-500">Profitez de votre journée libre !</p>
                 </div>
-                    </SortableWidget>
+                    </OverviewSortableWidget>
                   );
                 }
 
                 if (widgetId === 'clients-deposits') {
                   return (
-                    <SortableWidget key={widgetId} id={widgetId}>
+                    <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
               <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden">
                 <div className="px-5 pt-5 pb-0">
                   <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800">
@@ -1515,13 +1559,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           <button onClick={() => setActiveTab(rightPanelTab === 'clients' ? 'clients' : 'finance')} className="w-full py-2.5 rounded-xl text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">Voir tout →</button>
                         </div>
                       </div>
-                    </SortableWidget>
+                    </OverviewSortableWidget>
                   );
                 }
 
                 if (widgetId === 'requests-pending') {
                   return pendingRequestsCount > 0 ? (
-                    <SortableWidget key={widgetId} id={widgetId}>
+                    <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
                       <button onClick={() => !isEditMode && setActiveTab('requests')} className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] transition-all text-left group">
                         <div className="flex items-center gap-4">
                           <div className="p-3 rounded-xl bg-violet-100 dark:bg-violet-500/10"><Inbox className="w-5 h-5 text-violet-600 dark:text-violet-400" /></div>
@@ -1532,9 +1576,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
                         </div>
                       </button>
-                    </SortableWidget>
+                    </OverviewSortableWidget>
                   ) : (
-                    <SortableWidget key={widgetId} id={widgetId}>
+                    <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
                       <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
                         <div className="flex items-center gap-4">
                           <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-500/10"><Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /></div>
@@ -1544,7 +1588,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           </div>
                         </div>
                       </div>
-                    </SortableWidget>
+                    </OverviewSortableWidget>
                   );
                 }
 
@@ -1559,7 +1603,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     .slice(0, 3);
 
                   return (
-                    <SortableWidget key={widgetId} id={widgetId}>
+                    <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
                       <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
                         <div className="flex items-center gap-3 mb-4">
                           <div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-500/20">
@@ -1585,7 +1629,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           <p className="text-sm text-zinc-400 text-center py-4">Pas encore de données</p>
                         )}
                       </div>
-                    </SortableWidget>
+                    </OverviewSortableWidget>
                   );
                 }
 
@@ -1594,7 +1638,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   const progress = Math.min((monthlyRevenue / monthlyGoal) * 100, 100);
 
                   return (
-                    <SortableWidget key={widgetId} id={widgetId}>
+                    <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
                       <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-5 text-white shadow-lg shadow-rose-500/20">
                         <div className="flex items-center gap-3 mb-4">
                           <div className="p-2.5 rounded-xl bg-white/20">
@@ -1616,13 +1660,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         </div>
                         <p className="text-xs text-white/70">{Math.round(progress)}% de l'objectif atteint</p>
                       </div>
-                    </SortableWidget>
+                    </OverviewSortableWidget>
                   );
                 }
 
                 if (widgetId === 'flash-promo') {
                   return (
-                    <SortableWidget key={widgetId} id={widgetId}>
+                    <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
                   <button
                         onClick={() => setActiveTab('flash')}
                         className="w-full bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-5 text-white shadow-lg shadow-amber-500/20 text-left group"
@@ -1636,7 +1680,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         <p className="text-2xl font-bold mb-1">{customWidgets.length || 0} designs</p>
                         <p className="text-xs text-white/70">Gérez vos flash disponibles →</p>
                   </button>
-                    </SortableWidget>
+                    </OverviewSortableWidget>
                   );
                 }
 
@@ -1644,7 +1688,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   const vipCount = clients.filter(c => (c.totalSpent ?? 0) >= 500).length;
 
                   return (
-                    <SortableWidget key={widgetId} id={widgetId}>
+                    <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
                       <div className="bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg shadow-pink-500/20">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="p-2.5 rounded-xl bg-white/20">
@@ -1668,7 +1712,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           </div>
                         </div>
                       </div>
-                    </SortableWidget>
+                    </OverviewSortableWidget>
                   );
                 }
 

@@ -137,8 +137,8 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
             </button>
           ))}
         </div>
-        <div style={{ height: height }}>
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="w-full min-w-0" style={{ height: Math.max(height, 1) }}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
             <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="revenueChartGradient-clean" x1="0" y1="0" x2="0" y2="1">
@@ -188,8 +188,8 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
           </button>
         ))}
       </div>
-      <div style={{ height: height }}>
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="w-full min-w-0" style={{ height: Math.max(height, 1) }}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
           <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
             <defs>
               <linearGradient id="revenueChartGradient-overview" x1="0" y1="0" x2="0" y2="1">
