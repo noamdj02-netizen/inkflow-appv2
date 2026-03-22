@@ -8,10 +8,13 @@ import type { VitrineData } from '../../types/vitrine';
 import type { GoogleReviewsPayload } from '../../types/googlePlaces';
 
 /**
- * Map des thèmes structurels. Pour ajouter un nouveau thème (ex: BentoTheme, NeonTheme) :
- * 1. Créer le fichier dans components/studio-themes/ (ex: BentoTheme.tsx)
+ * Thèmes structurels = famille « Focus & conversion » (page courte). Les thèmes Full Studio
+ * restent rendus par PublicStudioPagePro. Voir `productTier` dans `lib/themes.ts`.
+ *
+ * Pour ajouter un thème structurel :
+ * 1. Créer le fichier dans components/studio-themes/
  * 2. L'exporter depuis components/studio-themes/index.ts
- * 3. L'ajouter ici dans themeMap avec sa clé (ex: bento, neon)
+ * 3. L'ajouter ici dans themeMap et dans VITRINE_THEMES (productTier: 'focus')
  */
 const themeMap: Record<string, ComponentType<StudioThemeProps>> = {
   classic: ClassicTheme,
@@ -30,13 +33,22 @@ function vitrineToStudioThemeProps(data: VitrineData, baseUrl: string): StudioTh
   const city = data.address?.split(',').pop()?.trim() ?? null;
   const instagramHandle = data.instagram?.replace(/^@/, '') ? `@${data.instagram.replace(/^@/, '')}` : null;
 
+  const trimOrNull = (s: string | undefined): string | null => {
+    const t = (s ?? '').trim();
+    return t.length > 0 ? t : null;
+  };
+
   return {
     studio: {
       name: data.name,
       slug: data.slug,
-      bio: data.description || data.tagline || null,
+      bio: trimOrNull(data.description) ?? trimOrNull(data.tagline),
       avatarUrl: data.avatar || null,
       city,
+      address: trimOrNull(data.address),
+      phone: trimOrNull(data.phone),
+      email: trimOrNull(data.email),
+      website: trimOrNull(data.website),
       instagramHandle,
       bookingUrl,
       themeName: data.theme ?? 'classic',

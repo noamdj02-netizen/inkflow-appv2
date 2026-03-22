@@ -44,13 +44,13 @@ export async function ensureStudio(
     .eq('slug', baseSlug)
     .maybeSingle();
 
-  let finalSlug: string;
+  let preferredSlug: string;
   if (!existing) {
-    finalSlug = baseSlug;
+    preferredSlug = baseSlug;
   } else if (existing.id === id) {
-    finalSlug = baseSlug;
+    preferredSlug = baseSlug;
   } else {
-    finalSlug = `${baseSlug}-${uniqueSlugSuffix(id)}`;
+    preferredSlug = `${baseSlug}-${uniqueSlugSuffix(id)}`;
   }
 
   let referredBy: string | null = null;
@@ -66,43 +66,68 @@ export async function ensureStudio(
     }
   }
 
-  const payload: Record<string, unknown> = {
-    id,
-    email,
-    name,
-    studio_name: studioName,
-    slug: finalSlug,
-    updated_at: now,
-  };
-  if (referredBy) payload.referred_by = referredBy;
+  const MAX_SLUG_ATTEMPTS = 8;
+  let lastError: { message?: string; code?: string } | null = null;
 
-  const { error } = await supabase.from('inkflow_studios').upsert(payload, { onConflict: 'id' });
-  if (error) {
-    const msg = error.message || (error as { code?: string }).code || 'Supabase error';
+  for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt++) {
+    const finalSlug =
+      attempt === 0
+        ? preferredSlug
+        : `${baseSlug}-${uniqueSlugSuffix(`${id}-retry-${attempt}-${Date.now()}`)}`;
+
+    const payload: Record<string, unknown> = {
+      id,
+      email,
+      name,
+      studio_name: studioName,
+      slug: finalSlug,
+      updated_at: now,
+    };
+    if (referredBy) payload.referred_by = referredBy;
+
+    const { error } = await supabase.from('inkflow_studios').upsert(payload, { onConflict: 'id' });
+    if (!error) {
+      if (referredBy) {
+        const { error: refErr } = await supabase.from('inkflow_referrals').insert({
+          referrer_id: referredBy,
+          referee_id: id,
+          status: 'pending',
+        });
+        if (refErr && refErr.code !== '23505') {
+          console.warn('[ensureStudio] referral insert:', refErr.message);
+        } else if (!refErr) {
+          sendReferralNotification({ referrerId: referredBy, refereeStudioName: studioName });
+        }
+      }
+      return { studioId: id, slug: finalSlug };
+    }
+
+    lastError = error as { message?: string; code?: string };
+    const code = lastError.code;
+    if (code === '23505') {
+      continue;
+    }
+    const msg = lastError.message || code || 'Supabase error';
     throw new Error(msg);
   }
 
-  if (referredBy) {
-    const { error: refErr } = await supabase.from('inkflow_referrals').insert({
-      referrer_id: referredBy,
-      referee_id: id,
-      status: 'pending',
-    });
-    if (refErr && refErr.code !== '23505') {
-      // 23505 = unique_violation, ignorer si doublon
-      console.warn('[ensureStudio] referral insert:', refErr.message);
-    } else if (!refErr) {
-      // Parrainage créé avec succès : notifier le parrain par email (non bloquant)
-      sendReferralNotification({ referrerId: referredBy, refereeStudioName: studioName });
-    }
-  }
-
-  return { studioId: id, slug: finalSlug };
+  throw new Error(
+    lastError?.message ||
+      'Impossible d’attribuer un slug unique (contrainte inkflow_studios.slug). Réessaie ou change le nom du studio.'
+  );
 }
 
-/** Récupère le studio (id + slug + subscription_status + trial_ends_at + siret) pour cet email.
+/** Récupère le studio (id + slug + subscription_status + trial_ends_at + siret + plan CSV quota) pour cet email.
  * Privilégie le studio avec le plus de clients et RDV (évite studio vide si plusieurs studios). */
-export async function getStudioByEmail(email: string): Promise<{ id: string; slug: string; subscription_status?: string; trial_ends_at?: string | null; siret?: string | null } | null> {
+export async function getStudioByEmail(email: string): Promise<{
+  id: string;
+  slug: string;
+  subscription_status?: string;
+  trial_ends_at?: string | null;
+  siret?: string | null;
+  plan_type?: string;
+  csv_import_slots_remaining?: number | null;
+} | null> {
   const { data, error } = await supabase.rpc('get_studio_by_email_with_data', { p_email: email });
   const row = Array.isArray(data) ? data[0] : data;
   if (!error && row?.id) {
@@ -112,12 +137,14 @@ export async function getStudioByEmail(email: string): Promise<{ id: string; slu
       subscription_status: row.subscription_status as string | undefined,
       trial_ends_at: row.trial_ends_at as string | null | undefined,
       siret: (row.siret as string | null) ?? null,
+      plan_type: row.plan_type as string | undefined,
+      csv_import_slots_remaining: row.csv_import_slots_remaining as number | null | undefined,
     };
   }
   // Fallback si la RPC n'existe pas encore (migration non appliquée)
   const { data: fallback, error: fallbackError } = await supabase
     .from('inkflow_studios')
-    .select('id, slug, subscription_status, trial_ends_at, siret')
+    .select('id, slug, subscription_status, trial_ends_at, siret, plan_type, csv_import_slots_remaining')
     .eq('email', email)
     .order('updated_at', { ascending: false })
     .limit(1)
@@ -129,6 +156,8 @@ export async function getStudioByEmail(email: string): Promise<{ id: string; slu
     subscription_status: fallback.subscription_status as string | undefined,
     trial_ends_at: fallback.trial_ends_at as string | null | undefined,
     siret: (fallback.siret as string | null) ?? null,
+    plan_type: (fallback as { plan_type?: string }).plan_type,
+    csv_import_slots_remaining: (fallback as { csv_import_slots_remaining?: number | null }).csv_import_slots_remaining,
   };
 }
 
@@ -146,10 +175,14 @@ export async function getStudioSlugByStudioId(studioId: string): Promise<string 
 /** Vérifie si un slug est disponible (non pris par un autre studio). Si excludeStudioId est fourni, le slug est considéré dispo si c'est le nôtre. */
 export async function checkSlugAvailable(slug: string, excludeStudioId?: string): Promise<boolean> {
   const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: slug });
+  if (error) {
+    console.warn('[checkSlugAvailable] RPC error — slug traité comme indisponible:', error.message);
+    return false;
+  }
   const row = Array.isArray(data) ? data[0] : data;
-  if (error || !row?.id) return true; // pas de conflit
-  if (excludeStudioId && row.id === excludeStudioId) return true; // c'est notre slug
-  return false; // pris par un autre
+  if (!row?.id) return true;
+  if (excludeStudioId && row.id === excludeStudioId) return true;
+  return false;
 }
 
 /** Met à jour le slug du studio. Le slug doit être validé (minuscules, chiffres, tirets) et disponible. */
@@ -409,6 +442,36 @@ export async function saveClientToSupabase(studioId: string, client: Client): Pr
 export async function deleteClientFromSupabase(clientId: string): Promise<void> {
   const { error } = await supabase.from('inkflow_clients').delete().eq('id', clientId);
   if (error) throw error;
+}
+
+const CLIENT_BULK_INSERT_CHUNK = 80;
+
+/** Insertion groupée (import CSV). Chunk pour limiter la taille des requêtes. */
+export async function bulkInsertClientsToSupabase(studioId: string, clients: Client[]): Promise<void> {
+  if (clients.length === 0) return;
+  const now = new Date().toISOString();
+  for (let i = 0; i < clients.length; i += CLIENT_BULK_INSERT_CHUNK) {
+    const slice = clients.slice(i, i + CLIENT_BULK_INSERT_CHUNK);
+    const rows = slice.map((c) => ({
+      id: c.id,
+      studio_id: studioId,
+      name: c.name,
+      email: c.email,
+      phone: c.phone?.trim() ? c.phone.trim() : null,
+      avatar_url: c.avatar ?? null,
+      total_spent: c.totalSpent,
+      appointments_count: c.appointmentsCount,
+      last_visit: c.lastVisit ?? null,
+      first_visit: c.firstVisit,
+      status: c.status,
+      tags: c.tags,
+      tattoos: c.tattoos,
+      notes: c.notes ?? null,
+      updated_at: now,
+    }));
+    const { error } = await supabase.from('inkflow_clients').insert(rows);
+    if (error) throw error;
+  }
 }
 
 // Waitlist

@@ -17,6 +17,9 @@ export interface Database {
           updated_at: string;
           trial_ends_at: string | null;
           subscription_status: 'trialing' | 'active' | 'restricted' | 'canceled';
+          plan_type: 'solo' | 'pro' | 'studio' | 'enterprise';
+          /** Quota import CSV sync webhook ; null = illimité (plans sans plafond CRM) */
+          csv_import_slots_remaining: number | null;
           /** Google Place ID — avis vitrine (Places API côté serveur uniquement) */
           google_place_id?: string | null;
           /** Google Business Profile OAuth — jamais exposé côté client */
@@ -30,6 +33,8 @@ export interface Database {
           updated_at?: string;
           trial_ends_at?: string | null;
           subscription_status?: 'trialing' | 'active' | 'restricted' | 'canceled';
+          plan_type?: 'solo' | 'pro' | 'studio' | 'enterprise';
+          csv_import_slots_remaining?: number | null;
         };
         Update: Partial<Database['public']['Tables']['inkflow_studios']['Insert']>;
       };

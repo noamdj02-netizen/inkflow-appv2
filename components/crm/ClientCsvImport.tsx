@@ -284,7 +284,7 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
         ok.push({
           name,
           email: emailRaw.toLowerCase(),
-          phone: phone || '+33 6 00 00 00 00',
+          phone,
           reservationDate,
         });
       } else {
@@ -341,7 +341,8 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
           <div className="min-w-0">
             <h3 className="text-sm font-semibold truncate">Import clients (CSV)</h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-              {step === 'drop' && 'Dépose un fichier ou choisis-le depuis ton ordinateur'}
+              {step === 'drop' &&
+                'Table Supabase : inkflow_clients — dépose un fichier ou choisis-le sur ton ordinateur'}
               {step === 'map' && fileName && <span className="tabular-nums">{fileName}</span>}
               {step === 'preview' && `${validatedRows.length} ligne(s) validée(s)`}
             </p>
@@ -411,7 +412,8 @@ export const ClientCsvImport: React.FC<ClientCsvImportProps> = ({
               <input type="file" accept=".csv,text/csv" className="hidden" onChange={onFileInput} />
             </label>
             <p className="text-[11px] text-zinc-500 text-center max-w-sm">
-              Première ligne = en-têtes. Max {maxFileSizeMb} Mo, {maxRows} lignes. Encodage UTF-8 recommandé.
+              Première ligne = en-têtes. Max {maxFileSizeMb} Mo, {maxRows} lignes. UTF-8 recommandé. Excel : enregistrer
+              au format <strong>CSV</strong> (séparateur virgule ou point-virgule).
             </p>
           </div>
         )}

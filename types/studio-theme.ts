@@ -25,6 +25,11 @@ export interface StudioThemeProps {
     bio: string | null;
     avatarUrl: string | null;
     city: string | null;
+    /** Adresse complète (vitrine) */
+    address: string | null;
+    phone: string | null;
+    email: string | null;
+    website: string | null;
     instagramHandle: string | null;
     bookingUrl: string | null;
     themeName: string;

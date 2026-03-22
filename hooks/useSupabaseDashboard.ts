@@ -12,6 +12,7 @@ import {
   getClientNotesFromSupabase,
   saveAppointmentToSupabase,
   saveClientToSupabase,
+  bulkInsertClientsToSupabase,
   saveFlashDesignToSupabase,
   saveClientNotesToSupabase,
   deleteAppointmentFromSupabase,
@@ -27,6 +28,8 @@ import { pushAppointmentToGoogle, deleteGoogleEvent } from '../lib/googleCalenda
 import { updateAppBadge } from '../lib/appBadge';
 import { useOptimisticMutation } from './useOptimisticMutation';
 import { useRealtimeSync } from './useRealtimeSync';
+import type { ClientCsvImportRow } from '../components/crm/ClientCsvImport';
+import { clientsFromCsvImportRows } from '../lib/clientImportMapping';
 import type { Appointment, Client, FlashDesign, Notification } from '../types';
 
 const EMPTY_ARRAYS = {
@@ -41,6 +44,8 @@ export const useSupabaseDashboard = () => {
   const toast = useToast();
   const [studioId, setStudioId] = useState<string | null>(null);
   const [studioSlug, setStudioSlug] = useState<string | null>(null);
+  /** Quota import CSV persisté (webhook Stripe) ; undefined = non chargé ; nombre = plafond côté DB (croisé avec la formule plan − count) */
+  const [studioCsvImportSlots, setStudioCsvImportSlots] = useState<number | null | undefined>(undefined);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -105,6 +110,7 @@ export const useSupabaseDashboard = () => {
       setNotifications([]);
       setSubscriptionStatus(null);
       setTrialEndsAt(null);
+      setStudioCsvImportSlots(undefined);
       setLoading(false);
       initializedRef.current = false;
       return;
@@ -123,6 +129,11 @@ export const useSupabaseDashboard = () => {
             slug = existing.slug;
             setSubscriptionStatus(existing.subscription_status ?? 'trialing');
             setTrialEndsAt(existing.trial_ends_at ?? null);
+            setStudioCsvImportSlots(
+              existing.csv_import_slots_remaining === undefined
+                ? undefined
+                : existing.csv_import_slots_remaining,
+            );
           } else {
             const created = await ensureStudio(user.email, user.name, user.studioName || 'Mon Studio');
             sid = created.studioId;
@@ -130,6 +141,11 @@ export const useSupabaseDashboard = () => {
             setSubscriptionStatus('trialing');
             const refreshed = await getStudioByEmail(user.email);
             setTrialEndsAt(refreshed?.trial_ends_at ?? null);
+            setStudioCsvImportSlots(
+              refreshed?.csv_import_slots_remaining === undefined
+                ? undefined
+                : refreshed.csv_import_slots_remaining,
+            );
           }
           setStudioId(sid);
           setStudioSlug(slug);
@@ -154,6 +170,7 @@ export const useSupabaseDashboard = () => {
         if (!initializedRef.current) {
           setStudioId(null);
           setStudioSlug(null);
+          setStudioCsvImportSlots(undefined);
           setSubscriptionStatus(null);
           setTrialEndsAt(null);
           setAppointments(EMPTY_ARRAYS.appointments);
@@ -256,6 +273,19 @@ export const useSupabaseDashboard = () => {
     return newClient.id;
   }, [studioId, useSupabase, clientMutation]);
 
+  const importClientsFromCsvRows = useCallback(
+    async (rows: ClientCsvImportRow[]) => {
+      if (!studioId) throw new Error('Studio introuvable');
+      if (!useSupabase) throw new Error('Configure Supabase (VITE_*) pour importer des clients');
+      const mapped = clientsFromCsvImportRows(rows);
+      if (mapped.length === 0) throw new Error('Aucune ligne à importer (emails en doublon dans le fichier ?).');
+      await bulkInsertClientsToSupabase(studioId, mapped);
+      const refreshed = await getClientsFromSupabase(studioId);
+      setClients(refreshed);
+    },
+    [studioId, useSupabase]
+  );
+
   const updateClient = useCallback((id: string, updates: Partial<Client>) => {
     if (studioId && useSupabase) {
       clientMutation.update(
@@ -297,6 +327,7 @@ export const useSupabaseDashboard = () => {
   return {
     studioId,
     studioSlug,
+    studioCsvImportSlots,
     refreshStudioSlug,
     subscriptionStatus,
     trialEndsAt,
@@ -316,6 +347,7 @@ export const useSupabaseDashboard = () => {
     updateFlash,
     deleteFlash,
     addClient,
+    importClientsFromCsvRows,
     updateClient,
     markNotificationAsRead,
     loadClientNotes,

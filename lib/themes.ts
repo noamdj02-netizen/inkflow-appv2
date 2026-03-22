@@ -1,11 +1,18 @@
 /**
  * Thèmes de la page vitrine — gratuit et premium.
  * Les thèmes premium nécessitent un abonnement Pro ou supérieur.
+ *
+ * **Positionnement produit** (tarifs / marketing) :
+ * - `focus` — thèmes « Focus & conversion » : page courte (flashs, contact, réservation). Idéal Instagram / lien en bio.
+ * - `full` — thèmes « Full Studio » : vitrine longue (SEO, services, artistes, FAQ, etc.). Idéal gros studios.
+ * On ne vise pas l’équivalence fonctionnelle entre les deux familles : c’est une hiérarchie d’offre.
  */
 export interface VitrineTheme {
   id: string;
   name: string;
   premium: boolean;
+  /** Famille produit : conversion courte vs vitrine complète */
+  productTier: 'focus' | 'full';
   description: string;
   /** Classes Tailwind pour le conteneur principal (bg, text) */
   containerClasses: string;
@@ -25,6 +32,7 @@ export const VITRINE_THEMES: VitrineTheme[] = [
     id: 'classic',
     name: 'Classic Linktree',
     premium: false,
+    productTier: 'focus',
     description: 'Une colonne centrée, style épuré',
     containerClasses: 'bg-[#0a0a0b] text-neutral-100',
     accentColor: '#7c3aed',
@@ -39,6 +47,7 @@ export const VITRINE_THEMES: VitrineTheme[] = [
     id: 'split',
     name: 'Split Layout',
     premium: false,
+    productTier: 'focus',
     description: '2 colonnes : profil fixe + contenu',
     containerClasses: 'bg-neutral-950 text-neutral-100',
     accentColor: '#7c3aed',
@@ -53,6 +62,7 @@ export const VITRINE_THEMES: VitrineTheme[] = [
     id: 'light',
     name: 'Minimalist Light',
     premium: false,
+    productTier: 'full',
     description: 'Blanc épuré, élégant et minimaliste',
     containerClasses: 'bg-[#fafaf9] text-neutral-900',
     accentColor: '#7c5cfc',
@@ -67,6 +77,7 @@ export const VITRINE_THEMES: VitrineTheme[] = [
     id: 'dark',
     name: 'Dark Ink',
     premium: false,
+    productTier: 'full',
     description: 'Noir profond, style tatouage',
     containerClasses: 'bg-neutral-950 text-white',
     accentColor: '#a78bfa',
@@ -81,6 +92,7 @@ export const VITRINE_THEMES: VitrineTheme[] = [
     id: 'vintage',
     name: 'Vintage Flash',
     premium: true,
+    productTier: 'focus',
     description: 'Papier texturé beige, rétro',
     containerClasses: 'bg-[#F5F5DC] text-amber-950 font-serif',
     accentColor: '#b45309',
@@ -95,6 +107,7 @@ export const VITRINE_THEMES: VitrineTheme[] = [
     id: 'neon',
     name: 'Cyber Neon',
     premium: true,
+    productTier: 'full',
     description: 'Sombre avec accents violets et verts',
     containerClasses: 'bg-slate-900 text-purple-400',
     accentColor: '#22d3ee',

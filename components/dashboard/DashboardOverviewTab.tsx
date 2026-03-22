@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Inbox, Image, LayoutGrid, Calendar, UserPlus, CreditCard, Clock, ChevronRight, Wallet, Users, DollarSign, TrendingUp, ArrowUpRight, Star, ExternalLink, AlertCircle, CalendarCheck, Phone, MessageCircle, Home, Settings, Zap, Grip, Move, GripVertical, X, Target, Sparkles, BarChart3, Gift, Heart, Award, Percent, Bell, FileText, MapPin, Share2, Check, Loader2, Camera } from 'lucide-react';
 import {
   DndContext,
@@ -8,8 +9,6 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-  DragStartEvent,
-  DragOverlay,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -17,7 +16,7 @@ import {
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-  horizontalListSortingStrategy,
+  rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { RevenueChart } from './RevenueChart';
@@ -136,8 +135,16 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   const [rightPanelTab, setRightPanelTab] = useState<'clients' | 'deposits'>('clients');
   const [mobileTab, setMobileTab] = useState<'home' | 'calendar' | 'requests' | 'clients' | 'settings'>('home');
   const [isEditMode, setIsEditMode] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
   const [showWidgetPicker, setShowWidgetPicker] = useState(false);
+
+  useEffect(() => {
+    if (!showWidgetPicker) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [showWidgetPicker]);
   const [periodRevenue, setPeriodRevenue] = useState<number | null>(null);
   const [periodTrend, setPeriodTrend] = useState<number | null>(null);
 
@@ -227,13 +234,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  }, []);
-
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveId(null);
     
     if (!over || active.id === over.id) return;
     
@@ -278,11 +280,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       transform: CSS.Transform.toString(transform),
       transition,
       opacity: isDragging ? 0.5 : 1,
-      zIndex: isDragging ? 50 : 'auto',
+      zIndex: isDragging ? 80 : 'auto',
     };
 
   return (
-      <div ref={setNodeRef} style={style} className={`relative group ${className}`}>
+      <div ref={setNodeRef} style={style} className={`relative group min-w-0 ${className}`}>
         {isEditMode && (
           <div className="absolute -top-2 -right-2 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
             <div 
@@ -336,11 +338,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       transform: CSS.Transform.toString(transform),
       transition,
       opacity: isDragging ? 0.5 : 1,
-      zIndex: isDragging ? 50 : 'auto',
+      zIndex: isDragging ? 80 : 'auto',
     };
     
     return (
-      <div ref={setNodeRef} style={style} className={`relative group h-full ${isMdUp ? 'min-h-[130px]' : 'min-h-[120px]'}`}>
+      <div ref={setNodeRef} style={style} className={`relative group h-full min-w-0 ${isMdUp ? 'min-h-[130px]' : 'min-h-[120px]'}`}>
         {isEditMode && (
           <div className="absolute -top-2 -right-2 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
             <div 
@@ -638,16 +640,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
   return (
     <>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       {/* =====================================================
-          MOBILE LAYOUT (< md) — iOS Native Style
+          MOBILE LAYOUT — monté uniquement si !isMdUp pour éviter les IDs @dnd-kit dupliqués
+          (un seul arbre sortable actif dans le DndContext).
           ===================================================== */}
-      <div className="md:hidden min-h-screen max-w-full overflow-x-hidden bg-[#F2F2F7] dark:bg-black pb-[calc(7rem+env(safe-area-inset-bottom,0px))] antialiased [-webkit-font-smoothing:antialiased] [font-family:system-ui,-apple-system,'SF_Pro_Text','Segoe_UI',sans-serif]">
+      {!isMdUp && (
+      <div className="min-h-screen max-w-full overflow-x-hidden bg-[#F2F2F7] dark:bg-black pb-[calc(7rem+env(safe-area-inset-bottom,0px))] antialiased [-webkit-font-smoothing:antialiased] [font-family:system-ui,-apple-system,'SF_Pro_Text','Segoe_UI',sans-serif]">
         
         {/* iOS Large Title Header */}
         <div className="px-3 min-[400px]:px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-2.5 sm:pt-6 sm:pb-3 safe-top">
@@ -906,8 +905,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 </div>
               </div>
             {!isMdUp ? (
-              <SortableContext items={layout.kpiOrder} strategy={horizontalListSortingStrategy}>
-                <div className="grid grid-cols-2 gap-2 min-[400px]:gap-3 items-stretch min-w-0">
+              <SortableContext items={layout.kpiOrder} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-2 gap-2 min-[400px]:gap-3 items-stretch min-w-0 [contain:layout]">
                   {layout.kpiOrder.map((widgetId) => renderKpiWidget(widgetId))}
                   </div>
               </SortableContext>
@@ -1041,13 +1040,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         </div>
 
       </div>
+      )}
 
       {/* =====================================================
-          DESKTOP LAYOUT (>= md) — Original Design
-          (monté seulement si ≥ md pour ne pas dupliquer les IDs @dnd-kit avec la vue mobile)
+          DESKTOP LAYOUT — monté uniquement si isMdUp (pas de doublon d’IDs avec la vue mobile)
           ===================================================== */}
       {isMdUp && (
-      <div className="hidden md:block min-h-full bg-zinc-50/30 dark:bg-black">
+      <div className="min-h-full bg-zinc-50/30 dark:bg-black isolate">
 
         {/* ===== HEADER — Compact avec alertes en pills ===== */}
         <div className="px-5 sm:px-8 lg:px-10 pt-8 pb-6">
@@ -1126,28 +1125,30 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         {/* Edit Mode Banner */}
         {isEditMode && (
           <div className="px-5 sm:px-8 lg:px-10 mb-4">
-            <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-500/20">
+            <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-4 min-w-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-500/20 shrink-0">
                     <Move className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">Mode personnalisation</p>
                     <p className="text-xs text-blue-600 dark:text-blue-400">Glissez les widgets ou ajoutez-en de nouveaux</p>
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowWidgetPicker(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+                  className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 shrink-0 w-full min-[520px]:w-auto"
                 >
                   <Plus className="w-4 h-4" />
                   Ajouter un widget
                 </button>
               </div>
               <button
+                type="button"
                 onClick={() => setIsEditMode(false)}
-                className="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+                className="min-h-[44px] px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors shrink-0 w-full sm:w-auto"
               >
                 Terminer
               </button>
@@ -1157,14 +1158,14 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
         {/* ===== MAIN GRID ===== */}
         <div className="px-5 sm:px-8 lg:px-10 pb-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start [contain:layout]">
             
             {/* ====== LEFT COLUMN (8/12) ====== */}
-            <div className="lg:col-span-8 space-y-6">
+            <div className="lg:col-span-8 space-y-6 min-w-0">
               
               {/* KPI Row — Sortable */}
-              <SortableContext items={layout.kpiOrder} strategy={horizontalListSortingStrategy}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 items-stretch">
+              <SortableContext items={layout.kpiOrder} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 items-stretch min-w-0">
                   {layout.kpiOrder.map(widgetId => renderKpiWidget(widgetId))}
                     </div>
               </SortableContext>
@@ -1408,7 +1409,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
             {/* ====== RIGHT COLUMN (4/12) ====== */}
             <SortableContext items={layout.rightColumn} strategy={verticalListSortingStrategy}>
-            <div className="lg:col-span-4 space-y-6">
+            <div className="lg:col-span-4 space-y-6 min-w-0">
               {layout.rightColumn.map(widgetId => {
                 if (widgetId === 'next-client') {
                   return nextClient ? (
@@ -1681,15 +1682,26 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       )}
     </DndContext>
 
-      {/* Widget Picker — hors DnD (mobile + desktop) */}
-      {showWidgetPicker && (
+      {/* Widget Picker — portail body : évite le parent motion.div (transform/opacity) qui casse fixed et donne l’effet « transparent / doublons » */}
+      {showWidgetPicker &&
+        typeof document !== 'undefined' &&
+        createPortal(
         <>
-          <div className="fixed inset-0 bg-black/50 z-50 animate-fade-in" onClick={() => setShowWidgetPicker(false)} />
-          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[600px] max-h-[80vh] bg-white dark:bg-zinc-900 rounded-3xl z-50 shadow-2xl overflow-hidden animate-slide-up">
-            <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Ajouter un widget</h2>
+          <div
+            className="fixed inset-0 bg-black z-[500]"
+            aria-hidden
+            onClick={() => setShowWidgetPicker(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="widget-picker-title"
+            className="fixed inset-x-3 top-[max(1rem,env(safe-area-inset-top))] max-h-[85dvh] sm:inset-x-4 sm:top-1/2 sm:-translate-y-1/2 sm:max-h-[80vh] md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[min(600px,calc(100vw-2rem))] rounded-3xl z-[510] shadow-2xl overflow-hidden flex flex-col bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800"
+          >
+            <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 id="widget-picker-title" className="text-xl font-bold text-zinc-900 dark:text-white">Ajouter un widget</h2>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Personnalisez votre dashboard avec de nouveaux widgets</p>
                 </div>
                 <button
@@ -1702,7 +1714,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     </div>
                     </div>
 
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
+            <div className="p-6 overflow-y-auto flex-1 min-h-0 overscroll-contain">
               {availableToAdd.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
@@ -1716,7 +1728,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   {availableToAdd.filter(w => w.category === 'kpi').length > 0 && (
                     <div className="mb-6">
                       <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Indicateurs clés</h3>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3">
                         {availableToAdd.filter(w => w.category === 'kpi').map(widget => {
                           const Icon = widget.icon;
                           return (
@@ -1772,7 +1784,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   {availableToAdd.filter(w => w.category === 'sidebar').length > 0 && (
                     <div>
                       <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3">Widgets latéraux</h3>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3">
                         {availableToAdd.filter(w => w.category === 'sidebar').map(widget => {
                           const Icon = widget.icon;
                           return (
@@ -1800,8 +1812,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               )}
             </div>
           </div>
-        </>
-      )}
+        </>,
+        document.body
+        )}
     </>
   );
 };

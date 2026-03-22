@@ -1,7 +1,8 @@
 import React from 'react';
-import { ExternalLink, Instagram } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import type { StudioThemeProps } from '../../types/studio-theme';
 import { GoogleReviews } from '../vitrine/GoogleReviews';
+import { StudioThemeContactBlock } from './StudioThemeContactBlock';
 
 /**
  * SplitTheme — 2 colonnes : gauche sticky (profil), droite scroll (contenu).
@@ -9,9 +10,6 @@ import { GoogleReviews } from '../vitrine/GoogleReviews';
  */
 export const SplitTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, portfolioItems, googleReviews }) => {
   const bookingUrl = studio.bookingUrl ?? `/book/${studio.slug}`;
-  const instagramUrl = studio.instagramHandle
-    ? `https://instagram.com/${studio.instagramHandle.replace('@', '')}`
-    : null;
 
   return (
     <div className="min-h-[100dvh] bg-neutral-950 text-neutral-100 font-sans">
@@ -27,7 +25,7 @@ export const SplitTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, por
               />
             )}
             <h1 className="text-2xl font-semibold text-white mb-2">{studio.name}</h1>
-            {studio.city && (
+            {studio.city && !studio.address && (
               <p className="text-neutral-400 text-sm mb-4">{studio.city}</p>
             )}
             {studio.bio && (
@@ -35,22 +33,19 @@ export const SplitTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, por
             )}
             <a
               href={bookingUrl}
-              className="inline-flex items-center gap-2 w-full justify-center px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-medium transition-all mb-4"
+              className="inline-flex items-center gap-2 w-full justify-center px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-medium transition-all mb-4 min-h-[44px]"
             >
               Réserver
               <ExternalLink className="w-4 h-4" />
             </a>
-            {instagramUrl && (
-              <a
-                href={instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-neutral-400 hover:text-violet-400 text-sm transition-colors"
-              >
-                <Instagram className="w-4 h-4" />
-                {studio.instagramHandle}
-              </a>
-            )}
+            <StudioThemeContactBlock
+              tone="dark"
+              address={studio.address}
+              phone={studio.phone}
+              email={studio.email}
+              website={studio.website}
+              instagramHandle={studio.instagramHandle}
+            />
           </div>
         </aside>
 

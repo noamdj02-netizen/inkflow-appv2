@@ -1,9 +1,25 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, User, Phone, Mail, Eye, Tag, UserPlus, ChevronDown, ChevronUp, StickyNote, ArrowUpDown, ArrowDownAZ } from 'lucide-react';
+import {
+  Search,
+  User,
+  Phone,
+  Mail,
+  Eye,
+  Tag,
+  UserPlus,
+  ChevronDown,
+  ChevronUp,
+  StickyNote,
+  ArrowUpDown,
+  ArrowDownAZ,
+  FileSpreadsheet,
+  MapPin,
+} from 'lucide-react';
 import { Client } from '../../types';
 import { Modal } from '../ui/Modal';
 import { useToast } from '../../contexts/ToastContext';
 import { useAutoSave } from '../../hooks/useAutoSave';
+import { ClientCsvImport, type ClientCsvImportRow } from './ClientCsvImport';
 
 const NOTES_KEY = (clientId: string) => `inkflow-notes-${clientId}`;
 
@@ -24,6 +40,14 @@ interface ClientListProps {
   openAddModal?: boolean;
   /** Appelé quand le modal d'ajout est fermé */
   onAddModalClose?: () => void;
+  /** Import CSV → persistance `inkflow_clients` (Supabase) */
+  onImportCsv?: (rows: ClientCsvImportRow[]) => Promise<void>;
+  /** Places restantes pour l’import (plan) ; `undefined` = illimité ; `0` = masque l’import */
+  csvImportRemainingSlots?: number;
+  /** Google Place ID renseigné (avis sur la vitrine) */
+  googlePlaceConfigured?: boolean;
+  /** Ouvre Paramètres métier (Établissement) pour configurer le Place ID */
+  onOpenGoogleReviewsSettings?: () => void;
   /** Vue depuis la sidebar : 'overview' = liste clients, 'projects' = demandes projet par client */
   view?: 'overview' | 'projects';
 }
@@ -40,9 +64,14 @@ export const ClientList: React.FC<ClientListProps> = ({
   onUpgradeClick,
   openAddModal,
   onAddModalClose,
+  onImportCsv,
+  csvImportRemainingSlots,
+  googlePlaceConfigured,
+  onOpenGoogleReviewsSettings,
   view = 'overview',
 }) => {
   const toast = useToast();
+  const [showCsvImportModal, setShowCsvImportModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'vip' | 'inactive'>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'alpha'>('recent');
@@ -119,6 +148,21 @@ export const ClientList: React.FC<ClientListProps> = ({
     setSelectedClient(null);
   };
 
+  const handleCsvImport = useCallback(
+    async (rows: ClientCsvImportRow[]) => {
+      if (!onImportCsv) return;
+      const deduped = new Set(rows.map((r) => r.email.toLowerCase()));
+      const uniqueCount = deduped.size;
+      if (typeof csvImportRemainingSlots === 'number' && uniqueCount > csvImportRemainingSlots) {
+        throw new Error(
+          `Avec ton plan, il ne reste que ${csvImportRemainingSlots} place(s). Réduis le fichier ou passe à une offre supérieure.`
+        );
+      }
+      await onImportCsv(rows);
+    },
+    [onImportCsv, csvImportRemainingSlots]
+  );
+
   const handleAddClient = () => {
     if (!addForm.email.trim() || !onAddClient) return;
     const newClient = {
@@ -181,20 +225,55 @@ export const ClientList: React.FC<ClientListProps> = ({
             <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Clients</h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-1">Gérez votre base de clients et leur historique</p>
           </div>
-          {onAddClient && (
-            <button
-              onClick={() => (clientLimitReached ? onUpgradeClick?.() : setShowAddModal(true))}
-              disabled={clientLimitReached}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all active:scale-[0.98] ${
-                clientLimitReached 
-                  ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed' 
-                  : 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100'
-              }`}
-            >
-              <UserPlus className="w-4 h-4" /> Nouveau client
-            </button>
-          )}
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            {onImportCsv && csvImportRemainingSlots !== 0 && !clientLimitReached && (
+              <button
+                type="button"
+                onClick={() => setShowCsvImportModal(true)}
+                className="flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl font-medium border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98]"
+              >
+                <FileSpreadsheet className="w-4 h-4 shrink-0" />
+                Importer CSV
+              </button>
+            )}
+            {onAddClient && (
+              <button
+                onClick={() => (clientLimitReached ? onUpgradeClick?.() : setShowAddModal(true))}
+                disabled={clientLimitReached}
+                className={`flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl font-medium transition-all active:scale-[0.98] ${
+                  clientLimitReached
+                    ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed'
+                    : 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100'
+                }`}
+              >
+                <UserPlus className="w-4 h-4" /> Nouveau client
+              </button>
+            )}
+          </div>
         </div>
+
+        {useSupabase && onOpenGoogleReviewsSettings && !googlePlaceConfigured && (
+          <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/40 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex gap-3 min-w-0">
+              <div className="p-2.5 rounded-xl bg-amber-100/90 dark:bg-amber-500/15 shrink-0">
+                <MapPin className="w-5 h-5 text-amber-800 dark:text-amber-300" aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-zinc-900 dark:text-white">Avis Google sur la vitrine</p>
+                <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
+                  Renseigne ton Google Place ID dans <strong>Établissement</strong> pour afficher les avis sur ta page publique (thèmes vitrine).
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenGoogleReviewsSettings}
+              className="shrink-0 min-h-[44px] px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98]"
+            >
+              Configurer
+            </button>
+          </div>
+        )}
 
         {/* Limite atteinte */}
         {clientLimitReached && (
@@ -595,6 +674,26 @@ export const ClientList: React.FC<ClientListProps> = ({
               )}
             </div>
           </div>
+        </Modal>
+      )}
+
+      {showCsvImportModal && onImportCsv && (
+        <Modal
+          isOpen={showCsvImportModal}
+          onClose={() => setShowCsvImportModal(false)}
+          title="Importer des clients (CSV)"
+          size="lg"
+        >
+          <ClientCsvImport
+            onImport={handleCsvImport}
+            onCancel={() => setShowCsvImportModal(false)}
+            maxRows={
+              csvImportRemainingSlots !== undefined
+                ? Math.min(Math.max(csvImportRemainingSlots, 1), 2000)
+                : 2000
+            }
+            className="border-0 shadow-none"
+          />
         </Modal>
       )}
     </div>

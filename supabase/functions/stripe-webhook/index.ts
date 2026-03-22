@@ -1,39 +1,183 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 
-const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-async function verifyStripeSignature(payload: string, signature: string, secret: string): Promise<boolean> {
-  if (!secret) {
-    console.error("[stripe-webhook] STRIPE_WEBHOOK_SECRET is empty - rejecting request");
-    return false;
+/** Aligné sur lib/subscriptionPlans.ts — limite clients CRM par plan (-1 = illimité) */
+const PLAN_CLIENTS_CRM: Record<string, number> = {
+  solo: 100,
+  pro: 300,
+  studio: -1,
+  enterprise: -1,
+};
+
+const SIGNATURE_TOLERANCE_SEC = 300;
+
+function normalizePlan(raw: string | undefined | null): string {
+  const p = (raw || "solo").toLowerCase();
+  if (p === "solo" || p === "pro" || p === "studio" || p === "enterprise") return p;
+  return "solo";
+}
+
+/** Recalcule csv_import_slots_remaining (studio) à partir du plan et du COUNT inkflow_clients. NULL = illimité. */
+async function syncStudioPlanAndCsvQuota(
+  supabase: SupabaseClient,
+  studioId: string,
+  plan: string,
+  logPrefix: string,
+): Promise<void> {
+  const normalized = normalizePlan(plan);
+  const limit = PLAN_CLIENTS_CRM[normalized] ?? PLAN_CLIENTS_CRM.solo;
+
+  const { count, error: countErr } = await supabase
+    .from("inkflow_clients")
+    .select("id", { count: "exact", head: true })
+    .eq("studio_id", studioId);
+
+  if (countErr) {
+    console.error(`${logPrefix} Erreur COUNT inkflow_clients:`, countErr.message);
+    return;
   }
+
+  const n = count ?? 0;
+  const csvRemaining = limit < 0 ? null : Math.max(0, limit - n);
+
+  const { error: updErr } = await supabase
+    .from("inkflow_studios")
+    .update({
+      plan_type: normalized,
+      csv_import_slots_remaining: csvRemaining,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", studioId);
+
+  if (updErr) {
+    console.error(`${logPrefix} Erreur MAJ plan_type / csv_import_slots_remaining:`, updErr.message);
+  } else {
+    console.log(`${logPrefix} Studio ${studioId} plan_type=${normalized} csv_import_slots_remaining=${csvRemaining === null ? "NULL(unlimited)" : csvRemaining} (clients=${n}, limit=${limit})`);
+  }
+}
+
+interface SignatureVerifyResult {
+  ok: boolean;
+  detail: Record<string, unknown>;
+}
+
+/**
+ * Vérifie la signature Stripe (t=, un ou plusieurs v1=).
+ * Logs détaillés en cas d’échec (debug sans exposer le secret).
+ */
+async function verifyStripeSignature(
+  payload: string,
+  signatureHeader: string,
+  secret: string,
+): Promise<SignatureVerifyResult> {
+  const baseDetail: Record<string, unknown> = {
+    payloadLength: payload.length,
+    headerPresent: Boolean(signatureHeader),
+    headerLength: signatureHeader?.length ?? 0,
+  };
+
+  if (!secret) {
+    console.error("[stripe-webhook][signature] STRIPE_WEBHOOK_SECRET vide — rejet");
+    return { ok: false, detail: { ...baseDetail, reason: "missing_webhook_secret" } };
+  }
+
+  if (!signatureHeader || !signatureHeader.trim()) {
+    console.error("[stripe-webhook][signature] Header stripe-signature absent ou vide", baseDetail);
+    return { ok: false, detail: { ...baseDetail, reason: "missing_signature_header" } };
+  }
+
   try {
-    const parts = signature.split(",");
-    const timestampPart = parts.find(p => p.startsWith("t="));
-    const sigPart = parts.find(p => p.startsWith("v1="));
-    if (!timestampPart || !sigPart) return false;
+    const parts = signatureHeader.split(",").map((p) => p.trim());
+    const timestampPart = parts.find((p) => p.startsWith("t="));
+    const v1Parts = parts.filter((p) => p.startsWith("v1="));
+
+    if (!timestampPart) {
+      console.error("[stripe-webhook][signature] Pas de préfixe t= dans le header", {
+        ...baseDetail,
+        partsPreview: parts.slice(0, 6),
+      });
+      return { ok: false, detail: { ...baseDetail, reason: "missing_timestamp" } };
+    }
+
+    if (v1Parts.length === 0) {
+      console.error("[stripe-webhook][signature] Pas de signature v1= dans le header", {
+        ...baseDetail,
+        partsPreview: parts.slice(0, 8),
+      });
+      return { ok: false, detail: { ...baseDetail, reason: "missing_v1_signatures" } };
+    }
 
     const timestamp = timestampPart.split("=")[1];
-    const expectedSig = sigPart.split("=")[1];
-    const signedPayload = `${timestamp}.${payload}`;
+    const tsNum = parseInt(timestamp, 10);
+    if (Number.isNaN(tsNum)) {
+      console.error("[stripe-webhook][signature] Timestamp t= non numérique", { ...baseDetail, timestamp });
+      return { ok: false, detail: { ...baseDetail, reason: "invalid_timestamp" } };
+    }
 
+    const nowSec = Math.floor(Date.now() / 1000);
+    const ageSec = Math.abs(nowSec - tsNum);
+    if (ageSec > SIGNATURE_TOLERANCE_SEC) {
+      console.error("[stripe-webhook][signature] Horodatage hors tolérance (replay / horloge)", {
+        ...baseDetail,
+        timestamp: tsNum,
+        nowSec,
+        ageSec,
+        toleranceSec: SIGNATURE_TOLERANCE_SEC,
+      });
+      return { ok: false, detail: { ...baseDetail, reason: "timestamp_outside_tolerance", ageSec } };
+    }
+
+    const signedPayload = `${timestamp}.${payload}`;
     const key = await crypto.subtle.importKey(
       "raw",
       new TextEncoder().encode(secret),
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["sign"]
+      ["sign"],
     );
-    const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signedPayload));
-    const computedSig = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
-    return computedSig === expectedSig;
-  } catch {
-    return false;
+    const sigBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signedPayload));
+    const computedSig = Array.from(new Uint8Array(sigBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+
+    const v1Sigs = v1Parts.map((p) => p.split("=")[1]).filter(Boolean);
+    let matched = false;
+    for (const expectedSig of v1Sigs) {
+      if (computedSig.length === expectedSig.length && computedSig === expectedSig) {
+        matched = true;
+        break;
+      }
+    }
+
+    if (!matched) {
+      const preview = (s: string) => (s.length > 16 ? `${s.slice(0, 8)}…${s.slice(-6)}` : s);
+      console.error("[stripe-webhook][signature] Aucune v1 ne correspond au HMAC calculé", {
+        ...baseDetail,
+        v1Count: v1Sigs.length,
+        computedSigPreview: preview(computedSig),
+        v1Previews: v1Sigs.map(preview),
+        hint: "Vérifie STRIPE_WEBHOOK_SECRET (dashboard Stripe vs secret Edge), ou payload brut non modifié (pas de JSON.parse avant vérif)",
+      });
+      return {
+        ok: false,
+        detail: {
+          ...baseDetail,
+          reason: "signature_mismatch",
+          computedLen: computedSig.length,
+          expectedLens: v1Sigs.map((s) => s.length),
+        },
+      };
+    }
+
+    console.log("[stripe-webhook][signature] OK", { v1Count: v1Sigs.length, ageSec });
+    return { ok: true, detail: { ...baseDetail, ageSec } };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[stripe-webhook][signature] Exception lors de la vérification:", msg, baseDetail);
+    return { ok: false, detail: { ...baseDetail, reason: "verify_exception", error: msg } };
   }
 }
 
@@ -50,13 +194,16 @@ Deno.serve(async (req: Request) => {
     const signature = req.headers.get("stripe-signature") || "";
 
     if (!STRIPE_WEBHOOK_SECRET) {
+      console.error("[stripe-webhook] STRIPE_WEBHOOK_SECRET non configuré — 501");
       return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
         status: 501,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
-    const valid = await verifyStripeSignature(body, signature, STRIPE_WEBHOOK_SECRET);
-    if (!valid) {
+
+    const sigResult = await verifyStripeSignature(body, signature, STRIPE_WEBHOOK_SECRET);
+    if (!sigResult.ok) {
+      console.error("[stripe-webhook] Signature invalide — détail (logs serveur uniquement):", JSON.stringify(sigResult.detail));
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -73,29 +220,62 @@ Deno.serve(async (req: Request) => {
         const session = event.data.object;
         const studioId = session.metadata?.studio_id || session.metadata?.studioId;
         const appointmentId = session.metadata?.appointment_id;
+        const planFromSession = normalizePlan(session.metadata?.plan);
 
-        // Abonnement : débloquer le studio dès que le checkout est payé
         if (session.mode === "subscription" && session.payment_status === "paid" && studioId) {
           const { data: studio, error: studioErr } = await supabase
             .from("inkflow_studios")
-            .update({ subscription_status: "active", updated_at: new Date().toISOString() })
+            .update({
+              subscription_status: "active",
+              plan_type: planFromSession,
+              updated_at: new Date().toISOString(),
+            })
             .eq("id", studioId)
             .select("id, studio_name")
             .single();
+
           if (studioErr) {
-            console.error("[stripe-webhook] Erreur déblocage studio (checkout):", studioErr.message);
+            console.error("[stripe-webhook] Erreur déblocage studio (checkout subscription):", studioErr.message);
           } else if (studio) {
-            console.log("[stripe-webhook] Studio débloqué via checkout.session.completed:", studio.id, studio.studio_name);
+            console.log("[stripe-webhook] Studio actif (checkout.session.completed subscription):", studio.id, studio.studio_name, "plan=", planFromSession);
           }
-          // Récompense parrainage : +1 mois pour parrain et filleul
+
+          await syncStudioPlanAndCsvQuota(supabase, studioId, planFromSession, "[checkout.subscription]");
+
+          const stripeSubId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+          const subMetaId = session.metadata?.subscription_id as string | undefined;
+          if (stripeSubId) {
+            const cust = session.customer;
+            const stripeCustomerId = typeof cust === "string" ? cust : cust?.id;
+            const { error: upsertErr } = await supabase.from("inkflow_subscriptions").upsert(
+              {
+                id: subMetaId || `sub_${stripeSubId}`,
+                studio_id: studioId,
+                stripe_subscription_id: stripeSubId,
+                stripe_customer_id: stripeCustomerId ?? null,
+                plan: planFromSession,
+                status: "active",
+                current_period_start: new Date().toISOString(),
+                current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                cancel_at_period_end: false,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "stripe_subscription_id" },
+            );
+            if (upsertErr) {
+              console.error("[stripe-webhook] upsert inkflow_subscriptions (checkout):", upsertErr.message);
+            } else {
+              console.log("[stripe-webhook] inkflow_subscriptions upsert OK subscription_id=", stripeSubId);
+            }
+          }
+
           const { data: refResult } = await supabase.rpc("process_referral_reward", { p_referee_id: studioId });
           if (refResult?.success) {
             console.log("[stripe-webhook] Récompense parrainage appliquée:", refResult);
           }
-          break; // Ne pas traiter comme paiement RDV
+          break;
         }
 
-        // Achat thème PRO (2,99 €) : ajouter le thème à unlocked_themes
         const metaType = session.metadata?.type;
         if (metaType === "theme_purchase" && studioId && session.payment_status === "paid") {
           const themeId = session.metadata?.theme_id;
@@ -122,12 +302,12 @@ Deno.serve(async (req: Request) => {
           break;
         }
 
-        const flashId = session.metadata?.flash_id;
         const type = (session.metadata?.type || "deposit") as "deposit" | "full_payment";
         const amountPaid = (session.amount_total || 0) / 100;
         const clientEmail = session.customer_email || session.metadata?.client_email || "";
         const clientName = session.metadata?.client_name || "Client";
         const serviceName = session.metadata?.service_name || "Service";
+        const flashId = session.metadata?.flash_id;
 
         await supabase
           .from("inkflow_payments")
@@ -182,7 +362,6 @@ Deno.serve(async (req: Request) => {
             action_url: "/dashboard",
           });
 
-          // Push notification (app fermée ou en arrière-plan)
           try {
             const pushUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-push-notification`;
             await fetch(pushUrl, {
@@ -244,7 +423,6 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        // Envoyer un email de confirmation au tatoueur (studio) pour les acomptes
         if (type === "deposit" && studioId) {
           const { data: studioForEmail } = await supabase
             .from("inkflow_studios")
@@ -286,34 +464,58 @@ Deno.serve(async (req: Request) => {
       case "customer.subscription.updated": {
         const sub = event.data.object;
         const studioId = sub.metadata?.studio_id || sub.metadata?.studioId;
-        if (studioId) {
-          const subStatus = sub.status === "active" ? "active" : sub.status === "trialing" ? "trialing" : sub.status === "past_due" ? "past_due" : "cancelled";
-          await supabase.from("inkflow_subscriptions").upsert({
-            id: sub.metadata?.subscription_id || `sub_${Date.now()}`,
-            studio_id: studioId,
-            stripe_subscription_id: sub.id,
-            stripe_customer_id: sub.customer,
-            plan: sub.metadata?.plan || "solo",
-            status: subStatus,
-            current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
-            cancel_at_period_end: sub.cancel_at_period_end || false,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: "stripe_subscription_id" });
+        const plan = normalizePlan(sub.metadata?.plan);
 
-          if (sub.status === "active") {
+        if (studioId) {
+          const subStatus =
+            sub.status === "active"
+              ? "active"
+              : sub.status === "trialing"
+              ? "trialing"
+              : sub.status === "past_due"
+              ? "past_due"
+              : "cancelled";
+
+          const { error: upsertErr } = await supabase.from("inkflow_subscriptions").upsert(
+            {
+              id: sub.metadata?.subscription_id || `sub_${sub.id}`,
+              studio_id: studioId,
+              stripe_subscription_id: sub.id,
+              stripe_customer_id: sub.customer,
+              plan,
+              status: subStatus,
+              current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
+              current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+              cancel_at_period_end: sub.cancel_at_period_end || false,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "stripe_subscription_id" },
+          );
+          if (upsertErr) {
+            console.error("[stripe-webhook] upsert inkflow_subscriptions (subscription event):", upsertErr.message);
+          }
+
+          if (sub.status === "active" || sub.status === "trialing") {
+            const studioStatus = sub.status === "active" ? "active" : "trialing";
             const { data: studio, error: studioErr } = await supabase
               .from("inkflow_studios")
-              .update({ subscription_status: "active", updated_at: new Date().toISOString() })
+              .update({
+                subscription_status: studioStatus,
+                plan_type: plan,
+                updated_at: new Date().toISOString(),
+              })
               .eq("id", studioId)
               .select("id, studio_name")
               .single();
             if (studioErr) {
-              console.error("[stripe-webhook] Erreur mise à jour studio:", studioErr.message);
+              console.error("[stripe-webhook] Erreur MAJ inkflow_studios (subscription):", studioErr.message);
             } else if (studio) {
-              console.log("[stripe-webhook] Studio débloqué avec succès:", studio.id, studio.studio_name);
+              console.log("[stripe-webhook] Studio synchronisé:", studio.id, studio.studio_name, "plan=", plan, "status=", studioStatus);
             }
-            // Récompense parrainage : +1 mois pour parrain et filleul
+            await syncStudioPlanAndCsvQuota(supabase, studioId, plan, `[${event.type}]`);
+          }
+
+          if (sub.status === "active") {
             const { data: refResult } = await supabase.rpc("process_referral_reward", { p_referee_id: studioId });
             if (refResult?.success) {
               console.log("[stripe-webhook] Récompense parrainage appliquée:", refResult);
@@ -327,21 +529,57 @@ Deno.serve(async (req: Request) => {
 
       case "customer.subscription.deleted": {
         const sub = event.data.object;
-        await supabase
+        const { data: subRow } = await supabase
+          .from("inkflow_subscriptions")
+          .select("studio_id")
+          .eq("stripe_subscription_id", sub.id)
+          .maybeSingle();
+
+        const studioId =
+          (subRow?.studio_id as string | undefined) ||
+          (sub.metadata?.studio_id as string | undefined) ||
+          (sub.metadata?.studioId as string | undefined);
+
+        const { error: subUpdErr } = await supabase
           .from("inkflow_subscriptions")
           .update({ status: "cancelled", updated_at: new Date().toISOString() })
           .eq("stripe_subscription_id", sub.id);
+
+        if (subUpdErr) {
+          console.error("[stripe-webhook] Erreur MAJ inkflow_subscriptions (deleted):", subUpdErr.message);
+        } else {
+          console.log("[stripe-webhook] inkflow_subscriptions marquée cancelled pour", sub.id);
+        }
+
+        if (studioId) {
+          const { error: stErr } = await supabase
+            .from("inkflow_studios")
+            .update({
+              subscription_status: "restricted",
+              plan_type: "solo",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", studioId);
+          if (stErr) {
+            console.error("[stripe-webhook] Erreur MAJ studio après résiliation:", stErr.message);
+          } else {
+            console.log("[stripe-webhook] Studio", studioId, "→ restricted, plan_type=solo (subscription deleted)");
+          }
+          await syncStudioPlanAndCsvQuota(supabase, studioId, "solo", "[customer.subscription.deleted]");
+        } else {
+          console.warn("[stripe-webhook] customer.subscription.deleted sans studio_id (sub ", sub.id, ")");
+        }
         break;
       }
 
       case "invoice.payment_failed": {
         const invoice = event.data.object;
-        const sub = invoice.subscription;
-        if (sub) {
+        const subId = invoice.subscription;
+        if (subId) {
           await supabase
             .from("inkflow_subscriptions")
             .update({ status: "past_due", updated_at: new Date().toISOString() })
-            .eq("stripe_subscription_id", sub);
+            .eq("stripe_subscription_id", subId);
         }
         break;
       }
@@ -351,7 +589,7 @@ Deno.serve(async (req: Request) => {
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (err) {
-    console.error("Webhook error:", err);
+    console.error("[stripe-webhook] Webhook error:", err);
     return new Response(JSON.stringify({ error: "Webhook processing failed" }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },

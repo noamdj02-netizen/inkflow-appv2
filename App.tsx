@@ -160,7 +160,7 @@ const Router: React.FC = () => {
   if (route.requiresAuth && !isAuthenticated) {
     window.location.href = '/login';
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center">
         <Logo size="lg" className="rounded-2xl" />
       </div>
     );

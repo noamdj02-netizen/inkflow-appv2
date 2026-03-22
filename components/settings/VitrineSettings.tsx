@@ -124,7 +124,9 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
   return (
     <div className="space-y-6 max-w-4xl w-full overflow-hidden">
       <VitrineLinkButton studioName={studioName} userEmail={userEmail} studioSlug={studioSlugFromDb} />
-      {studioId && <ThemeSelector studioId={studioId} userEmail={userEmail} />}
+      {studioId && (
+        <ThemeSelector studioId={studioId} userEmail={userEmail} publicVitrineUrl={publicUrl || undefined} />
+      )}
       {publicUrl && (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card-secondary)] p-4">
           <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">Votre lien public</p>

@@ -2,12 +2,13 @@ import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import type { StudioThemeProps } from '../../types/studio-theme';
 import { GoogleReviews } from '../vitrine/GoogleReviews';
+import { StudioThemeContactBlock } from './StudioThemeContactBlock';
 
 /**
  * VintageTheme — Élégance tatouage old-school / studio parisien.
  * Background crème/parchemin, Playfair Display, cards sans border-radius.
  */
-export const VintageTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, portfolioItems }) => {
+export const VintageTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, portfolioItems, googleReviews }) => {
   const bookingUrl = studio.bookingUrl ?? `/book/${studio.slug}`;
 
   return (
@@ -31,16 +32,28 @@ export const VintageTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, p
           <h1 className="font-serif text-4xl sm:text-5xl font-normal tracking-wide text-amber-950 mb-4">
             {studio.name}
           </h1>
+          {studio.city && !studio.address && (
+            <p className="text-stone-500 text-base mb-4">{studio.city}</p>
+          )}
           {studio.bio && (
             <p className="text-stone-600 text-lg max-w-xl mx-auto mb-8">{studio.bio}</p>
           )}
           <a
             href={bookingUrl}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-amber-950 text-amber-50 font-medium tracking-wide hover:bg-amber-900 transition-colors"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-amber-950 text-amber-50 font-medium tracking-wide hover:bg-amber-900 transition-colors min-h-[44px]"
           >
             Réserver
             <ExternalLink className="w-4 h-4" />
           </a>
+          <StudioThemeContactBlock
+            tone="vintage"
+            className="mt-8 max-w-md mx-auto flex flex-col items-stretch text-left"
+            address={studio.address}
+            phone={studio.phone}
+            email={studio.email}
+            website={studio.website}
+            instagramHandle={studio.instagramHandle}
+          />
         </header>
 
         <hr className="border-stone-300 my-12" />

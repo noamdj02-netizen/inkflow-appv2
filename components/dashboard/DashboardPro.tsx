@@ -18,12 +18,14 @@ import { CareSheetsSettings } from './CareSheetsSettings';
 import { PaymentsSettings } from './PaymentsSettings';
 import { BillingSettings } from './BillingSettings';
 import { PaywallView } from './PaywallView';
+import { PaymentSuccessModal } from './PaymentSuccessModal';
 import { AvailabilitySettings } from '../settings/AvailabilitySettings';
 import { VitrineSettings } from '../settings/VitrineSettings';
 import { SlugSettings } from '../settings/SlugSettings';
 import { InstagramConnect } from '../settings/InstagramConnect';
 import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 import { VitrineLinkButton } from './VitrineLinkButton';
+import { SidebarPwaInstallButton } from './SidebarPwaInstallButton';
 
 const FinanceDashboard = lazy(() => import('./FinanceDashboard').then(m => ({ default: m.FinanceDashboard })));
 const DepositsPage = lazy(() => import('./DepositsPage').then(m => ({ default: m.DepositsPage })));
@@ -45,7 +47,7 @@ import { ConsentFormEditor } from '../consent/ConsentFormEditor';
 import { CalendarSettings } from './CalendarSettings';
 import { AccountPage } from './AccountPage';
 import { EtablissementPage } from './EtablissementPage';
-import { Appointment, FlashDesign, BookingFormData, WaitlistEntry, ArtistAccount, LoyaltyEntry, MessageThread } from '../../types';
+import { Appointment, FlashDesign, BookingFormData, WaitlistEntry, ArtistAccount, LoyaltyEntry, MessageThread, type SubscriptionPlan } from '../../types';
 import type { Client } from '../../types';
 import { ClientPreviewPanel, type ClientPreviewData } from './ClientPreviewPanel';
 import { ClientPreviewDrawer } from './ClientPreviewDrawer';
@@ -54,6 +56,8 @@ import { WelcomeOnboardingFlow, shouldShowWelcomeFlow } from '../onboarding/Welc
 import { supabase } from '../../lib/supabase';
 import { getWaitlistFromSupabase, addWaitlistEntryToSupabase, updateWaitlistStatusInSupabase, deleteWaitlistEntryFromSupabase, ensureStudio } from '../../lib/supabaseDashboard';
 import { createSubscription } from '../../lib/stripeClient';
+import { getSubscription } from '../../lib/subscriptionGuard';
+import { getPlanLimit } from '../../lib/subscriptionPlans';
 import { getStripePaymentLink, STRIPE_PAYMENT_LINKS } from '../../lib/stripePaymentLinks';
 import { useToast } from '../../contexts/ToastContext';
 import { ThemeToggle } from '../ThemeToggle';
@@ -91,11 +95,23 @@ export const DashboardPro: React.FC = () => {
   /** Thème effectif — fallback DOM pour mobile/PWA (resolvedTheme peut être undefined avant hydration) */
   const effectiveTheme = resolvedTheme ?? (typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null : null) ?? 'light';
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
-  const { studioId, studioSlug, refreshStudioSlug, subscriptionStatus, trialEndsAt, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, retry } = useSupabaseSync();
+  const { studioId, studioSlug, studioCsvImportSlots, refreshStudioSlug, subscriptionStatus, trialEndsAt, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, importClientsFromCsvRows, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, retry } = useSupabaseSync();
   const { projectRequests, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
   const { pendingRequestsCount } = useNotificationCounts(studioId);
   const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false);
   const { canAccessFeature, hasReachedLimit, getLimit } = useSubscriptionPermissions(studioId);
+  const [paymentSuccessModalOpen, setPaymentSuccessModalOpen] = useState(false);
+  const [welcomePaidPlan, setWelcomePaidPlan] = useState<SubscriptionPlan | null>(null);
+  const paymentWelcomePollRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const crmClientLimit = getLimit('clients_crm');
+  const crmSlotsFormula = crmClientLimit < 0 ? undefined : Math.max(0, crmClientLimit - clients.length);
+  const csvImportRemainingSlotsForCrm =
+    crmClientLimit < 0
+      ? undefined
+      : typeof studioCsvImportSlots === 'number'
+        ? Math.min(studioCsvImportSlots, crmSlotsFormula ?? 0)
+        : crmSlotsFormula;
 
   // Sync notifications avec dashboard / planning / calendrier (Web Notifications)
   useNotificationSync(studioId, useSupabase ?? false);
@@ -339,6 +355,73 @@ export const DashboardPro: React.FC = () => {
       toast.success('Thème débloqué ! Vous pouvez maintenant l\'appliquer.');
     }
   }, [toast]);
+
+  const handlePaymentSuccessModalClose = useCallback(() => {
+    setPaymentSuccessModalOpen(false);
+    window.setTimeout(() => setWelcomePaidPlan(null), 450);
+    const u = new URL(window.location.href);
+    u.searchParams.delete('session_id');
+    u.searchParams.delete('subscription');
+    const q = u.searchParams.toString();
+    window.history.replaceState({}, '', q ? `${u.pathname}?${q}` : u.pathname);
+  }, []);
+
+  /** Retour Stripe abonnement : ?subscription=success&session_id= — modale une fois par session (localStorage) */
+  useEffect(() => {
+    if (!useSupabase) return;
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    if (params.get('subscription') !== 'success' || !sessionId || !studioId) return;
+
+    const lsKey = `inkflow_subscription_welcome_${sessionId}`;
+    if (localStorage.getItem(lsKey)) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 40;
+
+    const clearPoll = () => {
+      if (paymentWelcomePollRef.current !== null) {
+        clearTimeout(paymentWelcomePollRef.current);
+        paymentWelcomePollRef.current = null;
+      }
+    };
+
+    const tick = async () => {
+      if (cancelled) return;
+      attempts += 1;
+      if (localStorage.getItem(lsKey)) return;
+
+      const { data: row } = await supabase
+        .from('inkflow_studios')
+        .select('subscription_status')
+        .eq('id', studioId)
+        .maybeSingle();
+
+      const st = row?.subscription_status;
+      const statusOk = st === 'active' || st === 'trialing';
+      const sub = await getSubscription(studioId);
+      const subOk = sub && (sub.status === 'active' || sub.status === 'trialing');
+
+      if (statusOk && subOk && sub) {
+        clearPoll();
+        localStorage.setItem(lsKey, '1');
+        setWelcomePaidPlan(sub.plan);
+        setPaymentSuccessModalOpen(true);
+        return;
+      }
+
+      if (attempts < maxAttempts) {
+        paymentWelcomePollRef.current = window.setTimeout(tick, 1100);
+      }
+    };
+
+    void tick();
+    return () => {
+      cancelled = true;
+      clearPoll();
+    };
+  }, [studioId, useSupabase]);
 
   // Vitrine (cover + portfolio) : charger sur aperçu (bannière mobile), portfolio et Paramètres → Vitrine
   useEffect(() => {
@@ -684,6 +767,27 @@ export const DashboardPro: React.FC = () => {
 
   const showWelcome = useSupabase && shouldShowWelcomeFlow() && !welcomeComplete && studioId && studioSlug && user?.email;
 
+  const paymentSuccessTattooerName = user?.name?.trim() || user?.studioName?.trim() || '';
+
+  const paymentSuccessVitrineUrl = useMemo(() => {
+    const slug =
+      studioSlug != null && studioSlug !== ''
+        ? studioSlug
+        : user?.studioName
+          ? getVitrineSlug(user.studioName)
+          : '';
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return slug ? `${origin}/studio/${slug}` : `${origin}/studio/`;
+  }, [studioSlug, user?.studioName]);
+
+  const paymentSuccessCsvLabel = useMemo(() => {
+    if (!welcomePaidPlan) return '';
+    const lim = getPlanLimit(welcomePaidPlan, 'clients_crm');
+    if (lim < 0) return 'illimité';
+    if (typeof studioCsvImportSlots === 'number') return String(studioCsvImportSlots);
+    return String(lim);
+  }, [welcomePaidPlan, studioCsvImportSlots]);
+
   // Réinitialiser l'onglet initial des Demandes quand on quitte l'onglet
   useEffect(() => {
     if (activeTab !== 'requests') setRequestsInitialTab(null);
@@ -717,7 +821,7 @@ export const DashboardPro: React.FC = () => {
       <div className="app-shell-row">
         {/* ====== SIDEBAR — Style ByeWind avec Favoris/Récents et sous-menus ====== */}
         <aside
-          className={`fixed lg:static inset-y-0 left-0 z-[60] w-[240px] max-w-[85vw] border-r border-zinc-200 dark:border-zinc-800 flex flex-col transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
+          className={`fixed lg:static inset-y-0 left-0 z-[60] w-[240px] max-w-[85vw] border-r border-zinc-200 dark:border-zinc-800 flex flex-col min-h-0 transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           }`}
         >
@@ -803,7 +907,7 @@ export const DashboardPro: React.FC = () => {
           <div className="mx-4 border-t border-zinc-100 dark:border-zinc-800/50 my-1" />
 
           {/* Navigation — Style ByeWind avec sous-menus dépliables */}
-          <nav className="relative z-10 flex-1 px-3 py-2 overflow-y-auto overscroll-contain space-y-4">
+          <nav className="relative z-10 flex-1 min-h-0 px-3 py-2 overflow-y-auto overscroll-contain space-y-4">
             
             {/* Section TABLEAUX DE BORD */}
             <div>
@@ -1042,6 +1146,11 @@ export const DashboardPro: React.FC = () => {
               </div>
             </div>
           </nav>
+
+          {/* PWA : hors du nav scrollable pour rester visible au-dessus de Déconnexion */}
+          <div className="relative z-10 flex-shrink-0">
+            <SidebarPwaInstallButton onAfterAction={() => setSidebarOpen(false)} />
+          </div>
 
           {/* Footer — Déconnexion (Parrainage masqué pour MVP) */}
           <div className="relative z-10 mt-auto px-3 py-3 border-t border-zinc-100 dark:border-zinc-800/50 safe-bottom space-y-0.5">
@@ -1422,7 +1531,11 @@ export const DashboardPro: React.FC = () => {
           {!loading && activeTab === 'analytics' && (
             <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
             <Suspense fallback={<DashboardLoadingSkeleton />}>
-              <AnalyticsDashboard appointments={appointments} clients={clients} />
+              <AnalyticsDashboard
+                appointments={appointments}
+                clients={clients}
+                studioName={user?.studioName || generalStudioName || 'Mon studio'}
+              />
             </Suspense>
             </motion.div>
           )}
@@ -1478,6 +1591,13 @@ export const DashboardPro: React.FC = () => {
             <ClientList
               clients={clients}
               onAddClient={addClient}
+              onImportCsv={useSupabase && studioId ? importClientsFromCsvRows : undefined}
+              csvImportRemainingSlots={csvImportRemainingSlotsForCrm}
+              googlePlaceConfigured={Boolean(generalGooglePlaceId?.trim())}
+              onOpenGoogleReviewsSettings={() => {
+                setActiveTab('etablissement');
+                setSidebarOpen(false);
+              }}
               loadClientNotes={loadClientNotes}
               saveClientNotes={saveClientNotes}
               useSupabase={useSupabase}
@@ -2101,6 +2221,17 @@ export const DashboardPro: React.FC = () => {
             preselectedFlash={selectedFlash ? { id: selectedFlash.id, title: selectedFlash.title, price: selectedFlash.price } : undefined}
           />
         </Modal>
+      )}
+      {welcomePaidPlan && (
+        <PaymentSuccessModal
+          open={paymentSuccessModalOpen}
+          onClose={handlePaymentSuccessModalClose}
+          tattooerName={paymentSuccessTattooerName}
+          plan={welcomePaidPlan}
+          csvQuotaLabel={paymentSuccessCsvLabel || String(getPlanLimit(welcomePaidPlan, 'clients_crm'))}
+          vitrinePublicUrl={paymentSuccessVitrineUrl}
+          googlePlaceConfigured={!!generalGooglePlaceId}
+        />
       )}
       {/* ====== MOBILE: FAB DRAWER (bottom sheet) — fond opaque #18181B, z-index 70 ====== */}
       {showFabMenu && (

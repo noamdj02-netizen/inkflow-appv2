@@ -1324,6 +1324,55 @@ input, select, textarea {
     border: 1px solid #e5e5e5 !important;
     max-height: none !important;
   }
+
+  /* Statistiques — export PDF / impression (classe ajoutée sur beforeprint, retirée après) */
+  body.inkflow-print-stats #root,
+  body.inkflow-print-stats .app-root,
+  body.inkflow-print-stats .app-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    background: #fff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body.inkflow-print-stats .app-shell-row {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  body.inkflow-print-stats .app-shell-sidebar,
+  body.inkflow-print-stats .bottom-nav,
+  body.inkflow-print-stats .app-shell-header {
+    display: none !important;
+  }
+  body.inkflow-print-stats .app-shell-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+  }
+  body.inkflow-print-stats .app-shell-content {
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+  body.inkflow-print-stats .analytics-hide-print {
+    display: none !important;
+  }
+  body.inkflow-print-stats .analytics-dashboard-shell {
+    background: #fff !important;
+    color: #18181b !important;
+    padding: 1.25rem !important;
+    min-height: auto !important;
+  }
+  body.inkflow-print-stats .analytics-dashboard-shell .analytics-print-card {
+    background: #fafafa !important;
+    border: 1px solid #e4e4e7 !important;
+    box-shadow: none !important;
+  }
 }
 
 @keyframes demo-scene-slide-out {
