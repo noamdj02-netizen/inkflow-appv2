@@ -53,6 +53,44 @@ Deno.serve(async (req: Request) => {
       ? new Date().toLocaleDateString("en-CA", { timeZone: timezone })
       : new Date().toISOString().split("T")[0];
 
+    // Récupérer les créneaux fixes configurés par le studio
+    const { data: studioData } = await supabase
+      .from("inkflow_studios")
+      .select("availability_settings")
+      .eq("id", studioId)
+      .single();
+
+    const availabilitySettings = (studioData?.availability_settings as Record<string, unknown> | null) ?? {};
+    const customSlots: string[] = Array.isArray(availabilitySettings.customSlots)
+      ? (availabilitySettings.customSlots as string[]).filter((s) => typeof s === "string" && /^\d{1,2}:\d{2}$/.test(s))
+      : [];
+    const bookingWindowDays: number = typeof availabilitySettings.bookingWindowDays === "number"
+      ? availabilitySettings.bookingWindowDays
+      : 60;
+    // offDays: [0=dim, 1=lun, ...] — null signifie "utiliser les defaults côté client"
+    const offDays: number[] | null = Array.isArray(availabilitySettings.offDays)
+      ? (availabilitySettings.offDays as number[]).filter((n) => typeof n === "number" && n >= 0 && n <= 6)
+      : null;
+
+    // Périodes bloquées → marquer toutes les dates de la plage comme "full"
+    interface BlockedRange { start: string; end: string; label?: string }
+    const blockedRanges: BlockedRange[] = Array.isArray(availabilitySettings.blockedRanges)
+      ? (availabilitySettings.blockedRanges as BlockedRange[]).filter(
+          (r) => r && typeof r.start === "string" && typeof r.end === "string"
+        )
+      : [];
+
+    for (const range of blockedRanges) {
+      const start = new Date(range.start);
+      const end = new Date(range.end);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split("T")[0];
+        if (!busy[dateStr]) busy[dateStr] = new Set();
+        // Marquer avec un sentinel pour bloquer toute la journée
+        busy[dateStr].add("__blocked__");
+      }
+    }
+
     const { data: appointments } = await supabase
       .from("inkflow_appointments")
       .select("date, time")
@@ -85,7 +123,7 @@ Deno.serve(async (req: Request) => {
     });
 
     return new Response(
-      JSON.stringify({ busySlots }),
+      JSON.stringify({ busySlots, customSlots, bookingWindowDays, offDays }),
       { headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (err) {

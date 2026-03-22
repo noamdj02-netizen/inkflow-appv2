@@ -1979,7 +1979,7 @@ export const DashboardPro: React.FC = () => {
               {settingsTab === 'billing' && <BillingSettings studioId={studioId} userEmail={user?.email || ''} trialEndsAt={trialEndsAt} />}
               {settingsTab === 'care' && <CareSheetsSettings userEmail={user?.email} studioName={user?.studioName} />}
               {settingsTab === 'consent' && <ConsentFormEditor templates={consentTemplates} onSave={setConsentTemplates} />}
-              {settingsTab === 'availability' && <AvailabilitySettings />}
+              {settingsTab === 'availability' && <AvailabilitySettings studioId={studioId} />}
               {settingsTab === 'artists' && (
                 <ArtistManager
                   artists={artistAccounts}
