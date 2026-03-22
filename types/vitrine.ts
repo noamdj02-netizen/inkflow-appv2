@@ -13,6 +13,8 @@ export interface VitrineService {
   description: string;
   icon: IconKey;
   features: string[];
+  /** Pourcentage d'acompte spécifique à ce service (ex: 30). Prioritaire sur le global. */
+  depositPercentage?: number;
 }
 
 export interface VitrineArtist {
@@ -59,6 +61,10 @@ export interface VitrineFlashDesign {
   available: boolean;
   description: string;
   style: string;
+  /** Montant fixe de l'acompte (prioritaire sur depositPercentage). */
+  depositAmount?: number;
+  /** Pourcentage d'acompte pour ce flash (ex: 30). Utilisé si depositAmount absent. */
+  depositPercentage?: number;
 }
 
 export interface VitrineFaq {

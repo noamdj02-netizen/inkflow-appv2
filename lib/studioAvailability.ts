@@ -2,10 +2,16 @@ import { supabase } from './supabase';
 
 export interface StudioAvailabilityResponse {
   busySlots: Record<string, string[]>;
+  /** Créneaux fixes configurés par le studio. Vide = utiliser DEFAULT_TIME_SLOTS. */
+  customSlots: string[];
+  /** Fenêtre d'ouverture du planning en jours (0 = illimité). */
+  bookingWindowDays: number;
+  /** Jours désactivés (0=dim … 6=sam). null = utiliser DEFAULT_OFF_DAYS. */
+  offDays: number[] | null;
 }
 
 /**
- * Récupère les créneaux occupés pour un studio (appointments + bookings confirmés).
+ * Récupère les créneaux occupés et les slots personnalisés pour un studio.
  * Utilise l'Edge Function get-studio-availability.
  */
 export async function fetchStudioAvailability(studioId: string): Promise<StudioAvailabilityResponse> {
@@ -16,6 +22,9 @@ export async function fetchStudioAvailability(studioId: string): Promise<StudioA
   if (!data) throw new Error('Aucune donnée retournée');
   return {
     busySlots: data.busySlots || {},
+    customSlots: data.customSlots || [],
+    bookingWindowDays: data.bookingWindowDays ?? 60,
+    offDays: Array.isArray(data.offDays) ? data.offDays : null,
   };
 }
 

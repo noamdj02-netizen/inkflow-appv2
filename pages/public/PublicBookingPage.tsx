@@ -3,15 +3,18 @@
  * Tunnel de conversion Mobile-First, Light Mode, optimisé pour le paiement Stripe.
  */
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, Lock, ChevronLeft, ChevronRight, CreditCard, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, User, Lock, ChevronLeft, ChevronRight, CreditCard, Check, AlertCircle, Zap, Pencil, Send } from 'lucide-react';
 import { ReferenceImageUpload } from '../../components/booking/ReferenceImageUpload';
 import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
 import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 import { toLocalDateString } from '../../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS } from '../../lib/studioAvailability';
 import { createCheckoutSession } from '../../lib/stripeClient';
+import { createBooking } from '../../lib/supabaseBookings';
 import { supabase } from '../../lib/supabase';
 import { SEO } from '../../components/SEO';
+
+type BookingMode = 'select' | 'flash' | 'project';
 
 const supabaseEnabled = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
@@ -24,10 +27,26 @@ interface PublicBookingPageProps {
 }
 
 export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug }) => {
+  // Si un flash est dans l'URL, on va directement en mode flash
+  const flashInUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('flash') : null;
+  const [bookingMode, setBookingMode] = useState<BookingMode>(flashInUrl ? 'flash' : 'select');
+  const [projectSubmitted, setProjectSubmitted] = useState(false);
+  const [projectForm, setProjectForm] = useState({ firstName: '', lastName: '', email: '', phone: '', description: '' });
+  const [projectImages, setProjectImages] = useState<File[]>([]);
+  const [projectSubmitting, setProjectSubmitting] = useState(false);
+  const [projectError, setProjectError] = useState<string | null>(null);
+
   const [studioId, setStudioId] = useState<string | null | 'loading'>('loading');
   const [studioInfo, setStudioInfo] = useState<{ name: string; avatar: string } | null>(null);
-  const [vitrineData, setVitrineData] = useState<{ flashDesigns?: Array<{ id: string; price?: number; depositAmount?: number }> } | null>(null);
+  const [vitrineData, setVitrineData] = useState<{
+    flashDesigns?: Array<{ id: string; title?: string; price?: number; depositAmount?: number; depositPercentage?: number }>;
+    /** Pourcentage d'acompte global du studio (fallback si non défini par prestation) */
+    globalDepositPercentage?: number;
+  } | null>(null);
   const [busySlots, setBusySlots] = useState<Record<string, string[]>>({});
+  const [studioSlots, setStudioSlots] = useState<string[]>([]);
+  const [bookingWindowDays, setBookingWindowDays] = useState<number>(60);
+  const [studioOffDays, setStudioOffDays] = useState<number[] | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [referenceImages, setReferenceImages] = useState<File[]>([]);
@@ -53,9 +72,30 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
   useEffect(() => {
     getVitrineDataBySlugAsync(studioSlug)
-      .then((data) => setStudioInfo({ name: data.name, avatar: data.avatar || '' }))
+      .then((data) => {
+        setStudioInfo({ name: data.name, avatar: data.avatar || '' });
+        setVitrineData({
+          flashDesigns: (data.flashDesigns ?? []) as Array<{ id: string; title?: string; price?: number; depositAmount?: number; depositPercentage?: number }>,
+        });
+      })
       .catch(() => setStudioInfo({ name: studioSlug, avatar: '' }));
   }, [studioSlug]);
+
+  // Charger le depositPercentage global depuis availability_settings
+  useEffect(() => {
+    if (!studioId || studioId === 'loading' || !supabaseEnabled) return;
+    supabase
+      .from('inkflow_studios')
+      .select('availability_settings')
+      .eq('id', studioId)
+      .single()
+      .then(({ data }) => {
+        const pct = (data?.availability_settings as { depositPercentage?: number } | null)?.depositPercentage;
+        if (typeof pct === 'number') {
+          setVitrineData((prev) => ({ ...prev, globalDepositPercentage: pct }));
+        }
+      });
+  }, [studioId]);
 
   useEffect(() => {
     if (!studioId || studioId === 'loading') return;
@@ -63,8 +103,15 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     setAvailabilityLoading(true);
     if (supabaseEnabled) {
       fetchStudioAvailability(studioId)
-        .then(({ busySlots: slots }) => { if (!cancelled) setBusySlots(slots || {}); })
-        .catch(() => { if (!cancelled) setBusySlots({}); })
+        .then(({ busySlots: slots, customSlots, bookingWindowDays: windowDays, offDays }) => {
+          if (!cancelled) {
+            setBusySlots(slots || {});
+            setStudioSlots(customSlots || []);
+            if (windowDays && windowDays > 0) setBookingWindowDays(windowDays);
+            if (offDays !== null) setStudioOffDays(offDays);
+          }
+        })
+        .catch(() => { if (!cancelled) { setBusySlots({}); setStudioSlots([]); } })
         .finally(() => { if (!cancelled) setAvailabilityLoading(false); });
     } else {
       setBusySlots({});
@@ -75,17 +122,22 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
   const getAvailableSlotsForDate = (dateStr: string): string[] => {
     const taken = busySlots[dateStr] || [];
-    return DEFAULT_TIME_SLOTS.filter((t) => !taken.includes(t));
+    // Date entièrement bloquée (période bloquée par le tatoueur)
+    if (taken.includes('__blocked__')) return [];
+    const slots = studioSlots.length > 0 ? studioSlots : DEFAULT_TIME_SLOTS;
+    return slots.filter((t) => !taken.includes(t));
   };
 
   const getAvailableDates = (): string[] => {
     const dates: string[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    for (let i = 0; i < 60; i++) {
+    const window = bookingWindowDays > 0 ? bookingWindowDays : 365;
+    const offDays = studioOffDays ?? DEFAULT_OFF_DAYS;
+    for (let i = 0; i < window; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() + i);
-      if (DEFAULT_OFF_DAYS.includes(d.getDay())) continue;
+      if (offDays.includes(d.getDay())) continue;
       const dateStr = toLocalDateString(d);
       if (getAvailableSlotsForDate(dateStr).length > 0) dates.push(dateStr);
     }
@@ -97,9 +149,39 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
   const flashIdFromUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('flash') : null;
   const selectedFlash = flashIdFromUrl && vitrineData?.flashDesigns?.find((f) => f.id === flashIdFromUrl);
-  const depositAmount = selectedFlash
-    ? ((selectedFlash as { depositAmount?: number }).depositAmount ?? (Math.round((selectedFlash.price ?? 0) * 0.3) || 30))
-    : DEFAULT_DEPOSIT;
+
+  // Calcul de l'acompte — priorité : flash.depositAmount > flash.depositPercentage > global% > DEFAULT
+  const globalPct = vitrineData?.globalDepositPercentage ?? 30;
+  const depositAmount = (() => {
+    if (selectedFlash) {
+      if (selectedFlash.depositAmount) return selectedFlash.depositAmount;
+      const pct = selectedFlash.depositPercentage ?? globalPct;
+      return Math.max(Math.round((selectedFlash.price ?? 0) * pct / 100), 10);
+    }
+    return DEFAULT_DEPOSIT;
+  })();
+
+  const handleProjectSubmit = async () => {
+    if (!projectForm.firstName || !projectForm.lastName || !projectForm.email || !projectForm.description) return;
+    if (!studioId || studioId === 'loading') return;
+    setProjectSubmitting(true);
+    setProjectError(null);
+    try {
+      await createBooking({
+        clientName: `${projectForm.firstName} ${projectForm.lastName}`,
+        clientEmail: projectForm.email,
+        description: projectForm.description,
+        requestedDate: new Date().toISOString().split('T')[0],
+        requestedTime: null,
+        referenceImages: [],
+      }, studioId);
+      setProjectSubmitted(true);
+    } catch {
+      setProjectError('Erreur lors de l\'envoi. Veuillez réessayer.');
+    } finally {
+      setProjectSubmitting(false);
+    }
+  };
 
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentVerified, setPaymentVerified] = useState<boolean | null>(null);
@@ -278,13 +360,151 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             )}
           </div>
           <h1 className="text-2xl font-bold text-zinc-900 mt-4 tracking-tight">{studio.name}</h1>
-          <p className="text-zinc-500 text-sm mt-1">Demande de rendez-vous & Acompte</p>
+          <p className="text-zinc-500 text-sm mt-1">
+            {bookingMode === 'select' ? 'Choisissez votre type de prestation' : bookingMode === 'project' ? 'Demande de projet sur mesure' : 'Réservation & Acompte'}
+          </p>
           <span className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full bg-zinc-100 text-zinc-600 text-xs font-medium">
             <Lock className="w-3.5 h-3.5" strokeWidth={1.5} />
             Paiement sécurisé
           </span>
         </section>
 
+        {/* — Écran 0 : Sélection Flash / Projet — */}
+        {bookingMode === 'select' && (
+          <section className="mb-6 space-y-4">
+            <button
+              onClick={() => setBookingMode('flash')}
+              className="w-full bg-white rounded-2xl border border-zinc-100 shadow-sm p-5 text-left flex items-start gap-4 hover:border-zinc-300 transition-colors active:scale-[0.99]"
+            >
+              <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                <Zap className="w-6 h-6 text-amber-500" strokeWidth={1.5} />
+              </div>
+              <div>
+                <div className="font-semibold text-zinc-900 text-base">Flash</div>
+                <div className="text-zinc-500 text-sm mt-0.5">Dessin déjà prêt — réservez un créneau et payez l'acompte maintenant.</div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-zinc-400 ml-auto self-center flex-shrink-0" strokeWidth={1.5} />
+            </button>
+            <button
+              onClick={() => setBookingMode('project')}
+              className="w-full bg-white rounded-2xl border border-zinc-100 shadow-sm p-5 text-left flex items-start gap-4 hover:border-zinc-300 transition-colors active:scale-[0.99]"
+            >
+              <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center flex-shrink-0">
+                <Pencil className="w-6 h-6 text-violet-500" strokeWidth={1.5} />
+              </div>
+              <div>
+                <div className="font-semibold text-zinc-900 text-base">Projet sur mesure</div>
+                <div className="text-zinc-500 text-sm mt-0.5">Décrivez votre idée — l'artiste vous répond et vous ouvre ensuite le planning.</div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-zinc-400 ml-auto self-center flex-shrink-0" strokeWidth={1.5} />
+            </button>
+          </section>
+        )}
+
+        {/* — Écran Projet sur mesure — */}
+        {bookingMode === 'project' && (
+          <>
+            {projectSubmitted ? (
+              <section className="mb-6 flex flex-col items-center text-center py-8">
+                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+                  <Check className="w-8 h-8 text-emerald-600" strokeWidth={2} />
+                </div>
+                <h2 className="text-xl font-bold text-zinc-900 mb-2">Demande envoyée !</h2>
+                <p className="text-zinc-500 text-sm max-w-xs">
+                  L'artiste va étudier votre projet et vous recontacte avec le tarif et un lien pour choisir votre créneau.
+                </p>
+                <a href={`/studio/${studioSlug}`} className="mt-6 inline-flex items-center gap-2 text-zinc-600 hover:text-zinc-900 text-sm font-medium">
+                  <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+                  Retour au studio
+                </a>
+              </section>
+            ) : (
+              <section className="space-y-4 mb-6">
+                <button
+                  onClick={() => setBookingMode('select')}
+                  className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900 text-sm mb-2 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+                  Changer de type
+                </button>
+                <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
+                  <h2 className="text-sm font-semibold text-zinc-900 mb-4">Décrivez votre projet</h2>
+                  <textarea
+                    value={projectForm.description}
+                    onChange={(e) => setProjectForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Style, emplacement, taille, couleurs, idées... Plus c'est précis, mieux l'artiste peut vous répondre."
+                    rows={5}
+                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors resize-none text-sm"
+                  />
+                  <ReferenceImageUpload
+                    value={projectImages}
+                    onChange={setProjectImages}
+                    variant="light"
+                    inputId="ref-upload-project"
+                    className="mt-3"
+                  />
+                </div>
+                <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
+                  <h2 className="text-sm font-semibold text-zinc-900 mb-4">Vos coordonnées</h2>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-500 mb-1.5">Prénom</label>
+                      <input type="text" value={projectForm.firstName} onChange={(e) => setProjectForm((f) => ({ ...f, firstName: e.target.value }))} placeholder="Jean" className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-500 mb-1.5">Nom</label>
+                      <input type="text" value={projectForm.lastName} onChange={(e) => setProjectForm((f) => ({ ...f, lastName: e.target.value }))} placeholder="Dupont" className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm" />
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="block text-xs font-medium text-zinc-500 mb-1.5">Email</label>
+                    <input type="email" value={projectForm.email} onChange={(e) => setProjectForm((f) => ({ ...f, email: e.target.value }))} placeholder="jean@exemple.com" className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-500 mb-1.5">Téléphone</label>
+                    <input type="tel" value={projectForm.phone} onChange={(e) => setProjectForm((f) => ({ ...f, phone: e.target.value }))} placeholder="06 12 34 56 78" className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm" />
+                  </div>
+                </div>
+                {projectError && (
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>{projectError}</span>
+                  </div>
+                )}
+                <button
+                  onClick={handleProjectSubmit}
+                  disabled={!projectForm.firstName || !projectForm.lastName || !projectForm.email || !projectForm.description || projectSubmitting}
+                  className={`w-full h-14 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all ${
+                    !projectForm.firstName || !projectForm.lastName || !projectForm.email || !projectForm.description || projectSubmitting
+                      ? 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
+                      : 'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[0.99]'
+                  }`}
+                >
+                  {projectSubmitting ? (
+                    <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Envoi en cours...</>
+                  ) : (
+                    <><Send className="w-5 h-5" strokeWidth={1.5} />Envoyer ma demande</>
+                  )}
+                </button>
+              </section>
+            )}
+          </>
+        )}
+
+        {/* — Flux Flash — */}
+        {bookingMode === 'flash' && (
+          <>
+            {bookingMode === 'flash' && !flashInUrl && (
+              <div className="mb-4">
+                <button
+                  onClick={() => setBookingMode('select')}
+                  className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900 text-sm transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+                  Changer de type
+                </button>
+              </div>
+            )}
         {/* 2. Votre Projet */}
         <section className="mb-6">
           <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
@@ -443,9 +663,12 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             </div>
           </div>
         </section>
+          </>
+        )}
       </main>
 
-      {/* 5. Sticky Footer Paiement */}
+      {/* 5. Sticky Footer Paiement — visible uniquement en mode flash */}
+      {bookingMode === 'flash' && (
       <footer className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-zinc-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] safe-bottom">
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-3">
@@ -485,6 +708,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
           </p>
         </div>
       </footer>
+      )}
     </div>
   );
 };
