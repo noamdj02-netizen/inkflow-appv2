@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X, Filter, Image as ImageIcon, Plus, Pencil, Trash2, Sparkles, Camera, Share2, Loader2, Wand2, Copy, Download, ChevronDown } from 'lucide-react';
+import { ImageCropModal } from '../ui/ImageCropModal';
 import { uploadPortfolioImage, dataUrlToBlob } from '../../lib/supabasePortfolio';
 import { analyzePortfolioPhoto, isGeminiConfigured } from '../../lib/geminiAI';
 import { useToast } from '../../contexts/ToastContext';
@@ -60,6 +61,23 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
     appointmentId: '',
   });
   const [dragOver, setDragOver] = useState(false);
+  const cropBlobRef = useRef<string | null>(null);
+  const [cropSession, setCropSession] = useState<{ src: string; field: 'url' | 'beforeUrl' } | null>(null);
+
+  const revokeCropSession = () => {
+    if (cropBlobRef.current) {
+      URL.revokeObjectURL(cropBlobRef.current);
+      cropBlobRef.current = null;
+    }
+    setCropSession(null);
+  };
+
+  const startCropFromFile = (file: File, field: 'url' | 'beforeUrl') => {
+    if (cropBlobRef.current) URL.revokeObjectURL(cropBlobRef.current);
+    const url = URL.createObjectURL(file);
+    cropBlobRef.current = url;
+    setCropSession({ src: url, field });
+  };
 
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -82,6 +100,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
     if (showUpload) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
+  }, [showUpload]);
+
+  useEffect(() => {
+    if (!showUpload) revokeCropSession();
   }, [showUpload]);
 
   // Préchargement léger : uniquement les 6 premières images visibles (évite surcharge réseau)
@@ -107,18 +129,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
         toast.error('Image trop lourde (max 5 Mo)');
         return;
       }
-      setImageLoading(true);
       setUploadError(null);
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setNewItem(prev => ({ ...prev, url: ev.target?.result as string }));
-        setImageLoading(false);
-      };
-      reader.onerror = () => {
-        toast.error('Impossible de charger l\'image');
-        setImageLoading(false);
-      };
-      reader.readAsDataURL(file);
+      startCropFromFile(file, 'url');
     }
   };
 
@@ -129,18 +141,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
         toast.error('Image trop lourde (max 5 Mo)');
         return;
       }
-      if (field === 'url') setImageLoading(true);
       setUploadError(null);
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setNewItem(prev => ({ ...prev, [field]: ev.target?.result as string }));
-        if (field === 'url') setImageLoading(false);
-      };
-      reader.onerror = () => {
-        toast.error('Impossible de charger l\'image');
-        if (field === 'url') setImageLoading(false);
-      };
-      reader.readAsDataURL(file);
+      startCropFromFile(file, field);
     }
     e.target.value = '';
   };
@@ -309,6 +311,20 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
           Ajouter une photo
         </button>
       </div>
+
+      <ImageCropModal
+        isOpen={Boolean(cropSession)}
+        imageSrc={cropSession?.src ?? ''}
+        aspect={1}
+        cropShape="rect"
+        title="Ajuster le cadrage"
+        onClose={revokeCropSession}
+        onConfirm={async (dataUrl) => {
+          const field = cropSession?.field;
+          revokeCropSession();
+          if (field) setNewItem(prev => ({ ...prev, [field]: dataUrl }));
+        }}
+      />
 
       {/* Filters toolbar */}
       <div className="flex flex-wrap items-center gap-3 p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]">

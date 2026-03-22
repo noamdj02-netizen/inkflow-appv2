@@ -217,6 +217,12 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
     fetchData();
   }, [fetchData]);
 
+  /** Toujours avant tout return — ne pas placer après `if (loading)` (règles des hooks). */
+  const focusThemes = useMemo(() => VITRINE_THEMES.filter((t) => t.productTier === 'focus'), []);
+  const fullThemes = useMemo(() => VITRINE_THEMES.filter((t) => t.productTier === 'full'), []);
+  const focusThemeNames = focusThemes.map((t) => t.name).join(' · ');
+  const fullThemeNames = fullThemes.map((t) => t.name).join(' · ');
+
   const hasUnlockedTheme = (theme: VitrineTheme) => !theme.premium || unlockedThemes.includes(theme.id);
 
   const currentThemeName = VITRINE_THEMES.find((t) => t.id === currentThemeId)?.name ?? currentThemeId;
@@ -276,11 +282,6 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
   const freeThemes = VITRINE_THEMES.filter((t) => !t.premium);
   const premiumThemes = VITRINE_THEMES.filter((t) => t.premium);
   const visibleThemes = activeTab === 'free' ? freeThemes : premiumThemes;
-
-  const focusThemes = useMemo(() => VITRINE_THEMES.filter((t) => t.productTier === 'focus'), []);
-  const fullThemes = useMemo(() => VITRINE_THEMES.filter((t) => t.productTier === 'full'), []);
-  const focusThemeNames = focusThemes.map((t) => t.name).join(' · ');
-  const fullThemeNames = fullThemes.map((t) => t.name).join(' · ');
 
   return (
     <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-4 sm:p-6 md:p-8 space-y-6 shadow-sm">

@@ -1,44 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Upload, Pencil, Trash2 } from 'lucide-react';
-
-const MAX_SIZE = 800;
-const QUALITY = 0.8;
-
-function resizeImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = document.createElement('img');
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      let { width, height } = img;
-      if (width > MAX_SIZE || height > MAX_SIZE) {
-        if (width > height) {
-          height = (height / width) * MAX_SIZE;
-          width = MAX_SIZE;
-        } else {
-          width = (width / height) * MAX_SIZE;
-          height = MAX_SIZE;
-        }
-      }
-      canvas.width = width;
-      canvas.height = height;
-      ctx?.drawImage(img, 0, 0, width, height);
-      const isPng = file.type === 'image/png';
-      const dataUrl = isPng
-        ? canvas.toDataURL('image/png')
-        : canvas.toDataURL('image/jpeg', QUALITY);
-      resolve(dataUrl);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Erreur de chargement'));
-    };
-    img.src = url;
-  });
-}
+import { ImageCropModal } from './ImageCropModal';
+import { useToast } from '../../contexts/ToastContext';
 
 interface ImageUploadFieldProps {
   value: string;
@@ -50,6 +13,11 @@ interface ImageUploadFieldProps {
   className?: string;
 }
 
+function shapeToAspect(shape: 'square' | 'round' | 'cover'): number {
+  if (shape === 'cover') return 3;
+  return 1;
+}
+
 export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   value,
   onChange,
@@ -58,16 +26,40 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   previewSize = 'md',
   className = ''
 }) => {
+  const toast = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const cropBlobRef = useRef<string | null>(null);
 
-  const processFile = async (file: File) => {
+  const revokeCropSrc = () => {
+    if (cropBlobRef.current) {
+      URL.revokeObjectURL(cropBlobRef.current);
+      cropBlobRef.current = null;
+    }
+    setCropSrc(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (cropBlobRef.current) URL.revokeObjectURL(cropBlobRef.current);
+    };
+  }, []);
+
+  const openCropFromFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    if (cropBlobRef.current) URL.revokeObjectURL(cropBlobRef.current);
+    const url = URL.createObjectURL(file);
+    cropBlobRef.current = url;
+    setCropSrc(url);
+  };
+
+  const processFile = (file: File) => {
     if (!file.type.startsWith('image/')) return;
     try {
-      const dataUrl = await resizeImage(file);
-      onChange(dataUrl);
-    } catch (err) {
-      alert('Erreur lors du téléchargement de l\'image.');
+      openCropFromFile(file);
+    } catch {
+      toast.error('Impossible d’ouvrir l’image.');
     }
   };
 
@@ -97,7 +89,6 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
 
   const hasImage = Boolean(value && value.trim());
 
-  // Tailles pour square/round
   const sizeClasses = {
     sm: 'w-20 h-20',
     md: 'w-28 h-28',
@@ -114,11 +105,27 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
     ? `overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-[var(--border)] ${shapeClasses[shape]}`
     : `${sizeClasses[previewSize]} overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-[var(--border)] flex-shrink-0 ${shapeClasses[shape]}`;
 
+  const aspect = shapeToAspect(shape);
+  const cropShape = shape === 'round' ? 'round' : 'rect';
+
   return (
     <div className={className}>
       {label && (
         <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">{label}</label>
       )}
+
+      <ImageCropModal
+        isOpen={Boolean(cropSrc)}
+        imageSrc={cropSrc ?? ''}
+        aspect={aspect}
+        cropShape={cropShape}
+        title="Ajuster le cadrage"
+        onClose={revokeCropSrc}
+        onConfirm={async (dataUrl) => {
+          onChange(dataUrl);
+          revokeCropSrc();
+        }}
+      />
 
       <input
         ref={inputRef}
@@ -130,7 +137,6 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
       />
 
       {!hasImage ? (
-        /* ═══ État vide : zone placeholder cliquable ═══ */
         <div
           role="button"
           tabIndex={0}
@@ -157,7 +163,6 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
           </p>
         </div>
       ) : (
-        /* ═══ État rempli : miniature + boutons Modifier / Supprimer ═══ */
         <div className="space-y-3">
           <div className={thumbnailCls}>
             <img

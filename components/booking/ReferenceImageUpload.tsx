@@ -1,9 +1,11 @@
 /**
  * Zone d'upload d'images de référence — réutilisable (vitrine, réservation, demandes).
- * UX optimisée : prévisualisation immédiate, touch targets 44px, drag & drop.
+ * UX optimisée : prévisualisation immédiate, touch targets 44px, drag & drop, recadrage.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, X, Upload } from 'lucide-react';
+import { ImageCropModal } from '../ui/ImageCropModal';
+import { dataUrlToFile } from '../../lib/cropImage';
 
 const MAX_IMAGES = 10;
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic';
@@ -30,16 +32,60 @@ export const ReferenceImageUpload: React.FC<ReferenceImageUploadProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const cropBlobRef = useRef<string | null>(null);
+  const pendingQueueRef = useRef<File[]>([]);
+  const accumulatedRef = useRef<File[]>([]);
 
   const isDark = variant === 'dark';
 
+  const revokeCrop = () => {
+    if (cropBlobRef.current) {
+      URL.revokeObjectURL(cropBlobRef.current);
+      cropBlobRef.current = null;
+    }
+    setCropSrc(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (cropBlobRef.current) URL.revokeObjectURL(cropBlobRef.current);
+      pendingQueueRef.current = [];
+      accumulatedRef.current = [];
+    };
+  }, []);
+
+  const openNextInQueue = useCallback(() => {
+    const q = pendingQueueRef.current;
+    if (q.length === 0) {
+      revokeCrop();
+      return;
+    }
+    const file = q[0];
+    if (cropBlobRef.current) URL.revokeObjectURL(cropBlobRef.current);
+    const url = URL.createObjectURL(file);
+    cropBlobRef.current = url;
+    setCropSrc(url);
+  }, []);
+
+  const beginImport = useCallback(
+    (incoming: File[]) => {
+      const remaining = MAX_IMAGES - value.length;
+      if (remaining <= 0) return;
+      const valid = incoming.filter((f) => f.type.startsWith('image/')).slice(0, remaining);
+      if (valid.length === 0) return;
+      pendingQueueRef.current = valid;
+      accumulatedRef.current = [];
+      openNextInQueue();
+    },
+    [openNextInQueue, value.length]
+  );
+
   const addFiles = useCallback(
     (files: File[]) => {
-      const valid = Array.from(files).filter((f) => f.type.startsWith('image/'));
-      const next = [...value, ...valid].slice(0, MAX_IMAGES);
-      onChange(next);
+      beginImport(files);
     },
-    [value, onChange]
+    [beginImport]
   );
 
   const removeAt = useCallback(
@@ -53,7 +99,7 @@ export const ReferenceImageUpload: React.FC<ReferenceImageUploadProps> = ({
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
-      addFiles(e.dataTransfer.files);
+      addFiles(Array.from(e.dataTransfer.files));
     },
     [addFiles]
   );
@@ -61,7 +107,7 @@ export const ReferenceImageUpload: React.FC<ReferenceImageUploadProps> = ({
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
-      if (files?.length) addFiles(files);
+      if (files?.length) addFiles(Array.from(files));
       e.target.value = '';
     },
     [addFiles]
@@ -70,6 +116,37 @@ export const ReferenceImageUpload: React.FC<ReferenceImageUploadProps> = ({
   const handleClick = useCallback(() => {
     document.getElementById(inputId)?.click();
   }, [inputId]);
+
+  const handleCropConfirm = useCallback(
+    async (dataUrl: string) => {
+      const cropped = dataUrlToFile(dataUrl, `reference-${Date.now()}.jpg`);
+      accumulatedRef.current.push(cropped);
+      pendingQueueRef.current.shift();
+      if (cropBlobRef.current) {
+        URL.revokeObjectURL(cropBlobRef.current);
+        cropBlobRef.current = null;
+      }
+      setCropSrc(null);
+      if (pendingQueueRef.current.length > 0) {
+        const next = pendingQueueRef.current[0];
+        const url = URL.createObjectURL(next);
+        cropBlobRef.current = url;
+        setCropSrc(url);
+      } else {
+        const acc = accumulatedRef.current;
+        accumulatedRef.current = [];
+        pendingQueueRef.current = [];
+        onChange([...value, ...acc]);
+      }
+    },
+    [onChange, value]
+  );
+
+  const handleCropClose = useCallback(() => {
+    pendingQueueRef.current = [];
+    accumulatedRef.current = [];
+    revokeCrop();
+  }, []);
 
   useEffect(() => {
     const urls = value.map((f) => URL.createObjectURL(f));
@@ -85,6 +162,16 @@ export const ReferenceImageUpload: React.FC<ReferenceImageUploadProps> = ({
 
   return (
     <div className={className}>
+      <ImageCropModal
+        isOpen={Boolean(cropSrc)}
+        imageSrc={cropSrc ?? ''}
+        aspect={1}
+        cropShape="rect"
+        title="Ajuster le cadrage"
+        onClose={handleCropClose}
+        onConfirm={handleCropConfirm}
+      />
+
       <div
         role="button"
         tabIndex={0}

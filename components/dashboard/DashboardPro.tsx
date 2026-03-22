@@ -10,6 +10,7 @@ import { useNotificationSync } from '../../hooks/useNotificationSync';
 import { BadgeNotification } from '../ui/BadgeNotification';
 import { useSubscriptionPermissions } from '../../hooks/useSubscriptionPermissions';
 import { Modal } from '../ui/Modal';
+import { ImageCropModal } from '../ui/ImageCropModal';
 import { BookingForm } from '../booking/BookingForm';
 import { AppointmentCalendar } from './AppointmentCalendar';
 import { MiniCalendar } from './MiniCalendar';
@@ -158,6 +159,8 @@ export const DashboardPro: React.FC = () => {
   const [openAddClientModal, setOpenAddClientModal] = useState(false);
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null);
+  const avatarCropBlobRef = React.useRef<string | null>(null);
   const [openMessageThreadId, setOpenMessageThreadId] = useState<string | null>(null);
   const [welcomeComplete, setWelcomeComplete] = useState(false);
   /** Onglet initial pour Demandes (ex: 'history' quand on clique sur l'alerte RDV sans acompte) */
@@ -178,8 +181,9 @@ export const DashboardPro: React.FC = () => {
   const isRestricted = subscriptionStatus === 'restricted'
     || (!!trialEndsAt && new Date(trialEndsAt) <= new Date() && subscriptionStatus !== 'active');
 
-  const handleSidebarNav = useCallback((action: () => void, isBillingAccess = false) => {
-    if (isRestricted && !isBillingAccess) {
+  /** Si le compte est restreint (essai expiré), on redirige vers Abonnement — sauf si `allowWhenRestricted` (abonnement, page vitrine / personnalisation). */
+  const handleSidebarNav = useCallback((action: () => void, allowWhenRestricted = false) => {
+    if (isRestricted && !allowWhenRestricted) {
       setActiveTab('settings');
       setSettingsTab('billing');
       setSidebarOpen(false);
@@ -540,8 +544,75 @@ export const DashboardPro: React.FC = () => {
     return Array.from(new Set([user?.name || 'Artiste', ...fromVitrine].filter(Boolean)));
   }, [user?.name, vitrineData?.artists]);
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const revokeAvatarCrop = () => {
+    if (avatarCropBlobRef.current) {
+      URL.revokeObjectURL(avatarCropBlobRef.current);
+      avatarCropBlobRef.current = null;
+    }
+    setAvatarCropSrc(null);
+  };
+
+  const applyAvatarFromCroppedDataUrl = async (dataUrl: string) => {
+    setAvatarUploading(true);
+    try {
+      const img = document.createElement('img');
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('load'));
+        img.src = dataUrl;
+      });
+
+      const canvas = document.createElement('canvas');
+      const size = 200;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, size, size);
+
+      const resizedUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+      updateUser({ avatar: resizedUrl });
+
+      if (studioId) {
+        try {
+          const blob = await (await fetch(resizedUrl)).blob();
+          const fileName = `avatars/${studioId}.jpg`;
+          const { error: uploadError } = await supabase.storage
+            .from('inkflow-assets')
+            .upload(fileName, blob, { upsert: true, contentType: 'image/jpeg' });
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('inkflow-assets')
+              .getPublicUrl(fileName);
+            if (urlData?.publicUrl) {
+              const publicUrl = urlData.publicUrl + '?t=' + Date.now();
+              updateUser({ avatar: publicUrl });
+              await supabase.from('inkflow_studios').update({
+                avatar_url: publicUrl,
+                updated_at: new Date().toISOString()
+              }).eq('id', studioId);
+            }
+          } else {
+            toast.error('Erreur lors de l\'upload de l\'avatar');
+          }
+        } catch {
+          toast.error('Erreur lors de l\'upload de l\'avatar');
+        }
+      }
+
+      localStorage.setItem('inkflow_avatar', resizedUrl);
+    } catch {
+      toast.error('Erreur lors du traitement de l\'image');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -553,76 +624,10 @@ export const DashboardPro: React.FC = () => {
       return;
     }
 
-    setAvatarUploading(true);
-    try {
-      // Convert to base64 data URL for instant local preview
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const dataUrl = event.target?.result as string;
-
-        // Create a resized version (200x200) for performance
-        const img = document.createElement('img');
-        img.onload = async () => {
-          const canvas = document.createElement('canvas');
-          const size = 200;
-          canvas.width = size;
-          canvas.height = size;
-          const ctx = canvas.getContext('2d')!;
-
-          // Crop to square center
-          const srcSize = Math.min(img.width, img.height);
-          const sx = (img.width - srcSize) / 2;
-          const sy = (img.height - srcSize) / 2;
-          ctx.drawImage(img, sx, sy, srcSize, srcSize, 0, 0, size, size);
-
-          const resizedUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-          // Update user instantly
-          updateUser({ avatar: resizedUrl });
-
-          // Try to upload to Supabase Storage if available
-          if (studioId) {
-            try {
-              const blob = await (await fetch(resizedUrl)).blob();
-              const fileName = `avatars/${studioId}.jpg`;
-              const { error: uploadError } = await supabase.storage
-                .from('inkflow-assets')
-                .upload(fileName, blob, { upsert: true, contentType: 'image/jpeg' });
-
-              if (!uploadError) {
-                const { data: urlData } = supabase.storage
-                  .from('inkflow-assets')
-                  .getPublicUrl(fileName);
-                if (urlData?.publicUrl) {
-                  const publicUrl = urlData.publicUrl + '?t=' + Date.now();
-                  updateUser({ avatar: publicUrl });
-                  await supabase.from('inkflow_studios').update({
-                    avatar_url: publicUrl,
-                    updated_at: new Date().toISOString()
-                  }).eq('id', studioId);
-                }
-              } else {
-                toast.error('Erreur lors de l\'upload de l\'avatar');
-              }
-            } catch (err) {
-              toast.error('Erreur lors de l\'upload de l\'avatar');
-            }
-          }
-
-          // Also persist in localStorage as fallback
-          localStorage.setItem('inkflow_avatar', resizedUrl);
-          setAvatarUploading(false);
-        };
-        img.src = dataUrl;
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      toast.error('Erreur lors du traitement de l\'image');
-      setAvatarUploading(false);
-    }
-
-    // Reset input so same file can be re-selected
-    if (avatarInputRef.current) avatarInputRef.current.value = '';
+    if (avatarCropBlobRef.current) URL.revokeObjectURL(avatarCropBlobRef.current);
+    const url = URL.createObjectURL(file);
+    avatarCropBlobRef.current = url;
+    setAvatarCropSrc(url);
   };
 
   const handleAvatarRemove = async () => {
@@ -1068,7 +1073,7 @@ export const DashboardPro: React.FC = () => {
                   <button
                     onClick={() => setExpandedMenus(prev => ({ ...prev, vitrine: !prev.vitrine }))}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                      activeTab === 'flash' || activeTab === 'portfolio'
+                      activeTab === 'flash' || activeTab === 'portfolio' || (activeTab === 'settings' && settingsTab === 'vitrine')
                         ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
                         : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
                     }`}
@@ -1087,7 +1092,7 @@ export const DashboardPro: React.FC = () => {
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'portfolio' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Portfolio
                       </button>
-                      <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('vitrine'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                      <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('vitrine'); setSidebarOpen(false); }, true)} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Personnaliser
                       </button>
@@ -1136,7 +1141,7 @@ export const DashboardPro: React.FC = () => {
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'billing' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Abonnement
                       </button>
-                      <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('vitrine'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                      <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('vitrine'); setSidebarOpen(false); }, true)} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Vitrine
                       </button>
@@ -2059,7 +2064,22 @@ export const DashboardPro: React.FC = () => {
                 />
               )}
               {settingsTab === 'calendar' && <CalendarSettings studioId={studioId || ''} appointments={appointments} onToast={(msg, type) => type === 'success' ? toast.success(msg) : toast.error(msg)} />}
-              {settingsTab === 'vitrine' && user?.studioName && <VitrineSettings studioName={user.studioName} userEmail={user.email} studioSlug={studioSlug} studioId={studioId} />}
+              {settingsTab === 'vitrine' && (
+                (user?.studioName || generalStudioName)?.trim() ? (
+                  <VitrineSettings
+                    studioName={(user?.studioName || generalStudioName || '').trim()}
+                    userEmail={user.email}
+                    studioSlug={studioSlug}
+                    studioId={studioId}
+                  />
+                ) : (
+                  <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 max-w-xl">
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                      Indiquez le nom de votre studio dans l’onglet <strong>Général</strong> pour configurer la page vitrine.
+                    </p>
+                  </div>
+                )
+              )}
               {settingsTab === 'messagerie' && studioId && <InstagramConnect studioId={studioId} />}
             </div>
             </div>
@@ -2231,6 +2251,18 @@ export const DashboardPro: React.FC = () => {
           googlePlaceConfigured={!!generalGooglePlaceId}
         />
       )}
+      <ImageCropModal
+        isOpen={Boolean(avatarCropSrc)}
+        imageSrc={avatarCropSrc ?? ''}
+        aspect={1}
+        cropShape="round"
+        title="Ajuster le cadrage"
+        onClose={revokeAvatarCrop}
+        onConfirm={async (dataUrl) => {
+          revokeAvatarCrop();
+          await applyAvatarFromCroppedDataUrl(dataUrl);
+        }}
+      />
       {/* ====== MOBILE: FAB DRAWER (bottom sheet) — fond opaque #18181B, z-index 70 ====== */}
       {showFabMenu && (
         <>
