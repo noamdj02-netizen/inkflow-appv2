@@ -91,6 +91,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   };
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'rdv' | 'bookings' | 'projects' | 'history'>(initialTab ?? 'rdv');
+  const [bookingSubTab, setBookingSubTab] = useState<'all' | 'flash' | 'custom'>('all');
 
   // Synchroniser l'onglet quand la sidebar change (ex: clic sur Projets)
   useEffect(() => {
@@ -153,6 +154,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     .sort(byCreatedAtDesc);
   const pendingBookings = bookings.filter(b => b.status === 'pending');
   const bookingsChronological = [...bookings].sort(byCreatedAtDesc);
+  const flashBookings = bookingsChronological.filter(b => inferRequestType(b.description) === 'flash');
+  const customBookings = bookingsChronological.filter(b => inferRequestType(b.description) === 'custom');
+  const filteredBookings = bookingSubTab === 'flash' ? flashBookings : bookingSubTab === 'custom' ? customBookings : bookingsChronological;
+  const pendingFlashBookings = flashBookings.filter(b => b.status === 'pending');
+  const pendingCustomBookings = customBookings.filter(b => b.status === 'pending');
 
   const handleConfirm = async (apt: Appointment) => {
     onUpdateAppointment(apt.id, { status: 'confirmed' });
@@ -716,13 +722,68 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             </div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-zinc-800">
-              {bookingsChronological.map(bk => {
+              {/* Sub-filter : Toutes / Flash / Projet sur mesure */}
+              <div className="px-5 sm:px-6 py-3 flex gap-2 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-800/30">
+                <button
+                  onClick={() => setBookingSubTab('all')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                    bookingSubTab === 'all'
+                      ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900'
+                      : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600'
+                  }`}
+                >
+                  Toutes
+                  <span className={`min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full ${
+                    bookingSubTab === 'all' ? 'bg-white/20 text-white dark:bg-slate-900/20 dark:text-slate-900' : 'bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-slate-300'
+                  }`}>{bookingsChronological.length}</span>
+                </button>
+                <button
+                  onClick={() => setBookingSubTab('flash')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                    bookingSubTab === 'flash'
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-zinc-700 hover:border-amber-300 dark:hover:border-amber-600'
+                  }`}
+                >
+                  <Sparkles className="w-3 h-3" /> Flash
+                  {pendingFlashBookings.length > 0 && (
+                    <span className={`min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full ${
+                      bookingSubTab === 'flash' ? 'bg-white/25 text-white' : 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400'
+                    }`}>{pendingFlashBookings.length}</span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setBookingSubTab('custom')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                    bookingSubTab === 'custom'
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-zinc-700 hover:border-violet-300 dark:hover:border-violet-600'
+                  }`}
+                >
+                  <FileText className="w-3 h-3" /> Projet
+                  {pendingCustomBookings.length > 0 && (
+                    <span className={`min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full ${
+                      bookingSubTab === 'custom' ? 'bg-white/25 text-white' : 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-400'
+                    }`}>{pendingCustomBookings.length}</span>
+                  )}
+                </button>
+              </div>
+              {filteredBookings.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
+                    {bookingSubTab === 'flash' ? <Sparkles className="w-6 h-6 text-amber-400" /> : <FileText className="w-6 h-6 text-slate-400 dark:text-slate-500" />}
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {bookingSubTab === 'flash' ? 'Aucune demande Flash pour le moment.' : 'Aucun projet sur mesure pour le moment.'}
+                  </p>
+                </div>
+              ) : filteredBookings.map(bk => {
                 const thumbUrl = (bk.referenceImages && bk.referenceImages[0]) || null;
                 const reqType = inferRequestType(bk.description);
                 const placement = bk.placement;
                 const size = bk.size;
                 return (
-                <div key={bk.id} className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                <div key={bk.id} className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors border-b border-slate-100 dark:border-zinc-800 last:border-b-0">
                   <button type="button" onClick={() => setSheetItem({ ...bk, _type: 'booking' })} className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto">
                     <div className="flex gap-4 items-start md:items-center">
                       <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700">

@@ -721,8 +721,21 @@ export const DashboardPro: React.FC = () => {
     const start = `${y}-${String(mo + 1).padStart(2, '0')}-01`;
     const lastDay = new Date(y, mo + 1, 0).getDate();
     const end = `${y}-${String(mo + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    // CA encaissé = confirmed (acompte payé) + completed (séance terminée)
     return appointments
-      .filter(a => a.status === 'completed' && a.date >= start && a.date <= end)
+      .filter(a => ['confirmed', 'completed'].includes(a.status) && a.date >= start && a.date <= end)
+      .reduce((sum, a) => sum + a.price, 0);
+  }, [appointments]);
+  const monthlyForecast = useMemo(() => {
+    const n = new Date();
+    const y = n.getFullYear();
+    const mo = n.getMonth();
+    const start = `${y}-${String(mo + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(y, mo + 1, 0).getDate();
+    const end = `${y}-${String(mo + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    // CA prévisionnel = demandes en attente ce mois
+    return appointments
+      .filter(a => a.status === 'pending' && a.date >= start && a.date <= end)
       .reduce((sum, a) => sum + a.price, 0);
   }, [appointments]);
   const pendingDeposits = appointments.filter(a => !a.depositPaid && a.status !== 'cancelled').reduce((sum, a) => sum + a.deposit, 0);
@@ -1540,6 +1553,7 @@ export const DashboardPro: React.FC = () => {
               customWidgets={customWidgets}
               setCustomWidgets={setCustomWidgets}
               monthlyRevenue={monthlyRevenue}
+              monthlyForecast={monthlyForecast}
               totalRevenue={totalRevenue}
               pendingDeposits={pendingDeposits}
               nextAppointmentIn2h={nextAppointmentIn2h}

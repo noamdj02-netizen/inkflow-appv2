@@ -167,6 +167,7 @@ export interface DashboardOverviewTabProps {
   customWidgets: DashboardWidget[];
   setCustomWidgets: React.Dispatch<React.SetStateAction<DashboardWidget[]>>;
   monthlyRevenue: number;
+  monthlyForecast: number;
   totalRevenue: number;
   pendingDeposits: number;
   nextAppointmentIn2h: Appointment | null;
@@ -204,6 +205,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   customWidgets,
   setCustomWidgets,
   monthlyRevenue,
+  monthlyForecast,
   totalRevenue,
   pendingDeposits,
   nextAppointmentIn2h,
@@ -452,36 +454,49 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     </>
                   )}
                 </p>
-                <div className={`${isMdUp ? 'mt-2 min-h-[24px]' : 'mt-1 min-h-[20px]'} flex items-end`}>
-                  {trendRevenue !== null ? (
+                <div className={`${isMdUp ? 'mt-2' : 'mt-1'} flex flex-col gap-1`}>
+                  {monthlyForecast > 0 && (
                     isMdUp ? (
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          trendRevenue >= 0
-                            ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
-                            : 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400'
-                        }`}
-                      >
-                        {trendRevenue >= 0 ? '↑' : '↓'} {Math.abs(trendRevenue)}% vs mois dernier
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 dark:bg-sky-500/15 text-sky-700 dark:text-sky-400 w-fit">
+                        +{monthlyForecast.toLocaleString('fr-FR')}€ en attente
                       </span>
                     ) : (
-                      <p
-                        className={`text-[13px] font-normal ${
-                          trendRevenue >= 0
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-rose-600 dark:text-rose-400'
-                        }`}
-                      >
-                        {trendRevenue >= 0 ? '↑' : '↓'} {Math.abs(trendRevenue)}% vs mois dernier
+                      <p className="text-[12px] text-sky-600 dark:text-sky-400">
+                        +{monthlyForecast.toLocaleString('fr-FR')}€ prévisionnel
                       </p>
                     )
-                  ) : isMdUp ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-                      Ce mois
-                    </span>
-                  ) : (
-                    <p className="text-[13px] text-zinc-500 dark:text-zinc-400">Ce mois</p>
                   )}
+                  <div className="flex items-end min-h-[20px]">
+                    {trendRevenue !== null ? (
+                      isMdUp ? (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            trendRevenue >= 0
+                              ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                              : 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400'
+                          }`}
+                        >
+                          {trendRevenue >= 0 ? '↑' : '↓'} {Math.abs(trendRevenue)}% vs mois dernier
+                        </span>
+                      ) : (
+                        <p
+                          className={`text-[13px] font-normal ${
+                            trendRevenue >= 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-rose-600 dark:text-rose-400'
+                          }`}
+                        >
+                          {trendRevenue >= 0 ? '↑' : '↓'} {Math.abs(trendRevenue)}% vs mois dernier
+                        </p>
+                      )
+                    ) : isMdUp ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
+                        Ce mois
+                      </span>
+                    ) : (
+                      <p className="text-[13px] text-zinc-500 dark:text-zinc-400">Ce mois</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
