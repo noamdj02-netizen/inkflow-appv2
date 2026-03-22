@@ -1,18 +1,14 @@
 import { useMemo } from 'react';
-import { useProjectRequests } from './useProjectRequests';
+import type { ProjectRequest } from '../types';
 
 /**
- * Hook pour les pastilles de notification (demandes de projet en attente).
- * S'appuie sur useProjectRequests + Supabase Realtime : le chiffre se met à jour
- * instantanément quand une nouvelle demande arrive ou change de statut.
+ * Compte les demandes de projet en attente (PENDING) à partir de la liste déjà chargée.
+ * Ne pas appeler useProjectRequests ici : le parent doit fournir projectRequests pour éviter
+ * un double abonnement Realtime et des incohérences de hooks.
  */
-export function useNotificationCounts(studioId: string | null) {
-  const { projectRequests, loading } = useProjectRequests(studioId);
-
-  const pendingRequestsCount = useMemo(
+export function usePendingProjectRequestsCount(projectRequests: ProjectRequest[]): number {
+  return useMemo(
     () => projectRequests.filter((p) => p.status === 'PENDING').length,
     [projectRequests]
   );
-
-  return { pendingRequestsCount, loading };
 }

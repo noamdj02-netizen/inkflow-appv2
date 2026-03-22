@@ -233,6 +233,14 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   const [isMdUp, setIsMdUp] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
   );
+  const [rightPanelTab, setRightPanelTab] = useState<'clients' | 'deposits'>('clients');
+  const [mobileTab, setMobileTab] = useState<'home' | 'calendar' | 'requests' | 'clients' | 'settings'>('home');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [showWidgetPicker, setShowWidgetPicker] = useState(false);
+  const [periodRevenue, setPeriodRevenue] = useState<number | null>(null);
+  const [periodTrend, setPeriodTrend] = useState<number | null>(null);
+  const [layout, setLayout] = useState<DashboardLayout>(() => getLayoutFromStorage());
+
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 768px)');
     const apply = () => setIsMdUp(mq.matches);
@@ -252,11 +260,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     return (a.date === today || a.date === tomorrowStr) && ['pending', 'confirmed'].includes(a.status);
   }).length;
 
-  const [rightPanelTab, setRightPanelTab] = useState<'clients' | 'deposits'>('clients');
-  const [mobileTab, setMobileTab] = useState<'home' | 'calendar' | 'requests' | 'clients' | 'settings'>('home');
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [showWidgetPicker, setShowWidgetPicker] = useState(false);
-
   useEffect(() => {
     if (!showWidgetPicker) return;
     const prev = document.body.style.overflow;
@@ -265,8 +268,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       document.body.style.overflow = prev;
     };
   }, [showWidgetPicker]);
-  const [periodRevenue, setPeriodRevenue] = useState<number | null>(null);
-  const [periodTrend, setPeriodTrend] = useState<number | null>(null);
 
   // Comparaison mois précédent pour les trends KPI
   const lastMonthStr = useMemo(() => {
@@ -288,8 +289,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     setPeriodRevenue(total);
     setPeriodTrend(trend);
   }, []);
-  
-  const [layout, setLayout] = useState<DashboardLayout>(() => getLayoutFromStorage());
 
   const AVAILABLE_WIDGETS = useMemo(() => [
     { id: 'kpi-revenue', name: 'Revenu mensuel', icon: DollarSign, color: 'emerald', category: 'kpi', description: 'Affiche le revenu du mois en cours' },

@@ -1,12 +1,11 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
 import { useProjectRequests } from '../../hooks/useProjectRequests';
 import { useIncomingBookings } from '../../hooks/useIncomingBookings';
-import { useNotificationCounts } from '../../hooks/useNotificationCounts';
+import { usePendingProjectRequestsCount } from '../../hooks/useNotificationCounts';
 import { useNotificationSync } from '../../hooks/useNotificationSync';
 import { BadgeNotification } from '../ui/BadgeNotification';
 import { useSubscriptionPermissions } from '../../hooks/useSubscriptionPermissions';
@@ -97,7 +96,7 @@ export const DashboardPro: React.FC = () => {
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
   const { studioId, studioSlug, studioCsvImportSlots, refreshStudioSlug, subscriptionStatus, trialEndsAt, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, importClientsFromCsvRows, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, retry } = useSupabaseSync();
   const { projectRequests, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
-  const { pendingRequestsCount } = useNotificationCounts(studioId);
+  const pendingRequestsCount = usePendingProjectRequestsCount(projectRequests);
   const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false);
   const { canAccessFeature, hasReachedLimit, getLimit } = useSubscriptionPermissions(studioId);
   const [paymentSuccessModalOpen, setPaymentSuccessModalOpen] = useState(false);
@@ -113,8 +112,6 @@ export const DashboardPro: React.FC = () => {
         ? Math.min(studioCsvImportSlots, crmSlotsFormula ?? 0)
         : crmSlotsFormula;
 
-  // Sync notifications avec dashboard / planning / calendrier (Web Notifications)
-  useNotificationSync(studioId, useSupabase ?? false);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
@@ -165,6 +162,17 @@ export const DashboardPro: React.FC = () => {
   const [welcomeComplete, setWelcomeComplete] = useState(false);
   /** Onglet initial pour Demandes (ex: 'history' quand on clique sur l'alerte RDV sans acompte) */
   const [requestsInitialTab, setRequestsInitialTab] = useState<'rdv' | 'bookings' | 'projects' | 'history' | null>(null);
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [overviewCalendarMonth, setOverviewCalendarMonth] = useState(() => new Date());
+  const [planningSidebarDate, setPlanningSidebarDate] = useState<string | null>(null);
+  const [planningSidebarMonth, setPlanningSidebarMonth] = useState(() => new Date());
+  const [showPlanningSheet, setShowPlanningSheet] = useState(false);
+
+  // Sync notifications (Web Notifications) — après tous les useState pour un ordre de hooks stable
+  useNotificationSync(studioId, useSupabase ?? false);
 
   /** Compte restreint : essai terminé ou subscription_status = restricted */
   const isRestricted = subscriptionStatus === 'restricted'
@@ -712,14 +720,6 @@ export const DashboardPro: React.FC = () => {
     return a;
   }, [unpaidCount, upcoming24h.length]);
 
-  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [overviewCalendarMonth, setOverviewCalendarMonth] = useState(() => new Date());
-  const [planningSidebarDate, setPlanningSidebarDate] = useState<string | null>(null);
-  const [planningSidebarMonth, setPlanningSidebarMonth] = useState(() => new Date());
-  const [showPlanningSheet, setShowPlanningSheet] = useState(false);
   const visibleAlerts = alerts.filter(a => !dismissedAlerts.has(a.id));
 
   /** Prochain client de la journée (premier RDV à venir aujourd'hui) */
@@ -1476,9 +1476,8 @@ export const DashboardPro: React.FC = () => {
           ) : (
           <>
           {loading && <DashboardLoadingSkeleton />}
-          <AnimatePresence mode="wait">
           {!loading && activeTab === 'overview' && (
-            <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             <DashboardOverviewTab
               now={now}
               firstName={firstName}
@@ -1525,11 +1524,11 @@ export const DashboardPro: React.FC = () => {
               onAvatarClick={() => avatarInputRef.current?.click()}
               avatarUploading={avatarUploading}
             />
-            </motion.div>
+            </div>
           )}
 
           {!loading && activeTab === 'analytics' && (
-            <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
               <AnalyticsDashboard
                 appointments={appointments}
@@ -1537,11 +1536,11 @@ export const DashboardPro: React.FC = () => {
                 studioName={user?.studioName || generalStudioName || 'Mon studio'}
               />
             </Suspense>
-            </motion.div>
+            </div>
           )}
 
           {!loading && activeTab === 'requests' && (
-            <motion.div key="requests" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
             <RequestsDashboard
               studioId={studioId}
@@ -1559,11 +1558,11 @@ export const DashboardPro: React.FC = () => {
               bookingsLoading={bookingsLoading}
             />
             </Suspense>
-            </motion.div>
+            </div>
           )}
 
           {!loading && activeTab === 'appointments' && (
-            <motion.div key="appointments" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
             <AppointmentsView
               appointments={appointments}
@@ -1574,19 +1573,19 @@ export const DashboardPro: React.FC = () => {
               planningView={planningView}
             />
             </Suspense>
-            </motion.div>
+            </div>
           )}
 
           {!loading && activeTab === 'flash' && (
-            <motion.div key="flash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
             <FlashGallery designs={flashDesigns} onBook={handleBookFlash} onAddFlash={addFlash} onUpdateFlash={updateFlash} onDeleteFlash={deleteFlash} studioSlug={studioSlug} />
             </Suspense>
-            </motion.div>
+            </div>
           )}
 
           {!loading && activeTab === 'clients' && (
-            <motion.div key="clients" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
             <ClientList
               clients={clients}
@@ -1609,11 +1608,11 @@ export const DashboardPro: React.FC = () => {
               view={clientsView}
             />
             </Suspense>
-            </motion.div>
+            </div>
           )}
 
           {!loading && activeTab === 'messaging' && (
-            <motion.div key="messaging" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
             <MessagingTab
               studioId={studioId || ''}
@@ -1624,11 +1623,11 @@ export const DashboardPro: React.FC = () => {
               studioName={user?.studioName}
             />
             </Suspense>
-            </motion.div>
+            </div>
           )}
 
           {!loading && activeTab === 'notifications' && (
-            <motion.div key="notifications" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             <NotificationsPage
               studioId={studioId}
               notifications={notifications}
@@ -1639,11 +1638,11 @@ export const DashboardPro: React.FC = () => {
                 else setActiveTab('overview');
               }}
             />
-            </motion.div>
+            </div>
           )}
 
           {!loading && activeTab === 'portfolio' && (
-            <motion.div key="portfolio" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             {vitrineLoading ? (
               <DashboardLoadingSkeleton />
             ) : (
@@ -1700,11 +1699,11 @@ export const DashboardPro: React.FC = () => {
             />
             </Suspense>
             )}
-            </motion.div>
+            </div>
           )}
 
           {!loading && activeTab === 'finance' && (
-            <motion.div key="finance" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
               {financeView === 'acomptes' ? (
                 <DepositsPage 
@@ -1716,11 +1715,11 @@ export const DashboardPro: React.FC = () => {
                 <FinanceDashboard appointments={appointments} />
               )}
             </Suspense>
-            </motion.div>
+            </div>
           )}
 
           {!loading && activeTab === 'settings' && (
-            <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             <div className="settings-page-landing">
               {/* Header style landing */}
               <div className="mb-8">
@@ -2063,11 +2062,11 @@ export const DashboardPro: React.FC = () => {
               {settingsTab === 'vitrine' && user?.studioName && <VitrineSettings studioName={user.studioName} userEmail={user.email} studioSlug={studioSlug} studioId={studioId} />}
               {settingsTab === 'messagerie' && studioId && <InstagramConnect studioId={studioId} />}
             </div>
-            </motion.div>
+            </div>
           )}
 
           {!loading && activeTab === 'etablissement' && (
-            <motion.div key="etablissement" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             <div className="animate-fade-in">
               <EtablissementPage
                 studioId={studioId}
@@ -2112,11 +2111,11 @@ export const DashboardPro: React.FC = () => {
                 trialEndsAt={trialEndsAt}
               />
             </div>
-            </motion.div>
+            </div>
           )}
 
           {!loading && activeTab === 'account' && (
-            <motion.div key="account" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+            <div className="min-w-0">
             <div className="animate-fade-in px-0">
               <AccountPage
                 user={user}
@@ -2173,9 +2172,8 @@ export const DashboardPro: React.FC = () => {
                 trialEndsAt={trialEndsAt}
               />
             </div>
-            </motion.div>
+            </div>
           )}
-          </AnimatePresence>
           </>
           )}
           {/* Hidden avatar file input — always mounted so ref is always available */}
