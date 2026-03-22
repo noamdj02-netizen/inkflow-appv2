@@ -4,6 +4,7 @@ import { EmptyState } from '../common/EmptyState';
 import { Appointment, ProjectRequest, Booking, BookingStatus, Client } from '../../types';
 import { RequestQuickViewSheet } from './RequestQuickViewSheet';
 import { InvoiceButton } from './InvoiceButton';
+import { DevisButton } from './DevisButton';
 import { Modal } from '../ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -1008,6 +1009,9 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       >
                         <CreditCard className="w-4 h-4" /> Acompte
                       </button>
+                    )}
+                    {user && (
+                      <DevisButton appointment={apt} artist={user} />
                     )}
                     {apt.status === 'confirmed' && user && (
                       <InvoiceButton appointment={apt} artist={user} />
