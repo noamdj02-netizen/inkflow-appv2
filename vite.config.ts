@@ -6,12 +6,20 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
+    // En worktree, le .env.local est dans le repo principal (inkdlow)
+    const envDir = process.cwd().includes('mystifying-burnell')
+      ? 'C:/Users/lanie/OneDrive/.limpc/Bureau/inkdlow'
+      : '.';
+    const env = loadEnv(mode, envDir, '');
     const sentryAuthToken = env.SENTRY_AUTH_TOKEN || process.env.SENTRY_AUTH_TOKEN;
     return {
+      envDir,
       server: {
         port: 3000,
         host: '0.0.0.0',
+        fs: {
+          strict: false,
+        },
       },
       plugins: [
         react(),
