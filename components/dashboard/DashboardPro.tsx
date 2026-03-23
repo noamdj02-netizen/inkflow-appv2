@@ -161,6 +161,7 @@ export const DashboardPro: React.FC = () => {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null);
   const avatarCropBlobRef = React.useRef<string | null>(null);
+  const globalSearchInputRef = React.useRef<HTMLInputElement>(null);
   const [openMessageThreadId, setOpenMessageThreadId] = useState<string | null>(null);
   const [welcomeComplete, setWelcomeComplete] = useState(false);
   /** Onglet initial pour Demandes (ex: 'history' quand on clique sur l'alerte RDV sans acompte) */
@@ -176,6 +177,30 @@ export const DashboardPro: React.FC = () => {
 
   // Sync notifications (Web Notifications) — après tous les useState pour un ordre de hooks stable
   useNotificationSync(studioId, useSupabase ?? false);
+
+  /** Raccourci affiché dans le header : ⌘K (Apple) / Ctrl+K (Windows & Linux) */
+  const globalSearchKbdHint = useMemo(() => {
+    if (typeof navigator === 'undefined') return '⌘K';
+    const p = navigator.platform ?? '';
+    const ua = navigator.userAgent ?? '';
+    const apple = /Mac|iPhone|iPad|iPod/.test(p) || /Mac OS|iPhone OS/.test(ua);
+    return apple ? '⌘K' : 'Ctrl+K';
+  }, []);
+
+  useEffect(() => {
+    const onDocKey = (e: KeyboardEvent) => {
+      if (e.key?.toLowerCase() !== 'k') return;
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      e.preventDefault();
+      const el = globalSearchInputRef.current;
+      if (el) {
+        el.focus();
+        el.select();
+      }
+    };
+    document.addEventListener('keydown', onDocKey);
+    return () => document.removeEventListener('keydown', onDocKey);
+  }, []);
 
   /** Compte restreint : essai terminé ou subscription_status = restricted */
   const isRestricted = subscriptionStatus === 'restricted'
@@ -217,7 +242,9 @@ export const DashboardPro: React.FC = () => {
     if (!studioId || !useSupabase) return;
     supabase.from('inkflow_studios').select('siret, google_place_id').eq('id', studioId).maybeSingle()
       .then(({ data }) => {
-        setGeneralSiret((data?.siret as string) || '');
+        const loadedSiret = (data?.siret as string) || '';
+        setGeneralSiret(loadedSiret);
+        if (loadedSiret && user) updateUser({ ...user, siret: loadedSiret });
         const gid = data?.google_place_id;
         setGeneralGooglePlaceId(typeof gid === 'string' && gid.trim() ? gid.trim() : null);
       });
@@ -1249,17 +1276,24 @@ export const DashboardPro: React.FC = () => {
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            {/* Barre de recherche globale (style Command Palette) — desktop only */}
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-colors w-64 lg:w-72">
-              <Search className="w-4 h-4 text-zinc-500 dark:text-zinc-400 flex-shrink-0" />
+            {/* Barre de recherche globale (style Command Palette) — desktop only ; ⌘K / Ctrl+K pour focus */}
+            <div
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-colors w-64 lg:w-72 cursor-text"
+              role="search"
+              title={`Recherche globale (${globalSearchKbdHint})`}
+              onClick={() => globalSearchInputRef.current?.focus()}
+            >
+              <Search className="w-4 h-4 text-zinc-500 dark:text-zinc-400 flex-shrink-0" aria-hidden />
               <input
+                ref={globalSearchInputRef}
                 type="search"
                 placeholder="Chercher un client, RDV..."
                 className="bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-500 w-full min-w-0"
-                aria-label="Recherche globale"
+                aria-label={`Recherche globale, raccourci ${globalSearchKbdHint}`}
+                onClick={(e) => e.stopPropagation()}
               />
-              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-200 dark:bg-zinc-800 rounded border border-zinc-300 dark:border-zinc-700 flex-shrink-0">
-                ⌘K
+              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-200 dark:bg-zinc-800 rounded border border-zinc-300 dark:border-zinc-700 flex-shrink-0 tabular-nums">
+                {globalSearchKbdHint}
               </kbd>
             </div>
             {/* Planning — visible sur mobile/tablette, ouvre le sheet planning */}

@@ -2,10 +2,11 @@
  * Page de réservation publique — /book/:studioSlug
  * Tunnel de conversion Mobile-First, Light Mode, optimisé pour le paiement Stripe.
  */
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, Lock, ChevronLeft, ChevronRight, CreditCard, Check, AlertCircle, Zap, Pencil, Send } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ArrowLeft, User, Lock, ChevronLeft, ChevronRight, CreditCard, Check, AlertCircle, Zap, Pencil, Send, MapPin, Instagram } from 'lucide-react';
 import { ReferenceImageUpload } from '../../components/booking/ReferenceImageUpload';
-import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
+import { getStudioIdBySlug, getFlashDesignsFromSupabase } from '../../lib/supabaseDashboard';
+import type { FlashDesign } from '../../types';
 import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 import { toLocalDateString } from '../../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS } from '../../lib/studioAvailability';
@@ -18,20 +19,93 @@ type BookingMode = 'select' | 'flash' | 'project';
 
 const supabaseEnabled = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
-const DEFAULT_DEPOSIT = 50;
 const WEEKDAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
+/** Emplacements proposés si le flash n’a pas de liste côté artiste */
+const DEFAULT_BODY_PLACEMENTS = [
+  'Avant-bras',
+  'Bras / biceps',
+  'Épaule',
+  'Mollet',
+  'Cuisse',
+  'Dos',
+  'Torse',
+  'Nuque / cou',
+  'Cheville',
+  'Main / doigts',
+];
+
+const PLACEMENT_OTHER_VALUE = '__other__';
+
 interface PublicBookingPageProps {
   studioSlug: string;
+}
+
+/** Flash affiché sur la page publique (vitrine JSON ou table Supabase) */
+interface PublicFlash {
+  id: string;
+  title?: string;
+  price?: number;
+  depositAmount?: number;
+  depositPercentage?: number;
+  imageUrl?: string;
+  available: boolean;
+  /** Zones conseillées par l’artiste (vitrine ou Supabase) */
+  placement?: string[];
+}
+
+function mapVitrineFlashToPublic(f: {
+  id: string;
+  title?: string;
+  price?: number;
+  depositAmount?: number;
+  depositPercentage?: number;
+  imageUrl?: string;
+  available?: boolean;
+  placement?: string[];
+}): PublicFlash {
+  return {
+    id: f.id,
+    title: f.title,
+    price: f.price,
+    depositAmount: f.depositAmount,
+    depositPercentage: f.depositPercentage,
+    imageUrl: f.imageUrl,
+    available: f.available !== false,
+    placement: Array.isArray(f.placement) && f.placement.length > 0 ? f.placement : undefined,
+  };
+}
+
+function mapDbFlashToPublic(f: FlashDesign): PublicFlash {
+  return {
+    id: f.id,
+    title: f.title,
+    price: f.price,
+    depositAmount: f.depositAmount,
+    imageUrl: f.imageUrl,
+    available: f.available && !f.reserved,
+    placement: f.placement?.length ? f.placement : undefined,
+  };
+}
+
+function replaceUrlFlashParam(flashId: string | null): void {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (flashId) url.searchParams.set('flash', flashId);
+  else url.searchParams.delete('flash');
+  window.history.replaceState({}, '', url.toString());
 }
 
 export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug }) => {
   // Si un flash est dans l'URL, on va directement en mode flash
   const flashInUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('flash') : null;
   const [bookingMode, setBookingMode] = useState<BookingMode>(flashInUrl ? 'flash' : 'select');
+  const [selectedFlashId, setSelectedFlashId] = useState<string | null>(() => flashInUrl);
+  const [flashList, setFlashList] = useState<PublicFlash[]>([]);
+  const [flashListLoading, setFlashListLoading] = useState(true);
   const [projectSubmitted, setProjectSubmitted] = useState(false);
-  const [projectForm, setProjectForm] = useState({ firstName: '', lastName: '', email: '', phone: '', description: '' });
+  const [projectForm, setProjectForm] = useState({ firstName: '', lastName: '', email: '', phone: '', instagram: '', description: '' });
   const [projectImages, setProjectImages] = useState<File[]>([]);
   const [projectSubmitting, setProjectSubmitting] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
@@ -39,7 +113,6 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
   const [studioId, setStudioId] = useState<string | null | 'loading'>('loading');
   const [studioInfo, setStudioInfo] = useState<{ name: string; avatar: string } | null>(null);
   const [vitrineData, setVitrineData] = useState<{
-    flashDesigns?: Array<{ id: string; title?: string; price?: number; depositAmount?: number; depositPercentage?: number }>;
     /** Pourcentage d'acompte global du studio (fallback si non défini par prestation) */
     globalDepositPercentage?: number;
   } | null>(null);
@@ -49,17 +122,34 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
   const [studioOffDays, setStudioOffDays] = useState<number[] | null>(null);
   const [availabilityLoading, setAvailabilityLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
-  const [referenceImages, setReferenceImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const id = new URLSearchParams(window.location.search).get('flash');
+    setSelectedFlashId(id);
+  }, [studioSlug]);
+
+  useEffect(() => {
+    setForm((f) => ({
+      ...f,
+      flashPlacementPreset: '',
+      flashPlacementCustom: '',
+      flashNotes: '',
+    }));
+  }, [selectedFlashId]);
+
   const [form, setForm] = useState({
-    project: '',
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
+    instagram: '',
     selectedDate: '',
     selectedTime: '',
+    flashPlacementPreset: '',
+    flashPlacementCustom: '',
+    flashNotes: '',
   });
 
   useEffect(() => {
@@ -71,15 +161,32 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
   }, [studioSlug]);
 
   useEffect(() => {
+    setFlashListLoading(true);
     getVitrineDataBySlugAsync(studioSlug)
       .then((data) => {
         setStudioInfo({ name: data.name, avatar: data.avatar || '' });
-        setVitrineData({
-          flashDesigns: (data.flashDesigns ?? []) as Array<{ id: string; title?: string; price?: number; depositAmount?: number; depositPercentage?: number }>,
-        });
+        setFlashList((data.flashDesigns ?? []).map(mapVitrineFlashToPublic));
       })
-      .catch(() => setStudioInfo({ name: studioSlug, avatar: '' }));
+      .catch(() => {
+        setStudioInfo({ name: studioSlug, avatar: '' });
+        setFlashList([]);
+      })
+      .finally(() => setFlashListLoading(false));
   }, [studioSlug]);
+
+  useEffect(() => {
+    if (!studioId || studioId === 'loading' || !supabaseEnabled) return;
+    let cancelled = false;
+    getFlashDesignsFromSupabase(studioId)
+      .then((rows) => {
+        if (cancelled || rows.length === 0) return;
+        setFlashList(rows.map(mapDbFlashToPublic));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [studioId]);
 
   // Charger le depositPercentage global depuis availability_settings
   useEffect(() => {
@@ -147,18 +254,28 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
   const availableDates = getAvailableDates();
   const availableSlots = form.selectedDate ? getAvailableSlotsForDate(form.selectedDate) : [];
 
-  const flashIdFromUrl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('flash') : null;
-  const selectedFlash = flashIdFromUrl && vitrineData?.flashDesigns?.find((f) => f.id === flashIdFromUrl);
+  const availableFlashes = flashList.filter((f) => f.available);
+  const selectedFlash = selectedFlashId ? availableFlashes.find((f) => f.id === selectedFlashId) : undefined;
 
-  // Calcul de l'acompte — priorité : flash.depositAmount > flash.depositPercentage > global% > DEFAULT
+  const flashPlacementOptions = useMemo(() => {
+    if (!selectedFlash) return [];
+    const base = selectedFlash.placement?.length ? selectedFlash.placement : DEFAULT_BODY_PLACEMENTS;
+    return [...new Set(base)];
+  }, [selectedFlash]);
+
+  const resolvedPlacement = useMemo(() => {
+    if (!form.flashPlacementPreset) return '';
+    if (form.flashPlacementPreset === PLACEMENT_OTHER_VALUE) return form.flashPlacementCustom.trim();
+    return form.flashPlacementPreset.trim();
+  }, [form.flashPlacementPreset, form.flashPlacementCustom]);
+
+  // Calcul de l'acompte — priorité : flash.depositAmount > flash.depositPercentage > global%
   const globalPct = vitrineData?.globalDepositPercentage ?? 30;
-  const depositAmount = (() => {
-    if (selectedFlash) {
-      if (selectedFlash.depositAmount) return selectedFlash.depositAmount;
-      const pct = selectedFlash.depositPercentage ?? globalPct;
-      return Math.max(Math.round((selectedFlash.price ?? 0) * pct / 100), 10);
-    }
-    return DEFAULT_DEPOSIT;
+  const depositAmount: number | null = (() => {
+    if (!selectedFlash) return null;
+    if (selectedFlash.depositAmount) return selectedFlash.depositAmount;
+    const pct = selectedFlash.depositPercentage ?? globalPct;
+    return Math.max(Math.round((selectedFlash.price ?? 0) * pct / 100), 10);
   })();
 
   const handleProjectSubmit = async () => {
@@ -174,6 +291,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         requestedDate: new Date().toISOString().split('T')[0],
         requestedTime: null,
         referenceImages: [],
+        clientInstagram: projectForm.instagram.trim() || undefined,
       }, studioId);
       setProjectSubmitted(true);
     } catch {
@@ -188,6 +306,8 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
   const handlePay = async () => {
     if (!form.firstName || !form.lastName || !form.email || !form.phone || !form.selectedDate || !form.selectedTime) return;
+    if (!selectedFlashId || !selectedFlash || depositAmount == null) return;
+    if (!resolvedPlacement) return;
     if (!studioId || studioId === 'loading') return;
     
     setIsSubmitting(true);
@@ -202,11 +322,14 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         studioSlug: studioSlug,
         appointmentId,
         amount: depositAmount,
-        flashId: flashIdFromUrl || undefined,
+        flashId: selectedFlashId || undefined,
         clientName,
         clientEmail: form.email,
-        serviceName: form.project || selectedFlash?.title || 'Réservation tatouage',
+        serviceName: selectedFlash?.title || 'Réservation tatouage — Flash',
         type: 'deposit',
+        placement: resolvedPlacement,
+        clientNotes: form.flashNotes.trim() || undefined,
+        clientInstagram: form.instagram.trim() || undefined,
       });
       
       if ('error' in result) {
@@ -222,7 +345,15 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     }
   };
 
-  const canPay = form.firstName && form.lastName && form.email && form.phone && form.selectedDate && form.selectedTime;
+  const canPay =
+    Boolean(selectedFlashId && selectedFlash && depositAmount != null) &&
+    resolvedPlacement.length > 0 &&
+    form.firstName &&
+    form.lastName &&
+    form.email &&
+    form.phone &&
+    form.selectedDate &&
+    form.selectedTime;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -373,7 +504,11 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         {bookingMode === 'select' && (
           <section className="mb-6 space-y-4">
             <button
-              onClick={() => setBookingMode('flash')}
+              onClick={() => {
+                setBookingMode('flash');
+                setSelectedFlashId(null);
+                replaceUrlFlashParam(null);
+              }}
               className="w-full bg-white rounded-2xl border border-zinc-100 shadow-sm p-5 text-left flex items-start gap-4 hover:border-zinc-300 transition-colors active:scale-[0.99]"
             >
               <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
@@ -386,7 +521,11 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               <ChevronRight className="w-5 h-5 text-zinc-400 ml-auto self-center flex-shrink-0" strokeWidth={1.5} />
             </button>
             <button
-              onClick={() => setBookingMode('project')}
+              onClick={() => {
+                setBookingMode('project');
+                setSelectedFlashId(null);
+                replaceUrlFlashParam(null);
+              }}
               className="w-full bg-white rounded-2xl border border-zinc-100 shadow-sm p-5 text-left flex items-start gap-4 hover:border-zinc-300 transition-colors active:scale-[0.99]"
             >
               <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center flex-shrink-0">
@@ -421,7 +560,11 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             ) : (
               <section className="space-y-4 mb-6">
                 <button
-                  onClick={() => setBookingMode('select')}
+                  onClick={() => {
+                    setBookingMode('select');
+                    setSelectedFlashId(null);
+                    replaceUrlFlashParam(null);
+                  }}
                   className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900 text-sm mb-2 transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
@@ -460,9 +603,24 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                     <label className="block text-xs font-medium text-zinc-500 mb-1.5">Email</label>
                     <input type="email" value={projectForm.email} onChange={(e) => setProjectForm((f) => ({ ...f, email: e.target.value }))} placeholder="jean@exemple.com" className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm" />
                   </div>
-                  <div>
+                  <div className="mb-3">
                     <label className="block text-xs font-medium text-zinc-500 mb-1.5">Téléphone</label>
                     <input type="tel" value={projectForm.phone} onChange={(e) => setProjectForm((f) => ({ ...f, phone: e.target.value }))} placeholder="06 12 34 56 78" className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm" />
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 mb-1.5">
+                      <Instagram className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      Instagram <span className="font-normal text-zinc-400">(optionnel)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={projectForm.instagram}
+                      onChange={(e) => setProjectForm((f) => ({ ...f, instagram: e.target.value }))}
+                      placeholder="@votre_pseudo"
+                      autoComplete="off"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
+                    />
+                    <p className="text-[11px] text-zinc-400 mt-1.5">Pour échanger plus facilement avec l&apos;artiste en message privé.</p>
                   </div>
                 </div>
                 {projectError && (
@@ -497,7 +655,11 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             {bookingMode === 'flash' && !flashInUrl && (
               <div className="mb-4">
                 <button
-                  onClick={() => setBookingMode('select')}
+                  onClick={() => {
+                    setBookingMode('select');
+                    setSelectedFlashId(null);
+                    replaceUrlFlashParam(null);
+                  }}
                   className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900 text-sm transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
@@ -505,26 +667,160 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                 </button>
               </div>
             )}
-        {/* 2. Votre Projet */}
+        {/* 2. Choix du flash */}
         <section className="mb-6">
           <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
-            <h2 className="text-sm font-semibold text-zinc-900 mb-3">Votre projet</h2>
-            <textarea
-              value={form.project}
-              onChange={(e) => setForm((f) => ({ ...f, project: e.target.value }))}
-              placeholder="Décrivez votre projet (Emplacement, taille, style)..."
-              rows={4}
-              className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors resize-none text-sm"
-            />
-            <ReferenceImageUpload
-              value={referenceImages}
-              onChange={setReferenceImages}
-              variant="light"
-              inputId="ref-upload-book"
-              className="mt-3"
-            />
+            <h2 className="text-sm font-semibold text-zinc-900 mb-1">Choisissez un flash</h2>
+            <p className="text-xs text-zinc-500 mb-4">
+              Prix et acompte selon le design sélectionné.
+            </p>
+            {flashListLoading ? (
+              <div className="py-12 flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
+              </div>
+            ) : availableFlashes.length === 0 ? (
+              <p className="text-sm text-zinc-500 text-center py-8">
+                Aucun flash disponible pour le moment. Revenez plus tard ou contactez le studio.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                {availableFlashes.map((flash) => {
+                  const isSelected = selectedFlashId === flash.id;
+                  const priceLabel =
+                    typeof flash.price === 'number' ? `${flash.price.toLocaleString('fr-FR')} €` : '—';
+                  return (
+                    <button
+                      key={flash.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedFlashId(flash.id);
+                        replaceUrlFlashParam(flash.id);
+                      }}
+                      className={`group rounded-2xl border overflow-hidden text-left transition-all active:scale-[0.99] touch-manipulation shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 ${
+                        isSelected
+                          ? 'ring-2 ring-emerald-500 border-emerald-500/80 shadow-md'
+                          : 'border-zinc-200/90 hover:border-zinc-300 hover:shadow-md'
+                      }`}
+                    >
+                      {flash.imageUrl ? (
+                        <div className="relative aspect-[3/4] bg-zinc-100">
+                          <img
+                            src={flash.imageUrl}
+                            alt={flash.title || 'Flash'}
+                            className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+                          />
+                          <div
+                            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent"
+                            aria-hidden
+                          />
+                          {isSelected && (
+                            <div
+                              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md ring-2 ring-white/90"
+                              aria-hidden
+                            >
+                              <Check className="h-4 w-4" strokeWidth={2.5} />
+                            </div>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 p-3 pt-10">
+                            <p className="text-[13px] font-semibold leading-snug text-white drop-shadow-md line-clamp-2">
+                              {flash.title || 'Flash'}
+                            </p>
+                            <p className="mt-1 text-base font-bold tabular-nums tracking-tight text-white drop-shadow-md">
+                              {priceLabel}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col">
+                          <div className="relative flex aspect-[3/4] items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200/80">
+                            <Zap className="h-12 w-12 text-zinc-400" strokeWidth={1.25} />
+                            {isSelected && (
+                              <div className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md ring-2 ring-white">
+                                <Check className="h-4 w-4" strokeWidth={2.5} />
+                              </div>
+                            )}
+                          </div>
+                          <div className="border-t border-zinc-100 bg-zinc-50/80 p-3">
+                            <p className="text-[13px] font-semibold leading-snug text-zinc-900 line-clamp-2">
+                              {flash.title || 'Flash'}
+                            </p>
+                            <p className="mt-1 text-base font-bold tabular-nums text-zinc-800">{priceLabel}</p>
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
+
+        {selectedFlash && (
+          <section className="mb-6">
+            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-zinc-100">
+                  <MapPin className="h-5 w-5 text-zinc-600" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-zinc-900">Détails du tatouage</h2>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    Indiquez où vous souhaitez ce flash. Le studio validera avec vous si besoin.
+                  </p>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="flash-placement" className="block text-xs font-medium text-zinc-500 mb-1.5">
+                  Emplacement souhaité <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="flash-placement"
+                  value={form.flashPlacementPreset}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      flashPlacementPreset: e.target.value,
+                      flashPlacementCustom: e.target.value === PLACEMENT_OTHER_VALUE ? f.flashPlacementCustom : '',
+                    }))
+                  }
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-white text-zinc-900 text-sm focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors"
+                >
+                  <option value="">Choisir une zone…</option>
+                  {flashPlacementOptions.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                  <option value={PLACEMENT_OTHER_VALUE}>Autre — préciser</option>
+                </select>
+                {form.flashPlacementPreset === PLACEMENT_OTHER_VALUE && (
+                  <input
+                    type="text"
+                    value={form.flashPlacementCustom}
+                    onChange={(e) => setForm((f) => ({ ...f, flashPlacementCustom: e.target.value }))}
+                    placeholder="Ex. : flanc droit, derrière l’oreille, haut du dos…"
+                    className="mt-2 w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
+                    autoComplete="off"
+                  />
+                )}
+              </div>
+              <div className="mt-4">
+                <label htmlFor="flash-notes" className="block text-xs font-medium text-zinc-500 mb-1.5">
+                  Précisions (optionnel)
+                </label>
+                <textarea
+                  id="flash-notes"
+                  value={form.flashNotes}
+                  onChange={(e) => setForm((f) => ({ ...f, flashNotes: e.target.value }))}
+                  placeholder="Côté gauche ou droit, taille souhaitée, contraintes médicales, références…"
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors resize-none text-sm"
+                />
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* 3. Disponibilités */}
         <section className="mb-6">
@@ -661,6 +957,21 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                 className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
               />
             </div>
+            <div className="mt-3">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 mb-1.5">
+                <Instagram className="w-3.5 h-3.5" strokeWidth={1.5} />
+                Instagram <span className="font-normal text-zinc-400">(optionnel)</span>
+              </label>
+              <input
+                type="text"
+                value={form.instagram}
+                onChange={(e) => setForm((f) => ({ ...f, instagram: e.target.value }))}
+                placeholder="@votre_pseudo"
+                autoComplete="off"
+                className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
+              />
+              <p className="text-[11px] text-zinc-400 mt-1.5">Pour que le studio puisse vous contacter en DM si besoin.</p>
+            </div>
           </div>
         </section>
           </>
@@ -671,9 +982,17 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
       {bookingMode === 'flash' && (
       <footer className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-zinc-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] safe-bottom">
         <div className="max-w-md mx-auto px-4 py-4">
+          {selectedFlash && typeof selectedFlash.price === 'number' && (
+            <div className="flex items-center justify-between mb-2 text-xs text-zinc-500">
+              <span>Prix du tatouage</span>
+              <span className="font-medium text-zinc-700">{selectedFlash.price}€</span>
+            </div>
+          )}
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-zinc-500">Acompte requis</span>
-            <span className="text-xl font-bold text-zinc-900">{depositAmount}€</span>
+            <span className="text-xl font-bold text-zinc-900">
+              {depositAmount != null ? `${depositAmount}€` : '—'}
+            </span>
           </div>
           {paymentError && (
             <div className="mb-3 p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm flex items-start gap-2">
@@ -698,7 +1017,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             ) : (
               <>
                 <CreditCard className="w-5 h-5" strokeWidth={1.5} />
-                Payer {depositAmount}€ et Réserver
+                {depositAmount != null ? `Payer ${depositAmount}€ et Réserver` : 'Choisissez un flash'}
               </>
             )}
           </button>

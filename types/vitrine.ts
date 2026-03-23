@@ -101,6 +101,8 @@ export interface VitrineData {
   repeatClients: number;
   /** Masquer la bannière statistiques sur la vitrine (Tatouages réalisés, Satisfaction, etc.) */
   showStatsBanner?: boolean;
+  /** Masquer la section « Nos services » (cartes tarifs / réserver). Les services restent éditables dans les paramètres. */
+  showServicesSection?: boolean;
   services: VitrineService[];
   openingHours: Record<string, VitrineOpeningHours>;
   artists: VitrineArtist[];

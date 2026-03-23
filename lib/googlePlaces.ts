@@ -12,20 +12,25 @@ function friendlyError(_fn: string, raw: string): string {
   if (
     lower.includes('failed to send') ||
     lower.includes('edge function') ||
-    lower.includes('functionsrelayerror')
+    lower.includes('functionsrelayerror') ||
+    lower.includes('functionsfetcherror') ||
+    lower.includes('failed to fetch') ||
+    lower.includes('networkerror')
   ) {
     if (typeof console !== 'undefined' && console.warn) {
       console.warn(
-        '[google-places] Verifiez : fonction google-places deployee, secret GOOGLE_PLACES_API_KEY, domaine autorise (CORS). Voir docs/ENV-PRODUCTION.md'
+        '[google-places] Erreur technique:',
+        raw,
+        '— Vérifier côté projet : fonction edge `google-places` déployée, secret GOOGLE_PLACES_API_KEY (ou GOOGLE_MAPS_API_KEY), CORS. Voir docs/ENV-PRODUCTION.md'
       );
     }
-    return 'Connexion a la recherche Google impossible (serveur). Verifiez que la fonction Supabase google-places est deployee et que le secret GOOGLE_PLACES_API_KEY est defini.';
+    return 'Recherche Google indisponible. Dans « Options avancées », collez l’URL ou le Place ID de votre fiche — ou réessayez plus tard.';
   }
   if (lower.includes('non authentifie') || lower.includes('401')) {
-    return 'Session expiree : reconnectez-vous puis reessayez la recherche.';
+    return 'Session expirée : reconnectez-vous puis réessayez la recherche.';
   }
   if (lower.includes('configuration serveur') || lower.includes('503')) {
-    return 'Recherche Google non configuree cote serveur (cle API manquante). Contactez l\'administrateur.';
+    return 'La recherche Google n’est pas activée sur le serveur pour l’instant. Utilisez l’URL ou le Place ID dans les options avancées, ou contactez le support Inkflow.';
   }
   if (lower.includes('request_denied') || lower.includes('not authorized') || lower.includes('api key')) {
     return 'Cle Google ou API Places refusee : verifiez la cle et l\'activation Places API dans Google Cloud.';
@@ -152,6 +157,24 @@ export async function fetchBusinessPublicReviews(
 }
 
 // ── Google Places (Places API, 5 avis max) ────────────────────────────────────
+
+/**
+ * Suit les redirections (liens courts Google) et extrait un Place ID — JWT requis.
+ * Ne dépend pas de GOOGLE_PLACES_API_KEY (résolution HTTP).
+ */
+export async function resolveMapsPasteViaEdge(input: string): Promise<string | null> {
+  const { data, error } = await supabase.functions.invoke<{ placeId?: string | null; error?: string }>(
+    'google-places',
+    { body: { action: 'resolve_maps_paste', input: input.trim() } }
+  );
+  if (error) {
+    console.warn('[google-places] resolve_maps_paste', error.message);
+    return null;
+  }
+  if (data?.error && !data.placeId) return null;
+  const id = data?.placeId;
+  return typeof id === 'string' && id.length > 0 ? id : null;
+}
 
 /** Recherche d'etablissements (JWT requis). */
 export async function searchGooglePlaces(query: string): Promise<GooglePlaceSearchResultDTO[]> {

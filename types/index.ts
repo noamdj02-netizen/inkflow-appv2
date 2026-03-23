@@ -7,6 +7,7 @@ export interface User {
   role: 'artist' | 'studio_owner';
   phone?: string;
   address?: string;
+  siret?: string;
   createdAt?: string;
 }
 
@@ -190,6 +191,8 @@ export interface VitrineBookingFormData {
   requestedDate: string;
   requestedTime?: string;
   referenceImages?: string[];
+  /** Pseudo / lien Instagram (optionnel) — fluidifie l’échange avec le tatoueur */
+  clientInstagram?: string;
 }
 
 export interface StudioSettings {

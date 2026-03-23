@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Copy, Check, ExternalLink, Store } from 'lucide-react';
+import { Copy, Check, ExternalLink, Store, QrCode, X } from 'lucide-react';
 import { getStudioId } from '../../lib/supabase';
 import { getStudioSlug } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
@@ -56,6 +56,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
 }) => {
   const toast = useToast();
   const [copied, setCopied] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const [settings, setSettings] = useState<VitrineSettings>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);

@@ -2,7 +2,7 @@
  * Calendrier style calendar.me — vue semaine/jour/mois, cartes événements colorées.
  * Responsive mobile et PC.
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Clock, User, Pencil, XCircle, CheckCircle } from 'lucide-react';
 import { Appointment } from '../../types';
 import { Modal } from '../ui/Modal';
@@ -54,6 +54,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
     return d;
   });
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const touchStartX = useRef<number | null>(null);
 
   const weekDays = useMemo(() => {
     const days: Date[] = [];
@@ -146,7 +147,16 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
       </div>
 
       {/* Grille: en-têtes jours + créneaux horaires */}
-      <div className="overflow-x-auto">
+      <div
+        className="overflow-x-auto"
+        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          if (touchStartX.current === null) return;
+          const dx = e.changedTouches[0].clientX - touchStartX.current;
+          if (Math.abs(dx) > 50) { dx < 0 ? goNext() : goPrev(); }
+          touchStartX.current = null;
+        }}
+      >
         <div
           className="min-w-[600px] grid gap-px"
           style={{

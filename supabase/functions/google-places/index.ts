@@ -4,6 +4,7 @@
  * Actions (POST JSON) :
  * - public_reviews          : { action, slug } — sans JWT ; retourne avis via Places API (5 max)
  * - business_public_reviews : { action, slug } — sans JWT ; retourne TOUS les avis via Business Profile OAuth
+ * - resolve_maps_paste      : { action, input } — JWT requis ; suit URL Google (goo.gl / maps) et extrait Place ID
  * - text_search             : { action, query } — JWT requis ; recherche d’établissements
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -21,7 +22,9 @@ const BUSINESS_REVIEWS_BASE = "https://mybusiness.googleapis.com/v4";
 
 const PLACES_DETAILS = "https://maps.googleapis.com/maps/api/place/details/json";
 const PLACES_TEXTSEARCH = "https://maps.googleapis.com/maps/api/place/textsearch/json";
+const PLACES_NEARBY = "https://maps.googleapis.com/maps/api/place/nearbysearch/json";
 const PLACES_NEW_SEARCH = "https://places.googleapis.com/v1/places:searchText";
+const PLACES_NEW_GET_BASE = "https://places.googleapis.com/v1/places";
 
 type SearchHit = { placeId: string; name: string; formattedAddress: string };
 
@@ -102,6 +105,99 @@ async function textSearchPlaces(query: string): Promise<SearchHit[]> {
   throw new Error(data.error_message || `Text Search: ${data.status}`);
 }
 
+/** Ex. `@49.424296,1.0889154,17z` dans l’URL Maps */
+function extractLatLngFromMapsUrl(rawUrl: string): { lat: number; lng: number } | null {
+  const m = rawUrl.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  if (!m?.[1] || !m?.[2]) return null;
+  const lat = Number.parseFloat(m[1]);
+  const lng = Number.parseFloat(m[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat, lng };
+}
+
+/** Nom affiché dans `/place/Nom+…/` (apostrophe, %27, +) */
+function extractPlaceTitleFromMapsPath(rawUrl: string): string | null {
+  const m = rawUrl.match(/\/place\/([^/@]+)/);
+  if (!m?.[1]) return null;
+  let name = m[1];
+  try {
+    name = decodeURIComponent(name.replace(/\+/g, " "));
+  } catch {
+    name = name.replace(/\+/g, " ");
+  }
+  name = name.trim();
+  if (name.length < 2 || name.length > 200) return null;
+  return name;
+}
+
+/** Recherche « nearby » : meilleure pour les URLs avec `0x…:0x…` sans ChIJ (nom + coordonnées dans l’URL). */
+async function nearbySearchPlaces(lat: number, lng: number, keyword: string): Promise<SearchHit[]> {
+  const kw = keyword.replace(/'/g, " ").replace(/\s+/g, " ").trim().slice(0, 100);
+  if (kw.length < 2) return [];
+  const params = new URLSearchParams({
+    location: `${lat},${lng}`,
+    radius: "120",
+    keyword: kw,
+    key: GOOGLE_KEY,
+    language: "fr",
+  });
+  const res = await fetch(`${PLACES_NEARBY}?${params}`);
+  const data = await res.json() as {
+    status?: string;
+    error_message?: string;
+    results?: unknown[];
+  };
+  if (data.status === "OK" || data.status === "ZERO_RESULTS") {
+    return mapLegacyResults(data.results || []);
+  }
+  throw new Error(data.error_message || `Nearby Search: ${data.status}`);
+}
+
+function pickBestPlaceHit(hits: SearchHit[], placeTitle: string): string {
+  if (hits.length === 1) return hits[0].placeId;
+  const norm = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^a-z0-9]+/g, "");
+  const shortNeedle = norm(placeTitle).slice(0, 12);
+  const best = hits.find((h) => norm(h.name).includes(shortNeedle)) ?? hits[0];
+  return best.placeId;
+}
+
+/** Dernier recours : nom `/place/…` + optionnellement coordonnées `@lat,lng` → Nearby puis Text Search (nécessite GOOGLE_KEY) */
+async function resolvePlaceFromPlacePathName(rawUrl: string): Promise<string | null> {
+  if (!GOOGLE_KEY) return null;
+  const name = extractPlaceTitleFromMapsPath(rawUrl);
+  if (!name) return null;
+
+  const ll = extractLatLngFromMapsUrl(rawUrl);
+  if (ll) {
+    try {
+      const nearby = await nearbySearchPlaces(ll.lat, ll.lng, name);
+      if (nearby.length > 0) {
+        return pickBestPlaceHit(nearby, name);
+      }
+    } catch (e) {
+      console.warn("[google-places] nearbySearchPlaces:", e);
+    }
+  }
+
+  const queries = [name, name.replace(/'/g, " ").replace(/\s+/g, " ").trim()].filter(
+    (q, i, a) => q.length >= 3 && a.indexOf(q) === i,
+  );
+
+  try {
+    for (const q of queries) {
+      const hits = await textSearchPlaces(q);
+      if (hits.length === 0) continue;
+      return pickBestPlaceHit(hits, name);
+    }
+    return null;
+  } catch (e) {
+    console.warn("[google-places] resolvePlaceFromPlacePathName:", e);
+    return null;
+  }
+}
+
 interface PlaceReviewRaw {
   author_name?: string;
   rating?: number;
@@ -126,30 +222,229 @@ async function getUserEmailFromJwt(req: Request): Promise<string | null> {
   return data.user.email;
 }
 
-async function fetchPlaceDetails(placeId: string, language = "fr") {
+const PLACE_ID_RX = /^[A-Za-z0-9_-]{12,200}$/;
+
+function extractFromDataSegment(s: string): string | null {
+  const m = s.match(/(?:^|[?&/])data=([^?#]+)/);
+  if (!m?.[1]) return null;
+  let part = m[1];
+  try {
+    part = decodeURIComponent(part);
+  } catch {
+    /* ignore */
+  }
+  const chij = part.match(/!1s(ChIJ[A-Za-z0-9_-]{10,200})/);
+  if (chij?.[1] && PLACE_ID_RX.test(chij[1])) return chij[1];
+  return null;
+}
+
+function extractPlaceIdFromString(s: string): string | null {
+  const fromData = extractFromDataSegment(s);
+  if (fromData) return fromData;
+  const normalized = s.replace(/%21/gi, "!").replace(/%26/gi, "&");
+  if (normalized !== s) {
+    const d2 = extractFromDataSegment(normalized);
+    if (d2) return d2;
+  }
+  const chij = s.match(/(ChIJ[A-Za-z0-9_-]{10,200})/);
+  if (chij?.[1] && PLACE_ID_RX.test(chij[1])) return chij[1];
+  const q = s.match(/(?:[?&])(?:query_)?place_id=([A-Za-z0-9_-]{12,200})/i);
+  if (q?.[1] && PLACE_ID_RX.test(q[1])) return q[1];
+  const d1 = s.match(/!1s(ChIJ[A-Za-z0-9_-]{10,200})/);
+  if (d1?.[1] && PLACE_ID_RX.test(d1[1])) return d1[1];
+  return null;
+}
+
+function extractPlaceIdFromHtml(html: string): string | null {
+  const reQuoted = /"(?:place_id|placeId)"\s*:\s*"([A-Za-z0-9_-]{12,200})"/gi;
+  let m: RegExpExecArray | null;
+  while ((m = reQuoted.exec(html)) !== null) {
+    if (m[1]?.startsWith("ChIJ") && PLACE_ID_RX.test(m[1])) return m[1];
+  }
+  const loose = html.match(/(ChIJ[A-Za-z0-9_-]{10,200})/);
+  if (loose?.[1] && PLACE_ID_RX.test(loose[1])) return loose[1];
+  return null;
+}
+
+function isAllowedMapsResolveHost(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  return (
+    h === "maps.app.goo.gl" ||
+    h === "goo.gl" ||
+    h === "www.google.com" ||
+    h === "google.com" ||
+    h === "maps.google.com" ||
+    h === "www.google.fr" ||
+    h === "google.fr" ||
+    h === "share.google.com"
+  );
+}
+
+/** Suit les redirections (liens courts) et extrait un Place ID depuis l’URL finale, le HTML, ou la recherche texte sur /place/Nom/ */
+async function resolveMapsPasteToPlaceId(input: string): Promise<string | null> {
+  let hit = extractPlaceIdFromString(input);
+  if (hit) return hit;
+  try {
+    const dec = decodeURIComponent(input);
+    if (dec !== input) {
+      hit = extractPlaceIdFromString(dec);
+      if (hit) return hit;
+    }
+  } catch {
+    /* ignore */
+  }
+
+  const trimmed = input.trim();
+  if (!/^https:\/\//i.test(trimmed)) return null;
+  let u: URL;
+  try {
+    u = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== "https:") return null;
+  if (!isAllowedMapsResolveHost(u.hostname)) return null;
+
+  /** Sans ChIJ : URL barre complète avec `/place/Nom/` + `@lat,lng` → Nearby / Text Search (évite d’attendre le fetch HTML). */
+  if (
+    GOOGLE_KEY &&
+    !extractPlaceIdFromString(trimmed) &&
+    extractPlaceTitleFromMapsPath(trimmed) &&
+    extractLatLngFromMapsUrl(trimmed)
+  ) {
+    const resolved = await resolvePlaceFromPlacePathName(trimmed);
+    if (resolved) return resolved;
+  }
+
+  /** Après fetch, l’URL finale (ex. maps.google.com/place/…) — indispensable pour le fallback texte si le collage était un goo.gl */
+  let urlAfterFetch = trimmed;
+
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 12_000);
+  try {
+    const res = await fetch(trimmed, {
+      method: "GET",
+      redirect: "follow",
+      signal: ctrl.signal,
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+      },
+    });
+    urlAfterFetch = res.url || trimmed;
+    hit = extractPlaceIdFromString(urlAfterFetch);
+    if (hit) return hit;
+    const html = await res.text();
+    hit = extractPlaceIdFromString(html);
+    if (hit) return hit;
+    hit = extractPlaceIdFromHtml(html);
+    if (hit) return hit;
+  } catch (e) {
+    console.warn("[google-places] resolve_maps_paste fetch:", e);
+  } finally {
+    clearTimeout(tid);
+  }
+
+  return await resolvePlaceFromPlacePathName(urlAfterFetch);
+}
+
+/** Legacy `place_id` ou ressource `places/ChIJ…` (API New). */
+function normalizePlaceIdForApi(placeId: string): string {
+  const t = placeId.trim();
+  if (t.startsWith("places/")) return t.slice(7);
+  return t;
+}
+
+type PlaceDetailsResult = {
+  rating: number | null;
+  userRatingsTotal: number;
+  reviews: {
+    authorName: string;
+    rating: number;
+    text: string;
+    relativeTimeDescription: string;
+  }[];
+};
+
+async function fetchPlaceDetailsFromNewApi(placeId: string, language: string): Promise<PlaceDetailsResult> {
+  const id = normalizePlaceIdForApi(placeId);
+  const url = `${PLACES_NEW_GET_BASE}/${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    headers: {
+      "X-Goog-Api-Key": GOOGLE_KEY,
+      "X-Goog-FieldMask": "rating,userRatingCount,reviews",
+      "Accept-Language": language,
+    },
+  });
+  const body = (await res.json()) as {
+    rating?: number;
+    userRatingCount?: number;
+    reviews?: {
+      authorAttribution?: { displayName?: string };
+      rating?: number;
+      text?: { text?: string };
+      originalText?: { text?: string };
+      relativePublishTimeDescription?: string;
+    }[];
+    error?: { message?: string; status?: string };
+  };
+  if (!res.ok) {
+    const msg = body?.error?.message || `Places API (New): ${res.status}`;
+    throw new Error(msg);
+  }
+  const raw = Array.isArray(body.reviews) ? body.reviews : [];
+  const reviews = raw.map((rev) => ({
+    authorName: String(rev.authorAttribution?.displayName || "Anonyme"),
+    rating: typeof rev.rating === "number" ? rev.rating : 0,
+    text: String(rev.text?.text || rev.originalText?.text || "").trim(),
+    relativeTimeDescription: String(rev.relativePublishTimeDescription || ""),
+  }));
+  return {
+    rating: typeof body.rating === "number" ? body.rating : null,
+    userRatingsTotal: typeof body.userRatingCount === "number" ? body.userRatingCount : 0,
+    reviews,
+  };
+}
+
+async function fetchPlaceDetails(placeId: string, language = "fr"): Promise<PlaceDetailsResult> {
+  const id = normalizePlaceIdForApi(placeId);
   const params = new URLSearchParams({
-    place_id: placeId,
+    place_id: id,
     fields: "rating,user_ratings_total,reviews",
     language,
     key: GOOGLE_KEY,
   });
   const res = await fetch(`${PLACES_DETAILS}?${params}`);
-  const data = await res.json();
-  if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-    throw new Error(data.error_message || `Places API: ${data.status}`);
-  }
-  const r = data.result || {};
-  const reviews: PlaceReviewRaw[] = Array.isArray(r.reviews) ? r.reviews : [];
-  return {
-    rating: typeof r.rating === "number" ? r.rating : null,
-    userRatingsTotal: typeof r.user_ratings_total === "number" ? r.user_ratings_total : 0,
-    reviews: reviews.map((rev) => ({
-      authorName: String(rev.author_name || "Anonyme"),
-      rating: typeof rev.rating === "number" ? rev.rating : 0,
-      text: String(rev.text || "").trim(),
-      relativeTimeDescription: String(rev.relative_time_description || ""),
-    })),
+  const data = (await res.json()) as {
+    status?: string;
+    error_message?: string;
+    result?: { rating?: number; user_ratings_total?: number; reviews?: PlaceReviewRaw[] };
   };
+
+  if (data.status === "OK" || data.status === "ZERO_RESULTS") {
+    const r = data.result || {};
+    const reviews: PlaceReviewRaw[] = Array.isArray(r.reviews) ? r.reviews : [];
+    return {
+      rating: typeof r.rating === "number" ? r.rating : null,
+      userRatingsTotal: typeof r.user_ratings_total === "number" ? r.user_ratings_total : 0,
+      reviews: reviews.map((rev) => ({
+        authorName: String(rev.author_name || "Anonyme"),
+        rating: typeof rev.rating === "number" ? rev.rating : 0,
+        text: String(rev.text || "").trim(),
+        relativeTimeDescription: String(rev.relative_time_description || ""),
+      })),
+    };
+  }
+
+  console.warn(
+    "[google-places] Legacy Place Details:",
+    data.status,
+    data.error_message,
+    "→ Places API (New)",
+  );
+  return await fetchPlaceDetailsFromNewApi(id, language);
 }
 
 Deno.serve(async (req: Request) => {
@@ -163,11 +458,6 @@ Deno.serve(async (req: Request) => {
     return json(origin, { error: "Method not allowed" }, 405);
   }
 
-  if (!GOOGLE_KEY) {
-    console.error("[google-places] GOOGLE_PLACES_API_KEY manquante");
-    return json(origin, { error: "Configuration serveur incomplète" }, 503);
-  }
-
   let payload: Record<string, unknown>;
   try {
     payload = (await req.json()) as Record<string, unknown>;
@@ -176,6 +466,25 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = String(payload.action || "");
+
+  /** Résolution lien Maps (redirections goo.gl / maps.app) — ne nécessite pas GOOGLE_PLACES_API_KEY */
+  if (action === "resolve_maps_paste") {
+    const email = await getUserEmailFromJwt(req);
+    if (!email) {
+      return json(origin, { error: "Non authentifié" }, 401);
+    }
+    const input = String(payload.input || "").trim();
+    if (input.length < 8 || input.length > 2500) {
+      return json(origin, { error: "Texte invalide" }, 400);
+    }
+    const placeId = await resolveMapsPasteToPlaceId(input);
+    return json(origin, { placeId: placeId || null });
+  }
+
+  if (!GOOGLE_KEY) {
+    console.error("[google-places] GOOGLE_PLACES_API_KEY manquante");
+    return json(origin, { error: "Configuration serveur incomplète" }, 503);
+  }
 
   try {
     if (action === "public_reviews") {

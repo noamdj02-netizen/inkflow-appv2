@@ -20,6 +20,17 @@ interface CheckoutPayload {
   clientEmail: string;
   serviceName: string;
   type: "deposit" | "full_payment";
+  placement?: string;
+  clientNotes?: string;
+  clientInstagram?: string;
+}
+
+const META_MAX = 450;
+
+function trimMeta(s: string | undefined, max: number): string {
+  if (!s || typeof s !== "string") return "";
+  const t = s.trim();
+  return t.length <= max ? t : t.slice(0, max) + "…";
 }
 
 Deno.serve(async (req: Request) => {
@@ -69,6 +80,20 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const placementMeta = trimMeta(payload.placement, META_MAX);
+    const notesMeta = trimMeta(payload.clientNotes, META_MAX);
+    const instagramMeta = trimMeta(payload.clientInstagram, META_MAX);
+    const detailLine = [
+      placementMeta && `Emplacement : ${placementMeta}`,
+      notesMeta && `Précisions : ${notesMeta}`,
+      instagramMeta && `Instagram : ${instagramMeta}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    const lineDescription = detailLine
+      ? `InkFlow - ${payload.clientName} — ${detailLine}`
+      : `InkFlow - ${payload.clientName}`;
+
     const amountCents = Math.round(payload.amount * 100);
     const urlSegment = (payload.studioSlug && /^[a-z0-9-]+$/.test(payload.studioSlug))
       ? payload.studioSlug
@@ -84,7 +109,7 @@ Deno.serve(async (req: Request) => {
       "customer_email": payload.clientEmail,
       "line_items[0][price_data][currency]": "eur",
       "line_items[0][price_data][product_data][name]": `${payload.type === "deposit" ? "Acompte" : "Paiement"} - ${payload.serviceName}`,
-      "line_items[0][price_data][product_data][description]": `InkFlow - ${payload.clientName}`,
+      "line_items[0][price_data][product_data][description]": lineDescription.slice(0, 500),
       "line_items[0][price_data][unit_amount]": String(amountCents),
       "line_items[0][quantity]": "1",
       "metadata[studio_id]": payload.studioId,
@@ -94,6 +119,9 @@ Deno.serve(async (req: Request) => {
       "metadata[client_email]": payload.clientEmail,
       "metadata[service_name]": payload.serviceName,
       ...(payload.flashId ? { "metadata[flash_id]": payload.flashId } : {}),
+      ...(placementMeta ? { "metadata[placement]": placementMeta } : {}),
+      ...(notesMeta ? { "metadata[client_notes]": notesMeta } : {}),
+      ...(instagramMeta ? { "metadata[client_instagram]": instagramMeta } : {}),
     });
 
     const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {

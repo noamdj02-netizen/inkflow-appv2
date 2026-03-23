@@ -52,6 +52,7 @@
     "resend": "^6.9.2",
     "tailwindcss": "^4.1.18",
     "tslib": "^2.8.1",
+    "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
   "overrides": {
