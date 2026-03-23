@@ -78,12 +78,10 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {/* Toast container — top center on desktop, bottom center on mobile to avoid covering tabs */}
+      {/* Toast container — centré en largeur (flex, pas left 50% + translate, évite décalages) ; bas sur mobile, haut sur sm+ */}
       <div
-        className="fixed z-[9999] flex flex-col items-center pointer-events-none px-4
-          bottom-20 left-0 right-0
-          sm:bottom-auto sm:top-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-auto sm:right-auto sm:left-auto"
-        style={{ left: 0, right: 0 }}
+        className="fixed z-[9999] pointer-events-none inset-x-0 bottom-20 flex justify-center px-4
+          sm:bottom-auto sm:top-4"
         aria-live="polite"
         aria-atomic="true"
         role="status"

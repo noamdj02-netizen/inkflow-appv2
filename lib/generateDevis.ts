@@ -135,7 +135,10 @@ export async function generateDevis(opts: DevisOptions): Promise<void> {
   doc.setFontSize(8.5);
   doc.setTextColor(MUTED_R, MUTED_G, MUTED_B);
   if (artist.email) doc.text(trunc(artist.email, 35), L + 4, blockTop + 20);
-  if ((artist as Record<string, unknown>).phone) doc.text(String((artist as Record<string, unknown>).phone), L + 4, blockTop + 26);
+  const siretOrPhone = artist.siret
+    ? `SIRET ${artist.siret.replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, '$1 $2 $3 $4')}`
+    : artist.phone ? String(artist.phone) : '';
+  if (siretOrPhone) doc.text(siretOrPhone, L + 4, blockTop + 26);
 
   const clientX = COL2 - 5;
   doc.setFillColor(255, 255, 255);

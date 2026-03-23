@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Building2, User, Hash, Palette, Shield, Plus, Trash2, Save,
   Check, Loader2, ChevronRight, CreditCard, FileText, Upload,
-  Crown, Hammer, GraduationCap, X, AlertCircle, MapPin, Search,
+  Crown, Hammer, GraduationCap, X, AlertCircle,
   Link2, Link2Off, Star,
 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import type { ArtistAccount } from '../../types';
-import { searchGooglePlaces } from '../../lib/googlePlaces';
 import { looksLikeShortMapsShareLink, parsePlaceIdFromPaste } from '../../lib/parseGooglePlaceId';
-import type { GooglePlaceSearchResultDTO } from '../../types/googlePlaces';
+import { resolveMapsPasteViaEdge } from '../../lib/googlePlaces';
 import { GooglePlaceMapPreview } from './GooglePlaceMapPreview';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -177,15 +176,9 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
     ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
     : 0;
 
-  // ── Google Place (avis vitrine) ─────────────────────────────────────────
-  const [placeSearch, setPlaceSearch] = useState('');
-  const [debouncedPlaceQuery, setDebouncedPlaceQuery] = useState('');
-  const [placeResults, setPlaceResults] = useState<GooglePlaceSearchResultDTO[]>([]);
-  const [searchingPlaces, setSearchingPlaces] = useState(false);
+  // ── Google Place (avis vitrine) — collage uniquement (pas d’API recherche côté serveur) ──
   const [savingGooglePlace, setSavingGooglePlace] = useState(false);
-  const [manualPlaceId, setManualPlaceId] = useState('');
-  /** Évite un toast à chaque frappe si la recherche échoue en boucle */
-  const lastGooglePlacesErrorToastAt = useRef(0);
+  const [googlePlacePaste, setGooglePlacePaste] = useState('');
 
   // ── Google Business OAuth ─────────────────────────────────────────────────
   const [connectingBusiness, setConnectingBusiness] = useState(false);
@@ -216,65 +209,13 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
     }
   };
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedPlaceQuery(placeSearch.trim()), 450);
-    return () => clearTimeout(t);
-  }, [placeSearch]);
-
-  useEffect(() => {
-    if (!useSupabase || !onSaveGooglePlaceId || debouncedPlaceQuery.length < 2) {
-      if (debouncedPlaceQuery.length < 2) setPlaceResults([]);
-      return;
-    }
-    let cancelled = false;
-    setSearchingPlaces(true);
-    searchGooglePlaces(debouncedPlaceQuery)
-      .then((r) => {
-        if (!cancelled) setPlaceResults(r);
-      })
-      .catch((err: Error) => {
-        if (!cancelled) {
-          setPlaceResults([]);
-          const now = Date.now();
-          if (now - lastGooglePlacesErrorToastAt.current > 12_000) {
-            lastGooglePlacesErrorToastAt.current = now;
-            toast.error(err.message || 'Recherche Google indisponible');
-          }
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setSearchingPlaces(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [debouncedPlaceQuery, useSupabase, onSaveGooglePlaceId, toast]);
-
-  const handlePickGooglePlace = async (placeId: string) => {
-    if (!onSaveGooglePlaceId) return;
-    setSavingGooglePlace(true);
-    try {
-      await onSaveGooglePlaceId(placeId);
-      toast.success('Fiche Google enregistrée — les avis s’affichent sur la vitrine');
-      setPlaceSearch('');
-      setPlaceResults([]);
-      setManualPlaceId('');
-    } catch {
-      toast.error('Impossible d’enregistrer');
-    } finally {
-      setSavingGooglePlace(false);
-    }
-  };
-
   const handleClearGooglePlace = async () => {
     if (!onSaveGooglePlaceId) return;
     setSavingGooglePlace(true);
     try {
       await onSaveGooglePlaceId(null);
       toast.success('Lien Google retiré');
-      setPlaceSearch('');
-      setPlaceResults([]);
-      setManualPlaceId('');
+      setGooglePlacePaste('');
     } catch {
       toast.error('Impossible de retirer le lien');
     } finally {
@@ -282,27 +223,35 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
     }
   };
 
-  const handleSaveManualPlaceId = async () => {
+  const handleSaveGooglePlacePaste = async () => {
     if (!onSaveGooglePlaceId) return;
-    const idRaw = manualPlaceId.trim();
+    const idRaw = googlePlacePaste.trim();
     if (!idRaw) {
-      toast.error('Collez d’abord un Place ID ou une URL Maps');
+      toast.error('Collez d’abord le lien ou le code de votre fiche');
       return;
     }
-    if (looksLikeShortMapsShareLink(idRaw)) {
-      toast.error(
-        'Les liens « Partager » courts ne contiennent pas le Place ID. Ouvrez le lien dans le navigateur, puis copiez l’URL de la barre d’adresse ou utilisez le Place ID Finder Google.'
-      );
-      return;
+    setSavingGooglePlace(true);
+    try {
+      let parsed = parsePlaceIdFromPaste(idRaw);
+      if (!parsed) {
+        parsed = await resolveMapsPasteViaEdge(idRaw);
+      }
+      if (!parsed) {
+        toast.error(
+          looksLikeShortMapsShareLink(idRaw)
+            ? 'Ouvrez ce lien dans le navigateur, puis copiez l’adresse en haut (barre d’URL) et collez-la ici.'
+            : 'Impossible de lire ce lien. Sur Google Maps, ouvrez votre fiche, puis copiez l’URL dans la barre d’adresse (pas le bouton Partager).'
+        );
+        return;
+      }
+      await onSaveGooglePlaceId(parsed);
+      toast.success('Fiche Google enregistrée');
+      setGooglePlacePaste('');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Impossible d’enregistrer');
+    } finally {
+      setSavingGooglePlace(false);
     }
-    const parsed = parsePlaceIdFromPaste(idRaw);
-    if (!parsed) {
-      toast.error(
-        'Place ID non reconnu. Attendu : texte du type ChIJ… ou une URL avec place_id= / query_place_id=.'
-      );
-      return;
-    }
-    await handlePickGooglePlace(parsed);
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -443,225 +392,165 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
         </div>
       </section>
 
-      {/* ══ Avis Google Maps (vitrine) ══ */}
+      {/* ══ Avis Google (vitrine) — parcours simplifié ══ */}
       <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
-          <div className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-            <MapPin className="w-4 h-4 text-zinc-600 dark:text-zinc-300" />
+          <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+            <Star className="w-4 h-4 text-amber-500" />
           </div>
           <div>
-            <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">Google Maps — avis vitrine</h2>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500">
-              Liez votre fiche pour afficher note et avis (clé API uniquement côté serveur).
+            <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">Avis Google sur votre vitrine</h2>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              Vos clients voient votre note comme sur Google. Une étape : collez le lien de votre fiche.
             </p>
           </div>
         </div>
         <div className="p-5 space-y-4">
           {!useSupabase || !studioId ? (
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Connectez-vous avec Supabase activé pour associer une fiche Google à votre studio.
+              Connexion requise pour lier votre fiche Google à InkFlow.
             </p>
           ) : !onSaveGooglePlaceId ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Configuration indisponible.</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Réglage indisponible pour le moment.</p>
           ) : (
             <>
               {googlePlaceId ? (
                 <div className="space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-zinc-200 dark:border-zinc-700 px-4 py-3 bg-zinc-50 dark:bg-zinc-800/40">
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Place ID</p>
-                      <p className="text-sm text-zinc-800 dark:text-zinc-200 font-mono truncate" title={googlePlaceId}>
-                        {googlePlaceId}
-                      </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/80 dark:bg-emerald-500/10 px-4 py-3">
+                    <div className="min-w-0 flex items-center gap-2">
+                      <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Fiche Google liée</p>
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Les avis s’affichent sur votre vitrine.</p>
+                      </div>
                     </div>
                     <button
                       type="button"
                       onClick={handleClearGooglePlace}
                       disabled={savingGooglePlace}
-                      className="shrink-0 px-4 py-2 rounded-xl text-sm font-medium border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
+                      className="shrink-0 px-4 py-2 rounded-xl text-sm font-medium border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
                     >
-                      Retirer
+                      Retirer la fiche
                     </button>
                   </div>
                   <GooglePlaceMapPreview placeId={googlePlaceId} />
                 </div>
               ) : null}
 
-              <div>
-                <label className="block text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">
-                  <span className="flex items-center gap-1.5">
-                    <Search className="w-3.5 h-3.5" />
-                    Rechercher votre établissement
-                  </span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={placeSearch}
-                    onChange={(e) => setPlaceSearch(e.target.value)}
-                    placeholder="Ex : Studio Tattoo Paris"
-                    disabled={savingGooglePlace}
-                    className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400/30 focus:border-zinc-400 transition-all"
-                  />
-                  {searchingPlaces && (
-                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 animate-spin" />
-                  )}
-                </div>
-                <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1.5">
-                  Au moins 2 caractères. Choisissez le bon résultat dans la liste.
-                </p>
-              </div>
-
-              {placeResults.length > 0 && (
-                <ul className="rounded-xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden">
-                  {placeResults.map((r) => (
-                    <li key={r.placeId}>
-                      <button
-                        type="button"
-                        disabled={savingGooglePlace}
-                        onClick={() => handlePickGooglePlace(r.placeId)}
-                        className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all active:scale-[0.99] disabled:opacity-50"
-                      >
-                        <p className="text-sm font-medium text-zinc-900 dark:text-white">{r.name}</p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">{r.formattedAddress}</p>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {/* ── Google Business OAuth ── */}
-              {useSupabase && studioId && (onConnectGoogleBusiness || googleBusinessConnected) && (
-                <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Star className="w-3.5 h-3.5 text-amber-500" />
-                    <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wide">
-                      Connexion directe Google Business
-                    </p>
-                    <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400">
-                      Tous les avis
-                    </span>
+              {!googlePlaceId && (
+                <div className="rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 p-4 space-y-4">
+                  <p className="text-sm text-zinc-700 dark:text-zinc-200 leading-relaxed">
+                    Sur <strong>Google Maps</strong>, ouvrez la page de votre studio. Copiez le <strong>lien en haut</strong>{' '}
+                    (barre d’adresse du navigateur) et collez-le ici.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={googlePlacePaste}
+                      onChange={(e) => setGooglePlacePaste(e.target.value)}
+                      placeholder="https://maps.google.com/… ou code ChIJ…"
+                      disabled={savingGooglePlace}
+                      className="flex-1 min-w-0 min-h-[48px] px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400/60 transition-all"
+                      autoComplete="off"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleSaveGooglePlacePaste()}
+                      disabled={savingGooglePlace || !googlePlacePaste.trim()}
+                      className="shrink-0 min-h-[48px] px-5 rounded-xl text-sm font-semibold bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:opacity-90 disabled:opacity-50 transition-all active:scale-[0.98]"
+                    >
+                      {savingGooglePlace ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Enregistrer'}
+                    </button>
                   </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Évitez le bouton « Partager » (lien trop court). Si vous collez un lien court, Inkflow essaie de le
+                    compléter automatiquement ; sinon, copiez l’URL de la barre d’adresse ou un code <span className="font-mono text-[11px]">ChIJ…</span>.
+                  </p>
 
-                  {googleBusinessConnected ? (
-                    <div className="space-y-3">
-                      <div className="flex items-start sm:items-center justify-between gap-3 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                            <Link2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Compte connecté</p>
-                            {googleBusinessLocationName ? (
-                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate font-mono" title={googleBusinessLocationName}>
-                                {googleBusinessLocationName.split('/').slice(-1)[0] || googleBusinessLocationName}
-                              </p>
-                            ) : (
-                              <p className="text-[11px] text-amber-600 dark:text-amber-400">Sélectionnez une fiche ci-dessous</p>
+                  {useSupabase && studioId && (onConnectGoogleBusiness || googleBusinessConnected) && (
+                    <details className="group rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/40 pt-1">
+                      <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-400 flex items-center justify-between gap-2 select-none [&::-webkit-details-marker]:hidden">
+                        <span>Plus tard : compte Google Business (optionnel)</span>
+                        <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0 transition-transform group-open:rotate-90" />
+                      </summary>
+                      <div className="px-4 pb-4 pt-0 space-y-3 border-t border-zinc-100 dark:border-zinc-800">
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 pt-3">
+                          Pour afficher encore plus d’avis, vous pouvez connecter votre compte Google Business.
+                        </p>
+                        {googleBusinessConnected ? (
+                          <div className="space-y-3">
+                            <div className="flex items-start sm:items-center justify-between gap-3 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                                  <Link2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Connecté</p>
+                                  {googleBusinessLocationName ? (
+                                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate font-mono" title={googleBusinessLocationName}>
+                                      {googleBusinessLocationName.split('/').slice(-1)[0] || googleBusinessLocationName}
+                                    </p>
+                                  ) : (
+                                    <p className="text-[11px] text-amber-600 dark:text-amber-400">Choisissez une fiche ci-dessous</p>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleDisconnectBusiness}
+                                disabled={disconnectingBusiness}
+                                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 transition-all"
+                              >
+                                {disconnectingBusiness
+                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  : <Link2Off className="w-3.5 h-3.5" />}
+                                Déconnecter
+                              </button>
+                            </div>
+
+                            {googleBusinessNeedsLocationSelection && (
+                              <div>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">Quelle fiche correspond à votre vitrine ?</p>
+                                {loadingGoogleBusinessLocations ? (
+                                  <div className="flex items-center gap-2 text-xs text-zinc-400">
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />Chargement…
+                                  </div>
+                                ) : (
+                                  <ul className="rounded-xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden">
+                                    {googleBusinessLocations.map((loc) => (
+                                      <li key={loc.name}>
+                                        <button
+                                          type="button"
+                                          onClick={() => onSelectGoogleBusinessLocation?.(loc.name)}
+                                          className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all active:scale-[0.99]"
+                                        >
+                                          <p className="text-sm font-medium text-zinc-900 dark:text-white">{loc.title}</p>
+                                          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{loc.accountName}</p>
+                                        </button>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
                             )}
                           </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleDisconnectBusiness}
-                          disabled={disconnectingBusiness}
-                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 transition-all"
-                        >
-                          {disconnectingBusiness
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <Link2Off className="w-3.5 h-3.5" />}
-                          Déconnecter
-                        </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleConnectBusiness}
+                            disabled={connectingBusiness || !useSupabase}
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
+                          >
+                            {connectingBusiness
+                              ? <><Loader2 className="w-4 h-4 animate-spin" />Connexion…</>
+                              : <><Link2 className="w-4 h-4" />Connecter Google Business</>}
+                          </button>
+                        )}
                       </div>
-
-                      {/* Multi-location picker */}
-                      {googleBusinessNeedsLocationSelection && (
-                        <div>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2">
-                            Plusieurs fiches détectées — choisissez la bonne :
-                          </p>
-                          {loadingGoogleBusinessLocations ? (
-                            <div className="flex items-center gap-2 text-xs text-zinc-400">
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />Chargement des fiches…
-                            </div>
-                          ) : (
-                            <ul className="rounded-xl border border-zinc-200 dark:border-zinc-700 divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden">
-                              {googleBusinessLocations.map((loc) => (
-                                <li key={loc.name}>
-                                  <button
-                                    type="button"
-                                    onClick={() => onSelectGoogleBusinessLocation?.(loc.name)}
-                                    className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all active:scale-[0.99]"
-                                  >
-                                    <p className="text-sm font-medium text-zinc-900 dark:text-white">{loc.title}</p>
-                                    <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{loc.accountName}</p>
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
-                        Connectez votre compte Google Business pour afficher <strong>tous</strong> vos avis sur la vitrine (pas seulement les 5 derniers de Google Maps).
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleConnectBusiness}
-                        disabled={connectingBusiness || !useSupabase}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:border-zinc-400 dark:hover:border-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
-                      >
-                        {connectingBusiness
-                          ? <><Loader2 className="w-4 h-4 animate-spin" />Redirection…</>
-                          : <><Link2 className="w-4 h-4" />Connecter mon compte Google Business</>}
-                      </button>
-                    </div>
+                    </details>
                   )}
                 </div>
               )}
-
-              <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">
-                  Ou coller un Place ID
-                </p>
-                <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mb-3">
-                  Ne collez pas le lien court <code className="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">share.google/…</code> — ouvrez-le dans le navigateur et copiez l’URL complète. Le Place ID apparaît souvent après{' '}
-                  <code className="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">place_id=</code>
-                  {' '}ou{' '}
-                  <code className="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">query_place_id=</code>
-                  . Sinon utilisez le{' '}
-                  <a
-                    href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-zinc-600 dark:text-zinc-300 underline underline-offset-2"
-                  >
-                    Place ID Finder
-                  </a>
-                  {' '}Google.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="text"
-                    value={manualPlaceId}
-                    onChange={(e) => setManualPlaceId(e.target.value)}
-                    placeholder="Ex : ChIJN1t_tDeuEmsRUsoyG83frY4"
-                    disabled={savingGooglePlace || !!googlePlaceId}
-                    className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm font-mono placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400/30 focus:border-zinc-400 transition-all disabled:opacity-50"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSaveManualPlaceId}
-                    disabled={savingGooglePlace || !!googlePlaceId || !manualPlaceId.trim()}
-                    className="shrink-0 px-4 py-2.5 rounded-xl text-sm font-semibold bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:opacity-50 transition-all active:scale-[0.98]"
-                  >
-                    Enregistrer ce Place ID
-                  </button>
-                </div>
-              </div>
             </>
           )}
         </div>

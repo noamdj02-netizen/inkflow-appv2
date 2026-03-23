@@ -13,6 +13,12 @@ interface CreateCheckoutParams {
   clientEmail: string;
   serviceName: string;
   type: 'deposit' | 'full_payment';
+  /** Zone du corps choisie par le client (flash). */
+  placement?: string;
+  /** Notes libres (précisions taille, côté, etc.). */
+  clientNotes?: string;
+  /** Instagram du client (optionnel). */
+  clientInstagram?: string;
 }
 
 export type CreateCheckoutResult = { url: string } | { error: string };

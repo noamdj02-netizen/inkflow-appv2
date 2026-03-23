@@ -128,12 +128,16 @@ export async function uploadBookingReferenceImages(
 export async function createBooking(data: VitrineBookingFormData, studioId: string): Promise<string> {
   const id = `bk_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const now = new Date().toISOString();
+  const ig = data.clientInstagram?.trim();
+  const descriptionBody = data.description.trim();
+  const description =
+    ig ? `${descriptionBody}\n\nInstagram : ${ig}` : descriptionBody;
   const row = {
     id,
     studio_id: studioId,
     client_name: data.clientName.trim(),
     client_email: data.clientEmail.trim(),
-    description: data.description.trim(),
+    description,
     requested_date: data.requestedDate,
     requested_time: data.requestedTime?.trim() || null,
     status: 'pending',
@@ -155,7 +159,7 @@ export async function createBooking(data: VitrineBookingFormData, studioId: stri
       studioId,
       clientName: data.clientName.trim(),
       clientEmail: data.clientEmail.trim(),
-      description: data.description.trim(),
+      description,
       requestedDate: data.requestedDate,
       requestedTime: data.requestedTime?.trim() || null,
     }),

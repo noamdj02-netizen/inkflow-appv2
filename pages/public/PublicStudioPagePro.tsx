@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   MapPin, Phone, Mail, Clock, Instagram, ChevronRight, CheckCircle, Star,
   MessageCircle, Share2, Heart, Award, Shield, Users, Camera, X,
@@ -44,6 +44,8 @@ interface PublicStudioPageProProps {
 
 export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studioSlug }) => {
   const toast = useToast();
+  /** Le scroll de la vitrine se fait dans `.landing-scroll` (fixed + overflow), pas sur `window`. */
+  const landingScrollRef = useRef<HTMLDivElement>(null);
   const [studio, setStudio] = useState<VitrineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -95,7 +97,9 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
   useEffect(() => {
     let cancelled = false;
-    fetchPublicGoogleReviews(studioSlug).then((res) => {
+    const slug = (studio?.slug ?? studioSlug).trim().toLowerCase();
+    if (!slug) return;
+    fetchPublicGoogleReviews(slug).then((res) => {
       if (cancelled || !res || !res.configured) {
         if (!cancelled) setGoogleReviewsPayload(null);
         return;
@@ -111,7 +115,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     return () => {
       cancelled = true;
     };
-  }, [studioSlug]);
+  }, [studio?.slug, studioSlug]);
 
   useEffect(() => {
     const onVisibilityChange = () => {
@@ -171,23 +175,30 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   }, [selectedFlashId]);
 
   useEffect(() => {
+    const scroller = landingScrollRef.current;
+    if (!scroller) return;
+
+    const sections =
+      studio?.showServicesSection === false
+        ? ['about', 'artists', 'portfolio', 'flash', 'testimonials', 'faq']
+        : ['about', 'services', 'artists', 'portfolio', 'flash', 'testimonials', 'faq'];
+
     const handleScroll = () => {
-      setHeaderScrolled(window.scrollY > 100);
-      const sections = ['about', 'services', 'artists', 'portfolio', 'flash', 'testimonials', 'faq'];
-      for (const section of sections) {
-        const element = document.getElementById(section);
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          if (rect.top <= 150 && rect.bottom >= 150) {
-            setActiveSection(section);
-            break;
-          }
-        }
+      setHeaderScrolled(scroller.scrollTop > 100);
+      const anchorY = scroller.getBoundingClientRect().top + 120;
+      let current = sections[0];
+      for (const id of sections) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= anchorY) current = id;
       }
+      setActiveSection(current);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+
+    scroller.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => scroller.removeEventListener('scroll', handleScroll);
+  }, [studio?.showServicesSection, loading, studio]);
 
   const studioDisplay = useMemo(() => {
     if (!studio) return null;
@@ -197,6 +208,19 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       whyChooseUs: studio.whyChooseUs.map(w => ({ ...w, icon: ICON_MAP[w.icon] || Award }))
     };
   }, [studio]);
+
+  const navSections = useMemo(() => {
+    const all = [
+      { id: 'about', label: 'À propos' },
+      { id: 'services', label: 'Services' },
+      { id: 'artists', label: 'Artistes' },
+      { id: 'portfolio', label: 'Portfolio' },
+      { id: 'flash', label: 'Flash' },
+      { id: 'testimonials', label: 'Avis' },
+    ];
+    if (studio?.showServicesSection === false) return all.filter((s) => s.id !== 'services');
+    return all;
+  }, [studio?.showServicesSection]);
 
   const handleProjectRequestSubmit = async (data: ProjectRequestFormData) => {
     const studioId = await getStudioIdBySlug(studioSlug);
@@ -323,14 +347,10 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
-    if (element) {
-      const offset = 100;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.scrollY - offset;
-      window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-      setActiveSection(sectionId);
-      setShowMobileMenu(false);
-    }
+    if (!element) return;
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveSection(sectionId);
+    setShowMobileMenu(false);
   };
 
   const shareStudio = async () => {
@@ -401,6 +421,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
   return (
     <div
+      ref={landingScrollRef}
       className={`landing-scroll min-h-[100dvh] ${activeTheme?.containerClasses ?? 'bg-neutral-50'}`}
       style={{ ['--vitrine-primary' as string]: primaryColor }}
     >
@@ -431,15 +452,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
               </div>
             </div>
             <nav className="hidden lg:flex items-center gap-8">
-              {[
-                { id: 'about', label: 'À propos' },
-                { id: 'services', label: 'Services' },
-                { id: 'artists', label: 'Artistes' },
-                { id: 'portfolio', label: 'Portfolio' },
-                { id: 'flash', label: 'Flash' },
-                { id: 'testimonials', label: 'Avis' }
-              ].map(section => (
-                <button key={section.id} onClick={() => scrollToSection(section.id)}
+              {navSections.map(section => (
+                <button key={section.id} type="button" onClick={() => scrollToSection(section.id)}
                   className={`text-sm font-medium transition-all relative group ${activeSection === section.id ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'}`}>
                   {section.label}
                   <span className={`absolute -bottom-1 left-0 right-0 h-0.5 bg-neutral-900 transition-transform ${activeSection === section.id ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`} />
@@ -466,8 +480,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
           {showMobileMenu && (
             <div className="lg:hidden py-4 border-t border-neutral-200">
               <nav className="space-y-1">
-                {[{ id: 'about', label: 'À propos' }, { id: 'services', label: 'Services' }, { id: 'artists', label: 'Artistes' }, { id: 'portfolio', label: 'Portfolio' }, { id: 'flash', label: 'Flash' }, { id: 'testimonials', label: 'Avis' }].map(section => (
-                  <button key={section.id} onClick={() => scrollToSection(section.id)}
+                {navSections.map(section => (
+                  <button key={section.id} type="button" onClick={() => scrollToSection(section.id)}
                     className={`w-full text-left px-4 py-3 rounded-lg font-medium min-h-[44px] flex items-center ${activeSection === section.id ? 'bg-blue-600 text-white' : 'text-neutral-800 hover:bg-neutral-100'}`}>
                     {section.label}
                   </button>
@@ -598,7 +612,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
               </div>
             </section>
 
-            {/* Services */}
+            {/* Services — masquable via Paramètres > Vitrine > Services */}
+            {studioDisplay.showServicesSection !== false && (
             <section id="services" className="scroll-mt-24 sm:scroll-mt-32">
               <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
                 <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-6 sm:mb-10 flex items-center gap-3">
@@ -647,6 +662,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 </div>
               </div>
             </section>
+            )}
 
             {/* Artists */}
             <section id="artists" className="scroll-mt-24 sm:scroll-mt-32">
@@ -1022,10 +1038,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             <div>
               <h4 className="font-bold text-lg mb-4">Navigation</h4>
               <ul className="space-y-3 text-neutral-300">
-                <li><button onClick={() => scrollToSection('about')} className="hover:text-white transition-colors">À propos</button></li>
-                <li><button onClick={() => scrollToSection('services')} className="hover:text-white transition-colors">Services</button></li>
-                <li><button onClick={() => scrollToSection('portfolio')} className="hover:text-white transition-colors">Portfolio</button></li>
-                <li><button onClick={() => scrollToSection('testimonials')} className="hover:text-white transition-colors">Avis</button></li>
+                <li><button type="button" onClick={() => scrollToSection('about')} className="hover:text-white transition-colors">À propos</button></li>
+                {studioDisplay.showServicesSection !== false && (
+                  <li><button type="button" onClick={() => scrollToSection('services')} className="hover:text-white transition-colors">Services</button></li>
+                )}
+                <li><button type="button" onClick={() => scrollToSection('portfolio')} className="hover:text-white transition-colors">Portfolio</button></li>
+                <li><button type="button" onClick={() => scrollToSection('testimonials')} className="hover:text-white transition-colors">Avis</button></li>
               </ul>
             </div>
             <div>

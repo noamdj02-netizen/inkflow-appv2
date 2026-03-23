@@ -267,7 +267,24 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
 
         {activeSection === 'services' && (
           <div className="space-y-6">
-            <h3 className="font-bold text-lg">Services</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-primary)]">
+              <div>
+                <p className="font-semibold text-[var(--text-primary)]">Section « Nos services » sur la vitrine</p>
+                <p className="text-sm text-[var(--text-tertiary)] mt-1">
+                  Décochez pour masquer la section sur votre page publique. Vous pouvez toujours modifier le contenu ci-dessous.
+                </p>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={data.showServicesSection !== false}
+                  onChange={(e) => update('showServicesSection', e.target.checked)}
+                  className="w-4 h-4 rounded"
+                />
+                <span className="text-sm font-medium text-[var(--text-primary)]">Afficher la section</span>
+              </label>
+            </div>
+            <h3 className="font-bold text-lg">Contenu des offres</h3>
             {data.services.map((service, idx) => (
               <div key={idx} className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4">
                 <div className="flex justify-between items-center">

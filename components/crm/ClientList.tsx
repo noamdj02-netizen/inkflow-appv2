@@ -681,7 +681,7 @@ export const ClientList: React.FC<ClientListProps> = ({
         <Modal
           isOpen={showCsvImportModal}
           onClose={() => setShowCsvImportModal(false)}
-          title="Importer des clients (CSV)"
+          title="Importer des clients"
           size="lg"
         >
           <ClientCsvImport
