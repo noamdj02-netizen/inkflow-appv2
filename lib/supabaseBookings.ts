@@ -144,6 +144,23 @@ export async function createBooking(data: VitrineBookingFormData, studioId: stri
 
   const { error } = await supabase.from('inkflow_bookings').insert(row);
   if (error) throw new Error(error.message || "Erreur lors de l'envoi de la demande.");
+
+  // Notifier le tatoueur par email (non-bloquant)
+  const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-new-booking`;
+  fetch(fnUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '' },
+    body: JSON.stringify({
+      bookingId: id,
+      studioId,
+      clientName: data.clientName.trim(),
+      clientEmail: data.clientEmail.trim(),
+      description: data.description.trim(),
+      requestedDate: data.requestedDate,
+      requestedTime: data.requestedTime?.trim() || null,
+    }),
+  }).catch((e) => console.warn('[notify-new-booking] non-critical error:', e));
+
   return id;
 }
 

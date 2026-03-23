@@ -259,8 +259,75 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // ── Passe 2 : annulation automatique 24h après la relance ──────────────────
+  // RDV avec reminder_sent_at > 12h et toujours deposit_paid = false → annulé
+  const { data: toCancel, error: cancelFetchError } = await supabase
+    .from("inkflow_appointments")
+    .select("id, client_name, client_email, date, studio_id, inkflow_studios ( name )")
+    .in("status", ["pending", "confirmed"])
+    .eq("deposit_paid", false)
+    .not("reminder_sent_at", "is", null)
+    .lt("reminder_sent_at", twelveHoursAgo);  // relance envoyée il y a > 12h → 24h total
+
+  if (!cancelFetchError && toCancel && toCancel.length > 0) {
+    for (const apt of toCancel as AppointmentRow[]) {
+      const { error: cancelError } = await supabase
+        .from("inkflow_appointments")
+        .update({ status: "cancelled" })
+        .eq("id", apt.id);
+
+      if (!cancelError) {
+        results.push({ id: apt.id, status: "skipped", reason: "auto-cancelled: deposit unpaid 24h" });
+        console.log(`remind-unpaid-deposits: auto-cancelled apt ${apt.id}`);
+
+        // Email d'annulation au client (si email disponible)
+        if (apt.client_email) {
+          const studioName = (apt.inkflow_studios as { name: string | null } | null)?.name || "Votre studio";
+          const cancelHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><title>Réservation annulée</title></head>
+<body style="margin:0;padding:0;background:#0d0d0d;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d0d0d;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#161616;border-radius:16px;border:1px solid #2a2a2a;">
+        <tr><td style="padding:28px 32px 20px;border-bottom:1px solid #2a2a2a;">
+          <p style="margin:0;font-size:13px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.06em;">${escapeHtml(studioName)}</p>
+          <h1 style="margin:10px 0 0;font-size:22px;font-weight:700;color:#e8e3dc;">Réservation <span style="color:#ef4444;">annulée</span></h1>
+        </td></tr>
+        <tr><td style="padding:24px 32px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#e8e3dc;">Bonjour <strong>${escapeHtml(apt.client_name)}</strong>,</p>
+          <p style="margin:0 0 16px;font-size:14px;color:#a0998f;line-height:1.6;">
+            Votre demande de RDV du <strong style="color:#e8e3dc;">${escapeHtml(apt.date)}</strong> chez
+            <strong style="color:#e8e3dc;">${escapeHtml(studioName)}</strong> a été annulée
+            car l'acompte n'a pas été réglé dans les 24 heures.
+          </p>
+          <p style="margin:0;font-size:13px;color:#6b6b6b;">Pour prendre un nouveau rendez-vous, contactez directement le studio.</p>
+        </td></tr>
+        <tr><td style="padding:16px 32px;border-top:1px solid #2a2a2a;">
+          <p style="margin:0;font-size:12px;color:#6b6b6b;text-align:center;">
+            <a href="${SITE_URL}" style="color:#c9a96e;text-decoration:none;">ink-flow.me</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+          await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              from: RESEND_FROM,
+              to: [apt.client_email],
+              subject: `Réservation annulée — ${studioName}`,
+              html: cancelHtml,
+            }),
+          }).catch(e => console.error(`remind-unpaid-deposits: cancel email failed for ${apt.id}:`, e));
+        }
+      }
+    }
+  }
+
   return new Response(
-    JSON.stringify({ processed: rows.length, results }),
+    JSON.stringify({ processed: rows.length, cancelled: toCancel?.length ?? 0, results }),
     { headers: { "Content-Type": "application/json", ...corsHeaders } },
   );
 });

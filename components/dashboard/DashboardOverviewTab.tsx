@@ -933,6 +933,29 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             </button>
           )}
 
+          {/* Widget "Actions Requises" — affiché uniquement si demandes en attente */}
+          {pendingRequestsCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('requests')}
+              className="w-full rounded-2xl border border-amber-400/30 dark:border-amber-500/25 bg-amber-50/80 dark:bg-amber-500/10 p-3 flex items-center gap-3 text-left active:scale-[0.99] transition-transform touch-manipulation min-h-[52px]"
+              aria-label={`Voir les ${pendingRequestsCount} demande${pendingRequestsCount > 1 ? 's' : ''} en attente`}
+            >
+              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center shrink-0">
+                <Inbox className="w-5 h-5 text-amber-600 dark:text-amber-400" strokeWidth={2} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 leading-tight">
+                  {pendingRequestsCount} demande{pendingRequestsCount > 1 ? 's' : ''} en attente
+                </p>
+                <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+                  Action requise · Répondre maintenant
+                </p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" strokeWidth={2} aria-hidden />
+            </button>
+          )}
+
           {/* KPIs — grille type widgets iOS */}
           <div>
             <div className="px-0.5 pt-1 pb-2 sm:pb-3 flex flex-col gap-2 min-[380px]:flex-row min-[380px]:items-end min-[380px]:justify-between min-[380px]:gap-3">
