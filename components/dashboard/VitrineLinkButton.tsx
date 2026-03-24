@@ -161,7 +161,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
           className="flex-1 min-w-0 px-3 py-2.5 border border-neutral-200 rounded-xl bg-neutral-50 text-neutral-500 text-sm truncate"
         />
       </div>
-      {/* Ligne 2: boutons sur une ligne (scroll horizontal sur tout petit écran) */}
+      {/* Ligne 2: boutons */}
       <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
         <button
           onClick={handleCopy}
@@ -180,7 +180,35 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
           <ExternalLink className="w-4 h-4" />
           {settings.openButtonText}
         </a>
+        <button
+          onClick={() => setShowQr((v) => !v)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-neutral-100 text-neutral-700 rounded-2xl font-semibold text-sm hover:bg-neutral-200 transition-colors flex-shrink-0 min-h-[44px]"
+          title="Afficher le QR Code"
+        >
+          <QrCode className="w-4 h-4" />
+          QR
+        </button>
       </div>
+
+      {/* QR Code popover */}
+      {showQr && (
+        <div className="mt-3 flex flex-col items-center gap-3 p-4 bg-white border border-neutral-200 rounded-2xl">
+          <div className="flex items-center justify-between w-full">
+            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">QR Code vitrine</p>
+            <button onClick={() => setShowQr(false)} className="p-1 rounded-lg hover:bg-neutral-100 text-neutral-400 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <img
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(vitrineUrl)}&color=171717&bgcolor=FAFAFA`}
+            alt={`QR Code — ${vitrineUrl}`}
+            width={180}
+            height={180}
+            className="rounded-xl"
+          />
+          <p className="text-xs text-neutral-400 text-center break-all">{vitrineUrl}</p>
+        </div>
+      )}
     </div>
   );
 };
