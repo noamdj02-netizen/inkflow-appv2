@@ -10,7 +10,7 @@ import { getStudioIdBySlug, getFlashDesignsFromSupabase } from '../../lib/supaba
 import type { FlashDesign } from '../../types';
 import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 import { toLocalDateString } from '../../lib/utils';
-import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS } from '../../lib/studioAvailability';
+import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS, type StudioAvailabilityResponse } from '../../lib/studioAvailability';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { createBooking } from '../../lib/supabaseBookings';
 import { supabase } from '../../lib/supabase';
@@ -210,18 +210,27 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
       });
   }, [studioId]);
 
+  // État pour les paramètres avancés de disponibilité
+  const [advanceBookingDays, setAdvanceBookingDays] = useState(0);
+  const [dynamicSlotsByDay, setDynamicSlotsByDay] = useState<Record<number, string[]> | null>(null);
+
   useEffect(() => {
     if (!studioId || studioId === 'loading') return;
     let cancelled = false;
     setAvailabilityLoading(true);
     if (supabaseEnabled) {
       fetchStudioAvailability(studioId)
-        .then(({ busySlots: slots, customSlots, bookingWindowDays: windowDays, offDays }) => {
+        .then((response: StudioAvailabilityResponse) => {
           if (!cancelled) {
-            setBusySlots(slots || {});
-            setStudioSlots(customSlots || []);
-            if (windowDays && windowDays > 0) setBookingWindowDays(windowDays);
-            if (offDays !== null) setStudioOffDays(offDays);
+            setBusySlots(response.busySlots || {});
+            setStudioSlots(response.customSlots || []);
+            if (response.bookingWindowDays && response.bookingWindowDays > 0) {
+              setBookingWindowDays(response.bookingWindowDays);
+            }
+            if (response.offDays !== null) setStudioOffDays(response.offDays);
+            // Nouveaux paramètres
+            if (response.advanceBookingDays) setAdvanceBookingDays(response.advanceBookingDays);
+            if (response.dynamicSlotsByDay) setDynamicSlotsByDay(response.dynamicSlotsByDay);
           }
         })
         .catch(() => { if (!cancelled) { setBusySlots({}); setStudioSlots([]); } })
@@ -235,9 +244,22 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
   const getAvailableSlotsForDate = (dateStr: string): string[] => {
     const taken = busySlots[dateStr] || [];
-    // Date entièrement bloquée (période bloquée par le tatoueur)
-    if (taken.includes('__blocked__')) return [];
-    const slots = studioSlots.length > 0 ? studioSlots : DEFAULT_TIME_SLOTS;
+    // Date entièrement bloquée ou complète
+    if (taken.includes('__blocked__') || taken.includes('__full__')) return [];
+    
+    // Déterminer les créneaux possibles pour ce jour
+    let slots: string[];
+    if (dynamicSlotsByDay) {
+      // Utiliser les créneaux dynamiques pré-calculés par jour de la semaine
+      const date = new Date(dateStr + 'T00:00:00');
+      const dayIndex = date.getDay();
+      slots = dynamicSlotsByDay[dayIndex] || [];
+    } else if (studioSlots.length > 0) {
+      slots = studioSlots;
+    } else {
+      slots = DEFAULT_TIME_SLOTS;
+    }
+    
     return slots.filter((t) => !taken.includes(t));
   };
 
@@ -245,10 +267,16 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     const dates: string[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    
+    // Appliquer le délai minimum de réservation
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() + advanceBookingDays);
+    
     const window = bookingWindowDays > 0 ? bookingWindowDays : 365;
     const offDays = studioOffDays ?? DEFAULT_OFF_DAYS;
+    
     for (let i = 0; i < window; i++) {
-      const d = new Date(today);
+      const d = new Date(startDate);
       d.setDate(d.getDate() + i);
       if (offDays.includes(d.getDay())) continue;
       const dateStr = toLocalDateString(d);
