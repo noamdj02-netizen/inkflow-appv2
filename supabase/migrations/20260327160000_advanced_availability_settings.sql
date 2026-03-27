@@ -37,7 +37,7 @@ COMMENT ON COLUMN inkflow_studios.availability_settings IS
 - blockedRanges: périodes bloquées [{start, end, label}]
 - slotDuration: durée créneau en min [number] (30|60|90|120)
 - bufferTime: pause entre clients en min [number] (0|15|30|45|60)
-- overrunMargin: marge de sécurité en min [number] (0|15|30)
+- overrunMargin: marge de sécurité en min [number] (0|15|30|45|60)
 - maxDailyBookings: RDV max/jour [number]
 - advanceBookingDays: délai min réservation [number]
 - weeklySchedule: horaires/jour avec pauses {day: {enabled, open, close, breaks}}';

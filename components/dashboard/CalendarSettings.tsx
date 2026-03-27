@@ -12,15 +12,28 @@ import {
   type CalendarIntegrationStatus,
   type GoogleCalendarEvent,
 } from '../../lib/googleCalendar';
-import type { Appointment } from '../../types';
+import type { Appointment, Client } from '../../types';
+import { CalendarIcsImport } from './CalendarIcsImport';
 
 interface CalendarSettingsProps {
   studioId: string;
   appointments?: Appointment[];
+  clients?: Client[];
+  addClient?: (client: Omit<Client, 'id'>) => string;
+  addAppointment?: (appointment: Appointment) => void;
+  useSupabase?: boolean;
   onToast?: (msg: string, type: 'success' | 'error') => void;
 }
 
-export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, appointments = [], onToast }) => {
+export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
+  studioId,
+  appointments = [],
+  clients = [],
+  addClient,
+  addAppointment,
+  useSupabase = true,
+  onToast,
+}) => {
   const [googleStatus, setGoogleStatus] = useState<CalendarIntegrationStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -215,6 +228,18 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
         )}
       </div>
 
+      {/* ── Import .ics (Apple / Google export) ───── */}
+      {addClient && addAppointment && (
+        <CalendarIcsImport
+          studioId={studioId}
+          clients={clients}
+          appointments={appointments}
+          addClient={addClient}
+          addAppointment={addAppointment}
+          useSupabase={useSupabase}
+        />
+      )}
+
       {/* ── Apple Calendar / Export .ics ───── */}
       <div className="rounded-2xl border-2 border-[var(--border)] p-6 space-y-4">
         <div className="flex items-center justify-between">
@@ -223,7 +248,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
               <Calendar className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="font-medium text-[var(--text-primary)]">Apple Calendrier & Outlook</div>
+              <div className="font-medium text-[var(--text-primary)]">Exporter vers Apple / Outlook</div>
               <div className="text-xs text-[var(--text-secondary)]">
                 Export .ics — compatible Apple Calendrier, Outlook, Google (sans connexion)
               </div>
@@ -236,7 +261,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ studioId, ap
         </div>
 
         <p className="text-xs text-[var(--foreground-muted)]">
-          Téléchargez un fichier .ics pour importer vos rendez-vous dans Apple Calendrier, Outlook ou tout calendrier standard.
+          Téléchargez un fichier .ics pour ouvrir vos rendez-vous Inkflow dans Apple Calendrier, Outlook ou tout calendrier standard.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-2">

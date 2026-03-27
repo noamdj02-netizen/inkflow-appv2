@@ -22,6 +22,7 @@ import { PaymentSuccessModal } from './PaymentSuccessModal';
 import { AvailabilitySettings } from '../settings/AvailabilitySettings';
 import { VitrineSettings } from '../settings/VitrineSettings';
 import { SlugSettings } from '../settings/SlugSettings';
+import { EmailTestCard } from '../settings/EmailTestCard';
 import { InstagramConnect } from '../settings/InstagramConnect';
 import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 import { VitrineLinkButton } from './VitrineLinkButton';
@@ -32,6 +33,7 @@ const DepositsPage = lazy(() => import('./DepositsPage').then(m => ({ default: m
 const AnalyticsDashboard = lazy(() => import('../analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
 const FlashGallery = lazy(() => import('../flash/FlashGallery').then(m => ({ default: m.FlashGallery })));
 const ClientList = lazy(() => import('../crm/ClientList').then(m => ({ default: m.ClientList })));
+const StampLoyaltyTab = lazy(() => import('../crm/StampLoyaltyTab').then(m => ({ default: m.StampLoyaltyTab })));
 const RequestsDashboard = lazy(() => import('./RequestsDashboard').then(m => ({ default: m.RequestsDashboard })));
 const MessagingTab = lazy(() => import('../messaging/MessagingTab').then(m => ({ default: m.MessagingTab })));
 const PortfolioManager = lazy(() => import('./PortfolioManager').then(m => ({ default: m.PortfolioManager })));
@@ -66,6 +68,7 @@ import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../..
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
 import { LANDING_URL, LANDING_PRICING_URL } from '../../lib/urls';
 import { safeJsonParse } from '../../lib/utils';
+import { fetchPendingStampRewardsByEmail, type PendingStampReward } from '../../lib/stampLoyalty';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
@@ -130,7 +133,8 @@ export const DashboardPro: React.FC = () => {
   const [requestsSubTab, setRequestsSubTab] = useState<'rdv' | 'bookings' | 'projects' | 'history'>('rdv');
   const [planningView, setPlanningView] = useState<'week' | 'month'>('week');
   const [financeView, setFinanceView] = useState<'revenus' | 'acomptes' | 'stats'>('revenus');
-  const [clientsView, setClientsView] = useState<'overview' | 'projects' | 'messages'>('overview');
+  const [clientsView, setClientsView] = useState<'overview' | 'projects' | 'messages' | 'loyalty'>('overview');
+  const [stampRewardsByEmail, setStampRewardsByEmail] = useState<Record<string, PendingStampReward>>({});
   const [showWidgetModal, setShowWidgetModal] = useState(false);
   const [customWidgets, setCustomWidgets] = useDashboardWidgets(studioId, useSupabase ?? false, {
     onError: () => toast.error('Erreur de sauvegarde des widgets'),
@@ -236,6 +240,18 @@ export const DashboardPro: React.FC = () => {
     if (user?.studioName != null) setGeneralStudioName(user.studioName);
     if (user?.email != null) setGeneralEmail(user.email);
   }, [user?.studioName, user?.email]);
+
+  useEffect(() => {
+    if (!studioId || !useSupabase) {
+      setStampRewardsByEmail({});
+      return;
+    }
+    let cancelled = false;
+    fetchPendingStampRewardsByEmail(studioId)
+      .then((m) => { if (!cancelled) setStampRewardsByEmail(m); })
+      .catch(() => { if (!cancelled) setStampRewardsByEmail({}); });
+    return () => { cancelled = true; };
+  }, [studioId, useSupabase, appointments, bookings]);
 
   // Load SIRET & Google Place ID from studio when studioId is available
   useEffect(() => {
@@ -1103,6 +1119,10 @@ export const DashboardPro: React.FC = () => {
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Projets
                       </button>
+                      <button onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setClientsView('loyalty'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'loyalty' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'loyalty' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Fidélité
+                      </button>
                       {/* V2: Messagerie avancée masquée pour le MVP */}
                     </div>
                   )}
@@ -1609,6 +1629,7 @@ export const DashboardPro: React.FC = () => {
               bookings={bookings}
               onUpdateBookingStatus={updateBookingStatus}
               bookingsLoading={bookingsLoading}
+              stampRewardsByEmail={stampRewardsByEmail}
             />
             </Suspense>
             </div>
@@ -1640,6 +1661,9 @@ export const DashboardPro: React.FC = () => {
           {!loading && activeTab === 'clients' && (
             <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
+            {clientsView === 'loyalty' ? (
+              <StampLoyaltyTab studioId={studioId} clients={clients} />
+            ) : (
             <ClientList
               clients={clients}
               onAddClient={addClient}
@@ -1658,8 +1682,10 @@ export const DashboardPro: React.FC = () => {
               onUpgradeClick={() => { window.location.href = LANDING_PRICING_URL; }}
               openAddModal={openAddClientModal}
               onAddModalClose={() => setOpenAddClientModal(false)}
-              view={clientsView}
+              view={clientsView === 'messages' ? 'overview' : clientsView}
+              stampStudioId={studioId}
             />
+            )}
             </Suspense>
             </div>
           )}
@@ -1842,6 +1868,8 @@ export const DashboardPro: React.FC = () => {
                       onSlugUpdated={refreshStudioSlug}
                     />
                   )}
+
+                  <EmailTestCard userEmail={user?.email} />
                   
                   {/* Carte Profil */}
                   <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
@@ -2111,7 +2139,17 @@ export const DashboardPro: React.FC = () => {
                   onUpdateSettings={setLoyaltySettings}
                 />
               )}
-              {settingsTab === 'calendar' && <CalendarSettings studioId={studioId || ''} appointments={appointments} onToast={(msg, type) => type === 'success' ? toast.success(msg) : toast.error(msg)} />}
+              {settingsTab === 'calendar' && (
+                <CalendarSettings
+                  studioId={studioId || ''}
+                  appointments={appointments}
+                  clients={clients}
+                  addClient={addClient}
+                  addAppointment={addAppointment}
+                  useSupabase={useSupabase ?? false}
+                  onToast={(msg, type) => (type === 'success' ? toast.success(msg) : toast.error(msg))}
+                />
+              )}
               {settingsTab === 'vitrine' && (
                 (user?.studioName || generalStudioName)?.trim() ? (
                   <VitrineSettings

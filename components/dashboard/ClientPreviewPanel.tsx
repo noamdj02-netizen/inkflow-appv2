@@ -87,6 +87,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
     setSending(true);
     try {
       const { error } = await supabase.from('inkflow_messages').insert({
+        id: `msg_${Date.now()}`,
         studio_id: studioId,
         thread_id: thread.threadId,
         sender_type: 'artist',
