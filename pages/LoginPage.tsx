@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Mail, Sparkles } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
@@ -8,6 +8,126 @@ import { LANDING_URL, APP_URL } from '../lib/urls';
 const LOGIN_HERO_WEBP = '/images/login-hero.webp';
 const LOGIN_HERO_FALLBACK = '/images/login-hero.jpg';
 const LOGIN_HERO_ABSOLUTE = `${APP_URL}/images/login-hero.jpg`;
+
+/* ── iOS-style notification feed ───────────────────────────── */
+const NOTIFS = [
+  {
+    id: 'n1',
+    icon: '🗓️',
+    app: 'InkFlow',
+    title: 'Nouvelle demande',
+    body: 'Lucas B. · Flash serpent — 15 × 10 cm',
+    time: "À l'instant",
+    dot: '#34d399',
+  },
+  {
+    id: 'n2',
+    icon: '💸',
+    app: 'InkFlow',
+    title: 'Acompte reçu · 80 €',
+    body: 'Sarah M. · Papillon aquarelle',
+    time: '2 min',
+    dot: '#60a5fa',
+  },
+  {
+    id: 'n3',
+    icon: '💬',
+    app: 'InkFlow',
+    title: 'Nouveau message',
+    body: '"Merci ! Trop hâte pour vendredi 🙌"',
+    time: '5 min',
+    dot: '#a78bfa',
+  },
+  {
+    id: 'n4',
+    icon: '⏰',
+    app: 'InkFlow',
+    title: 'RDV dans 1 heure',
+    body: 'Antoine R. · Sleeve japonais — Studio A',
+    time: '58 min',
+    dot: '#fb923c',
+  },
+  {
+    id: 'n5',
+    icon: '⭐',
+    app: 'InkFlow',
+    title: 'Nouvel avis Google',
+    body: '"Travail exceptionnel, je recommande !"',
+    time: '12 min',
+    dot: '#fbbf24',
+  },
+];
+
+const IOSNotif: React.FC<{ notif: typeof NOTIFS[0]; index: number }> = ({ notif, index }) => (
+  <motion.div
+    layout
+    key={notif.id}
+    initial={{ opacity: 0, y: -24, scale: 0.92 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    exit={{ opacity: 0, y: -16, scale: 0.94 }}
+    transition={{ type: 'spring', stiffness: 380, damping: 32, delay: index * 0.06 }}
+    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl select-none"
+    style={{
+      background: 'rgba(255,255,255,0.14)',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      border: '1px solid rgba(255,255,255,0.18)',
+      boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
+    }}
+  >
+    {/* App icon */}
+    <div className="relative flex-shrink-0">
+      <div
+        className="w-10 h-10 rounded-[11px] flex items-center justify-center text-lg"
+        style={{ background: 'rgba(0,0,0,0.35)' }}
+      >
+        {notif.icon}
+      </div>
+      <span
+        className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-black/40"
+        style={{ background: notif.dot }}
+      />
+    </div>
+
+    {/* Content */}
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center justify-between gap-2 mb-0.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/50">{notif.app}</span>
+        <span className="text-[10px] text-white/40 flex-shrink-0">{notif.time}</span>
+      </div>
+      <p className="text-sm font-semibold text-white leading-tight truncate">{notif.title}</p>
+      <p className="text-xs text-white/60 leading-tight truncate mt-0.5">{notif.body}</p>
+    </div>
+  </motion.div>
+);
+
+type VisibleNotif = typeof NOTIFS[0] & { uid: number };
+
+const ProNotifFeed: React.FC = () => {
+  const [visible, setVisible] = useState<VisibleNotif[]>([{ ...NOTIFS[0], uid: 0 }]);
+  const counterRef = React.useRef(1);
+  const notifIdxRef = React.useRef(1);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      const notif = NOTIFS[notifIdxRef.current % NOTIFS.length];
+      const uid = counterRef.current++;
+      notifIdxRef.current++;
+      setVisible((cur) => [{ ...notif, uid }, ...cur].slice(0, 3));
+    }, 2600);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="absolute top-8 left-6 right-6 z-20 flex flex-col gap-2.5 pointer-events-none">
+      <AnimatePresence mode="popLayout">
+        {visible.map((n, i) => (
+          <IOSNotif key={n.uid} notif={n} index={i} />
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 export const LoginPage: React.FC = () => {
   const [checkEmailMessage, setCheckEmailMessage] = useState(false);
@@ -40,7 +160,7 @@ export const LoginPage: React.FC = () => {
         description="Connectez-vous à votre espace InkFlow : agenda, réservations, clients et paiements Stripe pour votre studio de tatouage."
         canonical="/login"
         keywords="connexion InkFlow, espace tatoueur, login studio tattoo"
-        ogImageAlt="Connexion InkFlow"
+        ogImageAlt="Personne avec tatouage regardant son téléphone"
       />
       {/* ── LEFT — Login Form ── */}
       <div className="flex-1 flex flex-col min-h-[100dvh]">
@@ -126,17 +246,21 @@ export const LoginPage: React.FC = () => {
       >
         <img
           src={heroSrc}
-          alt="Tatoueur au travail dans un studio de tatouage"
+          alt="Gros plan sur un avant-bras tatoué, la personne consulte son téléphone"
           className="absolute inset-0 h-full w-full object-cover object-center"
           loading="eager"
           fetchPriority="high"
           onError={handleHeroError}
         />
-        {/* Lisibilité du texte : dégradé noir vers le haut */}
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0 bg-black/30 pointer-events-none" aria-hidden />
+        {/* Gradient bottom */}
         <div
           className="absolute inset-x-0 bottom-0 top-1/3 z-[1] bg-gradient-to-t from-black via-black/55 to-transparent pointer-events-none"
           aria-hidden
         />
+        {/* iOS notifications */}
+        <ProNotifFeed />
 
         <div className="absolute bottom-0 left-0 right-0 z-10 px-8 sm:px-10 pb-8 sm:pb-10 pt-24 pointer-events-none safe-bottom">
           <h2 className="text-white text-2xl xl:text-3xl font-bold leading-tight mb-2 drop-shadow-md">
