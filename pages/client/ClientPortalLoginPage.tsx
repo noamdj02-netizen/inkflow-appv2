@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
-const HERO_CLIENT     = '/images/fallon-michael-EQucs66pts0-unsplash.jpg';
-const HERO_FALLBACK   = '/images/login-hero.jpg';
+const HERO_CLIENT   = '/images/client-hero.jpg';
+const HERO_FALLBACK = '/images/fallon-michael-EQucs66pts0-unsplash.jpg';
 
 /* ── Animated portal preview cards ─────────────────────────── */
 const PREVIEW_CARDS = [
@@ -407,8 +407,8 @@ export const ClientPortalLoginPage: React.FC = () => {
           src={heroSrc}
           alt=""
           aria-hidden
-          className="absolute inset-0 w-full h-full object-cover object-center"
-          style={{ opacity: 0.28, filter: 'grayscale(20%) brightness(0.8)' }}
+          className="absolute inset-0 w-full h-full object-cover object-top"
+          style={{ opacity: 0.35, filter: 'brightness(0.75)' }}
           onError={() => setHeroSrc(HERO_FALLBACK)}
         />
         {/* Vignette overlay */}
