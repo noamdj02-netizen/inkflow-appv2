@@ -1,204 +1,159 @@
 /**
- * send-client-magic-link
- * ──────────────────────────────────────────────────────────────
- * Génère un magic link OTP via Supabase Admin API et l'envoie
- * par email via Resend avec le template Inkflow.
- *
- * Body JSON attendu :
- *   { email: string; redirectTo?: string }
- *
- * Secrets requis dans Supabase Edge Functions :
- *   SUPABASE_URL          (auto-injecté)
- *   SUPABASE_SERVICE_ROLE_KEY (auto-injecté)
- *   RESEND_API_KEY
- *   RESEND_FROM_EMAIL     (ex: "Inkflow <noreply@ink-flow.me>")
- *   APP_URL               (ex: https://app.ink-flow.me)
+ * Génère un magic link client via Supabase Admin et envoie un email
+ * branded "My Inkflow" via Resend (dark theme, bouton blanc pill).
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ── Cors ─────────────────────────────────────────────────────
-const CORS = {
+const RESEND_API_KEY  = Deno.env.get("RESEND_API_KEY") || "";
+const RESEND_FROM     = "My Inkflow <contact@ink-flow.me>";
+const APP_URL         = (Deno.env.get("APP_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
+const SUPABASE_URL    = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// ── Config ───────────────────────────────────────────────────
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SERVICE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const RESEND_KEY   = Deno.env.get("RESEND_API_KEY") ?? "";
-const FROM         = Deno.env.get("RESEND_FROM_EMAIL") ?? "Inkflow <noreply@ink-flow.me>";
-const APP_URL      = (Deno.env.get("APP_URL") ?? "https://app.ink-flow.me").replace(/\/+$/, "");
-
-// ── Helper ───────────────────────────────────────────────────
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
-}
-
-// ── Email HTML ────────────────────────────────────────────────
-function buildEmail(magicLink: string): string {
+function buildEmail(magicUrl: string, email: string): string {
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ton lien de connexion Inkflow</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Ton espace client</title>
 </head>
-<body style="margin:0;padding:0;background:#0A0A0A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0A0A;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:520px;background:#111111;border-radius:20px;border:1px solid #202020;overflow:hidden;">
+<body style="margin:0;padding:0;background:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;padding:48px 24px;">
 
-        <!-- Header -->
-        <tr>
-          <td style="padding:32px 32px 20px;border-bottom:1px solid #202020;">
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td>
-                  <span style="font-size:22px;font-weight:900;color:#F5F3EF;letter-spacing:-0.5px;">
-                    Ink<span style="color:#DFFF00;">flow</span>
-                  </span>
-                  <span style="display:inline-block;margin-left:8px;font-size:11px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.12em;vertical-align:middle;">
-                    Espace Client
-                  </span>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:48px;">
+      <div style="display:inline-flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;background:#c9a96e;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;">
+          <span style="font-size:16px;line-height:1;">✦</span>
+        </div>
+        <span style="font-size:20px;font-weight:700;color:#ffffff;vertical-align:middle;">My Inkflow</span>
+      </div>
+    </div>
 
-        <!-- Body -->
-        <tr>
-          <td style="padding:32px;">
-            <p style="margin:0 0 8px;font-size:22px;font-weight:800;color:#F5F3EF;line-height:1.3;">
-              Ton lien de connexion
-            </p>
-            <p style="margin:0 0 28px;font-size:14px;color:#777;line-height:1.6;">
-              Clique sur le bouton ci-dessous pour accéder à ton espace client Inkflow. Ce lien est valable <strong style="color:#ADADAB;">60 minutes</strong> et à usage unique.
-            </p>
-
-            <!-- CTA -->
-            <table cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
-              <tr>
-                <td style="border-radius:14px;background:#DFFF00;box-shadow:0 0 24px rgba(223,255,0,0.22);">
-                  <a href="${magicLink}"
-                     style="display:inline-block;padding:16px 36px;font-size:15px;font-weight:800;color:#0A0A0A;text-decoration:none;letter-spacing:-0.2px;">
-                    Accéder à mon espace →
-                  </a>
-                </td>
-              </tr>
-            </table>
-
-            <p style="margin:0 0 8px;font-size:12px;color:#555;line-height:1.6;">
-              Si le bouton ne fonctionne pas, colle ce lien dans ton navigateur :
-            </p>
-            <p style="margin:0;font-size:11px;color:#444;word-break:break-all;font-family:monospace;background:#0A0A0A;padding:12px 14px;border-radius:10px;border:1px solid #202020;">
-              ${magicLink}
-            </p>
-          </td>
-        </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td style="padding:20px 32px 28px;border-top:1px solid #202020;">
-            <p style="margin:0;font-size:11px;color:#444;line-height:1.6;">
-              Tu reçois cet email car une connexion a été demandée sur <strong style="color:#555;">app.ink-flow.me</strong>.<br />
-              Si ce n'est pas toi, ignore simplement cet email.
-            </p>
-          </td>
-        </tr>
-
-      </table>
-
-      <p style="margin-top:20px;font-size:11px;color:#333;">
-        © Inkflow · Paris, France
+    <!-- Card -->
+    <div style="background:#111111;border:1px solid #242424;border-radius:20px;padding:40px 36px;text-align:center;">
+      <p style="margin:0 0 8px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#525252;">Connexion instantanée</p>
+      <h1 style="margin:0 0 16px;font-size:32px;font-weight:700;color:#ffffff;line-height:1.2;">Ton espace<br>t'attend.</h1>
+      <p style="margin:0 0 32px;font-size:15px;color:#737373;line-height:1.6;">
+        Clique sur le bouton pour accéder à ton espace — RDV, cicatrisation et parrainage en un clic.<br>
+        <span style="font-size:13px;color:#525252;">Lien valable 1 heure.</span>
       </p>
-    </td></tr>
-  </table>
+
+      <!-- CTA pill blanc (style landing) -->
+      <a href="${magicUrl}"
+         style="display:inline-block;background:#ffffff;color:#000000;text-decoration:none;padding:16px 40px;border-radius:9999px;font-size:16px;font-weight:700;letter-spacing:-0.01em;">
+        Activer mon espace client &rarr;
+      </a>
+
+      <p style="margin:24px 0 0;font-size:12px;color:#404040;">
+        Si tu n'as pas demandé cet email, ignore-le simplement.
+      </p>
+    </div>
+
+    <!-- What awaits -->
+    <div style="margin-top:28px;display:flex;gap:12px;">
+      <div style="flex:1;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:14px;padding:20px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:8px;">📅</div>
+        <p style="margin:0;font-size:13px;font-weight:600;color:#ffffff;">Tes RDV</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#525252;">Prochain rendez-vous</p>
+      </div>
+      <div style="flex:1;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:14px;padding:20px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:8px;">🩹</div>
+        <p style="margin:0;font-size:13px;font-weight:600;color:#ffffff;">Cicatrisation</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#525252;">Suivi J+1 à J+30</p>
+      </div>
+      <div style="flex:1;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:14px;padding:20px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:8px;">🎁</div>
+        <p style="margin:0;font-size:13px;font-weight:600;color:#ffffff;">Parrainage</p>
+        <p style="margin:4px 0 0;font-size:12px;color:#525252;">-10€ pour tes amis</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="margin-top:40px;text-align:center;">
+      <p style="margin:0;font-size:12px;color:#333333;">
+        © 2026 InkFlow · <a href="mailto:contact@ink-flow.me" style="color:#525252;text-decoration:none;">contact@ink-flow.me</a>
+      </p>
+    </div>
+
+  </div>
 </body>
 </html>`;
 }
 
-// ── Handler ───────────────────────────────────────────────────
-Deno.serve(async (req: Request) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS });
+    return new Response("ok", { headers: corsHeaders });
   }
-  if (req.method !== "POST") {
-    return json({ error: "Méthode non supportée" }, 405);
-  }
-
-  // Guards config
-  if (!RESEND_KEY) {
-    return json({ error: "RESEND_API_KEY manquant dans les secrets Supabase." }, 500);
-  }
-  if (!SERVICE_KEY) {
-    return json({ error: "SUPABASE_SERVICE_ROLE_KEY manquant." }, 500);
-  }
-
-  let email: string;
-  let redirectTo: string;
 
   try {
-    const body = await req.json() as { email?: string; redirectTo?: string };
-    email      = (body.email ?? "").trim().toLowerCase();
-    redirectTo = (body.redirectTo ?? `${APP_URL}/client`).trim();
-  } catch {
-    return json({ error: "Body JSON invalide." }, 400);
+    const { email } = await req.json();
+    if (!email || typeof email !== "string") {
+      return new Response(JSON.stringify({ error: "email requis" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Generate magic link via Supabase admin ────────────────────
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    const { data, error: linkError } = await adminClient.auth.admin.generateLink({
+      type: "magiclink",
+      email: email.trim().toLowerCase(),
+      options: {
+        redirectTo: `${APP_URL}/client/dashboard`,
+      },
+    });
+
+    if (linkError || !data?.properties?.action_link) {
+      console.error("generateLink error:", linkError);
+      return new Response(
+        JSON.stringify({ error: linkError?.message || "Impossible de générer le lien" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const magicUrl = data.properties.action_link;
+
+    // ── Send via Resend ───────────────────────────────────────────
+    const resendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: RESEND_FROM,
+        to: [email.trim().toLowerCase()],
+        subject: "Ton espace client t'attend ✦",
+        html: buildEmail(magicUrl, email),
+      }),
+    });
+
+    if (!resendRes.ok) {
+      const body = await resendRes.text();
+      console.error("Resend error:", body);
+      return new Response(
+        JSON.stringify({ error: "Erreur d'envoi email" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error(err);
+    return new Response(JSON.stringify({ error: "Erreur interne" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
-
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return json({ error: "Adresse email invalide." }, 400);
-  }
-
-  // 1. Générer le magic link via l'API Admin Supabase
-  const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
-  const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-    type: "magiclink",
-    email,
-    options: { redirectTo },
-  });
-
-  if (linkErr || !linkData?.properties?.action_link) {
-    console.error("[send-client-magic-link] generateLink error:", linkErr);
-    return json(
-      { error: "Impossible de générer le lien magique.", details: linkErr?.message ?? "unknown" },
-      500,
-    );
-  }
-
-  const magicLink = linkData.properties.action_link;
-
-  // 2. Envoyer l'email via Resend
-  const resendRes = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${RESEND_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: FROM,
-      to: [email],
-      subject: "Ton lien de connexion Inkflow",
-      html: buildEmail(magicLink),
-    }),
-  });
-
-  if (!resendRes.ok) {
-    const resendBody = await resendRes.text();
-    console.error("[send-client-magic-link] Resend error:", resendBody);
-    return json(
-      { error: "Échec de l'envoi email (Resend).", details: resendBody.slice(0, 300) },
-      500,
-    );
-  }
-
-  return json({ ok: true });
 });
