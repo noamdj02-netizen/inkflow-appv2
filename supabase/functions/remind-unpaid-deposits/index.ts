@@ -16,6 +16,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { escapeHtml } from "../_shared/emailLayout.ts";
+import { addPreviewBccToPayload } from "../_shared/resend.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -159,12 +160,14 @@ async function sendReminderEmail(
       Authorization: `Bearer ${RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      from: RESEND_FROM,
-      to: [to],
-      subject,
-      html,
-    }),
+    body: JSON.stringify(
+      addPreviewBccToPayload({
+        from: RESEND_FROM,
+        to: [to],
+        subject,
+        html,
+      }),
+    ),
   });
 
   if (!res.ok) {
@@ -314,12 +317,14 @@ Deno.serve(async (req: Request) => {
           await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              from: RESEND_FROM,
-              to: [apt.client_email],
-              subject: `Réservation annulée — ${studioName}`,
-              html: cancelHtml,
-            }),
+            body: JSON.stringify(
+              addPreviewBccToPayload({
+                from: RESEND_FROM,
+                to: [apt.client_email],
+                subject: `Réservation annulée — ${studioName}`,
+                html: cancelHtml,
+              }),
+            ),
           }).catch(e => console.error(`remind-unpaid-deposits: cancel email failed for ${apt.id}:`, e));
         }
       }

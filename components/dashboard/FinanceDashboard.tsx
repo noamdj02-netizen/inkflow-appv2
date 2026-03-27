@@ -299,11 +299,11 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
 
           <div>
             <h3 className="font-semibold text-neutral-800 dark:text-neutral-200 mb-3">Transactions de la période</h3>
-            <div className="border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-hidden">
+            <div className="border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-x-auto">
               {transactions.length === 0 ? (
                 <div className="py-8 text-center text-neutral-400 dark:text-neutral-500 text-sm">Aucune transaction</div>
               ) : (
-                <table className="w-full text-sm">
+                <table className="w-full text-sm min-w-[480px]">
                   <thead>
                     <tr className="bg-zinc-50 dark:bg-zinc-500/10 border-b border-neutral-200 dark:border-neutral-700">
                       <th className="text-left px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">Heure</th>

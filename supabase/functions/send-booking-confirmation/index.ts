@@ -4,6 +4,7 @@
  */
 
 import { escapeHtml } from "../_shared/emailLayout.ts";
+import { addPreviewBccToPayload } from "../_shared/resend.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
@@ -263,15 +264,17 @@ Deno.serve(async (req: Request) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        from: RESEND_FROM,
-        to: [payload.clientEmail],
-        subject,
-        html,
-        attachments: [
-          { filename: "rendez-vous.ics", content: icsBase64 },
-        ],
-      }),
+      body: JSON.stringify(
+        addPreviewBccToPayload({
+          from: RESEND_FROM,
+          to: [payload.clientEmail],
+          subject,
+          html,
+          attachments: [
+            { filename: "rendez-vous.ics", content: icsBase64 },
+          ],
+        }),
+      ),
     });
 
     if (!resendRes.ok) {

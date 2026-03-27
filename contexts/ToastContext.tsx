@@ -95,7 +95,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             <span className="text-sm font-medium text-neutral-800 dark:text-neutral-100 flex-1 line-clamp-3">{currentToast.message}</span>
             <button
               onClick={removeToast}
-              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 shrink-0"
+              className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg hover:bg-black/5 dark:hover:bg-white/10 shrink-0 active:scale-95 transition-transform"
+              aria-label="Fermer"
             >
               <X className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
             </button>

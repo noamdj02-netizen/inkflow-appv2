@@ -7,6 +7,39 @@
 export const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 
+/**
+ * Copie invisible de tous les mails transactionnels (clients + tatoueurs) vers une adresse interne
+ * pour prévisualiser les rendus en prod. Définir le secret Supabase : EMAIL_BCC_PREVIEW=noamdj02@gmail.com
+ * Aucun BCC si le destinataire principal est déjà cette adresse.
+ */
+export function addPreviewBccToPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const bccEmail = Deno.env.get("EMAIL_BCC_PREVIEW")?.trim();
+  if (!bccEmail) return payload;
+
+  const to = payload.to;
+  const list: string[] = Array.isArray(to)
+    ? (to as string[])
+    : typeof to === "string"
+      ? [to]
+      : [];
+  const norm = (s: string) => s.toLowerCase().trim();
+  const bccNorm = norm(bccEmail);
+  if (list.some((e) => typeof e === "string" && norm(e) === bccNorm)) {
+    return payload;
+  }
+
+  const existing = payload.bcc;
+  const bccList: string[] = Array.isArray(existing)
+    ? (existing as unknown[]).filter((x): x is string => typeof x === "string")
+    : typeof existing === "string"
+      ? [existing]
+      : [];
+  if (!bccList.some((e) => norm(e) === bccNorm)) {
+    bccList.push(bccEmail);
+  }
+  return { ...payload, bcc: bccList };
+}
+
 export interface SendEmailParams {
   to: string[];
   subject: string;
@@ -42,13 +75,15 @@ export async function sendEmail(params: SendEmailParams): Promise<{ id: string }
         Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        from: RESEND_FROM,
-        to: params.to,
-        subject: params.subject,
-        html: params.html,
-        text: params.text,
-      }),
+      body: JSON.stringify(
+        addPreviewBccToPayload({
+          from: RESEND_FROM,
+          to: params.to,
+          subject: params.subject,
+          html: params.html,
+          text: params.text,
+        }),
+      ),
     });
     if (!res.ok) {
       const errBody = await res.text();
@@ -80,15 +115,17 @@ export async function sendWithTemplate(params: SendWithTemplateParams): Promise<
         Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        from: RESEND_FROM,
-        to: params.to,
-        subject: params.subject,
-        template: {
-          id: params.templateId,
-          variables: params.variables,
-        },
-      }),
+      body: JSON.stringify(
+        addPreviewBccToPayload({
+          from: RESEND_FROM,
+          to: params.to,
+          subject: params.subject,
+          template: {
+            id: params.templateId,
+            variables: params.variables,
+          },
+        }),
+      ),
     });
     if (!res.ok) {
       const errBody = await res.text();

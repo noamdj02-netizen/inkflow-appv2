@@ -5,17 +5,16 @@ import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { SEO } from '../components/SEO';
 import { LANDING_URL, APP_URL } from '../lib/urls';
-import loginHeroImg from '../src/assets/login-hero.jpg';
-
+const LOGIN_HERO_WEBP = '/images/login-hero.webp';
 const LOGIN_HERO_FALLBACK = '/images/login-hero.jpg';
 const LOGIN_HERO_ABSOLUTE = `${APP_URL}/images/login-hero.jpg`;
 
 export const LoginPage: React.FC = () => {
   const [checkEmailMessage, setCheckEmailMessage] = useState(false);
-  const [heroSrc, setHeroSrc] = useState(loginHeroImg);
+  const [heroSrc, setHeroSrc] = useState(LOGIN_HERO_WEBP);
   const handleHeroError = () => {
     setHeroSrc((prev) => {
-      if (prev === loginHeroImg) return LOGIN_HERO_FALLBACK;
+      if (prev === LOGIN_HERO_WEBP) return LOGIN_HERO_FALLBACK;
       if (prev === LOGIN_HERO_FALLBACK) return LOGIN_HERO_ABSOLUTE;
       return prev;
     });

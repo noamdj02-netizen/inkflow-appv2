@@ -180,6 +180,21 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['inkflow_push_subscriptions']['Row'], 'id' | 'created_at'> & { id?: string; created_at?: string };
         Update: Partial<Database['public']['Tables']['inkflow_push_subscriptions']['Insert']>;
       };
+      inkflow_followups: {
+        Row: {
+          id: string;
+          studio_id: string;
+          appointment_id: string;
+          wave: 'j1' | 'j7' | 'j30';
+          client_email: string;
+          sent_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['inkflow_followups']['Row'], 'id' | 'sent_at'> & {
+          id?: string;
+          sent_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['inkflow_followups']['Insert']>;
+      };
     };
     Views: Record<string, never>;
     Functions: {
