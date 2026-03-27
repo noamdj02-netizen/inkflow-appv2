@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { ArrowLeft, Mail, Sparkles } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { SEO } from '../components/SEO';
@@ -30,7 +30,7 @@ export const LoginPage: React.FC = () => {
 
   return (
     <motion.div
-      className="min-h-screen flex bg-white dark:bg-black"
+      className="min-h-[100dvh] flex bg-white dark:bg-black"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
@@ -43,7 +43,7 @@ export const LoginPage: React.FC = () => {
         ogImageAlt="Connexion InkFlow"
       />
       {/* ── LEFT — Login Form ── */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-[100dvh]">
         <header className="p-4 sm:p-6 safe-top flex-shrink-0">
           <a
             href={LANDING_URL}
@@ -103,31 +103,48 @@ export const LoginPage: React.FC = () => {
                 Créer un compte
               </a>
             </p>
+
+            <div className="mt-5 pt-5 border-t border-zinc-200 dark:border-zinc-800">
+              <a
+                href="/client"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-400 dark:hover:border-zinc-500 transition-all"
+              >
+                <Sparkles className="w-4 h-4" style={{ color: '#c9a96e' }} />
+                Accéder à mon espace client
+              </a>
+            </div>
           </motion.div>
         </div>
       </div>
 
-      {/* ── RIGHT — Hero Photo Panel (desktop only, 100vh) ── */}
+      {/* ── RIGHT — Hero (desktop) : pleine hauteur viewport, pas de bande grise, texte lisible sur dégradé ── */}
       <motion.div
-        className="hidden lg:flex lg:w-[520px] xl:w-[600px] min-h-screen h-screen flex-shrink-0 relative overflow-hidden"
+        className="hidden lg:flex lg:w-[520px] xl:w-[600px] h-[100dvh] max-h-[100dvh] min-h-0 flex-shrink-0 relative overflow-hidden bg-zinc-950"
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
         <img
           src={heroSrc}
-          alt="Tatoueur"
-          className="absolute inset-0 w-full min-h-full object-cover object-bottom"
+          alt="Tatoueur au travail dans un studio de tatouage"
+          className="absolute inset-0 h-full w-full object-cover object-center"
           loading="eager"
           fetchPriority="high"
           onError={handleHeroError}
         />
+        {/* Lisibilité du texte : dégradé noir vers le haut */}
+        <div
+          className="absolute inset-x-0 bottom-0 top-1/3 z-[1] bg-gradient-to-t from-black via-black/55 to-transparent pointer-events-none"
+          aria-hidden
+        />
 
-        <div className="absolute bottom-0 left-0 right-0 z-10 px-10 pb-10 pt-16 pointer-events-none">
-          <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
+        <div className="absolute bottom-0 left-0 right-0 z-10 px-8 sm:px-10 pb-8 sm:pb-10 pt-24 pointer-events-none safe-bottom">
+          <h2 className="text-white text-2xl xl:text-3xl font-bold leading-tight mb-2 drop-shadow-md">
             Gérez votre studio.
           </h2>
-          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">Libérez votre art.</p>
+          <p className="text-white/95 text-base xl:text-lg font-medium leading-snug drop-shadow-md">
+            Libérez votre art.
+          </p>
         </div>
       </motion.div>
     </motion.div>
