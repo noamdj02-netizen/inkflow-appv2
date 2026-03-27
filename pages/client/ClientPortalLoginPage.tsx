@@ -6,6 +6,9 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
+const HERO_WEBP = '/images/login-hero.webp';
+const HERO_JPG  = '/images/login-hero.jpg';
+
 /* ── Animated portal preview cards ─────────────────────────── */
 const PREVIEW_CARDS = [
   {
@@ -178,10 +181,11 @@ const PortalPreview: React.FC = () => {
 
 /* ── Main page ──────────────────────────────────────────────── */
 export const ClientPortalLoginPage: React.FC = () => {
-  const [email, setEmail]     = useState('');
-  const [sent, setSent]       = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+  const [email, setEmail]       = useState('');
+  const [sent, setSent]         = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+  const [heroSrc, setHeroSrc]   = useState(HERO_WEBP);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,14 +193,22 @@ export const ClientPortalLoginPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const { error: err } = await supabase.auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/client/dashboard`,
-          data: { portal: 'client' },
-        },
-      });
-      if (err) throw err;
+      // Use custom edge function for branded email (bouton "Activer mon espace client")
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-client-magic-link`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Erreur lors de l'envoi.");
+      }
       setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors de l'envoi. Réessaie.");
@@ -390,6 +402,21 @@ export const ClientPortalLoginPage: React.FC = () => {
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
+        {/* Background photo — very dark overlay so cards stay readable */}
+        <img
+          src={heroSrc}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          style={{ opacity: 0.18, filter: 'grayscale(100%) contrast(1.1)' }}
+          onError={() => setHeroSrc(HERO_JPG)}
+        />
+        {/* Vignette overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.7) 100%)' }}
+          aria-hidden
+        />
         <PortalPreview />
       </motion.div>
     </motion.div>
