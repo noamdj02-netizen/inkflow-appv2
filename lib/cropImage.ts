@@ -3,8 +3,9 @@ import type { Area } from 'react-easy-crop';
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.addEventListener('load', () => resolve(img));
-    img.addEventListener('error', (e) => reject(e));
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(new Error(`Image load failed: ${e}`));
     img.src = src;
   });
 }

@@ -70,13 +70,29 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
       cropBlobRef.current = null;
     }
     setCropSession(null);
+    setImageLoading(false);
   };
 
   const startCropFromFile = (file: File, field: 'url' | 'beforeUrl') => {
     if (cropBlobRef.current) URL.revokeObjectURL(cropBlobRef.current);
-    const url = URL.createObjectURL(file);
-    cropBlobRef.current = url;
-    setCropSession({ src: url, field });
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        cropBlobRef.current = null;
+        setCropSession({ src: dataUrl, field });
+        setImageLoading(false);
+      } else {
+        toast.error('Impossible de lire l\'image');
+        setImageLoading(false);
+      }
+    };
+    reader.onerror = () => {
+      toast.error('Erreur de lecture du fichier');
+      setImageLoading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const thirtyDaysAgo = new Date();
@@ -136,13 +152,26 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, field: 'url' | 'beforeUrl') => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > MAX_IMAGE_SIZE_BYTES) {
-        toast.error('Image trop lourde (max 5 Mo)');
-        return;
-      }
-      setUploadError(null);
+    if (!file) {
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Seules les images sont acceptées');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      toast.error('Image trop lourde (max 5 Mo)');
+      e.target.value = '';
+      return;
+    }
+    setUploadError(null);
+    setImageLoading(true);
+    try {
       startCropFromFile(file, field);
+    } catch (err) {
+      toast.error('Impossible de charger l\'image');
+      setImageLoading(false);
     }
     e.target.value = '';
   };
@@ -514,8 +543,21 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                     <p className="text-xs text-slate-500">ou utilisez l'appareil photo / la galerie</p>
                   </>
                 )}
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'url')} />
-                <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFileSelect(e, 'url')} />
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
+                  className="hidden"
+                  onChange={e => handleFileSelect(e, 'url')}
+                />
+                <input
+                  ref={cameraRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={e => handleFileSelect(e, 'url')}
+                />
               </div>
 
               {newItem.url && isGeminiConfigured() && (
@@ -578,7 +620,13 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                 >
                   {newItem.beforeUrl ? '✓ Photo ajoutée' : 'Ajouter'}
                 </button>
-                <input ref={beforeRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'beforeUrl')} />
+                <input
+                  ref={beforeRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
+                  className="hidden"
+                  onChange={e => handleFileSelect(e, 'beforeUrl')}
+                />
               </div>
 
               <select
