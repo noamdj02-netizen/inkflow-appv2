@@ -660,18 +660,38 @@ export const ClientDashboard: React.FC = () => {
   const [favStudios, setFavStudios] = useState<Set<string>>(new Set());
   const [favFlashes, setFavFlashes] = useState<Set<string>>(new Set());
 
-  // Auth guard
+  // Auth guard — resilient to magic link hash tokens
   useEffect(() => {
-    supabase.auth.getSession().then(({data:{session}})=>{
-      if (!session?.user?.email) { window.location.href='/client'; return; }
-      setEmail(session.user.email);
+    const hasHashToken = window.location.hash.includes('access_token');
+    let redirectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (redirectTimer) { clearTimeout(redirectTimer); redirectTimer = null; }
+      if (session?.user?.email) {
+        setEmail(session.user.email);
+        // Clean hash from URL after magic link login
+        if (window.location.hash) window.history.replaceState({}, '', '/client/dashboard');
+      } else if (event === 'SIGNED_OUT') {
+        window.location.href = '/client';
+      }
     });
-    const {data:{subscription}} = supabase.auth.onAuthStateChange((_,s)=>{
-      if (!s?.user?.email) window.location.href='/client';
-      else setEmail(s.user.email);
-    });
-    return ()=>subscription.unsubscribe();
-  },[]);
+
+    if (!hasHashToken) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session?.user?.email) {
+          // Give onAuthStateChange 2s to fire before redirecting
+          redirectTimer = setTimeout(() => { window.location.href = '/client'; }, 2000);
+        } else {
+          setEmail(session.user.email);
+        }
+      });
+    }
+
+    return () => {
+      subscription.unsubscribe();
+      if (redirectTimer) clearTimeout(redirectTimer);
+    };
+  }, []);
 
   // Load data
   useEffect(()=>{
