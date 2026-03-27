@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Mail, Sparkles } from 'lucide-react';
+import {
+  ArrowLeft, Mail, Sparkles,
+  Calendar, TrendingUp, Zap, Star,
+} from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { SEO } from '../components/SEO';
@@ -9,122 +12,180 @@ const LOGIN_HERO_WEBP = '/images/login-hero.webp';
 const LOGIN_HERO_FALLBACK = '/images/login-hero.jpg';
 const LOGIN_HERO_ABSOLUTE = `${APP_URL}/images/login-hero.jpg`;
 
-/* ── iOS-style notification feed ───────────────────────────── */
-const NOTIFS = [
+/* ── Pro dashboard preview cards ── */
+const PRO_CARDS = [
   {
-    id: 'n1',
-    icon: '🗓️',
-    app: 'InkFlow',
-    title: 'Nouvelle demande',
-    body: 'Lucas B. · Flash serpent — 15 × 10 cm',
-    time: "À l'instant",
-    dot: '#34d399',
+    id: 'agenda',
+    icon: Calendar,
+    label: 'Prochain RDV',
+    title: 'Antoine R. · Sleeve japonais',
+    sub: "Aujourd'hui · 14h00 · Studio A",
+    accent: '#ffffff',
+    tag: 'Confirmé',
+    tagBg: 'rgba(255,255,255,0.12)',
+    avatar: { initials: 'AR', grad: ['#0ea5e9', '#38bdf8'] },
   },
   {
-    id: 'n2',
-    icon: '💸',
-    app: 'InkFlow',
-    title: 'Acompte reçu · 80 €',
-    body: 'Sarah M. · Papillon aquarelle',
-    time: '2 min',
-    dot: '#60a5fa',
+    id: 'revenue',
+    icon: TrendingUp,
+    label: 'Revenus ce mois',
+    title: '2 840 €',
+    sub: '+18 % vs mois dernier · 23 séances',
+    accent: '#c9a96e',
+    tag: 'En hausse',
+    tagBg: 'rgba(201,169,110,0.18)',
+    progress: 0.72,
   },
   {
-    id: 'n3',
-    icon: '💬',
-    app: 'InkFlow',
-    title: 'Nouveau message',
-    body: '"Merci ! Trop hâte pour vendredi 🙌"',
-    time: '5 min',
-    dot: '#a78bfa',
+    id: 'flash',
+    icon: Zap,
+    label: 'Flash disponible',
+    title: '3 designs dispo',
+    sub: 'Dragon · Rose · Serpent · 2 demandes',
+    accent: '#ffffff',
+    tag: 'Nouveau',
+    tagBg: 'rgba(255,255,255,0.12)',
   },
   {
-    id: 'n4',
-    icon: '⏰',
-    app: 'InkFlow',
-    title: 'RDV dans 1 heure',
-    body: 'Antoine R. · Sleeve japonais — Studio A',
-    time: '58 min',
-    dot: '#fb923c',
-  },
-  {
-    id: 'n5',
-    icon: '⭐',
-    app: 'InkFlow',
-    title: 'Nouvel avis Google',
-    body: '"Travail exceptionnel, je recommande !"',
-    time: '12 min',
-    dot: '#fbbf24',
+    id: 'review',
+    icon: Star,
+    label: 'Nouvel avis',
+    title: '⭐⭐⭐⭐⭐ · Camille D.',
+    sub: '"Travail exceptionnel, je recommande !"',
+    accent: '#c9a96e',
+    tag: '5 étoiles',
+    tagBg: 'rgba(201,169,110,0.18)',
   },
 ];
 
-const IOSNotif: React.FC<{ notif: typeof NOTIFS[0]; index: number }> = ({ notif, index }) => (
-  <motion.div
-    layout
-    key={notif.id}
-    initial={{ opacity: 0, y: -24, scale: 0.92 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    exit={{ opacity: 0, y: -16, scale: 0.94 }}
-    transition={{ type: 'spring', stiffness: 380, damping: 32, delay: index * 0.06 }}
-    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl select-none"
-    style={{
-      background: 'rgba(255,255,255,0.14)',
-      backdropFilter: 'blur(24px)',
-      WebkitBackdropFilter: 'blur(24px)',
-      border: '1px solid rgba(255,255,255,0.18)',
-      boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
-    }}
-  >
-    {/* App icon */}
-    <div className="relative flex-shrink-0">
-      <div
-        className="w-10 h-10 rounded-[11px] flex items-center justify-center text-lg"
-        style={{ background: 'rgba(0,0,0,0.35)' }}
-      >
-        {notif.icon}
-      </div>
-      <span
-        className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-black/40"
-        style={{ background: notif.dot }}
-      />
-    </div>
-
-    {/* Content */}
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center justify-between gap-2 mb-0.5">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/50">{notif.app}</span>
-        <span className="text-[10px] text-white/40 flex-shrink-0">{notif.time}</span>
-      </div>
-      <p className="text-sm font-semibold text-white leading-tight truncate">{notif.title}</p>
-      <p className="text-xs text-white/60 leading-tight truncate mt-0.5">{notif.body}</p>
-    </div>
-  </motion.div>
-);
-
-type VisibleNotif = typeof NOTIFS[0] & { uid: number };
-
-const ProNotifFeed: React.FC = () => {
-  const [visible, setVisible] = useState<VisibleNotif[]>([{ ...NOTIFS[0], uid: 0 }]);
-  const counterRef = React.useRef(1);
-  const notifIdxRef = React.useRef(1);
+const ProDashPreview: React.FC = () => {
+  const [active, setActive] = useState(0);
 
   useEffect(() => {
-    const t = setInterval(() => {
-      const notif = NOTIFS[notifIdxRef.current % NOTIFS.length];
-      const uid = counterRef.current++;
-      notifIdxRef.current++;
-      setVisible((cur) => [{ ...notif, uid }, ...cur].slice(0, 3));
-    }, 2600);
+    const t = setInterval(() => setActive((p) => (p + 1) % PRO_CARDS.length), 3000);
     return () => clearInterval(t);
   }, []);
 
+  const card = PRO_CARDS[active];
+  const Icon = card.icon;
+
   return (
-    <div className="absolute top-8 left-6 right-6 z-20 flex flex-col gap-2.5 pointer-events-none">
-      <AnimatePresence mode="popLayout">
-        {visible.map((n, i) => (
-          <IOSNotif key={n.uid} notif={n} index={i} />
-        ))}
-      </AnimatePresence>
+    <div className="w-full h-full flex flex-col items-center justify-center px-10 py-12 relative select-none">
+      {/* Subtle grid */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }}
+        aria-hidden
+      />
+
+      {/* App header mock */}
+      <div className="w-full max-w-[340px] mb-6">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Logo size="sm" className="rounded-lg" />
+            <span className="text-white text-sm font-bold">InkFlow Pro</span>
+          </div>
+          <div className="flex gap-1">
+            {PRO_CARDS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setActive(i)}
+                className="transition-all"
+                style={{
+                  width: i === active ? 20 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  background: i === active ? '#c9a96e' : 'rgba(255,255,255,0.15)',
+                }}
+                aria-label={`Slide ${i + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Card */}
+      <div className="w-full max-w-[340px]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={card.id}
+            initial={{ opacity: 0, y: 18, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -18, scale: 0.97 }}
+            transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+            className="rounded-2xl p-5 border"
+            style={{ background: '#111111', borderColor: '#242424' }}
+          >
+            <div className="flex items-start justify-between mb-4">
+              {'avatar' in card && card.avatar ? (
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                  style={{ background: `linear-gradient(135deg, ${card.avatar.grad[0]}, ${card.avatar.grad[1]})` }}
+                >
+                  {card.avatar.initials}
+                </div>
+              ) : (
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'rgba(255,255,255,0.07)' }}
+                >
+                  <Icon className="w-5 h-5 text-white" />
+                </div>
+              )}
+              <span
+                className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                style={{ background: card.tagBg, color: card.accent }}
+              >
+                {card.tag}
+              </span>
+            </div>
+
+            <p className="text-xs text-zinc-500 mb-1">{card.label}</p>
+            <p className="text-white font-bold text-lg leading-tight mb-1">{card.title}</p>
+            <p className="text-zinc-400 text-sm leading-snug">{card.sub}</p>
+
+            {card.progress !== undefined && (
+              <div className="mt-4">
+                <div className="flex justify-between text-xs text-zinc-600 mb-1.5">
+                  <span>Ce mois</span><span>Objectif</span>
+                </div>
+                <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                  <motion.div
+                    className="h-full rounded-full"
+                    style={{ background: '#c9a96e' }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${card.progress * 100}%` }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                  />
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Ghost cards below for depth */}
+        <div
+          className="mx-3 h-3 rounded-b-2xl -mt-1 border-x border-b"
+          style={{ background: '#0a0a0a', borderColor: '#1c1c1c' }}
+        />
+        <div
+          className="mx-6 h-2.5 rounded-b-2xl -mt-0.5 border-x border-b"
+          style={{ background: '#070707', borderColor: '#161616' }}
+        />
+      </div>
+
+      {/* Bottom tagline */}
+      <div className="mt-10 text-center">
+        <p className="text-white text-xl font-bold leading-tight mb-1">
+          Gérez votre studio.<br />Libérez votre art.
+        </p>
+        <p className="text-zinc-500 text-sm">
+          Agenda · Clients · Paiements
+        </p>
+      </div>
     </div>
   );
 };
@@ -150,7 +211,7 @@ export const LoginPage: React.FC = () => {
 
   return (
     <motion.div
-      className="min-h-[100dvh] flex bg-white dark:bg-black"
+      className="h-[100dvh] flex overflow-hidden bg-white dark:bg-black"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
@@ -163,7 +224,7 @@ export const LoginPage: React.FC = () => {
         ogImageAlt="Personne avec tatouage regardant son téléphone"
       />
       {/* ── LEFT — Login Form ── */}
-      <div className="flex-1 flex flex-col min-h-[100dvh]">
+      <div className="flex-1 flex flex-col h-full overflow-y-auto">
         <header className="p-4 sm:p-6 safe-top flex-shrink-0">
           <a
             href={LANDING_URL}
@@ -237,39 +298,24 @@ export const LoginPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── RIGHT — Hero (desktop) : pleine hauteur viewport, pas de bande grise, texte lisible sur dégradé ── */}
+      {/* ── RIGHT — Pro dashboard preview (desktop) ── */}
       <motion.div
-        className="hidden lg:flex lg:w-[520px] xl:w-[600px] h-[100dvh] max-h-[100dvh] min-h-0 flex-shrink-0 relative overflow-hidden bg-zinc-950"
+        className="hidden lg:flex lg:w-[520px] xl:w-[600px] h-full flex-shrink-0 relative overflow-hidden"
+        style={{ background: '#080808', borderLeft: '1px solid #1a1a1a' }}
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
+        {/* Background hero photo */}
         <img
           src={heroSrc}
-          alt="Gros plan sur un avant-bras tatoué, la personne consulte son téléphone"
-          className="absolute inset-0 h-full w-full object-cover object-center"
-          loading="eager"
-          fetchPriority="high"
+          alt=""
+          aria-hidden
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          style={{ opacity: 0.35, filter: 'brightness(0.8)' }}
           onError={handleHeroError}
         />
-        {/* Dark overlay for readability */}
-        <div className="absolute inset-0 bg-black/30 pointer-events-none" aria-hidden />
-        {/* Gradient bottom */}
-        <div
-          className="absolute inset-x-0 bottom-0 top-1/3 z-[1] bg-gradient-to-t from-black via-black/55 to-transparent pointer-events-none"
-          aria-hidden
-        />
-        {/* iOS notifications */}
-        <ProNotifFeed />
-
-        <div className="absolute bottom-0 left-0 right-0 z-10 px-8 sm:px-10 pb-8 sm:pb-10 pt-24 pointer-events-none safe-bottom">
-          <h2 className="text-white text-2xl xl:text-3xl font-bold leading-tight mb-2 drop-shadow-md">
-            Gérez votre studio.
-          </h2>
-          <p className="text-white/95 text-base xl:text-lg font-medium leading-snug drop-shadow-md">
-            Libérez votre art.
-          </p>
-        </div>
+        <ProDashPreview />
       </motion.div>
     </motion.div>
   );
