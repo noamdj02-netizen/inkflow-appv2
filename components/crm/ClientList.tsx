@@ -20,6 +20,8 @@ import { Modal } from '../ui/Modal';
 import { useToast } from '../../contexts/ToastContext';
 import { useAutoSave } from '../../hooks/useAutoSave';
 import { ClientCsvImport, type ClientCsvImportRow } from './ClientCsvImport';
+import { ClientStampCard } from './ClientStampCard';
+import { fetchStampLoyaltySettings, fetchStampStateForClient, type StampLoyaltySettings, DEFAULT_STAMP_LOYALTY } from '../../lib/stampLoyalty';
 
 const NOTES_KEY = (clientId: string) => `inkflow-notes-${clientId}`;
 
@@ -46,6 +48,8 @@ interface ClientListProps {
   csvImportRemainingSlots?: number;
   /** Google Place ID renseigné (avis sur la vitrine) */
   googlePlaceConfigured?: boolean;
+  /** Studio Supabase — affiche la carte à tampons dans le détail client */
+  stampStudioId?: string | null;
   /** Ouvre Paramètres métier (Établissement) pour configurer le Place ID */
   onOpenGoogleReviewsSettings?: () => void;
   /** Vue depuis la sidebar : 'overview' = liste clients, 'projects' = demandes projet par client */
@@ -67,6 +71,7 @@ export const ClientList: React.FC<ClientListProps> = ({
   onImportCsv,
   csvImportRemainingSlots,
   googlePlaceConfigured,
+  stampStudioId,
   onOpenGoogleReviewsSettings,
   view = 'overview',
 }) => {
@@ -78,6 +83,8 @@ export const ClientList: React.FC<ClientListProps> = ({
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [stampSettings, setStampSettings] = useState<StampLoyaltySettings>(DEFAULT_STAMP_LOYALTY);
+  const [stampStateModal, setStampStateModal] = useState<{ stampsInCycle: number; totalCompletedTattoos: number } | null>(null);
 
   useEffect(() => {
     if (openAddModal && onAddClient && !clientLimitReached) setShowAddModal(true);
@@ -142,6 +149,28 @@ export const ClientList: React.FC<ClientListProps> = ({
       setNotes(localStorage.getItem(NOTES_KEY(selectedClient.id)) || '');
     }
   }, [selectedClient, useSupabase, loadClientNotes]);
+
+  useEffect(() => {
+    if (!selectedClient || !stampStudioId || !useSupabase) {
+      setStampStateModal(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const [s, st] = await Promise.all([
+          fetchStampLoyaltySettings(stampStudioId),
+          fetchStampStateForClient(stampStudioId, selectedClient.id),
+        ]);
+        if (cancelled) return;
+        setStampSettings(s);
+        setStampStateModal(st);
+      } catch {
+        if (!cancelled) setStampStateModal(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedClient?.id, stampStudioId, useSupabase]);
 
   const closeModalAndSave = () => {
     saveNow();
@@ -574,6 +603,14 @@ export const ClientList: React.FC<ClientListProps> = ({
                 </div>
               </div>
             </div>
+            {useSupabase && stampStudioId && (
+              <ClientStampCard
+                enabled={stampSettings.enabled}
+                tattoosRequired={stampSettings.tattoosRequired}
+                stampsInCycle={stampStateModal?.stampsInCycle ?? 0}
+                totalCompleted={stampStateModal?.totalCompletedTattoos}
+              />
+            )}
             <div>
               <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3 flex items-center gap-2"><StickyNote className="w-4 h-4" /> Notes & Cicatrisation</h3>
               <textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={saveNow}

@@ -16,6 +16,72 @@ function sanitizeEmail(email: string): string {
   return String(email).trim().slice(0, MAX_EMAIL_LENGTH);
 }
 
+/** Logs visibles dans la console navigateur (Vercel / devtools) et reprise dans les rapports d’erreur. */
+export function logEdgeInvokeError(functionName: string, error: unknown, extra?: unknown): void {
+  const msg = error instanceof Error ? error.message : String(error);
+  console.error(`[InkFlow] ${functionName}:`, msg, extra !== undefined ? extra : '');
+}
+
+type InvokeErrorLike = {
+  message?: string;
+  context?: { json?: () => Promise<unknown>; status?: number };
+};
+
+async function parseEdgeInvokeErrorDetails(error: InvokeErrorLike, data: unknown): Promise<string | undefined> {
+  if (data && typeof data === 'object') {
+    const d = data as { userMessage?: string; error?: string; details?: string };
+    if (d.userMessage) return d.userMessage;
+    if (d.details) return d.details;
+    if (typeof d.error === 'string') return d.error;
+  }
+  if (typeof error?.context?.json === 'function') {
+    try {
+      const body = (await error.context.json()) as { userMessage?: string; error?: string; details?: string };
+      return body?.userMessage || body?.details || (typeof body?.error === 'string' ? body.error : undefined);
+    } catch {
+      /* ignore */
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Test Resend + secrets Supabase depuis le dashboard (Edge Function `send-email-test`).
+ */
+export async function testEmailConnection(): Promise<{
+  ok: boolean;
+  message: string;
+  details?: string;
+}> {
+  try {
+    const { data, error } = await supabase.functions.invoke('send-email-test', { body: {} });
+    if (error) {
+      const details = await parseEdgeInvokeErrorDetails(error, data);
+      logEdgeInvokeError('send-email-test', error, data);
+      const msg =
+        details ||
+        error.message ||
+        "Échec send-email-test — déployez la fonction : supabase functions deploy send-email-test";
+      return { ok: false, message: msg, details };
+    }
+    const d = data as { success?: boolean; error?: string; userMessage?: string; details?: string } | null;
+    if (d && (d.error || d.success === false)) {
+      return {
+        ok: false,
+        message: d.userMessage || d.error || 'Échec serveur',
+        details: d.details,
+      };
+    }
+    return { ok: true, message: "Email de test envoyé. Vérifiez votre boîte (et les spams)." };
+  } catch (err) {
+    logEdgeInvokeError('send-email-test', err);
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : 'Erreur inconnue',
+    };
+  }
+}
+
 interface ProjectNotificationData {
   studioId: string;
   clientName: string;
@@ -42,13 +108,9 @@ export async function sendProjectNotification(data: ProjectNotificationData): Pr
       budget: sanitizeText(data.budget, 100),
     };
     const { error } = await supabase.functions.invoke('send-project-notification', { body });
-    if (import.meta.env.DEV && error) {
-      console.warn('[InkFlow] send-project-notification:', error.message);
-    }
+    if (error) logEdgeInvokeError('send-project-notification', error);
   } catch (err) {
-    if (import.meta.env.DEV) {
-      console.warn('[InkFlow] send-project-notification error:', err);
-    }
+    logEdgeInvokeError('send-project-notification', err);
   }
 }
 
@@ -85,13 +147,9 @@ export async function sendBookingConfirmation(params: SendBookingConfirmationPar
       studioAddress: params.studioAddress ? sanitizeText(params.studioAddress, 300) : undefined,
     };
     const { error } = await supabase.functions.invoke('send-booking-confirmation', { body });
-    if (import.meta.env.DEV && error) {
-      console.warn('[InkFlow] send-booking-confirmation:', error.message);
-    }
+    if (error) logEdgeInvokeError('send-booking-confirmation', error);
   } catch (err) {
-    if (import.meta.env.DEV) {
-      console.warn('[InkFlow] send-booking-confirmation error:', err);
-    }
+    logEdgeInvokeError('send-booking-confirmation', err);
   }
 }
 
@@ -116,13 +174,9 @@ export async function sendBookingRefusal(params: SendBookingRefusalParams): Prom
       description: params.description ? sanitizeText(params.description, 500) : undefined,
     };
     const { error } = await supabase.functions.invoke('send-booking-refusal', { body });
-    if (import.meta.env.DEV && error) {
-      console.warn('[InkFlow] send-booking-refusal:', error.message);
-    }
+    if (error) logEdgeInvokeError('send-booking-refusal', error);
   } catch (err) {
-    if (import.meta.env.DEV) {
-      console.warn('[InkFlow] send-booking-refusal error:', err);
-    }
+    logEdgeInvokeError('send-booking-refusal', err);
   }
 }
 
@@ -187,18 +241,18 @@ export async function sendConversationLinkToClient(params: SendConversationLinkT
       const msg = unauthorized
         ? 'Session expirée ou non autorisée (401). Reconnectez-vous puis réessayez.'
         : error.message;
-      console.warn('[InkFlow] Email lien conversation non envoyé:', msg, data);
+      logEdgeInvokeError('send-client-conversation-link', error, data);
       const errorDetails = await getErrorDetails();
       return { sent: false, unauthorized: unauthorized || undefined, errorDetails };
     }
     if (data?.error) {
       const errorDetails = (data as { userMessage?: string }).userMessage || data.error;
-      console.warn('[InkFlow] Email lien conversation échec serveur:', data.error, data.details);
+      logEdgeInvokeError('send-client-conversation-link', data.error, data);
       return { sent: false, errorDetails };
     }
     return { sent: true };
   } catch (err) {
-    console.warn('[InkFlow] Email lien conversation erreur:', err);
+    logEdgeInvokeError('send-client-conversation-link', err);
     return { sent: false };
   }
 }
@@ -225,7 +279,7 @@ export interface SendMessageNotificationToStudioParams {
  */
 export async function sendMessageNotificationToClient(params: SendMessageNotificationToClientParams): Promise<void> {
   try {
-    await supabase.functions.invoke('send-message-notification', {
+    const { error } = await supabase.functions.invoke('send-message-notification', {
       body: {
         type: 'to_client',
         clientEmail: params.clientEmail,
@@ -236,8 +290,9 @@ export async function sendMessageNotificationToClient(params: SendMessageNotific
         threadId: params.threadId,
       },
     });
-  } catch {
-    // ignore
+    if (error) logEdgeInvokeError('send-message-notification (to_client)', error);
+  } catch (err) {
+    logEdgeInvokeError('send-message-notification (to_client)', err);
   }
 }
 
@@ -258,13 +313,9 @@ export async function sendAftercareEmail(params: SendAftercareEmailParams): Prom
       studioId: params.studioId,
     };
     const { error } = await supabase.functions.invoke('send-aftercare-email', { body });
-    if (import.meta.env.DEV && error) {
-      console.warn('[InkFlow] send-aftercare-email:', error.message);
-    }
+    if (error) logEdgeInvokeError('send-aftercare-email', error);
   } catch (err) {
-    if (import.meta.env.DEV) {
-      console.warn('[InkFlow] send-aftercare-email error:', err);
-    }
+    logEdgeInvokeError('send-aftercare-email', err);
   }
 }
 
@@ -285,13 +336,9 @@ export async function sendReferralNotification(params: SendReferralNotificationP
       refereeStudioName: sanitizeText(params.refereeStudioName, MAX_NAME_LENGTH) ?? 'Un studio',
     };
     const { error } = await supabase.functions.invoke('send-referral-notification', { body });
-    if (import.meta.env.DEV && error) {
-      console.warn('[InkFlow] send-referral-notification:', error.message);
-    }
+    if (error) logEdgeInvokeError('send-referral-notification', error);
   } catch (err) {
-    if (import.meta.env.DEV) {
-      console.warn('[InkFlow] send-referral-notification error:', err);
-    }
+    logEdgeInvokeError('send-referral-notification', err);
   }
 }
 
@@ -301,7 +348,7 @@ export async function sendReferralNotification(params: SendReferralNotificationP
  */
 export async function sendMessageNotificationToStudio(params: SendMessageNotificationToStudioParams): Promise<void> {
   try {
-    await supabase.functions.invoke('send-message-notification', {
+    const { error } = await supabase.functions.invoke('send-message-notification', {
       body: {
         type: 'to_studio',
         studioId: params.studioId,
@@ -310,8 +357,9 @@ export async function sendMessageNotificationToStudio(params: SendMessageNotific
         threadId: params.threadId,
       },
     });
-  } catch {
-    // ignore
+    if (error) logEdgeInvokeError('send-message-notification (to_studio)', error);
+  } catch (err) {
+    logEdgeInvokeError('send-message-notification (to_studio)', err);
   }
 }
 

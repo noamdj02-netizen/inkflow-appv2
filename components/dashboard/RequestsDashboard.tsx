@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { MessageSquare, CheckCircle, XCircle, Calendar, FileText, Mail, Clock, CreditCard, Copy, Loader2, AlertTriangle, MapPin, Ruler, Sparkles } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { MessageSquare, CheckCircle, XCircle, Calendar, FileText, Mail, Clock, CreditCard, Copy, Loader2, AlertTriangle, MapPin, Ruler, Sparkles, Gift } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
 import { Appointment, ProjectRequest, Booking, BookingStatus, Client } from '../../types';
 import { RequestQuickViewSheet } from './RequestQuickViewSheet';
@@ -13,6 +13,7 @@ import { saveAppointmentToSupabase } from '../../lib/supabaseDashboard';
 import { isSlotAvailableForBooking } from '../../lib/supabaseBookings';
 import { sendConversationLinkToClient, sendBookingConfirmation, sendBookingRefusal } from '../../lib/sendNotification';
 import { supabase } from '../../lib/supabase';
+import type { PendingStampReward } from '../../lib/stampLoyalty';
 
 interface RequestsDashboardProps {
   studioId: string | null;
@@ -31,6 +32,8 @@ interface RequestsDashboardProps {
   bookings?: Booking[];
   onUpdateBookingStatus?: (id: string, status: BookingStatus) => Promise<void>;
   bookingsLoading?: boolean;
+  /** Récompenses fidélité tampons en attente (email → montant + code), pour alerter le tatoueur */
+  stampRewardsByEmail?: Record<string, PendingStampReward>;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -62,7 +65,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   onOpenMessageThread,
   bookings = [],
   onUpdateBookingStatus,
-  bookingsLoading = false
+  bookingsLoading = false,
+  stampRewardsByEmail = {},
 }) => {
   const toast = useToast();
   const clientByEmail = useMemo(() => {
@@ -75,6 +79,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     clients.forEach((c) => { if (c.name) m.set(c.name.toLowerCase().trim(), c); });
     return m;
   }, [clients]);
+  const stampRewardForEmail = useCallback(
+    (email: string | undefined) => {
+      const key = (email || '').toLowerCase().trim();
+      if (!key) return undefined;
+      return stampRewardsByEmail[key];
+    },
+    [stampRewardsByEmail]
+  );
   const getAvatar = (email?: string, clientId?: string, name?: string) => {
     if (clientId) {
       const c = clients.find((x) => x.id === clientId);
@@ -653,7 +665,9 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             </div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-zinc-800">
-              {pendingAppointments.map(apt => (
+              {pendingAppointments.map(apt => {
+                const stampRw = stampRewardForEmail(apt.clientEmail);
+                return (
                 <div key={apt.id} className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-500/20 dark:to-blue-500/10 flex items-center justify-center flex-shrink-0 overflow-hidden ring-1 ring-blue-200/50 dark:ring-blue-500/20">
                     {(() => {
@@ -671,6 +685,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       <Mail className="w-3.5 h-3.5" />
                       {apt.clientEmail}
                     </div>
+                    {stampRw && (
+                      <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/90 dark:border-emerald-500/35 dark:bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-900 dark:text-emerald-100">
+                        <Gift className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>
+                          Ce client possède un avantage de <strong>{stampRw.amountEuros}€</strong> à valoir sur ce projet — code{' '}
+                          <code className="font-mono text-xs bg-white/70 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">{stampRw.promoCode}</code>
+                        </span>
+                      </div>
+                    )}
                     <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-slate-500 dark:text-slate-400">
                       <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800 px-2.5 py-1 rounded-lg">
                         <Calendar className="w-3.5 h-3.5" />
@@ -700,7 +723,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     </button>
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
           )
         )}
@@ -783,6 +806,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 const reqType = inferRequestType(bk.description);
                 const placement = bk.placement;
                 const size = bk.size;
+                const stampRwBk = stampRewardForEmail(bk.clientEmail);
                 return (
                 <div key={bk.id} className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors border-b border-slate-100 dark:border-zinc-800 last:border-b-0">
                   <button type="button" onClick={() => setSheetItem({ ...bk, _type: 'booking' })} className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto">
@@ -802,6 +826,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                           <Mail className="w-3.5 h-3.5 shrink-0" />
                           {bk.clientEmail}
                         </div>
+                        {stampRwBk && (
+                          <div className="mt-2.5 flex items-start gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/90 dark:border-emerald-500/35 dark:bg-emerald-500/10 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-100">
+                            <Gift className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                            <span>
+                              Avantage fidélité : <strong>{stampRwBk.amountEuros}€</strong> — code{' '}
+                              <code className="font-mono text-xs bg-white/70 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">{stampRwBk.promoCode}</code>
+                            </span>
+                          </div>
+                        )}
                         <div className="flex flex-wrap gap-1.5 mt-2.5">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
                             {reqType === 'flash' ? <Sparkles className="w-3 h-3" /> : <FileText className="w-3 h-3" />}

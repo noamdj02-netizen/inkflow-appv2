@@ -95,7 +95,9 @@ export const LoginForm: React.FC = () => {
             bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800
             text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500
             rounded-2xl
-            focus:outline-none focus:ring-2 focus:ring-zinc-900/15 dark:focus:ring-white/20 focus:border-zinc-400 dark:focus:border-zinc-600
+            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-950
+            focus:ring-zinc-900/35 dark:focus:ring-white/50
+            focus:border-zinc-900 dark:focus:border-white
             transition-all duration-150
             disabled:opacity-40
           "
@@ -125,7 +127,9 @@ export const LoginForm: React.FC = () => {
             bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800
             text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500
             rounded-2xl
-            focus:outline-none focus:ring-2 focus:ring-zinc-900/15 dark:focus:ring-white/20 focus:border-zinc-400 dark:focus:border-zinc-600
+            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-zinc-950
+            focus:ring-zinc-900/35 dark:focus:ring-white/50
+            focus:border-zinc-900 dark:focus:border-white
             transition-all duration-150
             disabled:opacity-40
           "

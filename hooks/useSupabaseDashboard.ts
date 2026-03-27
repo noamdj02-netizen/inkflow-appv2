@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { processStampLoyaltyAfterCompletedAppointment } from '../lib/stampLoyalty';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSupabaseEnabled } from './useSupabaseEnabled';
@@ -49,6 +50,10 @@ export const useSupabaseDashboard = () => {
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const appointmentsRef = useRef<Appointment[]>([]);
+  useEffect(() => {
+    appointmentsRef.current = appointments;
+  }, [appointments]);
   const [clients, setClients] = useState<Client[]>([]);
   const [flashDesigns, setFlashDesigns] = useState<FlashDesign[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -212,8 +217,18 @@ export const useSupabaseDashboard = () => {
         id,
         (apt) => ({ ...apt, ...updates, updatedAt: new Date().toISOString() }),
         (updated) =>
-          saveAppointmentToSupabase(studioId, updated).then(() => {
+          saveAppointmentToSupabase(studioId, updated).then(async () => {
             pushAppointmentToGoogle(studioId, updated.id).catch(() => {});
+            if (updated.status === 'completed') {
+              const prev = appointmentsRef.current.find((a) => a.id === updated.id);
+              if (prev?.status !== 'completed') {
+                try {
+                  await processStampLoyaltyAfterCompletedAppointment(studioId, updated);
+                } catch (e) {
+                  console.warn('Fidélité tampons:', e);
+                }
+              }
+            }
           })
       );
     } else {

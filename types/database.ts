@@ -5,7 +5,15 @@
  */
 export interface Database {
   public: {
+    /** Index + intersection : satisfait `Record<string, GenericTable>` pour @supabase/supabase-js ≥ 2.95 */
     Tables: {
+      [key: string]: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+    } & {
       inkflow_studios: {
         Row: {
           id: string;
@@ -37,6 +45,7 @@ export interface Database {
           csv_import_slots_remaining?: number | null;
         };
         Update: Partial<Database['public']['Tables']['inkflow_studios']['Insert']>;
+        Relationships: [];
       };
       inkflow_appointments: {
         Row: {
@@ -64,6 +73,7 @@ export interface Database {
         };
         Insert: Omit<Database['public']['Tables']['inkflow_appointments']['Row'], 'created_at' | 'updated_at'> & { created_at?: string; updated_at?: string };
         Update: Partial<Database['public']['Tables']['inkflow_appointments']['Insert']>;
+        Relationships: [];
       };
       inkflow_clients: {
         Row: {
@@ -85,6 +95,7 @@ export interface Database {
         };
         Insert: Omit<Database['public']['Tables']['inkflow_clients']['Row'], 'created_at' | 'updated_at'> & { created_at?: string; updated_at?: string };
         Update: Partial<Database['public']['Tables']['inkflow_clients']['Insert']>;
+        Relationships: [];
       };
       inkflow_flash_designs: {
         Row: {
@@ -107,6 +118,7 @@ export interface Database {
         };
         Insert: Omit<Database['public']['Tables']['inkflow_flash_designs']['Row'], 'created_at' | 'updated_at'> & { created_at?: string; updated_at?: string };
         Update: Partial<Database['public']['Tables']['inkflow_flash_designs']['Insert']>;
+        Relationships: [];
       };
       inkflow_notifications: {
         Row: {
@@ -121,6 +133,7 @@ export interface Database {
         };
         Insert: Omit<Database['public']['Tables']['inkflow_notifications']['Row'], 'created_at'> & { created_at?: string };
         Update: Partial<Database['public']['Tables']['inkflow_notifications']['Insert']>;
+        Relationships: [];
       };
       inkflow_vitrine_data: {
         Row: {
@@ -130,6 +143,7 @@ export interface Database {
         };
         Insert: { studio_id: string; data: Record<string, unknown>; updated_at?: string };
         Update: Partial<Database['public']['Tables']['inkflow_vitrine_data']['Insert']>;
+        Relationships: [];
       };
       inkflow_widgets: {
         Row: {
@@ -140,6 +154,7 @@ export interface Database {
         };
         Insert: { studio_id: string; widgets: unknown[]; widget_order?: string[]; updated_at?: string };
         Update: Partial<Database['public']['Tables']['inkflow_widgets']['Insert']>;
+        Relationships: [];
       };
       inkflow_bookings: {
         Row: {
@@ -157,6 +172,7 @@ export interface Database {
         };
         Insert: Omit<Database['public']['Tables']['inkflow_bookings']['Row'], 'created_at' | 'updated_at'> & { created_at?: string; updated_at?: string; reference_images?: string[] };
         Update: Partial<Database['public']['Tables']['inkflow_bookings']['Insert']>;
+        Relationships: [];
       };
       inkflow_user_settings: {
         Row: {
@@ -167,6 +183,7 @@ export interface Database {
         };
         Insert: { studio_id: string; onboarding_step?: number; onboarding_dismissed?: boolean; updated_at?: string };
         Update: Partial<Database['public']['Tables']['inkflow_user_settings']['Insert']>;
+        Relationships: [];
       };
       inkflow_push_subscriptions: {
         Row: {
@@ -179,6 +196,7 @@ export interface Database {
         };
         Insert: Omit<Database['public']['Tables']['inkflow_push_subscriptions']['Row'], 'id' | 'created_at'> & { id?: string; created_at?: string };
         Update: Partial<Database['public']['Tables']['inkflow_push_subscriptions']['Insert']>;
+        Relationships: [];
       };
       inkflow_followups: {
         Row: {
@@ -194,6 +212,7 @@ export interface Database {
           sent_at?: string;
         };
         Update: Partial<Database['public']['Tables']['inkflow_followups']['Insert']>;
+        Relationships: [];
       };
       inkflow_health_forms: {
         Row: {
@@ -233,14 +252,47 @@ export interface Database {
         };
         Update: Partial<Database['public']['Tables']['inkflow_health_forms']['Insert']>;
       };
+      inkflow_messages: {
+        Row: {
+          id: string;
+          studio_id: string;
+          thread_id: string;
+          sender_type: string;
+          sender_name: string;
+          content: string;
+          read: boolean;
+          created_at: string;
+        };
+        /** Pas de self-référence Database[...] ici (sinon résolution circulaire → never) */
+        Insert: {
+          id: string;
+          studio_id: string;
+          thread_id: string;
+          sender_type?: string;
+          sender_name: string;
+          content: string;
+          read?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<{
+          id: string;
+          studio_id: string;
+          thread_id: string;
+          sender_type: string;
+          sender_name: string;
+          content: string;
+          read: boolean;
+          created_at: string;
+        }>;
+        Relationships: [];
+      };
     };
-    Views: Record<string, never>;
+    Views: { [_ in never]: never };
     Functions: {
       get_studio_public_by_slug: {
         Args: { p_slug: string };
         Returns: { id: string; name: string; studio_name: string; slug: string }[];
       };
     };
-    Enums: Record<string, never>;
   };
 }
