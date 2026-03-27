@@ -1058,8 +1058,14 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
       {/* Modal Questionnaire de Santé */}
       {showHealthForm && (
-        <div className="fixed inset-0 z-[60] bg-zinc-50 overflow-y-auto safe-top safe-bottom">
-          <div className="min-h-full px-4 py-6">
+        <div 
+          className="fixed inset-0 z-[60] bg-zinc-50 overflow-y-auto overscroll-contain"
+          style={{ 
+            paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)',
+            paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+          }}
+        >
+          <div className="min-h-full px-4 py-4">
             <div className="max-w-lg mx-auto">
               <HealthQuestionnaireForm
                 clientName={`${form.firstName} ${form.lastName}`}

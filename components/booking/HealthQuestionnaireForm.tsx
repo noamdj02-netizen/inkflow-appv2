@@ -61,13 +61,13 @@ interface YesNoFieldProps {
 }
 
 const YesNoField: React.FC<YesNoFieldProps> = ({ label, value, onChange, required = true }) => (
-  <div className="flex items-center justify-between py-3 border-b border-zinc-100 last:border-0">
-    <span className="text-sm text-zinc-700 font-medium pr-4">{label}</span>
-    <div className="flex items-center gap-3 flex-shrink-0">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 border-b border-zinc-100 last:border-0 gap-2 sm:gap-4">
+    <span className="text-sm text-zinc-700 font-medium">{label}</span>
+    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
       <button
         type="button"
         onClick={() => onChange(true)}
-        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+        className={`flex-1 sm:flex-none min-w-[60px] min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.97] touch-manipulation ${
           value === true
             ? 'bg-zinc-900 text-white'
             : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
@@ -78,7 +78,7 @@ const YesNoField: React.FC<YesNoFieldProps> = ({ label, value, onChange, require
       <button
         type="button"
         onClick={() => onChange(false)}
-        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+        className={`flex-1 sm:flex-none min-w-[60px] min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.97] touch-manipulation ${
           value === false
             ? 'bg-zinc-900 text-white'
             : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
@@ -149,33 +149,33 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
   }, [form]);
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-lg mx-auto">
+    <form onSubmit={handleSubmit} className="w-full max-w-lg mx-auto px-1">
       {/* Header */}
-      <div className="bg-white rounded-t-2xl border border-zinc-100 shadow-sm p-5">
+      <div className="bg-white rounded-t-2xl border border-zinc-200 shadow-sm p-4 sm:p-5">
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-rose-50 flex items-center justify-center flex-shrink-0">
             <Heart className="w-5 h-5 text-rose-500" strokeWidth={1.5} />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-zinc-900">Questionnaire de santé</h2>
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-lg font-bold text-zinc-900">Questionnaire de santé</h2>
             <p className="text-xs text-zinc-500">Obligatoire avant le paiement</p>
           </div>
         </div>
         <div className="mt-4 flex items-center gap-2">
-          <div className="flex-1 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+          <div className="flex-1 h-2 bg-zinc-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-zinc-900 rounded-full transition-all duration-300"
               style={{ width: `${(answeredCount / 10) * 100}%` }}
             />
           </div>
-          <span className="text-xs font-medium text-zinc-500">{answeredCount}/10</span>
+          <span className="text-xs font-medium text-zinc-500 tabular-nums">{answeredCount}/10</span>
         </div>
       </div>
 
       {/* Informations personnelles */}
-      <div className="bg-white border-x border-zinc-100 p-5">
+      <div className="bg-white border-x border-zinc-200 p-4 sm:p-5">
         <h3 className="text-sm font-semibold text-zinc-900 mb-3">Vos informations</h3>
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
           <div>
             <label className="block text-xs font-medium text-zinc-500 mb-1.5">Prénom</label>
             <input
@@ -186,7 +186,7 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
                 update('clientName', `${e.target.value} ${lastName}`.trim());
               }}
               placeholder="Jean"
-              className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
+              className="w-full px-4 py-3 min-h-[48px] rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-base"
               required
             />
           </div>
@@ -200,7 +200,7 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
                 update('clientName', `${firstName} ${e.target.value}`.trim());
               }}
               placeholder="Dupont"
-              className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
+              className="w-full px-4 py-3 min-h-[48px] rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-base"
               required
             />
           </div>
@@ -211,14 +211,14 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
             type="date"
             value={form.clientBirthdate}
             onChange={(e) => update('clientBirthdate', e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm"
+            className="w-full px-4 py-3 min-h-[48px] rounded-xl border border-zinc-200 text-zinc-900 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-base"
             required
           />
         </div>
       </div>
 
       {/* Questions de santé */}
-      <div className="bg-white border-x border-zinc-100 p-5">
+      <div className="bg-white border-x border-zinc-200 p-4 sm:p-5">
         <h3 className="text-sm font-semibold text-zinc-900 mb-3">Questions de santé</h3>
         <div className="space-y-0">
           <YesNoField label="Allergies connues" value={form.allergies} onChange={(v) => update('allergies', v)} />
@@ -229,7 +229,7 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
                 value={form.allergiesDetails}
                 onChange={(e) => update('allergiesDetails', e.target.value)}
                 placeholder="Précisez vos allergies..."
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-sm bg-zinc-50"
+                className="w-full px-4 py-3 min-h-[48px] rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-base bg-zinc-50"
                 required
               />
             </div>
@@ -248,7 +248,7 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
 
       {/* Avertissements */}
       {(form.diabete || form.maladiesInfectieuses || form.infectionsVirales) && (
-        <div className="bg-amber-50 border-x border-amber-100 px-5 py-4">
+        <div className="bg-amber-50 border-x border-amber-200 px-4 sm:px-5 py-4">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-amber-800 space-y-1">
@@ -261,17 +261,17 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
       )}
 
       {/* Certification et signature */}
-      <div className="bg-white border-x border-b border-zinc-100 rounded-b-2xl p-5">
+      <div className="bg-white border-x border-b border-zinc-200 rounded-b-2xl p-4 sm:p-5">
         <div className="flex items-start gap-3 mb-4">
           <input
             type="checkbox"
             id="certify"
             checked={form.certifiedAccurate}
             onChange={(e) => update('certifiedAccurate', e.target.checked)}
-            className="mt-1 w-5 h-5 accent-zinc-900 rounded"
+            className="mt-0.5 w-6 h-6 min-w-[24px] accent-zinc-900 rounded cursor-pointer"
             required
           />
-          <label htmlFor="certify" className="text-sm text-zinc-600 leading-relaxed">
+          <label htmlFor="certify" className="text-sm text-zinc-600 leading-relaxed cursor-pointer">
             Je certifie sur l'honneur que les informations ci-dessus sont exactes. 
             Je comprends qu'une omission pourrait compromettre ma sécurité.
           </label>
@@ -286,19 +286,19 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
             value={form.signatureText}
             onChange={(e) => update('signatureText', e.target.value)}
             placeholder="Votre nom complet"
-            className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-base font-medium italic"
+            className="w-full px-4 py-3 min-h-[48px] rounded-xl border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-colors text-base font-medium italic"
             required
           />
         </div>
       </div>
 
       {/* Actions */}
-      <div className="mt-4 flex items-center gap-3">
+      <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         {onBack && (
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border border-zinc-200 text-zinc-700 font-semibold hover:bg-zinc-50 transition-colors active:scale-[0.98]"
+            className="flex items-center justify-center gap-2 min-h-[52px] px-5 py-3.5 rounded-xl border border-zinc-200 text-zinc-700 font-semibold hover:bg-zinc-50 transition-colors active:scale-[0.98] touch-manipulation"
           >
             <ChevronLeft className="w-5 h-5" />
             Retour
@@ -307,7 +307,7 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
         <button
           type="submit"
           disabled={!isComplete}
-          className={`flex-1 h-14 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+          className={`flex-1 min-h-[56px] rounded-xl font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] touch-manipulation ${
             isComplete
               ? 'bg-zinc-900 text-white hover:bg-zinc-800'
               : 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
@@ -319,7 +319,7 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
       </div>
       
       {!isComplete && (
-        <p className="text-center text-xs text-zinc-500 mt-3">
+        <p className="text-center text-xs text-zinc-500 mt-3 pb-4">
           Répondez à toutes les questions et signez pour continuer
         </p>
       )}
