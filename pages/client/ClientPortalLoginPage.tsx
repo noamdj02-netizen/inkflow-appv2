@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
-const HERO_WEBP = '/images/login-hero.webp';
-const HERO_JPG  = '/images/login-hero.jpg';
+const HERO_CLIENT     = '/images/fallon-michael-EQucs66pts0-unsplash.jpg';
+const HERO_FALLBACK   = '/images/login-hero.jpg';
 
 /* ── Animated portal preview cards ─────────────────────────── */
 const PREVIEW_CARDS = [
@@ -185,7 +185,7 @@ export const ClientPortalLoginPage: React.FC = () => {
   const [sent, setSent]         = useState(false);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
-  const [heroSrc, setHeroSrc]   = useState(HERO_WEBP);
+  const [heroSrc, setHeroSrc]   = useState(HERO_CLIENT);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,7 +193,7 @@ export const ClientPortalLoginPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      // Use custom edge function for branded email (bouton "Activer mon espace client")
+      const redirectTo = `${window.location.origin}/client/dashboard`;
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-client-magic-link`,
         {
@@ -202,7 +202,7 @@ export const ClientPortalLoginPage: React.FC = () => {
             'Content-Type': 'application/json',
             'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
-          body: JSON.stringify({ email: email.trim().toLowerCase() }),
+          body: JSON.stringify({ email: email.trim().toLowerCase(), redirectTo }),
         }
       );
       if (!res.ok) {
@@ -402,14 +402,14 @@ export const ClientPortalLoginPage: React.FC = () => {
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        {/* Background photo — very dark overlay so cards stay readable */}
+        {/* Background photo */}
         <img
           src={heroSrc}
           alt=""
           aria-hidden
           className="absolute inset-0 w-full h-full object-cover object-center"
-          style={{ opacity: 0.18, filter: 'grayscale(100%) contrast(1.1)' }}
-          onError={() => setHeroSrc(HERO_JPG)}
+          style={{ opacity: 0.28, filter: 'grayscale(20%) brightness(0.8)' }}
+          onError={() => setHeroSrc(HERO_FALLBACK)}
         />
         {/* Vignette overlay */}
         <div
