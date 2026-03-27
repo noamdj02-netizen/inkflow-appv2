@@ -21,8 +21,14 @@ export const AuthCallbackPage: React.FC = () => {
     }
 
     setStatus('success');
+    // Priority: 1) redirect_to query param (magic link client portal)
+    //           2) sessionStorage (pro login)
+    //           3) fallback /dashboard
+    const redirectTo = params.get('redirect_to');
     const redirectUrl =
-      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) || '/dashboard';
+      redirectTo ||
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) ||
+      '/dashboard';
     try {
       sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
     } catch {
@@ -42,10 +48,13 @@ export const AuthCallbackPage: React.FC = () => {
       const name = (meta.name as string) || u.email?.split('@')[0] || 'User';
       const studioName = (meta.studio_name as string) || 'Mon studio';
       const referralCode = (meta.referral_code as string) || undefined;
-      try {
-        await ensureStudio(u.email ?? '', name, studioName, referralCode);
-      } catch {
-        // Ne pas bloquer la redirection
+      // Only run ensureStudio for pro login (not client portal)
+      if (!redirectUrl.includes('/client')) {
+        try {
+          await ensureStudio(u.email ?? '', name, studioName, referralCode);
+        } catch {
+          // Ne pas bloquer la redirection
+        }
       }
       if (!cancelled) window.location.href = redirectUrl;
     };

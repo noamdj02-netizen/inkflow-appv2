@@ -21,7 +21,7 @@ export const ClientPortalLoginPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const redirectTo = `${window.location.origin}/client/dashboard`;
+      const redirectTo = `${window.location.origin}/auth/callback?redirect_to=/client/dashboard`;
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-client-magic-link`,
         {
