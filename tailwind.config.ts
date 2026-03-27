@@ -20,22 +20,6 @@ export default {
           border: '#27272a',
           'border-light': '#3f3f46',
         },
-      },
-      borderRadius: {
-        'inkflow-card': '1rem',
-        'inkflow-btn': '9999px',
-      },
-      height: {
-        screen: '100dvh',
-      },
-      minHeight: {
-        screen: '100dvh',
-      },
-      spacing: {
-        'safe-bottom': 'env(safe-area-inset-bottom, 0px)',
-        'safe-top': 'env(safe-area-inset-top, 0px)',
-      },
-      colors: {
         /* Aligner indigo sur la palette maquette InkFlow (violet / lavande) */
         indigo: {
           50: '#f5f0ff',
@@ -50,6 +34,20 @@ export default {
           900: '#3b1668',
           950: '#1e1535',
         },
+      },
+      borderRadius: {
+        'inkflow-card': '1rem',
+        'inkflow-btn': '9999px',
+      },
+      height: {
+        screen: '100dvh',
+      },
+      minHeight: {
+        screen: '100dvh',
+      },
+      spacing: {
+        'safe-bottom': 'env(safe-area-inset-bottom, 0px)',
+        'safe-top': 'env(safe-area-inset-top, 0px)',
       },
     },
   },

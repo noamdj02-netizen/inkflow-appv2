@@ -263,7 +263,7 @@ const UnhandledRejectionHandler: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem storageKey="inkflow-theme">
+      <ThemeProvider attribute="data-theme" defaultTheme="dark" storageKey="inkflow-theme">
         <div className="app-root">
           <AuthProvider>
             <AppSplashGate>
