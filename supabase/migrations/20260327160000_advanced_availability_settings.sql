@@ -1,0 +1,43 @@
+-- InkFlow: Extension availability_settings pour gestion avancée des créneaux
+-- Ajoute: bufferTime, slotDuration, overrunMargin, weeklySchedule
+--
+-- Structure JSON étendue:
+-- {
+--   "customSlots": ["10:30", "14:00"],           -- créneaux fixes (optionnel)
+--   "offDays": [0, 1],                            -- jours fermés (0=dim)
+--   "bookingWindowDays": 60,                      -- fenêtre de réservation
+--   "blockedRanges": [...],                       -- périodes bloquées
+--
+--   -- NOUVEAUX PARAMÈTRES --
+--   "slotDuration": 60,                           -- durée d'un créneau en minutes (30, 60, 90, 120)
+--   "bufferTime": 30,                             -- pause entre 2 clients en minutes (0, 15, 30, 45, 60)
+--   "overrunMargin": 15,                          -- marge de sécurité en minutes (0, 15, 30)
+--   "maxDailyBookings": 8,                        -- RDV max par jour
+--   "advanceBookingDays": 7,                      -- délai min de réservation en jours
+--
+--   "weeklySchedule": {                           -- horaires par jour avec pauses
+--     "monday":    { "enabled": true, "open": "10:00", "close": "19:00", "breaks": [{"start":"13:00","end":"14:00"}] },
+--     "tuesday":   { "enabled": true, "open": "10:00", "close": "19:00", "breaks": [] },
+--     ...
+--   }
+-- }
+--
+-- Note: Cette migration est idempotente car availability_settings est déjà JSONB.
+-- Les nouvelles clés sont simplement attendues par le code.
+
+-- Pas de modification de schéma nécessaire, la colonne JSONB existe déjà.
+-- Cette migration documente la structure étendue.
+
+-- Commentaire de documentation
+COMMENT ON COLUMN inkflow_studios.availability_settings IS 
+'Configuration avancée des disponibilités:
+- customSlots: créneaux fixes [string[]]
+- offDays: jours fermés [number[]] (0=dim)
+- bookingWindowDays: fenêtre max [number]
+- blockedRanges: périodes bloquées [{start, end, label}]
+- slotDuration: durée créneau en min [number] (30|60|90|120)
+- bufferTime: pause entre clients en min [number] (0|15|30|45|60)
+- overrunMargin: marge de sécurité en min [number] (0|15|30)
+- maxDailyBookings: RDV max/jour [number]
+- advanceBookingDays: délai min réservation [number]
+- weeklySchedule: horaires/jour avec pauses {day: {enabled, open, close, breaks}}';

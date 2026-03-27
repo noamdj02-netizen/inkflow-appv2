@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Clock, Plus, Trash2, Save, Calendar, AlertCircle, Timer } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Clock, Plus, Trash2, Save, Calendar, AlertCircle, Timer, Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface AvailabilitySettingsProps {
@@ -7,25 +7,45 @@ interface AvailabilitySettingsProps {
   onSave?: (settings: unknown) => void;
 }
 
+interface DaySchedule {
+  enabled: boolean;
+  open: string;
+  close: string;
+  breaks: { start: string; end: string }[];
+}
+
+interface WeeklySchedule {
+  monday: DaySchedule;
+  tuesday: DaySchedule;
+  wednesday: DaySchedule;
+  thursday: DaySchedule;
+  friday: DaySchedule;
+  saturday: DaySchedule;
+  sunday: DaySchedule;
+}
+
+const DEFAULT_SCHEDULE: WeeklySchedule = {
+  monday: { enabled: true, open: '10:00', close: '19:00', breaks: [{ start: '13:00', end: '14:00' }] },
+  tuesday: { enabled: true, open: '10:00', close: '19:00', breaks: [{ start: '13:00', end: '14:00' }] },
+  wednesday: { enabled: true, open: '10:00', close: '19:00', breaks: [{ start: '13:00', end: '14:00' }] },
+  thursday: { enabled: true, open: '10:00', close: '19:00', breaks: [{ start: '13:00', end: '14:00' }] },
+  friday: { enabled: true, open: '10:00', close: '20:00', breaks: [{ start: '13:00', end: '14:00' }] },
+  saturday: { enabled: true, open: '11:00', close: '20:00', breaks: [] },
+  sunday: { enabled: false, open: '10:00', close: '19:00', breaks: [] }
+};
+
 export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ studioId, onSave }) => {
-  const [schedule, setSchedule] = useState({
-    monday: { enabled: true, open: '10:00', close: '19:00', breaks: [{ start: '13:00', end: '14:00' }] },
-    tuesday: { enabled: true, open: '10:00', close: '19:00', breaks: [{ start: '13:00', end: '14:00' }] },
-    wednesday: { enabled: true, open: '10:00', close: '19:00', breaks: [{ start: '13:00', end: '14:00' }] },
-    thursday: { enabled: true, open: '10:00', close: '19:00', breaks: [{ start: '13:00', end: '14:00' }] },
-    friday: { enabled: true, open: '10:00', close: '20:00', breaks: [{ start: '13:00', end: '14:00' }] },
-    saturday: { enabled: true, open: '11:00', close: '20:00', breaks: [] as { start: string; end: string }[] },
-    sunday: { enabled: false, open: '10:00', close: '19:00', breaks: [] as { start: string; end: string }[] }
-  });
+  const [schedule, setSchedule] = useState<WeeklySchedule>(DEFAULT_SCHEDULE);
 
   const [bookingSettings, setBookingSettings] = useState({
-    slotDuration: 60,
-    bufferTime: 15,
-    advanceBooking: 30,
+    slotDuration: 60,       // durée créneau en minutes
+    bufferTime: 15,         // pause entre 2 clients en minutes
+    overrunMargin: 0,       // marge de sécurité pour pièces complexes
+    advanceBooking: 7,      // délai min de réservation en jours
     maxDailyBookings: 8,
     requireDeposit: true,
     depositPercentage: 30,
-    bookingWindowDays: 60,  // nb jours max d'ouverture du planning (0 = illimité)
+    bookingWindowDays: 60,
   });
 
   const [closedDates, setClosedDates] = useState<string[]>(['2024-12-25', '2024-01-01']);
@@ -116,6 +136,62 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
   };
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Charger les paramètres existants depuis Supabase
+  useEffect(() => {
+    if (!studioId) {
+      setIsLoading(false);
+      return;
+    }
+    
+    const loadSettings = async () => {
+      try {
+        const { data } = await supabase
+          .from('inkflow_studios')
+          .select('availability_settings')
+          .eq('id', studioId)
+          .single();
+        
+        if (data?.availability_settings) {
+          const settings = data.availability_settings as Record<string, unknown>;
+          
+          // Restaurer weeklySchedule
+          if (settings.weeklySchedule && typeof settings.weeklySchedule === 'object') {
+            setSchedule({ ...DEFAULT_SCHEDULE, ...(settings.weeklySchedule as WeeklySchedule) });
+          }
+          
+          // Restaurer les paramètres de réservation
+          setBookingSettings(prev => ({
+            ...prev,
+            slotDuration: (settings.slotDuration as number) ?? prev.slotDuration,
+            bufferTime: (settings.bufferTime as number) ?? prev.bufferTime,
+            overrunMargin: (settings.overrunMargin as number) ?? prev.overrunMargin,
+            advanceBooking: (settings.advanceBookingDays as number) ?? prev.advanceBooking,
+            maxDailyBookings: (settings.maxDailyBookings as number) ?? prev.maxDailyBookings,
+            depositPercentage: (settings.depositPercentage as number) ?? prev.depositPercentage,
+            bookingWindowDays: (settings.bookingWindowDays as number) ?? prev.bookingWindowDays,
+          }));
+          
+          // Restaurer les créneaux personnalisés
+          if (Array.isArray(settings.customSlots)) {
+            setCustomSlots(settings.customSlots as string[]);
+          }
+          
+          // Restaurer les périodes bloquées
+          if (Array.isArray(settings.blockedRanges)) {
+            setBlockedRanges(settings.blockedRanges as BlockedRange[]);
+          }
+        }
+      } catch (err) {
+        console.error('Erreur chargement availability_settings:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadSettings();
+  }, [studioId]);
 
   const handleSave = async () => {
     const settings = { schedule, bookingSettings, closedDates, customSlots, blockedRanges };
@@ -123,16 +199,33 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
     if (!studioId) return;
     setSaveStatus('saving');
     try {
+      // Structure complète des paramètres de disponibilité
       const availabilitySettings = {
+        // Créneaux et périodes
         customSlots,
         blockedRanges,
+        
+        // Paramètres de base
         bookingWindowDays: bookingSettings.bookingWindowDays,
         depositPercentage: bookingSettings.depositPercentage,
+        
+        // Jours fermés (calculés depuis schedule)
         offDays: Object.entries(schedule)
           .filter(([, v]) => !v.enabled)
           .map(([k]) => ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'].indexOf(k))
           .filter((i) => i >= 0),
+        
+        // NOUVEAUX: Paramètres avancés de temps
+        slotDuration: bookingSettings.slotDuration,
+        bufferTime: bookingSettings.bufferTime,
+        overrunMargin: bookingSettings.overrunMargin,
+        maxDailyBookings: bookingSettings.maxDailyBookings,
+        advanceBookingDays: bookingSettings.advanceBooking,
+        
+        // Planning hebdomadaire complet avec pauses
+        weeklySchedule: schedule,
       };
+      
       const { error } = await supabase
         .from('inkflow_studios')
         .update({ availability_settings: availabilitySettings })
@@ -145,6 +238,14 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
       setTimeout(() => setSaveStatus('idle'), 4000);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -167,6 +268,21 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
         </button>
       </div>
 
+      {/* Info buffer */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-5 border border-blue-200 dark:border-blue-800">
+        <div className="flex gap-3">
+          <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Gestion intelligente des créneaux</h4>
+            <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
+              Configurez la <strong>durée de vos séances</strong>, le <strong>temps de pause entre clients</strong> (buffer) 
+              et une <strong>marge de sécurité</strong> pour les pièces complexes. Ces paramètres s'appliquent automatiquement 
+              au calendrier de réservation pour éviter les chevauchements.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)]">
         <h3 className="text-lg font-bold mb-6 text-[var(--text-primary)]">Paramètres de réservation</h3>
         <div className="grid md:grid-cols-2 gap-6">
@@ -184,7 +300,10 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
             </select>
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Temps de pause entre RDV</label>
+            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">
+              Temps de pause entre RDV
+              <span className="ml-2 text-xs font-normal text-[var(--text-secondary)]">(buffer)</span>
+            </label>
             <select
               value={bookingSettings.bufferTime}
               onChange={(e) => setBookingSettings({ ...bookingSettings, bufferTime: parseInt(e.target.value) })}
@@ -193,26 +312,54 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
               <option value={0}>Aucun</option>
               <option value={15}>15 minutes</option>
               <option value={30}>30 minutes</option>
+              <option value={45}>45 minutes</option>
+              <option value={60}>1 heure</option>
             </select>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              Ce temps est automatiquement bloqué après chaque RDV
+            </p>
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-2">Réservation à l'avance (jours)</label>
+            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">
+              Marge de sécurité
+              <span className="ml-2 text-xs font-normal text-[var(--text-secondary)]">(overrun)</span>
+            </label>
+            <select
+              value={bookingSettings.overrunMargin}
+              onChange={(e) => setBookingSettings({ ...bookingSettings, overrunMargin: parseInt(e.target.value) })}
+              className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            >
+              <option value={0}>Aucune</option>
+              <option value={15}>+15 minutes</option>
+              <option value={30}>+30 minutes</option>
+              <option value={45}>+45 minutes</option>
+              <option value={60}>+1 heure</option>
+            </select>
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              Pour les pièces complexes qui peuvent durer plus longtemps
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">Délai min de réservation (jours)</label>
             <input
               type="number"
               value={bookingSettings.advanceBooking}
-              onChange={(e) => setBookingSettings({ ...bookingSettings, advanceBooking: parseInt(e.target.value) })}
-              className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
-              min={1}
-              max={90}
+              onChange={(e) => setBookingSettings({ ...bookingSettings, advanceBooking: parseInt(e.target.value) || 1 })}
+              className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              min={0}
+              max={30}
             />
+            <p className="text-xs text-[var(--text-secondary)] mt-1">
+              Ex: 7 = pas de réservation avant J+7
+            </p>
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-2">RDV max par jour</label>
+            <label className="block text-sm font-semibold mb-2 text-[var(--text-primary)]">RDV max par jour</label>
             <input
               type="number"
               value={bookingSettings.maxDailyBookings}
-              onChange={(e) => setBookingSettings({ ...bookingSettings, maxDailyBookings: parseInt(e.target.value) })}
-              className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
+              onChange={(e) => setBookingSettings({ ...bookingSettings, maxDailyBookings: parseInt(e.target.value) || 1 })}
+              className="w-full px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
               min={1}
               max={20}
             />
