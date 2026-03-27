@@ -3,8 +3,9 @@
  * Tunnel de conversion Mobile-First, Light Mode, optimisé pour le paiement Stripe.
  */
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, User, Lock, ChevronLeft, ChevronRight, CreditCard, Check, AlertCircle, Zap, Pencil, Send, MapPin, Instagram } from 'lucide-react';
+import { ArrowLeft, User, Lock, ChevronLeft, ChevronRight, CreditCard, Check, AlertCircle, Zap, Pencil, Send, MapPin, Instagram, FileText } from 'lucide-react';
 import { ReferenceImageUpload } from '../../components/booking/ReferenceImageUpload';
+import { HealthQuestionnaireForm, type HealthFormData } from '../../components/booking/HealthQuestionnaireForm';
 import { getStudioIdBySlug, getFlashDesignsFromSupabase } from '../../lib/supabaseDashboard';
 import type { FlashDesign } from '../../types';
 import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
@@ -151,6 +152,11 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     flashPlacementCustom: '',
     flashNotes: '',
   });
+
+  // État pour le questionnaire de santé (étape obligatoire avant paiement)
+  const [showHealthForm, setShowHealthForm] = useState(false);
+  const [healthFormData, setHealthFormData] = useState<HealthFormData | null>(null);
+  const [healthFormCompleted, setHealthFormCompleted] = useState(false);
 
   useEffect(() => {
     if (supabaseEnabled) {
@@ -304,7 +310,62 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentVerified, setPaymentVerified] = useState<boolean | null>(null);
 
-  const handlePay = async () => {
+  // Sauvegarde du questionnaire de santé dans Supabase
+  const saveHealthForm = async (data: HealthFormData): Promise<boolean> => {
+    if (!studioId || studioId === 'loading') return false;
+    try {
+      const healthData = {
+        allergies: data.allergies,
+        allergiesDetails: data.allergiesDetails || null,
+        grossesse: data.grossesse,
+        allaitement: data.allaitement,
+        maladiesInfectieuses: data.maladiesInfectieuses,
+        infectionsVirales: data.infectionsVirales,
+        troubleCicatriciel: data.troubleCicatriciel,
+        diabete: data.diabete,
+        antibiotiques: data.antibiotiques,
+        antiInflammatoires: data.antiInflammatoires,
+        steroides: data.steroides,
+      };
+
+      const { error } = await supabase.from('inkflow_health_forms').insert({
+        studio_id: studioId,
+        client_name: data.clientName,
+        client_email: form.email,
+        client_birthdate: data.clientBirthdate || null,
+        client_instagram: data.clientInstagram || null,
+        health_data: healthData,
+        signature_text: data.signatureText,
+        certified_accurate: data.certifiedAccurate,
+        certified_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        console.error('Erreur sauvegarde questionnaire santé:', error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Erreur sauvegarde questionnaire santé:', err);
+      return false;
+    }
+  };
+
+  // Gestion de la complétion du questionnaire de santé
+  const handleHealthFormComplete = async (data: HealthFormData) => {
+    setHealthFormData(data);
+    const saved = await saveHealthForm(data);
+    if (saved) {
+      setHealthFormCompleted(true);
+      setShowHealthForm(false);
+      proceedToPayment();
+    } else {
+      setPaymentError('Erreur lors de la sauvegarde du questionnaire. Veuillez réessayer.');
+    }
+  };
+
+  // Procéder au paiement après questionnaire validé
+  const proceedToPayment = async () => {
     if (!form.firstName || !form.lastName || !form.email || !form.phone || !form.selectedDate || !form.selectedTime) return;
     if (!selectedFlashId || !selectedFlash || depositAmount == null) return;
     if (!resolvedPlacement) return;
@@ -343,6 +404,23 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
       setPaymentError('Erreur lors de la création du paiement. Veuillez réessayer.');
       setIsSubmitting(false);
     }
+  };
+
+  // Bouton payer : affiche d'abord le questionnaire si pas complété
+  const handlePay = async () => {
+    if (!form.firstName || !form.lastName || !form.email || !form.phone || !form.selectedDate || !form.selectedTime) return;
+    if (!selectedFlashId || !selectedFlash || depositAmount == null) return;
+    if (!resolvedPlacement) return;
+    if (!studioId || studioId === 'loading') return;
+
+    // Si questionnaire déjà complété, procéder directement au paiement
+    if (healthFormCompleted) {
+      proceedToPayment();
+      return;
+    }
+
+    // Sinon, afficher le questionnaire de santé
+    setShowHealthForm(true);
   };
 
   const canPay =
@@ -978,8 +1056,32 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         )}
       </main>
 
+      {/* Modal Questionnaire de Santé */}
+      {showHealthForm && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-lg my-8">
+            <div className="mb-4 text-center">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-white/95 backdrop-blur-sm rounded-full text-sm font-medium text-zinc-700 shadow-lg">
+                <FileText className="w-4 h-4" />
+                Étape obligatoire avant paiement
+              </span>
+            </div>
+            <HealthQuestionnaireForm
+              clientName={`${form.firstName} ${form.lastName}`}
+              clientEmail={form.email}
+              initialData={{
+                clientName: `${form.firstName} ${form.lastName}`,
+                clientInstagram: form.instagram,
+              }}
+              onComplete={handleHealthFormComplete}
+              onBack={() => setShowHealthForm(false)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* 5. Sticky Footer Paiement — visible uniquement en mode flash */}
-      {bookingMode === 'flash' && (
+      {bookingMode === 'flash' && !showHealthForm && (
       <footer className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-zinc-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] safe-bottom">
         <div className="max-w-md mx-auto px-4 py-4">
           {selectedFlash && typeof selectedFlash.price === 'number' && (
@@ -1000,6 +1102,12 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               <span>{paymentError}</span>
             </div>
           )}
+          {healthFormCompleted && (
+            <div className="mb-3 flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg">
+              <Check className="w-4 h-4" />
+              Questionnaire de santé complété
+            </div>
+          )}
           <button
             onClick={handlePay}
             disabled={!canPay || isSubmitting}
@@ -1014,10 +1122,15 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 Redirection vers Stripe...
               </>
-            ) : (
+            ) : healthFormCompleted ? (
               <>
                 <CreditCard className="w-5 h-5" strokeWidth={1.5} />
                 {depositAmount != null ? `Payer ${depositAmount}€ et Réserver` : 'Choisissez un flash'}
+              </>
+            ) : (
+              <>
+                <FileText className="w-5 h-5" strokeWidth={1.5} />
+                {depositAmount != null ? `Questionnaire santé → Payer ${depositAmount}€` : 'Choisissez un flash'}
               </>
             )}
           </button>

@@ -195,6 +195,44 @@ export interface Database {
         };
         Update: Partial<Database['public']['Tables']['inkflow_followups']['Insert']>;
       };
+      inkflow_health_forms: {
+        Row: {
+          id: string;
+          studio_id: string;
+          booking_id: string | null;
+          appointment_id: string | null;
+          client_name: string;
+          client_email: string;
+          client_birthdate: string | null;
+          client_instagram: string | null;
+          health_data: {
+            allergies?: boolean;
+            allergiesDetails?: string | null;
+            grossesse?: boolean;
+            allaitement?: boolean;
+            maladiesInfectieuses?: boolean;
+            infectionsVirales?: boolean;
+            troubleCicatriciel?: boolean;
+            diabete?: boolean;
+            antibiotiques?: boolean;
+            antiInflammatoires?: boolean;
+            steroides?: boolean;
+          };
+          signature_text: string | null;
+          certified_accurate: boolean;
+          certified_at: string | null;
+          ip_address: string | null;
+          user_agent: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['inkflow_health_forms']['Row'], 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['inkflow_health_forms']['Insert']>;
+      };
     };
     Views: Record<string, never>;
     Functions: {
