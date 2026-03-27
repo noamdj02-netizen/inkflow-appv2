@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
+import { addPreviewBccToPayload } from "../_shared/resend.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
@@ -89,12 +90,14 @@ Deno.serve(async (_req: Request) => {
           Authorization: `Bearer ${RESEND_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          from: RESEND_FROM,
-          to: [apt.client_email],
-          subject: getReminderSubject(reminderType, studioName),
-          html,
-        }),
+        body: JSON.stringify(
+          addPreviewBccToPayload({
+            from: RESEND_FROM,
+            to: [apt.client_email],
+            subject: getReminderSubject(reminderType, studioName),
+            html,
+          }),
+        ),
       });
 
       if (resendRes.ok) {

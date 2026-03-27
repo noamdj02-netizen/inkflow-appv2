@@ -19,6 +19,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { addPreviewBccToPayload } from "../_shared/resend.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -35,9 +36,10 @@ function escapeHtml(s: string): string {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function dateOffset(days: number): string {
+/** Date du RDV (colonne `date` YYYY-MM-DD) = aujourd’hui UTC − N jours — évite le décalage jour J+7/J+30 selon le fuseau du serveur. */
+function dateOffsetUtc(days: number): string {
   const d = new Date();
-  d.setDate(d.getDate() - days);
+  d.setUTCDate(d.getUTCDate() - days);
   return d.toISOString().slice(0, 10);
 }
 
@@ -182,7 +184,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: RESEND_FROM, to: [to], subject, html }),
+    body: JSON.stringify(addPreviewBccToPayload({ from: RESEND_FROM, to: [to], subject, html })),
   });
   if (!res.ok) {
     const txt = await res.text().catch(() => "");
@@ -207,11 +209,11 @@ Deno.serve(async (req: Request) => {
   ];
 
   for (const wave of waves) {
-    const targetDate = dateOffset(wave.days);
+    const targetDate = dateOffsetUtc(wave.days);
 
     const { data: appointments, error } = await supabase
       .from("inkflow_appointments")
-      .select(`id, client_name, client_email, service, studio_id, inkflow_studios ( name, studio_name, slug )`)
+      .select(`id, studio_id, client_name, client_email, service, inkflow_studios ( name, studio_name, slug )`)
       .eq("date", targetDate)
       .in("status", ["confirmed", "completed"])
       .not("client_email", "is", null)
@@ -253,6 +255,19 @@ Deno.serve(async (req: Request) => {
           .from("inkflow_appointments")
           .update({ [wave.col]: now })
           .eq("id", apt.id);
+
+        const sid = apt.studio_id as string;
+        if (sid) {
+          const { error: logErr } = await supabase.from("inkflow_followups").insert({
+            studio_id: sid,
+            appointment_id: apt.id,
+            wave: wave.label,
+            client_email: clientEmail,
+          });
+          if (logErr) {
+            console.warn("send-loyalty-emails: inkflow_followups insert:", logErr.message);
+          }
+        }
 
         results.push({ id: apt.id, wave: wave.label, status: "sent" });
         console.log(`send-loyalty-emails: ${wave.label} sent to ${clientEmail} for apt ${apt.id}`);

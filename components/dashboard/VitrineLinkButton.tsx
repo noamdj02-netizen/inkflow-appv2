@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Copy, Check, ExternalLink, Store, QrCode, X } from 'lucide-react';
+import QRCodeLib from 'qrcode';
 import { getStudioId } from '../../lib/supabase';
 import { getStudioSlug } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
@@ -57,6 +58,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
   const toast = useToast();
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const [settings, setSettings] = useState<VitrineSettings>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -96,6 +98,16 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     }, 500);
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
   }, [settings, studioId, useSupabase]);
+
+  useEffect(() => {
+    if (showQr && qrCanvasRef.current) {
+      QRCodeLib.toCanvas(qrCanvasRef.current, vitrineUrl, {
+        width: 180,
+        margin: 2,
+        color: { dark: '#171717', light: '#FAFAFA' },
+      }).catch(() => {});
+    }
+  }, [showQr, vitrineUrl]);
 
   const handleCopy = async () => {
     try {
@@ -199,13 +211,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
               <X className="w-4 h-4" />
             </button>
           </div>
-          <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(vitrineUrl)}&color=171717&bgcolor=FAFAFA`}
-            alt={`QR Code — ${vitrineUrl}`}
-            width={180}
-            height={180}
-            className="rounded-xl"
-          />
+          <canvas ref={qrCanvasRef} className="rounded-xl" />
           <p className="text-xs text-neutral-400 text-center break-all">{vitrineUrl}</p>
         </div>
       )}
