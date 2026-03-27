@@ -3,9 +3,9 @@
 
 CREATE TABLE IF NOT EXISTS inkflow_health_forms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  studio_id UUID NOT NULL REFERENCES inkflow_studios(id) ON DELETE CASCADE,
-  booking_id UUID REFERENCES inkflow_bookings(id) ON DELETE SET NULL,
-  appointment_id UUID REFERENCES inkflow_appointments(id) ON DELETE SET NULL,
+  studio_id TEXT NOT NULL REFERENCES inkflow_studios(id) ON DELETE CASCADE,
+  booking_id TEXT REFERENCES inkflow_bookings(id) ON DELETE SET NULL,
+  appointment_id TEXT REFERENCES inkflow_appointments(id) ON DELETE SET NULL,
   
   -- Informations client
   client_name TEXT NOT NULL,
