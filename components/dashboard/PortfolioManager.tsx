@@ -36,12 +36,6 @@ interface PortfolioManagerProps {
 const CATEGORIES = ['Realisme', 'Traditionnel', 'Neo-traditionnel', 'Japonais', 'Minimaliste', 'Geometrique', 'Aquarelle', 'Dotwork', 'Lettering', 'Autre'];
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 Mo
 
-/** Windows / Explorer peut laisser type vide au drag & drop — on accepte aussi l’extension. */
-function isImageFile(file: File): boolean {
-  if (file.type.startsWith('image/')) return true;
-  return /\.(jpe?g|png|gif|webp|heic|bmp|tif)$/i.test(file.name);
-}
-
 export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAddItem, onDeleteItem, onEditItem, artists, studioId, studioSlug, studioName, appointments = [], onEnsureStudio }) => {
   const toast = useToast();
   const [filterCategory, setFilterCategory] = useState('all');
@@ -50,6 +44,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [aiGenerating, setAiGenerating] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -67,8 +62,6 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
   });
   const [dragOver, setDragOver] = useState(false);
   const cropBlobRef = useRef<string | null>(null);
-  /** Après un drop, le navigateur envoie souvent un clic synthétique — on évite d’ouvrir la galerie par erreur. */
-  const suppressDropZoneClickRef = useRef(false);
   const [cropSession, setCropSession] = useState<{ src: string; field: 'url' | 'beforeUrl' } | null>(null);
 
   const revokeCropSession = () => {
@@ -77,13 +70,29 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
       cropBlobRef.current = null;
     }
     setCropSession(null);
+    setImageLoading(false);
   };
 
   const startCropFromFile = (file: File, field: 'url' | 'beforeUrl') => {
     if (cropBlobRef.current) URL.revokeObjectURL(cropBlobRef.current);
-    const url = URL.createObjectURL(file);
-    cropBlobRef.current = url;
-    setCropSession({ src: url, field });
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        cropBlobRef.current = null;
+        setCropSession({ src: dataUrl, field });
+        setImageLoading(false);
+      } else {
+        toast.error('Impossible de lire l\'image');
+        setImageLoading(false);
+      }
+    };
+    reader.onerror = () => {
+      toast.error('Erreur de lecture du fichier');
+      setImageLoading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const thirtyDaysAgo = new Date();
@@ -128,70 +137,41 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     setDragOver(false);
-    suppressDropZoneClickRef.current = true;
-    window.setTimeout(() => {
-      suppressDropZoneClickRef.current = false;
-    }, 500);
-    const file = e.dataTransfer.files?.[0];
-    if (!file) {
-      toast.error('Aucun fichier détecté. Réessayez en déposant l’image sur la zone en pointillés.');
-      return;
+    if (imageLoading) return;
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        toast.error('Image trop lourde (max 5 Mo)');
+        return;
+      }
+      setUploadError(null);
+      startCropFromFile(file, 'url');
     }
-    if (!isImageFile(file)) {
-      toast.error('Format non reconnu. Utilisez JPG, PNG, WebP ou HEIC.');
-      return;
-    }
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      toast.error('Image trop lourde (max 5 Mo)');
-      return;
-    }
-    setUploadError(null);
-    startCropFromFile(file, 'url');
-  };
-
-  const handleDropZoneClick = () => {
-    if (suppressDropZoneClickRef.current) return;
-    fileRef.current?.click();
-  };
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.types?.includes('Files')) {
-      e.dataTransfer.dropEffect = 'copy';
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'copy';
-    setDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    const next = e.relatedTarget as Node | null;
-    if (next && e.currentTarget.contains(next)) return;
-    setDragOver(false);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, field: 'url' | 'beforeUrl') => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!isImageFile(file)) {
-        toast.error('Format non reconnu. Utilisez JPG, PNG, WebP ou HEIC.');
-        e.target.value = '';
-        return;
-      }
-      if (file.size > MAX_IMAGE_SIZE_BYTES) {
-        toast.error('Image trop lourde (max 5 Mo)');
-        e.target.value = '';
-        return;
-      }
-      setUploadError(null);
+    if (!file) {
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Seules les images sont acceptées');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      toast.error('Image trop lourde (max 5 Mo)');
+      e.target.value = '';
+      return;
+    }
+    setUploadError(null);
+    setImageLoading(true);
+    try {
       startCropFromFile(file, field);
+    } catch (err) {
+      toast.error('Impossible de charger l\'image');
+      setImageLoading(false);
     }
     e.target.value = '';
   };
@@ -248,6 +228,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
         appointmentId: newItem.appointmentId || undefined,
       });
       setNewItem({ url: '', beforeUrl: '', category: '', artist: artists[0] || '', description: '', tags: '', appointmentId: '' });
+      setImageLoading(false);
       setShowUpload(false);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Erreur lors de l\'upload');
@@ -492,7 +473,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
       {showUpload && (
         <div
           className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/95 flex justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
-          onClick={() => { setShowUpload(false); }}
+          onClick={() => { setShowUpload(false); setImageLoading(false); }}
           style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
         >
           <div
@@ -505,7 +486,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                 <p className="text-sm text-slate-500 mt-0.5">Partagez votre dernière réalisation</p>
               </div>
               <button
-                onClick={() => { setShowUpload(false); }}
+                onClick={() => { setShowUpload(false); setImageLoading(false); }}
                 className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
               >
                 <X className="w-5 h-5 text-slate-500" />
@@ -513,18 +494,22 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
             </div>
             <div className="space-y-4">
               <div
-                onDragEnter={handleDragEnter}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
+                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
-                onClick={handleDropZoneClick}
+                onClick={() => fileRef.current?.click()}
                 className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
                   dragOver
                     ? 'border-slate-900 dark:border-white bg-slate-50 dark:bg-zinc-800'
                     : 'border-slate-300 dark:border-zinc-700 hover:border-slate-400 dark:hover:border-zinc-600 hover:bg-slate-50 dark:hover:bg-zinc-800/50'
                 }`}
               >
-                {newItem.url ? (
+                {imageLoading ? (
+                  <div className="flex flex-col items-center gap-3 py-8">
+                    <Loader2 className="w-10 h-10 text-slate-400 animate-spin" />
+                    <p className="text-sm text-slate-500">Chargement de l'image...</p>
+                  </div>
+                ) : newItem.url ? (
                   <div className="relative inline-block">
                     <img src={newItem.url} alt="Aperçu" className="w-40 h-40 object-cover rounded-xl mx-auto shadow-lg" />
                     <button
@@ -539,7 +524,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                     <div className="flex items-center justify-center gap-4 mb-3">
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); cameraRef.current?.click(); }}
+                        onClick={() => cameraRef.current?.click()}
                         className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-blue-100 dark:bg-blue-500/20 hover:bg-blue-200 dark:hover:bg-blue-500/30 transition-colors"
                       >
                         <Camera className="w-8 h-8 text-blue-600 dark:text-blue-400" />
@@ -547,7 +532,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                       </button>
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
+                        onClick={() => fileRef.current?.click()}
                         className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors"
                       >
                         <Upload className="w-8 h-8 text-slate-500 dark:text-zinc-400" />
@@ -558,8 +543,21 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                     <p className="text-xs text-slate-500">ou utilisez l'appareil photo / la galerie</p>
                   </>
                 )}
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'url')} />
-                <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFileSelect(e, 'url')} />
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
+                  className="hidden"
+                  onChange={e => handleFileSelect(e, 'url')}
+                />
+                <input
+                  ref={cameraRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={e => handleFileSelect(e, 'url')}
+                />
               </div>
 
               {newItem.url && isGeminiConfigured() && (
@@ -622,7 +620,13 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                 >
                   {newItem.beforeUrl ? '✓ Photo ajoutée' : 'Ajouter'}
                 </button>
-                <input ref={beforeRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'beforeUrl')} />
+                <input
+                  ref={beforeRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/*"
+                  className="hidden"
+                  onChange={e => handleFileSelect(e, 'beforeUrl')}
+                />
               </div>
 
               <select
@@ -662,7 +666,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
 
               <button
                 onClick={handleAdd}
-                disabled={!newItem.url || !newItem.category || uploading}
+                disabled={!newItem.url || !newItem.category || uploading || imageLoading}
                 className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-semibold hover:bg-slate-800 dark:hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 {uploading ? (
