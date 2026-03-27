@@ -1058,24 +1058,20 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
       {/* Modal Questionnaire de Santé */}
       {showHealthForm && (
-        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="w-full max-w-lg my-8">
-            <div className="mb-4 text-center">
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-white/95 backdrop-blur-sm rounded-full text-sm font-medium text-zinc-700 shadow-lg">
-                <FileText className="w-4 h-4" />
-                Étape obligatoire avant paiement
-              </span>
+        <div className="fixed inset-0 z-[60] bg-zinc-50 overflow-y-auto safe-top safe-bottom">
+          <div className="min-h-full px-4 py-6">
+            <div className="max-w-lg mx-auto">
+              <HealthQuestionnaireForm
+                clientName={`${form.firstName} ${form.lastName}`}
+                clientEmail={form.email}
+                initialData={{
+                  clientName: `${form.firstName} ${form.lastName}`,
+                  clientInstagram: form.instagram,
+                }}
+                onComplete={handleHealthFormComplete}
+                onBack={() => setShowHealthForm(false)}
+              />
             </div>
-            <HealthQuestionnaireForm
-              clientName={`${form.firstName} ${form.lastName}`}
-              clientEmail={form.email}
-              initialData={{
-                clientName: `${form.firstName} ${form.lastName}`,
-                clientInstagram: form.instagram,
-              }}
-              onComplete={handleHealthFormComplete}
-              onBack={() => setShowHealthForm(false)}
-            />
           </div>
         </div>
       )}
