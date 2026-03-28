@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { ArrowLeft, Mail, MapPin, User } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { SEO } from '../components/SEO';
@@ -94,6 +94,27 @@ export const LoginPage: React.FC = () => {
             )}
 
             <LoginForm />
+
+            {/* Séparateur */}
+            <div className="relative my-1 flex items-center gap-3">
+              <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+              <span className="text-xs text-zinc-400 dark:text-zinc-600 font-medium">ou</span>
+              <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+            </div>
+
+            {/* Bouton Espace Client — accès direct sans login */}
+            <a
+              href="/client/dashboard"
+              className="flex w-full items-center justify-center gap-2.5 rounded-2xl py-4 text-sm font-bold transition-all active:scale-[0.98]"
+              style={{
+                background: '#DFFF00',
+                color: '#0A0A0A',
+                boxShadow: '0 0 24px rgba(223,255,0,0.25)',
+              }}
+            >
+              <User className="w-4 h-4 shrink-0" aria-hidden />
+              Accéder à l'Espace Client
+            </a>
 
             <p className="text-center mt-6 text-sm text-zinc-500 dark:text-zinc-400">
               Pas encore de compte ?{' '}
