@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { Modal } from './Modal';
 import { getCroppedImgDataUrl } from '../../lib/cropImage';
 import { resizeDataUrl } from '../../lib/imageResize';
+import { useToast } from '../../contexts/ToastContext';
 
 export interface ImageCropModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
   onClose,
   onConfirm,
 }) => {
+  const toast = useToast();
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const pixelsRef = useRef<Area | null>(null);
@@ -48,6 +50,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
   const handleConfirm = async () => {
     const pixels = pixelsRef.current;
     if (!pixels || pixels.width < 1 || pixels.height < 1) {
+      toast.error('L’image est encore en chargement. Patientez un instant puis réessayez.');
       return;
     }
     setSubmitting(true);
@@ -67,6 +70,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
           Déplacez l’image et utilisez le zoom pour cadrer comme souhaité.
         </p>
         <div className="relative w-full h-[min(52vh,300px)] sm:h-[340px] rounded-xl overflow-hidden bg-zinc-950 border border-zinc-800">
+          {imageSrc ? (
           <Cropper
             image={imageSrc}
             crop={crop}
@@ -95,6 +99,11 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
             zoomWithScroll={false}
             keyboardStep={4}
           />
+          ) : (
+            <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-zinc-400">
+              Chargement de l’image…
+            </div>
+          )}
         </div>
         <div className="space-y-2">
           <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400" htmlFor="crop-zoom">
@@ -123,7 +132,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
           <button
             type="button"
             onClick={() => void handleConfirm()}
-            disabled={submitting}
+            disabled={submitting || !imageSrc}
             className="min-h-[44px] px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {submitting ? (

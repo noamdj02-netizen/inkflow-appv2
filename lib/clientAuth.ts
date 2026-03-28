@@ -1,11 +1,17 @@
-/** Métadonnées utilisateur espace client (Supabase Auth). */
+/**
+ * Helpers pour l'espace client (side public, non tatoueur).
+ * Pas de logique métier — uniquement des guards sur les métadonnées Supabase.
+ */
 
+/** Le client a été créé via magic-link et n'a pas encore défini de mot de passe. */
 export function clientNeedsPassword(meta: Record<string, unknown>): boolean {
-  return meta.client_password_set !== true;
+  return meta?.needs_password_setup === true;
 }
 
+/**
+ * L'onboarding client est considéré complet si l'une des deux clés est présente.
+ * (Rétro-compatibilité avec l'ancienne clé `client_onboarding_done`.)
+ */
 export function clientOnboardingComplete(meta: Record<string, unknown>): boolean {
-  if (meta.client_onboarding_complete === true) return true;
-  const n = meta.name;
-  return typeof n === 'string' && n.trim().length > 0;
+  return meta?.onboarding_complete === true || meta?.client_onboarding_done === true;
 }
