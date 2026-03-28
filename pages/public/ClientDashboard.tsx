@@ -402,6 +402,126 @@ const FlashCard: React.FC<{
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
+// GUEST LOGIN FORM (profil tab — magic link inline)
+// ══════════════════════════════════════════════════════════════════════════════
+const GuestLoginForm: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [phase, setPhase] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const sendLink = async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setErrorMsg('Adresse email invalide.');
+      return;
+    }
+    setPhase('loading');
+    setErrorMsg('');
+    try {
+      const base = (import.meta as { env: Record<string, string> }).env.VITE_SUPABASE_URL?.replace(/\/+$/, '') ?? '';
+      const anon = (import.meta as { env: Record<string, string> }).env.VITE_SUPABASE_ANON_KEY ?? '';
+      const res = await fetch(`${base}/functions/v1/send-client-magic-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': `Bearer ${anon}` },
+        body: JSON.stringify({ email: trimmed, redirectTo: `${window.location.origin}/client/dashboard` }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(d.error ?? 'Erreur serveur');
+      }
+      setPhase('sent');
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : 'Erreur inconnue');
+      setPhase('error');
+    }
+  };
+
+  if (phase === 'sent') {
+    return (
+      <div className="px-4 pt-12 pb-6 flex flex-col items-center text-center gap-5">
+        <div className="w-16 h-16 rounded-full flex items-center justify-center"
+          style={{ background: N.neonDim, border: `1.5px solid ${N.neon}` }}>
+          <Check className="w-7 h-7" style={{ color: N.neon }} />
+        </div>
+        <div>
+          <p className="text-xl font-black mb-2" style={{ color: N.text }}>Lien envoyé !</p>
+          <p className="text-sm leading-relaxed" style={{ color: N.muted }}>
+            Vérifie ta boîte mail <strong style={{ color: N.textSub }}>{email}</strong>.<br />
+            Clique sur le lien pour te connecter (valable 60 min).
+          </p>
+        </div>
+        <button type="button" onClick={() => { setPhase('idle'); setEmail(''); }}
+          className="text-sm font-semibold" style={{ color: N.muted }}>
+          Utiliser un autre email
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5 pt-4">
+      {/* Header */}
+      <div className="text-center pb-2">
+        <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
+          style={{ background: N.neonDim, border: `1.5px solid rgba(223,255,0,0.2)` }}>
+          <User className="w-6 h-6" style={{ color: N.neon }} />
+        </div>
+        <h2 className="text-xl font-black mb-1" style={{ color: N.text }}>Connecte-toi</h2>
+        <p className="text-sm leading-relaxed" style={{ color: N.muted }}>
+          Entre ton email pour recevoir un lien magique.<br />
+          Pas besoin de mot de passe.
+        </p>
+      </div>
+
+      {/* Email input */}
+      <div className="space-y-3">
+        <input
+          type="email"
+          value={email}
+          onChange={e => { setEmail(e.target.value); setErrorMsg(''); }}
+          onKeyDown={e => e.key === 'Enter' && phase !== 'loading' && sendLink()}
+          placeholder="ton@email.com"
+          className="w-full rounded-2xl border px-4 py-4 text-sm outline-none transition-all"
+          style={{
+            background: N.surface,
+            borderColor: errorMsg ? N.error : N.border,
+            color: N.text,
+          }}
+        />
+        {errorMsg && (
+          <p className="text-xs px-1" style={{ color: N.error }}>{errorMsg}</p>
+        )}
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.98 }}
+          disabled={phase === 'loading' || !email.trim()}
+          onClick={sendLink}
+          className="w-full py-4 rounded-2xl font-bold text-sm transition-all"
+          style={{
+            background: email.trim() ? N.neon : N.border,
+            color: email.trim() ? N.bg : N.muted,
+            boxShadow: email.trim() ? N.neonGlow : 'none',
+            cursor: phase === 'loading' ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {phase === 'loading' ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-4 h-4 rounded-full border-2 animate-spin inline-block"
+                style={{ borderColor: N.bg, borderTopColor: 'transparent' }} />
+              Envoi…
+            </span>
+          ) : 'Recevoir mon lien de connexion →'}
+        </motion.button>
+      </div>
+
+      <p className="text-center text-xs" style={{ color: N.muted }}>
+        Pas encore inscrit ? Le lien crée automatiquement ton compte.
+      </p>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
 // ARTIST BOTTOM SHEET
 // ══════════════════════════════════════════════════════════════════════════════
 const GuestConnectPanel: React.FC<{ title: string; body: string }> = ({ title, body }) => (
@@ -1252,17 +1372,7 @@ export const ClientDashboard: React.FC = () => {
             {tab === 'profile' && (
               <div className="px-4 pt-5 space-y-6 pb-6">
                 {isGuest ? (
-                  <>
-                    <GuestConnectPanel
-                      title="Ton profil Inkflow"
-                      body="Pour enregistrer tes préférences, tes studios favoris et ton compte fidélité, connecte-toi ou crée un compte avec ton email."
-                    />
-                    <button type="button" onClick={() => goTab('explore')}
-                      className="w-full py-3.5 rounded-2xl border text-sm font-semibold active:scale-[0.98] transition-all"
-                      style={{ borderColor: N.border, background: N.surface, color: N.textSub }}>
-                      Continuer à explorer sans compte
-                    </button>
-                  </>
+                  <GuestLoginForm />
                 ) : (
                 <>
                 <div className="rounded-3xl border p-5 flex items-center gap-4"
