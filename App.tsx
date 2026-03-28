@@ -39,6 +39,8 @@ const DebugExperiencePage = lazy(() => import('./pages/admin/DebugExperiencePage
 const ClientPortalLoginPage = lazy(() => import('./pages/client/ClientPortalLoginPage').then(m => ({ default: m.ClientPortalLoginPage })));
 const ClientWelcomePage = lazy(() => import('./pages/client/ClientWelcomePage').then(m => ({ default: m.ClientWelcomePage })));
 const ClientDashboard = lazy(() => import('./pages/client/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
+const ArtistPage = lazy(() => import('./pages/vitrine/ArtistPage').then(m => ({ default: m.ArtistPage })));
+const FlashPage = lazy(() => import('./pages/vitrine/FlashPage').then(m => ({ default: m.FlashPage })));
 
 interface Route {
   path: string | RegExp;
@@ -142,6 +144,9 @@ const Router: React.FC = () => {
     { path: '/client', component: ClientPortalLoginPage },
     { path: /^\/client\/welcome\/?$/, component: ClientWelcomePage },
     { path: /^\/client\/dashboard\/?$/, component: ClientDashboard },
+    // ── Pages vitrines publiques (artistes & flashs) ────────────────────────
+    { path: /^\/artist\/([a-z0-9-]+)\/?$/, component: ArtistPage, getProps: (m) => ({ artistSlug: m[1] }) },
+    { path: /^\/flash\/([a-z0-9-]+)\/?$/, component: FlashPage, getProps: (m) => ({ flashSlug: m[1] }) },
   ];
 
   const matchRoute = () => {
