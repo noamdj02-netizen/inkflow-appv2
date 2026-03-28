@@ -35,6 +35,7 @@ const DashboardDemoPage = lazy(() => import('./pages/DashboardDemoPage').then(m 
 const FeatureDetailPage = lazy(() => import('./pages/features/FeatureDetailPage').then(m => ({ default: m.FeatureDetailPage })));
 const InstagramCallbackPage = lazy(() => import('./pages/InstagramCallbackPage').then(m => ({ default: m.InstagramCallbackPage })));
 const AddToHomeScreenPage = lazy(() => import('./pages/AddToHomeScreenPage').then(m => ({ default: m.AddToHomeScreenPage })));
+const ClientDashboard = lazy(() => import('./pages/public/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
 
 interface Route {
   path: string | RegExp;
@@ -131,6 +132,8 @@ const Router: React.FC = () => {
     { path: '/terms', component: TermsOfServicePage },
     { path: '/aide', component: AidePage },
     { path: '/referral', component: ReferralPage, requiresAuth: true },
+    // Espace client (PWA)
+    { path: /^\/client(\/dashboard)?\/?$/, component: ClientDashboard },
   ];
 
   const matchRoute = () => {
