@@ -1158,8 +1158,19 @@ export const DashboardPro: React.FC = () => {
             <SidebarPwaInstallButton onAfterAction={() => setSidebarOpen(false)} />
           </div>
 
-          {/* Footer — Déconnexion (Parrainage masqué pour MVP) */}
+          {/* Footer — Espace Client + Déconnexion */}
           <div className="relative z-10 mt-auto px-3 py-3 border-t border-zinc-100 dark:border-zinc-800/50 safe-bottom space-y-0.5">
+            {/* Espace Client */}
+            <a
+              href="/client/dashboard"
+              target="_blank"
+              rel="noreferrer"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all"
+            >
+              <User className="w-4 h-4 flex-shrink-0" />
+              <span>Espace Client</span>
+              <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+            </a>
             {/* V2: Parrainage masqué pour le MVP
             <a
               href="/referral"
