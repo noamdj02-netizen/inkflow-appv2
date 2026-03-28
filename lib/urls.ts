@@ -14,3 +14,13 @@ export const LANDING_PRICING_URL = `${LANDING_URL}/#pricing`;
 export const LANDING_PRIVACY_URL = `${LANDING_URL}/politique-confidentialite`;
 export const LANDING_TERMS_URL = `${LANDING_URL}/conditions-utilisation`;
 export const LANDING_LEGAL_URL = `${LANDING_URL}/mentions-legales`;
+
+/** Origine canonique de l'app (Vercel prod ou localhost en dev). */
+function getCanonicalAppOrigin(): string {
+  if (typeof window !== 'undefined') return window.location.origin;
+  return APP_URL;
+}
+/** redirectTo pour le magic link espace client (`/client`). */
+export function getClientMagicLinkRedirectTo(): string {
+  return `${getCanonicalAppOrigin()}/client`;
+}
