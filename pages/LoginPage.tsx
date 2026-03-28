@@ -285,10 +285,13 @@ export const LoginPage: React.FC = () => {
               </a>
             </p>
 
-            <div className="mt-5 pt-5 border-t border-zinc-200 dark:border-zinc-800">
+            <div className="mt-5 pt-5 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+              <p className="text-center text-xs text-zinc-500 dark:text-zinc-500">
+                Tu es client ? Connexion par lien magique (sans mot de passe).
+              </p>
               <a
                 href="/client"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-400 dark:hover:border-zinc-500 transition-all"
+                className="w-full flex items-center justify-center gap-2 min-h-[44px] py-3 rounded-2xl text-sm font-semibold border border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-400 dark:hover:border-zinc-500 transition-all active:scale-[0.98]"
               >
                 <Sparkles className="w-4 h-4" style={{ color: '#c9a96e' }} />
                 Accéder à mon espace client

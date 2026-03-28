@@ -12,6 +12,7 @@ import {
   Droplets, Sun, Shield, Check, Gift,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { clientNeedsPassword, clientOnboardingComplete } from '../../lib/clientAuth';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
@@ -693,12 +694,22 @@ export const ClientDashboard: React.FC = () => {
     };
   }, []);
 
-  // Load data
+  // Load data (+ renvoi onboarding si profil client non finalisé)
   useEffect(()=>{
     if (!sessionEmail) return;
     (async()=>{
       setLoading(true);
       try {
+        const { data: { user } } = await supabase.auth.getUser();
+        const meta = user?.user_metadata ?? {} as Record<string, unknown>;
+        if (clientNeedsPassword(meta)) {
+          window.location.replace('/client');
+          return;
+        }
+        if (!clientOnboardingComplete(meta)) {
+          window.location.replace('/client/welcome');
+          return;
+        }
         const {data:apts} = await supabase
           .from('inkflow_appointments')
           .select('id,date,time,service,status,price,inkflow_studios(studio_name)')

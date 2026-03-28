@@ -1,19 +1,118 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft, Mail, ArrowRight, CheckCircle, Sparkles,
+  ArrowLeft, Mail, ArrowRight, CheckCircle, Sparkles, Loader2, Lock,
 } from 'lucide-react';
+import { SEO } from '../../components/SEO';
+import { APP_URL, getClientMagicLinkRedirectTo } from '../../lib/urls';
+import { supabase } from '../../lib/supabase';
+import { clientNeedsPassword, clientOnboardingComplete } from '../../lib/clientAuth';
+import { consumeSupabaseAuthUrlError } from '../../lib/supabaseAuthUrl';
+import type { User } from '@supabase/supabase-js';
 
-const HERO_CLIENT   = '/images/client-hero.jpg';
-const HERO_FALLBACK = '/images/fallon-michael-EQucs66pts0-unsplash.jpg';
+/** Hero optimisé (WebP) + JPG Unsplash ; repli final si fichier manquant. */
+const CLIENT_HERO_WEBP = '/images/client-hero.webp';
+const CLIENT_HERO_JPG = '/images/ravi-sharma-7KMzdNfIlQY-unsplash.jpg';
+const CLIENT_HERO_FALLBACK = '/images/fallon-michael-EQucs66pts0-unsplash.jpg';
+const CLIENT_HERO_ABSOLUTE = `${APP_URL}${CLIENT_HERO_JPG}`;
+
+type Phase = 'boot' | 'email' | 'sent' | 'password';
 
 /* ── Main page ──────────────────────────────────────────────── */
 export const ClientPortalLoginPage: React.FC = () => {
-  const [email, setEmail]       = useState('');
-  const [sent, setSent]         = useState(false);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
-  const [heroSrc, setHeroSrc]   = useState(HERO_CLIENT);
+  const [email, setEmail]         = useState('');
+  const [phase, setPhase]         = useState<Phase>('boot');
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState('');
+  const [heroSrc, setHeroSrc]     = useState(CLIENT_HERO_WEBP);
+  const [password, setPassword]   = useState('');
+  const [password2, setPassword2] = useState('');
+  const [savingPw, setSavingPw]   = useState(false);
+  const [pwError, setPwError]     = useState('');
+  const redirectedRef           = useRef(false);
+
+  const handleHeroError = () => {
+    setHeroSrc((prev) => {
+      if (prev === CLIENT_HERO_WEBP) return CLIENT_HERO_JPG;
+      if (prev === CLIENT_HERO_JPG) return CLIENT_HERO_FALLBACK;
+      if (prev === CLIENT_HERO_FALLBACK) return CLIENT_HERO_ABSOLUTE;
+      return prev;
+    });
+  };
+
+  /** Après clic sur le lien magique : même page `/client`, session dans le hash (géré par Supabase). */
+  useEffect(() => {
+    let cancelled = false;
+
+    const authUrlError = consumeSupabaseAuthUrlError();
+    if (authUrlError) {
+      setError(authUrlError);
+      setPhase('email');
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const cleanAuthUrl = () => {
+      if (window.location.hash) {
+        window.history.replaceState({}, '', `${window.location.pathname}${window.location.search}`);
+      }
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.has('code')) {
+        window.history.replaceState({}, '', '/client');
+      }
+    };
+
+    const routeLoggedInUser = async (user: User) => {
+      if (redirectedRef.current || cancelled) return;
+      const meta = user.user_metadata ?? {};
+      if (clientNeedsPassword(meta as Record<string, unknown>)) {
+        cleanAuthUrl();
+        setPhase('password');
+        return;
+      }
+      redirectedRef.current = true;
+      cleanAuthUrl();
+      const dest = clientOnboardingComplete(meta as Record<string, unknown>)
+        ? '/client/dashboard'
+        : '/client/welcome';
+      window.location.replace(dest);
+    };
+
+    const resolve = async () => {
+      for (let i = 0; i < 14; i++) {
+        if (cancelled) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await routeLoggedInUser(session.user);
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 70 + i * 35));
+      }
+      if (cancelled) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await routeLoggedInUser(session.user);
+        return;
+      }
+      cleanAuthUrl();
+      setPhase('email');
+    };
+
+    void resolve();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (cancelled || !session?.user) return;
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        await routeLoggedInUser(session.user);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,23 +120,37 @@ export const ClientPortalLoginPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const redirectTo = `${window.location.origin}/auth/callback?redirect_to=/client/dashboard`;
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-client-magic-link`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          },
-          body: JSON.stringify({ email: email.trim().toLowerCase(), redirectTo }),
-        }
-      );
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Erreur lors de l'envoi.");
+      const redirectTo = getClientMagicLinkRedirectTo();
+      const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+      const base = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
+      if (!base || !anon) {
+        throw new Error('Configuration Supabase manquante (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
       }
-      setSent(true);
+      const res = await fetch(`${base}/functions/v1/send-client-magic-link`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: anon,
+          Authorization: `Bearer ${anon}`,
+        },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), redirectTo }),
+      });
+      const raw = await res.text();
+      let msg = "Erreur lors de l'envoi.";
+      if (!res.ok) {
+        try {
+          const data = JSON.parse(raw) as { error?: string; details?: string };
+          msg = data.error || data.details || msg;
+          if (data.details && data.error && import.meta.env.DEV) {
+            msg = `${data.error} — ${data.details}`;
+          }
+        } catch {
+          if (raw) msg = raw.slice(0, 280);
+          else msg = `Erreur ${res.status} — vérifiez le déploiement de send-client-magic-link et les logs Supabase.`;
+        }
+        throw new Error(msg);
+      }
+      setPhase('sent');
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors de l'envoi. Réessaie.");
     } finally {
@@ -45,14 +158,65 @@ export const ClientPortalLoginPage: React.FC = () => {
     }
   };
 
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const p = password.trim();
+    if (p.length < 8) {
+      setPwError('Au moins 8 caractères.');
+      return;
+    }
+    if (p !== password2) {
+      setPwError('Les mots de passe ne correspondent pas.');
+      return;
+    }
+    setSavingPw(true);
+    setPwError('');
+    const { error: updErr } = await supabase.auth.updateUser({
+      password: p,
+      data: { client_password_set: true },
+    });
+    setSavingPw(false);
+    if (updErr) {
+      setPwError(updErr.message);
+      return;
+    }
+    const { data: { user } } = await supabase.auth.getUser();
+    const meta = user?.user_metadata ?? {};
+    const dest = clientOnboardingComplete(meta as Record<string, unknown>)
+      ? '/client/dashboard'
+      : '/client/welcome';
+    window.location.href = dest;
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setPassword('');
+    setPassword2('');
+    setPwError('');
+    setPhase('email');
+  };
+
+  const sent = phase === 'sent';
+
   return (
     <motion.div
       className="min-h-[100dvh] flex"
-      style={{ background: '#000000' }}
+      style={{
+        background: '#000000',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
+      <SEO
+        title="Espace client My Inkflow"
+        description="Connecte-toi à ton espace client Inkflow : rendez-vous, cicatrisation et parrainage. Reçois un lien magique par email."
+        canonical="/client"
+        keywords="espace client tatouage, My Inkflow, lien magique, suivi RDV"
+        ogImageAlt="Espace client My Inkflow"
+        noindex
+      />
       {/* ── LEFT — Form ───────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-h-[100dvh]">
         {/* Header */}
@@ -88,7 +252,18 @@ export const ClientPortalLoginPage: React.FC = () => {
                 <span className="text-xl font-bold text-white">My Inkflow</span>
               </div>
 
-              {!sent ? (
+              {phase === 'boot' && (
+                <>
+                  <h1 className="text-3xl font-bold tracking-tight text-white mb-1.5">
+                    Connexion…
+                  </h1>
+                  <p className="text-sm" style={{ color: '#737373' }}>
+                    Vérification de ta session.
+                  </p>
+                </>
+              )}
+
+              {phase === 'email' && (
                 <>
                   <h1 className="text-3xl font-bold tracking-tight text-white mb-1.5">
                     Ton espace client
@@ -97,7 +272,9 @@ export const ClientPortalLoginPage: React.FC = () => {
                     Entre l'email utilisé lors de ta réservation — on t'envoie un lien instantané.
                   </p>
                 </>
-              ) : (
+              )}
+
+              {sent && (
                 <>
                   <h1 className="text-3xl font-bold tracking-tight text-white mb-1.5">
                     Vérifie ta boîte mail
@@ -108,10 +285,27 @@ export const ClientPortalLoginPage: React.FC = () => {
                   </p>
                 </>
               )}
+
+              {phase === 'password' && (
+                <>
+                  <h1 className="text-3xl font-bold tracking-tight text-white mb-1.5">
+                    Choisis ton mot de passe
+                  </h1>
+                  <p className="text-sm" style={{ color: '#737373' }}>
+                    Tu pourras te reconnecter avec ton email et ce mot de passe. Ensuite, accès à ton espace RDV et suivi.
+                  </p>
+                </>
+              )}
             </div>
 
-            {/* Confirmation state */}
-            {sent ? (
+            {phase === 'boot' && (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#c9a96e' }} />
+              </div>
+            )}
+
+            {/* Confirmation state — email envoyé */}
+            {sent && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -126,13 +320,13 @@ export const ClientPortalLoginPage: React.FC = () => {
                   <div>
                     <p className="text-sm font-medium text-white">Lien envoyé !</p>
                     <p className="text-xs mt-0.5" style={{ color: '#737373' }}>
-                      Clique sur le lien dans l'email pour accéder à ton espace en un clic.
+                      Ouvre l’email et clique sur le lien : tu reviendras ici pour sécuriser ton compte puis entrer dans ton espace.
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => { setSent(false); setEmail(''); }}
+                  onClick={() => { setPhase('email'); setEmail(''); }}
                   className="text-sm transition-colors"
                   style={{ color: '#525252' }}
                   onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
@@ -141,7 +335,101 @@ export const ClientPortalLoginPage: React.FC = () => {
                   ← Modifier l'adresse email
                 </button>
               </motion.div>
-            ) : (
+            )}
+
+            {phase === 'password' && (
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="client-pw"
+                    className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                    style={{ color: '#525252' }}
+                  >
+                    Mot de passe
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#525252' }} />
+                    <input
+                      id="client-pw"
+                      type="password"
+                      autoComplete="new-password"
+                      autoFocus
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Au moins 8 caractères"
+                      className="w-full pl-10 pr-4 py-3.5 rounded-2xl text-sm text-white outline-none transition-all border"
+                      style={{
+                        background: '#111111',
+                        borderColor: '#2a2a2a',
+                        caretColor: '#ffffff',
+                      }}
+                      onFocus={e => (e.currentTarget.style.borderColor = '#ffffff')}
+                      onBlur={e => (e.currentTarget.style.borderColor = '#2a2a2a')}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label
+                    htmlFor="client-pw2"
+                    className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                    style={{ color: '#525252' }}
+                  >
+                    Confirmer
+                  </label>
+                  <input
+                    id="client-pw2"
+                    type="password"
+                    autoComplete="new-password"
+                    value={password2}
+                    onChange={(e) => setPassword2(e.target.value)}
+                    placeholder="Répète le mot de passe"
+                    className="w-full px-4 py-3.5 rounded-2xl text-sm text-white outline-none transition-all border"
+                    style={{
+                      background: '#111111',
+                      borderColor: '#2a2a2a',
+                      caretColor: '#ffffff',
+                    }}
+                    onFocus={e => (e.currentTarget.style.borderColor = '#ffffff')}
+                    onBlur={e => (e.currentTarget.style.borderColor = '#2a2a2a')}
+                  />
+                </div>
+                {pwError && (
+                  <p
+                    className="text-sm px-4 py-3 rounded-xl border text-red-400"
+                    style={{ background: 'rgba(248,113,113,0.08)', borderColor: 'rgba(248,113,113,0.2)' }}
+                  >
+                    {pwError}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  disabled={savingPw || password.length < 8 || password !== password2}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: '#ffffff', color: '#000000' }}
+                >
+                  {savingPw ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      Continuer
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="w-full text-sm transition-colors py-2"
+                  style={{ color: '#525252' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
+                  onMouseLeave={e => (e.currentTarget.style.color = '#525252')}
+                >
+                  Ce n’est pas toi ? Se déconnecter
+                </button>
+              </form>
+            )}
+
+            {phase === 'email' && (
               <form onSubmit={handleSend} className="space-y-4">
                 {/* Email field */}
                 <div>
@@ -232,11 +520,12 @@ export const ClientPortalLoginPage: React.FC = () => {
       >
         <img
           src={heroSrc}
-          alt=""
-          aria-hidden
-          className="absolute inset-0 w-full h-full object-cover object-top"
+          alt="Personne avec tatouage consultant son téléphone — espace client"
+          className="absolute inset-0 w-full h-full object-cover object-center"
           style={{ opacity: 0.55, filter: 'brightness(0.8)' }}
-          onError={() => setHeroSrc(HERO_FALLBACK)}
+          loading="eager"
+          fetchPriority="high"
+          onError={handleHeroError}
         />
         {/* Gradient bottom */}
         <div

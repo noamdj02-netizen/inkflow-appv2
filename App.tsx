@@ -37,6 +37,7 @@ const InstagramCallbackPage = lazy(() => import('./pages/InstagramCallbackPage')
 const AddToHomeScreenPage = lazy(() => import('./pages/AddToHomeScreenPage').then(m => ({ default: m.AddToHomeScreenPage })));
 const DebugExperiencePage = lazy(() => import('./pages/admin/DebugExperiencePage').then(m => ({ default: m.DebugExperiencePage })));
 const ClientPortalLoginPage = lazy(() => import('./pages/client/ClientPortalLoginPage').then(m => ({ default: m.ClientPortalLoginPage })));
+const ClientWelcomePage = lazy(() => import('./pages/client/ClientWelcomePage').then(m => ({ default: m.ClientWelcomePage })));
 const ClientDashboard = lazy(() => import('./pages/client/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
 
 interface Route {
@@ -117,9 +118,11 @@ const Router: React.FC = () => {
     { path: '/dashboard-demo', component: DashboardDemoPage },
     { path: /^\/(vue-ensemble|demandes|rendez-vous|galerie-flash|clients|messagerie|portfolio|finance|parametres)\/?$/, component: FeatureDetailPage, getProps: (m) => ({ slug: m[1] }) },
     { path: '/dashboard', component: DashboardPage, requiresAuth: true, needsSupabaseSync: true },
-    { path: '/auth/callback', component: AuthCallbackPage },
-    { path: '/instagram/callback', component: InstagramCallbackPage },
-    { path: '/auth/update-password', component: UpdatePasswordPage },
+    /** Slash final optionnel — évite 404 si l’URL est /auth/callback/client/ */
+    { path: /^\/auth\/callback\/client\/?$/, component: AuthCallbackPage },
+    { path: /^\/auth\/callback\/?$/, component: AuthCallbackPage },
+    { path: /^\/instagram\/callback\/?$/, component: InstagramCallbackPage },
+    { path: /^\/auth\/update-password\/?$/, component: UpdatePasswordPage },
     // Vitrine publique : accessible sans connexion (slash final optionnel)
     { path: /^\/studio\/([a-z0-9-]+)\/?$/, component: PublicStudioPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
     { path: /^\/book\/([a-z0-9-]+)\/?$/, component: PublicBookingPage, getProps: (m) => ({ studioSlug: m[1] }) },
@@ -137,11 +140,15 @@ const Router: React.FC = () => {
     { path: '/admin/debug-experience', component: DebugExperiencePage, requiresAuth: true },
     // ── Portail client "My Inkflow" ─────────────────────────────────────────
     { path: '/client', component: ClientPortalLoginPage },
+    { path: /^\/client\/welcome\/?$/, component: ClientWelcomePage },
     { path: /^\/client\/dashboard\/?$/, component: ClientDashboard },
   ];
 
   const matchRoute = () => {
-    const pathname = currentPath.split('?')[0];
+    let pathname = currentPath.split('?')[0];
+    if (pathname.length > 1 && pathname.endsWith('/')) {
+      pathname = pathname.replace(/\/+$/, '');
+    }
     for (const route of routes) {
       if (typeof route.path === 'string') {
         if (route.path === pathname) return { route, match: null };
