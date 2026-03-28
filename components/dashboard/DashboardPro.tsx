@@ -22,6 +22,7 @@ import { PaymentSuccessModal } from './PaymentSuccessModal';
 import { AvailabilitySettings } from '../settings/AvailabilitySettings';
 import { VitrineSettings } from '../settings/VitrineSettings';
 import { SlugSettings } from '../settings/SlugSettings';
+import { GeoSettings } from '../settings/GeoSettings';
 import { InstagramConnect } from '../settings/InstagramConnect';
 import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 import { VitrineLinkButton } from './VitrineLinkButton';
@@ -1794,7 +1795,15 @@ export const DashboardPro: React.FC = () => {
                       onSlugUpdated={refreshStudioSlug}
                     />
                   )}
-                  
+
+                  {/* Géolocalisation — carte de découverte client */}
+                  {studioId && (
+                    <GeoSettings
+                      studioId={studioId}
+                      studioSlug={studioSlug ?? ''}
+                    />
+                  )}
+
                   {/* Carte Profil */}
                   <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
                     <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">

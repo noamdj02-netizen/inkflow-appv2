@@ -7,18 +7,21 @@
  * Structure     : Onboarding (Welcome → StylePicker) → Dashboard (4 onglets)
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Heart, Star, ChevronRight, Search, X,
   ExternalLink, Award, Wallet, User, CalendarDays,
   Map, Flame, LogOut, Clock, ArrowUpRight, Copy, Share2, Check,
+  Navigation, List, LayoutGrid,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { clientNeedsPassword, clientOnboardingComplete } from '../../lib/clientAuth';
 import { getInviteBaseUrl } from '../../lib/urls';
 import { type ClientAppointment, type ClientTab } from '../../components/client/clientExperienceTypes';
 import { HealingBanner } from '../../components/client/HealingBanner';
+import { getNearbyStudios, type NearbyStudio } from '../../lib/supabaseGeo';
+import { NearbyMapView } from '../../components/client/NearbyMapView';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const N = {
@@ -71,6 +74,51 @@ const CHAT_BUBBLES = [
   { text: "C'est son 1er tattoo ?",      delay: 1.0, side: 'left'  as const },
   { text: '🔥 Trop beau j\'adore',      delay: 1.7, side: 'right' as const },
   { text: 'Il dure combien de temps ?', delay: 2.3, side: 'left'  as const },
+];
+
+// ── Types pour les cartes ─────────────────────────────────────────────────────
+interface DisplayFlash {
+  id: string;
+  name: string;
+  artist: string;
+  studio: string;
+  studioSlug: string;
+  dist: string;
+  price: number;
+  h: number;
+  grad: [string, string];
+  hot: boolean;
+  imageUrl?: string;
+}
+
+interface SheetStudio {
+  id: string;
+  slug: string;
+  name: string;
+  artistLabel: string;
+  styleLabel: string;
+  rating: number;
+  distLabel: string;
+  grad: [string, string];
+  portfolioImages: string[];
+  city?: string;
+}
+
+// Fallback mock → DisplayFlash (utilisé avant que la géo ne charge)
+const MOCK_FLASH: DisplayFlash[] = [
+  { id:'f1', name:'Serpent minimal',  artist:'Léa M.',   studio:'Vénus',  studioSlug:'', dist:'1.2km', price:180, h:200, grad:['#1A0A2E','#3D1A6B'], hot:true  },
+  { id:'f2', name:'Rose géométrique', artist:'Sarah K.', studio:'Noir',   studioSlug:'', dist:'0.8km', price:140, h:165, grad:['#0A1A2E','#0F3A5A'], hot:false },
+  { id:'f3', name:'Dragon irezumi',   artist:'Thomas R.',studio:'I&B',    studioSlug:'', dist:'2.0km', price:320, h:245, grad:['#1A0A0A','#4A1010'], hot:true  },
+  { id:'f4', name:'Lune & étoiles',   artist:'Léa M.',   studio:'Vénus',  studioSlug:'', dist:'1.2km', price:90,  h:160, grad:['#0A0A1A','#141428'], hot:false },
+  { id:'f5', name:'Colibri',          artist:'Sarah K.', studio:'Noir',   studioSlug:'', dist:'0.8km', price:160, h:190, grad:['#0A1A0A','#143514'], hot:false },
+  { id:'f6', name:'Crâne néo-trad',   artist:'Marco V.', studio:'Skull',  studioSlug:'', dist:'3.1km', price:220, h:230, grad:['#1A0A10','#3D1025'], hot:true  },
+];
+
+const MOCK_STUDIOS: SheetStudio[] = [
+  { id:'s1', slug:'', name:'Vénus Ink',   artistLabel:'Léa M.',   styleLabel:'Fine line',   rating:4.9, distLabel:'1.2 km', grad:['#1A0A2E','#3D1A6B'], portfolioImages:[] },
+  { id:'s2', slug:'', name:'Noir Studio', artistLabel:'Sarah K.', styleLabel:'Blackwork',   rating:5.0, distLabel:'0.8 km', grad:['#111111','#2E2E2E'], portfolioImages:[] },
+  { id:'s3', slug:'', name:'Ink & Bones', artistLabel:'Thomas R.',styleLabel:'Japonais',    rating:4.8, distLabel:'2.0 km', grad:['#0A1A2E','#0F3A5A'], portfolioImages:[] },
+  { id:'s4', slug:'', name:'Skull Press', artistLabel:'Marco V.', styleLabel:'Traditional', rating:4.7, distLabel:'3.1 km', grad:['#2E0A0A','#6B1A1A'], portfolioImages:[] },
 ];
 
 const TXNS = [
@@ -328,67 +376,105 @@ const OnboardingStylePicker: React.FC<{ onDone: (styles: string[]) => void }> = 
 // FLASH CARD
 // ══════════════════════════════════════════════════════════════════════════════
 const FlashCard: React.FC<{
-  f: typeof FLASHES[0]; fav: boolean; onFav: () => void;
-}> = ({ f, fav, onFav }) => (
-  <motion.div
-    whileTap={{ scale: 0.97 }}
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="rounded-[20px] overflow-hidden border"
-    style={{ borderColor: N.border, background: N.surface }}
-  >
-    <div
-      className="relative"
-      style={{ height: f.h * 0.82, background: `linear-gradient(155deg, ${f.grad[0]}, ${f.grad[1]})` }}
+  f: DisplayFlash; fav: boolean; onFav: () => void;
+}> = ({ f, fav, onFav }) => {
+  const cardContent = (
+    <motion.div
+      whileTap={{ scale: 0.97 }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-[20px] overflow-hidden border"
+      style={{ borderColor: N.border, background: N.surface }}
     >
-      {/* SVG abstrait décoratif */}
-      <svg className="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <circle cx="70" cy="30" r="25" fill="none" stroke="rgba(223,255,0,0.2)" strokeWidth="0.5"/>
-        <path d="M10 60 Q50 40 90 60 Q70 85 50 80 Q30 85 10 60Z" fill="rgba(255,255,255,0.03)"/>
-      </svg>
-
-      {/* Hot badge */}
-      {f.hot && (
-        <div
-          className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold"
-          style={{ background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(8px)', color: N.neon }}
-        >
-          <Flame className="w-3 h-3" />
-          Tendance
-        </div>
-      )}
-
-      {/* Heart */}
-      <motion.button
-        type="button"
-        whileTap={{ scale: 0.85 }}
-        onClick={(e) => { e.stopPropagation(); onFav(); }}
-        className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center border"
-        style={{ background: 'rgba(10,10,10,0.7)', backdropFilter: 'blur(8px)', borderColor: fav ? 'rgba(223,255,0,0.4)' : N.border }}
-      >
-        <Heart className="w-3.5 h-3.5" style={{ color: fav ? N.neon : N.text, fill: fav ? N.neon : 'none' }} />
-      </motion.button>
-
-      {/* Overlay info */}
       <div
-        className="absolute bottom-0 left-0 right-0 px-3 pt-8 pb-2.5"
-        style={{ background: 'linear-gradient(to top, rgba(10,10,10,0.95), transparent)' }}
+        className="relative"
+        style={{ height: f.h * 0.82, background: `linear-gradient(155deg, ${f.grad[0]}, ${f.grad[1]})` }}
       >
-        <p className="text-[13px] font-bold" style={{ color: N.text }}>{f.name}</p>
-        <p className="text-[10px] mt-0.5" style={{ color: 'rgba(245,243,239,0.45)' }}>{f.artist} · {f.dist}</p>
+        {/* Image réelle si disponible */}
+        {f.imageUrl && (
+          <img
+            src={f.imageUrl}
+            alt={f.name}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+
+        {/* SVG décoratif (fallback sans image) */}
+        {!f.imageUrl && (
+          <svg className="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <circle cx="70" cy="30" r="25" fill="none" stroke="rgba(223,255,0,0.2)" strokeWidth="0.5"/>
+            <path d="M10 60 Q50 40 90 60 Q70 85 50 80 Q30 85 10 60Z" fill="rgba(255,255,255,0.03)"/>
+          </svg>
+        )}
+
+        {/* Hot badge */}
+        {f.hot && (
+          <div
+            className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold"
+            style={{ background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(8px)', color: N.neon }}
+          >
+            <Flame className="w-3 h-3" />
+            Tendance
+          </div>
+        )}
+
+        {/* Heart */}
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.85 }}
+          onClick={(e) => { e.stopPropagation(); onFav(); }}
+          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center border"
+          style={{ background: 'rgba(10,10,10,0.7)', backdropFilter: 'blur(8px)', borderColor: fav ? 'rgba(223,255,0,0.4)' : N.border }}
+        >
+          <Heart className="w-3.5 h-3.5" style={{ color: fav ? N.neon : N.text, fill: fav ? N.neon : 'none' }} />
+        </motion.button>
+
+        {/* Overlay info */}
+        <div
+          className="absolute bottom-0 left-0 right-0 px-3 pt-8 pb-2.5"
+          style={{ background: 'linear-gradient(to top, rgba(10,10,10,0.95), transparent)' }}
+        >
+          <p className="text-[13px] font-bold" style={{ color: N.text }}>{f.name}</p>
+          <p className="text-[10px] mt-0.5" style={{ color: 'rgba(245,243,239,0.45)' }}>{f.artist} · {f.dist}</p>
+        </div>
       </div>
-    </div>
-    <div className="px-3 py-2.5 flex items-center justify-between">
-      <span className="text-sm font-black tabular-nums" style={{ color: N.neonText }}>{f.price}€</span>
-      <span className="text-[10px] px-2 py-0.5 rounded-lg font-medium" style={{ background: N.elevated, color: N.muted }}>{f.studio}</span>
-    </div>
-  </motion.div>
-);
+      <div className="px-3 py-2.5 flex items-center justify-between">
+        <span className="text-sm font-black tabular-nums" style={{ color: N.neonText }}>{f.price}€</span>
+        <span className="text-[10px] px-2 py-0.5 rounded-lg font-medium" style={{ background: N.elevated, color: N.muted }}>{f.studio}</span>
+      </div>
+    </motion.div>
+  );
+
+  // Si le flash est lié à une vraie vitrine, on enveloppe dans un lien
+  if (f.studioSlug) {
+    return (
+      <a href={`/studio/${f.studioSlug}`} className="block">
+        {cardContent}
+      </a>
+    );
+  }
+  return cardContent;
+};
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ARTIST BOTTOM SHEET
 // ══════════════════════════════════════════════════════════════════════════════
-const ArtistSheet: React.FC<{ studio: typeof STUDIOS[0] | null; onClose: () => void }> = ({ studio, onClose }) => (
+const GuestConnectPanel: React.FC<{ title: string; body: string }> = ({ title, body }) => (
+  <div className="rounded-3xl border p-8 flex flex-col items-center text-center gap-3" style={{ borderColor: N.border, background: N.elevated }}>
+    <User className="w-10 h-10 opacity-25" style={{ color: N.neon }} />
+    <h3 className="text-base font-black" style={{ color: N.text }}>{title}</h3>
+    <p className="text-sm leading-relaxed max-w-xs" style={{ color: N.muted }}>{body}</p>
+    <a
+      href="/client"
+      className="mt-2 inline-flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-bold text-sm active:scale-[0.98] transition-all"
+      style={{ background: N.neon, color: N.bg, boxShadow: N.neonGlow }}
+    >
+      Se connecter ou créer un compte
+    </a>
+  </div>
+);
+
+const ArtistSheet: React.FC<{ studio: SheetStudio | null; onClose: () => void; isGuest?: boolean }> = ({ studio, onClose, isGuest }) => (
   <AnimatePresence>
     {studio && (
       <motion.div
@@ -428,37 +514,65 @@ const ArtistSheet: React.FC<{ studio: typeof STUDIOS[0] | null; onClose: () => v
           <div className="px-5 pt-10 pb-8 space-y-4">
             <div>
               <h2 className="text-xl font-black" style={{ color: N.text }}>{studio.name}</h2>
-              <p className="text-sm mt-0.5" style={{ color: N.muted }}>{studio.artist} · {studio.style}</p>
+              <p className="text-sm mt-0.5" style={{ color: N.muted }}>
+                {studio.artistLabel}{studio.styleLabel ? ` · ${studio.styleLabel}` : ''}
+                {studio.city ? ` · ${studio.city}` : ''}
+              </p>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
               {[
-                { l: 'Note', v: String(studio.rating), neon: true },
-                { l: 'Distance', v: studio.dist, neon: false },
-                { l: 'Spécialité', v: studio.style, neon: false },
+                { l: 'Note', v: studio.rating > 0 ? String(studio.rating) : '–', neon: true },
+                { l: 'Distance', v: studio.distLabel, neon: false },
+                { l: 'Style', v: studio.styleLabel || '–', neon: false },
               ].map(({ l, v, neon }) => (
                 <div key={l} className="rounded-2xl border p-3 text-center" style={{ borderColor: N.border, background: N.elevated }}>
-                  <p className="text-sm font-black" style={{ color: neon ? N.neonText : N.text }}>{v}</p>
+                  <p className="text-sm font-black truncate" style={{ color: neon ? N.neonText : N.text }}>{v}</p>
                   <p className="text-[10px] mt-0.5 uppercase tracking-wider" style={{ color: N.muted }}>{l}</p>
                 </div>
               ))}
             </div>
 
+            {/* Portfolio images */}
             <div className="grid grid-cols-3 gap-2">
-              {Array.from({ length: 6 }, (_, i) => (
-                <div key={i} className="aspect-square rounded-2xl border overflow-hidden" style={{ borderColor: N.border }}>
-                  <div className="w-full h-full" style={{ background: `linear-gradient(${135 + i * 20}deg, ${studio.grad[0]}, ${studio.grad[1]})` }} />
-                </div>
-              ))}
+              {studio.portfolioImages.length > 0
+                ? studio.portfolioImages.slice(0, 6).map((url, i) => (
+                  <div key={i} className="aspect-square rounded-2xl border overflow-hidden" style={{ borderColor: N.border }}>
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ))
+                : Array.from({ length: 6 }, (_, i) => (
+                  <div key={i} className="aspect-square rounded-2xl border overflow-hidden" style={{ borderColor: N.border }}>
+                    <div className="w-full h-full" style={{ background: `linear-gradient(${135 + i * 20}deg, ${studio.grad[0]}, ${studio.grad[1]})` }} />
+                  </div>
+                ))
+              }
             </div>
 
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              className="w-full py-4 rounded-2xl font-bold text-[15px]"
-              style={{ background: N.neon, color: N.bg, boxShadow: N.neonGlow }}
-            >
-              Réserver mon prochain tattoo
-            </motion.button>
+            <div className="flex gap-2">
+              {studio.slug && (
+                <a
+                  href={`/studio/${studio.slug}`}
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm border transition-all"
+                  style={{ borderColor: N.borderMid, color: N.text, background: N.elevated }}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Vitrine
+                </a>
+              )}
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  if (isGuest) { window.location.href = '/client'; return; }
+                  if (studio.slug) { window.location.href = `/book/${studio.slug}`; }
+                }}
+                className="flex-1 py-3.5 rounded-2xl font-bold text-[15px] active:scale-[0.98] transition-all"
+                style={{ background: N.neon, color: N.bg, boxShadow: N.neonGlow }}
+              >
+                {isGuest ? 'Se connecter' : 'Réserver'}
+              </motion.button>
+            </div>
           </div>
           <div style={{ height: 'env(safe-area-inset-bottom, 16px)' }} />
         </motion.div>
@@ -491,10 +605,8 @@ const Spinner: React.FC = () => (
 // ══════════════════════════════════════════════════════════════════════════════
 export const ClientDashboard: React.FC = () => {
   // ── Onboarding state (localStorage) ──
-  const [onboardStep, setOnboardStep] = useState<'welcome' | 'styles' | 'done'>(() => {
-    try { return localStorage.getItem('inkflow_onboarded_v1') === '1' ? 'done' : 'welcome'; }
-    catch { return 'welcome'; }
-  });
+  /** Accès direct à l’app ; l’onboarding plein écran reste disponible si on repasse à welcome/styles plus tard. */
+  const [onboardStep, setOnboardStep] = useState<'welcome' | 'styles' | 'done'>('done');
 
   const finishOnboarding = (styles: string[]) => {
     try { localStorage.setItem('inkflow_onboarded_v1', '1'); } catch {}
@@ -513,39 +625,68 @@ export const ClientDashboard: React.FC = () => {
 
   // ── Auth & data ──
   const [sessionEmail, setEmail] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [bootLoading, setBootLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   const [appointments, setApts] = useState<ClientAppointment[]>([]);
   const [cents, setCents] = useState(0);
   const [code, setCode] = useState('');
   const [favFlash, setFavFlash] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
-  const [artistSheet, setArtistSheet] = useState<typeof STUDIOS[0] | null>(null);
+  const [artistSheet, setArtistSheet] = useState<SheetStudio | null>(null);
   const [referralCount] = useState(2);
   const [copiedCode, setCopiedCode] = useState(false);
 
+  // ── Géolocalisation & studios proches ──
+  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [nearbyStudios, setNearbyStudios] = useState<NearbyStudio[]>([]);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+
   useEffect(() => {
-    const hasHashToken = window.location.hash.includes('access_token');
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (timer) { clearTimeout(timer); timer = null; }
+    let cancelled = false;
+    const hasHash = window.location.hash.includes('access_token');
+    const hashFallback = hasHash ? setTimeout(() => { if (!cancelled) setBootLoading(false); }, 5000) : null;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
       if (session?.user?.email) {
         setEmail(session.user.email);
         if (window.location.hash) window.history.replaceState({}, '', '/client/dashboard');
-      } else if (_e === 'SIGNED_OUT') { window.location.href = '/client'; }
+        setBootLoading(false);
+      } else if (event === 'SIGNED_OUT') {
+        window.location.href = '/client/dashboard';
+      }
     });
-    if (!hasHashToken) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!session?.user?.email) timer = setTimeout(() => { window.location.href = '/client'; }, 2000);
-        else setEmail(session.user.email);
-      });
-    }
-    return () => { subscription.unsubscribe(); if (timer) clearTimeout(timer); };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled) return;
+      if (session?.user?.email) {
+        setEmail(session.user.email);
+        setBootLoading(false);
+      } else {
+        setEmail(null);
+        if (!hasHash) setBootLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+      if (hashFallback) clearTimeout(hashFallback);
+    };
   }, []);
 
   useEffect(() => {
-    if (!sessionEmail) return;
+    if (!sessionEmail) {
+      setApts([]);
+      setCents(0);
+      setCode('');
+      setDataLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setDataLoading(true);
     (async () => {
-      setLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
         const meta = user?.user_metadata ?? ({} as Record<string, unknown>);
@@ -555,6 +696,7 @@ export const ClientDashboard: React.FC = () => {
         const { data: apts } = await supabase
           .from('inkflow_appointments').select('id,date,time,service,status,price,inkflow_studios(studio_name)')
           .eq('client_email', sessionEmail).order('date', { ascending: false }).limit(50);
+        if (cancelled) return;
         setApts((apts ?? []).map((a: Record<string, unknown>) => ({
           id: String(a.id), date: String(a.date), time: a.time as string | undefined,
           service: String(a.service), status: String(a.status), price: Number(a.price ?? 0),
@@ -562,17 +704,54 @@ export const ClientDashboard: React.FC = () => {
           studio_address: 'Paris · adresse communiquée par le studio',
         })));
         const { data: w } = await supabase.from('inkflow_client_wallets').select('balance_cents').eq('email', sessionEmail).maybeSingle();
+        if (cancelled) return;
         setCents((w as { balance_cents?: number } | null)?.balance_cents ?? 0);
         const { data: cd } = await supabase.from('inkflow_client_codes').select('code').eq('email', sessionEmail).maybeSingle();
         if (!cd) {
           const c = generateCode(sessionEmail);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (supabase.from('inkflow_client_codes') as any).insert({ email: sessionEmail, code: c });
-          setCode(c);
-        } else { setCode((cd as { code: string }).code); }
-      } finally { setLoading(false); }
+          if (!cancelled) setCode(c);
+        } else if (!cancelled) { setCode((cd as { code: string }).code); }
+      } finally {
+        if (!cancelled) setDataLoading(false);
+      }
     })();
+    return () => { cancelled = true; };
   }, [sessionEmail]);
+
+  // Demande géolocalisation + charge les studios proches
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setUserPos({ lat: latitude, lng: longitude });
+        const studios = await getNearbyStudios(latitude, longitude, 50);
+        setNearbyStudios(studios);
+        setGeoLoading(false);
+      },
+      () => setGeoLoading(false),
+      { timeout: 8000, maximumAge: 300_000 },
+    );
+  }, []);
+
+  // Convertit un NearbyStudio en SheetStudio pour le bottom sheet
+  const nearbyToSheet = useCallback((s: NearbyStudio): SheetStudio => ({
+    id: s.id,
+    slug: s.slug,
+    name: s.studio_name,
+    artistLabel: s.tags[0] ?? 'Tatoueur',
+    styleLabel: s.tags[1] ?? '',
+    rating: 0,
+    distLabel: s.distance_km < 1
+      ? `${Math.round(s.distance_km * 1000)} m`
+      : `${s.distance_km.toFixed(1)} km`,
+    grad: ['#1A0A2E', '#3D1A6B'],
+    portfolioImages: s.portfolio.map((p) => p.url),
+    city: s.city ?? undefined,
+  }), []);
 
   const firstName = useMemo(() => {
     if (!sessionEmail) return 'toi';
@@ -585,10 +764,65 @@ export const ClientDashboard: React.FC = () => {
   const lastTattoo = useMemo(() => completed[0] ?? null, [completed]);
   const healingDays = lastTattoo ? daysSince(lastTattoo.date) : 999;
 
-  const filteredFlash = useMemo(() => {
+  // Flash displays : données réelles si geo chargée, sinon mock
+  const allDisplayFlash = useMemo<DisplayFlash[]>(() => {
+    if (nearbyStudios.length === 0) return MOCK_FLASH;
+    const GRADS: [string, string][] = [
+      ['#1A0A2E','#3D1A6B'], ['#0A1A2E','#0F3A5A'], ['#1A0A0A','#4A1010'],
+      ['#111111','#2A2A2A'], ['#0A1A0A','#143514'], ['#1A0A10','#3D1025'],
+    ];
+    return nearbyStudios.flatMap((s, si) =>
+      s.flash.map((f, fi) => ({
+        id: f.id || `${s.id}-${fi}`,
+        name: f.title,
+        artist: s.studio_name,
+        studio: s.studio_name,
+        studioSlug: s.slug,
+        dist: s.distance_km < 1
+          ? `${Math.round(s.distance_km * 1000)} m`
+          : `${s.distance_km.toFixed(1)} km`,
+        price: f.price,
+        h: 160 + ((si * 3 + fi) % 5) * 18,
+        grad: GRADS[(si + fi) % GRADS.length],
+        hot: fi === 0 && si < 3,
+        imageUrl: f.imageUrl || undefined,
+      }))
+    );
+  }, [nearbyStudios]);
+
+  // Studios à afficher (réels ou mock)
+  const displayStudios = useMemo<SheetStudio[]>(() => {
+    if (nearbyStudios.length === 0) return MOCK_STUDIOS;
+    const GRADS: [string, string][] = [
+      ['#1A0A2E','#3D1A6B'], ['#0A1A2E','#0F3A5A'],
+      ['#111111','#2E2E2E'], ['#2E0A0A','#6B1A1A'],
+    ];
+    return nearbyStudios.slice(0, 8).map((s, i) => ({
+      id: s.id,
+      slug: s.slug,
+      name: s.studio_name,
+      artistLabel: s.tags[0] ?? 'Tatoueur',
+      styleLabel: s.tags[1] ?? '',
+      rating: 0,
+      distLabel: s.distance_km < 1
+        ? `${Math.round(s.distance_km * 1000)} m`
+        : `${s.distance_km.toFixed(1)} km`,
+      grad: GRADS[i % GRADS.length],
+      portfolioImages: s.portfolio.map((p) => p.url),
+      city: s.city ?? undefined,
+    }));
+  }, [nearbyStudios]);
+
+  const filteredFlash = useMemo<DisplayFlash[]>(() => {
     const q = search.trim().toLowerCase();
-    return q ? FLASHES.filter(f => f.name.toLowerCase().includes(q) || f.artist.toLowerCase().includes(q)) : FLASHES;
-  }, [search]);
+    return q
+      ? allDisplayFlash.filter(f =>
+          f.name.toLowerCase().includes(q) ||
+          f.artist.toLowerCase().includes(q) ||
+          f.studio.toLowerCase().includes(q),
+        )
+      : allDisplayFlash;
+  }, [search, allDisplayFlash]);
 
   const colA = filteredFlash.filter((_, i) => i % 2 === 0);
   const colB = filteredFlash.filter((_, i) => i % 2 !== 0);
@@ -605,7 +839,10 @@ export const ClientDashboard: React.FC = () => {
   if (onboardStep === 'welcome') return <OnboardingWelcome onNext={() => setOnboardStep('styles')} />;
   if (onboardStep === 'styles') return <OnboardingStylePicker onDone={finishOnboarding} />;
 
-  if (loading || !sessionEmail) return <Spinner />;
+  if (bootLoading) return <Spinner />;
+  if (sessionEmail && dataLoading) return <Spinner />;
+
+  const isGuest = !sessionEmail;
 
   const TAB_TITLES: Record<ClientTab, string> = { explore:'Découvrir', rdv:'Mes RDV', wallet:'Wallet', profile:'Profil' };
 
@@ -649,6 +886,17 @@ export const ClientDashboard: React.FC = () => {
         </div>
       </header>
 
+      {isGuest && (
+        <div
+          className="max-w-lg mx-auto px-5 py-2.5 border-b text-center"
+          style={{ borderColor: N.border, background: 'rgba(223,255,0,0.04)' }}
+        >
+          <p className="text-[11px] leading-snug" style={{ color: N.muted }}>
+            Mode découverte — connecte-toi pour réserver, suivre tes RDV et ton wallet.
+          </p>
+        </div>
+      )}
+
       {/* ── Healing banner ── */}
       {lastTattoo && healingDays < 15 && (
         <div className="max-w-lg mx-auto">
@@ -671,20 +919,84 @@ export const ClientDashboard: React.FC = () => {
 
             {/* ════ EXPLORER ════ */}
             {tab === 'explore' && (
-              <div className="px-4 pt-5 space-y-7 pb-6">
-                {/* Localisation */}
+              <div className="px-4 pt-5 space-y-6 pb-6">
+
+                {/* Localisation pill */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4" style={{ color: N.neon }} />
-                    <span className="text-sm font-semibold" style={{ color: N.textSub }}>Autour de moi</span>
-                    <span className="text-sm" style={{ color: N.muted }}>· Paris 11e</span>
+                    <div
+                      className="w-5 h-5 rounded-full flex items-center justify-center"
+                      style={{ background: N.neonDim }}
+                    >
+                      {geoLoading
+                        ? <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: N.neon }} />
+                        : <MapPin className="w-3 h-3" style={{ color: N.neon }} />
+                      }
+                    </div>
+                    <span className="text-sm font-semibold" style={{ color: N.textSub }}>
+                      {geoLoading ? 'Localisation…' : userPos ? 'Autour de moi' : 'Position inconnue'}
+                    </span>
+                    {userPos && nearbyStudios.length > 0 && (
+                      <span className="text-sm" style={{ color: N.muted }}>
+                        · {nearbyStudios.length} studio{nearbyStudios.length > 1 ? 's' : ''}
+                      </span>
+                    )}
                   </div>
-                  <button type="button"
-                    className="text-xs font-semibold px-2.5 py-1.5 rounded-xl border"
-                    style={{ borderColor: N.border, background: N.elevated, color: N.neonText }}>
-                    Changer
-                  </button>
+                  {/* Toggle Carte / Liste */}
+                  <div className="flex items-center gap-1 p-1 rounded-xl border" style={{ borderColor: N.border, background: N.surface }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowMap(false)}
+                      className="p-1.5 rounded-lg transition-all"
+                      style={{ background: !showMap ? N.elevated : 'transparent', color: !showMap ? N.neon : N.muted }}
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowMap(true)}
+                      className="p-1.5 rounded-lg transition-all"
+                      style={{ background: showMap ? N.elevated : 'transparent', color: showMap ? N.neon : N.muted }}
+                    >
+                      <Map className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
+
+                {/* Carte Google Maps */}
+                {showMap && userPos && (
+                  <NearbyMapView
+                    userPos={userPos}
+                    studios={nearbyStudios}
+                    onSelectStudio={(s) => setArtistSheet(nearbyToSheet(s))}
+                  />
+                )}
+
+                {/* CTA géolocalisation si non accordée */}
+                {!userPos && !geoLoading && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGeoLoading(true);
+                      navigator.geolocation?.getCurrentPosition(
+                        async (pos) => {
+                          const { latitude, longitude } = pos.coords;
+                          setUserPos({ lat: latitude, lng: longitude });
+                          const studios = await getNearbyStudios(latitude, longitude, 50);
+                          setNearbyStudios(studios);
+                          setGeoLoading(false);
+                        },
+                        () => setGeoLoading(false),
+                        { timeout: 8000 },
+                      );
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-semibold transition-all active:scale-[0.98]"
+                    style={{ borderColor: 'rgba(223,255,0,0.25)', background: N.neonDim, color: N.neonText }}
+                  >
+                    <Navigation className="w-4 h-4" />
+                    Activer la géolocalisation
+                  </button>
+                )}
 
                 {/* Recherche */}
                 <div className="relative">
@@ -708,11 +1020,15 @@ export const ClientDashboard: React.FC = () => {
                 {!search && (
                   <section>
                     <div className="flex items-center justify-between mb-3">
-                      <h2 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>Studios à la une</h2>
-                      <button type="button" className="text-xs font-semibold" style={{ color: N.neon }}>Voir tout</button>
+                      <h2 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>
+                        {nearbyStudios.length > 0 ? 'Studios proches' : 'Studios à la une'}
+                      </h2>
+                      <button type="button" className="text-xs font-semibold" style={{ color: N.neon }}>
+                        Voir tout
+                      </button>
                     </div>
                     <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
-                      {STUDIOS.map((s, i) => (
+                      {displayStudios.map((s, i) => (
                         <motion.button
                           key={s.id} type="button"
                           initial={{ opacity: 0, x: 20 }}
@@ -723,20 +1039,31 @@ export const ClientDashboard: React.FC = () => {
                           className="flex-shrink-0 w-44 rounded-3xl border overflow-hidden text-left"
                           style={{ borderColor: N.border, background: N.surface }}
                         >
-                          <div className="h-28 relative" style={{ background: `linear-gradient(145deg, ${s.grad[0]}, ${s.grad[1]})` }}>
-                            {/* Note */}
-                            <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold"
-                              style={{ background: 'rgba(10,10,10,0.75)', backdropFilter: 'blur(6px)', color: N.text }}>
-                              <Star className="w-2.5 h-2.5 fill-current" style={{ color: N.neon }} />
-                              {s.rating}
-                            </div>
-                            <div className="absolute bottom-2.5 left-3 text-sm font-black text-white/80">{s.name.slice(0,2)}</div>
+                          <div
+                            className="h-28 relative overflow-hidden"
+                            style={{ background: `linear-gradient(145deg, ${s.grad[0]}, ${s.grad[1]})` }}
+                          >
+                            {s.portfolioImages[0] && (
+                              <img src={s.portfolioImages[0]} alt={s.name} className="absolute inset-0 w-full h-full object-cover" />
+                            )}
+                            {s.rating > 0 && (
+                              <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold"
+                                style={{ background: 'rgba(10,10,10,0.75)', backdropFilter: 'blur(6px)', color: N.text }}>
+                                <Star className="w-2.5 h-2.5 fill-current" style={{ color: N.neon }} />
+                                {s.rating}
+                              </div>
+                            )}
+                            <div className="absolute bottom-2.5 left-3 text-sm font-black text-white/80">{s.name.slice(0, 2)}</div>
                           </div>
                           <div className="p-3">
-                            <p className="text-[13px] font-bold truncate" style={{ color: N.text }}>{s.artist}</p>
-                            <p className="text-[11px] truncate mt-0.5" style={{ color: N.muted }}>{s.style}</p>
+                            <p className="text-[13px] font-bold truncate" style={{ color: N.text }}>{s.name}</p>
+                            <p className="text-[11px] truncate mt-0.5" style={{ color: N.muted }}>
+                              {s.artistLabel}{s.styleLabel ? ` · ${s.styleLabel}` : ''}
+                            </p>
                             <div className="flex items-center justify-between mt-2">
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-lg" style={{ background: N.elevated, color: N.muted }}>{s.dist}</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-lg" style={{ background: N.elevated, color: N.muted }}>
+                                {s.distLabel}
+                              </span>
                               <ChevronRight className="w-3.5 h-3.5" style={{ color: N.border }} />
                             </div>
                           </div>
@@ -779,6 +1106,13 @@ export const ClientDashboard: React.FC = () => {
             {/* ════ RDV ════ */}
             {tab === 'rdv' && (
               <div className="px-4 pt-5 space-y-8 pb-6">
+                {isGuest ? (
+                  <GuestConnectPanel
+                    title="Tes rendez-vous"
+                    body="Connecte-toi avec l’email utilisé lors d’une réservation pour voir tes RDV à venir et ton historique."
+                  />
+                ) : (
+                <>
                 <section>
                   <h2 className="text-[13px] font-bold uppercase tracking-widest mb-4" style={{ color: N.muted }}>À venir</h2>
                   {upcoming.length === 0 ? (
@@ -870,12 +1204,21 @@ export const ClientDashboard: React.FC = () => {
                     </div>
                   )}
                 </section>
+                </>
+                )}
               </div>
             )}
 
             {/* ════ WALLET ════ */}
             {tab === 'wallet' && (
               <div className="px-4 pt-5 space-y-6 pb-6">
+                {isGuest ? (
+                  <GuestConnectPanel
+                    title="Wallet & parrainage"
+                    body="Crée un compte ou connecte-toi pour activer ton crédit fidélité, ton code parrainage et l’historique des gains."
+                  />
+                ) : (
+                <>
                 {/* Carte fidélité neon */}
                 <motion.div
                   whileTap={{ scale: 0.985 }}
@@ -983,12 +1326,28 @@ export const ClientDashboard: React.FC = () => {
                     ))}
                   </div>
                 </section>
+                </>
+                )}
               </div>
             )}
 
             {/* ════ PROFIL ════ */}
             {tab === 'profile' && (
               <div className="px-4 pt-5 space-y-6 pb-6">
+                {isGuest ? (
+                  <>
+                    <GuestConnectPanel
+                      title="Ton profil Inkflow"
+                      body="Pour enregistrer tes préférences, tes studios favoris et ton compte fidélité, connecte-toi ou crée un compte avec ton email."
+                    />
+                    <button type="button" onClick={() => goTab('explore')}
+                      className="w-full py-3.5 rounded-2xl border text-sm font-semibold active:scale-[0.98] transition-all"
+                      style={{ borderColor: N.border, background: N.surface, color: N.textSub }}>
+                      Continuer à explorer sans compte
+                    </button>
+                  </>
+                ) : (
+                <>
                 <div className="rounded-3xl border p-5 flex items-center gap-4"
                   style={{ borderColor: N.border, background: N.elevated }}>
                   <div className="w-16 h-16 rounded-3xl flex items-center justify-center text-xl font-black border-2 shrink-0"
@@ -1008,24 +1367,28 @@ export const ClientDashboard: React.FC = () => {
                 <section>
                   <h2 className="text-[13px] font-bold uppercase tracking-widest mb-3" style={{ color: N.muted }}>Studios sauvegardés</h2>
                   <div className="space-y-2">
-                    {STUDIOS.map((s, i) => (
+                    {displayStudios.map((s, i) => (
                       <motion.button key={s.id} type="button"
                         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
                         whileTap={{ scale: 0.99 }}
                         onClick={() => setArtistSheet(s)}
                         className="w-full flex items-center gap-3.5 p-4 rounded-3xl border text-left"
                         style={{ borderColor: N.border, background: N.surface }}>
-                        <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-black text-white shrink-0"
+                        <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-black text-white shrink-0 overflow-hidden"
                           style={{ background: `linear-gradient(135deg, ${s.grad[0]}, ${s.grad[1]})` }}>
-                          {s.name.slice(0, 2)}
+                          {s.portfolioImages[0]
+                            ? <img src={s.portfolioImages[0]} alt={s.name} className="w-full h-full object-cover" />
+                            : s.name.slice(0, 2)
+                          }
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold truncate" style={{ color: N.text }}>{s.name}</p>
-                          <p className="text-[11px] truncate mt-0.5" style={{ color: N.muted }}>{s.artist} · {s.style}</p>
+                          <p className="text-[11px] truncate mt-0.5" style={{ color: N.muted }}>
+                            {s.artistLabel}{s.styleLabel ? ` · ${s.styleLabel}` : ''}
+                          </p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <Star className="w-3.5 h-3.5" style={{ color: N.neon, fill: N.neon }} />
-                          <span className="text-xs font-semibold" style={{ color: N.textSub }}>{s.rating}</span>
+                          <span className="text-xs font-semibold" style={{ color: N.muted }}>{s.distLabel}</span>
                           <ChevronRight className="w-4 h-4 ml-1" style={{ color: N.border }} />
                         </div>
                       </motion.button>
@@ -1034,12 +1397,14 @@ export const ClientDashboard: React.FC = () => {
                 </section>
 
                 <button type="button"
-                  onClick={() => supabase.auth.signOut().then(() => { window.location.href = '/client'; })}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-medium"
+                  onClick={() => supabase.auth.signOut().then(() => { window.location.href = '/client/dashboard'; })}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-medium active:scale-[0.98] transition-all"
                   style={{ borderColor: N.border, background: N.surface, color: N.muted }}>
                   <LogOut className="w-4 h-4" />
                   Se déconnecter
                 </button>
+                </>
+                )}
               </div>
             )}
           </motion.div>
@@ -1047,7 +1412,7 @@ export const ClientDashboard: React.FC = () => {
       </main>
 
       {/* ── Artist sheet ── */}
-      <ArtistSheet studio={artistSheet} onClose={() => setArtistSheet(null)} />
+      <ArtistSheet studio={artistSheet} onClose={() => setArtistSheet(null)} isGuest={isGuest} />
 
       {/* ── Bottom nav flottante neon ── */}
       <div
