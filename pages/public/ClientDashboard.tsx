@@ -11,7 +11,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Heart, Star, ChevronRight, Search, X,
-  ExternalLink, Award, Wallet, User, CalendarDays,
+  ExternalLink, Wallet, User, CalendarDays,
   Map, Flame, LogOut, Clock, ArrowUpRight, Copy, Share2, Check,
   Navigation, List, LayoutGrid,
 } from 'lucide-react';
@@ -22,6 +22,8 @@ import { type ClientAppointment, type ClientTab } from '../../components/client/
 import { HealingBanner } from '../../components/client/HealingBanner';
 import { getNearbyStudios, type NearbyStudio } from '../../lib/supabaseGeo';
 import { NearbyMapView } from '../../components/client/NearbyMapView';
+import { LoyaltyCard } from '../../components/client/LoyaltyCard';
+import { ROUEN_STUDIOS, ROUEN_FLASH, type DisplayFlash, type SheetStudio } from '../../lib/rouenStudios';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const N = {
@@ -53,21 +55,6 @@ const STYLES = [
   { id: 'tribal',      label: 'Tribal',     emoji: '◈',  desc: 'Motifs ancestraux',     grad: ['#1E1A0A', '#3D3210'] },
 ];
 
-const STUDIOS = [
-  { id: 's1', name: 'Vénus Ink',    artist: 'Léa M.',   style: 'Fine line',  rating: 4.9, dist: '1.2 km', grad: ['#1A0A2E','#3D1A6B'] },
-  { id: 's2', name: 'Noir Studio',  artist: 'Sarah K.', style: 'Blackwork',  rating: 5.0, dist: '0.8 km', grad: ['#111111','#2E2E2E'] },
-  { id: 's3', name: 'Ink & Bones',  artist: 'Thomas R.',style: 'Japonais',   rating: 4.8, dist: '2.0 km', grad: ['#0A1A2E','#0F3A5A'] },
-  { id: 's4', name: 'Skull Press',  artist: 'Marco V.', style: 'Traditional',rating: 4.7, dist: '3.1 km', grad: ['#2E0A0A','#6B1A1A'] },
-];
-
-const FLASHES = [
-  { id:'f1', name:'Serpent minimal',  artist:'Léa M.',   studio:'Vénus',     dist:'1.2km', price:180, h:200, grad:['#1A0A2E','#3D1A6B'], hot:true  },
-  { id:'f2', name:'Rose géométrique', artist:'Sarah K.', studio:'Noir',      dist:'0.8km', price:140, h:165, grad:['#0A1A2E','#0F3A5A'], hot:false },
-  { id:'f3', name:'Dragon irezumi',   artist:'Thomas R.',studio:'I&B',       dist:'2.0km', price:320, h:245, grad:['#1A0A0A','#4A1010'], hot:true  },
-  { id:'f4', name:'Lune & étoiles',   artist:'Léa M.',   studio:'Vénus',     dist:'1.2km', price:90,  h:160, grad:['#0A0A1A','#141428'], hot:false },
-  { id:'f5', name:'Colibri',          artist:'Sarah K.', studio:'Noir',      dist:'0.8km', price:160, h:190, grad:['#0A1A0A','#143514'], hot:false },
-  { id:'f6', name:'Crâne néo-trad',   artist:'Marco V.', studio:'Skull',     dist:'3.1km', price:220, h:230, grad:['#1A0A10','#3D1025'], hot:true  },
-];
 
 const CHAT_BUBBLES = [
   { text: 'Le style de Vénus ! 💚',     delay: 0.3, side: 'right' as const },
@@ -76,50 +63,8 @@ const CHAT_BUBBLES = [
   { text: 'Il dure combien de temps ?', delay: 2.3, side: 'left'  as const },
 ];
 
-// ── Types pour les cartes ─────────────────────────────────────────────────────
-interface DisplayFlash {
-  id: string;
-  name: string;
-  artist: string;
-  studio: string;
-  studioSlug: string;
-  dist: string;
-  price: number;
-  h: number;
-  grad: [string, string];
-  hot: boolean;
-  imageUrl?: string;
-}
-
-interface SheetStudio {
-  id: string;
-  slug: string;
-  name: string;
-  artistLabel: string;
-  styleLabel: string;
-  rating: number;
-  distLabel: string;
-  grad: [string, string];
-  portfolioImages: string[];
-  city?: string;
-}
-
-// Fallback mock → DisplayFlash (utilisé avant que la géo ne charge)
-const MOCK_FLASH: DisplayFlash[] = [
-  { id:'f1', name:'Serpent minimal',  artist:'Léa M.',   studio:'Vénus',  studioSlug:'', dist:'1.2km', price:180, h:200, grad:['#1A0A2E','#3D1A6B'], hot:true  },
-  { id:'f2', name:'Rose géométrique', artist:'Sarah K.', studio:'Noir',   studioSlug:'', dist:'0.8km', price:140, h:165, grad:['#0A1A2E','#0F3A5A'], hot:false },
-  { id:'f3', name:'Dragon irezumi',   artist:'Thomas R.',studio:'I&B',    studioSlug:'', dist:'2.0km', price:320, h:245, grad:['#1A0A0A','#4A1010'], hot:true  },
-  { id:'f4', name:'Lune & étoiles',   artist:'Léa M.',   studio:'Vénus',  studioSlug:'', dist:'1.2km', price:90,  h:160, grad:['#0A0A1A','#141428'], hot:false },
-  { id:'f5', name:'Colibri',          artist:'Sarah K.', studio:'Noir',   studioSlug:'', dist:'0.8km', price:160, h:190, grad:['#0A1A0A','#143514'], hot:false },
-  { id:'f6', name:'Crâne néo-trad',   artist:'Marco V.', studio:'Skull',  studioSlug:'', dist:'3.1km', price:220, h:230, grad:['#1A0A10','#3D1025'], hot:true  },
-];
-
-const MOCK_STUDIOS: SheetStudio[] = [
-  { id:'s1', slug:'', name:'Vénus Ink',   artistLabel:'Léa M.',   styleLabel:'Fine line',   rating:4.9, distLabel:'1.2 km', grad:['#1A0A2E','#3D1A6B'], portfolioImages:[] },
-  { id:'s2', slug:'', name:'Noir Studio', artistLabel:'Sarah K.', styleLabel:'Blackwork',   rating:5.0, distLabel:'0.8 km', grad:['#111111','#2E2E2E'], portfolioImages:[] },
-  { id:'s3', slug:'', name:'Ink & Bones', artistLabel:'Thomas R.',styleLabel:'Japonais',    rating:4.8, distLabel:'2.0 km', grad:['#0A1A2E','#0F3A5A'], portfolioImages:[] },
-  { id:'s4', slug:'', name:'Skull Press', artistLabel:'Marco V.', styleLabel:'Traditional', rating:4.7, distLabel:'3.1 km', grad:['#2E0A0A','#6B1A1A'], portfolioImages:[] },
-];
+// Types et données Rouen importés depuis lib/rouenStudios.ts
+// (DisplayFlash, SheetStudio, ROUEN_STUDIOS, ROUEN_FLASH)
 
 const TXNS = [
   { id:'1', label:'Parrainage Aurélie', sub:'il y a 3 jours', amount:'+10,00 €', pos:true },
@@ -764,9 +709,9 @@ export const ClientDashboard: React.FC = () => {
   const lastTattoo = useMemo(() => completed[0] ?? null, [completed]);
   const healingDays = lastTattoo ? daysSince(lastTattoo.date) : 999;
 
-  // Flash displays : données réelles si geo chargée, sinon mock
+  // Flash displays : données réelles si geo chargée, sinon Rouen fallback
   const allDisplayFlash = useMemo<DisplayFlash[]>(() => {
-    if (nearbyStudios.length === 0) return MOCK_FLASH;
+    if (nearbyStudios.length === 0) return ROUEN_FLASH;
     const GRADS: [string, string][] = [
       ['#1A0A2E','#3D1A6B'], ['#0A1A2E','#0F3A5A'], ['#1A0A0A','#4A1010'],
       ['#111111','#2A2A2A'], ['#0A1A0A','#143514'], ['#1A0A10','#3D1025'],
@@ -790,9 +735,9 @@ export const ClientDashboard: React.FC = () => {
     );
   }, [nearbyStudios]);
 
-  // Studios à afficher (réels ou mock)
+  // Studios à afficher (réels ou Rouen fallback)
   const displayStudios = useMemo<SheetStudio[]>(() => {
-    if (nearbyStudios.length === 0) return MOCK_STUDIOS;
+    if (nearbyStudios.length === 0) return ROUEN_STUDIOS;
     const GRADS: [string, string][] = [
       ['#1A0A2E','#3D1A6B'], ['#0A1A2E','#0F3A5A'],
       ['#111111','#2E2E2E'], ['#2E0A0A','#6B1A1A'],
@@ -1193,6 +1138,7 @@ export const ClientDashboard: React.FC = () => {
                                 Laisser un avis
                               </button>
                               <button type="button"
+                                onClick={() => goTab('explore')}
                                 className="text-xs font-medium px-3.5 py-2 rounded-xl border"
                                 style={{ borderColor: N.border, color: N.muted, background: N.elevated }}>
                                 Reprendre RDV
@@ -1219,43 +1165,14 @@ export const ClientDashboard: React.FC = () => {
                   />
                 ) : (
                 <>
-                {/* Carte fidélité neon */}
-                <motion.div
-                  whileTap={{ scale: 0.985 }}
-                  className="rounded-3xl overflow-hidden relative border"
-                  style={{
-                    background: 'linear-gradient(145deg, #0E0E0E 0%, #141414 50%, #0A0A0A 100%)',
-                    borderColor: 'rgba(223,255,0,0.2)',
-                    boxShadow: `0 0 40px rgba(223,255,0,0.08), inset 0 1px 0 rgba(223,255,0,0.06)`,
-                  }}
-                >
-                  {/* Glow décoratif */}
-                  <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full opacity-[0.07]"
-                    style={{ background: N.neon, filter: 'blur(40px)' }} />
-
-                  <div className="relative px-6 pt-7 pb-6">
-                    <div className="flex items-start justify-between mb-8">
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.25em] mb-0.5" style={{ color: 'rgba(223,255,0,0.45)' }}>Inkflow</p>
-                        <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(245,243,239,0.3)' }}>Fidélité · Gold</p>
-                      </div>
-                      <Award className="w-7 h-7 opacity-20" style={{ color: N.neon }} />
-                    </div>
-
-                    <div className="mb-8">
-                      <p className="text-[11px] uppercase tracking-widest mb-1" style={{ color: 'rgba(245,243,239,0.3)' }}>Crédit disponible</p>
-                      <p className="text-5xl font-black tracking-tight tabular-nums" style={{ color: N.text }}>
-                        {(cents / 100).toFixed(0)}
-                        <span className="text-2xl ml-1" style={{ color: 'rgba(245,243,239,0.4)' }}>€</span>
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'rgba(223,255,0,0.08)' }}>
-                      <span className="text-[10px] uppercase tracking-[0.2em]" style={{ color: 'rgba(245,243,239,0.25)' }}>Gold Member</span>
-                      <span className="text-[11px] font-mono tracking-widest" style={{ color: 'rgba(245,243,239,0.2)' }}>···· ···· {code.slice(0, 4) || '????'}</span>
-                    </div>
-                  </div>
-                </motion.div>
+                {/* Carte fidélité 3D flip */}
+                <LoyaltyCard
+                  firstName={firstName}
+                  code={code || 'XXXXXX'}
+                  cents={cents}
+                  stampsCount={completed.length}
+                  lastStudio={completed[0] ? (completed[0].studio_name ?? undefined) : undefined}
+                />
 
                 {/* Parrainage */}
                 <div className="rounded-3xl border overflow-hidden" style={{ borderColor: N.borderMid, background: N.surface }}>
