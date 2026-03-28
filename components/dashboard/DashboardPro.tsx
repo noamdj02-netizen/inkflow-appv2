@@ -22,7 +22,7 @@ import { PaymentSuccessModal } from './PaymentSuccessModal';
 import { AvailabilitySettings } from '../settings/AvailabilitySettings';
 import { VitrineSettings } from '../settings/VitrineSettings';
 import { SlugSettings } from '../settings/SlugSettings';
-import { EmailTestCard } from '../settings/EmailTestCard';
+import { GeoSettings } from '../settings/GeoSettings';
 import { InstagramConnect } from '../settings/InstagramConnect';
 import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 import { VitrineLinkButton } from './VitrineLinkButton';
@@ -33,7 +33,6 @@ const DepositsPage = lazy(() => import('./DepositsPage').then(m => ({ default: m
 const AnalyticsDashboard = lazy(() => import('../analytics/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
 const FlashGallery = lazy(() => import('../flash/FlashGallery').then(m => ({ default: m.FlashGallery })));
 const ClientList = lazy(() => import('../crm/ClientList').then(m => ({ default: m.ClientList })));
-const StampLoyaltyTab = lazy(() => import('../crm/StampLoyaltyTab').then(m => ({ default: m.StampLoyaltyTab })));
 const RequestsDashboard = lazy(() => import('./RequestsDashboard').then(m => ({ default: m.RequestsDashboard })));
 const MessagingTab = lazy(() => import('../messaging/MessagingTab').then(m => ({ default: m.MessagingTab })));
 const PortfolioManager = lazy(() => import('./PortfolioManager').then(m => ({ default: m.PortfolioManager })));
@@ -68,7 +67,6 @@ import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../..
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
 import { LANDING_URL, LANDING_PRICING_URL } from '../../lib/urls';
 import { safeJsonParse } from '../../lib/utils';
-import { fetchPendingStampRewardsByEmail, type PendingStampReward } from '../../lib/stampLoyalty';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
@@ -133,8 +131,7 @@ export const DashboardPro: React.FC = () => {
   const [requestsSubTab, setRequestsSubTab] = useState<'rdv' | 'bookings' | 'projects' | 'history'>('rdv');
   const [planningView, setPlanningView] = useState<'week' | 'month'>('week');
   const [financeView, setFinanceView] = useState<'revenus' | 'acomptes' | 'stats'>('revenus');
-  const [clientsView, setClientsView] = useState<'overview' | 'projects' | 'messages' | 'loyalty'>('overview');
-  const [stampRewardsByEmail, setStampRewardsByEmail] = useState<Record<string, PendingStampReward>>({});
+  const [clientsView, setClientsView] = useState<'overview' | 'projects' | 'messages'>('overview');
   const [showWidgetModal, setShowWidgetModal] = useState(false);
   const [customWidgets, setCustomWidgets] = useDashboardWidgets(studioId, useSupabase ?? false, {
     onError: () => toast.error('Erreur de sauvegarde des widgets'),
@@ -165,7 +162,6 @@ export const DashboardPro: React.FC = () => {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null);
   const avatarCropBlobRef = React.useRef<string | null>(null);
-  const globalSearchInputRef = React.useRef<HTMLInputElement>(null);
   const [openMessageThreadId, setOpenMessageThreadId] = useState<string | null>(null);
   const [welcomeComplete, setWelcomeComplete] = useState(false);
   /** Onglet initial pour Demandes (ex: 'history' quand on clique sur l'alerte RDV sans acompte) */
@@ -181,30 +177,6 @@ export const DashboardPro: React.FC = () => {
 
   // Sync notifications (Web Notifications) — après tous les useState pour un ordre de hooks stable
   useNotificationSync(studioId, useSupabase ?? false);
-
-  /** Raccourci affiché dans le header : ⌘K (Apple) / Ctrl+K (Windows & Linux) */
-  const globalSearchKbdHint = useMemo(() => {
-    if (typeof navigator === 'undefined') return '⌘K';
-    const p = navigator.platform ?? '';
-    const ua = navigator.userAgent ?? '';
-    const apple = /Mac|iPhone|iPad|iPod/.test(p) || /Mac OS|iPhone OS/.test(ua);
-    return apple ? '⌘K' : 'Ctrl+K';
-  }, []);
-
-  useEffect(() => {
-    const onDocKey = (e: KeyboardEvent) => {
-      if (e.key?.toLowerCase() !== 'k') return;
-      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
-      e.preventDefault();
-      const el = globalSearchInputRef.current;
-      if (el) {
-        el.focus();
-        el.select();
-      }
-    };
-    document.addEventListener('keydown', onDocKey);
-    return () => document.removeEventListener('keydown', onDocKey);
-  }, []);
 
   /** Compte restreint : essai terminé ou subscription_status = restricted */
   const isRestricted = subscriptionStatus === 'restricted'
@@ -241,26 +213,12 @@ export const DashboardPro: React.FC = () => {
     if (user?.email != null) setGeneralEmail(user.email);
   }, [user?.studioName, user?.email]);
 
-  useEffect(() => {
-    if (!studioId || !useSupabase) {
-      setStampRewardsByEmail({});
-      return;
-    }
-    let cancelled = false;
-    fetchPendingStampRewardsByEmail(studioId)
-      .then((m) => { if (!cancelled) setStampRewardsByEmail(m); })
-      .catch(() => { if (!cancelled) setStampRewardsByEmail({}); });
-    return () => { cancelled = true; };
-  }, [studioId, useSupabase, appointments, bookings]);
-
   // Load SIRET & Google Place ID from studio when studioId is available
   useEffect(() => {
     if (!studioId || !useSupabase) return;
     supabase.from('inkflow_studios').select('siret, google_place_id').eq('id', studioId).maybeSingle()
       .then(({ data }) => {
-        const loadedSiret = (data?.siret as string) || '';
-        setGeneralSiret(loadedSiret);
-        if (loadedSiret && user) updateUser({ ...user, siret: loadedSiret });
+        setGeneralSiret((data?.siret as string) || '');
         const gid = data?.google_place_id;
         setGeneralGooglePlaceId(typeof gid === 'string' && gid.trim() ? gid.trim() : null);
       });
@@ -737,21 +695,8 @@ export const DashboardPro: React.FC = () => {
     const start = `${y}-${String(mo + 1).padStart(2, '0')}-01`;
     const lastDay = new Date(y, mo + 1, 0).getDate();
     const end = `${y}-${String(mo + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    // CA encaissé = confirmed (acompte payé) + completed (séance terminée)
     return appointments
-      .filter(a => ['confirmed', 'completed'].includes(a.status) && a.date >= start && a.date <= end)
-      .reduce((sum, a) => sum + a.price, 0);
-  }, [appointments]);
-  const monthlyForecast = useMemo(() => {
-    const n = new Date();
-    const y = n.getFullYear();
-    const mo = n.getMonth();
-    const start = `${y}-${String(mo + 1).padStart(2, '0')}-01`;
-    const lastDay = new Date(y, mo + 1, 0).getDate();
-    const end = `${y}-${String(mo + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    // CA prévisionnel = demandes en attente ce mois
-    return appointments
-      .filter(a => a.status === 'pending' && a.date >= start && a.date <= end)
+      .filter(a => a.status === 'completed' && a.date >= start && a.date <= end)
       .reduce((sum, a) => sum + a.price, 0);
   }, [appointments]);
   const pendingDeposits = appointments.filter(a => !a.depositPaid && a.status !== 'cancelled').reduce((sum, a) => sum + a.deposit, 0);
@@ -1119,10 +1064,6 @@ export const DashboardPro: React.FC = () => {
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Projets
                       </button>
-                      <button onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setClientsView('loyalty'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'loyalty' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'loyalty' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
-                        Fidélité
-                      </button>
                       {/* V2: Messagerie avancée masquée pour le MVP */}
                     </div>
                   )}
@@ -1217,8 +1158,19 @@ export const DashboardPro: React.FC = () => {
             <SidebarPwaInstallButton onAfterAction={() => setSidebarOpen(false)} />
           </div>
 
-          {/* Footer — Déconnexion (Parrainage masqué pour MVP) */}
+          {/* Footer — Espace Client + Déconnexion */}
           <div className="relative z-10 mt-auto px-3 py-3 border-t border-zinc-100 dark:border-zinc-800/50 safe-bottom space-y-0.5">
+            {/* Espace Client */}
+            <a
+              href="/client/dashboard"
+              target="_blank"
+              rel="noreferrer"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all"
+            >
+              <User className="w-4 h-4 flex-shrink-0" />
+              <span>Espace Client</span>
+              <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+            </a>
             {/* V2: Parrainage masqué pour le MVP
             <a
               href="/referral"
@@ -1296,24 +1248,17 @@ export const DashboardPro: React.FC = () => {
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            {/* Barre de recherche globale (style Command Palette) — desktop only ; ⌘K / Ctrl+K pour focus */}
-            <div
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-colors w-64 lg:w-72 cursor-text"
-              role="search"
-              title={`Recherche globale (${globalSearchKbdHint})`}
-              onClick={() => globalSearchInputRef.current?.focus()}
-            >
-              <Search className="w-4 h-4 text-zinc-500 dark:text-zinc-400 flex-shrink-0" aria-hidden />
+            {/* Barre de recherche globale (style Command Palette) — desktop only */}
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-colors w-64 lg:w-72">
+              <Search className="w-4 h-4 text-zinc-500 dark:text-zinc-400 flex-shrink-0" />
               <input
-                ref={globalSearchInputRef}
                 type="search"
                 placeholder="Chercher un client, RDV..."
                 className="bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-500 w-full min-w-0"
-                aria-label={`Recherche globale, raccourci ${globalSearchKbdHint}`}
-                onClick={(e) => e.stopPropagation()}
+                aria-label="Recherche globale"
               />
-              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-200 dark:bg-zinc-800 rounded border border-zinc-300 dark:border-zinc-700 flex-shrink-0 tabular-nums">
-                {globalSearchKbdHint}
+              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-200 dark:bg-zinc-800 rounded border border-zinc-300 dark:border-zinc-700 flex-shrink-0">
+                ⌘K
               </kbd>
             </div>
             {/* Planning — visible sur mobile/tablette, ouvre le sheet planning */}
@@ -1566,7 +1511,6 @@ export const DashboardPro: React.FC = () => {
               customWidgets={customWidgets}
               setCustomWidgets={setCustomWidgets}
               monthlyRevenue={monthlyRevenue}
-              monthlyForecast={monthlyForecast}
               totalRevenue={totalRevenue}
               pendingDeposits={pendingDeposits}
               nextAppointmentIn2h={nextAppointmentIn2h}
@@ -1629,7 +1573,6 @@ export const DashboardPro: React.FC = () => {
               bookings={bookings}
               onUpdateBookingStatus={updateBookingStatus}
               bookingsLoading={bookingsLoading}
-              stampRewardsByEmail={stampRewardsByEmail}
             />
             </Suspense>
             </div>
@@ -1661,9 +1604,6 @@ export const DashboardPro: React.FC = () => {
           {!loading && activeTab === 'clients' && (
             <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
-            {clientsView === 'loyalty' ? (
-              <StampLoyaltyTab studioId={studioId} clients={clients} />
-            ) : (
             <ClientList
               clients={clients}
               onAddClient={addClient}
@@ -1682,10 +1622,8 @@ export const DashboardPro: React.FC = () => {
               onUpgradeClick={() => { window.location.href = LANDING_PRICING_URL; }}
               openAddModal={openAddClientModal}
               onAddModalClose={() => setOpenAddClientModal(false)}
-              view={clientsView === 'messages' ? 'overview' : clientsView}
-              stampStudioId={studioId}
+              view={clientsView}
             />
-            )}
             </Suspense>
             </div>
           )}
@@ -1869,8 +1807,14 @@ export const DashboardPro: React.FC = () => {
                     />
                   )}
 
-                  <EmailTestCard userEmail={user?.email} />
-                  
+                  {/* Géolocalisation — carte de découverte client */}
+                  {studioId && (
+                    <GeoSettings
+                      studioId={studioId}
+                      studioSlug={studioSlug ?? ''}
+                    />
+                  )}
+
                   {/* Carte Profil */}
                   <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
                     <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
@@ -2055,7 +1999,7 @@ export const DashboardPro: React.FC = () => {
               {settingsTab === 'billing' && <BillingSettings studioId={studioId} userEmail={user?.email || ''} trialEndsAt={trialEndsAt} />}
               {settingsTab === 'care' && <CareSheetsSettings userEmail={user?.email} studioName={user?.studioName} />}
               {settingsTab === 'consent' && <ConsentFormEditor templates={consentTemplates} onSave={setConsentTemplates} />}
-              {settingsTab === 'availability' && <AvailabilitySettings studioId={studioId} />}
+              {settingsTab === 'availability' && <AvailabilitySettings />}
               {settingsTab === 'artists' && (
                 <ArtistManager
                   artists={artistAccounts}
@@ -2139,17 +2083,7 @@ export const DashboardPro: React.FC = () => {
                   onUpdateSettings={setLoyaltySettings}
                 />
               )}
-              {settingsTab === 'calendar' && (
-                <CalendarSettings
-                  studioId={studioId || ''}
-                  appointments={appointments}
-                  clients={clients}
-                  addClient={addClient}
-                  addAppointment={addAppointment}
-                  useSupabase={useSupabase ?? false}
-                  onToast={(msg, type) => (type === 'success' ? toast.success(msg) : toast.error(msg))}
-                />
-              )}
+              {settingsTab === 'calendar' && <CalendarSettings studioId={studioId || ''} appointments={appointments} onToast={(msg, type) => type === 'success' ? toast.success(msg) : toast.error(msg)} />}
               {settingsTab === 'vitrine' && (
                 (user?.studioName || generalStudioName)?.trim() ? (
                   <VitrineSettings
