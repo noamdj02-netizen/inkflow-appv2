@@ -3,7 +3,7 @@ import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { ensureStudio } from '../lib/supabaseDashboard';
 import { clearAllInkflowStorage } from '../lib/clearAuthStorage';
-import { LANDING_URL } from '../lib/urls';
+import { getAuthCallbackRedirectTo, LANDING_URL } from '../lib/urls';
 import { useSupabaseEnabled } from '../hooks/useSupabaseEnabled';
 import { DEMO_ACCOUNT_EMAIL } from '../data/demoData';
 
@@ -133,7 +133,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const loginWithGoogle = useCallback(async () => {
     if (!isSupabaseAuthEnabled) return;
-    const redirectTo = `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`;
+    const redirectTo = getAuthCallbackRedirectTo();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo },

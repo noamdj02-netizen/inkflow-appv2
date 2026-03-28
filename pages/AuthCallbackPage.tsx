@@ -21,14 +21,20 @@ export const AuthCallbackPage: React.FC = () => {
     }
 
     setStatus('success');
-    // Priority: 1) redirect_to query param (magic link client portal)
-    //           2) sessionStorage (pro login)
-    //           3) fallback /dashboard
-    const redirectTo = params.get('redirect_to');
+    /**
+     * Magic link Supabase : les tokens arrivent dans le hash (#access_token=…).
+     * Le paramètre redirect_to en query est souvent perdu après redirection.
+     * URL dédiée /auth/callback/client → renvoie vers /client (mot de passe puis welcome ou dashboard).
+     */
+    const pathname = window.location.pathname.replace(/\/$/, '') || '/';
+    const isClientCallback = pathname === '/auth/callback/client';
+    const redirectToParam = params.get('redirect_to');
+    const fromStorage =
+      typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY) : null;
     const redirectUrl =
-      redirectTo ||
-      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) ||
-      '/dashboard';
+      redirectToParam ||
+      fromStorage ||
+      (isClientCallback ? '/client' : '/dashboard');
     try {
       sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
     } catch {
@@ -37,10 +43,23 @@ export const AuthCallbackPage: React.FC = () => {
 
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const resolveSession = async () => {
+      for (let i = 0; i < 8; i++) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) return session;
+        await new Promise((r) => setTimeout(r, 100 + i * 50));
+      }
+      return null;
+    };
+
     const run = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (cancelled || !session?.user) {
-        timeoutId = setTimeout(() => { if (!cancelled) window.location.href = redirectUrl; }, 1000);
+      const session = await resolveSession();
+      if (cancelled) return;
+      if (!session?.user) {
+        timeoutId = setTimeout(() => {
+          if (!cancelled) window.location.href = redirectUrl;
+        }, 1200);
         return;
       }
       const u = session.user;
@@ -48,8 +67,8 @@ export const AuthCallbackPage: React.FC = () => {
       const name = (meta.name as string) || u.email?.split('@')[0] || 'User';
       const studioName = (meta.studio_name as string) || 'Mon studio';
       const referralCode = (meta.referral_code as string) || undefined;
-      // Only run ensureStudio for pro login (not client portal)
-      if (!redirectUrl.includes('/client')) {
+      const isClientFlow = isClientCallback || redirectUrl.includes('/client');
+      if (!isClientFlow) {
         try {
           await ensureStudio(u.email ?? '', name, studioName, referralCode);
         } catch {

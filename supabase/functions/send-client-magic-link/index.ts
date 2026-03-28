@@ -12,6 +12,21 @@ const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP_URL              = (Deno.env.get("APP_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
 
+/** Évite redirectTo vers la landing marketing (Framer) — Supabase refuserait ou renverrait vers Site URL. */
+function sanitizeRedirectTo(input: string, appBase: string): string {
+  const base = appBase.replace(/\/+$/, "");
+  try {
+    const u = new URL(input);
+    const host = u.hostname.toLowerCase();
+    if (host === "ink-flow.me" || host === "www.ink-flow.me") {
+      return `${base}/client`;
+    }
+  } catch {
+    return `${base}/client`;
+  }
+  return input;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -26,7 +41,9 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const email      = typeof body.email === "string" ? body.email.trim().toLowerCase() : null;
     // redirectTo passed from client so it uses the correct origin (localhost or prod)
-    const redirectTo = typeof body.redirectTo === "string" ? body.redirectTo : `${APP_URL}/client/dashboard`;
+    const rawRedirect =
+      typeof body.redirectTo === "string" ? body.redirectTo : `${APP_URL}/client`;
+    const redirectTo = sanitizeRedirectTo(rawRedirect, APP_URL);
 
     if (!email) {
       return new Response(JSON.stringify({ error: "email requis" }), {
@@ -46,7 +63,12 @@ Deno.serve(async (req) => {
     if (linkError || !data?.properties?.action_link) {
       console.error("generateLink error:", linkError);
       return new Response(
-        JSON.stringify({ error: linkError?.message || "Impossible de générer le lien" }),
+        JSON.stringify({
+          error: linkError?.message || "Impossible de générer le lien",
+          details: !data?.properties?.action_link
+            ? "Pas d'action_link (vérifie redirectTo dans Auth > URL de redirection)"
+            : undefined,
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -91,9 +113,12 @@ Deno.serve(async (req) => {
 
     if (!resendRes.ok) {
       const errBody = await resendRes.text();
-      console.error("Resend error:", errBody);
+      console.error("Resend error:", resendRes.status, errBody);
       return new Response(
-        JSON.stringify({ error: "Erreur d'envoi email" }),
+        JSON.stringify({
+          error: "Erreur d'envoi email",
+          details: errBody.slice(0, 500),
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { supabase } from '../lib/supabase';
+import { getPasswordRecoveryRedirectTo } from '../lib/urls';
 import { resetPasswordSchema } from '../lib/authValidation';
 
 export const ResetPasswordPage: React.FC = () => {
@@ -20,7 +21,7 @@ export const ResetPasswordPage: React.FC = () => {
     }
     setLoading(true);
     try {
-      const redirectTo = `${window.location.origin}/auth/update-password`;
+      const redirectTo = getPasswordRecoveryRedirectTo();
       const { error: err } = await supabase.auth.resetPasswordForEmail(parsed.data.email, { redirectTo });
       if (err) throw err;
       setSent(true);
