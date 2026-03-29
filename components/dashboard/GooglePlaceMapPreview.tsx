@@ -2,12 +2,13 @@
  * Apercu carte + avis Google Maps (Maps JavaScript API).
  * Affiche la localisation du studio et les 5 premiers avis Places API.
  *
- * Requiert : VITE_GOOGLE_MAPS_JS_API_KEY dans .env.local + Vercel
+ * Requiert : VITE_GOOGLE_MAPS_JS_API_KEY (ou VITE_GOOGLE_MAPS_API_KEY) dans .env.local + Vercel
  * Clé à restreindre par domaine (HTTP referrer) dans Google Cloud Console.
  * APIs a activer : Maps JavaScript API, Places API (New).
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Star, ExternalLink, Loader2, MapPin } from 'lucide-react';
+import { getGoogleMapsBrowserApiKey } from '../../lib/googleMapsBrowserKey';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -26,7 +27,7 @@ interface GooglePlaceMapPreviewProps {
 
 // ── Globals ───────────────────────────────────────────────────────────────────
 
-const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_JS_API_KEY as string | undefined;
+const MAPS_KEY = getGoogleMapsBrowserApiKey();
 
 let scriptPromise: Promise<void> | null = null;
 

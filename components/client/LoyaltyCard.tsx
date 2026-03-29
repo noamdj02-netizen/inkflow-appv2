@@ -6,9 +6,15 @@
  * Animation : Framer Motion rotateY + preserve-3d
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Award, RotateCw, Smartphone, CreditCard } from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext';
+import {
+  buildLoyaltyShareText,
+  getAppleWalletPassUrl,
+  getGoogleWalletSaveUrl,
+} from '../../lib/walletLoyalty';
 
 const N = {
   bg:       '#0A0A0A',
@@ -27,6 +33,8 @@ interface LoyaltyCardProps {
   cents: number;
   stampsCount?: number;
   lastStudio?: string;
+  /** Lien parrainage / profil — utilisé si les passes serveur ne sont pas configurées */
+  inviteUrl?: string;
 }
 
 export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
@@ -35,8 +43,78 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
   cents,
   stampsCount = 0,
   lastStudio,
+  inviteUrl,
 }) => {
   const [flipped, setFlipped] = useState(false);
+  const [appleBusy, setAppleBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const toast = useToast();
+
+  const fallbackShare = useCallback(async (kind: 'apple' | 'google') => {
+    const text = buildLoyaltyShareText(code, inviteUrl);
+    const title = kind === 'apple' ? 'Inkflow — Apple Wallet' : 'Inkflow — Google Wallet';
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title,
+          text,
+          url: inviteUrl || undefined,
+        });
+        toast.success('Partage envoyé');
+        return;
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Code et lien copiés dans le presse-papiers');
+    } catch {
+      toast.error('Impossible de copier. Utilise le QR code au verso de la carte.');
+    }
+  }, [code, inviteUrl, toast]);
+
+  const onAppleWallet = useCallback(async () => {
+    const passUrl = getAppleWalletPassUrl(code);
+    if (passUrl) {
+      setAppleBusy(true);
+      try {
+        window.location.assign(passUrl);
+      } finally {
+        setAppleBusy(false);
+      }
+      return;
+    }
+
+    setAppleBusy(true);
+    try {
+      await fallbackShare('apple');
+    } finally {
+      setAppleBusy(false);
+    }
+  }, [code, fallbackShare]);
+
+  const onGoogleWallet = useCallback(async () => {
+    const saveUrl = getGoogleWalletSaveUrl(code);
+    if (saveUrl) {
+      setGoogleBusy(true);
+      try {
+        window.open(saveUrl, '_blank', 'noopener,noreferrer');
+      } finally {
+        setGoogleBusy(false);
+      }
+      return;
+    }
+
+    setGoogleBusy(true);
+    try {
+      await fallbackShare('google');
+    } finally {
+      setGoogleBusy(false);
+    }
+  }, [code, fallbackShare]);
 
   const qrData = encodeURIComponent(`INK-${code}`);
   const qrUrl  = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&bgcolor=111111&color=DFFF00&data=${qrData}&margin=12`;
@@ -185,25 +263,29 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
         Toucher pour {flipped ? 'voir la carte' : 'voir le QR code'}
       </p>
 
-      {/* Wallet buttons */}
+      {/* Wallet buttons — pass serveur (env) ou partage / copie */}
       <div className="grid grid-cols-2 gap-2.5">
         <button
           type="button"
-          className="flex items-center justify-center gap-2 py-3 rounded-2xl border text-xs font-bold transition-all active:scale-[0.97]"
+          aria-busy={appleBusy}
+          disabled={appleBusy}
+          className="flex items-center justify-center gap-2 py-3 rounded-2xl border text-xs font-bold transition-all active:scale-[0.97] disabled:opacity-60 min-h-[44px]"
           style={{ borderColor: N.border, background: N.surface, color: N.text }}
-          onClick={() => alert('Apple Wallet — bientôt disponible')}
+          onClick={() => void onAppleWallet()}
         >
-          <Smartphone className="w-3.5 h-3.5" style={{ color: N.neon }} />
+          <Smartphone className="w-3.5 h-3.5 shrink-0" style={{ color: N.neon }} />
           Apple Wallet
         </button>
         <button
           type="button"
-          className="flex items-center justify-center gap-2 py-3 rounded-2xl border text-xs font-bold transition-all active:scale-[0.97]"
+          aria-busy={googleBusy}
+          disabled={googleBusy}
+          className="flex items-center justify-center gap-2 py-3 rounded-2xl border text-xs font-bold transition-all active:scale-[0.97] disabled:opacity-60 min-h-[44px]"
           style={{ borderColor: N.border, background: N.surface, color: N.text }}
-          onClick={() => alert('Google Pay — bientôt disponible')}
+          onClick={() => void onGoogleWallet()}
         >
-          <CreditCard className="w-3.5 h-3.5" style={{ color: N.neon }} />
-          Google Pay
+          <CreditCard className="w-3.5 h-3.5 shrink-0" style={{ color: N.neon }} />
+          Google Wallet
         </button>
       </div>
     </div>

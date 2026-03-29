@@ -9,6 +9,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { MapPin, Loader2 } from 'lucide-react';
+import { getGoogleMapsBrowserApiKey } from '../../lib/googleMapsBrowserKey';
 import type { NearbyStudio } from '../../lib/supabaseGeo';
 
 interface NearbyMapViewProps {
@@ -54,11 +55,12 @@ export const NearbyMapView: React.FC<NearbyMapViewProps> = ({
   useEffect(() => {
     if (window.google?.maps) { setApiReady(true); return; }
 
-    const apiKey = (import.meta as { env: Record<string, string> }).env.VITE_GOOGLE_MAPS_API_KEY;
+    const apiKey = getGoogleMapsBrowserApiKey();
     if (!apiKey) { setApiError(true); return; }
 
     const callbackName = '_inkflowMapInit';
     window[callbackName] = () => setApiReady(true);
+    window.gm_authFailure = () => setApiError(true);
 
     if (document.querySelector(`script[data-inkflow-maps]`)) return;
 
@@ -69,7 +71,10 @@ export const NearbyMapView: React.FC<NearbyMapViewProps> = ({
     script.onerror = () => setApiError(true);
     document.head.appendChild(script);
 
-    return () => { delete window[callbackName]; };
+    return () => {
+      delete window[callbackName];
+      if (window.gm_authFailure) delete window.gm_authFailure;
+    };
   }, []);
 
   // Initialise la carte une fois l'API prête
@@ -150,16 +155,30 @@ export const NearbyMapView: React.FC<NearbyMapViewProps> = ({
   }, [apiReady, userPos, studios, onSelectStudio]);
 
   if (apiError) {
+    const hasKey = Boolean(getGoogleMapsBrowserApiKey());
     return (
       <div
-        className="rounded-2xl border flex flex-col items-center justify-center gap-3 py-10"
+        className="rounded-2xl border flex flex-col items-center justify-center gap-3 py-8 px-4"
         style={{ borderColor: N.border, background: N.surface, minHeight: 220 }}
       >
         <MapPin className="w-8 h-8 opacity-20" style={{ color: N.neon }} />
-        <p className="text-sm text-center px-4" style={{ color: N.muted }}>
-          Carte indisponible — ajoutez<br />
-          <code className="text-xs" style={{ color: N.text }}>VITE_GOOGLE_MAPS_API_KEY</code>
-          <br />dans votre .env
+        <p className="text-sm text-center max-w-sm" style={{ color: N.muted }}>
+          {hasKey ? (
+            <>
+              La carte Google ne s’est pas chargée. Vérifiez dans Google Cloud : facturation activée,
+              <span className="whitespace-nowrap"> </span>
+              <strong style={{ color: N.text }}>Maps JavaScript API</strong> activée, et restrictions
+              HTTP referrer (localhost / votre domaine).
+            </>
+          ) : (
+            <>
+              Carte indisponible — définissez{' '}
+              <code className="text-xs" style={{ color: N.text }}>VITE_GOOGLE_MAPS_JS_API_KEY</code>
+              {' '}ou{' '}
+              <code className="text-xs" style={{ color: N.text }}>VITE_GOOGLE_MAPS_API_KEY</code>
+              {' '}dans votre .env.
+            </>
+          )}
         </p>
       </div>
     );

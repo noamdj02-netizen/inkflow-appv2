@@ -12,11 +12,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Heart, Star, ChevronRight, Search, X,
   ExternalLink, Wallet, User, CalendarDays,
-  Map, Flame, LogOut, Clock, ArrowUpRight, Copy, Share2, Check,
-  Navigation, List, LayoutGrid,
+  Map, Flame, LogOut, Clock, ArrowUpRight, Copy, Share2, Check, Lock,
+  Navigation, List, LayoutGrid, LayoutDashboard, FolderKanban, Sparkles,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { clientNeedsPassword, clientOnboardingComplete } from '../../lib/clientAuth';
+import { clientNeedsPassword } from '../../lib/clientAuth';
 import { getInviteBaseUrl } from '../../lib/urls';
 import { type ClientAppointment, type ClientTab } from '../../components/client/clientExperienceTypes';
 import { HealingBanner } from '../../components/client/HealingBanner';
@@ -332,55 +332,59 @@ const FlashCard: React.FC<{
       style={{ borderColor: N.border, background: N.surface }}
     >
       <div
-        className="relative"
-        style={{ height: f.h * 0.82, background: `linear-gradient(155deg, ${f.grad[0]}, ${f.grad[1]})` }}
+        className="relative isolate"
+        style={{ minHeight: Math.max(140, f.h * 0.82), background: `linear-gradient(155deg, ${f.grad[0]}, ${f.grad[1]})` }}
       >
         {/* Image réelle si disponible */}
         {f.imageUrl && (
           <img
             src={f.imageUrl}
-            alt={f.name}
+            alt=""
             className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         )}
 
         {/* SVG décoratif (fallback sans image) */}
         {!f.imageUrl && (
-          <svg className="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <svg className="absolute inset-0 w-full h-full opacity-30 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
             <circle cx="70" cy="30" r="25" fill="none" stroke="rgba(223,255,0,0.2)" strokeWidth="0.5"/>
             <path d="M10 60 Q50 40 90 60 Q70 85 50 80 Q30 85 10 60Z" fill="rgba(255,255,255,0.03)"/>
           </svg>
         )}
 
-        {/* Hot badge */}
-        {f.hot && (
-          <div
-            className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold"
-            style={{ background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(8px)', color: N.neon }}
-          >
-            <Flame className="w-3 h-3" />
-            Tendance
-          </div>
-        )}
-
-        {/* Heart */}
+        {/* Heart — seul élément en haut à droite (évite chevauchement avec le titre) */}
         <motion.button
           type="button"
           whileTap={{ scale: 0.85 }}
           onClick={(e) => { e.stopPropagation(); onFav(); }}
-          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center border"
-          style={{ background: 'rgba(10,10,10,0.7)', backdropFilter: 'blur(8px)', borderColor: fav ? 'rgba(223,255,0,0.4)' : N.border }}
+          className="absolute top-2 right-2 z-20 min-w-[44px] min-h-[44px] w-11 h-11 -m-1 rounded-full flex items-center justify-center border"
+          style={{ background: 'rgba(10,10,10,0.75)', backdropFilter: 'blur(8px)', borderColor: fav ? 'rgba(223,255,0,0.4)' : N.border }}
+          aria-label={fav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         >
           <Heart className="w-3.5 h-3.5" style={{ color: fav ? N.neon : N.text, fill: fav ? N.neon : 'none' }} />
         </motion.button>
 
-        {/* Overlay info */}
+        {/* Overlay info : badge Tendance + titre dans le même bloc bas (plus de chevauchement) */}
         <div
-          className="absolute bottom-0 left-0 right-0 px-3 pt-8 pb-2.5"
-          style={{ background: 'linear-gradient(to top, rgba(10,10,10,0.95), transparent)' }}
+          className="absolute bottom-0 left-0 right-0 z-10 px-3 pt-10 pb-3"
+          style={{
+            background: 'linear-gradient(to top, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.88) 45%, transparent 100%)',
+          }}
         >
-          <p className="text-[13px] font-bold" style={{ color: N.text }}>{f.name}</p>
-          <p className="text-[10px] mt-0.5" style={{ color: 'rgba(245,243,239,0.45)' }}>{f.artist} · {f.dist}</p>
+          {f.hot && (
+            <div
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wide mb-1.5"
+              style={{ background: 'rgba(223,255,0,0.12)', color: N.neon, border: '1px solid rgba(223,255,0,0.2)' }}
+            >
+              <Flame className="w-3 h-3 shrink-0" />
+              Tendance
+            </div>
+          )}
+          <p className="text-[13px] font-bold leading-snug line-clamp-2" style={{ color: N.text }}>{f.name}</p>
+          <p className="text-[10px] mt-1 line-clamp-1" style={{ color: 'rgba(245,243,239,0.45)' }}>{f.artist} · {f.dist}</p>
         </div>
       </div>
       <div className="px-3 py-2.5 flex items-center justify-between">
@@ -402,57 +406,115 @@ const FlashCard: React.FC<{
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
-// GUEST LOGIN FORM (profil tab — magic link inline)
+// GUEST LOGIN FORM (profil — inscription / connexion email + mot de passe)
 // ══════════════════════════════════════════════════════════════════════════════
 const GuestLoginForm: React.FC = () => {
+  const [registerMode, setRegisterMode] = useState(true);
   const [email, setEmail] = useState('');
-  const [phase, setPhase] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
+  const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
+  const [phase, setPhase] = useState<'form' | 'loading' | 'confirmEmail'>('form');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const sendLink = async () => {
-    const trimmed = email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+  const submit = async () => {
+    const em = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
       setErrorMsg('Adresse email invalide.');
       return;
     }
+    if (registerMode) {
+      if (password.length < 8) {
+        setErrorMsg('Mot de passe : au moins 8 caractères.');
+        return;
+      }
+      if (password !== password2) {
+        setErrorMsg('Les mots de passe ne correspondent pas.');
+        return;
+      }
+    } else if (!password) {
+      setErrorMsg('Entre ton mot de passe.');
+      return;
+    }
+
     setPhase('loading');
     setErrorMsg('');
     try {
-      const base = (import.meta as { env: Record<string, string> }).env.VITE_SUPABASE_URL?.replace(/\/+$/, '') ?? '';
-      const anon = (import.meta as { env: Record<string, string> }).env.VITE_SUPABASE_ANON_KEY ?? '';
-      const res = await fetch(`${base}/functions/v1/send-client-magic-link`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': `Bearer ${anon}` },
-        body: JSON.stringify({ email: trimmed, redirectTo: `${window.location.origin}/client/dashboard` }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(d.error ?? 'Erreur serveur');
+      if (registerMode) {
+        const { data, error } = await supabase.auth.signUp({
+          email: em,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/client`,
+            data: {
+              client_onboarding_complete: true,
+              client_password_set: true,
+            },
+          },
+        });
+        if (error) {
+          const m = error.message.toLowerCase();
+          if (m.includes('already registered') || m.includes('already been registered')) {
+            setErrorMsg('Un compte existe déjà. Passe en « Me connecter ».');
+          } else {
+            setErrorMsg(error.message);
+          }
+          setPhase('form');
+          return;
+        }
+        if (data.session?.user) {
+          window.location.href = '/client/dashboard';
+          return;
+        }
+        if (data.user && !data.session) {
+          setPhase('confirmEmail');
+          return;
+        }
+        setPhase('form');
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({ email: em, password });
+        if (error) {
+          const m = error.message.toLowerCase();
+          setErrorMsg(
+            m.includes('invalid') || m.includes('credentials')
+              ? 'Email ou mot de passe incorrect.'
+              : error.message
+          );
+          setPhase('form');
+          return;
+        }
+        if (data.user) {
+          window.location.href = '/client/dashboard';
+          return;
+        }
+        setPhase('form');
       }
-      setPhase('sent');
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : 'Erreur inconnue');
-      setPhase('error');
+      setPhase('form');
     }
   };
 
-  if (phase === 'sent') {
+  if (phase === 'confirmEmail') {
     return (
-      <div className="px-4 pt-12 pb-6 flex flex-col items-center text-center gap-5">
+      <div className="px-2 pt-8 pb-6 flex flex-col items-center text-center gap-5">
         <div className="w-16 h-16 rounded-full flex items-center justify-center"
           style={{ background: N.neonDim, border: `1.5px solid ${N.neon}` }}>
           <Check className="w-7 h-7" style={{ color: N.neon }} />
         </div>
         <div>
-          <p className="text-xl font-black mb-2" style={{ color: N.text }}>Lien envoyé !</p>
+          <p className="text-xl font-black mb-2" style={{ color: N.text }}>Confirme ton email</p>
           <p className="text-sm leading-relaxed" style={{ color: N.muted }}>
-            Vérifie ta boîte mail <strong style={{ color: N.textSub }}>{email}</strong>.<br />
-            Clique sur le lien pour te connecter (valable 60 min).
+            Un email a été envoyé à <strong style={{ color: N.textSub }}>{email}</strong>.<br />
+            Clique sur le lien pour activer ton compte, puis reviens ici.
           </p>
         </div>
-        <button type="button" onClick={() => { setPhase('idle'); setEmail(''); }}
-          className="text-sm font-semibold" style={{ color: N.muted }}>
-          Utiliser un autre email
+        <button
+          type="button"
+          onClick={() => { setPhase('form'); setPassword(''); setPassword2(''); }}
+          className="text-sm font-semibold active:scale-[0.98] transition-all"
+          style={{ color: N.neonText }}
+        >
+          Retour
         </button>
       </div>
     );
@@ -460,43 +522,114 @@ const GuestLoginForm: React.FC = () => {
 
   return (
     <div className="space-y-5 pt-4">
-      {/* Header */}
       <div className="text-center pb-2">
         <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
           style={{ background: N.neonDim, border: `1.5px solid rgba(223,255,0,0.2)` }}>
           <User className="w-6 h-6" style={{ color: N.neon }} />
         </div>
-        <h2 className="text-xl font-black mb-1" style={{ color: N.text }}>Connecte-toi</h2>
+        <h2 className="text-xl font-black mb-1" style={{ color: N.text }}>Mon compte</h2>
         <p className="text-sm leading-relaxed" style={{ color: N.muted }}>
-          Entre ton email pour recevoir un lien magique.<br />
-          Pas besoin de mot de passe.
+          {registerMode
+            ? 'Crée ton compte avec ton email et un mot de passe.'
+            : 'Connecte-toi avec ton email et ton mot de passe.'}
         </p>
       </div>
 
-      {/* Email input */}
-      <div className="space-y-3">
-        <input
-          type="email"
-          value={email}
-          onChange={e => { setEmail(e.target.value); setErrorMsg(''); }}
-          onKeyDown={e => e.key === 'Enter' && phase !== 'loading' && sendLink()}
-          placeholder="ton@email.com"
-          className="w-full rounded-2xl border px-4 py-4 text-sm outline-none transition-all"
+      <div className="flex rounded-2xl border p-1 gap-1" style={{ borderColor: N.border, background: N.surface }}>
+        <button
+          type="button"
+          onClick={() => { setRegisterMode(true); setErrorMsg(''); }}
+          className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
           style={{
-            background: N.surface,
-            borderColor: errorMsg ? N.error : N.border,
-            color: N.text,
+            background: registerMode ? N.neon : 'transparent',
+            color: registerMode ? N.bg : N.muted,
+            boxShadow: registerMode ? N.neonGlow : 'none',
           }}
-        />
+        >
+          M&apos;inscrire
+        </button>
+        <button
+          type="button"
+          onClick={() => { setRegisterMode(false); setErrorMsg(''); }}
+          className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
+          style={{
+            background: !registerMode ? N.neon : 'transparent',
+            color: !registerMode ? N.bg : N.muted,
+            boxShadow: !registerMode ? N.neonGlow : 'none',
+          }}
+        >
+          Me connecter
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: N.muted }}>Email</label>
+          <input
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={e => { setEmail(e.target.value); setErrorMsg(''); }}
+            placeholder="ton@email.com"
+            className="w-full rounded-2xl border px-4 py-3.5 text-sm outline-none transition-all"
+            style={{
+              background: N.elevated,
+              borderColor: errorMsg ? N.error : N.border,
+              color: N.text,
+            }}
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: N.muted }}>Mot de passe</label>
+          <div className="relative">
+            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: N.muted }} />
+            <input
+              type="password"
+              autoComplete={registerMode ? 'new-password' : 'current-password'}
+              value={password}
+              onChange={e => { setPassword(e.target.value); setErrorMsg(''); }}
+              placeholder={registerMode ? 'Au moins 8 caractères' : '••••••••'}
+              className="w-full rounded-2xl border pl-11 pr-4 py-3.5 text-sm outline-none transition-all"
+              style={{
+                background: N.elevated,
+                borderColor: errorMsg ? N.error : N.border,
+                color: N.text,
+              }}
+            />
+          </div>
+        </div>
+        {registerMode && (
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: N.muted }}>Confirmer</label>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: N.muted }} />
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={password2}
+                onChange={e => { setPassword2(e.target.value); setErrorMsg(''); }}
+                placeholder="Répète le mot de passe"
+                className="w-full rounded-2xl border pl-11 pr-4 py-3.5 text-sm outline-none transition-all"
+                style={{
+                  background: N.elevated,
+                  borderColor: errorMsg ? N.error : N.border,
+                  color: N.text,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {errorMsg && (
           <p className="text-xs px-1" style={{ color: N.error }}>{errorMsg}</p>
         )}
+
         <motion.button
           type="button"
           whileTap={{ scale: 0.98 }}
           disabled={phase === 'loading' || !email.trim()}
-          onClick={sendLink}
-          className="w-full py-4 rounded-2xl font-bold text-sm transition-all"
+          onClick={submit}
+          className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-50"
           style={{
             background: email.trim() ? N.neon : N.border,
             color: email.trim() ? N.bg : N.muted,
@@ -508,14 +641,22 @@ const GuestLoginForm: React.FC = () => {
             <span className="flex items-center justify-center gap-2">
               <span className="w-4 h-4 rounded-full border-2 animate-spin inline-block"
                 style={{ borderColor: N.bg, borderTopColor: 'transparent' }} />
-              Envoi…
+              Patience…
             </span>
-          ) : 'Recevoir mon lien de connexion →'}
+          ) : registerMode ? (
+            'Créer mon compte'
+          ) : (
+            'Se connecter'
+          )}
         </motion.button>
       </div>
 
-      <p className="text-center text-xs" style={{ color: N.muted }}>
-        Pas encore inscrit ? Le lien crée automatiquement ton compte.
+      <p className="text-center text-xs leading-relaxed" style={{ color: N.muted }}>
+        Connexion sans lien magique : tout se passe ici avec ton mot de passe.
+        {' '}
+        <a href="/client" className="font-semibold underline underline-offset-2" style={{ color: N.neonText }}>
+          Page d’accès complète
+        </a>
       </p>
     </div>
   );
@@ -700,6 +841,8 @@ export const ClientDashboard: React.FC = () => {
   const [artistSheet, setArtistSheet] = useState<SheetStudio | null>(null);
   const [referralCount] = useState(2);
   const [copiedCode, setCopiedCode] = useState(false);
+  /** Sous-onglets de l’espace client (Profil) */
+  const [clientSpaceView, setClientSpaceView] = useState<'overview' | 'projects'>('overview');
 
   // ── Géolocalisation & studios proches ──
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
@@ -756,7 +899,6 @@ export const ClientDashboard: React.FC = () => {
         const { data: { user } } = await supabase.auth.getUser();
         const meta = user?.user_metadata ?? ({} as Record<string, unknown>);
         if (clientNeedsPassword(meta)) { window.location.replace('/client'); return; }
-        if (!clientOnboardingComplete(meta)) { window.location.replace('/client/welcome'); return; }
 
         const { data: apts } = await supabase
           .from('inkflow_appointments').select('id,date,time,service,status,price,inkflow_studios(studio_name)')
@@ -909,7 +1051,13 @@ export const ClientDashboard: React.FC = () => {
 
   const isGuest = !sessionEmail;
 
-  const TAB_TITLES: Record<ClientTab, string> = { explore:'Découvrir', rdv:'Mes RDV', wallet:'Wallet', profile:'Profil' };
+  const TAB_TITLES: Record<ClientTab, string> = {
+    explore: 'Découvrir',
+    rdv: 'Mes RDV',
+    wallet: 'Wallet',
+    profile: 'Espace client',
+  };
+  const nextRdv = upcoming[0] ?? null;
 
   return (
     <div
@@ -918,22 +1066,29 @@ export const ClientDashboard: React.FC = () => {
     >
       {/* ── Header ── */}
       <header
-        className="sticky top-0 z-20 px-5 pt-14 pb-4 border-b"
+        className="sticky top-0 z-20 px-4 sm:px-5 pt-[max(3.25rem,env(safe-area-inset-top))] pb-4 border-b"
         style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: N.border }}
       >
-        <div className="flex items-end justify-between max-w-lg mx-auto">
-          <div>
+        <div className="flex items-end justify-between gap-3 max-w-lg mx-auto min-w-0">
+          <div className="min-w-0 flex-1 pr-1">
             <p className="text-[11px] font-medium mb-0.5 uppercase tracking-widest" style={{ color: N.muted }}>
               {tab === 'explore' ? `Bonjour,` : ''}
             </p>
-            <h1
-              className="text-[30px] font-black leading-none tracking-tight"
-              style={{ color: N.text, fontFamily: 'var(--font-syne, Syne, sans-serif)' }}
-            >
-              {tab === 'explore' ? firstName : TAB_TITLES[tab]}
-            </h1>
+            <div className="min-w-0">
+              <h1
+                className="text-[clamp(1.35rem,5.5vw,1.875rem)] font-black leading-[1.1] tracking-tight break-words line-clamp-2 sm:line-clamp-none"
+                style={{ color: N.text, fontFamily: 'var(--font-syne, Syne, sans-serif)' }}
+              >
+                {tab === 'explore' ? firstName : TAB_TITLES[tab]}
+              </h1>
+              {tab === 'profile' && !isGuest && (
+                <p className="text-[11px] mt-1 font-medium truncate" style={{ color: N.muted }}>
+                  {clientSpaceView === 'overview' ? 'Vue d’ensemble · ton activité Inkflow' : 'Tes projets tatouage & suivi'}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={() => goTab('wallet')}
@@ -984,10 +1139,10 @@ export const ClientDashboard: React.FC = () => {
 
             {/* ════ EXPLORER ════ */}
             {tab === 'explore' && (
-              <div className="px-4 pt-5 space-y-6 pb-6">
+              <div className="px-3 sm:px-4 pt-4 sm:pt-5 space-y-5 sm:space-y-6 pb-6 max-w-full min-w-0">
 
                 {/* Localisation pill */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 min-w-0">
                   <div className="flex items-center gap-2">
                     <div
                       className="w-5 h-5 rounded-full flex items-center justify-center"
@@ -1092,7 +1247,10 @@ export const ClientDashboard: React.FC = () => {
                         Voir tout
                       </button>
                     </div>
-                    <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+                    <div
+                      className="flex gap-2.5 sm:gap-3 overflow-x-auto pb-2 -mx-3 px-3 sm:-mx-4 sm:px-4 snap-x snap-mandatory touch-pan-x overscroll-x-contain"
+                      style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+                    >
                       {displayStudios.map((s, i) => (
                         <motion.button
                           key={s.id} type="button"
@@ -1101,7 +1259,7 @@ export const ClientDashboard: React.FC = () => {
                           transition={{ delay: i * 0.07, type: 'spring', stiffness: 260, damping: 22 }}
                           whileTap={{ scale: 0.97 }}
                           onClick={() => setArtistSheet(s)}
-                          className="flex-shrink-0 w-44 rounded-3xl border overflow-hidden text-left"
+                          className="flex-shrink-0 w-[min(11rem,calc(100vw-3rem))] sm:w-44 rounded-3xl border overflow-hidden text-left snap-start"
                           style={{ borderColor: N.border, background: N.surface }}
                         >
                           <div
@@ -1109,7 +1267,14 @@ export const ClientDashboard: React.FC = () => {
                             style={{ background: `linear-gradient(145deg, ${s.grad[0]}, ${s.grad[1]})` }}
                           >
                             {s.portfolioImages[0] && (
-                              <img src={s.portfolioImages[0]} alt={s.name} className="absolute inset-0 w-full h-full object-cover" />
+                              <img
+                                src={s.portfolioImages[0]}
+                                alt=""
+                                className="absolute inset-0 w-full h-full object-cover"
+                                loading="lazy"
+                                decoding="async"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
                             )}
                             {s.rating > 0 && (
                               <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold"
@@ -1149,14 +1314,14 @@ export const ClientDashboard: React.FC = () => {
                       <p className="text-sm" style={{ color: N.muted }}>Aucun flash pour «{search}»</p>
                     </div>
                   ) : (
-                    <div className="flex gap-3">
-                      <div className="flex-1 space-y-3">
+                    <div className="flex gap-2 sm:gap-3 min-w-0">
+                      <div className="flex-1 min-w-0 space-y-2.5 sm:space-y-3">
                         {colA.map(f => (
                           <FlashCard key={f.id} f={f} fav={favFlash.has(f.id)}
                             onFav={() => setFavFlash(p => { const n = new Set(p); n.has(f.id) ? n.delete(f.id) : n.add(f.id); return n; })} />
                         ))}
                       </div>
-                      <div className="flex-1 space-y-3 pt-10">
+                      <div className="flex-1 min-w-0 space-y-2.5 sm:space-y-3 pt-7 sm:pt-10">
                         {colB.map(f => (
                           <FlashCard key={f.id} f={f} fav={favFlash.has(f.id)}
                             onFav={() => setFavFlash(p => { const n = new Set(p); n.has(f.id) ? n.delete(f.id) : n.add(f.id); return n; })} />
@@ -1224,6 +1389,7 @@ export const ClientDashboard: React.FC = () => {
                                   Y aller <ArrowUpRight className="w-3.5 h-3.5" />
                                 </a>
                                 <button type="button"
+                                  onClick={() => { setClientSpaceView('projects'); goTab('profile'); }}
                                   className="text-sm font-medium px-4 py-2.5 rounded-2xl border"
                                   style={{ borderColor: N.border, color: N.textSub, background: N.elevated }}>
                                   Fiche projet
@@ -1292,6 +1458,7 @@ export const ClientDashboard: React.FC = () => {
                   cents={cents}
                   stampsCount={completed.length}
                   lastStudio={completed[0] ? (completed[0].studio_name ?? undefined) : undefined}
+                  inviteUrl={shareUrl}
                 />
 
                 {/* Parrainage */}
@@ -1368,60 +1535,269 @@ export const ClientDashboard: React.FC = () => {
               </div>
             )}
 
-            {/* ════ PROFIL ════ */}
+            {/* ════ ESPACE CLIENT (Profil) ════ */}
             {tab === 'profile' && (
-              <div className="px-4 pt-5 space-y-6 pb-6">
+              <div className="px-4 pt-4 space-y-5 pb-6">
                 {isGuest ? (
                   <GuestLoginForm />
                 ) : (
                 <>
-                <div className="rounded-3xl border p-5 flex items-center gap-4"
-                  style={{ borderColor: N.border, background: N.elevated }}>
-                  <div className="w-16 h-16 rounded-3xl flex items-center justify-center text-xl font-black border-2 shrink-0"
-                    style={{ borderColor: 'rgba(223,255,0,0.25)', background: N.neonDim, color: N.neonText }}>
-                    {firstName.slice(0, 1)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xl font-black truncate" style={{ color: N.text }}>{firstName}</p>
-                    <p className="text-xs truncate mt-0.5" style={{ color: N.muted }}>{sessionEmail}</p>
-                    <div className="mt-1.5">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                        style={{ background: N.neonDim, color: N.neonText }}>Gold Member</span>
-                    </div>
-                  </div>
+                {/* Segmented : Vue d’ensemble / Projets */}
+                <div
+                  className="flex p-1 rounded-2xl border gap-0.5"
+                  style={{ borderColor: N.borderMid, background: N.surface }}
+                  role="tablist"
+                  aria-label="Sections espace client"
+                >
+                  {([
+                    { id: 'overview' as const, label: 'Vue d’ensemble', Icon: LayoutDashboard },
+                    { id: 'projects' as const, label: 'Projets', Icon: FolderKanban },
+                  ]).map(({ id, label, Icon }) => {
+                    const on = clientSpaceView === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        role="tab"
+                        aria-selected={on}
+                        onClick={() => setClientSpaceView(id)}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
+                        style={{
+                          background: on ? N.elevated : 'transparent',
+                          color: on ? N.neonText : N.muted,
+                          boxShadow: on ? `0 0 0 1px ${N.borderMid}` : 'none',
+                        }}
+                      >
+                        <Icon className="w-4 h-4 shrink-0" strokeWidth={on ? 2.2 : 1.5} />
+                        <span className="truncate">{label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
-                <section>
-                  <h2 className="text-[13px] font-bold uppercase tracking-widest mb-3" style={{ color: N.muted }}>Studios sauvegardés</h2>
-                  <div className="space-y-2">
-                    {displayStudios.map((s, i) => (
-                      <motion.button key={s.id} type="button"
-                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                        whileTap={{ scale: 0.99 }}
-                        onClick={() => setArtistSheet(s)}
-                        className="w-full flex items-center gap-3.5 p-4 rounded-3xl border text-left"
-                        style={{ borderColor: N.border, background: N.surface }}>
-                        <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-black text-white shrink-0 overflow-hidden"
-                          style={{ background: `linear-gradient(135deg, ${s.grad[0]}, ${s.grad[1]})` }}>
-                          {s.portfolioImages[0]
-                            ? <img src={s.portfolioImages[0]} alt={s.name} className="w-full h-full object-cover" />
-                            : s.name.slice(0, 2)
-                          }
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold truncate" style={{ color: N.text }}>{s.name}</p>
-                          <p className="text-[11px] truncate mt-0.5" style={{ color: N.muted }}>
-                            {s.artistLabel}{s.styleLabel ? ` · ${s.styleLabel}` : ''}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-xs font-semibold" style={{ color: N.muted }}>{s.distLabel}</span>
-                          <ChevronRight className="w-4 h-4 ml-1" style={{ color: N.border }} />
-                        </div>
-                      </motion.button>
+                <AnimatePresence mode="wait">
+                  {clientSpaceView === 'overview' && (
+                    <motion.div
+                      key="overview"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.22 }}
+                      className="space-y-5"
+                    >
+                  <div className="rounded-3xl border p-5 flex items-center gap-4"
+                    style={{ borderColor: N.border, background: N.elevated }}>
+                    <div className="w-16 h-16 rounded-3xl flex items-center justify-center text-xl font-black border-2 shrink-0"
+                      style={{ borderColor: 'rgba(223,255,0,0.25)', background: N.neonDim, color: N.neonText }}>
+                      {firstName.slice(0, 1)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xl font-black truncate" style={{ color: N.text }}>{firstName}</p>
+                      <p className="text-xs truncate mt-0.5" style={{ color: N.muted }}>{sessionEmail}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          style={{ background: N.neonDim, color: N.neonText }}>Membre Inkflow</span>
+                        {completed.length >= 3 && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
+                            style={{ borderColor: N.border, color: N.textSub }}>Habitué·e</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stats rapides */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { k: 'rdv', v: String(upcoming.length), sub: 'à venir', onClick: () => goTab('rdv') },
+                      { k: 'wal', v: `${(cents / 100).toFixed(0)}€`, sub: 'crédit', onClick: () => goTab('wallet') },
+                      { k: 'ink', v: String(completed.length), sub: 'sessions', onClick: () => setClientSpaceView('projects') },
+                    ]).map((s) => (
+                      <button
+                        key={s.k}
+                        type="button"
+                        onClick={s.onClick}
+                        className="rounded-2xl border p-3 text-center transition-all active:scale-[0.98]"
+                        style={{ borderColor: N.border, background: N.surface }}
+                      >
+                        <p className="text-xl font-black tabular-nums" style={{ color: N.neonText }}>{s.v}</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide mt-0.5" style={{ color: N.muted }}>{s.sub}</p>
+                      </button>
                     ))}
                   </div>
-                </section>
+
+                  {lastTattoo && healingDays < 15 && (
+                    <button
+                      type="button"
+                      onClick={() => goTab('rdv')}
+                      className="w-full rounded-2xl border p-4 text-left flex items-start gap-3 transition-all active:scale-[0.99]"
+                      style={{ borderColor: 'rgba(223,255,0,0.2)', background: `linear-gradient(135deg, ${N.neonDim}, transparent)` }}
+                    >
+                      <Sparkles className="w-5 h-5 shrink-0 mt-0.5" style={{ color: N.neon }} />
+                      <div>
+                        <p className="text-sm font-bold" style={{ color: N.text }}>Cicatrisation en cours</p>
+                        <p className="text-xs mt-0.5" style={{ color: N.muted }}>
+                          J+{healingDays} · {lastTattoo.service} — conseils dans l’onglet RDV
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 shrink-0 ml-auto" style={{ color: N.border }} />
+                    </button>
+                  )}
+
+                  {nextRdv && (
+                    <section>
+                      <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>Prochain rendez-vous</h2>
+                        <button type="button" onClick={() => goTab('rdv')} className="text-xs font-bold" style={{ color: N.neon }}>Voir tout</button>
+                      </div>
+                      <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => goTab('rdv')}
+                        className="w-full rounded-3xl border overflow-hidden text-left"
+                        style={{ borderColor: N.borderMid, background: N.surface }}
+                      >
+                        <div className="h-1" style={{ background: `linear-gradient(90deg, ${N.neon}, rgba(223,255,0,0.3))` }} />
+                        <div className="p-4">
+                          <p className="text-base font-black mb-1" style={{ color: N.text }}>{nextRdv.service}</p>
+                          <p className="text-xs flex items-center gap-1.5" style={{ color: N.muted }}>
+                            <Clock className="w-3.5 h-3.5" />
+                            {formatDateFr(nextRdv.date)}{nextRdv.time && ` · ${nextRdv.time}`}
+                          </p>
+                          {nextRdv.studio_name && (
+                            <p className="text-sm mt-2 flex items-center gap-1.5" style={{ color: N.textSub }}>
+                              <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: N.neon }} />
+                              {nextRdv.studio_name}
+                            </p>
+                          )}
+                        </div>
+                      </motion.button>
+                    </section>
+                  )}
+
+                  <section>
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>Studios suivis</h2>
+                      <button type="button" onClick={() => goTab('explore')} className="text-xs font-bold" style={{ color: N.neon }}>Explorer</button>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
+                      {displayStudios.slice(0, 8).map((s, i) => (
+                        <motion.button key={s.id} type="button"
+                          initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setArtistSheet(s)}
+                          className="flex-shrink-0 w-[min(13rem,72vw)] snap-start rounded-2xl border overflow-hidden text-left"
+                          style={{ borderColor: N.border, background: N.elevated }}>
+                          <div className="h-20 w-full relative"
+                            style={{ background: `linear-gradient(135deg, ${s.grad[0]}, ${s.grad[1]})` }}>
+                            {s.portfolioImages[0] && (
+                              <img src={s.portfolioImages[0]} alt="" className="w-full h-full object-cover opacity-90" />
+                            )}
+                          </div>
+                          <div className="p-3">
+                            <p className="text-sm font-bold truncate" style={{ color: N.text }}>{s.name}</p>
+                            <p className="text-[10px] truncate mt-0.5" style={{ color: N.muted }}>{s.distLabel}</p>
+                          </div>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </section>
+                    </motion.div>
+                  )}
+
+                  {clientSpaceView === 'projects' && (
+                    <motion.div
+                      key="projects"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.22 }}
+                      className="space-y-6"
+                    >
+                  <section>
+                    <h2 className="text-[13px] font-bold uppercase tracking-widest mb-3" style={{ color: N.muted }}>Projets en cours</h2>
+                    {upcoming.length === 0 ? (
+                      <div className="rounded-3xl border p-8 text-center" style={{ borderColor: N.border, background: N.surface }}>
+                        <FolderKanban className="w-10 h-10 mx-auto mb-3 opacity-25" style={{ color: N.neon }} />
+                        <p className="text-sm font-semibold mb-1" style={{ color: N.text }}>Aucun projet actif</p>
+                        <p className="text-xs mb-4" style={{ color: N.muted }}>Réserve une séance pour lancer un projet tatouage.</p>
+                        <button type="button" onClick={() => goTab('explore')}
+                          className="text-xs font-bold px-4 py-2.5 rounded-xl border active:scale-[0.98] transition-all"
+                          style={{ borderColor: N.border, color: N.neonText, background: N.neonDim }}>
+                          Découvrir des studios
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {upcoming.map((a, i) => {
+                          const d0 = Math.ceil((new Date(a.date).getTime() - Date.now()) / 86400000);
+                          const jLabel = d0 > 0 ? `J−${d0}` : "Aujourd'hui";
+                          return (
+                            <motion.div key={a.id}
+                              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
+                              className="rounded-3xl border overflow-hidden"
+                              style={{ borderColor: N.borderMid, background: N.surface }}
+                            >
+                              <div className="px-4 py-3 flex items-start justify-between gap-2 border-b" style={{ borderColor: N.border }}>
+                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg" style={{ background: N.neonDim, color: N.neonText }}>{jLabel}</span>
+                                <span className="text-[11px]" style={{ color: N.muted }}>{formatDateFr(a.date)}</span>
+                              </div>
+                              <div className="p-4">
+                                <h3 className="text-base font-black mb-1" style={{ color: N.text }}>{a.service}</h3>
+                                {a.studio_name && (
+                                  <p className="text-sm flex items-center gap-1.5 mb-3" style={{ color: N.textSub }}>
+                                    <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: N.neon }} />
+                                    {a.studio_name}
+                                  </p>
+                                )}
+                                <div className="flex gap-2 flex-wrap">
+                                  <button type="button" onClick={() => goTab('rdv')}
+                                    className="text-xs font-bold px-3 py-2 rounded-xl border active:scale-[0.98] transition-all"
+                                    style={{ borderColor: 'rgba(223,255,0,0.3)', color: N.neonText, background: N.neonDim }}>
+                                    Détails RDV
+                                  </button>
+                                  <a href={mapsUrl(a.studio_address ?? '')} target="_blank" rel="noreferrer"
+                                    className="text-xs font-semibold px-3 py-2 rounded-xl border inline-flex items-center gap-1"
+                                    style={{ borderColor: N.border, color: N.textSub }}>
+                                    Itinéraire <ArrowUpRight className="w-3 h-3" />
+                                  </a>
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </section>
+
+                  <section>
+                    <h2 className="text-[13px] font-bold uppercase tracking-widest mb-3" style={{ color: N.muted }}>Projets terminés</h2>
+                    {completed.length === 0 ? (
+                      <p className="text-sm py-6 text-center rounded-2xl border" style={{ borderColor: N.border, color: N.muted, background: N.elevated }}>
+                        Tes séances terminées apparaîtront ici.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {completed.map((a, i) => (
+                          <motion.div key={a.id}
+                            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                            className="rounded-2xl border px-4 py-3 flex items-center justify-between gap-3"
+                            style={{ borderColor: N.border, background: N.elevated }}
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold truncate" style={{ color: N.text }}>{a.service}</p>
+                              <p className="text-[11px] mt-0.5 truncate" style={{ color: N.muted }}>
+                                {formatDateFr(a.date)}{a.studio_name ? ` · ${a.studio_name}` : ''}
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-bold uppercase shrink-0 px-2 py-1 rounded-lg" style={{ background: 'rgba(94,219,154,0.12)', color: N.success }}>Fait</span>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <button type="button"
                   onClick={() => supabase.auth.signOut().then(() => { window.location.href = '/client/dashboard'; })}
@@ -1459,7 +1835,7 @@ export const ClientDashboard: React.FC = () => {
             { id: 'explore' as const, Icon: Map,         label: 'Explorer' },
             { id: 'rdv'     as const, Icon: CalendarDays, label: 'RDV'     },
             { id: 'wallet'  as const, Icon: Wallet,       label: 'Wallet'  },
-            { id: 'profile' as const, Icon: User,         label: 'Profil'  },
+            { id: 'profile' as const, Icon: User,         label: 'Client'  },
           ] as const).map(({ id, Icon, label }) => {
             const active = tab === id;
             return (

@@ -16,6 +16,13 @@ Le build Vite n’a accès qu’aux variables **préfixées par `VITE_`**. Tout 
 | `VITE_SUPABASE_ANON_KEY` | Clé anonyme (publique) Supabase | `eyJhbGc...` |
 | `VITE_GEMINI_API_KEY` | Clé API Google Gemini (optionnel, pour l’assistant IA) | (optionnel) |
 | `VITE_SENTRY_DSN` | DSN Sentry pour le monitoring (optionnel) | `https://xxx@xxx.ingest.sentry.io/xxx` |
+| `VITE_APPLE_WALLET_PASS_URL` | (Optionnel) URL vers un pass .pkpass ou endpoint. Placeholder `{code}`. | `https://api.example.com/wallet/apple?code={code}` |
+| `VITE_GOOGLE_WALLET_SAVE_URL` | (Optionnel) URL Save to Google Wallet (JWT backend). Placeholder `{code}`. | Voir Google Wallet API |
+| `VITE_GOOGLE_MAPS_JS_API_KEY` | Carte Google Maps (client + dashboard), géocodage côté navigateur | Clé navigateur avec **Maps JavaScript API** activée ; facturation GCP ; restrictions **HTTP referrer** (ex. `http://localhost:*`, `https://votre-domaine/*`). `VITE_GOOGLE_MAPS_API_KEY` est accepté en secours si la clé JS n’est pas définie. |
+
+Sans ces variables, les boutons Wallet utilisent partage ou copie du code + lien d’invitation.
+
+**Google Maps (erreur « ne s’est pas chargé correctement »)** : en général clé absente au mauvais nom, clé invalide, **Maps JavaScript API** non activée, facturation GCP inactive, ou domaine non autorisé dans les restrictions de la clé. Vérifier la console JavaScript pour le code d’erreur Google.
 
 **Important :** n’utilise **jamais** en frontend :
 - `SUPABASE_SERVICE_ROLE_KEY`

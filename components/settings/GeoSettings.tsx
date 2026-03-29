@@ -16,6 +16,7 @@ import {
   updateStudioGeo,
   type StudioGeoData,
 } from '../../lib/supabaseGeo';
+import { getGoogleMapsBrowserApiKey } from '../../lib/googleMapsBrowserKey';
 
 interface GeoSettingsProps {
   studioId: string;
@@ -85,7 +86,7 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
         setLat(lt);
         setLng(lg);
         // Reverse geocode pour récupérer la ville
-        const apiKey = (import.meta as { env: Record<string, string> }).env.VITE_GOOGLE_MAPS_API_KEY;
+        const apiKey = getGoogleMapsBrowserApiKey();
         if (apiKey) {
           try {
             const res = await fetch(
@@ -300,9 +301,10 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
         </button>
 
         {/* Info clé API */}
-        {!(import.meta as { env: Record<string, string> }).env.VITE_GOOGLE_MAPS_API_KEY && (
+        {!getGoogleMapsBrowserApiKey() && (
           <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center">
-            Ajoutez <code className="font-mono">VITE_GOOGLE_MAPS_API_KEY</code> dans votre .env pour activer le géocodage.
+            Ajoutez <code className="font-mono">VITE_GOOGLE_MAPS_JS_API_KEY</code> (ou{' '}
+            <code className="font-mono">VITE_GOOGLE_MAPS_API_KEY</code>) dans votre .env pour activer le géocodage.
           </p>
         )}
       </div>

@@ -9,9 +9,13 @@ export function clientNeedsPassword(meta: Record<string, unknown>): boolean {
 }
 
 /**
- * L'onboarding client est considéré complet si l'une des deux clés est présente.
- * (Rétro-compatibilité avec l'ancienne clé `client_onboarding_done`.)
+ * L'onboarding client est considéré complet si l'une des clés est présente (rétro-compat / métadonnées).
+ * L'écran dédié `/client/welcome` n'est plus affiché ; l'app client s'ouvre directement sur le dashboard.
  */
 export function clientOnboardingComplete(meta: Record<string, unknown>): boolean {
-  return meta?.onboarding_complete === true || meta?.client_onboarding_done === true;
+  return (
+    meta?.client_onboarding_complete === true ||
+    meta?.onboarding_complete === true ||
+    meta?.client_onboarding_done === true
+  );
 }

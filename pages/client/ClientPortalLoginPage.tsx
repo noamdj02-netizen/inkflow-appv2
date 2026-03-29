@@ -6,7 +6,7 @@ import {
 import { SEO } from '../../components/SEO';
 import { APP_URL, getClientMagicLinkRedirectTo } from '../../lib/urls';
 import { supabase } from '../../lib/supabase';
-import { clientNeedsPassword, clientOnboardingComplete } from '../../lib/clientAuth';
+import { clientNeedsPassword } from '../../lib/clientAuth';
 import { consumeSupabaseAuthUrlError } from '../../lib/supabaseAuthUrl';
 import type { User } from '@supabase/supabase-js';
 
@@ -16,7 +16,23 @@ const CLIENT_HERO_JPG = '/images/ravi-sharma-7KMzdNfIlQY-unsplash.jpg';
 const CLIENT_HERO_FALLBACK = '/images/fallon-michael-EQucs66pts0-unsplash.jpg';
 const CLIENT_HERO_ABSOLUTE = `${APP_URL}${CLIENT_HERO_JPG}`;
 
+/** Accents alignés sur l’app client (néon sur fond noir). */
+const C = {
+  neon: '#DFFF00',
+  neonSoft: '#E8FF3A',
+  onNeon: '#0A0A0A',
+  neonGlow: '0 0 24px rgba(223, 255, 0, 0.22)',
+} as const;
+
 type Phase = 'boot' | 'email' | 'sent' | 'password';
+type AuthPanel = 'password' | 'magic';
+type SentKind = 'magic' | 'signup';
+
+function getClientPostAuthPath(user: User): string {
+  const meta = user.user_metadata ?? {};
+  if (clientNeedsPassword(meta as Record<string, unknown>)) return '/client';
+  return '/client/dashboard';
+}
 
 /* ── Main page ──────────────────────────────────────────────── */
 export const ClientPortalLoginPage: React.FC = () => {
@@ -24,6 +40,12 @@ export const ClientPortalLoginPage: React.FC = () => {
   const [phase, setPhase]         = useState<Phase>('boot');
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
+  const [authPanel, setAuthPanel] = useState<AuthPanel>('password');
+  const [pwRegister, setPwRegister] = useState(true);
+  const [clientPwd, setClientPwd] = useState('');
+  const [clientPwd2, setClientPwd2] = useState('');
+  const [pwFlowLoading, setPwFlowLoading] = useState(false);
+  const [sentKind, setSentKind]   = useState<SentKind>('magic');
   const [heroSrc, setHeroSrc]     = useState(CLIENT_HERO_WEBP);
   const [password, setPassword]   = useState('');
   const [password2, setPassword2] = useState('');
@@ -73,10 +95,7 @@ export const ClientPortalLoginPage: React.FC = () => {
       }
       redirectedRef.current = true;
       cleanAuthUrl();
-      const dest = clientOnboardingComplete(meta as Record<string, unknown>)
-        ? '/client/dashboard'
-        : '/client/welcome';
-      window.location.replace(dest);
+      window.location.replace('/client/dashboard');
     };
 
     const resolve = async () => {
@@ -150,11 +169,88 @@ export const ClientPortalLoginPage: React.FC = () => {
         }
         throw new Error(msg);
       }
+      setSentKind('magic');
       setPhase('sent');
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors de l'envoi. Réessaie.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePasswordFlowSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    const em = email.trim().toLowerCase();
+    if (!em) return;
+
+    if (pwRegister) {
+      if (clientPwd.length < 8) {
+        setError('Le mot de passe doit contenir au moins 8 caractères.');
+        return;
+      }
+      if (clientPwd !== clientPwd2) {
+        setError('Les mots de passe ne correspondent pas.');
+        return;
+      }
+    } else if (!clientPwd) {
+      return;
+    }
+
+    setPwFlowLoading(true);
+    try {
+      if (pwRegister) {
+        const { data, error: signErr } = await supabase.auth.signUp({
+          email: em,
+          password: clientPwd,
+          options: {
+            emailRedirectTo: getClientMagicLinkRedirectTo(),
+            data: {
+              client_onboarding_complete: true,
+              client_password_set: true,
+            },
+          },
+        });
+        if (signErr) {
+          const msg = signErr.message.toLowerCase();
+          if (msg.includes('already registered') || msg.includes('already been registered')) {
+            setError('Un compte existe déjà avec cet email. Passe en « Me connecter » ou utilise le lien magique.');
+          } else {
+            setError(signErr.message);
+          }
+          return;
+        }
+        if (data.session?.user) {
+          window.location.replace(getClientPostAuthPath(data.session.user));
+          return;
+        }
+        if (data.user && !data.session) {
+          setSentKind('signup');
+          setPhase('sent');
+          return;
+        }
+      } else {
+        const { data, error: signInErr } = await supabase.auth.signInWithPassword({
+          email: em,
+          password: clientPwd,
+        });
+        if (signInErr) {
+          const m = signInErr.message.toLowerCase();
+          if (m.includes('invalid login') || m.includes('invalid credentials')) {
+            setError('Email ou mot de passe incorrect. Tu peux créer un compte ou utiliser le lien magique.');
+          } else {
+            setError(signInErr.message);
+          }
+          return;
+        }
+        if (data.user) {
+          window.location.replace(getClientPostAuthPath(data.user));
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue.');
+    } finally {
+      setPwFlowLoading(false);
     }
   };
 
@@ -180,12 +276,7 @@ export const ClientPortalLoginPage: React.FC = () => {
       setPwError(updErr.message);
       return;
     }
-    const { data: { user } } = await supabase.auth.getUser();
-    const meta = user?.user_metadata ?? {};
-    const dest = clientOnboardingComplete(meta as Record<string, unknown>)
-      ? '/client/dashboard'
-      : '/client/welcome';
-    window.location.href = dest;
+    window.location.href = '/client/dashboard';
   };
 
   const handleSignOut = async () => {
@@ -211,7 +302,7 @@ export const ClientPortalLoginPage: React.FC = () => {
     >
       <SEO
         title="Espace client My Inkflow"
-        description="Connecte-toi à ton espace client Inkflow : rendez-vous, cicatrisation et parrainage. Reçois un lien magique par email."
+        description="Crée ton compte client ou connecte-toi (email + mot de passe ou lien magique) : rendez-vous, cicatrisation et parrainage."
         canonical="/client"
         keywords="espace client tatouage, My Inkflow, lien magique, suivi RDV"
         ogImageAlt="Espace client My Inkflow"
@@ -245,9 +336,12 @@ export const ClientPortalLoginPage: React.FC = () => {
               <div className="inline-flex items-center gap-2.5 mb-6">
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ background: '#c9a96e' }}
+                  style={{
+                    background: `linear-gradient(145deg, ${C.neonSoft} 0%, ${C.neon} 100%)`,
+                    boxShadow: C.neonGlow,
+                  }}
                 >
-                  <Sparkles className="w-4 h-4 text-black" />
+                  <Sparkles className="w-4 h-4" style={{ color: C.onNeon }} />
                 </div>
                 <span className="text-xl font-bold text-white">My Inkflow</span>
               </div>
@@ -269,7 +363,9 @@ export const ClientPortalLoginPage: React.FC = () => {
                     Ton espace client
                   </h1>
                   <p className="text-sm" style={{ color: '#737373' }}>
-                    Entre l'email utilisé lors de ta réservation — on t'envoie un lien instantané.
+                    {authPanel === 'password'
+                      ? 'Crée ton compte ou connecte-toi avec ton email — accès direct à l’app après inscription.'
+                      : 'Entre l’email utilisé lors de ta réservation — on t’envoie un lien instantané.'}
                   </p>
                 </>
               )}
@@ -280,8 +376,17 @@ export const ClientPortalLoginPage: React.FC = () => {
                     Vérifie ta boîte mail
                   </h1>
                   <p className="text-sm" style={{ color: '#737373' }}>
-                    Un lien de connexion a été envoyé à{' '}
-                    <strong className="text-white">{email}</strong>.
+                    {sentKind === 'signup' ? (
+                      <>
+                        Un email de confirmation a été envoyé à{' '}
+                        <strong className="text-white">{email}</strong>. Clique sur le lien pour activer ton compte, puis tu seras redirigé vers l’app.
+                      </>
+                    ) : (
+                      <>
+                        Un lien de connexion a été envoyé à{' '}
+                        <strong className="text-white">{email}</strong>.
+                      </>
+                    )}
                   </p>
                 </>
               )}
@@ -300,7 +405,7 @@ export const ClientPortalLoginPage: React.FC = () => {
 
             {phase === 'boot' && (
               <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#c9a96e' }} />
+                <Loader2 className="w-8 h-8 animate-spin" style={{ color: C.neon }} />
               </div>
             )}
 
@@ -318,9 +423,13 @@ export const ClientPortalLoginPage: React.FC = () => {
                 >
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5 text-white" />
                   <div>
-                    <p className="text-sm font-medium text-white">Lien envoyé !</p>
+                    <p className="text-sm font-medium text-white">
+                      {sentKind === 'signup' ? 'Confirme ton email' : 'Lien envoyé !'}
+                    </p>
                     <p className="text-xs mt-0.5" style={{ color: '#737373' }}>
-                      Ouvre l’email et clique sur le lien : tu reviendras ici pour sécuriser ton compte puis entrer dans ton espace.
+                      {sentKind === 'signup'
+                        ? 'Ouvre l’email et clique sur le lien de confirmation. Tu pourras ensuite te connecter et accéder à ton espace.'
+                        : 'Ouvre l’email et clique sur le lien : tu reviendras ici pour sécuriser ton compte puis entrer dans ton espace.'}
                     </p>
                   </div>
                 </div>
@@ -430,67 +539,263 @@ export const ClientPortalLoginPage: React.FC = () => {
             )}
 
             {phase === 'email' && (
-              <form onSubmit={handleSend} className="space-y-4">
-                {/* Email field */}
-                <div>
-                  <label
-                    htmlFor="client-email"
-                    className="block text-xs font-semibold uppercase tracking-wider mb-2"
-                    style={{ color: '#525252' }}
+              <div className="space-y-4">
+                {/* Mot de passe vs lien magique */}
+                <div
+                  className="flex rounded-2xl border p-1 gap-1"
+                  style={{ borderColor: '#2a2a2a', background: '#0a0a0a' }}
+                  role="tablist"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={authPanel === 'password'}
+                    onClick={() => { setAuthPanel('password'); setError(''); }}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-[0.98]"
+                    style={{
+                      background: authPanel === 'password' ? '#1a1a1a' : 'transparent',
+                      color: authPanel === 'password' ? '#ffffff' : '#737373',
+                      boxShadow: authPanel === 'password' ? '0 1px 0 rgba(255,255,255,0.06)' : 'none',
+                    }}
                   >
-                    Email
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#525252' }} />
-                    <input
-                      id="client-email"
-                      type="email"
-                      autoComplete="email"
-                      autoFocus
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="toi@exemple.com"
-                      required
-                      className="w-full pl-10 pr-4 py-3.5 rounded-2xl text-sm text-white outline-none transition-all border"
-                      style={{
-                        background: '#111111',
-                        borderColor: '#2a2a2a',
-                        caretColor: '#ffffff',
-                      }}
-                      onFocus={e => (e.currentTarget.style.borderColor = '#ffffff')}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#2a2a2a')}
-                    />
-                  </div>
+                    Email & mot de passe
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={authPanel === 'magic'}
+                    onClick={() => { setAuthPanel('magic'); setError(''); }}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-[0.98]"
+                    style={{
+                      background: authPanel === 'magic' ? '#1a1a1a' : 'transparent',
+                      color: authPanel === 'magic' ? '#ffffff' : '#737373',
+                      boxShadow: authPanel === 'magic' ? '0 1px 0 rgba(255,255,255,0.06)' : 'none',
+                    }}
+                  >
+                    Lien magique
+                  </button>
                 </div>
 
-                {error && (
-                  <p
-                    className="text-sm px-4 py-3 rounded-xl border text-red-400"
-                    style={{ background: 'rgba(248,113,113,0.08)', borderColor: 'rgba(248,113,113,0.2)' }}
-                  >
-                    {error}
-                  </p>
+                {authPanel === 'password' && (
+                  <>
+                    <div className="flex rounded-xl border p-0.5 gap-0.5" style={{ borderColor: '#2a2a2a' }}>
+                      <button
+                        type="button"
+                        onClick={() => { setPwRegister(true); setError(''); }}
+                        className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all active:scale-[0.98]"
+                        style={{
+                          background: pwRegister ? C.neon : 'transparent',
+                          color: pwRegister ? C.onNeon : '#737373',
+                          boxShadow: pwRegister ? C.neonGlow : 'none',
+                        }}
+                      >
+                        Créer un compte
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setPwRegister(false); setError(''); }}
+                        className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all active:scale-[0.98]"
+                        style={{
+                          background: !pwRegister ? C.neon : 'transparent',
+                          color: !pwRegister ? C.onNeon : '#737373',
+                          boxShadow: !pwRegister ? C.neonGlow : 'none',
+                        }}
+                      >
+                        Me connecter
+                      </button>
+                    </div>
+
+                    <form onSubmit={handlePasswordFlowSubmit} className="space-y-4">
+                      <div>
+                        <label
+                          htmlFor="client-email-pw"
+                          className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                          style={{ color: '#525252' }}
+                        >
+                          Email
+                        </label>
+                        <div className="relative">
+                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#525252' }} />
+                          <input
+                            id="client-email-pw"
+                            type="email"
+                            autoComplete="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="toi@exemple.com"
+                            required
+                            className="w-full pl-10 pr-4 py-3.5 rounded-2xl text-sm text-white outline-none transition-all border"
+                            style={{
+                              background: '#111111',
+                              borderColor: '#2a2a2a',
+                              caretColor: '#ffffff',
+                            }}
+                            onFocus={e => (e.currentTarget.style.borderColor = '#ffffff')}
+                            onBlur={e => (e.currentTarget.style.borderColor = '#2a2a2a')}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="client-pw-flow"
+                          className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                          style={{ color: '#525252' }}
+                        >
+                          Mot de passe
+                        </label>
+                        <div className="relative">
+                          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#525252' }} />
+                          <input
+                            id="client-pw-flow"
+                            type="password"
+                            autoComplete={pwRegister ? 'new-password' : 'current-password'}
+                            value={clientPwd}
+                            onChange={(e) => setClientPwd(e.target.value)}
+                            placeholder={pwRegister ? 'Au moins 8 caractères' : '••••••••'}
+                            required
+                            minLength={pwRegister ? 8 : undefined}
+                            className="w-full pl-10 pr-4 py-3.5 rounded-2xl text-sm text-white outline-none transition-all border"
+                            style={{
+                              background: '#111111',
+                              borderColor: '#2a2a2a',
+                              caretColor: '#ffffff',
+                            }}
+                            onFocus={e => (e.currentTarget.style.borderColor = '#ffffff')}
+                            onBlur={e => (e.currentTarget.style.borderColor = '#2a2a2a')}
+                          />
+                        </div>
+                      </div>
+                      {pwRegister && (
+                        <div>
+                          <label
+                            htmlFor="client-pw-flow2"
+                            className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                            style={{ color: '#525252' }}
+                          >
+                            Confirmer le mot de passe
+                          </label>
+                          <div className="relative">
+                            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#525252' }} />
+                            <input
+                              id="client-pw-flow2"
+                              type="password"
+                              autoComplete="new-password"
+                              value={clientPwd2}
+                              onChange={(e) => setClientPwd2(e.target.value)}
+                              placeholder="Répète le mot de passe"
+                              required
+                              minLength={8}
+                              className="w-full pl-10 pr-4 py-3.5 rounded-2xl text-sm text-white outline-none transition-all border"
+                              style={{
+                                background: '#111111',
+                                borderColor: '#2a2a2a',
+                                caretColor: '#ffffff',
+                              }}
+                              onFocus={e => (e.currentTarget.style.borderColor = '#ffffff')}
+                              onBlur={e => (e.currentTarget.style.borderColor = '#2a2a2a')}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {error && (
+                        <p
+                          className="text-sm px-4 py-3 rounded-xl border text-red-400"
+                          style={{ background: 'rgba(248,113,113,0.08)', borderColor: 'rgba(248,113,113,0.2)' }}
+                        >
+                          {error}
+                        </p>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={pwFlowLoading || !email.trim()}
+                        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                        style={{ background: '#ffffff', color: '#000000' }}
+                      >
+                        {pwFlowLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            {pwRegister ? 'Créer mon compte et accéder à l’app' : 'Se connecter'}
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  </>
                 )}
 
-                {/* CTA — white pill like landing page */}
-                <button
-                  type="submit"
-                  disabled={loading || !email.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-40"
-                  style={{ background: '#ffffff', color: '#000000' }}
+                {authPanel === 'magic' && (
+                  <form onSubmit={handleSend} className="space-y-4">
+                    <div>
+                      <label
+                        htmlFor="client-email"
+                        className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                        style={{ color: '#525252' }}
+                      >
+                        Email
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#525252' }} />
+                        <input
+                          id="client-email"
+                          type="email"
+                          autoComplete="email"
+                          autoFocus
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="toi@exemple.com"
+                          required
+                          className="w-full pl-10 pr-4 py-3.5 rounded-2xl text-sm text-white outline-none transition-all border"
+                          style={{
+                            background: '#111111',
+                            borderColor: '#2a2a2a',
+                            caretColor: '#ffffff',
+                          }}
+                          onFocus={e => (e.currentTarget.style.borderColor = '#ffffff')}
+                          onBlur={e => (e.currentTarget.style.borderColor = '#2a2a2a')}
+                        />
+                      </div>
+                    </div>
+
+                    {error && (
+                      <p
+                        className="text-sm px-4 py-3 rounded-xl border text-red-400"
+                        style={{ background: 'rgba(248,113,113,0.08)', borderColor: 'rgba(248,113,113,0.2)' }}
+                      >
+                        {error}
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={loading || !email.trim()}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-40"
+                      style={{ background: '#ffffff', color: '#000000' }}
+                    >
+                      {loading ? (
+                        <span
+                          className="w-4 h-4 border-2 rounded-full animate-spin"
+                          style={{ borderColor: 'rgba(0,0,0,0.2)', borderTopColor: '#000' }}
+                        />
+                      ) : (
+                        <>
+                          Recevoir mon lien de connexion
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                )}
+
+                <a
+                  href="/client/dashboard"
+                  className="block w-full text-center text-sm py-3 rounded-2xl border transition-all active:scale-[0.98]"
+                  style={{ borderColor: '#2a2a2a', color: '#a3a3a3' }}
                 >
-                  {loading ? (
-                    <span
-                      className="w-4 h-4 border-2 rounded-full animate-spin"
-                      style={{ borderColor: 'rgba(0,0,0,0.2)', borderTopColor: '#000' }}
-                    />
-                  ) : (
-                    <>
-                      Recevoir mon lien de connexion
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
+                  Continuer sans compte — explorer l’app
+                </a>
 
                 <p className="text-center text-xs pt-1" style={{ color: '#404040' }}>
                   Pas encore de tatouage réservé via Inkflow ?{' '}
@@ -504,7 +809,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                     Découvrir
                   </a>
                 </p>
-              </form>
+              </div>
             )}
           </motion.div>
         </div>

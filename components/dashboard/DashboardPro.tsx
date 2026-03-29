@@ -131,7 +131,7 @@ export const DashboardPro: React.FC = () => {
   const [requestsSubTab, setRequestsSubTab] = useState<'rdv' | 'bookings' | 'projects' | 'history'>('rdv');
   const [planningView, setPlanningView] = useState<'week' | 'month'>('week');
   const [financeView, setFinanceView] = useState<'revenus' | 'acomptes' | 'stats'>('revenus');
-  const [clientsView, setClientsView] = useState<'overview' | 'projects' | 'messages'>('overview');
+  const [clientsView, setClientsView] = useState<'overview' | 'projects' | 'loyalty'>('overview');
   const [showWidgetModal, setShowWidgetModal] = useState(false);
   const [customWidgets, setCustomWidgets] = useDashboardWidgets(studioId, useSupabase ?? false, {
     onError: () => toast.error('Erreur de sauvegarde des widgets'),
@@ -145,9 +145,20 @@ export const DashboardPro: React.FC = () => {
   const [artistAccounts, setArtistAccounts] = useState<ArtistAccount[]>([]);
   const [loyaltyEntries, setLoyaltyEntries] = useState<LoyaltyEntry[]>([]);
   const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettingsType>({
-    enabled: true, pointsPerEuro: 1, referralBonus: 50,
+    enabled: true,
+    pointsPerEuro: 1,
+    referralBonus: 50,
     tierThresholds: { silver: 200, gold: 500, platinum: 1000 },
-    rewards: [{ name: '10% sur prochain tattoo', cost: 100 }, { name: 'Retouche gratuite', cost: 200 }, { name: 'Flash offert', cost: 500 }],
+    rewards: [
+      { name: '10% sur prochain tattoo', cost: 100 },
+      { name: 'Retouche gratuite', cost: 200 },
+      { name: 'Flash offert', cost: 500 },
+    ],
+    programName: '',
+    programSubtitle: '',
+    stampSlots: 10,
+    pointsPerStamp: 100,
+    stampRuleDescription: '',
   });
   const [consentTemplates, setConsentTemplates] = useState<{ id: string; title: string; content: string }[]>([]);
   const [generalStudioName, setGeneralStudioName] = useState(user?.studioName || '');
@@ -261,7 +272,22 @@ export const DashboardPro: React.FC = () => {
     }
     const a = safeJsonParse<ArtistAccount[]>(localStorage.getItem(storageKey('inkflow_artists')), []);
     if (a.length > 0) setArtistAccounts(a);
-    const defaultLoyalty: LoyaltySettingsType = { enabled: true, pointsPerEuro: 1, referralBonus: 50, tierThresholds: { silver: 200, gold: 500, platinum: 1000 }, rewards: [{ name: '10% sur prochain tattoo', cost: 100 }, { name: 'Retouche gratuite', cost: 200 }, { name: 'Flash offert', cost: 500 }] };
+    const defaultLoyalty: LoyaltySettingsType = {
+      enabled: true,
+      pointsPerEuro: 1,
+      referralBonus: 50,
+      tierThresholds: { silver: 200, gold: 500, platinum: 1000 },
+      rewards: [
+        { name: '10% sur prochain tattoo', cost: 100 },
+        { name: 'Retouche gratuite', cost: 200 },
+        { name: 'Flash offert', cost: 500 },
+      ],
+      programName: '',
+      programSubtitle: '',
+      stampSlots: 10,
+      pointsPerStamp: 100,
+      stampRuleDescription: '',
+    };
     const ly = safeJsonParse<LoyaltySettingsType>(localStorage.getItem(storageKey('inkflow_loyalty_settings')), defaultLoyalty);
     if (ly && Object.keys(ly).length > 0) setLoyaltySettings(ly);
     const le = safeJsonParse<LoyaltyEntry[]>(localStorage.getItem(storageKey('inkflow_loyalty_entries')), []);
@@ -892,7 +918,7 @@ export const DashboardPro: React.FC = () => {
               ) : (
                 <>
                   <button
-                    onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setSidebarOpen(false); })}
+                    onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setClientsView('overview'); setSidebarOpen(false); })}
                     className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all w-full"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-zinc-400/50 flex-shrink-0" />
@@ -1064,7 +1090,10 @@ export const DashboardPro: React.FC = () => {
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Projets
                       </button>
-                      {/* V2: Messagerie avancée masquée pour le MVP */}
+                      <button onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setClientsView('loyalty'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'loyalty' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'loyalty' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Fidélité
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1604,26 +1633,39 @@ export const DashboardPro: React.FC = () => {
           {!loading && activeTab === 'clients' && (
             <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
-            <ClientList
-              clients={clients}
-              onAddClient={addClient}
-              onImportCsv={useSupabase && studioId ? importClientsFromCsvRows : undefined}
-              csvImportRemainingSlots={csvImportRemainingSlotsForCrm}
-              googlePlaceConfigured={Boolean(generalGooglePlaceId?.trim())}
-              onOpenGoogleReviewsSettings={() => {
-                setActiveTab('etablissement');
-                setSidebarOpen(false);
-              }}
-              loadClientNotes={loadClientNotes}
-              saveClientNotes={saveClientNotes}
-              useSupabase={useSupabase}
-              clientLimitReached={hasReachedLimit('clients_crm', clients.length)}
-              clientLimit={getLimit('clients_crm')}
-              onUpgradeClick={() => { window.location.href = LANDING_PRICING_URL; }}
-              openAddModal={openAddClientModal}
-              onAddModalClose={() => setOpenAddClientModal(false)}
-              view={clientsView}
-            />
+            {clientsView === 'loyalty' ? (
+              <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-6xl mx-auto w-full">
+                <LoyaltyManager
+                  entries={loyaltyEntries}
+                  clients={clients}
+                  onUpdatePoints={() => {}}
+                  settings={loyaltySettings}
+                  onUpdateSettings={setLoyaltySettings}
+                  studioName={user?.studioName ?? undefined}
+                />
+              </div>
+            ) : (
+              <ClientList
+                clients={clients}
+                onAddClient={addClient}
+                onImportCsv={useSupabase && studioId ? importClientsFromCsvRows : undefined}
+                csvImportRemainingSlots={csvImportRemainingSlotsForCrm}
+                googlePlaceConfigured={Boolean(generalGooglePlaceId?.trim())}
+                onOpenGoogleReviewsSettings={() => {
+                  setActiveTab('etablissement');
+                  setSidebarOpen(false);
+                }}
+                loadClientNotes={loadClientNotes}
+                saveClientNotes={saveClientNotes}
+                useSupabase={useSupabase}
+                clientLimitReached={hasReachedLimit('clients_crm', clients.length)}
+                clientLimit={getLimit('clients_crm')}
+                onUpgradeClick={() => { window.location.href = LANDING_PRICING_URL; }}
+                openAddModal={openAddClientModal}
+                onAddModalClose={() => setOpenAddClientModal(false)}
+                view={clientsView}
+              />
+            )}
             </Suspense>
             </div>
           )}
@@ -1766,8 +1808,12 @@ export const DashboardPro: React.FC = () => {
                     { id: 'care', label: 'Soins post-tattoo' },
                     { id: 'consent', label: 'Consentement' },
                     { id: 'availability', label: 'Disponibilités' },
+                    { id: 'artists', label: 'Artistes' },
+                    { id: 'waitlist', label: 'Liste d\'attente' },
+                    { id: 'loyalty', label: 'Fidélité' },
                     { id: 'calendar', label: 'Calendrier' },
                     { id: 'vitrine', label: 'Page vitrine' },
+                    { id: 'messagerie', label: 'Messagerie' },
                   ] as const).map(tab => (
                     <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
                       className={`px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
@@ -2081,6 +2127,7 @@ export const DashboardPro: React.FC = () => {
                   onUpdatePoints={() => {}}
                   settings={loyaltySettings}
                   onUpdateSettings={setLoyaltySettings}
+                  studioName={user?.studioName ?? undefined}
                 />
               )}
               {settingsTab === 'calendar' && <CalendarSettings studioId={studioId || ''} appointments={appointments} onToast={(msg, type) => type === 'success' ? toast.success(msg) : toast.error(msg)} />}
@@ -2319,7 +2366,7 @@ export const DashboardPro: React.FC = () => {
                     Nouveau RDV
                   </button>
                   <button
-                    onClick={() => { setShowFabMenu(false); handleSidebarNav(() => { setActiveTab('clients'); setOpenAddClientModal(true); }); }}
+                    onClick={() => { setShowFabMenu(false); handleSidebarNav(() => { setActiveTab('clients'); setClientsView('overview'); setOpenAddClientModal(true); }); }}
                     className="flex items-center gap-4 w-full bg-neutral-50 dark:bg-[#27272A] hover:bg-neutral-100 dark:hover:bg-[#3f3f46] rounded-2xl px-5 py-4 border border-neutral-200 dark:border-zinc-600 font-semibold text-neutral-900 dark:text-white min-h-[56px] text-left transition-colors touch-target"
                   >
                     <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-zinc-600 flex items-center justify-center flex-shrink-0">
@@ -2479,7 +2526,7 @@ export const DashboardPro: React.FC = () => {
 
           {/* Clients */}
           <button
-            onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setShowFabMenu(false); })}
+            onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setClientsView('overview'); setShowFabMenu(false); })}
             className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'clients' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400 dark:text-zinc-500'}`}
           >
             <Users className="w-6 h-6" />

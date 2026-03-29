@@ -8,6 +8,7 @@
  */
 
 import { supabase } from './supabase';
+import { getGoogleMapsBrowserApiKey } from './googleMapsBrowserKey';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -126,7 +127,7 @@ export async function getNearbyStudios(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// geocodeAddress  (Google Geocoding REST — nécessite VITE_GOOGLE_MAPS_API_KEY)
+// geocodeAddress  (Google Geocoding REST — nécessite une clé navigateur, voir getGoogleMapsBrowserApiKey)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface GeocodeResult {
@@ -137,9 +138,9 @@ export interface GeocodeResult {
 }
 
 export async function geocodeAddress(address: string): Promise<GeocodeResult | null> {
-  const apiKey = (import.meta as { env: Record<string, string> }).env.VITE_GOOGLE_MAPS_API_KEY;
+  const apiKey = getGoogleMapsBrowserApiKey();
   if (!apiKey) {
-    console.warn('[supabaseGeo] VITE_GOOGLE_MAPS_API_KEY manquant');
+    console.warn('[supabaseGeo] Clé Google Maps navigateur manquante (VITE_GOOGLE_MAPS_JS_API_KEY ou VITE_GOOGLE_MAPS_API_KEY)');
     return null;
   }
 
