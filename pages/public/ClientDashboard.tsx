@@ -12,11 +12,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Heart, Star, ChevronRight, Search, X,
   ExternalLink, Wallet, User, CalendarDays,
-  Map, Flame, LogOut, Clock, ArrowUpRight, Copy, Share2, Check, Lock,
-  Navigation, List, LayoutGrid, LayoutDashboard, FolderKanban, Sparkles,
+  Map, Flame, LogOut, Clock, ArrowUpRight, Copy, Share2, Check,
+  Navigation, List, LayoutGrid,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { clientNeedsPassword } from '../../lib/clientAuth';
+import { clientNeedsPassword, clientOnboardingComplete } from '../../lib/clientAuth';
 import { getInviteBaseUrl } from '../../lib/urls';
 import { type ClientAppointment, type ClientTab } from '../../components/client/clientExperienceTypes';
 import { HealingBanner } from '../../components/client/HealingBanner';
@@ -25,22 +25,22 @@ import { NearbyMapView } from '../../components/client/NearbyMapView';
 import { LoyaltyCard } from '../../components/client/LoyaltyCard';
 import { ROUEN_STUDIOS, ROUEN_FLASH, type DisplayFlash, type SheetStudio } from '../../lib/rouenStudios';
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
+// ── Design tokens — iOS Travel Discovery ──────────────────────────────────────
 const N = {
-  bg:         '#0A0A0A',
-  surface:    '#111111',
-  elevated:   '#181818',
-  border:     '#202020',
-  borderMid:  '#2C2C2C',
-  text:       '#F5F3EF',
-  textSub:    '#ADADAB',
-  muted:      '#555555',
-  neon:       '#DFFF00',
-  neonDim:    'rgba(223,255,0,0.10)',
-  neonGlow:   '0 0 18px rgba(223,255,0,0.28)',
-  neonText:   '#E8FF3A',
-  success:    '#5EDB9A',
-  error:      '#F47B7B',
+  bg:         '#FFFFFF',
+  surface:    '#F5F5F5',
+  elevated:   '#EBEBEB',
+  border:     '#E5E5E5',
+  borderMid:  '#D4D4D4',
+  text:       '#111111',
+  textSub:    '#555555',
+  muted:      '#999999',
+  neon:       '#60A5FA',       // Sky blue accent (from "COMMENCER" button)
+  neonDim:    'rgba(96,165,250,0.10)',
+  neonGlow:   '0 4px 24px rgba(96,165,250,0.25)',
+  neonText:   '#2563EB',
+  success:    '#22C55E',
+  error:      '#EF4444',
 } as const;
 
 const TAB_ORDER: ClientTab[] = ['explore', 'rdv', 'wallet', 'profile'];
@@ -332,59 +332,55 @@ const FlashCard: React.FC<{
       style={{ borderColor: N.border, background: N.surface }}
     >
       <div
-        className="relative isolate"
-        style={{ minHeight: Math.max(140, f.h * 0.82), background: `linear-gradient(155deg, ${f.grad[0]}, ${f.grad[1]})` }}
+        className="relative"
+        style={{ height: f.h * 0.82, background: `linear-gradient(155deg, ${f.grad[0]}, ${f.grad[1]})` }}
       >
         {/* Image réelle si disponible */}
         {f.imageUrl && (
           <img
             src={f.imageUrl}
-            alt=""
+            alt={f.name}
             className="absolute inset-0 w-full h-full object-cover"
-            loading="lazy"
-            decoding="async"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         )}
 
         {/* SVG décoratif (fallback sans image) */}
         {!f.imageUrl && (
-          <svg className="absolute inset-0 w-full h-full opacity-30 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <svg className="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100" preserveAspectRatio="none">
             <circle cx="70" cy="30" r="25" fill="none" stroke="rgba(223,255,0,0.2)" strokeWidth="0.5"/>
             <path d="M10 60 Q50 40 90 60 Q70 85 50 80 Q30 85 10 60Z" fill="rgba(255,255,255,0.03)"/>
           </svg>
         )}
 
-        {/* Heart — seul élément en haut à droite (évite chevauchement avec le titre) */}
+        {/* Hot badge */}
+        {f.hot && (
+          <div
+            className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold"
+            style={{ background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(8px)', color: N.neon }}
+          >
+            <Flame className="w-3 h-3" />
+            Tendance
+          </div>
+        )}
+
+        {/* Heart */}
         <motion.button
           type="button"
           whileTap={{ scale: 0.85 }}
           onClick={(e) => { e.stopPropagation(); onFav(); }}
-          className="absolute top-2 right-2 z-20 min-w-[44px] min-h-[44px] w-11 h-11 -m-1 rounded-full flex items-center justify-center border"
-          style={{ background: 'rgba(10,10,10,0.75)', backdropFilter: 'blur(8px)', borderColor: fav ? 'rgba(223,255,0,0.4)' : N.border }}
-          aria-label={fav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center border"
+          style={{ background: 'rgba(10,10,10,0.7)', backdropFilter: 'blur(8px)', borderColor: fav ? 'rgba(223,255,0,0.4)' : N.border }}
         >
           <Heart className="w-3.5 h-3.5" style={{ color: fav ? N.neon : N.text, fill: fav ? N.neon : 'none' }} />
         </motion.button>
 
-        {/* Overlay info : badge Tendance + titre dans le même bloc bas (plus de chevauchement) */}
+        {/* Overlay info */}
         <div
-          className="absolute bottom-0 left-0 right-0 z-10 px-3 pt-10 pb-3"
-          style={{
-            background: 'linear-gradient(to top, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.88) 45%, transparent 100%)',
-          }}
+          className="absolute bottom-0 left-0 right-0 px-3 pt-8 pb-2.5"
+          style={{ background: 'linear-gradient(to top, rgba(10,10,10,0.95), transparent)' }}
         >
-          {f.hot && (
-            <div
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wide mb-1.5"
-              style={{ background: 'rgba(223,255,0,0.12)', color: N.neon, border: '1px solid rgba(223,255,0,0.2)' }}
-            >
-              <Flame className="w-3 h-3 shrink-0" />
-              Tendance
-            </div>
-          )}
-          <p className="text-[13px] font-bold leading-snug line-clamp-2" style={{ color: N.text }}>{f.name}</p>
-          <p className="text-[10px] mt-1 line-clamp-1" style={{ color: 'rgba(245,243,239,0.45)' }}>{f.artist} · {f.dist}</p>
+          <p className="text-[13px] font-bold" style={{ color: N.text }}>{f.name}</p>
+          <p className="text-[10px] mt-0.5" style={{ color: 'rgba(245,243,239,0.45)' }}>{f.artist} · {f.dist}</p>
         </div>
       </div>
       <div className="px-3 py-2.5 flex items-center justify-between">
@@ -406,115 +402,57 @@ const FlashCard: React.FC<{
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
-// GUEST LOGIN FORM (profil — inscription / connexion email + mot de passe)
+// GUEST LOGIN FORM (profil tab — magic link inline)
 // ══════════════════════════════════════════════════════════════════════════════
 const GuestLoginForm: React.FC = () => {
-  const [registerMode, setRegisterMode] = useState(true);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [password2, setPassword2] = useState('');
-  const [phase, setPhase] = useState<'form' | 'loading' | 'confirmEmail'>('form');
+  const [phase, setPhase] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const submit = async () => {
-    const em = email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+  const sendLink = async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       setErrorMsg('Adresse email invalide.');
       return;
     }
-    if (registerMode) {
-      if (password.length < 8) {
-        setErrorMsg('Mot de passe : au moins 8 caractères.');
-        return;
-      }
-      if (password !== password2) {
-        setErrorMsg('Les mots de passe ne correspondent pas.');
-        return;
-      }
-    } else if (!password) {
-      setErrorMsg('Entre ton mot de passe.');
-      return;
-    }
-
     setPhase('loading');
     setErrorMsg('');
     try {
-      if (registerMode) {
-        const { data, error } = await supabase.auth.signUp({
-          email: em,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/client`,
-            data: {
-              client_onboarding_complete: true,
-              client_password_set: true,
-            },
-          },
-        });
-        if (error) {
-          const m = error.message.toLowerCase();
-          if (m.includes('already registered') || m.includes('already been registered')) {
-            setErrorMsg('Un compte existe déjà. Passe en « Me connecter ».');
-          } else {
-            setErrorMsg(error.message);
-          }
-          setPhase('form');
-          return;
-        }
-        if (data.session?.user) {
-          window.location.href = '/client/dashboard';
-          return;
-        }
-        if (data.user && !data.session) {
-          setPhase('confirmEmail');
-          return;
-        }
-        setPhase('form');
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email: em, password });
-        if (error) {
-          const m = error.message.toLowerCase();
-          setErrorMsg(
-            m.includes('invalid') || m.includes('credentials')
-              ? 'Email ou mot de passe incorrect.'
-              : error.message
-          );
-          setPhase('form');
-          return;
-        }
-        if (data.user) {
-          window.location.href = '/client/dashboard';
-          return;
-        }
-        setPhase('form');
+      const base = (import.meta as { env: Record<string, string> }).env.VITE_SUPABASE_URL?.replace(/\/+$/, '') ?? '';
+      const anon = (import.meta as { env: Record<string, string> }).env.VITE_SUPABASE_ANON_KEY ?? '';
+      const res = await fetch(`${base}/functions/v1/send-client-magic-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': `Bearer ${anon}` },
+        body: JSON.stringify({ email: trimmed, redirectTo: `${window.location.origin}/client/dashboard` }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(d.error ?? 'Erreur serveur');
       }
+      setPhase('sent');
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : 'Erreur inconnue');
-      setPhase('form');
+      setPhase('error');
     }
   };
 
-  if (phase === 'confirmEmail') {
+  if (phase === 'sent') {
     return (
-      <div className="px-2 pt-8 pb-6 flex flex-col items-center text-center gap-5">
+      <div className="px-4 pt-12 pb-6 flex flex-col items-center text-center gap-5">
         <div className="w-16 h-16 rounded-full flex items-center justify-center"
           style={{ background: N.neonDim, border: `1.5px solid ${N.neon}` }}>
           <Check className="w-7 h-7" style={{ color: N.neon }} />
         </div>
         <div>
-          <p className="text-xl font-black mb-2" style={{ color: N.text }}>Confirme ton email</p>
+          <p className="text-xl font-black mb-2" style={{ color: N.text }}>Lien envoyé !</p>
           <p className="text-sm leading-relaxed" style={{ color: N.muted }}>
-            Un email a été envoyé à <strong style={{ color: N.textSub }}>{email}</strong>.<br />
-            Clique sur le lien pour activer ton compte, puis reviens ici.
+            Vérifie ta boîte mail <strong style={{ color: N.textSub }}>{email}</strong>.<br />
+            Clique sur le lien pour te connecter (valable 60 min).
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => { setPhase('form'); setPassword(''); setPassword2(''); }}
-          className="text-sm font-semibold active:scale-[0.98] transition-all"
-          style={{ color: N.neonText }}
-        >
-          Retour
+        <button type="button" onClick={() => { setPhase('idle'); setEmail(''); }}
+          className="text-sm font-semibold" style={{ color: N.muted }}>
+          Utiliser un autre email
         </button>
       </div>
     );
@@ -522,114 +460,43 @@ const GuestLoginForm: React.FC = () => {
 
   return (
     <div className="space-y-5 pt-4">
+      {/* Header */}
       <div className="text-center pb-2">
         <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
           style={{ background: N.neonDim, border: `1.5px solid rgba(223,255,0,0.2)` }}>
           <User className="w-6 h-6" style={{ color: N.neon }} />
         </div>
-        <h2 className="text-xl font-black mb-1" style={{ color: N.text }}>Mon compte</h2>
+        <h2 className="text-xl font-black mb-1" style={{ color: N.text }}>Connecte-toi</h2>
         <p className="text-sm leading-relaxed" style={{ color: N.muted }}>
-          {registerMode
-            ? 'Crée ton compte avec ton email et un mot de passe.'
-            : 'Connecte-toi avec ton email et ton mot de passe.'}
+          Entre ton email pour recevoir un lien magique.<br />
+          Pas besoin de mot de passe.
         </p>
       </div>
 
-      <div className="flex rounded-2xl border p-1 gap-1" style={{ borderColor: N.border, background: N.surface }}>
-        <button
-          type="button"
-          onClick={() => { setRegisterMode(true); setErrorMsg(''); }}
-          className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
-          style={{
-            background: registerMode ? N.neon : 'transparent',
-            color: registerMode ? N.bg : N.muted,
-            boxShadow: registerMode ? N.neonGlow : 'none',
-          }}
-        >
-          M&apos;inscrire
-        </button>
-        <button
-          type="button"
-          onClick={() => { setRegisterMode(false); setErrorMsg(''); }}
-          className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
-          style={{
-            background: !registerMode ? N.neon : 'transparent',
-            color: !registerMode ? N.bg : N.muted,
-            boxShadow: !registerMode ? N.neonGlow : 'none',
-          }}
-        >
-          Me connecter
-        </button>
-      </div>
-
+      {/* Email input */}
       <div className="space-y-3">
-        <div>
-          <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: N.muted }}>Email</label>
-          <input
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={e => { setEmail(e.target.value); setErrorMsg(''); }}
-            placeholder="ton@email.com"
-            className="w-full rounded-2xl border px-4 py-3.5 text-sm outline-none transition-all"
-            style={{
-              background: N.elevated,
-              borderColor: errorMsg ? N.error : N.border,
-              color: N.text,
-            }}
-          />
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: N.muted }}>Mot de passe</label>
-          <div className="relative">
-            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: N.muted }} />
-            <input
-              type="password"
-              autoComplete={registerMode ? 'new-password' : 'current-password'}
-              value={password}
-              onChange={e => { setPassword(e.target.value); setErrorMsg(''); }}
-              placeholder={registerMode ? 'Au moins 8 caractères' : '••••••••'}
-              className="w-full rounded-2xl border pl-11 pr-4 py-3.5 text-sm outline-none transition-all"
-              style={{
-                background: N.elevated,
-                borderColor: errorMsg ? N.error : N.border,
-                color: N.text,
-              }}
-            />
-          </div>
-        </div>
-        {registerMode && (
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: N.muted }}>Confirmer</label>
-            <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: N.muted }} />
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={password2}
-                onChange={e => { setPassword2(e.target.value); setErrorMsg(''); }}
-                placeholder="Répète le mot de passe"
-                className="w-full rounded-2xl border pl-11 pr-4 py-3.5 text-sm outline-none transition-all"
-                style={{
-                  background: N.elevated,
-                  borderColor: errorMsg ? N.error : N.border,
-                  color: N.text,
-                }}
-              />
-            </div>
-          </div>
-        )}
-
+        <input
+          type="email"
+          value={email}
+          onChange={e => { setEmail(e.target.value); setErrorMsg(''); }}
+          onKeyDown={e => e.key === 'Enter' && phase !== 'loading' && sendLink()}
+          placeholder="ton@email.com"
+          className="w-full rounded-2xl border px-4 py-4 text-sm outline-none transition-all"
+          style={{
+            background: N.surface,
+            borderColor: errorMsg ? N.error : N.border,
+            color: N.text,
+          }}
+        />
         {errorMsg && (
           <p className="text-xs px-1" style={{ color: N.error }}>{errorMsg}</p>
         )}
-
         <motion.button
           type="button"
           whileTap={{ scale: 0.98 }}
           disabled={phase === 'loading' || !email.trim()}
-          onClick={submit}
-          className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-50"
+          onClick={sendLink}
+          className="w-full py-4 rounded-2xl font-bold text-sm transition-all"
           style={{
             background: email.trim() ? N.neon : N.border,
             color: email.trim() ? N.bg : N.muted,
@@ -641,22 +508,14 @@ const GuestLoginForm: React.FC = () => {
             <span className="flex items-center justify-center gap-2">
               <span className="w-4 h-4 rounded-full border-2 animate-spin inline-block"
                 style={{ borderColor: N.bg, borderTopColor: 'transparent' }} />
-              Patience…
+              Envoi…
             </span>
-          ) : registerMode ? (
-            'Créer mon compte'
-          ) : (
-            'Se connecter'
-          )}
+          ) : 'Recevoir mon lien de connexion →'}
         </motion.button>
       </div>
 
-      <p className="text-center text-xs leading-relaxed" style={{ color: N.muted }}>
-        Connexion sans lien magique : tout se passe ici avec ton mot de passe.
-        {' '}
-        <a href="/client" className="font-semibold underline underline-offset-2" style={{ color: N.neonText }}>
-          Page d’accès complète
-        </a>
+      <p className="text-center text-xs" style={{ color: N.muted }}>
+        Pas encore inscrit ? Le lien crée automatiquement ton compte.
       </p>
     </div>
   );
@@ -841,8 +700,6 @@ export const ClientDashboard: React.FC = () => {
   const [artistSheet, setArtistSheet] = useState<SheetStudio | null>(null);
   const [referralCount] = useState(2);
   const [copiedCode, setCopiedCode] = useState(false);
-  /** Sous-onglets de l’espace client (Profil) */
-  const [clientSpaceView, setClientSpaceView] = useState<'overview' | 'projects'>('overview');
 
   // ── Géolocalisation & studios proches ──
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
@@ -899,6 +756,7 @@ export const ClientDashboard: React.FC = () => {
         const { data: { user } } = await supabase.auth.getUser();
         const meta = user?.user_metadata ?? ({} as Record<string, unknown>);
         if (clientNeedsPassword(meta)) { window.location.replace('/client'); return; }
+        if (!clientOnboardingComplete(meta)) { window.location.replace('/client/welcome'); return; }
 
         const { data: apts } = await supabase
           .from('inkflow_appointments').select('id,date,time,service,status,price,inkflow_studios(studio_name)')
@@ -1051,13 +909,7 @@ export const ClientDashboard: React.FC = () => {
 
   const isGuest = !sessionEmail;
 
-  const TAB_TITLES: Record<ClientTab, string> = {
-    explore: 'Découvrir',
-    rdv: 'Mes RDV',
-    wallet: 'Wallet',
-    profile: 'Espace client',
-  };
-  const nextRdv = upcoming[0] ?? null;
+  const TAB_TITLES: Record<ClientTab, string> = { explore:'Découvrir', rdv:'Mes RDV', wallet:'Wallet', profile:'Profil' };
 
   return (
     <div
@@ -1066,53 +918,47 @@ export const ClientDashboard: React.FC = () => {
     >
       {/* ── Header ── */}
       <header
-        className="sticky top-0 z-20 px-4 sm:px-5 pt-[max(3.25rem,env(safe-area-inset-top))] pb-4 border-b"
-        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: N.border }}
+        className="sticky top-0 z-20 px-5 pt-safe-top pt-12 pb-3 border-b"
+        style={{ background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(20px)', borderColor: N.border }}
       >
-        <div className="flex items-end justify-between gap-3 max-w-lg mx-auto min-w-0">
-          <div className="min-w-0 flex-1 pr-1">
-            <p className="text-[11px] font-medium mb-0.5 uppercase tracking-widest" style={{ color: N.muted }}>
-              {tab === 'explore' ? `Bonjour,` : ''}
-            </p>
-            <div className="min-w-0">
-              <h1
-                className="text-[clamp(1.35rem,5.5vw,1.875rem)] font-black leading-[1.1] tracking-tight break-words line-clamp-2 sm:line-clamp-none"
-                style={{ color: N.text, fontFamily: 'var(--font-syne, Syne, sans-serif)' }}
-              >
-                {tab === 'explore' ? firstName : TAB_TITLES[tab]}
-              </h1>
-              {tab === 'profile' && !isGuest && (
-                <p className="text-[11px] mt-1 font-medium truncate" style={{ color: N.muted }}>
-                  {clientSpaceView === 'overview' ? 'Vue d’ensemble · ton activité Inkflow' : 'Tes projets tatouage & suivi'}
-                </p>
-              )}
-            </div>
+        <div className="flex items-center justify-between max-w-lg mx-auto">
+          {/* IF. logo */}
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-black tracking-tighter" style={{ color: N.text, letterSpacing: '-0.04em' }}>
+              IF.
+            </span>
+            {tab !== 'explore' && (
+              <span className="text-base font-semibold" style={{ color: N.textSub }}>
+                {TAB_TITLES[tab]}
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Right: wallet + avatar */}
+          <div className="flex items-center gap-2">
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={() => goTab('wallet')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border"
-              style={{ borderColor: N.border, background: N.elevated }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border"
+              style={{ borderColor: N.border, background: N.surface }}
             >
               <Wallet className="w-3.5 h-3.5" style={{ color: N.neon }} />
-              <span className="text-sm font-black tabular-nums" style={{ color: N.neonText }}>{(cents / 100).toFixed(0)}€</span>
+              <span className="text-sm font-bold tabular-nums" style={{ color: N.neonText }}>{(cents / 100).toFixed(0)}€</span>
             </motion.button>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold border text-sm"
-              style={{ borderColor: 'rgba(223,255,0,0.2)', background: N.neonDim, color: N.neonText }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold border text-sm overflow-hidden"
+              style={{ borderColor: N.border, background: N.neon, color: '#fff' }}>
               {firstName.slice(0, 1)}
             </div>
           </div>
         </div>
       </header>
 
-      {isGuest && (
+      {isGuest && tab === 'explore' && (
         <div
-          className="max-w-lg mx-auto px-5 py-2.5 border-b text-center"
-          style={{ borderColor: N.border, background: 'rgba(223,255,0,0.04)' }}
+          className="max-w-lg mx-auto px-5 py-2 border-b text-center"
+          style={{ borderColor: N.border, background: N.neonDim }}
         >
-          <p className="text-[11px] leading-snug" style={{ color: N.muted }}>
-            Mode découverte — connecte-toi pour réserver, suivre tes RDV et ton wallet.
+          <p className="text-[11px]" style={{ color: N.neonText }}>
+            Mode découverte — connecte-toi pour réserver et suivre tes RDV.
           </p>
         </div>
       )}
@@ -1139,193 +985,252 @@ export const ClientDashboard: React.FC = () => {
 
             {/* ════ EXPLORER ════ */}
             {tab === 'explore' && (
-              <div className="px-3 sm:px-4 pt-4 sm:pt-5 space-y-5 sm:space-y-6 pb-6 max-w-full min-w-0">
+              <div className="pb-6">
 
-                {/* Localisation pill */}
-                <div className="flex items-center justify-between gap-2 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ background: N.neonDim }}
-                    >
+                {/* Hero heading + search */}
+                <div className="px-5 pt-6 pb-4">
+                  <motion.h1
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-[30px] font-black leading-tight mb-4"
+                    style={{ color: N.text, letterSpacing: '-0.02em' }}
+                  >
+                    Trouve ton<br />prochain Tattoo.
+                  </motion.h1>
+
+                  {/* Search bar */}
+                  <div className="relative">
+                    <input
+                      value={search} onChange={e => setSearch(e.target.value)}
+                      placeholder="Rechercher un style, un artiste, un flash..."
+                      className="w-full rounded-full border py-3.5 pl-5 pr-12 text-sm outline-none transition-all"
+                      style={{ background: N.surface, borderColor: N.border, color: N.text, caretColor: N.neon }}
+                      onFocus={e => (e.currentTarget.style.borderColor = N.neon)}
+                      onBlur={e => (e.currentTarget.style.borderColor = N.border)}
+                    />
+                    <button type="button" className="absolute right-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center"
+                      style={{ background: N.neon }}>
+                      {search
+                        ? <X className="w-4 h-4 text-white" onClick={() => setSearch('')} />
+                        : <Search className="w-4 h-4 text-white" />
+                      }
+                    </button>
+                  </div>
+
+                  {/* Geo pill */}
+                  <div className="flex items-center gap-2 mt-3">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border" style={{ borderColor: N.border, background: N.surface }}>
                       {geoLoading
                         ? <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: N.neon }} />
                         : <MapPin className="w-3 h-3" style={{ color: N.neon }} />
                       }
-                    </div>
-                    <span className="text-sm font-semibold" style={{ color: N.textSub }}>
-                      {geoLoading ? 'Localisation…' : userPos ? 'Autour de moi' : 'Position inconnue'}
-                    </span>
-                    {userPos && nearbyStudios.length > 0 && (
-                      <span className="text-sm" style={{ color: N.muted }}>
-                        · {nearbyStudios.length} studio{nearbyStudios.length > 1 ? 's' : ''}
+                      <span className="text-xs font-medium" style={{ color: N.textSub }}>
+                        {geoLoading ? 'Localisation…' : userPos ? `${nearbyStudios.length} studios autour de moi` : 'Position inconnue'}
                       </span>
+                    </div>
+                    {!userPos && !geoLoading && (
+                      <button type="button"
+                        onClick={() => {
+                          setGeoLoading(true);
+                          navigator.geolocation?.getCurrentPosition(
+                            async (pos) => {
+                              const { latitude, longitude } = pos.coords;
+                              setUserPos({ lat: latitude, lng: longitude });
+                              const studios = await getNearbyStudios(latitude, longitude, 50);
+                              setNearbyStudios(studios);
+                              setGeoLoading(false);
+                            },
+                            () => setGeoLoading(false),
+                            { timeout: 8000 },
+                          );
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                        style={{ background: N.neon, color: '#fff' }}
+                      >
+                        <Navigation className="w-3 h-3" />
+                        Activer
+                      </button>
                     )}
                   </div>
-                  {/* Toggle Carte / Liste */}
-                  <div className="flex items-center gap-1 p-1 rounded-xl border" style={{ borderColor: N.border, background: N.surface }}>
-                    <button
-                      type="button"
-                      onClick={() => setShowMap(false)}
-                      className="p-1.5 rounded-lg transition-all"
-                      style={{ background: !showMap ? N.elevated : 'transparent', color: !showMap ? N.neon : N.muted }}
-                    >
-                      <LayoutGrid className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowMap(true)}
-                      className="p-1.5 rounded-lg transition-all"
-                      style={{ background: showMap ? N.elevated : 'transparent', color: showMap ? N.neon : N.muted }}
-                    >
-                      <Map className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
                 </div>
 
-                {/* Carte Google Maps */}
-                {showMap && userPos && (
-                  <NearbyMapView
-                    userPos={userPos}
-                    studios={nearbyStudios}
-                    onSelectStudio={(s) => setArtistSheet(nearbyToSheet(s))}
-                  />
-                )}
-
-                {/* CTA géolocalisation si non accordée */}
-                {!userPos && !geoLoading && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGeoLoading(true);
-                      navigator.geolocation?.getCurrentPosition(
-                        async (pos) => {
-                          const { latitude, longitude } = pos.coords;
-                          setUserPos({ lat: latitude, lng: longitude });
-                          const studios = await getNearbyStudios(latitude, longitude, 50);
-                          setNearbyStudios(studios);
-                          setGeoLoading(false);
-                        },
-                        () => setGeoLoading(false),
-                        { timeout: 8000 },
-                      );
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-semibold transition-all active:scale-[0.98]"
-                    style={{ borderColor: 'rgba(223,255,0,0.25)', background: N.neonDim, color: N.neonText }}
-                  >
-                    <Navigation className="w-4 h-4" />
-                    Activer la géolocalisation
-                  </button>
-                )}
-
-                {/* Recherche */}
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: N.muted }} />
-                  <input
-                    value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder="Style, flash, tatoueur…"
-                    className="w-full rounded-2xl border pl-11 pr-10 py-3.5 text-sm outline-none"
-                    style={{ background: N.surface, borderColor: N.border, color: N.text }}
-                  />
-                  {search && (
-                    <button type="button" onClick={() => setSearch('')}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ background: N.borderMid }}>
-                      <X className="w-3 h-3" style={{ color: N.muted }} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Studios à la une */}
+                {/* ── POPULAR (horizontal scroll cards) ── */}
                 {!search && (
-                  <section>
-                    <div className="flex items-center justify-between mb-3">
-                      <h2 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>
-                        {nearbyStudios.length > 0 ? 'Studios proches' : 'Studios à la une'}
-                      </h2>
-                      <button type="button" className="text-xs font-semibold" style={{ color: N.neon }}>
-                        Voir tout
-                      </button>
+                  <section className="mb-6">
+                    <div className="flex items-center justify-between px-5 mb-3">
+                      <h2 className="text-xl font-black" style={{ color: N.text }}>Popular</h2>
+                      <button type="button" className="text-sm font-semibold" style={{ color: N.neon }}>See All</button>
                     </div>
-                    <div
-                      className="flex gap-2.5 sm:gap-3 overflow-x-auto pb-2 -mx-3 px-3 sm:-mx-4 sm:px-4 snap-x snap-mandatory touch-pan-x overscroll-x-contain"
-                      style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
-                    >
+                    <div className="flex gap-4 overflow-x-auto pl-5 pr-3 pb-2" style={{ scrollbarWidth: 'none' }}>
                       {displayStudios.map((s, i) => (
-                        <motion.button
-                          key={s.id} type="button"
+                        <motion.div
+                          key={s.id}
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.07, type: 'spring', stiffness: 260, damping: 22 }}
+                          transition={{ delay: i * 0.08, type: 'spring', stiffness: 280, damping: 24 }}
                           whileTap={{ scale: 0.97 }}
                           onClick={() => setArtistSheet(s)}
-                          className="flex-shrink-0 w-[min(11rem,calc(100vw-3rem))] sm:w-44 rounded-3xl border overflow-hidden text-left snap-start"
-                          style={{ borderColor: N.border, background: N.surface }}
+                          className="flex-shrink-0 rounded-3xl overflow-hidden cursor-pointer"
+                          style={{ width: 200, background: N.surface, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                         >
-                          <div
-                            className="h-28 relative overflow-hidden"
-                            style={{ background: `linear-gradient(145deg, ${s.grad[0]}, ${s.grad[1]})` }}
-                          >
+                          {/* Image */}
+                          <div className="relative" style={{ height: 220 }}>
+                            <div
+                              className="absolute inset-0"
+                              style={{ background: `linear-gradient(145deg, ${s.grad[0]}, ${s.grad[1]})` }}
+                            />
                             {s.portfolioImages[0] && (
-                              <img
-                                src={s.portfolioImages[0]}
-                                alt=""
-                                className="absolute inset-0 w-full h-full object-cover"
-                                loading="lazy"
-                                decoding="async"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              <img src={s.portfolioImages[0]} alt={s.name}
+                                className="absolute inset-0 w-full h-full object-cover" />
+                            )}
+                            {/* Top badges */}
+                            <div className="absolute top-3 left-3 flex items-center gap-1">
+                              {s.rating > 0 && (
+                                <div className="flex items-center gap-0.5 px-2 py-1 rounded-full text-[10px] font-bold"
+                                  style={{ background: 'rgba(255,255,255,0.92)', color: N.text }}>
+                                  <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                                  {s.rating}
+                                </div>
+                              )}
+                            </div>
+                            {/* Fav */}
+                            <button type="button"
+                              className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center"
+                              style={{ background: 'rgba(255,255,255,0.92)' }}
+                              onClick={e => { e.stopPropagation(); setFavFlash(p => { const n2 = new Set(p); n2.has(s.id) ? n2.delete(s.id) : n2.add(s.id); return n2; }); }}
+                            >
+                              <Heart className="w-4 h-4"
+                                style={{ color: favFlash.has(s.id) ? '#fb7185' : '#aaa', fill: favFlash.has(s.id) ? '#fb7185' : 'none' }}
                               />
-                            )}
-                            {s.rating > 0 && (
-                              <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold"
-                                style={{ background: 'rgba(10,10,10,0.75)', backdropFilter: 'blur(6px)', color: N.text }}>
-                                <Star className="w-2.5 h-2.5 fill-current" style={{ color: N.neon }} />
-                                {s.rating}
+                            </button>
+                            {/* Bottom frosted overlay */}
+                            <div className="absolute inset-x-0 bottom-0 p-3 rounded-b-none"
+                              style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(12px)' }}>
+                              <p className="text-[13px] font-bold truncate" style={{ color: N.text }}>{s.name}</p>
+                              <div className="flex items-center gap-1 mb-2">
+                                <MapPin className="w-2.5 h-2.5" style={{ color: N.muted }} />
+                                <p className="text-[11px] truncate" style={{ color: N.muted }}>
+                                  {s.artistLabel}
+                                </p>
                               </div>
-                            )}
-                            <div className="absolute bottom-2.5 left-3 text-sm font-black text-white/80">{s.name.slice(0, 2)}</div>
-                          </div>
-                          <div className="p-3">
-                            <p className="text-[13px] font-bold truncate" style={{ color: N.text }}>{s.name}</p>
-                            <p className="text-[11px] truncate mt-0.5" style={{ color: N.muted }}>
-                              {s.artistLabel}{s.styleLabel ? ` · ${s.styleLabel}` : ''}
-                            </p>
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-lg" style={{ background: N.elevated, color: N.muted }}>
-                                {s.distLabel}
-                              </span>
-                              <ChevronRight className="w-3.5 h-3.5" style={{ color: N.border }} />
+                              <div className="flex items-center justify-between">
+                                <span className="text-[12px] font-semibold" style={{ color: N.textSub }}>{s.distLabel}</span>
+                                <button type="button"
+                                  className="px-4 py-1.5 rounded-full text-[12px] font-bold text-white"
+                                  style={{ background: N.neon }}
+                                  onClick={e => { e.stopPropagation(); setArtistSheet(s); }}
+                                >
+                                  Voir
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </motion.button>
+                        </motion.div>
                       ))}
                     </div>
                   </section>
                 )}
 
-                {/* Flashs */}
-                <section>
+                {/* ── NEAREST PLACES (vertical list) ── */}
+                <section className="px-5">
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>Flashs du moment</h2>
-                    <span className="text-[12px]" style={{ color: N.muted }}>{filteredFlash.length} designs</span>
+                    <h2 className="text-xl font-black" style={{ color: N.text }}>
+                      {search ? `Résultats` : 'Nearest Places'}
+                    </h2>
+                    {!search && <button type="button" className="text-sm font-semibold" style={{ color: N.neon }}>See All</button>}
                   </div>
-                  {filteredFlash.length === 0 ? (
-                    <div className="rounded-3xl border p-10 text-center" style={{ borderColor: N.border, background: N.elevated }}>
-                      <p className="text-sm" style={{ color: N.muted }}>Aucun flash pour «{search}»</p>
+
+                  {/* Google Maps map view */}
+                  {showMap && userPos && (
+                    <div className="mb-4 rounded-3xl overflow-hidden">
+                      <NearbyMapView
+                        userPos={userPos}
+                        studios={nearbyStudios}
+                        onSelectStudio={(s) => setArtistSheet(nearbyToSheet(s))}
+                      />
                     </div>
-                  ) : (
-                    <div className="flex gap-2 sm:gap-3 min-w-0">
-                      <div className="flex-1 min-w-0 space-y-2.5 sm:space-y-3">
-                        {colA.map(f => (
-                          <FlashCard key={f.id} f={f} fav={favFlash.has(f.id)}
-                            onFav={() => setFavFlash(p => { const n = new Set(p); n.has(f.id) ? n.delete(f.id) : n.add(f.id); return n; })} />
-                        ))}
+                  )}
+
+                  {/* View toggle */}
+                  <div className="flex gap-2 mb-4">
+                    <button type="button" onClick={() => setShowMap(false)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+                      style={{ background: !showMap ? N.neon : 'transparent', color: !showMap ? '#fff' : N.muted, borderColor: !showMap ? N.neon : N.border }}>
+                      <LayoutGrid className="w-3 h-3" /> Liste
+                    </button>
+                    <button type="button" onClick={() => setShowMap(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+                      style={{ background: showMap ? N.neon : 'transparent', color: showMap ? '#fff' : N.muted, borderColor: showMap ? N.neon : N.border }}>
+                      <Map className="w-3 h-3" /> Carte
+                    </button>
+                  </div>
+
+                  {/* Studio list */}
+                  <div className="space-y-3">
+                    {displayStudios.filter(s =>
+                      !search || s.name.toLowerCase().includes(search.toLowerCase()) ||
+                      s.artistLabel?.toLowerCase().includes(search.toLowerCase()) ||
+                      s.styleLabel?.toLowerCase().includes(search.toLowerCase())
+                    ).map((s, i) => (
+                      <motion.div
+                        key={s.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.06 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => setArtistSheet(s)}
+                        className="flex items-center gap-3 p-3 rounded-2xl border cursor-pointer"
+                        style={{ borderColor: N.border, background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}
+                      >
+                        {/* Round thumbnail */}
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 relative"
+                          style={{ background: `linear-gradient(135deg, ${s.grad[0]}, ${s.grad[1]})` }}>
+                          {s.portfolioImages[0] && (
+                            <img src={s.portfolioImages[0]} alt={s.name} className="absolute inset-0 w-full h-full object-cover" />
+                          )}
+                        </div>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-[14px] truncate" style={{ color: N.text }}>{s.name}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: N.muted }} />
+                            <p className="text-[12px] truncate" style={{ color: N.muted }}>{s.artistLabel}</p>
+                          </div>
+                          <p className="text-[12px] font-semibold mt-1" style={{ color: N.textSub }}>{s.distLabel}</p>
+                        </div>
+                        {/* Route button */}
+                        <button type="button"
+                          className="flex-shrink-0 px-4 py-2 rounded-2xl text-[13px] font-bold text-white"
+                          style={{ background: N.neon }}
+                          onClick={e => { e.stopPropagation(); setArtistSheet(s); }}
+                        >
+                          Voir
+                        </button>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Flashs section under nearest places */}
+                  {!search && filteredFlash.length > 0 && (
+                    <div className="mt-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-xl font-black" style={{ color: N.text }}>Flashs</h2>
+                        <span className="text-sm" style={{ color: N.muted }}>{filteredFlash.length} designs</span>
                       </div>
-                      <div className="flex-1 min-w-0 space-y-2.5 sm:space-y-3 pt-7 sm:pt-10">
-                        {colB.map(f => (
-                          <FlashCard key={f.id} f={f} fav={favFlash.has(f.id)}
-                            onFav={() => setFavFlash(p => { const n = new Set(p); n.has(f.id) ? n.delete(f.id) : n.add(f.id); return n; })} />
-                        ))}
+                      <div className="flex gap-3">
+                        <div className="flex-1 space-y-3">
+                          {colA.map(f => (
+                            <FlashCard key={f.id} f={f} fav={favFlash.has(f.id)}
+                              onFav={() => setFavFlash(p => { const n2 = new Set(p); n2.has(f.id) ? n2.delete(f.id) : n2.add(f.id); return n2; })} />
+                          ))}
+                        </div>
+                        <div className="flex-1 space-y-3 pt-10">
+                          {colB.map(f => (
+                            <FlashCard key={f.id} f={f} fav={favFlash.has(f.id)}
+                              onFav={() => setFavFlash(p => { const n2 = new Set(p); n2.has(f.id) ? n2.delete(f.id) : n2.add(f.id); return n2; })} />
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1389,7 +1294,6 @@ export const ClientDashboard: React.FC = () => {
                                   Y aller <ArrowUpRight className="w-3.5 h-3.5" />
                                 </a>
                                 <button type="button"
-                                  onClick={() => { setClientSpaceView('projects'); goTab('profile'); }}
                                   className="text-sm font-medium px-4 py-2.5 rounded-2xl border"
                                   style={{ borderColor: N.border, color: N.textSub, background: N.elevated }}>
                                   Fiche projet
@@ -1458,7 +1362,6 @@ export const ClientDashboard: React.FC = () => {
                   cents={cents}
                   stampsCount={completed.length}
                   lastStudio={completed[0] ? (completed[0].studio_name ?? undefined) : undefined}
-                  inviteUrl={shareUrl}
                 />
 
                 {/* Parrainage */}
@@ -1535,269 +1438,60 @@ export const ClientDashboard: React.FC = () => {
               </div>
             )}
 
-            {/* ════ ESPACE CLIENT (Profil) ════ */}
+            {/* ════ PROFIL ════ */}
             {tab === 'profile' && (
-              <div className="px-4 pt-4 space-y-5 pb-6">
+              <div className="px-4 pt-5 space-y-6 pb-6">
                 {isGuest ? (
                   <GuestLoginForm />
                 ) : (
                 <>
-                {/* Segmented : Vue d’ensemble / Projets */}
-                <div
-                  className="flex p-1 rounded-2xl border gap-0.5"
-                  style={{ borderColor: N.borderMid, background: N.surface }}
-                  role="tablist"
-                  aria-label="Sections espace client"
-                >
-                  {([
-                    { id: 'overview' as const, label: 'Vue d’ensemble', Icon: LayoutDashboard },
-                    { id: 'projects' as const, label: 'Projets', Icon: FolderKanban },
-                  ]).map(({ id, label, Icon }) => {
-                    const on = clientSpaceView === id;
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        role="tab"
-                        aria-selected={on}
-                        onClick={() => setClientSpaceView(id)}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
-                        style={{
-                          background: on ? N.elevated : 'transparent',
-                          color: on ? N.neonText : N.muted,
-                          boxShadow: on ? `0 0 0 1px ${N.borderMid}` : 'none',
-                        }}
-                      >
-                        <Icon className="w-4 h-4 shrink-0" strokeWidth={on ? 2.2 : 1.5} />
-                        <span className="truncate">{label}</span>
-                      </button>
-                    );
-                  })}
+                <div className="rounded-3xl border p-5 flex items-center gap-4"
+                  style={{ borderColor: N.border, background: N.elevated }}>
+                  <div className="w-16 h-16 rounded-3xl flex items-center justify-center text-xl font-black border-2 shrink-0"
+                    style={{ borderColor: 'rgba(96,165,250,0.25)', background: N.neonDim, color: N.neonText }}>
+                    {firstName.slice(0, 1)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xl font-black truncate" style={{ color: N.text }}>{firstName}</p>
+                    <p className="text-xs truncate mt-0.5" style={{ color: N.muted }}>{sessionEmail}</p>
+                    <div className="mt-1.5">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: N.neonDim, color: N.neonText }}>Gold Member</span>
+                    </div>
+                  </div>
                 </div>
 
-                <AnimatePresence mode="wait">
-                  {clientSpaceView === 'overview' && (
-                    <motion.div
-                      key="overview"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      transition={{ duration: 0.22 }}
-                      className="space-y-5"
-                    >
-                  <div className="rounded-3xl border p-5 flex items-center gap-4"
-                    style={{ borderColor: N.border, background: N.elevated }}>
-                    <div className="w-16 h-16 rounded-3xl flex items-center justify-center text-xl font-black border-2 shrink-0"
-                      style={{ borderColor: 'rgba(223,255,0,0.25)', background: N.neonDim, color: N.neonText }}>
-                      {firstName.slice(0, 1)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xl font-black truncate" style={{ color: N.text }}>{firstName}</p>
-                      <p className="text-xs truncate mt-0.5" style={{ color: N.muted }}>{sessionEmail}</p>
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                          style={{ background: N.neonDim, color: N.neonText }}>Membre Inkflow</span>
-                        {completed.length >= 3 && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
-                            style={{ borderColor: N.border, color: N.textSub }}>Habitué·e</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Stats rapides */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {([
-                      { k: 'rdv', v: String(upcoming.length), sub: 'à venir', onClick: () => goTab('rdv') },
-                      { k: 'wal', v: `${(cents / 100).toFixed(0)}€`, sub: 'crédit', onClick: () => goTab('wallet') },
-                      { k: 'ink', v: String(completed.length), sub: 'sessions', onClick: () => setClientSpaceView('projects') },
-                    ]).map((s) => (
-                      <button
-                        key={s.k}
-                        type="button"
-                        onClick={s.onClick}
-                        className="rounded-2xl border p-3 text-center transition-all active:scale-[0.98]"
-                        style={{ borderColor: N.border, background: N.surface }}
-                      >
-                        <p className="text-xl font-black tabular-nums" style={{ color: N.neonText }}>{s.v}</p>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide mt-0.5" style={{ color: N.muted }}>{s.sub}</p>
-                      </button>
-                    ))}
-                  </div>
-
-                  {lastTattoo && healingDays < 15 && (
-                    <button
-                      type="button"
-                      onClick={() => goTab('rdv')}
-                      className="w-full rounded-2xl border p-4 text-left flex items-start gap-3 transition-all active:scale-[0.99]"
-                      style={{ borderColor: 'rgba(223,255,0,0.2)', background: `linear-gradient(135deg, ${N.neonDim}, transparent)` }}
-                    >
-                      <Sparkles className="w-5 h-5 shrink-0 mt-0.5" style={{ color: N.neon }} />
-                      <div>
-                        <p className="text-sm font-bold" style={{ color: N.text }}>Cicatrisation en cours</p>
-                        <p className="text-xs mt-0.5" style={{ color: N.muted }}>
-                          J+{healingDays} · {lastTattoo.service} — conseils dans l’onglet RDV
-                        </p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 shrink-0 ml-auto" style={{ color: N.border }} />
-                    </button>
-                  )}
-
-                  {nextRdv && (
-                    <section>
-                      <div className="flex items-center justify-between mb-2">
-                        <h2 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>Prochain rendez-vous</h2>
-                        <button type="button" onClick={() => goTab('rdv')} className="text-xs font-bold" style={{ color: N.neon }}>Voir tout</button>
-                      </div>
-                      <motion.button
-                        type="button"
+                <section>
+                  <h2 className="text-[13px] font-bold uppercase tracking-widest mb-3" style={{ color: N.muted }}>Studios sauvegardés</h2>
+                  <div className="space-y-2">
+                    {displayStudios.map((s, i) => (
+                      <motion.button key={s.id} type="button"
+                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
                         whileTap={{ scale: 0.99 }}
-                        onClick={() => goTab('rdv')}
-                        className="w-full rounded-3xl border overflow-hidden text-left"
-                        style={{ borderColor: N.borderMid, background: N.surface }}
-                      >
-                        <div className="h-1" style={{ background: `linear-gradient(90deg, ${N.neon}, rgba(223,255,0,0.3))` }} />
-                        <div className="p-4">
-                          <p className="text-base font-black mb-1" style={{ color: N.text }}>{nextRdv.service}</p>
-                          <p className="text-xs flex items-center gap-1.5" style={{ color: N.muted }}>
-                            <Clock className="w-3.5 h-3.5" />
-                            {formatDateFr(nextRdv.date)}{nextRdv.time && ` · ${nextRdv.time}`}
+                        onClick={() => setArtistSheet(s)}
+                        className="w-full flex items-center gap-3.5 p-4 rounded-3xl border text-left"
+                        style={{ borderColor: N.border, background: N.surface }}>
+                        <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-black text-white shrink-0 overflow-hidden"
+                          style={{ background: `linear-gradient(135deg, ${s.grad[0]}, ${s.grad[1]})` }}>
+                          {s.portfolioImages[0]
+                            ? <img src={s.portfolioImages[0]} alt={s.name} className="w-full h-full object-cover" />
+                            : s.name.slice(0, 2)
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold truncate" style={{ color: N.text }}>{s.name}</p>
+                          <p className="text-[11px] truncate mt-0.5" style={{ color: N.muted }}>
+                            {s.artistLabel}{s.styleLabel ? ` · ${s.styleLabel}` : ''}
                           </p>
-                          {nextRdv.studio_name && (
-                            <p className="text-sm mt-2 flex items-center gap-1.5" style={{ color: N.textSub }}>
-                              <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: N.neon }} />
-                              {nextRdv.studio_name}
-                            </p>
-                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-xs font-semibold" style={{ color: N.muted }}>{s.distLabel}</span>
+                          <ChevronRight className="w-4 h-4 ml-1" style={{ color: N.border }} />
                         </div>
                       </motion.button>
-                    </section>
-                  )}
-
-                  <section>
-                    <div className="flex items-center justify-between mb-3">
-                      <h2 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>Studios suivis</h2>
-                      <button type="button" onClick={() => goTab('explore')} className="text-xs font-bold" style={{ color: N.neon }}>Explorer</button>
-                    </div>
-                    <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
-                      {displayStudios.slice(0, 8).map((s, i) => (
-                        <motion.button key={s.id} type="button"
-                          initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => setArtistSheet(s)}
-                          className="flex-shrink-0 w-[min(13rem,72vw)] snap-start rounded-2xl border overflow-hidden text-left"
-                          style={{ borderColor: N.border, background: N.elevated }}>
-                          <div className="h-20 w-full relative"
-                            style={{ background: `linear-gradient(135deg, ${s.grad[0]}, ${s.grad[1]})` }}>
-                            {s.portfolioImages[0] && (
-                              <img src={s.portfolioImages[0]} alt="" className="w-full h-full object-cover opacity-90" />
-                            )}
-                          </div>
-                          <div className="p-3">
-                            <p className="text-sm font-bold truncate" style={{ color: N.text }}>{s.name}</p>
-                            <p className="text-[10px] truncate mt-0.5" style={{ color: N.muted }}>{s.distLabel}</p>
-                          </div>
-                        </motion.button>
-                      ))}
-                    </div>
-                  </section>
-                    </motion.div>
-                  )}
-
-                  {clientSpaceView === 'projects' && (
-                    <motion.div
-                      key="projects"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      transition={{ duration: 0.22 }}
-                      className="space-y-6"
-                    >
-                  <section>
-                    <h2 className="text-[13px] font-bold uppercase tracking-widest mb-3" style={{ color: N.muted }}>Projets en cours</h2>
-                    {upcoming.length === 0 ? (
-                      <div className="rounded-3xl border p-8 text-center" style={{ borderColor: N.border, background: N.surface }}>
-                        <FolderKanban className="w-10 h-10 mx-auto mb-3 opacity-25" style={{ color: N.neon }} />
-                        <p className="text-sm font-semibold mb-1" style={{ color: N.text }}>Aucun projet actif</p>
-                        <p className="text-xs mb-4" style={{ color: N.muted }}>Réserve une séance pour lancer un projet tatouage.</p>
-                        <button type="button" onClick={() => goTab('explore')}
-                          className="text-xs font-bold px-4 py-2.5 rounded-xl border active:scale-[0.98] transition-all"
-                          style={{ borderColor: N.border, color: N.neonText, background: N.neonDim }}>
-                          Découvrir des studios
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {upcoming.map((a, i) => {
-                          const d0 = Math.ceil((new Date(a.date).getTime() - Date.now()) / 86400000);
-                          const jLabel = d0 > 0 ? `J−${d0}` : "Aujourd'hui";
-                          return (
-                            <motion.div key={a.id}
-                              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-                              className="rounded-3xl border overflow-hidden"
-                              style={{ borderColor: N.borderMid, background: N.surface }}
-                            >
-                              <div className="px-4 py-3 flex items-start justify-between gap-2 border-b" style={{ borderColor: N.border }}>
-                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg" style={{ background: N.neonDim, color: N.neonText }}>{jLabel}</span>
-                                <span className="text-[11px]" style={{ color: N.muted }}>{formatDateFr(a.date)}</span>
-                              </div>
-                              <div className="p-4">
-                                <h3 className="text-base font-black mb-1" style={{ color: N.text }}>{a.service}</h3>
-                                {a.studio_name && (
-                                  <p className="text-sm flex items-center gap-1.5 mb-3" style={{ color: N.textSub }}>
-                                    <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: N.neon }} />
-                                    {a.studio_name}
-                                  </p>
-                                )}
-                                <div className="flex gap-2 flex-wrap">
-                                  <button type="button" onClick={() => goTab('rdv')}
-                                    className="text-xs font-bold px-3 py-2 rounded-xl border active:scale-[0.98] transition-all"
-                                    style={{ borderColor: 'rgba(223,255,0,0.3)', color: N.neonText, background: N.neonDim }}>
-                                    Détails RDV
-                                  </button>
-                                  <a href={mapsUrl(a.studio_address ?? '')} target="_blank" rel="noreferrer"
-                                    className="text-xs font-semibold px-3 py-2 rounded-xl border inline-flex items-center gap-1"
-                                    style={{ borderColor: N.border, color: N.textSub }}>
-                                    Itinéraire <ArrowUpRight className="w-3 h-3" />
-                                  </a>
-                                </div>
-                              </div>
-                            </motion.div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </section>
-
-                  <section>
-                    <h2 className="text-[13px] font-bold uppercase tracking-widest mb-3" style={{ color: N.muted }}>Projets terminés</h2>
-                    {completed.length === 0 ? (
-                      <p className="text-sm py-6 text-center rounded-2xl border" style={{ borderColor: N.border, color: N.muted, background: N.elevated }}>
-                        Tes séances terminées apparaîtront ici.
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {completed.map((a, i) => (
-                          <motion.div key={a.id}
-                            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                            className="rounded-2xl border px-4 py-3 flex items-center justify-between gap-3"
-                            style={{ borderColor: N.border, background: N.elevated }}
-                          >
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold truncate" style={{ color: N.text }}>{a.service}</p>
-                              <p className="text-[11px] mt-0.5 truncate" style={{ color: N.muted }}>
-                                {formatDateFr(a.date)}{a.studio_name ? ` · ${a.studio_name}` : ''}
-                              </p>
-                            </div>
-                            <span className="text-[10px] font-bold uppercase shrink-0 px-2 py-1 rounded-lg" style={{ background: 'rgba(94,219,154,0.12)', color: N.success }}>Fait</span>
-                          </motion.div>
-                        ))}
-                      </div>
-                    )}
-                  </section>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    ))}
+                  </div>
+                </section>
 
                 <button type="button"
                   onClick={() => supabase.auth.signOut().then(() => { window.location.href = '/client/dashboard'; })}
@@ -1835,7 +1529,7 @@ export const ClientDashboard: React.FC = () => {
             { id: 'explore' as const, Icon: Map,         label: 'Explorer' },
             { id: 'rdv'     as const, Icon: CalendarDays, label: 'RDV'     },
             { id: 'wallet'  as const, Icon: Wallet,       label: 'Wallet'  },
-            { id: 'profile' as const, Icon: User,         label: 'Client'  },
+            { id: 'profile' as const, Icon: User,         label: 'Profil'  },
           ] as const).map(({ id, Icon, label }) => {
             const active = tab === id;
             return (
