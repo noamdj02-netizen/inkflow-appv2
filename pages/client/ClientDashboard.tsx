@@ -16,25 +16,48 @@ import { getInviteBaseUrl } from '../../lib/urls';
 import { CX, type ClientAppointment, type ClientTab } from '../../components/client/clientExperienceTypes';
 import { HealingBanner } from '../../components/client/HealingBanner';
 import { ReferralCard } from '../../components/client/ReferralCard';
+import type { FlashItem, StudioItem } from '../../lib/clientData';
+import { fetchAnyArtistAvailableNow, fetchAvailableFlashes, fetchFeaturedStudios } from '../../lib/clientData';
 
 const SERIF = '"Cormorant Garamond", Georgia, serif';
 const TAB_ORDER: ClientTab[] = ['explore', 'rdv', 'wallet', 'profile'];
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const MOCK_STUDIOS = [
-  { id: 's1', name: 'Vénus Ink', artist: 'Léa M.', style: 'Fine line', rating: 4.9, years: 8, inkflowCount: 124, dist: '1.2 km', grad: ['#1a1a2e', '#c9a96e'], initials: 'VI', address: '12 rue Oberkampf, Paris' },
-  { id: 's2', name: 'Ink & Bones', artist: 'Thomas R.', style: 'Japonais', rating: 4.8, years: 12, inkflowCount: 89, dist: '2.0 km', grad: ['#2d1b69', '#11998e'], initials: 'IB', address: '5 bd Voltaire, Paris' },
-  { id: 's3', name: 'Noir Studio', artist: 'Sarah K.', style: 'Blackwork', rating: 5, years: 6, inkflowCount: 210, dist: '0.8 km', grad: ['#0f2027', '#c9a96e'], initials: 'NS', address: '88 av République, Paris' },
-];
+/** Données tatoueur / studio pour la fiche (aligné sur StudioItem) */
+type ArtistSheetData = {
+  id: string;
+  name: string;
+  artist: string;
+  style: string;
+  rating: number;
+  years: number;
+  inkflowCount: number;
+  dist: string;
+  grad: [string, string];
+  initials: string;
+  address: string;
+  artistSlug: string | null;
+  studioSlug: string | null;
+  availableNow: boolean;
+};
 
-const MOCK_FLASHES = [
-  { id: 'f1', name: 'Serpent minimal', studio: 'Vénus Ink', artist: 'Léa M.', dist: '1.2 km', price: 180, h: 200, grad: ['#1a1a2e', '#e94560'] },
-  { id: 'f2', name: 'Rose géométrique', studio: 'Noir Studio', artist: 'Sarah K.', dist: '0.8 km', price: 140, h: 160, grad: ['#134e5e', '#71b280'] },
-  { id: 'f3', name: 'Dragon irezumi', studio: 'Ink & Bones', artist: 'Thomas R.', dist: '2.0 km', price: 320, h: 240, grad: ['#2d1b69', '#f97316'] },
-  { id: 'f4', name: 'Lune & étoiles', studio: 'Vénus Ink', artist: 'Léa M.', dist: '1.2 km', price: 90, h: 150, grad: ['#0d0d0d', '#c9a96e'] },
-  { id: 'f5', name: 'Colibri', studio: 'Noir Studio', artist: 'Sarah K.', dist: '0.8 km', price: 160, h: 190, grad: ['#a8ff78', '#78ffd6'] },
-  { id: 'f6', name: 'Crâne néo-trad', studio: 'Ink & Bones', artist: 'Thomas R.', dist: '2.0 km', price: 220, h: 220, grad: ['#1e3c72', '#e53935'] },
-];
+function studioItemToSheet(s: StudioItem): ArtistSheetData {
+  return {
+    id: s.id,
+    name: s.name,
+    artist: s.artistName,
+    style: s.style,
+    rating: s.rating,
+    years: s.yearsExp,
+    inkflowCount: s.tattooCount,
+    dist: s.distance,
+    grad: s.gradient,
+    initials: s.initials,
+    address: s.address,
+    artistSlug: s.slug,
+    studioSlug: s.studioSlug,
+    availableNow: s.availableNow,
+  };
+}
 
 const WALLET_TX_MOCK = [
   { id: '1', label: 'Parrainage Aurélie', date: 'Il y a 3 jours', amount: '+10,00 €', pos: true },
@@ -64,13 +87,23 @@ function mapsUrl(address: string) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 }
 
+const PIN_COLORS = [CX.accent, '#a78bfa', '#60a5fa', '#34d399', '#f472b6'];
+
 // ── Mini Map ───────────────────────────────────────────────────────────────────
-const MiniMap: React.FC = () => {
-  const pins = [
-    { l: '24%', t: '42%', name: 'Vénus', c: CX.accent },
-    { l: '58%', t: '28%', name: 'Ink & Bones', c: '#a78bfa' },
-    { l: '72%', t: '58%', name: 'Noir', c: '#60a5fa' },
+const MiniMap: React.FC<{ pinLabels?: string[] }> = ({ pinLabels = [] }) => {
+  const positions = [
+    { l: '24%', t: '42%' },
+    { l: '58%', t: '28%' },
+    { l: '72%', t: '58%' },
+    { l: '40%', t: '62%' },
+    { l: '18%', t: '55%' },
   ];
+  const pins = pinLabels.slice(0, 5).map((name, i) => ({
+    ...positions[i % positions.length],
+    name: name.length > 14 ? `${name.slice(0, 12)}…` : name,
+    c: PIN_COLORS[i % PIN_COLORS.length],
+  }));
+  const displayPins = pins.length > 0 ? pins : [{ l: '50%', t: '45%', name: 'Studio', c: CX.accent }];
   return (
     <div
       className="relative w-full h-52 rounded-[24px] overflow-hidden border"
@@ -88,8 +121,8 @@ const MiniMap: React.FC = () => {
       {/* Glow */}
       <div className="absolute inset-0 opacity-30" style={{ background: 'radial-gradient(ellipse 60% 60% at 35% 50%, rgba(201,169,110,0.15) 0%, transparent 70%)' }} />
       {/* Pins */}
-      {pins.map((p) => (
-        <div key={p.name} className="absolute flex flex-col items-center" style={{ left: p.l, top: p.t, transform: 'translate(-50%,-100%)' }}>
+      {displayPins.map((p, i) => (
+        <div key={`${p.name}-${i}`} className="absolute flex flex-col items-center" style={{ left: p.l, top: p.t, transform: 'translate(-50%,-100%)' }}>
           <div className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg border border-white/10" style={{ background: p.c }}>
             <MapPin className="w-3.5 h-3.5 text-black" strokeWidth={2.5} />
           </div>
@@ -104,7 +137,7 @@ const MiniMap: React.FC = () => {
         <div className="absolute -inset-3 rounded-full animate-ping opacity-15" style={{ background: '#3b82f6' }} />
       </div>
       <div className="absolute bottom-3 left-3 text-[10px] font-medium px-2.5 py-1.5 rounded-full border backdrop-blur-md" style={{ background: 'rgba(0,0,0,0.7)', borderColor: 'rgba(255,255,255,0.08)', color: CX.muted }}>
-        3 studios autour de toi
+        {pinLabels.length > 0 ? `${pinLabels.length} studio${pinLabels.length > 1 ? 's' : ''} à proximité` : 'Carte indicative'}
       </div>
     </div>
   );
@@ -112,7 +145,7 @@ const MiniMap: React.FC = () => {
 
 // ── Artist bottom sheet ────────────────────────────────────────────────────────
 const ArtistSheet: React.FC<{
-  studio: (typeof MOCK_STUDIOS)[0] | null;
+  studio: ArtistSheetData | null;
   onClose: () => void;
 }> = ({ studio, onClose }) => (
   <AnimatePresence>
@@ -159,6 +192,11 @@ const ArtistSheet: React.FC<{
             </div>
           </div>
           <div className="pt-14 px-5 pb-8">
+            {studio.availableNow && (
+              <span className="inline-block text-[10px] font-bold px-2 py-1 rounded-full mb-2" style={{ background: 'rgba(34,197,94,0.2)', color: '#4ade80' }}>
+                Disponible maintenant
+              </span>
+            )}
             <h2 className="text-xl font-bold" style={{ color: CX.text }}>{studio.name}</h2>
             <p className="text-sm mt-0.5" style={{ color: CX.muted }}>{studio.artist} · {studio.style}</p>
             {/* Stats */}
@@ -197,14 +235,22 @@ const ArtistSheet: React.FC<{
                 />
               ))}
             </div>
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.98 }}
-              className="w-full mt-6 py-4 rounded-2xl font-bold text-sm transition-all"
+            {studio.artistSlug && (
+              <a
+                href={`/artist/${studio.artistSlug}`}
+                className="block w-full mt-4 py-3 rounded-2xl text-xs font-semibold text-center border transition-all active:scale-[0.98]"
+                style={{ borderColor: 'rgba(255,255,255,0.1)', color: CX.accent }}
+              >
+                Voir la fiche publique
+              </a>
+            )}
+            <a
+              href={studio.studioSlug ? `/book/${studio.studioSlug}` : '#'}
+              className="block w-full mt-3 py-4 rounded-2xl font-bold text-sm transition-all text-center active:scale-[0.98]"
               style={{ background: CX.accent, color: '#0A0A0A' }}
             >
               Réserver mon prochain tattoo
-            </motion.button>
+            </a>
           </div>
           <div style={{ height: 'env(safe-area-inset-bottom, 16px)' }} />
         </motion.div>
@@ -239,7 +285,10 @@ export const ClientDashboard: React.FC = () => {
   const [code, setCode] = useState('');
   const [favFlash, setFavFlash] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
-  const [artistSheet, setArtistSheet] = useState<(typeof MOCK_STUDIOS)[0] | null>(null);
+  const [artistSheet, setArtistSheet] = useState<ArtistSheetData | null>(null);
+  const [exploreStudios, setExploreStudios] = useState<StudioItem[]>([]);
+  const [exploreFlashes, setExploreFlashes] = useState<FlashItem[]>([]);
+  const [anyArtistAvailableNow, setAnyArtistAvailableNow] = useState(false);
   const [referralCount] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -304,6 +353,15 @@ export const ClientDashboard: React.FC = () => {
           await supabase.from('inkflow_client_codes').insert({ email: sessionEmail, code: c });
           setCode(c);
         } else setCode(cd.code);
+
+        const [fl, st, avail] = await Promise.all([
+          fetchAvailableFlashes(48),
+          fetchFeaturedStudios(16),
+          fetchAnyArtistAvailableNow(),
+        ]);
+        setExploreFlashes(fl);
+        setExploreStudios(st);
+        setAnyArtistAvailableNow(avail);
       } finally { setLoading(false); }
     })();
   }, [sessionEmail]);
@@ -319,13 +377,23 @@ export const ClientDashboard: React.FC = () => {
   const lastTattoo = useMemo(() => completed[0] ?? null, [completed]);
   const healingDays = lastTattoo ? daysSince(lastTattoo.date) : 999;
 
+  const sortedStudiosExplore = useMemo(
+    () => [...exploreStudios].sort((a, b) => (a.availableNow === b.availableNow ? 0 : a.availableNow ? -1 : 1)),
+    [exploreStudios]
+  );
+
   const filteredFlash = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return MOCK_FLASHES;
-    return MOCK_FLASHES.filter((f) =>
-      f.name.toLowerCase().includes(q) || f.studio.toLowerCase().includes(q) || f.artist.toLowerCase().includes(q)
+    if (!q) return exploreFlashes;
+    return exploreFlashes.filter(
+      (f) =>
+        f.title.toLowerCase().includes(q) ||
+        f.studioName.toLowerCase().includes(q) ||
+        f.artistName.toLowerCase().includes(q)
     );
-  }, [search]);
+  }, [search, exploreFlashes]);
+
+  const featuredFlashes = useMemo(() => exploreFlashes.filter((f) => f.featured).slice(0, 12), [exploreFlashes]);
 
   const colA = filteredFlash.filter((_, i) => i % 2 === 0);
   const colB = filteredFlash.filter((_, i) => i % 2 !== 0);
@@ -369,42 +437,82 @@ export const ClientDashboard: React.FC = () => {
     { id: 'profile' as ClientTab, Icon: User, label: 'Profil' },
   ];
 
-  /* ── Flash card (shared between Explore & Favs) ──────────────────────── */
-  const FlashCard: React.FC<{ f: typeof MOCK_FLASHES[0]; col?: 'a' | 'b' }> = ({ f }) => (
-    <motion.div
-      whileTap={{ scale: 0.98 }}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      className="rounded-[20px] overflow-hidden border"
-      style={{ borderColor: 'rgba(255,255,255,0.06)', background: CX.surface }}
-    >
-      <div
-        className="relative"
-        style={{ height: f.h * 0.85, background: `linear-gradient(160deg,${f.grad[0]},${f.grad[1]})` }}
+  /* ── Flash card ──────────────────────── */
+  const FlashCard: React.FC<{ f: FlashItem }> = ({ f }) => {
+    const bgStyle = f.imageUrl
+      ? { backgroundImage: `url(${f.imageUrl})`, backgroundSize: 'cover' as const, backgroundPosition: 'center' as const }
+      : { background: `linear-gradient(160deg,${f.gradient[0]},${f.gradient[1]})` };
+    const goFlash = () => {
+      if (f.slug) window.location.assign(`/flash/${f.slug}`);
+    };
+    const goArtist = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (f.artistSlug) window.location.assign(`/artist/${f.artistSlug}`);
+    };
+    return (
+      <motion.div
+        whileTap={{ scale: 0.98 }}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className={`rounded-[20px] overflow-hidden border relative ${f.slug ? 'cursor-pointer' : ''}`}
+        style={{ borderColor: 'rgba(255,255,255,0.06)', background: CX.surface }}
+        onClick={f.slug ? goFlash : undefined}
+        role={f.slug ? 'link' : undefined}
+        aria-label={f.slug ? `Flash ${f.title}` : undefined}
+        tabIndex={f.slug ? 0 : undefined}
+        onKeyDown={
+          f.slug
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  goFlash();
+                }
+              }
+            : undefined
+        }
       >
-        <button
-          type="button"
-          onClick={() => toggleFav(f.id)}
-          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center border backdrop-blur-md transition-transform active:scale-90"
-          style={{ borderColor: 'rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.4)' }}
-        >
-          <Heart
-            className="w-3.5 h-3.5"
-            style={{ color: favFlash.has(f.id) ? '#fb7185' : '#fff', fill: favFlash.has(f.id) ? '#fb7185' : 'none' }}
-          />
-        </button>
-        <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
-          <p className="text-xs font-semibold text-white">{f.name}</p>
-          <p className="text-[10px] text-white/60 mt-0.5 truncate">{f.artist} · {f.dist}</p>
+        <div className="relative" style={{ height: f.height * 0.85, ...bgStyle }}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFav(f.id);
+            }}
+            className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center border backdrop-blur-md transition-transform active:scale-90 z-10"
+            style={{ borderColor: 'rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.4)' }}
+          >
+            <Heart
+              className="w-3.5 h-3.5"
+              style={{ color: favFlash.has(f.id) ? '#fb7185' : '#fff', fill: favFlash.has(f.id) ? '#fb7185' : 'none' }}
+            />
+          </button>
+          <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none">
+            <p className="text-xs font-semibold text-white">{f.title}</p>
+            <p className="text-[10px] text-white/60 mt-0.5 truncate pointer-events-auto">
+              {f.artistSlug ? (
+                <button
+                  type="button"
+                  onClick={goArtist}
+                  className="underline-offset-2 hover:underline text-left"
+                >
+                  {f.artistName}
+                </button>
+              ) : (
+                f.artistName
+              )}
+              {' · '}
+              {f.distance}
+            </p>
+          </div>
         </div>
-      </div>
-      <div className="px-3 py-2.5 flex items-center justify-between">
-        <span className="text-sm font-bold tabular-nums" style={{ color: CX.accent }}>{f.price}€</span>
-        <span className="text-[10px]" style={{ color: CX.muted }}>{f.studio}</span>
-      </div>
-    </motion.div>
-  );
+        <div className="px-3 py-2.5 flex items-center justify-between">
+          <span className="text-sm font-bold tabular-nums" style={{ color: CX.accent }}>{f.price}€</span>
+          <span className="text-[10px] truncate max-w-[45%]" style={{ color: CX.muted }}>{f.studioName}</span>
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="min-h-screen" style={{ background: CX.bg, color: CX.text, paddingBottom: 'calc(84px + env(safe-area-inset-bottom, 0px))' }}>
@@ -439,6 +547,11 @@ export const ClientDashboard: React.FC = () => {
                     <h1 style={{ fontFamily: SERIF, fontSize: '3rem', lineHeight: 1, fontStyle: 'italic', fontWeight: 300, color: CX.text }}>
                       {firstName}
                     </h1>
+                    {anyArtistAvailableNow && (
+                      <p className="text-[10px] font-semibold mt-2 px-2.5 py-1 rounded-full inline-block" style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80' }}>
+                        Un tatoueur est disponible maintenant
+                      </p>
+                    )}
                   </div>
                   {/* Wallet chip */}
                   <motion.button
@@ -467,27 +580,52 @@ export const ClientDashboard: React.FC = () => {
                   />
                 </div>
 
+                {featuredFlashes.length > 0 && (
+                  <section>
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: CX.muted }}>Mis en avant</h2>
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+                      {featuredFlashes.map((f) => (
+                        <div key={f.id} className="flex-shrink-0 w-36">
+                          <FlashCard f={f} />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
                 {/* Studios */}
                 <section>
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: CX.muted }}>Tatoueurs à la une</h2>
                   </div>
+                  {sortedStudiosExplore.length === 0 ? (
+                    <p className="text-sm py-4 text-center rounded-2xl border" style={{ borderColor: 'rgba(255,255,255,0.06)', color: CX.muted }}>
+                      Aucun tatoueur pour l’instant — reviens bientôt.
+                    </p>
+                  ) : (
                   <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
-                    {MOCK_STUDIOS.map((s, idx) => (
+                    {sortedStudiosExplore.map((s, idx) => (
                       <motion.button
                         key={s.id}
                         type="button"
                         whileTap={{ scale: 0.97 }}
-                        onClick={() => setArtistSheet(s)}
+                        onClick={() => setArtistSheet(studioItemToSheet(s))}
                         initial={{ opacity: 0, x: 16 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.08 }}
-                        className="flex-shrink-0 w-44 rounded-[22px] border overflow-hidden text-left"
+                        className="flex-shrink-0 w-44 rounded-[22px] border overflow-hidden text-left relative"
                         style={{ borderColor: 'rgba(255,255,255,0.06)', background: CX.surface }}
                       >
+                        {s.availableNow && (
+                          <span className="absolute top-2 right-2 z-20 text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(34,197,94,0.9)', color: '#052e16' }}>
+                            Dispo
+                          </span>
+                        )}
                         <div
                           className="h-28 flex items-end p-3 relative"
-                          style={{ background: `linear-gradient(135deg,${s.grad[0]},${s.grad[1]})` }}
+                          style={{ background: `linear-gradient(135deg,${s.gradient[0]},${s.gradient[1]})` }}
                         >
                           <span
                             className="text-2xl font-black text-white/80 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 select-none"
@@ -501,12 +639,13 @@ export const ClientDashboard: React.FC = () => {
                           </div>
                         </div>
                         <div className="px-3 py-2.5">
-                          <p className="text-xs font-semibold truncate" style={{ color: CX.text }}>{s.artist}</p>
-                          <p className="text-[10px] truncate mt-0.5" style={{ color: CX.muted }}>{s.style} · {s.dist}</p>
+                          <p className="text-xs font-semibold truncate" style={{ color: CX.text }}>{s.artistName}</p>
+                          <p className="text-[10px] truncate mt-0.5" style={{ color: CX.muted }}>{s.style} · {s.distance}</p>
                         </div>
                       </motion.button>
                     ))}
                   </div>
+                  )}
                 </section>
 
                 {/* Map */}
@@ -522,7 +661,7 @@ export const ClientDashboard: React.FC = () => {
                       Paris 11e
                     </button>
                   </div>
-                  <MiniMap />
+                  <MiniMap pinLabels={sortedStudiosExplore.map((s) => s.name)} />
                 </section>
 
                 {/* Flash grid */}
@@ -530,14 +669,20 @@ export const ClientDashboard: React.FC = () => {
                   <h2 className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: CX.muted }}>
                     Flashs du moment
                   </h2>
+                  {filteredFlash.length === 0 ? (
+                    <p className="text-sm py-8 text-center rounded-2xl border" style={{ borderColor: 'rgba(255,255,255,0.06)', color: CX.muted }}>
+                      {exploreFlashes.length === 0 ? 'Aucun flash disponible pour le moment.' : 'Aucun résultat pour ta recherche.'}
+                    </p>
+                  ) : (
                   <div className="flex gap-3">
                     <div className="flex-1 space-y-3">
-                      {colA.map((f) => <FlashCard key={f.id} f={f} col="a" />)}
+                      {colA.map((f) => <FlashCard key={f.id} f={f} />)}
                     </div>
                     <div className="flex-1 space-y-3 mt-8">
-                      {colB.map((f) => <FlashCard key={f.id} f={f} col="b" />)}
+                      {colB.map((f) => <FlashCard key={f.id} f={f} />)}
                     </div>
                   </div>
+                  )}
                 </section>
               </div>
             )}
@@ -806,25 +951,31 @@ export const ClientDashboard: React.FC = () => {
                 <section>
                   <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: CX.muted }}>Studios Inkflow</p>
                   <div className="space-y-2">
-                    {MOCK_STUDIOS.map((s) => (
+                    {sortedStudiosExplore.length === 0 ? (
+                      <p className="text-xs py-3 text-center rounded-2xl border" style={{ borderColor: 'rgba(255,255,255,0.06)', color: CX.muted }}>
+                        Aucun studio listé pour l’instant.
+                      </p>
+                    ) : (
+                    sortedStudiosExplore.map((s) => (
                       <motion.button
                         key={s.id}
                         type="button"
                         whileTap={{ scale: 0.99 }}
-                        onClick={() => setArtistSheet(s)}
+                        onClick={() => setArtistSheet(studioItemToSheet(s))}
                         className="w-full flex items-center gap-3 p-4 rounded-2xl border text-left"
                         style={{ borderColor: 'rgba(255,255,255,0.06)', background: CX.surface }}
                       >
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0" style={{ background: `linear-gradient(135deg,${s.grad[0]},${s.grad[1]})` }}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0" style={{ background: `linear-gradient(135deg,${s.gradient[0]},${s.gradient[1]})` }}>
                           {s.initials}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold truncate" style={{ color: CX.text }}>{s.name}</p>
-                          <p className="text-xs truncate mt-0.5" style={{ color: CX.muted }}>{s.artist} · {s.style}</p>
+                          <p className="text-xs truncate mt-0.5" style={{ color: CX.muted }}>{s.artistName} · {s.style}</p>
                         </div>
                         <ChevronRight className="w-4 h-4 shrink-0" style={{ color: CX.muted }} />
                       </motion.button>
-                    ))}
+                    ))
+                    )}
                   </div>
                 </section>
 

@@ -53,6 +53,14 @@ export interface FlashDesign {
   createdAt: string;
   reservedBy?: string;
   reservedUntil?: string;
+  /** URL slug public (/flash/[slug]) — généré côté serveur si vide */
+  slug?: string | null;
+  /** Lien vers inkflow_artists.id (même id que compte artiste dashboard) */
+  artistId?: string | null;
+  /** Mis en avant dans l’app client / aperçu pro */
+  featured?: boolean;
+  /** Ordre d’affichage (slider « populaire ») */
+  displayOrder?: number;
 }
 
 export interface Client {

@@ -38,6 +38,7 @@ CREATE INDEX IF NOT EXISTS idx_health_forms_appointment ON inkflow_health_forms(
 ALTER TABLE inkflow_health_forms ENABLE ROW LEVEL SECURITY;
 
 -- SELECT : studio propriétaire uniquement
+DROP POLICY IF EXISTS "health_forms_select_owner" ON inkflow_health_forms;
 CREATE POLICY "health_forms_select_owner" ON inkflow_health_forms
   FOR SELECT USING (
     studio_id IN (
@@ -48,10 +49,12 @@ CREATE POLICY "health_forms_select_owner" ON inkflow_health_forms
 
 -- INSERT : autorisé pour les clients anonymes (via service role ou anon avec validation)
 -- Note: L'insertion côté client se fait via une Edge Function avec service_role
+DROP POLICY IF EXISTS "health_forms_insert_anon" ON inkflow_health_forms;
 CREATE POLICY "health_forms_insert_anon" ON inkflow_health_forms
   FOR INSERT WITH CHECK (true);
 
 -- UPDATE : studio propriétaire uniquement
+DROP POLICY IF EXISTS "health_forms_update_owner" ON inkflow_health_forms;
 CREATE POLICY "health_forms_update_owner" ON inkflow_health_forms
   FOR UPDATE USING (
     studio_id IN (

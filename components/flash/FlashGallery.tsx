@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Filter, Clock, DollarSign, CheckCircle, X, Plus, Grid3X3, List, Edit, Trash2, Sparkles, Loader2, Copy, Check } from 'lucide-react';
-import { FlashDesign } from '../../types';
+import { Search, Filter, Clock, DollarSign, CheckCircle, X, Plus, Grid3X3, List, Edit, Trash2, Sparkles, Loader2, Copy, Check, Star } from 'lucide-react';
+import { FlashDesign, type ArtistAccount } from '../../types';
 import { Modal } from '../ui/Modal';
 import { ImageUploadField } from '../ui/ImageUploadField';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -14,9 +14,21 @@ interface FlashGalleryProps {
   onAddFlash?: (flash: Omit<FlashDesign, 'id' | 'createdAt'>) => void;
   onUpdateFlash?: (id: string, updates: Partial<FlashDesign>) => void;
   onDeleteFlash?: (id: string) => void;
+  /** Slug studio pour lien vitrine */
+  studioSlug?: string | null;
+  /** Tatoueurs du studio (liaison flash → artiste public) */
+  artists?: ArtistAccount[];
 }
 
-export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onAddFlash, onUpdateFlash, onDeleteFlash, studioSlug }) => {
+export const FlashGallery: React.FC<FlashGalleryProps> = ({
+  designs,
+  onBook,
+  onAddFlash,
+  onUpdateFlash,
+  onDeleteFlash,
+  studioSlug,
+  artists = [],
+}) => {
   const toast = useToast();
   const [linkCopied, setLinkCopied] = useState(false);
   const vitrineUrl = studioSlug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/studio/${studioSlug}` : '';
@@ -29,7 +41,22 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
   const [editingFlash, setEditingFlash] = useState<FlashDesign | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [savingFlash, setSavingFlash] = useState(false);
-  const [form, setForm] = useState({ title: '', description: '', imageUrl: '', price: 100, depositAmount: 30, category: 'Minimaliste', size: 'small' as const, estimatedDuration: 60, placement: ['Bras'], tags: [''] });
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    imageUrl: '',
+    price: 100,
+    depositAmount: 30,
+    category: 'Minimaliste',
+    size: 'small' as const,
+    estimatedDuration: 60,
+    placement: ['Bras'],
+    tags: [''],
+    artistId: '' as string,
+    featured: false,
+    displayOrder: 0,
+    slug: '',
+  });
 
   const categories = ['all', ...Array.from(new Set(designs.map(d => d.category)))];
 
@@ -51,7 +78,22 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
 
   const openAddModal = () => {
     setEditingFlash(null);
-    setForm({ title: '', description: '', imageUrl: 'https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400', price: 100, depositAmount: 30, category: 'Minimaliste', size: 'small', estimatedDuration: 60, placement: ['Bras'], tags: [''] });
+    setForm({
+      title: '',
+      description: '',
+      imageUrl: 'https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400',
+      price: 100,
+      depositAmount: 30,
+      category: 'Minimaliste',
+      size: 'small',
+      estimatedDuration: 60,
+      placement: ['Bras'],
+      tags: [''],
+      artistId: artists?.[0]?.id ?? '',
+      featured: false,
+      displayOrder: 0,
+      slug: '',
+    });
     setShowFormModal(true);
   };
 
@@ -67,7 +109,11 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
       size: flash.size,
       estimatedDuration: flash.estimatedDuration,
       placement: flash.placement?.length ? flash.placement : ['Bras'],
-      tags: flash.tags?.length ? flash.tags : ['']
+      tags: flash.tags?.length ? flash.tags : [''],
+      artistId: flash.artistId ?? '',
+      featured: flash.featured ?? false,
+      displayOrder: flash.displayOrder ?? 0,
+      slug: flash.slug ?? '',
     });
     setShowFormModal(true);
   };
@@ -76,7 +122,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
     if (!form.title.trim() || savingFlash) return;
     const tags = form.tags.filter(t => t.trim());
     const placement = form.placement.filter(p => p.trim());
-    const data = {
+    const data: Omit<FlashDesign, 'id' | 'createdAt'> = {
       title: form.title.trim(),
       description: form.description.trim() || undefined,
       imageUrl: form.imageUrl || 'https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400',
@@ -88,7 +134,11 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
       size: form.size,
       placement: placement.length ? placement : ['Bras'],
       estimatedDuration: form.estimatedDuration,
-      tags: tags.length ? tags : ['flash']
+      tags: tags.length ? tags : ['flash'],
+      artistId: form.artistId.trim() || null,
+      featured: form.featured,
+      displayOrder: form.displayOrder,
+      slug: form.slug.trim() || null,
     };
     setSavingFlash(true);
     if (editingFlash && onUpdateFlash) {
@@ -218,8 +268,13 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                   className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 ease-out" />
 
                 {/* Status badge — top right only */}
+                {design.featured && (
+                  <div className="absolute top-2.5 right-2.5 bg-amber-500/90 text-black px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-0.5">
+                    <Star className="w-3 h-3 fill-current" /> Vedette
+                  </div>
+                )}
                 {design.reserved && (
-                  <div className="absolute top-2.5 right-2.5 bg-black/70 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide">
+                  <div className={`absolute ${design.featured ? 'top-10' : 'top-2.5'} right-2.5 bg-black/70 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide`}>
                     Réservé
                   </div>
                 )}
@@ -421,6 +476,55 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({ designs, onBook, onA
                   <option value="medium">Moyen</option>
                   <option value="large">Grand</option>
                 </select>
+              </div>
+              {artists.length > 0 && (
+                <div>
+                  <label className="block text-sm font-semibold text-zinc-900 dark:text-white mb-2">Tatoueur (app & vitrine)</label>
+                  <select
+                    value={form.artistId}
+                    onChange={(e) => setForm((f) => ({ ...f, artistId: e.target.value }))}
+                    className="w-full px-4 py-3 min-h-[48px] border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  >
+                    <option value="">— Non assigné —</option>
+                    {artists.filter((a) => a.active).map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.featured}
+                    onChange={(e) => setForm((f) => ({ ...f, featured: e.target.checked }))}
+                    className="rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-zinc-900 dark:text-white">Mis en avant (app client)</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-semibold text-zinc-900 dark:text-white whitespace-nowrap">Ordre</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.displayOrder}
+                    onChange={(e) => setForm((f) => ({ ...f, displayOrder: Number(e.target.value) }))}
+                    className="w-24 px-3 py-2 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-zinc-900 dark:text-white mb-2">Slug URL (optionnel)</label>
+                <input
+                  type="text"
+                  value={form.slug}
+                  onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+                  className="w-full px-4 py-3 min-h-[48px] border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  placeholder="Généré automatiquement si vide"
+                />
+                <p className="text-xs text-zinc-500 mt-1">Page publique : /flash/votre-slug</p>
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <button onClick={() => setShowFormModal(false)} className="min-h-[44px] px-6 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 dark:border-zinc-800 rounded-xl font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]">

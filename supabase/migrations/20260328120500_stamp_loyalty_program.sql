@@ -54,31 +54,39 @@ ALTER TABLE inkflow_stamp_appointment_credits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inkflow_stamp_rewards ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "stamp_state_owner" ON inkflow_client_stamp_state;
+DROP POLICY IF EXISTS "stamp_state_select" ON inkflow_client_stamp_state;
 CREATE POLICY "stamp_state_select" ON inkflow_client_stamp_state FOR SELECT USING (
   studio_id IN (SELECT id FROM inkflow_studios WHERE email = COALESCE(auth.jwt()->>'email', ''))
 );
+DROP POLICY IF EXISTS "stamp_state_insert" ON inkflow_client_stamp_state;
 CREATE POLICY "stamp_state_insert" ON inkflow_client_stamp_state FOR INSERT WITH CHECK (
   studio_id IN (SELECT id FROM inkflow_studios WHERE email = COALESCE(auth.jwt()->>'email', ''))
 );
+DROP POLICY IF EXISTS "stamp_state_update" ON inkflow_client_stamp_state;
 CREATE POLICY "stamp_state_update" ON inkflow_client_stamp_state FOR UPDATE USING (
   studio_id IN (SELECT id FROM inkflow_studios WHERE email = COALESCE(auth.jwt()->>'email', ''))
 );
 
 DROP POLICY IF EXISTS "stamp_credits_owner" ON inkflow_stamp_appointment_credits;
+DROP POLICY IF EXISTS "stamp_credits_select" ON inkflow_stamp_appointment_credits;
 CREATE POLICY "stamp_credits_select" ON inkflow_stamp_appointment_credits FOR SELECT USING (
   studio_id IN (SELECT id FROM inkflow_studios WHERE email = COALESCE(auth.jwt()->>'email', ''))
 );
+DROP POLICY IF EXISTS "stamp_credits_insert" ON inkflow_stamp_appointment_credits;
 CREATE POLICY "stamp_credits_insert" ON inkflow_stamp_appointment_credits FOR INSERT WITH CHECK (
   studio_id IN (SELECT id FROM inkflow_studios WHERE email = COALESCE(auth.jwt()->>'email', ''))
 );
 
 DROP POLICY IF EXISTS "stamp_rewards_owner" ON inkflow_stamp_rewards;
+DROP POLICY IF EXISTS "stamp_rewards_select" ON inkflow_stamp_rewards;
 CREATE POLICY "stamp_rewards_select" ON inkflow_stamp_rewards FOR SELECT USING (
   studio_id IN (SELECT id FROM inkflow_studios WHERE email = COALESCE(auth.jwt()->>'email', ''))
 );
+DROP POLICY IF EXISTS "stamp_rewards_insert" ON inkflow_stamp_rewards;
 CREATE POLICY "stamp_rewards_insert" ON inkflow_stamp_rewards FOR INSERT WITH CHECK (
   studio_id IN (SELECT id FROM inkflow_studios WHERE email = COALESCE(auth.jwt()->>'email', ''))
 );
+DROP POLICY IF EXISTS "stamp_rewards_update" ON inkflow_stamp_rewards;
 CREATE POLICY "stamp_rewards_update" ON inkflow_stamp_rewards FOR UPDATE USING (
   studio_id IN (SELECT id FROM inkflow_studios WHERE email = COALESCE(auth.jwt()->>'email', ''))
 );

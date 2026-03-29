@@ -751,6 +751,7 @@ export const ClientDashboard: React.FC = () => {
   const [artistSheet, setArtistSheet] = useState<SheetStudio | null>(null);
   const [referralCount] = useState(2);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   // ── Géolocalisation & studios proches ──
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
@@ -765,6 +766,7 @@ export const ClientDashboard: React.FC = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
+      setAccessToken(session?.access_token ?? null);
       if (session?.user?.email) {
         setEmail(session.user.email);
         if (window.location.hash) window.history.replaceState({}, '', '/client/dashboard');
@@ -776,6 +778,7 @@ export const ClientDashboard: React.FC = () => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled) return;
+      setAccessToken(session?.access_token ?? null);
       if (session?.user?.email) {
         setEmail(session.user.email);
         setBootLoading(false);
@@ -1413,6 +1416,7 @@ export const ClientDashboard: React.FC = () => {
                   cents={cents}
                   stampsCount={completed.length}
                   lastStudio={completed[0] ? (completed[0].studio_name ?? undefined) : undefined}
+                  accessToken={accessToken}
                 />
 
                 {/* Parrainage */}
