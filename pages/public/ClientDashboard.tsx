@@ -13,7 +13,7 @@ import {
   MapPin, Heart, Star, ChevronRight, Search, X,
   ExternalLink, Wallet, User, CalendarDays,
   Map, Flame, LogOut, Clock, ArrowUpRight, Copy, Share2, Check,
-  Navigation, List, LayoutGrid,
+  Navigation, List, LayoutGrid, Eye, EyeOff, Lock,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { clientNeedsPassword, clientOnboardingComplete } from '../../lib/clientAuth';
@@ -405,118 +405,169 @@ const FlashCard: React.FC<{
 // GUEST LOGIN FORM (profil tab — magic link inline)
 // ══════════════════════════════════════════════════════════════════════════════
 const GuestLoginForm: React.FC = () => {
+  const [mode, setMode] = useState<'signin' | 'signup'>('signup');
   const [email, setEmail] = useState('');
-  const [phase, setPhase] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
+  const [pwd, setPwd] = useState('');
+  const [pwd2, setPwd2] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [done, setDone] = useState(false);
 
-  const sendLink = async () => {
-    const trimmed = email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setErrorMsg('Adresse email invalide.');
-      return;
-    }
-    setPhase('loading');
-    setErrorMsg('');
+  const reset = () => { setErrorMsg(''); };
+
+  const submit = async () => {
+    const em = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { setErrorMsg('Email invalide.'); return; }
+    if (pwd.length < 8) { setErrorMsg('Mot de passe : 8 caractères min.'); return; }
+    if (mode === 'signup' && pwd !== pwd2) { setErrorMsg('Les mots de passe ne correspondent pas.'); return; }
+    setLoading(true); setErrorMsg('');
     try {
-      const base = (import.meta as { env: Record<string, string> }).env.VITE_SUPABASE_URL?.replace(/\/+$/, '') ?? '';
-      const anon = (import.meta as { env: Record<string, string> }).env.VITE_SUPABASE_ANON_KEY ?? '';
-      const res = await fetch(`${base}/functions/v1/send-client-magic-link`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': anon, 'Authorization': `Bearer ${anon}` },
-        body: JSON.stringify({ email: trimmed, redirectTo: `${window.location.origin}/client/dashboard` }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(d.error ?? 'Erreur serveur');
+      if (mode === 'signup') {
+        const { data, error } = await supabase.auth.signUp({
+          email: em, password: pwd,
+          options: { data: { client_onboarding_complete: true, client_password_set: true } },
+        });
+        if (error) {
+          const m = error.message.toLowerCase();
+          setErrorMsg(m.includes('already') ? 'Un compte existe déjà. Passe en « Se connecter ».' : error.message);
+          return;
+        }
+        if (data.session) { window.location.reload(); return; }
+        setDone(true);
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({ email: em, password: pwd });
+        if (error) {
+          setErrorMsg('Email ou mot de passe incorrect.');
+          return;
+        }
+        if (data.user) { window.location.reload(); }
       }
-      setPhase('sent');
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : 'Erreur inconnue');
-      setPhase('error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (phase === 'sent') {
+  if (done) {
     return (
-      <div className="px-4 pt-12 pb-6 flex flex-col items-center text-center gap-5">
+      <div className="flex flex-col items-center text-center gap-5 py-10">
         <div className="w-16 h-16 rounded-full flex items-center justify-center"
           style={{ background: N.neonDim, border: `1.5px solid ${N.neon}` }}>
           <Check className="w-7 h-7" style={{ color: N.neon }} />
         </div>
         <div>
-          <p className="text-xl font-black mb-2" style={{ color: N.text }}>Lien envoyé !</p>
+          <p className="text-xl font-black mb-2" style={{ color: N.text }}>Vérifie ta boîte mail</p>
           <p className="text-sm leading-relaxed" style={{ color: N.muted }}>
-            Vérifie ta boîte mail <strong style={{ color: N.textSub }}>{email}</strong>.<br />
-            Clique sur le lien pour te connecter (valable 60 min).
+            Un email de confirmation a été envoyé à<br />
+            <strong style={{ color: N.textSub }}>{email}</strong>.<br />
+            Clique sur le lien pour activer ton compte.
           </p>
         </div>
-        <button type="button" onClick={() => { setPhase('idle'); setEmail(''); }}
-          className="text-sm font-semibold" style={{ color: N.muted }}>
-          Utiliser un autre email
+        <button type="button" onClick={() => { setDone(false); setMode('signin'); }}
+          className="text-sm font-semibold" style={{ color: N.neon }}>
+          Déjà confirmé ? Se connecter
         </button>
       </div>
     );
   }
 
+  const canSubmit = email.trim() && pwd.length >= 8 && (mode === 'signin' || pwd === pwd2);
+
   return (
-    <div className="space-y-5 pt-4">
+    <div className="space-y-4 pt-2">
       {/* Header */}
-      <div className="text-center pb-2">
-        <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
-          style={{ background: N.neonDim, border: `1.5px solid rgba(223,255,0,0.2)` }}>
-          <User className="w-6 h-6" style={{ color: N.neon }} />
+      <div className="text-center pb-1">
+        <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center"
+          style={{ background: N.neonDim }}>
+          <User className="w-5 h-5" style={{ color: N.neon }} />
         </div>
-        <h2 className="text-xl font-black mb-1" style={{ color: N.text }}>Connecte-toi</h2>
-        <p className="text-sm leading-relaxed" style={{ color: N.muted }}>
-          Entre ton email pour recevoir un lien magique.<br />
-          Pas besoin de mot de passe.
-        </p>
+        <h2 className="text-xl font-black mb-1" style={{ color: N.text }}>Mon compte</h2>
+        <p className="text-xs" style={{ color: N.muted }}>Accède à tes RDV, ton wallet et tes favoris.</p>
       </div>
 
-      {/* Email input */}
-      <div className="space-y-3">
-        <input
-          type="email"
-          value={email}
-          onChange={e => { setEmail(e.target.value); setErrorMsg(''); }}
-          onKeyDown={e => e.key === 'Enter' && phase !== 'loading' && sendLink()}
+      {/* Tab toggle */}
+      <div className="flex rounded-2xl p-1 gap-1" style={{ background: N.surface }}>
+        {(['signup', 'signin'] as const).map(m => (
+          <button key={m} type="button"
+            onClick={() => { setMode(m); reset(); }}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
+            style={{
+              background: mode === m ? '#fff' : 'transparent',
+              color: mode === m ? N.text : N.muted,
+              boxShadow: mode === m ? '0 1px 8px rgba(0,0,0,0.08)' : 'none',
+            }}>
+            {m === 'signup' ? "S'inscrire" : 'Se connecter'}
+          </button>
+        ))}
+      </div>
+
+      {/* Fields */}
+      <div className="space-y-2.5">
+        <input type="email" value={email}
+          onChange={e => { setEmail(e.target.value); reset(); }}
           placeholder="ton@email.com"
-          className="w-full rounded-2xl border px-4 py-4 text-sm outline-none transition-all"
-          style={{
-            background: N.surface,
-            borderColor: errorMsg ? N.error : N.border,
-            color: N.text,
-          }}
+          className="w-full rounded-2xl border px-4 py-3.5 text-sm outline-none transition-all"
+          style={{ background: N.surface, borderColor: N.border, color: N.text, caretColor: N.neon }}
+          onFocus={e => (e.currentTarget.style.borderColor = N.neon)}
+          onBlur={e => (e.currentTarget.style.borderColor = N.border)}
         />
-        {errorMsg && (
-          <p className="text-xs px-1" style={{ color: N.error }}>{errorMsg}</p>
+
+        <div className="relative">
+          <input type={showPwd ? 'text' : 'password'} value={pwd}
+            onChange={e => { setPwd(e.target.value); reset(); }}
+            onKeyDown={e => e.key === 'Enter' && !loading && canSubmit && submit()}
+            placeholder="Mot de passe (8 car. min.)"
+            className="w-full rounded-2xl border px-4 py-3.5 pr-11 text-sm outline-none transition-all"
+            style={{ background: N.surface, borderColor: N.border, color: N.text, caretColor: N.neon }}
+            onFocus={e => (e.currentTarget.style.borderColor = N.neon)}
+            onBlur={e => (e.currentTarget.style.borderColor = N.border)}
+          />
+          <button type="button" onClick={() => setShowPwd(p => !p)}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1">
+            {showPwd
+              ? <EyeOff className="w-4 h-4" style={{ color: N.muted }} />
+              : <Eye className="w-4 h-4" style={{ color: N.muted }} />
+            }
+          </button>
+        </div>
+
+        {mode === 'signup' && (
+          <input type={showPwd ? 'text' : 'password'} value={pwd2}
+            onChange={e => { setPwd2(e.target.value); reset(); }}
+            placeholder="Confirme le mot de passe"
+            className="w-full rounded-2xl border px-4 py-3.5 text-sm outline-none transition-all"
+            style={{
+              background: N.surface,
+              borderColor: pwd2 && pwd !== pwd2 ? N.error : N.border,
+              color: N.text, caretColor: N.neon,
+            }}
+            onFocus={e => (e.currentTarget.style.borderColor = pwd2 && pwd !== pwd2 ? N.error : N.neon)}
+            onBlur={e => (e.currentTarget.style.borderColor = pwd2 && pwd !== pwd2 ? N.error : N.border)}
+          />
         )}
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.98 }}
-          disabled={phase === 'loading' || !email.trim()}
-          onClick={sendLink}
-          className="w-full py-4 rounded-2xl font-bold text-sm transition-all"
-          style={{
-            background: email.trim() ? N.neon : N.border,
-            color: email.trim() ? N.bg : N.muted,
-            boxShadow: email.trim() ? N.neonGlow : 'none',
-            cursor: phase === 'loading' ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {phase === 'loading' ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="w-4 h-4 rounded-full border-2 animate-spin inline-block"
-                style={{ borderColor: N.bg, borderTopColor: 'transparent' }} />
-              Envoi…
-            </span>
-          ) : 'Recevoir mon lien de connexion →'}
-        </motion.button>
+
+        {errorMsg && (
+          <p className="text-xs px-1 font-medium" style={{ color: N.error }}>{errorMsg}</p>
+        )}
       </div>
 
-      <p className="text-center text-xs" style={{ color: N.muted }}>
-        Pas encore inscrit ? Le lien crée automatiquement ton compte.
-      </p>
+      {/* Submit */}
+      <motion.button type="button" whileTap={{ scale: 0.98 }}
+        disabled={loading || !canSubmit}
+        onClick={submit}
+        className="w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+        style={{
+          background: canSubmit ? N.neon : N.border,
+          color: canSubmit ? '#fff' : N.muted,
+          boxShadow: canSubmit ? N.neonGlow : 'none',
+        }}>
+        {loading
+          ? <span className="w-4 h-4 rounded-full border-2 animate-spin" style={{ borderColor: '#fff', borderTopColor: 'transparent' }} />
+          : <><Lock className="w-4 h-4" />{mode === 'signup' ? 'Créer mon compte' : 'Me connecter'}</>
+        }
+      </motion.button>
     </div>
   );
 };
