@@ -25,22 +25,22 @@ import { NearbyMapView } from '../../components/client/NearbyMapView';
 import { LoyaltyCard } from '../../components/client/LoyaltyCard';
 import { ROUEN_STUDIOS, ROUEN_FLASH, type DisplayFlash, type SheetStudio } from '../../lib/rouenStudios';
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
+// ── Design tokens — iOS Travel Discovery ──────────────────────────────────────
 const N = {
-  bg:         '#0A0A0A',
-  surface:    '#111111',
-  elevated:   '#181818',
-  border:     '#202020',
-  borderMid:  '#2C2C2C',
-  text:       '#F5F3EF',
-  textSub:    '#ADADAB',
-  muted:      '#555555',
-  neon:       '#DFFF00',
-  neonDim:    'rgba(223,255,0,0.10)',
-  neonGlow:   '0 0 18px rgba(223,255,0,0.28)',
-  neonText:   '#E8FF3A',
-  success:    '#5EDB9A',
-  error:      '#F47B7B',
+  bg:         '#FFFFFF',
+  surface:    '#F5F5F5',
+  elevated:   '#EBEBEB',
+  border:     '#E5E5E5',
+  borderMid:  '#D4D4D4',
+  text:       '#111111',
+  textSub:    '#555555',
+  muted:      '#999999',
+  neon:       '#60A5FA',       // Sky blue accent (from "COMMENCER" button)
+  neonDim:    'rgba(96,165,250,0.10)',
+  neonGlow:   '0 4px 24px rgba(96,165,250,0.25)',
+  neonText:   '#2563EB',
+  success:    '#22C55E',
+  error:      '#EF4444',
 } as const;
 
 const TAB_ORDER: ClientTab[] = ['explore', 'rdv', 'wallet', 'profile'];
@@ -918,46 +918,47 @@ export const ClientDashboard: React.FC = () => {
     >
       {/* ── Header ── */}
       <header
-        className="sticky top-0 z-20 px-5 pt-14 pb-4 border-b"
-        style={{ background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(20px)', borderColor: N.border }}
+        className="sticky top-0 z-20 px-5 pt-safe-top pt-12 pb-3 border-b"
+        style={{ background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(20px)', borderColor: N.border }}
       >
-        <div className="flex items-end justify-between max-w-lg mx-auto">
-          <div>
-            <p className="text-[11px] font-medium mb-0.5 uppercase tracking-widest" style={{ color: N.muted }}>
-              {tab === 'explore' ? `Bonjour,` : ''}
-            </p>
-            <h1
-              className="text-[30px] font-black leading-none tracking-tight"
-              style={{ color: N.text, fontFamily: 'var(--font-syne, Syne, sans-serif)' }}
-            >
-              {tab === 'explore' ? firstName : TAB_TITLES[tab]}
-            </h1>
+        <div className="flex items-center justify-between max-w-lg mx-auto">
+          {/* IF. logo */}
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-black tracking-tighter" style={{ color: N.text, letterSpacing: '-0.04em' }}>
+              IF.
+            </span>
+            {tab !== 'explore' && (
+              <span className="text-base font-semibold" style={{ color: N.textSub }}>
+                {TAB_TITLES[tab]}
+              </span>
+            )}
           </div>
+          {/* Right: wallet + avatar */}
           <div className="flex items-center gap-2">
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={() => goTab('wallet')}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border"
-              style={{ borderColor: N.border, background: N.elevated }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl border"
+              style={{ borderColor: N.border, background: N.surface }}
             >
               <Wallet className="w-3.5 h-3.5" style={{ color: N.neon }} />
-              <span className="text-sm font-black tabular-nums" style={{ color: N.neonText }}>{(cents / 100).toFixed(0)}€</span>
+              <span className="text-sm font-bold tabular-nums" style={{ color: N.neonText }}>{(cents / 100).toFixed(0)}€</span>
             </motion.button>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold border text-sm"
-              style={{ borderColor: 'rgba(223,255,0,0.2)', background: N.neonDim, color: N.neonText }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold border text-sm overflow-hidden"
+              style={{ borderColor: N.border, background: N.neon, color: '#fff' }}>
               {firstName.slice(0, 1)}
             </div>
           </div>
         </div>
       </header>
 
-      {isGuest && (
+      {isGuest && tab === 'explore' && (
         <div
-          className="max-w-lg mx-auto px-5 py-2.5 border-b text-center"
-          style={{ borderColor: N.border, background: 'rgba(223,255,0,0.04)' }}
+          className="max-w-lg mx-auto px-5 py-2 border-b text-center"
+          style={{ borderColor: N.border, background: N.neonDim }}
         >
-          <p className="text-[11px] leading-snug" style={{ color: N.muted }}>
-            Mode découverte — connecte-toi pour réserver, suivre tes RDV et ton wallet.
+          <p className="text-[11px]" style={{ color: N.neonText }}>
+            Mode découverte — connecte-toi pour réserver et suivre tes RDV.
           </p>
         </div>
       )}
@@ -984,183 +985,252 @@ export const ClientDashboard: React.FC = () => {
 
             {/* ════ EXPLORER ════ */}
             {tab === 'explore' && (
-              <div className="px-4 pt-5 space-y-6 pb-6">
+              <div className="pb-6">
 
-                {/* Localisation pill */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ background: N.neonDim }}
-                    >
+                {/* Hero heading + search */}
+                <div className="px-5 pt-6 pb-4">
+                  <motion.h1
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-[30px] font-black leading-tight mb-4"
+                    style={{ color: N.text, letterSpacing: '-0.02em' }}
+                  >
+                    Trouve ton<br />prochain Tattoo.
+                  </motion.h1>
+
+                  {/* Search bar */}
+                  <div className="relative">
+                    <input
+                      value={search} onChange={e => setSearch(e.target.value)}
+                      placeholder="Rechercher un style, un artiste, un flash..."
+                      className="w-full rounded-full border py-3.5 pl-5 pr-12 text-sm outline-none transition-all"
+                      style={{ background: N.surface, borderColor: N.border, color: N.text, caretColor: N.neon }}
+                      onFocus={e => (e.currentTarget.style.borderColor = N.neon)}
+                      onBlur={e => (e.currentTarget.style.borderColor = N.border)}
+                    />
+                    <button type="button" className="absolute right-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center"
+                      style={{ background: N.neon }}>
+                      {search
+                        ? <X className="w-4 h-4 text-white" onClick={() => setSearch('')} />
+                        : <Search className="w-4 h-4 text-white" />
+                      }
+                    </button>
+                  </div>
+
+                  {/* Geo pill */}
+                  <div className="flex items-center gap-2 mt-3">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border" style={{ borderColor: N.border, background: N.surface }}>
                       {geoLoading
                         ? <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: N.neon }} />
                         : <MapPin className="w-3 h-3" style={{ color: N.neon }} />
                       }
-                    </div>
-                    <span className="text-sm font-semibold" style={{ color: N.textSub }}>
-                      {geoLoading ? 'Localisation…' : userPos ? 'Autour de moi' : 'Position inconnue'}
-                    </span>
-                    {userPos && nearbyStudios.length > 0 && (
-                      <span className="text-sm" style={{ color: N.muted }}>
-                        · {nearbyStudios.length} studio{nearbyStudios.length > 1 ? 's' : ''}
+                      <span className="text-xs font-medium" style={{ color: N.textSub }}>
+                        {geoLoading ? 'Localisation…' : userPos ? `${nearbyStudios.length} studios autour de moi` : 'Position inconnue'}
                       </span>
+                    </div>
+                    {!userPos && !geoLoading && (
+                      <button type="button"
+                        onClick={() => {
+                          setGeoLoading(true);
+                          navigator.geolocation?.getCurrentPosition(
+                            async (pos) => {
+                              const { latitude, longitude } = pos.coords;
+                              setUserPos({ lat: latitude, lng: longitude });
+                              const studios = await getNearbyStudios(latitude, longitude, 50);
+                              setNearbyStudios(studios);
+                              setGeoLoading(false);
+                            },
+                            () => setGeoLoading(false),
+                            { timeout: 8000 },
+                          );
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                        style={{ background: N.neon, color: '#fff' }}
+                      >
+                        <Navigation className="w-3 h-3" />
+                        Activer
+                      </button>
                     )}
                   </div>
-                  {/* Toggle Carte / Liste */}
-                  <div className="flex items-center gap-1 p-1 rounded-xl border" style={{ borderColor: N.border, background: N.surface }}>
-                    <button
-                      type="button"
-                      onClick={() => setShowMap(false)}
-                      className="p-1.5 rounded-lg transition-all"
-                      style={{ background: !showMap ? N.elevated : 'transparent', color: !showMap ? N.neon : N.muted }}
-                    >
-                      <LayoutGrid className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowMap(true)}
-                      className="p-1.5 rounded-lg transition-all"
-                      style={{ background: showMap ? N.elevated : 'transparent', color: showMap ? N.neon : N.muted }}
-                    >
-                      <Map className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
                 </div>
 
-                {/* Carte Google Maps */}
-                {showMap && userPos && (
-                  <NearbyMapView
-                    userPos={userPos}
-                    studios={nearbyStudios}
-                    onSelectStudio={(s) => setArtistSheet(nearbyToSheet(s))}
-                  />
-                )}
-
-                {/* CTA géolocalisation si non accordée */}
-                {!userPos && !geoLoading && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGeoLoading(true);
-                      navigator.geolocation?.getCurrentPosition(
-                        async (pos) => {
-                          const { latitude, longitude } = pos.coords;
-                          setUserPos({ lat: latitude, lng: longitude });
-                          const studios = await getNearbyStudios(latitude, longitude, 50);
-                          setNearbyStudios(studios);
-                          setGeoLoading(false);
-                        },
-                        () => setGeoLoading(false),
-                        { timeout: 8000 },
-                      );
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-semibold transition-all active:scale-[0.98]"
-                    style={{ borderColor: 'rgba(223,255,0,0.25)', background: N.neonDim, color: N.neonText }}
-                  >
-                    <Navigation className="w-4 h-4" />
-                    Activer la géolocalisation
-                  </button>
-                )}
-
-                {/* Recherche */}
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: N.muted }} />
-                  <input
-                    value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder="Style, flash, tatoueur…"
-                    className="w-full rounded-2xl border pl-11 pr-10 py-3.5 text-sm outline-none"
-                    style={{ background: N.surface, borderColor: N.border, color: N.text }}
-                  />
-                  {search && (
-                    <button type="button" onClick={() => setSearch('')}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ background: N.borderMid }}>
-                      <X className="w-3 h-3" style={{ color: N.muted }} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Studios à la une */}
+                {/* ── POPULAR (horizontal scroll cards) ── */}
                 {!search && (
-                  <section>
-                    <div className="flex items-center justify-between mb-3">
-                      <h2 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>
-                        {nearbyStudios.length > 0 ? 'Studios proches' : 'Studios à la une'}
-                      </h2>
-                      <button type="button" className="text-xs font-semibold" style={{ color: N.neon }}>
-                        Voir tout
-                      </button>
+                  <section className="mb-6">
+                    <div className="flex items-center justify-between px-5 mb-3">
+                      <h2 className="text-xl font-black" style={{ color: N.text }}>Popular</h2>
+                      <button type="button" className="text-sm font-semibold" style={{ color: N.neon }}>See All</button>
                     </div>
-                    <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+                    <div className="flex gap-4 overflow-x-auto pl-5 pr-3 pb-2" style={{ scrollbarWidth: 'none' }}>
                       {displayStudios.map((s, i) => (
-                        <motion.button
-                          key={s.id} type="button"
+                        <motion.div
+                          key={s.id}
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.07, type: 'spring', stiffness: 260, damping: 22 }}
+                          transition={{ delay: i * 0.08, type: 'spring', stiffness: 280, damping: 24 }}
                           whileTap={{ scale: 0.97 }}
                           onClick={() => setArtistSheet(s)}
-                          className="flex-shrink-0 w-44 rounded-3xl border overflow-hidden text-left"
-                          style={{ borderColor: N.border, background: N.surface }}
+                          className="flex-shrink-0 rounded-3xl overflow-hidden cursor-pointer"
+                          style={{ width: 200, background: N.surface, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                         >
-                          <div
-                            className="h-28 relative overflow-hidden"
-                            style={{ background: `linear-gradient(145deg, ${s.grad[0]}, ${s.grad[1]})` }}
-                          >
+                          {/* Image */}
+                          <div className="relative" style={{ height: 220 }}>
+                            <div
+                              className="absolute inset-0"
+                              style={{ background: `linear-gradient(145deg, ${s.grad[0]}, ${s.grad[1]})` }}
+                            />
                             {s.portfolioImages[0] && (
-                              <img src={s.portfolioImages[0]} alt={s.name} className="absolute inset-0 w-full h-full object-cover" />
+                              <img src={s.portfolioImages[0]} alt={s.name}
+                                className="absolute inset-0 w-full h-full object-cover" />
                             )}
-                            {s.rating > 0 && (
-                              <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold"
-                                style={{ background: 'rgba(10,10,10,0.75)', backdropFilter: 'blur(6px)', color: N.text }}>
-                                <Star className="w-2.5 h-2.5 fill-current" style={{ color: N.neon }} />
-                                {s.rating}
+                            {/* Top badges */}
+                            <div className="absolute top-3 left-3 flex items-center gap-1">
+                              {s.rating > 0 && (
+                                <div className="flex items-center gap-0.5 px-2 py-1 rounded-full text-[10px] font-bold"
+                                  style={{ background: 'rgba(255,255,255,0.92)', color: N.text }}>
+                                  <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                                  {s.rating}
+                                </div>
+                              )}
+                            </div>
+                            {/* Fav */}
+                            <button type="button"
+                              className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center"
+                              style={{ background: 'rgba(255,255,255,0.92)' }}
+                              onClick={e => { e.stopPropagation(); setFavFlash(p => { const n2 = new Set(p); n2.has(s.id) ? n2.delete(s.id) : n2.add(s.id); return n2; }); }}
+                            >
+                              <Heart className="w-4 h-4"
+                                style={{ color: favFlash.has(s.id) ? '#fb7185' : '#aaa', fill: favFlash.has(s.id) ? '#fb7185' : 'none' }}
+                              />
+                            </button>
+                            {/* Bottom frosted overlay */}
+                            <div className="absolute inset-x-0 bottom-0 p-3 rounded-b-none"
+                              style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(12px)' }}>
+                              <p className="text-[13px] font-bold truncate" style={{ color: N.text }}>{s.name}</p>
+                              <div className="flex items-center gap-1 mb-2">
+                                <MapPin className="w-2.5 h-2.5" style={{ color: N.muted }} />
+                                <p className="text-[11px] truncate" style={{ color: N.muted }}>
+                                  {s.artistLabel}
+                                </p>
                               </div>
-                            )}
-                            <div className="absolute bottom-2.5 left-3 text-sm font-black text-white/80">{s.name.slice(0, 2)}</div>
-                          </div>
-                          <div className="p-3">
-                            <p className="text-[13px] font-bold truncate" style={{ color: N.text }}>{s.name}</p>
-                            <p className="text-[11px] truncate mt-0.5" style={{ color: N.muted }}>
-                              {s.artistLabel}{s.styleLabel ? ` · ${s.styleLabel}` : ''}
-                            </p>
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-lg" style={{ background: N.elevated, color: N.muted }}>
-                                {s.distLabel}
-                              </span>
-                              <ChevronRight className="w-3.5 h-3.5" style={{ color: N.border }} />
+                              <div className="flex items-center justify-between">
+                                <span className="text-[12px] font-semibold" style={{ color: N.textSub }}>{s.distLabel}</span>
+                                <button type="button"
+                                  className="px-4 py-1.5 rounded-full text-[12px] font-bold text-white"
+                                  style={{ background: N.neon }}
+                                  onClick={e => { e.stopPropagation(); setArtistSheet(s); }}
+                                >
+                                  Voir
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </motion.button>
+                        </motion.div>
                       ))}
                     </div>
                   </section>
                 )}
 
-                {/* Flashs */}
-                <section>
+                {/* ── NEAREST PLACES (vertical list) ── */}
+                <section className="px-5">
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>Flashs du moment</h2>
-                    <span className="text-[12px]" style={{ color: N.muted }}>{filteredFlash.length} designs</span>
+                    <h2 className="text-xl font-black" style={{ color: N.text }}>
+                      {search ? `Résultats` : 'Nearest Places'}
+                    </h2>
+                    {!search && <button type="button" className="text-sm font-semibold" style={{ color: N.neon }}>See All</button>}
                   </div>
-                  {filteredFlash.length === 0 ? (
-                    <div className="rounded-3xl border p-10 text-center" style={{ borderColor: N.border, background: N.elevated }}>
-                      <p className="text-sm" style={{ color: N.muted }}>Aucun flash pour «{search}»</p>
+
+                  {/* Google Maps map view */}
+                  {showMap && userPos && (
+                    <div className="mb-4 rounded-3xl overflow-hidden">
+                      <NearbyMapView
+                        userPos={userPos}
+                        studios={nearbyStudios}
+                        onSelectStudio={(s) => setArtistSheet(nearbyToSheet(s))}
+                      />
                     </div>
-                  ) : (
-                    <div className="flex gap-3">
-                      <div className="flex-1 space-y-3">
-                        {colA.map(f => (
-                          <FlashCard key={f.id} f={f} fav={favFlash.has(f.id)}
-                            onFav={() => setFavFlash(p => { const n = new Set(p); n.has(f.id) ? n.delete(f.id) : n.add(f.id); return n; })} />
-                        ))}
+                  )}
+
+                  {/* View toggle */}
+                  <div className="flex gap-2 mb-4">
+                    <button type="button" onClick={() => setShowMap(false)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+                      style={{ background: !showMap ? N.neon : 'transparent', color: !showMap ? '#fff' : N.muted, borderColor: !showMap ? N.neon : N.border }}>
+                      <LayoutGrid className="w-3 h-3" /> Liste
+                    </button>
+                    <button type="button" onClick={() => setShowMap(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all"
+                      style={{ background: showMap ? N.neon : 'transparent', color: showMap ? '#fff' : N.muted, borderColor: showMap ? N.neon : N.border }}>
+                      <Map className="w-3 h-3" /> Carte
+                    </button>
+                  </div>
+
+                  {/* Studio list */}
+                  <div className="space-y-3">
+                    {displayStudios.filter(s =>
+                      !search || s.name.toLowerCase().includes(search.toLowerCase()) ||
+                      s.artistLabel?.toLowerCase().includes(search.toLowerCase()) ||
+                      s.styleLabel?.toLowerCase().includes(search.toLowerCase())
+                    ).map((s, i) => (
+                      <motion.div
+                        key={s.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.06 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => setArtistSheet(s)}
+                        className="flex items-center gap-3 p-3 rounded-2xl border cursor-pointer"
+                        style={{ borderColor: N.border, background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}
+                      >
+                        {/* Round thumbnail */}
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 relative"
+                          style={{ background: `linear-gradient(135deg, ${s.grad[0]}, ${s.grad[1]})` }}>
+                          {s.portfolioImages[0] && (
+                            <img src={s.portfolioImages[0]} alt={s.name} className="absolute inset-0 w-full h-full object-cover" />
+                          )}
+                        </div>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-[14px] truncate" style={{ color: N.text }}>{s.name}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: N.muted }} />
+                            <p className="text-[12px] truncate" style={{ color: N.muted }}>{s.artistLabel}</p>
+                          </div>
+                          <p className="text-[12px] font-semibold mt-1" style={{ color: N.textSub }}>{s.distLabel}</p>
+                        </div>
+                        {/* Route button */}
+                        <button type="button"
+                          className="flex-shrink-0 px-4 py-2 rounded-2xl text-[13px] font-bold text-white"
+                          style={{ background: N.neon }}
+                          onClick={e => { e.stopPropagation(); setArtistSheet(s); }}
+                        >
+                          Voir
+                        </button>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Flashs section under nearest places */}
+                  {!search && filteredFlash.length > 0 && (
+                    <div className="mt-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-xl font-black" style={{ color: N.text }}>Flashs</h2>
+                        <span className="text-sm" style={{ color: N.muted }}>{filteredFlash.length} designs</span>
                       </div>
-                      <div className="flex-1 space-y-3 pt-10">
-                        {colB.map(f => (
-                          <FlashCard key={f.id} f={f} fav={favFlash.has(f.id)}
-                            onFav={() => setFavFlash(p => { const n = new Set(p); n.has(f.id) ? n.delete(f.id) : n.add(f.id); return n; })} />
-                        ))}
+                      <div className="flex gap-3">
+                        <div className="flex-1 space-y-3">
+                          {colA.map(f => (
+                            <FlashCard key={f.id} f={f} fav={favFlash.has(f.id)}
+                              onFav={() => setFavFlash(p => { const n2 = new Set(p); n2.has(f.id) ? n2.delete(f.id) : n2.add(f.id); return n2; })} />
+                          ))}
+                        </div>
+                        <div className="flex-1 space-y-3 pt-10">
+                          {colB.map(f => (
+                            <FlashCard key={f.id} f={f} fav={favFlash.has(f.id)}
+                              onFav={() => setFavFlash(p => { const n2 = new Set(p); n2.has(f.id) ? n2.delete(f.id) : n2.add(f.id); return n2; })} />
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1378,7 +1448,7 @@ export const ClientDashboard: React.FC = () => {
                 <div className="rounded-3xl border p-5 flex items-center gap-4"
                   style={{ borderColor: N.border, background: N.elevated }}>
                   <div className="w-16 h-16 rounded-3xl flex items-center justify-center text-xl font-black border-2 shrink-0"
-                    style={{ borderColor: 'rgba(223,255,0,0.25)', background: N.neonDim, color: N.neonText }}>
+                    style={{ borderColor: 'rgba(96,165,250,0.25)', background: N.neonDim, color: N.neonText }}>
                     {firstName.slice(0, 1)}
                   </div>
                   <div className="min-w-0">
