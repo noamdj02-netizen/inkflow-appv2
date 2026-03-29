@@ -807,7 +807,7 @@ export const ClientDashboard: React.FC = () => {
         const { data: { user } } = await supabase.auth.getUser();
         const meta = user?.user_metadata ?? ({} as Record<string, unknown>);
         if (clientNeedsPassword(meta)) { window.location.replace('/client'); return; }
-        if (!clientOnboardingComplete(meta)) { window.location.replace('/client/welcome'); return; }
+        // Page bienvenue supprimée — onboarding intégré dans le flux login
 
         const { data: apts } = await supabase
           .from('inkflow_appointments').select('id,date,time,service,status,price,inkflow_studios(studio_name)')
