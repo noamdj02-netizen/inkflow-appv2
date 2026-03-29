@@ -37,8 +37,7 @@ const InstagramCallbackPage = lazy(() => import('./pages/InstagramCallbackPage')
 const AddToHomeScreenPage = lazy(() => import('./pages/AddToHomeScreenPage').then(m => ({ default: m.AddToHomeScreenPage })));
 const DebugExperiencePage = lazy(() => import('./pages/admin/DebugExperiencePage').then(m => ({ default: m.DebugExperiencePage })));
 const ClientPortalLoginPage = lazy(() => import('./pages/client/ClientPortalLoginPage').then(m => ({ default: m.ClientPortalLoginPage })));
-const ClientWelcomePage = lazy(() => import('./pages/client/ClientWelcomePage').then(m => ({ default: m.ClientWelcomePage })));
-const ClientDashboard = lazy(() => import('./pages/client/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
+const ClientDashboard = lazy(() => import('./pages/public/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
 const ArtistPage = lazy(() => import('./pages/vitrine/ArtistPage').then(m => ({ default: m.ArtistPage })));
 const FlashPage = lazy(() => import('./pages/vitrine/FlashPage').then(m => ({ default: m.FlashPage })));
 
@@ -142,7 +141,6 @@ const Router: React.FC = () => {
     { path: '/admin/debug-experience', component: DebugExperiencePage, requiresAuth: true },
     // ── Portail client "My Inkflow" ─────────────────────────────────────────
     { path: '/client', component: ClientPortalLoginPage },
-    { path: /^\/client\/welcome\/?$/, component: ClientWelcomePage },
     { path: /^\/client\/dashboard\/?$/, component: ClientDashboard },
     // ── Pages vitrines publiques (artistes & flashs) ────────────────────────
     { path: /^\/artist\/([a-z0-9-]+)\/?$/, component: ArtistPage, getProps: (m) => ({ artistSlug: m[1] }) },
@@ -282,7 +280,7 @@ const UnhandledRejectionHandler: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem storageKey="inkflow-theme">
+      <ThemeProvider attribute="data-theme" defaultTheme="dark" storageKey="inkflow-theme">
         <div className="app-root">
           <AuthProvider>
             <AppSplashGate>
