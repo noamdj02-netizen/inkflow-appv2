@@ -249,7 +249,15 @@ export const useSupabaseDashboard = () => {
   }, [studioId, useSupabase, aptMutation]);
 
   const addFlash = useCallback((flash: Omit<FlashDesign, 'id' | 'createdAt'>) => {
-    const newFlash: FlashDesign = { ...flash, id: `f${Date.now()}`, createdAt: new Date().toISOString() };
+    const newFlash: FlashDesign = {
+      ...flash,
+      id: `f${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      featured: flash.featured ?? false,
+      displayOrder: flash.displayOrder ?? 0,
+      artistId: flash.artistId ?? null,
+      slug: flash.slug ?? null,
+    };
     if (studioId && useSupabase) {
       flashMutation.add(newFlash, (f) => saveFlashDesignToSupabase(studioId, f));
     } else {

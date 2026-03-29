@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Star, Calendar, Heart, ArrowLeft, Share2, Instagram, ExternalLink } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -15,6 +15,8 @@ interface Artist {
   rating: number;
   tattoos_count: number;
   studio_id: string;
+  available_now: boolean;
+  instagram_url: string | null;
   studio_name?: string;
   studio_slug?: string;
 }
@@ -55,6 +57,7 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
         .from('inkflow_artists')
         .select(`
           id, name, slug, bio, avatar_url, styles, years_exp, rating, tattoos_count, studio_id,
+          available_now, instagram_url,
           inkflow_studios(studio_name, slug)
         `)
         .eq('slug', artistSlug)
@@ -70,6 +73,8 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
       const studioInfo = artistData.inkflow_studios as { studio_name?: string; slug?: string } | null;
       setArtist({
         ...artistData,
+        available_now: Boolean(artistData.available_now),
+        instagram_url: (artistData.instagram_url as string | null) ?? null,
         studio_name: studioInfo?.studio_name,
         studio_slug: studioInfo?.slug,
       });
@@ -183,7 +188,14 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
             {!artist.avatar_url && artist.name.slice(0, 1)}
           </div>
           <div className="flex-1 pb-2">
-            <h1 className="text-2xl font-bold tracking-tight">{artist.name}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">{artist.name}</h1>
+              {artist.available_now && (
+                <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: 'rgba(34,197,94,0.2)', color: '#4ade80' }}>
+                  Disponible maintenant
+                </span>
+              )}
+            </div>
             {artist.studio_name && (
               <a
                 href={artist.studio_slug ? `/studio/${artist.studio_slug}` : '#'}
@@ -231,6 +243,20 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
           <p className="text-sm mt-4 leading-relaxed" style={{ color: CX.muted }}>
             {artist.bio}
           </p>
+        )}
+
+        {artist.instagram_url && (
+          <a
+            href={artist.instagram_url.startsWith('http') ? artist.instagram_url : `https://${artist.instagram_url}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 mt-4 text-sm font-medium transition-opacity hover:opacity-90"
+            style={{ color: CX.accent }}
+          >
+            <Instagram className="w-4 h-4" />
+            Instagram
+            <ExternalLink className="w-3.5 h-3.5 opacity-60" />
+          </a>
         )}
 
         {/* Action buttons */}

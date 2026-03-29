@@ -1,4 +1,5 @@
 import { supabase, getStudioId } from './supabase';
+import { buildFlashSlug } from './flashSlug';
 import { sendReferralNotification } from './sendNotification';
 import type { VitrineData } from '../types/vitrine';
 import type { Appointment, Client, FlashDesign, Notification, ProjectRequest, ProjectRequestStatus, WaitlistEntry } from '../types';
@@ -647,7 +648,11 @@ export function mapFlashFromDb(row: Record<string, unknown>): FlashDesign {
     placement: (row.placement as string[]) || [],
     estimatedDuration: Number(row.estimated_duration) || 60,
     tags: (row.tags as string[]) || [],
-    createdAt: (row.created_at as string) || new Date().toISOString()
+    createdAt: (row.created_at as string) || new Date().toISOString(),
+    slug: (row.slug as string) || null,
+    artistId: (row.artist_id as string) || null,
+    featured: Boolean(row.featured),
+    displayOrder: Number(row.display_order) || 0,
   };
 }
 
@@ -658,7 +663,12 @@ export async function getFlashDesignsFromSupabase(studioId: string): Promise<Fla
 }
 
 export async function saveFlashDesignToSupabase(studioId: string, flash: FlashDesign): Promise<void> {
-  const row = {
+  const slug =
+    flash.slug && String(flash.slug).trim() !== ''
+      ? String(flash.slug).trim().toLowerCase()
+      : buildFlashSlug(flash.title, flash.id);
+
+  const row: Record<string, unknown> = {
     id: flash.id,
     studio_id: studioId,
     title: flash.title,
@@ -673,7 +683,11 @@ export async function saveFlashDesignToSupabase(studioId: string, flash: FlashDe
     placement: flash.placement || [],
     estimated_duration: flash.estimatedDuration,
     tags: flash.tags || [],
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
+    slug,
+    artist_id: flash.artistId ?? null,
+    featured: flash.featured ?? false,
+    display_order: flash.displayOrder ?? 0,
   };
   const { error } = await supabase.from('inkflow_flash_designs').upsert(row, { onConflict: 'id' });
   if (error) throw error;

@@ -23,6 +23,7 @@ import { AvailabilitySettings } from '../settings/AvailabilitySettings';
 import { VitrineSettings } from '../settings/VitrineSettings';
 import { SlugSettings } from '../settings/SlugSettings';
 import { GeoSettings } from '../settings/GeoSettings';
+import { PublicAppSettings } from '../settings/PublicAppSettings';
 import { InstagramConnect } from '../settings/InstagramConnect';
 import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 import { VitrineLinkButton } from './VitrineLinkButton';
@@ -56,6 +57,7 @@ import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
 import { WelcomeOnboardingFlow, shouldShowWelcomeFlow } from '../onboarding/WelcomeOnboardingFlow';
 import { supabase } from '../../lib/supabase';
 import { getWaitlistFromSupabase, addWaitlistEntryToSupabase, updateWaitlistStatusInSupabase, deleteWaitlistEntryFromSupabase, ensureStudio } from '../../lib/supabaseDashboard';
+import { syncArtistAccountsToSupabase } from '../../lib/inkflowArtistsSync';
 import { createSubscription } from '../../lib/stripeClient';
 import { getSubscription } from '../../lib/subscriptionGuard';
 import { getPlanLimit } from '../../lib/subscriptionPlans';
@@ -117,7 +119,7 @@ export const DashboardPro: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
-  const [settingsTab, setSettingsTab] = useState<'general' | 'payments' | 'care' | 'availability' | 'vitrine' | 'billing' | 'consent' | 'artists' | 'waitlist' | 'loyalty' | 'calendar' | 'messagerie'>('general');
+  const [settingsTab, setSettingsTab] = useState<'general' | 'payments' | 'care' | 'availability' | 'vitrine' | 'public_app' | 'billing' | 'consent' | 'artists' | 'waitlist' | 'loyalty' | 'calendar' | 'messagerie'>('general');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarFavTab, setSidebarFavTab] = useState<'favorites' | 'recent'>('favorites');
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
@@ -306,6 +308,14 @@ export const DashboardPro: React.FC = () => {
       localStorage.setItem(storageKey('inkflow_loyalty_entries'), JSON.stringify(loyaltyEntries));
     } catch (_) { /* ignore */ }
   }, [loyaltyEntries, user?.email, studioId]);
+
+  useEffect(() => {
+    if (!studioId || !useSupabase || artistAccounts.length === 0) return;
+    const t = window.setTimeout(() => {
+      syncArtistAccountsToSupabase(studioId, artistAccounts).catch(() => {});
+    }, 1500);
+    return () => window.clearTimeout(t);
+  }, [studioId, useSupabase, artistAccounts]);
 
   // Auto-checkout: when landing with ?subscribe=starter|pro|studio, redirect to Stripe Payment Link; solo|studio use createSubscription
   const subscribeAttempted = React.useRef(false);
@@ -1596,7 +1606,7 @@ export const DashboardPro: React.FC = () => {
           {!loading && activeTab === 'flash' && (
             <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
-            <FlashGallery designs={flashDesigns} onBook={handleBookFlash} onAddFlash={addFlash} onUpdateFlash={updateFlash} onDeleteFlash={deleteFlash} studioSlug={studioSlug} />
+            <FlashGallery designs={flashDesigns} onBook={handleBookFlash} onAddFlash={addFlash} onUpdateFlash={updateFlash} onDeleteFlash={deleteFlash} studioSlug={studioSlug} artists={artistAccounts} />
             </Suspense>
             </div>
           )}
@@ -1768,6 +1778,7 @@ export const DashboardPro: React.FC = () => {
                     { id: 'availability', label: 'Disponibilités' },
                     { id: 'calendar', label: 'Calendrier' },
                     { id: 'vitrine', label: 'Page vitrine' },
+                    { id: 'public_app', label: 'App client & public' },
                   ] as const).map(tab => (
                     <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
                       className={`px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
@@ -2099,6 +2110,17 @@ export const DashboardPro: React.FC = () => {
                     </p>
                   </div>
                 )
+              )}
+              {settingsTab === 'public_app' && studioId && (
+                <PublicAppSettings
+                  studioId={studioId}
+                  studioSlug={studioSlug}
+                  studioName={(user?.studioName || generalStudioName || 'Studio').trim()}
+                  artistAccounts={artistAccounts}
+                  flashDesigns={flashDesigns}
+                  onUpdateFlash={updateFlash}
+                  onOpenGeoSettings={() => setSettingsTab('general')}
+                />
               )}
               {settingsTab === 'messagerie' && studioId && <InstagramConnect studioId={studioId} />}
             </div>
