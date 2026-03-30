@@ -1,0 +1,24 @@
+{
+  "name": "My Inkflow — Mon Espace Tatouage",
+  "short_name": "My Inkflow",
+  "description": "Trouve ton tatoueur, réserve en un tap, suis la cicatrisation et cumule des points de fidélité.",
+  "start_url": "/client/dashboard",
+  "id": "/client/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait",
+  "theme_color": "#FFFFFF",
+  "background_color": "#FFFFFF",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "categories": ["lifestyle", "health-fitness"],
+  "icons": [
+    { "src": "/pwa-64x64.png",           "sizes": "64x64",   "type": "image/png" },
+    { "src": "/pwa-192x192.png",          "sizes": "192x192", "type": "image/png" },
+    { "src": "/pwa-512x512.png",          "sizes": "512x512", "type": "image/png" },
+    { "src": "/maskable-icon-512x512.png","sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

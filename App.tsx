@@ -1,4 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { useClientManifest } from './hooks/useClientManifest';
 import { ThemeProvider } from 'next-themes';
 import { LANDING_URL } from './lib/urls';
 import { SEO } from './components/SEO';
@@ -64,6 +65,7 @@ const FullScreenSpinner: React.FC = () => (
 const Router: React.FC = () => {
   const [currentPath, setCurrentPath] = useState(window.location.pathname + window.location.search);
   const { isAuthenticated, authLoading } = useAuth();
+  useClientManifest(currentPath.startsWith('/client'));
 
   useEffect(() => {
     const handleLocationChange = () => setCurrentPath(window.location.pathname + window.location.search);
