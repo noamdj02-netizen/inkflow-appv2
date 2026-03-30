@@ -34,11 +34,30 @@ export async function getClientFavorites(clientEmail: string): Promise<Set<strin
     .eq('client_email', clientEmail);
 
   if (error) {
-    console.error('Error fetching favorites:', error);
+    if (import.meta.env.DEV) {
+      console.warn('[clientFavorites] getClientFavorites:', error.message);
+    }
     return new Set();
   }
 
   return new Set((data ?? []).map((f) => f.flash_id));
+}
+
+/** IDs studios favoris (Explore), même compte que les favoris flash (email). */
+export async function getClientStudioFavoriteIds(clientEmail: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('inkflow_client_studio_favorites')
+    .select('studio_id')
+    .eq('client_email', clientEmail);
+
+  if (error) {
+    if (import.meta.env.DEV) {
+      console.warn('[clientFavorites] getClientStudioFavoriteIds:', error.message);
+    }
+    return new Set();
+  }
+
+  return new Set((data ?? []).map((r: { studio_id: string }) => r.studio_id));
 }
 
 export async function getFavoritedFlashes(clientEmail: string) {
@@ -55,7 +74,9 @@ export async function getFavoritedFlashes(clientEmail: string) {
     .eq('client_email', clientEmail);
 
   if (error) {
-    console.error('Error fetching favorited flashes:', error);
+    if (import.meta.env.DEV) {
+      console.warn('[clientFavorites] getFavoritedFlashes:', error.message);
+    }
     return [];
   }
 

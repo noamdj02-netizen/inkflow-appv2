@@ -1,6 +1,6 @@
 /**
  * LoyaltyCard — Carte fidélité 3D flip style Apple Wallet
- * Design : bleu #60A5FA · fond sombre premium · logo Inkflow
+ * Design : bronze / ivoire (aligné espace client) — pas de bleu « SaaS »
  */
 
 import React, { useCallback, useState } from 'react';
@@ -14,16 +14,29 @@ import {
 } from '../../lib/walletNativePass';
 
 const C = {
-  accent:    '#60A5FA',
-  accentDim: 'rgba(96,165,250,0.12)',
-  accentGlow:'0 0 32px rgba(96,165,250,0.22)',
-  text:      '#FFFFFF',
-  textSub:   'rgba(255,255,255,0.55)',
-  textMuted: 'rgba(255,255,255,0.22)',
-  border:    'rgba(96,165,250,0.18)',
-  surface:   '#1A1F2E',
-  hint:      '#6B7280',
+  accent:    '#C9A96E',
+  accentDim: 'rgba(201,169,110,0.14)',
+  accentGlow:'0 0 28px rgba(201,169,110,0.18)',
+  text:      '#F7F4EF',
+  textSub:   'rgba(247,244,239,0.58)',
+  textMuted: 'rgba(247,244,239,0.28)',
+  border:    'rgba(201,169,110,0.22)',
+  surface:   '#16130F',
+  hint:      '#9CA3AF',
+  cardBg0:   '#12100C',
+  cardBg1:   '#1C1812',
+  ink:       '#14120E',
 } as const;
+
+type LoyaltyLevel = { label: string; color: string; next: number | null; nextLabel: string };
+
+function getLoyaltyLevel(stamps: number, cents: number): LoyaltyLevel {
+  const score = stamps * 10 + Math.floor(cents / 500);
+  if (score >= 150) return { label: 'Platinum', color: '#E2E8F0', next: null, nextLabel: '' };
+  if (score >= 60)  return { label: 'Gold',     color: '#FBBF24', next: 150, nextLabel: 'Platinum' };
+  if (score >= 20)  return { label: 'Silver',   color: '#94A3B8', next: 60,  nextLabel: 'Gold' };
+  return              { label: 'Bronze',   color: '#CD7F32', next: 20,  nextLabel: 'Silver' };
+}
 
 interface LoyaltyCardProps {
   firstName: string;
@@ -44,6 +57,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
   accessToken,
 }) => {
   const [flipped, setFlipped] = useState(false);
+  const level = getLoyaltyLevel(stampsCount, cents);
   const [walletSheet, setWalletSheet] = useState<{
     platform: 'apple' | 'google';
     payload: WalletPassJsonOk;
@@ -116,7 +130,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
   );
 
   const qrData = encodeURIComponent(`INK-${code}`);
-  const qrUrl  = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&bgcolor=1A1F2E&color=60A5FA&data=${qrData}&margin=10`;
+  const qrUrl  = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&color=C9A96E&bgcolor=16130F&data=${qrData}&margin=10`;
 
   return (
     <div className="space-y-3">
@@ -137,19 +151,19 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
-              background: 'linear-gradient(145deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)',
+              background: `linear-gradient(145deg, ${C.cardBg0} 0%, ${C.cardBg1} 50%, ${C.cardBg0} 100%)`,
               border: `1px solid ${C.border}`,
               boxShadow: `${C.accentGlow}, 0 8px 32px rgba(0,0,0,0.5)`,
             }}
           >
             {/* Glow orbs */}
             <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full"
-              style={{ background: 'rgba(96,165,250,0.12)', filter: 'blur(40px)' }} />
+              style={{ background: 'rgba(201,169,110,0.1)', filter: 'blur(40px)' }} />
             <div className="absolute -left-6 bottom-0 w-32 h-32 rounded-full"
-              style={{ background: 'rgba(96,165,250,0.06)', filter: 'blur(30px)' }} />
+              style={{ background: 'rgba(201,169,110,0.05)', filter: 'blur(30px)' }} />
             {/* Stripe déco */}
             <div className="absolute top-0 left-0 right-0 h-0.5 rounded-full"
-              style={{ background: 'linear-gradient(90deg, transparent, rgba(96,165,250,0.5), transparent)' }} />
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(201,169,110,0.45), transparent)' }} />
 
             <div className="relative px-6 pt-5 pb-5 h-full flex flex-col justify-between">
               {/* Header : logo + label */}
@@ -170,8 +184,8 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
                   </div>
                 </div>
                 <div className="px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider"
-                  style={{ background: C.accentDim, color: C.accent, border: `1px solid ${C.border}` }}>
-                  Gold
+                  style={{ background: 'rgba(255,255,255,0.08)', color: level.color, border: `1px solid ${level.color}40` }}>
+                  {level.label}
                 </div>
               </div>
 
@@ -188,7 +202,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
 
               {/* Footer */}
               <div className="flex items-center justify-between pt-3"
-                style={{ borderTop: `1px solid rgba(96,165,250,0.08)` }}>
+                style={{ borderTop: '1px solid rgba(201,169,110,0.1)' }}>
                 <div>
                   <p className="text-[9px] uppercase tracking-[0.18em] mb-0.5" style={{ color: C.textMuted }}>
                     Membre
@@ -209,13 +223,13 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
-              background: 'linear-gradient(145deg, #0F172A 0%, #1E293B 50%, #0F172A 100%)',
+              background: `linear-gradient(145deg, ${C.cardBg0} 0%, ${C.cardBg1} 50%, ${C.cardBg0} 100%)`,
               border: `1px solid ${C.border}`,
               boxShadow: `${C.accentGlow}, 0 8px 32px rgba(0,0,0,0.5)`,
             }}
           >
             <div className="absolute top-0 left-0 right-0 h-0.5 rounded-full"
-              style={{ background: 'linear-gradient(90deg, transparent, rgba(96,165,250,0.5), transparent)' }} />
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(201,169,110,0.45), transparent)' }} />
 
             <div className="relative px-5 py-5 h-full flex items-center gap-4">
               {/* QR */}
@@ -253,7 +267,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
                         }}>
                         {i < stampsCount && (
                           <svg viewBox="0 0 8 8" width="8" height="8">
-                            <path d="M1.5 4L3.5 6L6.5 2" stroke="#0F172A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                            <path d="M1.5 4L3.5 6L6.5 2" stroke={C.ink} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
                           </svg>
                         )}
                       </div>
@@ -283,15 +297,15 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
             disabled={walletLoading !== null}
             className="flex items-center justify-center gap-2 py-3 rounded-2xl border text-xs font-bold transition-all active:scale-[0.97] disabled:opacity-60"
             style={{
-              borderColor: 'rgba(37,99,235,0.35)',
-              background: 'rgba(96,165,250,0.14)',
-              color: '#0f172a',
+              borderColor: 'rgba(107,83,69,0.35)',
+              background: 'rgba(107,83,69,0.1)',
+              color: '#2D241C',
             }}
             onClick={() => handleWallet(platform)}>
             {walletLoading === platform ? (
-              <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" style={{ color: '#2563eb' }} />
+              <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" style={{ color: '#6B5345' }} />
             ) : (
-              <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: '#2563eb' }} />
+              <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: '#6B5345' }} />
             )}
             <span className="truncate">{walletLoading === platform ? '…' : label}</span>
           </button>
@@ -305,7 +319,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4"
-            style={{ background: 'rgba(15,23,42,0.55)' }}
+            style={{ background: 'rgba(18,16,12,0.55)' }}
             onClick={() => setWalletSheet(null)}
           >
             <motion.div
@@ -315,19 +329,19 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
               transition={{ type: 'spring', stiffness: 380, damping: 32 }}
               className="w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden"
               style={{
-                background: '#fff',
-                borderColor: 'rgba(37,99,235,0.2)',
-                color: '#0f172a',
+                background: '#FAFAF8',
+                borderColor: 'rgba(107,83,69,0.18)',
+                color: '#1a1510',
               }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#2563eb' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#6B5345' }}>
                     {walletSheet.platform === 'apple' ? 'Apple Wallet' : 'Google Wallet'}
                   </p>
                   <h3 className="text-lg font-black leading-tight">
-                    {walletSheet.payload.configured ? 'Presque fini' : 'Ajout de la carte'}
+                    {walletSheet.payload.configured ? 'Presque fini' : 'Carte Wallet'}
                   </h3>
                 </div>
                 <button
@@ -345,7 +359,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
                   {walletSheet.payload.userMessage}
                 </p>
                 {walletSheet.payload.clientCode ? (
-                  <div className="rounded-2xl border p-4 flex items-center justify-between gap-3" style={{ borderColor: 'rgba(37,99,235,0.25)', background: 'rgba(96,165,250,0.08)' }}>
+                  <div className="rounded-2xl border p-4 flex items-center justify-between gap-3" style={{ borderColor: 'rgba(107,83,69,0.22)', background: 'rgba(201,169,110,0.08)' }}>
                     <div className="min-w-0">
                       <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: '#64748b' }}>Code client</p>
                       <p className="text-lg font-black font-mono tracking-widest truncate">{walletSheet.payload.clientCode}</p>
@@ -354,7 +368,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
                       type="button"
                       onClick={() => copyCode(walletSheet.payload.clientCode)}
                       className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all active:scale-95"
-                      style={{ borderColor: 'rgba(37,99,235,0.35)', background: '#fff', color: '#1d4ed8' }}
+                      style={{ borderColor: 'rgba(107,83,69,0.35)', background: '#fff', color: '#5C4A3A' }}
                     >
                       {copyOk ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                       {copyOk ? 'Copié' : 'Copier'}
@@ -370,7 +384,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
                   type="button"
                   onClick={() => setWalletSheet(null)}
                   className="w-full py-3.5 rounded-2xl text-sm font-bold transition-all active:scale-[0.98]"
-                  style={{ background: '#2563eb', color: '#fff' }}
+                  style={{ background: '#6B5345', color: '#FAFAF8' }}
                 >
                   Compris
                 </button>

@@ -30,7 +30,6 @@ const ReservationSuccessPage = lazy(() => import('./pages/public/ReservationSucc
 const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
 const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
 const AidePage = lazy(() => import('./pages/AidePage').then(m => ({ default: m.AidePage })));
-const DemoSandboxPage = lazy(() => import('./pages/DemoSandboxPage').then(m => ({ default: m.DemoSandboxPage })));
 const DashboardDemoPage = lazy(() => import('./pages/DashboardDemoPage').then(m => ({ default: m.DashboardDemoPage })));
 const FeatureDetailPage = lazy(() => import('./pages/features/FeatureDetailPage').then(m => ({ default: m.FeatureDetailPage })));
 const InstagramCallbackPage = lazy(() => import('./pages/InstagramCallbackPage').then(m => ({ default: m.InstagramCallbackPage })));
@@ -189,7 +188,7 @@ const Router: React.FC = () => {
   // ErrorBoundary par route : évite un crash complet si une page publique plante
   const pageContent = (
     <ErrorBoundary
-      fallback={
+      fallback={({ error }) => (
         <div className="min-h-screen bg-neutral-50 dark:bg-[var(--bg-primary)] flex items-center justify-center p-6">
           <div className="max-w-md w-full text-center">
             <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -199,6 +198,11 @@ const Router: React.FC = () => {
             <p className="text-[var(--text-secondary)] text-sm mb-6">
               Cette page n&apos;a pas pu s&apos;afficher. Réessayez ou retournez à l&apos;accueil.
             </p>
+            {import.meta.env.DEV && error?.message ? (
+              <p className="text-left text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 p-3 rounded-lg mb-6 font-mono break-all">
+                {error.message}
+              </p>
+            ) : null}
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 type="button"
@@ -218,7 +222,7 @@ const Router: React.FC = () => {
             </div>
           </div>
         </div>
-      }
+      )}
     >
       <Component {...props} />
     </ErrorBoundary>
@@ -263,7 +267,9 @@ const UnhandledRejectionHandler: React.FC = () => {
     const handler = (event: PromiseRejectionEvent) => {
       const reason = event.reason;
       const msg = reason instanceof Error ? reason.message : String(reason);
-      console.error('[unhandledrejection]', reason);
+      if (import.meta.env.DEV) {
+        console.error('[unhandledrejection]', reason);
+      }
       try {
         toast.error(`Erreur inattendue : ${msg.slice(0, 80)}${msg.length > 80 ? '…' : ''}`);
       } catch {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Star, Calendar, Heart, ArrowLeft, Share2, Instagram, ExternalLink } from 'lucide-react';
+import { MapPin, Star, Calendar, Heart, ArrowLeft, Share2, Instagram, ExternalLink, MessageCircle, Bell, Check, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { CX } from '../../components/client/clientExperienceTypes';
 
@@ -41,6 +41,13 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
   const [error, setError] = useState<string | null>(null);
   const [following, setFollowing] = useState(false);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [waitlisted, setWaitlisted] = useState(false);
+  const [waitlistDone, setWaitlistDone] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+
+  useEffect(() => {
+    setAvatarBroken(false);
+  }, [artistSlug]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -121,6 +128,29 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
     }
   };
 
+  const joinWaitlist = async () => {
+    if (!sessionEmail || !artist) return;
+    await supabase.from('inkflow_waitlist').upsert({
+      client_email: sessionEmail,
+      artist_id: artist.id,
+      studio_id: artist.studio_id,
+      created_at: new Date().toISOString(),
+    }, { onConflict: 'client_email,artist_id' });
+    setWaitlisted(true);
+    setWaitlistDone(true);
+    setTimeout(() => setWaitlistDone(false), 4000);
+  };
+
+  const openChat = () => {
+    if (!sessionEmail || !artist) { window.location.href = '/client'; return; }
+    // Thread ID déterministe : client+artiste
+    let h = 5381;
+    const seed = `${sessionEmail}-${artist.id}`;
+    for (let i = 0; i < seed.length; i++) h = ((h << 5) + h) + seed.charCodeAt(i);
+    const threadId = `a-${Math.abs(h).toString(36)}`;
+    window.location.href = `/c/${threadId}`;
+  };
+
   const share = async () => {
     if (navigator.share) {
       try {
@@ -159,7 +189,8 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
         <button
           type="button"
           onClick={() => window.history.back()}
-          className="absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md border z-10"
+          aria-label="Retour"
+          className="absolute top-4 left-4 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md border z-10"
           style={{ background: 'rgba(0,0,0,0.4)', borderColor: CX.border }}
         >
           <ArrowLeft className="w-5 h-5" style={{ color: CX.text }} />
@@ -167,7 +198,8 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
         <button
           type="button"
           onClick={share}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md border z-10"
+          aria-label="Partager"
+          className="absolute top-4 right-4 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md border z-10"
           style={{ background: 'rgba(0,0,0,0.4)', borderColor: CX.border }}
         >
           <Share2 className="w-5 h-5" style={{ color: CX.text }} />
@@ -178,14 +210,23 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
       <div className="px-4 -mt-14 relative z-10">
         <div className="flex items-end gap-4">
           <div
-            className="w-28 h-28 rounded-3xl border-4 flex items-center justify-center text-3xl font-black shrink-0"
+            className="w-28 h-28 rounded-3xl border-4 flex items-center justify-center text-3xl font-black shrink-0 overflow-hidden relative"
             style={{
               borderColor: CX.bg,
-              background: artist.avatar_url ? `url(${artist.avatar_url}) center/cover` : CX.surface,
+              background: CX.surface,
               color: CX.accent,
             }}
           >
-            {!artist.avatar_url && artist.name.slice(0, 1)}
+            {artist.avatar_url && !avatarBroken ? (
+              <img
+                src={artist.avatar_url}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={() => setAvatarBroken(true)}
+              />
+            ) : (
+              <span className="relative z-10">{artist.name.slice(0, 1)}</span>
+            )}
           </div>
           <div className="flex-1 pb-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -260,28 +301,69 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
         )}
 
         {/* Action buttons */}
-        <div className="flex gap-3 mt-6">
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={toggleFollow}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-semibold transition-all"
-            style={{
-              background: following ? CX.accent : CX.surface,
-              borderColor: following ? CX.accent : CX.border,
-              color: following ? '#000' : CX.text,
-            }}
-          >
-            <Heart className="w-4 h-4" style={{ fill: following ? '#000' : 'none' }} />
-            {following ? 'Suivi' : 'Suivre'}
-          </motion.button>
-          <a
-            href={artist.studio_slug ? `/book/${artist.studio_slug}` : '#'}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold transition-all"
-            style={{ background: CX.accent, color: '#000' }}
-          >
-            <Calendar className="w-4 h-4" />
-            Réserver
-          </a>
+        <div className="space-y-3 mt-6">
+          <div className="flex gap-3">
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={toggleFollow}
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-semibold transition-all"
+              style={{
+                background: following ? CX.accent : CX.surface,
+                borderColor: following ? CX.accent : CX.border,
+                color: following ? '#000' : CX.text,
+              }}
+            >
+              <Heart className="w-4 h-4" style={{ fill: following ? '#000' : 'none' }} />
+              {following ? 'Suivi' : 'Suivre'}
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={openChat}
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-semibold transition-all"
+              style={{ background: CX.surface, borderColor: CX.border, color: CX.text }}
+            >
+              <MessageCircle className="w-4 h-4" style={{ color: CX.accent }} />
+              Contacter
+            </motion.button>
+          </div>
+
+          {artist.available_now ? (
+            <a
+              href={artist.studio_slug ? `/book/${artist.studio_slug}` : '#'}
+              className="flex w-full items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold transition-all"
+              style={{ background: CX.accent, color: '#000' }}
+            >
+              <Calendar className="w-4 h-4" />
+              Réserver
+            </a>
+          ) : (
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={!waitlisted ? joinWaitlist : undefined}
+              className="flex w-full items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold border transition-all"
+              style={{
+                background: waitlisted ? 'rgba(34,197,94,0.1)' : CX.surface,
+                borderColor: waitlisted ? 'rgba(34,197,94,0.5)' : CX.border,
+                color: waitlisted ? '#4ade80' : CX.muted,
+              }}
+            >
+              <AnimatePresence mode="wait">
+                {waitlistDone ? (
+                  <motion.span key="ok" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                    className="flex items-center gap-2">
+                    <Check className="w-4 h-4" /> Sur liste d'attente !
+                  </motion.span>
+                ) : (
+                  <motion.span key="w" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                    className="flex items-center gap-2">
+                    <Bell className="w-4 h-4" />
+                    {waitlisted ? 'Liste d\'attente ✓' : 'Rejoindre la liste d\'attente'}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          )}
         </div>
       </div>
 
@@ -305,13 +387,22 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
                 style={{ borderColor: CX.border, background: CX.surface }}
               >
                 <div
-                  className="aspect-square"
+                  className="aspect-square relative overflow-hidden"
                   style={{
-                    background: f.image_url
-                      ? `url(${f.image_url}) center/cover`
-                      : 'linear-gradient(135deg, #1a1a1a, #2a1810)',
+                    background: 'linear-gradient(135deg, #1a1a1a, #2a1810)',
                   }}
-                />
+                >
+                  {f.image_url ? (
+                    <img
+                      src={f.image_url}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : null}
+                </div>
                 <div className="p-3">
                   <p className="text-xs font-semibold truncate" style={{ color: CX.text }}>
                     {f.title}

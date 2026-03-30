@@ -3,6 +3,8 @@
  * Utilisé comme fallback avant que la géolocalisation ne charge.
  */
 
+import { CLIENT_DEMO_FLASH_IMAGES, CLIENT_DEMO_STUDIO_PORTFOLIOS } from './clientTattooDemoImages';
+
 export interface DisplayFlash {
   id: string;
   name: string;
@@ -15,6 +17,8 @@ export interface DisplayFlash {
   grad: [string, string];
   hot: boolean;
   imageUrl?: string;
+  /** Timestamp ms d'expiration — si défini, affiche un countdown. */
+  expiresAt?: number;
 }
 
 export interface SheetStudio {
@@ -26,8 +30,12 @@ export interface SheetStudio {
   rating: number;
   distLabel: string;
   grad: [string, string];
+  /** Photo de profil studio / tatoueur (cartes découverte), pas une image portfolio. */
+  avatarUrl?: string | null;
   portfolioImages: string[];
   city?: string;
+  /** Distance en km (géoloc active) — filtres Inspiration « près de moi » */
+  distanceKm?: number;
 }
 
 // ── Studios ─────────────────────────────────────────────────────────────────
@@ -42,11 +50,8 @@ export const ROUEN_STUDIOS: SheetStudio[] = [
     distLabel: '1.4 km',
     grad: ['#111111', '#2A2A2A'],
     city: 'Rouen',
-    portfolioImages: [
-      'https://images.unsplash.com/photo-1562962230-14de672e03e1?w=400&q=80',
-      'https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400&q=80',
-      'https://images.unsplash.com/photo-1595475038784-bbe439ff41e6?w=400&q=80',
-    ],
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+    portfolioImages: CLIENT_DEMO_STUDIO_PORTFOLIOS['thomas-leblanc-blackwork'],
   },
   {
     id: 'rouen-2',
@@ -56,13 +61,10 @@ export const ROUEN_STUDIOS: SheetStudio[] = [
     styleLabel: 'Fine line',
     rating: 5.0,
     distLabel: '0.9 km',
-    grad: ['#1A0A2E', '#3D1A6B'],
+    grad: ['#1C1612', '#3A3028'],
     city: 'Rouen',
-    portfolioImages: [
-      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
-      'https://images.unsplash.com/photo-1604076913837-52ab5629fde9?w=400&q=80',
-      'https://images.unsplash.com/photo-1563396983906-b3795482a59a?w=400&q=80',
-    ],
+    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+    portfolioImages: CLIENT_DEMO_STUDIO_PORTFOLIOS['lea-moreau-fineline'],
   },
   {
     id: 'rouen-3',
@@ -72,13 +74,10 @@ export const ROUEN_STUDIOS: SheetStudio[] = [
     styleLabel: 'Japonais',
     rating: 4.8,
     distLabel: '2.1 km',
-    grad: ['#0A1A2E', '#0F3A5A'],
+    grad: ['#181612', '#2C2820'],
     city: 'Rouen',
-    portfolioImages: [
-      'https://images.unsplash.com/photo-1609501676725-7186f017a4b7?w=400&q=80',
-      'https://images.unsplash.com/photo-1536766820879-059fec98ec0a?w=400&q=80',
-      'https://images.unsplash.com/photo-1580618864180-b0b3c8f23a33?w=400&q=80',
-    ],
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
+    portfolioImages: CLIENT_DEMO_STUDIO_PORTFOLIOS['hugo-martin-japonais'],
   },
   {
     id: 'rouen-4',
@@ -90,11 +89,8 @@ export const ROUEN_STUDIOS: SheetStudio[] = [
     distLabel: '3.3 km',
     grad: ['#0A1E0A', '#143514'],
     city: 'Rouen',
-    portfolioImages: [
-      'https://images.unsplash.com/photo-1564861257520-6eb0adb6a32b?w=400&q=80',
-      'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&q=80',
-      'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&q=80',
-    ],
+    avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400',
+    portfolioImages: CLIENT_DEMO_STUDIO_PORTFOLIOS['sarah-dupont-realiste'],
   },
 ];
 
@@ -111,7 +107,8 @@ export const ROUEN_FLASH: DisplayFlash[] = [
     h: 210,
     grad: ['#111111', '#2A2A2A'],
     hot: true,
-    imageUrl: 'https://images.unsplash.com/photo-1562962230-14de672e03e1?w=400&q=80',
+    imageUrl: CLIENT_DEMO_FLASH_IMAGES.rf1,
+    expiresAt: new Date('2026-03-29T18:30:00+02:00').getTime(),
   },
   {
     id: 'rf2',
@@ -122,9 +119,9 @@ export const ROUEN_FLASH: DisplayFlash[] = [
     dist: '0.9km',
     price: 120,
     h: 175,
-    grad: ['#1A0A2E', '#3D1A6B'],
+    grad: ['#1C1612', '#3A3028'],
     hot: false,
-    imageUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
+    imageUrl: CLIENT_DEMO_FLASH_IMAGES.rf2,
   },
   {
     id: 'rf3',
@@ -135,9 +132,10 @@ export const ROUEN_FLASH: DisplayFlash[] = [
     dist: '2.1km',
     price: 380,
     h: 250,
-    grad: ['#0A1A2E', '#0F3A5A'],
+    grad: ['#181612', '#2C2820'],
     hot: true,
-    imageUrl: 'https://images.unsplash.com/photo-1609501676725-7186f017a4b7?w=400&q=80',
+    imageUrl: CLIENT_DEMO_FLASH_IMAGES.rf3,
+    expiresAt: new Date('2026-03-29T22:00:00+02:00').getTime(),
   },
   {
     id: 'rf4',
@@ -150,7 +148,7 @@ export const ROUEN_FLASH: DisplayFlash[] = [
     h: 230,
     grad: ['#0A1E0A', '#143514'],
     hot: false,
-    imageUrl: 'https://images.unsplash.com/photo-1564861257520-6eb0adb6a32b?w=400&q=80',
+    imageUrl: CLIENT_DEMO_FLASH_IMAGES.rf4,
   },
   {
     id: 'rf5',
@@ -163,7 +161,7 @@ export const ROUEN_FLASH: DisplayFlash[] = [
     h: 185,
     grad: ['#111111', '#2A2A2A'],
     hot: false,
-    imageUrl: 'https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400&q=80',
+    imageUrl: CLIENT_DEMO_FLASH_IMAGES.rf5,
   },
   {
     id: 'rf6',
@@ -174,8 +172,9 @@ export const ROUEN_FLASH: DisplayFlash[] = [
     dist: '0.9km',
     price: 95,
     h: 160,
-    grad: ['#1A0A2E', '#3D1A6B'],
+    grad: ['#1C1612', '#3A3028'],
     hot: true,
-    imageUrl: 'https://images.unsplash.com/photo-1604076913837-52ab5629fde9?w=400&q=80',
+    imageUrl: CLIENT_DEMO_FLASH_IMAGES.rf6,
+    expiresAt: new Date('2026-03-29T15:20:00+02:00').getTime(),
   },
 ];

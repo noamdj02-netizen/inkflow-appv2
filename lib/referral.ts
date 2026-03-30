@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { getInviteBaseUrl } from './urls';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -65,6 +66,5 @@ export async function getReferralStats(email: string): Promise<{
 }
 
 export function generateShareUrl(code: string): string {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://app.ink-flow.me';
-  return `${baseUrl}/invite/${code}`;
+  return `${getInviteBaseUrl()}/${code}`;
 }

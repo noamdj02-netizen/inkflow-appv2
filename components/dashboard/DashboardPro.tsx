@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen, Smartphone, Heart, Globe, FileCheck, Crown, ListOrdered, type LucideIcon } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
@@ -90,6 +90,121 @@ const tabs: { id: TabId | 'referral'; label: string; icon: React.ReactNode; badg
   // { id: 'referral', label: '🎁 Mois offerts', icon: <Gift {...iconProps} />, href: '/referral' }, // V2
   { id: 'settings', label: 'Paramètres', icon: <Settings {...iconProps} /> },
 ];
+
+type SettingsTabId =
+  | 'general'
+  | 'payments'
+  | 'billing'
+  | 'care'
+  | 'consent'
+  | 'availability'
+  | 'calendar'
+  | 'vitrine'
+  | 'public_app'
+  | 'artists'
+  | 'waitlist'
+  | 'loyalty'
+  | 'messagerie';
+
+const SETTINGS_TAB_META: Record<
+  SettingsTabId,
+  { label: string; Icon: LucideIcon; description: string }
+> = {
+  general: {
+    label: 'Général',
+    Icon: Settings,
+    description:
+      'Identité du studio, photo, coordonnées, lien vitrine, slug d’URL personnalisé et position sur la carte pour la découverte client.',
+  },
+  payments: {
+    label: 'Paiements',
+    Icon: CreditCard,
+    description:
+      'Connexion Stripe, acomptes, liens de paiement et règles financières liées aux réservations.',
+  },
+  billing: {
+    label: 'Abonnement',
+    Icon: Crown,
+    description:
+      'Formule InkFlow, période d’essai, renouvellement et limites incluses dans votre plan (clients, stockage, etc.).',
+  },
+  care: {
+    label: 'Soins post-tattoo',
+    Icon: Heart,
+    description:
+      'Fiches de soins et messages automatiques pour accompagner vos clients après la séance.',
+  },
+  consent: {
+    label: 'Consentement',
+    Icon: FileCheck,
+    description:
+      'Modèles de formulaires de consentement : textes, champs et documents adaptés à votre pratique.',
+  },
+  availability: {
+    label: 'Disponibilités',
+    Icon: Clock,
+    description:
+      'Créneaux ouverts, durées de séance et règles pour les prises de rendez-vous en ligne.',
+  },
+  calendar: {
+    label: 'Calendrier',
+    Icon: Calendar,
+    description:
+      'Synchronisation agenda (Google), créneaux bloqués et comportement des rendez-vous importés.',
+  },
+  vitrine: {
+    label: 'Page vitrine',
+    Icon: Globe,
+    description:
+      'Thème visuel, textes, médias, sections et lien public : tout ce que voient les visiteurs avant de réserver.',
+  },
+  public_app: {
+    label: 'App client & public',
+    Icon: Smartphone,
+    description:
+      'Bio studio, profils tatoueurs, flashs « vedette », aperçu mobile : cohérence entre vitrine et app client.',
+  },
+  artists: {
+    label: 'Équipe',
+    Icon: Users,
+    description:
+      'Artistes du studio, rôles et fiches publiques pour la réservation et la vitrine.',
+  },
+  waitlist: {
+    label: 'Liste d’attente',
+    Icon: ListOrdered,
+    description:
+      'File d’attente des demandes, notifications et conversion en rendez-vous.',
+  },
+  loyalty: {
+    label: 'Fidélité',
+    Icon: Star,
+    description:
+      'Points, paliers et récompenses pour fidéliser vos clients dans le temps.',
+  },
+  messagerie: {
+    label: 'Messagerie',
+    Icon: MessageSquare,
+    description:
+      'Connexion Instagram / messages : centralisez les échanges avec vos prospects et clients.',
+  },
+};
+
+const SETTINGS_MAIN_TABS: { id: SettingsTabId; label: string }[] = [
+  { id: 'general', label: 'Général' },
+  { id: 'payments', label: 'Paiements' },
+  { id: 'billing', label: 'Abonnement' },
+  { id: 'care', label: 'Soins post-tattoo' },
+  { id: 'consent', label: 'Consentement' },
+  { id: 'availability', label: 'Disponibilités' },
+  { id: 'calendar', label: 'Calendrier' },
+  { id: 'vitrine', label: 'Page vitrine' },
+  { id: 'public_app', label: 'App client & public' },
+];
+
+/** Mobile : 5 onglets en haut (grille), le reste en bas de page — évite la bande horizontale illisible */
+const SETTINGS_TABS_MOBILE_TOP = SETTINGS_MAIN_TABS.slice(0, 5);
+const SETTINGS_TABS_MOBILE_BOTTOM = SETTINGS_MAIN_TABS.slice(5);
 
 export const DashboardPro: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
@@ -452,7 +567,7 @@ export const DashboardPro: React.FC = () => {
     const needVitrine =
       activeTab === 'overview' ||
       activeTab === 'portfolio' ||
-      (activeTab === 'settings' && settingsTab === 'vitrine');
+      (activeTab === 'settings' && (settingsTab === 'vitrine' || settingsTab === 'public_app'));
     if (!needVitrine) return;
     setVitrineLoading(activeTab === 'portfolio');
     const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user.studioName);
@@ -1748,47 +1863,81 @@ export const DashboardPro: React.FC = () => {
           {!loading && activeTab === 'settings' && (
             <div className="min-w-0">
             <div className="settings-page-landing">
-              {/* Header style landing */}
-              <div className="mb-8">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white font-display">Paramètres</h1>
-                <p className="text-zinc-500 dark:text-zinc-400 mt-1.5 text-sm sm:text-base max-w-2xl">
-                  Personnalisez votre studio, configurez vos réservations, paiements, disponibilités et page vitrine. Tous vos réglages au même endroit.
+              {/* Onglets : en premier — desktop = défilement horizontal ; mobile = grille haut + grille bas (fin de page) */}
+              <div className="md:hidden sticky top-0 z-20 -mx-4 px-4 py-2 mb-4 bg-zinc-50/95 dark:bg-black/95 backdrop-blur-md border-b border-zinc-200/70 dark:border-zinc-800">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2 px-0.5">
+                  Sections
                 </p>
+                <div
+                  className="grid grid-cols-2 gap-2"
+                  role="tablist"
+                  aria-label="Sections des paramètres (partie haute)"
+                >
+                  {SETTINGS_TABS_MOBILE_TOP.map((tab) => {
+                    const { Icon } = SETTINGS_TAB_META[tab.id];
+                    const active = settingsTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setSettingsTab(tab.id)}
+                        title={SETTINGS_TAB_META[tab.id].description}
+                        className={`inline-flex items-center gap-2 rounded-xl px-2.5 py-2.5 text-left text-xs font-medium transition-all duration-200 min-h-[44px] active:scale-[0.98] ${
+                          active
+                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
+                            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white border border-zinc-200/50 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/30'
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : 'opacity-80'}`} aria-hidden />
+                        <span className="leading-tight">{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              {/* Navigation tabs style pill */}
-              <div className="flex items-center gap-2 -mx-4 px-4 sm:mx-0 sm:px-0 mb-8">
+
+              <div className="hidden md:flex items-center gap-2 mb-4">
                 <button
                   type="button"
                   onClick={(e) => {
                     const el = e.currentTarget.nextElementSibling;
                     if (el) el.scrollBy({ left: -200, behavior: 'smooth' });
                   }}
-                  className="hidden sm:flex flex-shrink-0 w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 items-center justify-center text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all"
+                  className="flex flex-shrink-0 w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 items-center justify-center text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all"
                   aria-label="Défiler à gauche"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <div className="flex-1 min-w-0 overflow-x-auto scrollbar-hide flex gap-1 flex-nowrap py-1.5 px-1 rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800" style={{ scrollBehavior: 'smooth' }}>
-                  {([
-                    { id: 'general', label: 'Général' },
-                    { id: 'payments', label: 'Paiements' },
-                    { id: 'billing', label: 'Abonnement' },
-                    { id: 'care', label: 'Soins post-tattoo' },
-                    { id: 'consent', label: 'Consentement' },
-                    { id: 'availability', label: 'Disponibilités' },
-                    { id: 'calendar', label: 'Calendrier' },
-                    { id: 'vitrine', label: 'Page vitrine' },
-                    { id: 'public_app', label: 'App client & public' },
-                  ] as const).map(tab => (
-                    <button key={tab.id} onClick={() => setSettingsTab(tab.id)}
-                      className={`px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 ${
-                        settingsTab === tab.id
-                          ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-                          : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-800/50'
-                      }`}>
-                      {tab.label}
-                    </button>
-                  ))}
+                <div
+                  className="flex-1 min-w-0 overflow-x-auto scrollbar-hide flex gap-1 flex-nowrap py-1.5 px-1 rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800"
+                  style={{ scrollBehavior: 'smooth' }}
+                  role="tablist"
+                  aria-label="Sections des paramètres"
+                >
+                  {SETTINGS_MAIN_TABS.map((tab) => {
+                    const { Icon } = SETTINGS_TAB_META[tab.id];
+                    const active = settingsTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setSettingsTab(tab.id)}
+                        title={SETTINGS_TAB_META[tab.id].description}
+                        className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 min-h-[44px] active:scale-[0.98] ${
+                          active
+                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
+                            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-800/50 border border-transparent'
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : 'opacity-80'}`} aria-hidden />
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
                 <button
                   type="button"
@@ -1796,12 +1945,97 @@ export const DashboardPro: React.FC = () => {
                     const el = e.currentTarget.previousElementSibling;
                     if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
                   }}
-                  className="hidden sm:flex flex-shrink-0 w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 items-center justify-center text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all"
+                  className="flex flex-shrink-0 w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 items-center justify-center text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-all"
                   aria-label="Défiler à droite"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
+
+              {/* En-tête personnalisé + accès rapide vitrine */}
+              <div className="relative overflow-hidden rounded-2xl border border-zinc-200/90 dark:border-zinc-800 bg-gradient-to-br from-zinc-50 via-white to-zinc-50/80 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 p-6 sm:p-8 mb-6 sm:mb-8">
+                <div className="absolute top-0 right-0 w-40 h-40 sm:w-56 sm:h-56 rounded-full bg-emerald-500/10 dark:bg-emerald-400/5 blur-3xl pointer-events-none" aria-hidden />
+                <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">
+                      Centre de configuration
+                    </p>
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white font-display">
+                      Paramètres
+                    </h1>
+                    <p className="text-zinc-600 dark:text-zinc-400 mt-2 text-sm sm:text-base max-w-2xl leading-relaxed">
+                      {user?.studioName?.trim() ? (
+                        <>
+                          Personnalisez <span className="font-semibold text-zinc-800 dark:text-zinc-200">{user.studioName.trim()}</span> : image publique, réservations, paiements, équipe et expérience dans l&apos;app client — tout se pilote ici, par thématique.
+                        </>
+                      ) : (
+                        <>
+                          Configurez votre studio pas à pas : identité, vitrine, disponibilités, paiements et lien avec l&apos;app client.
+                        </>
+                      )}
+                    </p>
+                    <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      <li className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        Même design que vos pages publiques (zinc, cartes arrondies)
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                        Sauvegarde cloud quand Supabase est connecté
+                      </li>
+                    </ul>
+                  </div>
+                  {studioSlug ? (
+                    <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                      <a
+                        href={`/studio/${studioSlug}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] shadow-sm"
+                      >
+                        <ExternalLink className="w-4 h-4 shrink-0" />
+                        Voir la page vitrine
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setSettingsTab('vitrine')}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]"
+                      >
+                        <Globe className="w-4 h-4 shrink-0 text-blue-500" />
+                        Personnaliser la vitrine
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Bandeau contextuel : section active + aide à la personnalisation */}
+              <div
+                className="mb-8 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-900/40 px-4 py-4 sm:px-5 sm:py-4"
+                role="region"
+                aria-live="polite"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                  {(() => {
+                    const meta = SETTINGS_TAB_META[settingsTab];
+                    const SectionIcon = meta.Icon;
+                    return (
+                      <>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 shadow-sm">
+                          <SectionIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" aria-hidden />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                            {meta.label}
+                          </p>
+                          <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed mt-1">{meta.description}</p>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
               {settingsTab === 'general' && (
                 <div className="space-y-6 max-w-2xl w-full overflow-hidden">
                   {/* Lien vitrine */}
@@ -2120,9 +2354,68 @@ export const DashboardPro: React.FC = () => {
                   flashDesigns={flashDesigns}
                   onUpdateFlash={updateFlash}
                   onOpenGeoSettings={() => setSettingsTab('general')}
+                  studioTagline={vitrineData?.tagline ?? ''}
+                  studioDescription={vitrineData?.description ?? ''}
+                  previewCityLabel={
+                    vitrineData?.address?.trim()
+                      ? vitrineData.address.split('\n')[0].trim().slice(0, 48)
+                      : undefined
+                  }
+                  onSaveStudioCopy={
+                    user?.email && user?.studioName
+                      ? async ({ tagline, description }) => {
+                          const slug =
+                            studioSlug != null && studioSlug !== '' ? studioSlug : getVitrineSlug(user.studioName!);
+                          const base = vitrineData ?? defaultVitrineData(slug);
+                          const newData: VitrineData = { ...base, tagline, description };
+                          setVitrineData(newData);
+                          try {
+                            await saveVitrineDataAsync(slug, newData, user.email!, user.studioName!);
+                            toast.success('Texte public enregistré');
+                          } catch {
+                            toast.warning('Enregistré localement. Synchronisation à réessayer.');
+                          }
+                        }
+                      : undefined
+                  }
                 />
               )}
               {settingsTab === 'messagerie' && studioId && <InstagramConnect studioId={studioId} />}
+
+              {/* Mobile : 2e rangée d’onglets en bas (planning, vitrine, app client) */}
+              <div
+                id="settings-nav-bottom"
+                className="md:hidden mt-10 pt-6 pb-2 border-t border-zinc-200/80 dark:border-zinc-800"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2 px-0.5">
+                  Planning & vitrine
+                </p>
+                <nav className="grid grid-cols-2 gap-2" aria-label="Autres sections des paramètres">
+                  {SETTINGS_TABS_MOBILE_BOTTOM.map((tab) => {
+                    const { Icon } = SETTINGS_TAB_META[tab.id];
+                    const active = settingsTab === tab.id;
+                    return (
+                      <button
+                        key={`bottom-${tab.id}`}
+                        type="button"
+                        onClick={() => {
+                          setSettingsTab(tab.id);
+                          document.querySelector('.app-shell-content')?.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        title={SETTINGS_TAB_META[tab.id].description}
+                        className={`inline-flex items-center gap-2 rounded-xl px-2.5 py-2.5 text-left text-xs font-medium transition-all duration-200 min-h-[44px] active:scale-[0.98] ${
+                          active
+                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
+                            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white border border-zinc-200/50 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/30'
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : 'opacity-80'}`} aria-hidden />
+                        <span className="leading-tight">{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
             </div>
             </div>
           )}
