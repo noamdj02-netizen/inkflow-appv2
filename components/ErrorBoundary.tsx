@@ -1,9 +1,14 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import * as Sentry from '@sentry/react';
 
+export type ErrorBoundaryFallbackRender = (ctx: {
+  error: Error | null;
+  reset: () => void;
+}) => ReactNode;
+
 interface Props {
   children: ReactNode;
-  fallback?: ReactNode;
+  fallback?: ReactNode | ErrorBoundaryFallbackRender;
   /** Si défini, affiche le message « tableau de bord » (sinon message page générique) */
   errorContext?: 'dashboard';
 }
@@ -21,7 +26,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+    try {
+      Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+    } catch {
+      /* évite un second crash si Sentry est mal configuré */
+    }
   }
 
   render() {
@@ -29,7 +38,15 @@ export class ErrorBoundary extends Component<Props, State> {
     const state = (this as Component<Props, State>).state;
     const setState = (this as Component<Props, State>).setState.bind(this);
     if (state.hasError) {
-      if (props.fallback) return props.fallback;
+      if (props.fallback !== undefined) {
+        if (typeof props.fallback === 'function') {
+          return props.fallback({
+            error: state.error,
+            reset: () => setState({ hasError: false, error: null }),
+          });
+        }
+        return props.fallback;
+      }
       const errMsg = state.error?.message ?? '';
       const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
       return (

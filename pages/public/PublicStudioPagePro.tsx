@@ -29,6 +29,29 @@ const STRUCTURAL_THEMES = ['classic', 'split', 'vintage'] as const;
 
 const ICON_MAP = { sparkles: Sparkles, award: Award, star: Star, camera: Camera, shield: Shield, heart: Heart, users: Users };
 
+type VitrineHeadingIcon = React.ComponentType<{ className?: string; strokeWidth?: number }>;
+
+/** En-tête de section vitrine « Pinterest » : pas de pastille colorée, typo éditoriale. */
+function VitrineSectionHeading({
+  eyebrow,
+  title,
+  icon: Icon,
+}: {
+  eyebrow: string;
+  title: string;
+  icon: VitrineHeadingIcon;
+}) {
+  return (
+    <header className="mb-8 sm:mb-10 border-b border-neutral-200/70 pb-5 sm:pb-6">
+      <div className="flex items-center gap-2 text-neutral-400 mb-1.5">
+        <Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} aria-hidden />
+        <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.2em]">{eyebrow}</span>
+      </div>
+      <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-neutral-900 tracking-tight">{title}</h2>
+    </header>
+  );
+}
+
 const VITRINE_GUIDE_STEPS: TourStep[] = [
   { target: '[data-joyride="vitrine-hero"]', title: 'Bienvenue sur votre vitrine', content: "Voici exactement ce que voient vos clients : votre photo, nom du studio, note et avis, adresse. Tout est modifiable depuis Paramètres > Vitrine dans le dashboard." },
   { target: '[data-joyride="vitrine-reserver"]', title: 'Bouton Réserver', content: "Le CTA principal. Les clients cliquent ici pour choisir un créneau et prendre RDV. En production, ils sont redirigés vers votre calendrier de réservation." },
@@ -77,7 +100,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [vitrineStepIndex, setVitrineStepIndex] = useState(0);
   const [googleReviewsPayload, setGoogleReviewsPayload] = useState<GoogleReviewsPayload | null>(null);
   const activeTheme = getVitrineTheme(studio?.theme ?? 'light') ?? getVitrineTheme('light')!;
-  const primaryColor = activeTheme?.accentColor ?? '#2563eb';
+  const primaryColor = activeTheme?.accentColor ?? '#171717';
 
   const loadVitrine = React.useCallback(() => {
     setLoading(true);
@@ -435,7 +458,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         schema={studioSchema}
       />
       {/* Sticky Header */}
-      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 safe-top ${headerScrolled ? 'bg-white/98 backdrop-blur-lg shadow-lg' : 'bg-white/80 backdrop-blur-sm'}`}>
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 safe-top border-b border-neutral-200/60 ${headerScrolled ? 'bg-[#f7f7f5]/95 backdrop-blur-md shadow-sm' : 'bg-[#f7f7f5]/90 backdrop-blur-sm'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
             <div className="flex items-center gap-3">
@@ -468,7 +491,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 <MessageCircle className="w-5 h-5" />
                 <span className="text-sm font-medium">Contact</span>
               </button>
-              <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} data-joyride="vitrine-reserver" className="bg-[var(--vitrine-primary)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center cursor-pointer">
+              <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} data-joyride="vitrine-reserver" className="bg-[var(--vitrine-primary)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center cursor-pointer">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                 <span>Réserver</span>
               </a>
@@ -482,7 +505,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
               <nav className="space-y-1">
                 {navSections.map(section => (
                   <button key={section.id} type="button" onClick={() => scrollToSection(section.id)}
-                    className={`w-full text-left px-4 py-3 rounded-lg font-medium min-h-[44px] flex items-center ${activeSection === section.id ? 'bg-blue-600 text-white' : 'text-neutral-800 hover:bg-neutral-100'}`}>
+                    className={`w-full text-left px-4 py-3 rounded-lg font-medium min-h-[44px] flex items-center ${activeSection === section.id ? 'bg-neutral-900 text-white' : 'text-neutral-800 hover:bg-neutral-100'}`}>
                     {section.label}
                   </button>
                 ))}
@@ -582,24 +605,19 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
           <div className="lg:col-span-2 space-y-10 sm:space-y-16 relative z-10">
             {/* About */}
             <section id="about" className="scroll-mt-24 sm:scroll-mt-32">
-              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-6 sm:mb-8 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
-                    <Sparkles className="w-6 h-6 text-white" />
-                  </div>
-                  À propos du studio
-                </h2>
-                <p className="text-neutral-800 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8">{studioDisplay.description}</p>
-                <div className="aspect-video rounded-xl sm:rounded-2xl overflow-hidden mb-6 sm:mb-8 bg-neutral-100">
+              <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
+                <VitrineSectionHeading eyebrow="Le studio" title="À propos" icon={Sparkles} />
+                <p className="text-neutral-600 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8 max-w-3xl">{studioDisplay.description}</p>
+                <div className="aspect-video rounded-lg overflow-hidden mb-6 sm:mb-8 bg-neutral-100">
                   <img src={studioDisplay.coverImage} alt="Couverture du studio" loading="lazy" className="w-full h-full object-cover" />
                 </div>
-                <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 pt-6 sm:pt-8 border-t border-neutral-200">
+                <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 pt-6 sm:pt-8 border-t border-neutral-200/70">
                   {studioDisplay.whyChooseUs.map((item, idx) => {
                     const Icon = item.icon;
                     return (
-                      <div key={idx} className="flex items-start gap-3 sm:gap-4 p-4 sm:p-6 bg-gradient-to-br from-neutral-50 to-white rounded-xl sm:rounded-2xl border border-neutral-200 hover:border-neutral-900 hover:shadow-lg transition-all group">
-                        <div className="w-14 h-14 bg-neutral-900 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                          <Icon className="w-7 h-7 text-white" />
+                      <div key={idx} className="flex items-start gap-3 sm:gap-4 p-4 sm:p-5 rounded-lg border border-neutral-200/80 hover:border-neutral-300 transition-colors group">
+                        <div className="w-11 h-11 bg-neutral-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Icon className="w-5 h-5 text-neutral-700" strokeWidth={1.75} />
                         </div>
                         <div>
                           <h3 className="font-bold text-lg text-neutral-900 mb-2">{item.title}</h3>
@@ -615,22 +633,17 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             {/* Services — masquable via Paramètres > Vitrine > Services */}
             {studioDisplay.showServicesSection !== false && (
             <section id="services" className="scroll-mt-24 sm:scroll-mt-32">
-              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-6 sm:mb-10 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
-                    <Award className="w-6 h-6 text-white" />
-                  </div>
-                  Nos services
-                </h2>
-                <div className="space-y-6">
+              <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
+                <VitrineSectionHeading eyebrow="Prestations" title="Services" icon={Award} />
+                <div className="space-y-4 sm:space-y-5">
                   {studioDisplay.services.map((service, idx) => {
                     const Icon = service.icon;
                     return (
-                      <div key={idx} className="group relative bg-gradient-to-r from-neutral-50 to-white rounded-2xl border-2 border-neutral-200 hover:border-neutral-900 transition-all overflow-hidden">
+                      <div key={idx} className="group relative rounded-lg border border-neutral-200/80 hover:border-neutral-300 transition-colors overflow-hidden bg-white">
                         <div className="p-4 sm:p-6 md:p-8 flex flex-col md:flex-row gap-4 sm:gap-6">
                           <div className="flex-shrink-0">
-                            <div className="w-16 h-16 bg-neutral-900 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                              <Icon className="w-8 h-8 text-white" />
+                            <div className="w-12 h-12 bg-neutral-100 rounded-lg flex items-center justify-center">
+                              <Icon className="w-6 h-6 text-neutral-700" strokeWidth={1.75} />
                             </div>
                           </div>
                           <div className="flex-1">
@@ -638,8 +651,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                             <p className="text-neutral-800 mb-4 leading-relaxed">{service.description}</p>
                             <div className="flex flex-wrap gap-2 mb-4">
                               {service.features.map((feature, i) => (
-                                <span key={i} className="px-3 py-1.5 bg-green-100 text-green-700 text-sm rounded-full font-medium flex items-center gap-1">
-                                  <CheckCircle className="w-4 h-4" />
+                                <span key={i} className="px-3 py-1.5 bg-neutral-100 text-neutral-700 text-xs sm:text-sm rounded-md font-medium flex items-center gap-1">
+                                  <CheckCircle className="w-3.5 h-3.5 text-neutral-500" strokeWidth={2} />
                                   {feature}
                                 </span>
                               ))}
@@ -650,7 +663,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                           </div>
                           <div className="flex-shrink-0 text-right md:text-center">
                             <div className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">{service.price}</div>
-                            <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-[var(--vitrine-primary)] text-white rounded-xl font-semibold hover:opacity-90 transition-all text-sm sm:text-base w-full md:w-auto cursor-pointer">
+                            <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-[var(--vitrine-primary)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity text-sm sm:text-base w-full md:w-auto cursor-pointer">
                               Réserver
                               <ArrowRight className="w-4 h-4" />
                             </a>
@@ -666,25 +679,20 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
             {/* Artists */}
             <section id="artists" className="scroll-mt-24 sm:scroll-mt-32">
-              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-6 sm:mb-10 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
-                    <Users className="w-6 h-6 text-white" />
-                  </div>
-                  Notre équipe d'artistes
-                </h2>
+              <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
+                <VitrineSectionHeading eyebrow="Équipe" title="Artistes" icon={Users} />
                 <div className="space-y-8">
                   {studioDisplay.artists.map((artist, idx) => (
-                    <div key={idx} className="group bg-gradient-to-br from-neutral-50 to-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border-2 border-neutral-200 hover:border-neutral-900 hover:shadow-xl transition-all">
+                    <div key={idx} className="group rounded-lg p-4 sm:p-6 md:p-8 border border-neutral-200/80 hover:border-neutral-300 transition-colors">
                       <div className="flex flex-col md:flex-row gap-4 sm:gap-8">
-                        <img src={artist.avatar} alt={artist.name} loading="lazy" className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl object-cover shadow-lg flex-shrink-0 mx-auto md:mx-0" />
+                        <img src={artist.avatar} alt={artist.name} loading="lazy" className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-lg object-cover flex-shrink-0 mx-auto md:mx-0" />
                         <div className="flex-1">
                           <h3 className="text-xl sm:text-3xl font-bold text-neutral-900 mb-2 text-center md:text-left">{artist.name}</h3>
                           <p className="text-neutral-800 text-sm font-medium mb-4">{artist.role}</p>
                           <p className="text-neutral-800 mb-6 leading-relaxed">{artist.bio}</p>
                           <div className="flex flex-wrap gap-2 mb-6">
                             {artist.specialties.map((spec, i) => (
-                              <span key={i} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-xl font-semibold">{spec}</span>
+                              <span key={i} className="px-3 py-1.5 bg-neutral-100 text-neutral-800 text-xs sm:text-sm rounded-md font-medium border border-neutral-200/80">{spec}</span>
                             ))}
                           </div>
                           <div className="flex flex-wrap items-center gap-6 text-sm">
@@ -696,7 +704,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                               <Camera className="w-5 h-5 text-neutral-700" />
                               <span className="font-semibold">{artist.portfolio}+ tatouages</span>
                             </div>
-                            <a href={`https://instagram.com/${artist.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-neutral-900 hover:text-blue-600 font-semibold">
+                            <a href={`https://instagram.com/${artist.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-neutral-800 hover:text-neutral-900 font-medium underline-offset-4 hover:underline">
                               <Instagram className="w-5 h-5" />
                               {artist.instagram}
                               <ExternalLink className="w-4 h-4" />
@@ -712,36 +720,51 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
             {/* Portfolio */}
             <section id="portfolio" className="scroll-mt-24 sm:scroll-mt-32" data-joyride="vitrine-portfolio">
-              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-6 sm:mb-10 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
-                    <Camera className="w-6 h-6 text-white" />
-                  </div>
-                  Notre portfolio
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                  {studioDisplay.portfolio.map((item, idx) => (
-                    <div key={idx} className="group relative aspect-square rounded-2xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl transition-all" onClick={() => setSelectedImage(item.url)}>
-                      <img src={item.url} alt={item.description || 'Portfolio'} loading="lazy" className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-500" />
-                      <div className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent transition-opacity ${(runVitrineTour && vitrineStepIndex === 3 && idx === 0) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                        <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                          <div className="text-xs font-semibold mb-2 opacity-90">{item.category}</div>
-                          <div className="font-bold mb-1">{item.description}</div>
-                          <div className="text-sm opacity-90">By {item.artist}</div>
-                          <div className="flex items-center gap-2 mt-3 text-sm">
-                            <Heart className="w-4 h-4" />
-                            <span>{item.likes}</span>
+              <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
+                <VitrineSectionHeading eyebrow="Galerie" title="Portfolio" icon={Camera} />
+                {studioDisplay.portfolio.length === 0 ? (
+                  <p className="text-sm text-neutral-500 mb-6 max-w-md leading-relaxed">
+                    Les photos de réalisations apparaîtront ici. Ajoutez-les depuis le dashboard — en attendant, suivez le studio sur Instagram.
+                  </p>
+                ) : (
+                  <div className="columns-2 md:columns-3 gap-2 sm:gap-3 [column-fill:balance]">
+                    {studioDisplay.portfolio.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`break-inside-avoid mb-2 sm:mb-3 group relative rounded-md overflow-hidden cursor-pointer ring-1 ring-neutral-200/80 ${(runVitrineTour && vitrineStepIndex === 3 && idx === 0) ? 'ring-neutral-400' : ''}`}
+                        onClick={() => setSelectedImage(item.url)}
+                      >
+                        <img src={item.url} alt={item.description || 'Portfolio'} loading="lazy" className="w-full h-auto object-cover object-center group-hover:opacity-95 transition-opacity duration-300" />
+                        <div className={`absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent transition-opacity ${(runVitrineTour && vitrineStepIndex === 3 && idx === 0) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                          <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 text-white">
+                            {item.category && <div className="text-[10px] font-medium uppercase tracking-wider opacity-80 mb-0.5">{item.category}</div>}
+                            {item.description && <div className="text-sm font-medium leading-snug">{item.description}</div>}
+                            <div className="flex items-center gap-2 mt-2 text-xs opacity-90">
+                              <span>{item.artist}</span>
+                              {item.likes ? (
+                                <>
+                                  <span aria-hidden>·</span>
+                                  <Heart className="w-3 h-3 inline" />
+                                  <span>{item.likes}</span>
+                                </>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-8 text-center">
-                  <a href={`https://instagram.com/${studioDisplay.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-lg">
-                    <Instagram className="w-5 h-5" />
-                    Voir plus sur Instagram
-                    <ExternalLink className="w-4 h-4" />
+                    ))}
+                  </div>
+                )}
+                <div className="mt-8 sm:mt-10 flex justify-center">
+                  <a
+                    href={`https://instagram.com/${studioDisplay.instagram.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 border border-neutral-300 text-neutral-800 rounded-lg text-sm font-medium hover:bg-neutral-50 transition-colors"
+                  >
+                    <Instagram className="w-4 h-4" strokeWidth={1.75} />
+                    Instagram
+                    <ExternalLink className="w-3.5 h-3.5 opacity-60" strokeWidth={1.75} />
                   </a>
                 </div>
               </div>
@@ -749,23 +772,24 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
             {/* Flash */}
             <section id="flash" className="scroll-mt-24 sm:scroll-mt-32" data-joyride="vitrine-flash">
-              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-10">
-                  <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
-                      <Sparkles className="w-6 h-6 text-white" />
+              <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 sm:mb-10 border-b border-neutral-200/70 pb-5 sm:pb-6">
+                  <div>
+                    <div className="flex items-center gap-2 text-neutral-400 mb-1.5">
+                      <Sparkles className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} aria-hidden />
+                      <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.2em]">Flash</span>
                     </div>
-                    Flash disponibles
-                  </h2>
-                  <span className="text-sm px-4 py-2 bg-green-100 text-green-700 rounded-full font-semibold">
-                    {studioDisplay.flashDesigns.filter(f => f.available).length} disponibles
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-neutral-900 tracking-tight">Disponibles</h2>
+                  </div>
+                  <span className="text-xs sm:text-sm px-3 py-1.5 bg-neutral-100 text-neutral-600 rounded-md font-medium tabular-nums w-fit">
+                    {studioDisplay.flashDesigns.filter(f => f.available).length} dispo
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                   {studioDisplay.flashDesigns.map((flash) => (
-                    <div key={flash.id} className={`group relative aspect-square rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all ${!flash.available ? 'opacity-75' : ''}`}>
+                    <div key={flash.id} className={`group relative aspect-square rounded-lg overflow-hidden ring-1 ring-neutral-200/80 hover:ring-neutral-300 transition-all ${!flash.available ? 'opacity-70' : ''}`}>
                       <div className="absolute inset-0 cursor-pointer" onClick={() => setSelectedFlash(flash)}>
-                        <img src={flash.imageUrl} alt={flash.title} loading="lazy" className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700" />
+                        <img src={flash.imageUrl} alt={flash.title} loading="lazy" className="w-full h-full object-cover object-center group-hover:opacity-95 transition-opacity duration-300" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                           <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-8 text-white">
                             <div className="flex items-center gap-2 mb-3">
@@ -783,7 +807,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); setSelectedFlash(flash); }}
-                                  className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-neutral-900 rounded-xl font-semibold hover:bg-neutral-100 transition-colors text-sm sm:text-base"
+                                  className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-neutral-900 rounded-lg font-medium hover:bg-neutral-100 transition-colors text-sm sm:text-base"
                                 >
                                   Réserver
                                 </button>
@@ -805,17 +829,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
             {/* Testimonials */}
             <section id="testimonials" className="scroll-mt-24 sm:scroll-mt-32">
-              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                  <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-4 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
-                    <Star className="w-6 h-6 text-white" />
-                  </div>
-                  Avis clients
-                </h2>
-                <p className="text-neutral-800 mb-6 sm:mb-10">Ce que disent nos clients sur leur expérience</p>
-                <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+              <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
+                <VitrineSectionHeading eyebrow="Témoignages" title="Avis clients" icon={Star} />
+                <p className="text-neutral-500 text-sm sm:text-base mb-8 sm:mb-10 -mt-4 max-w-xl">Retours de clients après leur séance.</p>
+                <div className="grid md:grid-cols-2 gap-4 sm:gap-5">
                   {studioDisplay.testimonials.map((testimonial, idx) => (
-                    <div key={idx} className="bg-gradient-to-br from-neutral-50 to-white p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl border-2 border-neutral-200 hover:border-neutral-900 hover:shadow-lg transition-all">
+                    <div key={idx} className="p-4 sm:p-6 rounded-lg border border-neutral-200/80 hover:border-neutral-300 transition-colors">
                       <div className="flex gap-1 mb-4">
                         {[...Array(testimonial.rating)].map((_, i) => (
                           <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
@@ -841,12 +860,13 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                     <GoogleReviews data={googleReviewsPayload} />
                   </div>
                 )}
-                <div className="mt-6 sm:mt-10 text-center bg-[var(--vitrine-primary)] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-white">
-                  <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">Rejoignez nos clients satisfaits</h3>
-                  <p className="mb-4 sm:mb-6 opacity-90">Plus de {studioDisplay.satisfactionRate}% de satisfaction</p>
-                  <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-[var(--vitrine-primary)] rounded-xl font-semibold hover:opacity-90 transition-all w-full sm:w-auto min-h-[44px] cursor-pointer">
-                    Réserver maintenant
-                    <ArrowRight className="w-5 h-5" />
+                <div className="mt-8 sm:mt-10 pt-8 border-t border-neutral-200/70 text-center">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400 mb-2">Réserver</p>
+                  <h3 className="text-lg sm:text-xl font-semibold text-neutral-900 mb-1">Une place avec nous</h3>
+                  <p className="text-sm text-neutral-500 mb-5 max-w-sm mx-auto">{studioDisplay.satisfactionRate}% de clients satisfaits — rejoignez-les.</p>
+                  <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 bg-[var(--vitrine-primary)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity w-full sm:w-auto min-h-[44px] cursor-pointer">
+                    Prendre rendez-vous
+                    <ArrowRight className="w-4 h-4" strokeWidth={2} />
                   </a>
                 </div>
               </div>
@@ -854,17 +874,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
             {/* FAQ */}
             <section id="faq" className="scroll-mt-24 sm:scroll-mt-32">
-              <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 shadow-xl border border-neutral-200">
-                <h2 className="text-2xl sm:text-4xl font-bold text-neutral-900 mb-4 flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center">
-                    <AlertCircle className="w-6 h-6 text-white" />
-                  </div>
-                  Questions fréquentes
-                </h2>
-                <p className="text-neutral-800 mb-6 sm:mb-10">Tout ce que vous devez savoir avant votre premier tatouage</p>
-                <div className="space-y-3 sm:space-y-4">
+              <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
+                <VitrineSectionHeading eyebrow="FAQ" title="Questions fréquentes" icon={AlertCircle} />
+                <p className="text-neutral-500 text-sm sm:text-base mb-8 sm:mb-10 -mt-4">Avant votre première séance.</p>
+                <div className="space-y-2 sm:space-y-3">
                   {studioDisplay.faqs.map((faq, idx) => (
-                    <div key={idx} className="border-2 border-neutral-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-neutral-900 transition-colors">
+                    <div key={idx} className="border border-neutral-200/80 rounded-lg overflow-hidden hover:border-neutral-300 transition-colors">
                       <button onClick={() => setExpandedFaq(expandedFaq === idx ? null : idx)} className="w-full px-4 sm:px-6 md:px-8 py-4 sm:py-6 flex items-center justify-between text-left hover:bg-neutral-50 transition-colors">
                         <span className="font-bold text-base sm:text-lg text-neutral-900 pr-4">{faq.q}</span>
                         <ChevronDown className={`w-6 h-6 flex-shrink-0 transition-transform ${expandedFaq === idx ? 'rotate-180' : ''}`} />
@@ -881,7 +896,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
           {/* Sidebar */}
           <div className="space-y-6 lg:space-y-6 lg:self-start" data-joyride="vitrine-coordonnees">
-            <div className="flex flex-col bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border-2 border-neutral-200">
+            <div className="flex flex-col bg-white rounded-xl p-4 sm:p-6 md:p-8 border border-neutral-200/80 shadow-sm">
               <div className="mb-4 sm:mb-6">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">Réserver</h3>
@@ -899,21 +914,21 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 </div>
                 <p className="text-neutral-800 text-sm">Réservez votre session en quelques clics</p>
               </div>
-              <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="block w-full bg-[var(--vitrine-primary)] text-white text-center py-4 rounded-xl font-bold text-lg hover:opacity-90 hover:shadow-xl transition-all mb-3 cursor-pointer">
+              <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="block w-full bg-[var(--vitrine-primary)] text-white text-center py-3.5 rounded-lg font-semibold text-base hover:opacity-90 transition-opacity mb-3 cursor-pointer">
                 Prendre rendez-vous
               </a>
-              <button onClick={() => setShowProjectRequestForm(true)} className="block w-full bg-white border-2 border-blue-600 text-blue-600 text-center py-3 rounded-xl font-bold hover:bg-blue-50 transition-all mb-3">
+              <button type="button" onClick={() => setShowProjectRequestForm(true)} className="block w-full bg-white border border-neutral-300 text-neutral-900 text-center py-3 rounded-lg font-medium hover:bg-neutral-50 transition-colors mb-2">
                 Demande de projet
               </button>
-              <button onClick={openBookingForm} className="block w-full bg-blue-600 text-white text-center py-3 rounded-xl font-bold hover:bg-blue-700 transition-all mb-6">
-                Demande de RDV (créneau)
+              <button type="button" onClick={openBookingForm} className="block w-full bg-neutral-900 text-white text-center py-3 rounded-lg font-medium hover:bg-neutral-800 transition-colors mb-6">
+                Créneau sur mesure
               </button>
-              <div className="space-y-4 mb-6">
+              <div className="space-y-3 mb-6">
                 {[
-                  { icon: CheckCircle, text: "Confirmation instantanée", color: "text-green-600" },
-                  { icon: Shield, text: "Paiement 100% sécurisé", color: "text-blue-600" },
-                  { icon: Calendar, text: "Rappels automatiques", color: "text-purple-600" },
-                  { icon: Award, text: "Retouche gratuite incluse", color: "text-amber-600" }
+                  { icon: CheckCircle, text: "Confirmation instantanée", color: "text-neutral-600" },
+                  { icon: Shield, text: "Paiement sécurisé", color: "text-neutral-600" },
+                  { icon: Calendar, text: "Rappels automatiques", color: "text-neutral-600" },
+                  { icon: Award, text: "Retouche incluse", color: "text-neutral-600" }
                 ].map((item, idx) => {
                   const Icon = item.icon;
                   return (
@@ -932,8 +947,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl p-8 shadow-xl border-2 border-neutral-200">
-              <h3 className="text-xl font-bold text-neutral-900 mb-6">Coordonnées</h3>
+            <div className="bg-white rounded-xl p-6 sm:p-8 border border-neutral-200/80 shadow-sm">
+              <h3 className="text-lg font-semibold text-neutral-900 mb-5">Coordonnées</h3>
               <div className="space-y-5">
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -941,7 +956,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   </div>
                   <div className="flex-1">
                     <div className="font-semibold text-sm mb-1">Adresse</div>
-                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(studioDisplay.address)}`} target="_blank" rel="noopener noreferrer" className="text-neutral-800 hover:text-blue-600 text-sm">
+                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(studioDisplay.address)}`} target="_blank" rel="noopener noreferrer" className="text-neutral-700 hover:text-neutral-900 text-sm underline-offset-2 hover:underline">
                       {studioDisplay.address}
                     </a>
                   </div>
@@ -952,7 +967,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   </div>
                   <div>
                     <div className="font-semibold text-sm mb-1">Téléphone</div>
-                    <a href={`tel:${studioDisplay.phone}`} className="text-neutral-800 hover:text-blue-600 text-sm font-medium">{studioDisplay.phone}</a>
+                    <a href={`tel:${studioDisplay.phone}`} className="text-neutral-700 hover:text-neutral-900 text-sm font-medium underline-offset-2 hover:underline">{studioDisplay.phone}</a>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -961,26 +976,26 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   </div>
                   <div>
                     <div className="font-semibold text-sm mb-1">Email</div>
-                    <a href={`mailto:${studioDisplay.email}`} className="text-neutral-800 hover:text-blue-600 text-sm">{studioDisplay.email}</a>
+                    <a href={`mailto:${studioDisplay.email}`} className="text-neutral-700 hover:text-neutral-900 text-sm underline-offset-2 hover:underline">{studioDisplay.email}</a>
                   </div>
                 </div>
               </div>
               <div className="pt-6 mt-6 border-t border-neutral-200">
                 <div className="font-semibold text-sm mb-4">Réseaux sociaux</div>
                 <div className="flex gap-3">
-                  <a href={`https://instagram.com/${studioDisplay.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="w-11 h-11 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:bg-blue-700 hover:shadow-lg transition-all">
-                    <Instagram className="w-5 h-5" />
+                  <a href={`https://instagram.com/${studioDisplay.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="w-11 h-11 bg-neutral-900 text-white rounded-lg flex items-center justify-center hover:bg-neutral-800 transition-colors">
+                    <Instagram className="w-5 h-5" strokeWidth={1.75} />
                   </a>
-                  <a href={`https://facebook.com/${studioDisplay.facebook}`} target="_blank" rel="noopener noreferrer" className="w-11 h-11 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:shadow-lg transition-all">
+                  <a href={`https://facebook.com/${studioDisplay.facebook}`} target="_blank" rel="noopener noreferrer" className="w-11 h-11 bg-neutral-900 text-white rounded-lg flex items-center justify-center hover:bg-neutral-800 transition-colors">
                     <Facebook className="w-5 h-5" />
                   </a>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl p-8 shadow-xl border-2 border-neutral-200">
-              <h3 className="text-xl font-bold text-neutral-900 mb-6 flex items-center gap-2">
-                <Clock className="w-6 h-6" />
+            <div className="bg-white rounded-xl p-6 sm:p-8 border border-neutral-200/80 shadow-sm">
+              <h3 className="text-lg font-semibold text-neutral-900 mb-5 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-neutral-500" strokeWidth={1.75} />
                 Horaires
               </h3>
               <div className="space-y-3">
@@ -990,7 +1005,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   const h = hours as { closed?: boolean; open?: string; close?: string };
                   const isToday = getCurrentDay() === day;
                   return (
-                    <div key={day} className={`flex justify-between items-center py-2 rounded-lg transition-colors ${isToday ? 'bg-blue-600 text-white px-4 font-bold' : 'text-neutral-800'}`}>
+                    <div key={day} className={`flex justify-between items-center py-2 rounded-md transition-colors ${isToday ? 'bg-neutral-900 text-white px-3 font-semibold' : 'text-neutral-700'}`}>
                       <span className="capitalize text-sm">{dayLabels[day] || day}</span>
                       <span className={`text-sm ${isToday ? 'font-bold' : 'font-semibold'}`}>
                         {h.closed ? 'Fermé' : `${h.open ?? ''} - ${h.close ?? ''}`}

@@ -38,9 +38,28 @@ export function getPasswordRecoveryRedirectTo(): string {
   return `${getCanonicalAppOrigin()}/auth/update-password`;
 }
 
-/** Base URL pour les liens de parrainage /invite/:code — utilise l'origine courante en prod */
-export const getInviteBaseUrl = () =>
-  (typeof window !== 'undefined' ? window.location.origin : APP_URL) + '/invite';
+/**
+ * Origine publique pour les liens /invite (parrainage).
+ * En local, `window.location.origin` vaut localhost — les amis ne peuvent pas ouvrir le lien.
+ * Définir `VITE_PUBLIC_INVITE_ORIGIN=https://app.ink-flow.me` (ou ton domaine Vercel) dans .env.local et Vercel.
+ */
+export function getInviteShareOrigin(): string {
+  const fromEnv =
+    (import.meta.env.VITE_PUBLIC_INVITE_ORIGIN as string | undefined)?.trim() ||
+    (import.meta.env.VITE_APP_URL as string | undefined)?.trim();
+  if (fromEnv && /^https?:\/\//i.test(fromEnv)) {
+    try {
+      return new URL(fromEnv).origin.replace(/\/$/, '');
+    } catch {
+      /* ignore */
+    }
+  }
+  if (typeof window !== 'undefined') return window.location.origin.replace(/\/$/, '');
+  return APP_URL.replace(/\/$/, '');
+}
+
+/** Base path des invitations : `https://app…/invite` */
+export const getInviteBaseUrl = () => `${getInviteShareOrigin()}/invite`;
 export const LANDING_PRICING_URL = `${LANDING_URL}/#pricing`;
 /** Pages légales sur la landing Framer */
 export const LANDING_PRIVACY_URL = `${LANDING_URL}/politique-confidentialite`;

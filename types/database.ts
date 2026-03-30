@@ -97,6 +97,21 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['inkflow_clients']['Insert']>;
         Relationships: [];
       };
+      /** Avatar portail client — persiste hors user_metadata (OAuth Google ne peut pas l’écraser) */
+      inkflow_client_portal_profiles: {
+        Row: {
+          user_id: string;
+          portal_avatar_url: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          portal_avatar_url?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['inkflow_client_portal_profiles']['Insert']>;
+        Relationships: [];
+      };
       inkflow_flash_designs: {
         Row: {
           id: string;

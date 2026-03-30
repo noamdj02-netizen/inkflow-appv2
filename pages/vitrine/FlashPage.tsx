@@ -40,6 +40,11 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [optimisticFav, setOptimisticFav] = useOptimistic(isFavorited);
   const [isPending, startTransition] = useTransition();
+  const [imageBroken, setImageBroken] = useState(false);
+
+  useEffect(() => {
+    setImageBroken(false);
+  }, [flashSlug]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -172,16 +177,25 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
 
   return (
     <div className="min-h-screen pb-32" style={{ background: CX.bg, color: CX.text }}>
-      {/* Image */}
-      <div className="relative aspect-square">
+      {/* Image — pinch-to-zoom natif */}
+      <div className="relative aspect-square" style={{ touchAction: 'pinch-zoom', overflow: 'hidden' }}>
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 select-none"
           style={{
-            background: flash.image_url
-              ? `url(${flash.image_url}) center/cover`
-              : 'linear-gradient(135deg, #1a1a1a, #2a1810)',
+            background: 'linear-gradient(135deg, #1a1a1a, #2a1810)',
+            touchAction: 'pinch-zoom',
           }}
         />
+        {flash.image_url && !imageBroken ? (
+          <img
+            src={flash.image_url}
+            alt={flash.title}
+            draggable={false}
+            className="absolute inset-0 w-full h-full object-cover select-none"
+            style={{ touchAction: 'pinch-zoom' }}
+            onError={() => setImageBroken(true)}
+          />
+        ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
         <button
           type="button"
@@ -196,7 +210,8 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
             type="button"
             onClick={toggleFavorite}
             disabled={isPending}
-            className="w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md border z-10 transition-all active:scale-95"
+            aria-label={optimisticFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+            className="min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md border z-10 transition-all active:scale-95"
             style={{ background: 'rgba(0,0,0,0.4)', borderColor: CX.border }}
           >
             <Heart

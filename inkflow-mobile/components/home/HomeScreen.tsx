@@ -75,8 +75,8 @@ export default function HomeScreen() {
     }, 1200);
   }, []);
 
-  const handleAppointmentPress = useCallback((id: string) => {
-    // TODO: navigation vers détail RDV
+  const handleAppointmentPress = useCallback((_id: string) => {
+    /* Détail RDV : brancher sur l’écran dédié quand le stack mobile expose la route. */
   }, []);
 
   return (

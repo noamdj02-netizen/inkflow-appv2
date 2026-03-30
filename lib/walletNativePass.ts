@@ -30,6 +30,23 @@ export type WalletPassResult =
   | { success: true; kind: 'json'; data: WalletPassJsonOk }
   | { success: false; error: string };
 
+function extractHttpError(data: unknown, res: Response): string {
+  if (typeof data === 'object' && data !== null) {
+    const o = data as Record<string, unknown>;
+    for (const k of ['error', 'message', 'msg', 'hint'] as const) {
+      const v = o[k];
+      if (typeof v === 'string' && v.trim()) return v.trim();
+    }
+  }
+  if (res.status === 404) {
+    return 'Fonction Wallet non trouvée (404). Déploie l’Edge Function `wallet-loyalty-pass` : supabase functions deploy wallet-loyalty-pass';
+  }
+  if (res.status === 401 || res.status === 403) {
+    return 'Session expirée ou accès refusé. Reconnecte-toi et réessaie.';
+  }
+  return `Erreur serveur (${res.status}). Vérifie que l’Edge Function wallet-loyalty-pass est déployée et que le projet Supabase est actif.`;
+}
+
 export async function requestWalletPass(
   accessToken: string,
   platform: 'apple' | 'google'
@@ -40,15 +57,24 @@ export async function requestWalletPass(
     return { success: false, error: 'Application non configurée (Supabase).' };
   }
 
-  const res = await fetch(`${base}/functions/v1/wallet-loyalty-pass`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      apikey: anon,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ platform }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${base}/functions/v1/wallet-loyalty-pass`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: anon,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ platform }),
+    });
+  } catch (e) {
+    const m = e instanceof Error ? e.message : String(e);
+    return {
+      success: false,
+      error: `Connexion impossible à Supabase (${m}). Vérifie la connexion, l’URL du projet et le déploiement des Edge Functions.`,
+    };
+  }
 
   const ct = res.headers.get('content-type') ?? '';
 
@@ -64,12 +90,16 @@ export async function requestWalletPass(
   try {
     data = await res.json();
   } catch {
-    return { success: false, error: 'Réponse serveur illisible.' };
+    return {
+      success: false,
+      error: !res.ok
+        ? extractHttpError(null, res)
+        : 'Réponse serveur illisible.',
+    };
   }
 
   if (!res.ok) {
-    const msg = typeof data === 'object' && data && 'error' in data ? String((data as { error: unknown }).error) : 'Erreur réseau';
-    return { success: false, error: msg };
+    return { success: false, error: extractHttpError(data, res) };
   }
 
   const obj = data as WalletPassJson;

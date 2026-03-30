@@ -39,7 +39,7 @@ export const CX = {
 } as const;
 
 // ── Types ───────────────────────────────────────────────────────────────────
-export type ClientTab = 'explore' | 'rdv' | 'wallet' | 'profile';
+export type ClientTab = 'explore' | 'inspire' | 'rdv' | 'wallet' | 'profile';
 
 export interface ClientAppointment {
   id: string;
@@ -50,4 +50,9 @@ export interface ClientAppointment {
   price: number;
   studio_name?: string;
   studio_address?: string;
+  /** FK studio — pour regrouper la progression fidélité par lieu / tatoueur */
+  studio_id?: string;
+  studio_slug?: string | null;
+  /** Cible tampons du studio (`stamp_loyalty_settings.tattoosRequired`), défaut 10 */
+  studio_stamp_target?: number;
 }

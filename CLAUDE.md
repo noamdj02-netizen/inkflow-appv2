@@ -80,3 +80,25 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 - Pas de dark/light toggle (100% dark)
 - Pas de notifications push (PWA silent install suffit)
 - Pas de tests E2E automatisés (tests manuels uniquement)
+
+## 📋 Post-Deploy — Obligation Notion
+
+Après chaque `git push` + build Vercel confirmé :
+
+### 1. Créer un rapport de déploiement
+Page parent : https://www.notion.so/332246970fa3819486a3c7a58dbf4bc3
+Titre : `[YYYY-MM-DD HH:mm] Deploy — [SUCCESS/FAILED]`
+Contenu (template) :
+- Commit hash court
+- Fichiers modifiés
+- Features ajoutées / bugs corrigés
+- Erreurs de build ou TypeScript (tsc --noEmit)
+- Warnings runtime à surveiller
+- Bugs à ouvrir dans le backlog
+
+### 2. Ouvrir les bugs détectés dans le Backlog
+Page : https://www.notion.so/b96b09ef9a6d4c0cb1b093a1bab786cc
+Champs obligatoires : Titre, Type, Priorité, Module, Status="A trier", Date détection
+
+### 3. Clore les items résolus
+Mettre Status="Réglé" + "Résolu le" pour chaque INK-XXX traité dans ce push.

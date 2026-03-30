@@ -34,9 +34,10 @@ export interface NearbyStudio {
   studio_name: string;
   avatar_url: string | null;
   city: string | null;
-  latitude: number;
-  longitude: number;
-  distance_km: number;
+  latitude: number | null;
+  longitude: number | null;
+  /** null si pas de GPS user ou studio sans coordonnées */
+  distance_km: number | null;
   flash: FlashPreview[];
   portfolio: PortfolioPreview[];
   /** Services ou styles affichés comme tags */
@@ -49,35 +50,258 @@ interface RpcRow {
   studio_name: string;
   avatar_url: string | null;
   city: string | null;
-  latitude: number;
-  longitude: number;
-  distance_km: number;
+  latitude: number | null;
+  longitude: number | null;
+  distance_km: number | null;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// getNearbyStudios
-// ─────────────────────────────────────────────────────────────────────────────
+function numOrNull(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
 
-export async function getNearbyStudios(
-  lat: number,
-  lng: number,
-  radiusKm = 50,
-): Promise<NearbyStudio[]> {
-  const { data: rows, error } = await supabase.rpc('get_nearby_studios', {
+function vitrineFlashList(vd: Record<string, unknown>, slug: string, name: string): FlashPreview[] {
+  const flashRaw = Array.isArray(vd.flashDesigns) ? vd.flashDesigns : [];
+  return flashRaw
+    .filter((f: Record<string, unknown>) => f.available !== false && (f.imageUrl || f.image_url))
+    .slice(0, 16)
+    .map((f: Record<string, unknown>) => ({
+      id: String(f.id ?? ''),
+      title: String(f.title ?? 'Flash'),
+      imageUrl: String(f.imageUrl ?? f.image_url ?? '').trim(),
+      price: Number(f.price ?? 0),
+      style: f.style ? String(f.style) : undefined,
+      studioSlug: slug,
+      studioName: name,
+    }))
+    .filter((f) => f.imageUrl.length > 0);
+}
+
+function normalizePortfolio(vd: Record<string, unknown>): PortfolioPreview[] {
+  const portRaw = Array.isArray(vd.portfolio) ? vd.portfolio : [];
+  const mapped = portRaw
+    .map((p: Record<string, unknown>) => {
+      const url = String(p.url ?? p.imageUrl ?? p.image_url ?? '').trim();
+      return { url, category: String(p.category ?? '') };
+    })
+    .filter((p) => p.url.length > 0);
+  if (mapped.length > 0) return mapped.slice(0, 8);
+  const cover = typeof vd.coverImage === 'string' ? vd.coverImage.trim() : '';
+  const avatar = typeof vd.avatar === 'string' ? vd.avatar.trim() : '';
+  if (cover) return [{ url: cover, category: 'Couverture' }];
+  if (avatar) return [{ url: avatar, category: 'Profil' }];
+  return [];
+}
+
+function mergeFlashFromVitrineAndDb(
+  vitrine: FlashPreview[],
+  dbList: FlashPreview[],
+): FlashPreview[] {
+  const NativeMap = globalThis.Map;
+  const byId = new NativeMap<string, FlashPreview>();
+  for (const f of vitrine) {
+    if (f.id) byId.set(f.id, f);
+  }
+  for (const f of dbList) {
+    if (!f.id) continue;
+    const prev = byId.get(f.id);
+    if (!prev) {
+      byId.set(f.id, f);
+      continue;
+    }
+    const img = (f.imageUrl?.trim() || prev.imageUrl?.trim()) ?? '';
+    if (!img) continue;
+    byId.set(f.id, {
+      ...prev,
+      ...f,
+      imageUrl: img,
+      title: f.title || prev.title,
+      price: Number.isFinite(f.price) ? f.price : prev.price,
+    });
+  }
+  return [...byId.values()].filter((x) => (x.imageUrl ?? '').trim().length > 0).slice(0, 16);
+}
+
+function normDiscoveryKey(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/** Garde le studio le plus pertinent si plusieurs lignes BDD (même slug ou même nom + ville). */
+function pickPreferredStudio(a: NearbyStudio, b: NearbyStudio): NearbyStudio {
+  const da = a.distance_km;
+  const db = b.distance_km;
+  const aOk = da != null && Number.isFinite(da);
+  const bOk = db != null && Number.isFinite(db);
+  if (aOk && bOk) return da! <= db! ? a : b;
+  if (aOk) return a;
+  if (bOk) return b;
+  const aGeo = a.latitude != null && a.longitude != null;
+  const bGeo = b.latitude != null && b.longitude != null;
+  if (aGeo && !bGeo) return a;
+  if (!aGeo && bGeo) return b;
+  return a;
+}
+
+function mergeNearbyStudios(primary: NearbyStudio, secondary: NearbyStudio): NearbyStudio {
+  const flash = mergeFlashFromVitrineAndDb(primary.flash ?? [], secondary.flash ?? []);
+  const seenUrls = new Set<string>();
+  const portfolio: PortfolioPreview[] = [];
+  for (const src of [primary, secondary]) {
+    for (const p of src.portfolio ?? []) {
+      const u = p.url?.trim();
+      if (!u || seenUrls.has(u)) continue;
+      seenUrls.add(u);
+      portfolio.push(p);
+      if (portfolio.length >= 8) break;
+    }
+    if (portfolio.length >= 8) break;
+  }
+  const tagSeen = new Set<string>();
+  const tags: string[] = [];
+  for (const src of [primary, secondary]) {
+    for (const t of src.tags ?? []) {
+      const u = t.trim();
+      if (!u || tagSeen.has(u)) continue;
+      tagSeen.add(u);
+      tags.push(u);
+      if (tags.length >= 3) break;
+    }
+    if (tags.length >= 3) break;
+  }
+  const winner = pickPreferredStudio(primary, secondary);
+  const loser = winner === primary ? secondary : primary;
+  return {
+    ...winner,
+    flash,
+    portfolio: portfolio.length > 0 ? portfolio : winner.portfolio ?? [],
+    tags: tags.length > 0 ? tags : winner.tags ?? [],
+    avatar_url: winner.avatar_url?.trim() || loser.avatar_url?.trim() || null,
+    distance_km: pickPreferredStudio(primary, secondary).distance_km,
+  };
+}
+
+/**
+ * Évite les cartes en double : plusieurs lignes `inkflow_studios` pour le même slug,
+ * ou même nom d’enseigne + même ville (ex. comptes de test + prod).
+ */
+function deduplicateDiscoveryStudios(studios: NearbyStudio[]): NearbyStudio[] {
+  const bySlug = new Map<string, NearbyStudio>();
+  for (const s of studios) {
+    const sk = normDiscoveryKey(s.slug || '');
+    const key = sk.length > 0 ? `slug:${sk}` : `id:${s.id}`;
+    const ex = bySlug.get(key);
+    if (!ex) {
+      bySlug.set(key, s);
+      continue;
+    }
+    bySlug.set(key, mergeNearbyStudios(ex, s));
+  }
+  const slugPass = [...bySlug.values()];
+
+  const byNameCity = new Map<string, NearbyStudio>();
+  for (const s of slugPass) {
+    const nk = normDiscoveryKey(s.studio_name);
+    const ck = normDiscoveryKey(s.city ?? '');
+    const key = `name:${nk}|city:${ck}`;
+    const ex = byNameCity.get(key);
+    if (!ex) {
+      byNameCity.set(key, s);
+      continue;
+    }
+    byNameCity.set(key, mergeNearbyStudios(ex, s));
+  }
+
+  return [...byNameCity.values()].sort((a, b) => {
+    const da = a.distance_km;
+    const db = b.distance_km;
+    const aN = da != null && Number.isFinite(da) ? da : 1e9;
+    const bN = db != null && Number.isFinite(db) ? db : 1e9;
+    if (aN !== bN) return aN - bN;
+    return a.studio_name.localeCompare(b.studio_name, 'fr');
+  });
+}
+
+async function fetchDiscoveryRpcRows(
+  userLat: number | null,
+  userLng: number | null,
+  radiusKm: number,
+  limitCount: number,
+): Promise<RpcRow[] | null> {
+  const { data, error } = await supabase.rpc('get_discovery_studios_for_client', {
+    user_lat: userLat,
+    user_lng: userLng,
+    radius_km: radiusKm,
+    limit_count: limitCount,
+  });
+  if (error) {
+    if (import.meta.env.DEV) {
+      console.warn('[supabaseGeo] get_discovery_studios_for_client:', error.message);
+    }
+    return null;
+  }
+  if (!data?.length) return [];
+  return (data as RpcRow[]).map((r) => ({
+    ...r,
+    latitude: numOrNull(r.latitude),
+    longitude: numOrNull(r.longitude),
+    distance_km: numOrNull(r.distance_km),
+  }));
+}
+
+async function fetchNearbyOnlyRows(lat: number, lng: number, radiusKm: number): Promise<RpcRow[]> {
+  const { data, error } = await supabase.rpc('get_nearby_studios', {
     user_lat: lat,
     user_lng: lng,
     radius_km: radiusKm,
-    limit_count: 20,
+    limit_count: 30,
   });
+  if (error || !data?.length) return [];
+  return (data as RpcRow[]).map((r) => ({
+    ...r,
+    latitude: numOrNull(r.latitude),
+    longitude: numOrNull(r.longitude),
+    distance_km: numOrNull(r.distance_km),
+  }));
+}
 
-  if (error || !rows?.length) return [];
+/**
+ * Studios pour l’app client : même source logique que la vitrine publique.
+ * - RPC `get_discovery_studios_for_client` : inclut les studios sans lat/lng (souvent la cause des listes vides).
+ * - Flashs : fusion `inkflow_flash_designs` (dashboard) + JSON vitrine.
+ * - Portfolio : champs url / imageUrl / image_url + repli cover / avatar vitrine.
+ */
+export async function loadClientDiscoveryStudios(
+  userLat?: number | null,
+  userLng?: number | null,
+  radiusKm = 120,
+  limitCount = 40,
+): Promise<NearbyStudio[]> {
+  let rows: RpcRow[] | null = await fetchDiscoveryRpcRows(
+    userLat ?? null,
+    userLng ?? null,
+    radiusKm,
+    limitCount,
+  );
 
-  const studioIds = (rows as RpcRow[]).map((r) => r.id);
+  if (rows === null && userLat != null && userLng != null) {
+    rows = await fetchNearbyOnlyRows(userLat, userLng, radiusKm);
+  }
+  if (rows === null) rows = [];
+  if (!rows.length) return [];
 
-  const { data: vitrineRows } = await supabase
-    .from('inkflow_vitrine_data')
-    .select('studio_id, data')
-    .in('studio_id', studioIds);
+  const studioIds = rows.map((r) => r.id);
+
+  const [{ data: vitrineRows }, { data: flashRows }] = await Promise.all([
+    supabase.from('inkflow_vitrine_data').select('studio_id, data').in('studio_id', studioIds),
+    supabase
+      .from('inkflow_flash_designs')
+      .select('id, studio_id, title, image_url, price, category')
+      .in('studio_id', studioIds)
+      .eq('available', true)
+      .eq('reserved', false)
+      .order('created_at', { ascending: false }),
+  ]);
 
   const vitrineMap = new Map<string, Record<string, unknown>>(
     (vitrineRows ?? []).map((v: { studio_id: string; data: Record<string, unknown> }) => [
@@ -86,43 +310,81 @@ export async function getNearbyStudios(
     ]),
   );
 
-  return (rows as RpcRow[]).map((s) => {
+  const flashByStudio = new globalThis.Map<string, FlashPreview[]>();
+  for (const fr of flashRows ?? []) {
+    const row = fr as {
+      id: string;
+      studio_id: string;
+      title: string;
+      image_url: string | null;
+      price: number;
+      category: string | null;
+    };
+    const url = (row.image_url ?? '').trim();
+    if (!url) continue;
+    const slugRow = rows.find((x) => x.id === row.studio_id);
+    const preview: FlashPreview = {
+      id: String(row.id),
+      title: String(row.title ?? 'Flash'),
+      imageUrl: url,
+      price: Number(row.price ?? 0),
+      style: row.category ? String(row.category) : undefined,
+      studioSlug: slugRow?.slug ?? '',
+      studioName: slugRow?.studio_name ?? '',
+    };
+    const list = flashByStudio.get(row.studio_id) ?? [];
+    list.push(preview);
+    flashByStudio.set(row.studio_id, list);
+  }
+
+  const list = rows.map((s) => {
     const vd = vitrineMap.get(s.id) ?? {};
+    const vitrineFlash = vitrineFlashList(vd, s.slug, s.studio_name);
+    const dbFlash = flashByStudio.get(s.id) ?? [];
+    const flash = mergeFlashFromVitrineAndDb(vitrineFlash, dbFlash);
 
-    // Flash designs disponibles
-    const flashRaw = Array.isArray(vd.flashDesigns) ? vd.flashDesigns : [];
-    const flash: FlashPreview[] = flashRaw
-      .filter((f: Record<string, unknown>) => f.available !== false && f.imageUrl)
-      .slice(0, 8)
-      .map((f: Record<string, unknown>) => ({
-        id: String(f.id ?? ''),
-        title: String(f.title ?? 'Flash'),
-        imageUrl: String(f.imageUrl ?? ''),
-        price: Number(f.price ?? 0),
-        style: f.style ? String(f.style) : undefined,
-        studioSlug: s.slug,
-        studioName: s.studio_name,
-      }));
+    let portfolio = normalizePortfolio(vd);
+    const dbAvatar = s.avatar_url?.trim() || '';
+    const vitrineAvatar = typeof vd.avatar === 'string' ? vd.avatar.trim() : '';
+    const resolvedAvatar = dbAvatar || vitrineAvatar || null;
+    if (portfolio.length === 0 && resolvedAvatar) {
+      portfolio = [{ url: resolvedAvatar, category: 'Studio' }];
+    }
 
-    // Portfolio (4 premières photos)
-    const portRaw = Array.isArray(vd.portfolio) ? vd.portfolio : [];
-    const portfolio: PortfolioPreview[] = portRaw
-      .filter((p: Record<string, unknown>) => p.url)
-      .slice(0, 4)
-      .map((p: Record<string, unknown>) => ({
-        url: String(p.url),
-        category: String(p.category ?? ''),
-      }));
-
-    // Tags depuis services ou styles
     const services = Array.isArray(vd.services) ? vd.services : [];
     const tags: string[] = services
       .map((sv: Record<string, unknown>) => String(sv.name ?? ''))
       .filter(Boolean)
       .slice(0, 3);
 
-    return { ...s, flash, portfolio, tags };
+    return {
+      id: s.id,
+      slug: s.slug,
+      studio_name: s.studio_name,
+      avatar_url: resolvedAvatar,
+      city: s.city,
+      latitude: s.latitude,
+      longitude: s.longitude,
+      distance_km: s.distance_km,
+      flash,
+      portfolio,
+      tags,
+    };
   });
+
+  return deduplicateDiscoveryStudios(list);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getNearbyStudios  (GPS user — même pipeline que la découverte globale)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function getNearbyStudios(
+  lat: number,
+  lng: number,
+  radiusKm = 80,
+): Promise<NearbyStudio[]> {
+  return loadClientDiscoveryStudios(lat, lng, radiusKm, 40);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
