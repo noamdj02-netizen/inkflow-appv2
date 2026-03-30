@@ -16,7 +16,7 @@ const ONBOARD_SLIDES = [
     img: '/images/allef-vinicius-hxNiXP498UI-unsplash.jpg',
     logo: true,
     title: 'INKFLOW',
-    sub: 'Ton espace tatouage personnel',
+    sub: 'Trouve ton tatoueur près de chez toi.',
     desc: '',
     Icon: null as React.ElementType | null,
   },
