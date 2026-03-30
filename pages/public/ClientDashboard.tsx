@@ -23,6 +23,7 @@ import { clientNeedsPassword, clientOnboardingComplete } from '../../lib/clientA
 import { getInviteBaseUrl } from '../../lib/urls';
 import { type ClientAppointment, type ClientTab } from '../../components/client/clientExperienceTypes';
 import { HealingBanner } from '../../components/client/HealingBanner';
+import { ClientReviewPrompt, shouldShowReviewPrompt, markReviewPromptDismissed } from '../../components/client/ClientReviewPrompt';
 import { loadClientDiscoveryStudios, type NearbyStudio } from '../../lib/supabaseGeo';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { NearbyMapView } from '../../components/client/NearbyMapView';
@@ -2006,6 +2007,8 @@ export const ClientDashboard: React.FC = () => {
   const [showPriceEstimator, setShowPriceEstimator] = useState(false);
   const [showCommissionModal, setShowCommissionModal] = useState(false);
   const [dismissedAnniversaries, setDismissedAnniversaries] = useState<Set<string>>(new Set());
+  const [showReviewPrompt, setShowReviewPrompt] = useState(false);
+  const [reviewTriggerLabel, setReviewTriggerLabel] = useState<string | undefined>(undefined);
 
   // ── Géolocalisation & studios proches ──
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
@@ -2506,6 +2509,29 @@ export const ClientDashboard: React.FC = () => {
       return diffDays > 0 && diffDays % 365 < 2; // ± 1 jour
     });
   }, [completed]);
+
+  /** Review prompt — déclenché au palier fidélité ou J14 cicatrisation */
+  useEffect(() => {
+    if (!shouldShowReviewPrompt()) return;
+    // Paliers fidélité : 2 séances = Silver, 5 = Gold, 10 = Platinum
+    const milestones = [2, 5, 10];
+    if (milestones.includes(completed.length)) {
+      const label = completed.length === 10 ? 'Tu viens d\'atteindre le statut Platinum 🏆'
+        : completed.length === 5 ? 'Tu viens d\'atteindre le statut Gold ⭐'
+        : 'Tu viens d\'atteindre le statut Silver 🥈';
+      setReviewTriggerLabel(label);
+      setShowReviewPrompt(true);
+      return;
+    }
+    // J14 : dernier tattoo cicatrisé depuis 14 jours
+    if (lastTattoo) {
+      const daysSince = Math.round((Date.now() - new Date(lastTattoo.date).getTime()) / 86_400_000);
+      if (daysSince === 14 || daysSince === 15) {
+        setReviewTriggerLabel('Ton tatouage est maintenant cicatrisé ✨');
+        setShowReviewPrompt(true);
+      }
+    }
+  }, [completed.length, lastTattoo]);
 
   /** Badge rouge tab RDV : prochain RDV dans < 48h */
   const rdvUrgent = useMemo(() => {
@@ -3963,6 +3989,19 @@ export const ClientDashboard: React.FC = () => {
             appointment={reviewTarget}
             sessionEmail={sessionEmail}
             onClose={() => setReviewTarget(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Review prompt ── */}
+      <AnimatePresence>
+        {showReviewPrompt && (
+          <ClientReviewPrompt
+            triggerLabel={reviewTriggerLabel}
+            onClose={() => {
+              markReviewPromptDismissed();
+              setShowReviewPrompt(false);
+            }}
           />
         )}
       </AnimatePresence>
