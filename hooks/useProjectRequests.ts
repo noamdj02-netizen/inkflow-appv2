@@ -48,14 +48,15 @@ export function useProjectRequests(studioId: string | null) {
   }, [load]);
 
   const updateStatus = useCallback(async (id: string, status: ProjectRequestStatus) => {
-    mutation.update(
+    const p = mutation.update(
       id,
       (req) => ({ ...req, status }),
       async () => {
         await updateStatusInSupabase(id, status);
-        if (studioId) load();
+        if (studioId) await load();
       }
     );
+    if (p) await p;
   }, [mutation, studioId, load]);
 
   return { projectRequests, loading, updateStatus, refetch: load };

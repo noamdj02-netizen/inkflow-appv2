@@ -43,7 +43,7 @@ export function useOptimisticMutation<T extends { id: string }>(
       id: string,
       optimisticUpdate: (item: T) => T,
       serverFn: (updated: T) => Promise<unknown>
-    ) => {
+    ): Promise<void> | undefined => {
       let snapshot: T | undefined;
       let updated: T | undefined;
 
@@ -59,19 +59,21 @@ export function useOptimisticMutation<T extends { id: string }>(
         return next;
       });
 
-      if (!updated) return;
+      if (!updated) return undefined;
 
       inflightRef.current++;
       const capturedSnapshot = snapshot!;
       const capturedUpdated = updated;
 
-      serverFn(capturedUpdated)
+      return serverFn(capturedUpdated)
         .catch((err) => {
           // Rollback: restore the snapshot
           setState(prev => prev.map(item => item.id === id ? capturedSnapshot : item));
           toast.error('Erreur de sauvegarde — modification annulee');
+          throw err;
         })
-        .finally(() => { inflightRef.current--; });
+        .finally(() => { inflightRef.current--; })
+        .then(() => undefined);
     },
     [setState, toast]
   );

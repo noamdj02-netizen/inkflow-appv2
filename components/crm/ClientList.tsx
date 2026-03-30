@@ -14,8 +14,14 @@ import {
   ArrowDownAZ,
   FileSpreadsheet,
   MapPin,
+  FolderKanban,
+  ChevronRight,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Loader2,
 } from 'lucide-react';
-import { Client } from '../../types';
+import { Client, type ProjectRequest, type ProjectRequestStatus } from '../../types';
 import { Modal } from '../ui/Modal';
 import { useToast } from '../../contexts/ToastContext';
 import { useAutoSave } from '../../hooks/useAutoSave';
@@ -50,6 +56,10 @@ interface ClientListProps {
   onOpenGoogleReviewsSettings?: () => void;
   /** Vue depuis la sidebar : 'overview' = liste clients, 'projects' = demandes projet par client */
   view?: 'overview' | 'projects';
+  /** Demandes projet (même source que Demandes → Projets) */
+  projectRequests?: ProjectRequest[];
+  /** Mise à jour statut depuis la fiche client (ex. accepter / refuser) */
+  onUpdateProjectRequest?: (id: string, status: ProjectRequestStatus) => void | Promise<void>;
 }
 
 export const ClientList: React.FC<ClientListProps> = ({
@@ -69,6 +79,8 @@ export const ClientList: React.FC<ClientListProps> = ({
   googlePlaceConfigured,
   onOpenGoogleReviewsSettings,
   view = 'overview',
+  projectRequests = [],
+  onUpdateProjectRequest,
 }) => {
   const toast = useToast();
   const [showCsvImportModal, setShowCsvImportModal] = useState(false);
@@ -78,6 +90,13 @@ export const ClientList: React.FC<ClientListProps> = ({
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [projectsSearch, setProjectsSearch] = useState('');
+  const [projectsDetail, setProjectsDetail] = useState<
+    | { kind: 'crm'; client: Client; requests: ProjectRequest[] }
+    | { kind: 'orphan'; email: string; displayName: string; requests: ProjectRequest[] }
+    | null
+  >(null);
+  const [projectActionId, setProjectActionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (openAddModal && onAddClient && !clientLimitReached) setShowAddModal(true);
@@ -119,6 +138,95 @@ export const ClientList: React.FC<ClientListProps> = ({
       return new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime();
     });
   }, [filteredClients, sortBy]);
+
+  const normalizeEmail = (e: string) => e.trim().toLowerCase();
+
+  const projectRows = useMemo(() => {
+    const byEmail = new Map<string, ProjectRequest[]>();
+    for (const pr of projectRequests) {
+      const k = normalizeEmail(pr.clientEmail);
+      if (!byEmail.has(k)) byEmail.set(k, []);
+      byEmail.get(k)!.push(pr);
+    }
+    type Row =
+      | { kind: 'crm'; client: Client; requests: ProjectRequest[] }
+      | { kind: 'orphan'; email: string; displayName: string; requests: ProjectRequest[] };
+    const rows: Row[] = [];
+    const consumed = new Set<string>();
+    for (const c of clients) {
+      const k = normalizeEmail(c.email);
+      const reqs = byEmail.get(k);
+      if (reqs?.length) {
+        rows.push({
+          kind: 'crm',
+          client: c,
+          requests: [...reqs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+        });
+        consumed.add(k);
+      }
+    }
+    for (const [email, reqs] of byEmail) {
+      if (consumed.has(email) || !reqs.length) continue;
+      const sorted = [...reqs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      rows.push({ kind: 'orphan', email, displayName: sorted[0]?.clientName || email, requests: sorted });
+    }
+    rows.sort((a, b) => {
+      const ta = new Date(a.requests[0]?.createdAt || 0).getTime();
+      const tb = new Date(b.requests[0]?.createdAt || 0).getTime();
+      return tb - ta;
+    });
+    return rows;
+  }, [clients, projectRequests]);
+
+  const filteredProjectRows = useMemo(() => {
+    const q = projectsSearch.trim().toLowerCase();
+    if (!q) return projectRows;
+    return projectRows.filter((row) => {
+      if (row.kind === 'crm') {
+        return (
+          row.client.name.toLowerCase().includes(q) ||
+          row.client.email.toLowerCase().includes(q)
+        );
+      }
+      return row.displayName.toLowerCase().includes(q) || row.email.toLowerCase().includes(q);
+    });
+  }, [projectRows, projectsSearch]);
+
+  const projectStatusLabel = (s: ProjectRequestStatus) =>
+    s === 'pending' ? 'En attente' : s === 'accepted' ? 'Accepté' : 'Refusé';
+
+  const projectStatusClass = (s: ProjectRequestStatus) =>
+    s === 'pending'
+      ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/30'
+      : s === 'accepted'
+        ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/30'
+        : 'bg-red-50 text-red-800 border-red-200 dark:bg-red-500/15 dark:text-red-200 dark:border-red-500/30';
+
+  const countProjectStatuses = (reqs: ProjectRequest[]) => ({
+    pending: reqs.filter((r) => r.status === 'pending').length,
+    accepted: reqs.filter((r) => r.status === 'accepted').length,
+    rejected: reqs.filter((r) => r.status === 'rejected').length,
+  });
+
+  const handleProjectStatusChange = async (id: string, status: ProjectRequestStatus) => {
+    if (!onUpdateProjectRequest) return;
+    setProjectActionId(id);
+    try {
+      await Promise.resolve(onUpdateProjectRequest(id, status));
+      toast.success(status === 'accepted' ? 'Demande acceptée' : status === 'rejected' ? 'Demande refusée' : 'Statut mis à jour');
+      setProjectsDetail((cur) => {
+        if (!cur) return cur;
+        return {
+          ...cur,
+          requests: cur.requests.map((r) => (r.id === id ? { ...r, status } : r)),
+        };
+      });
+    } catch {
+      toast.error('Impossible de mettre à jour la demande');
+    } finally {
+      setProjectActionId(null);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -194,24 +302,204 @@ export const ClientList: React.FC<ClientListProps> = ({
   };
 
   if (view === 'projects') {
+    const detailTitle =
+      projectsDetail?.kind === 'crm'
+        ? projectsDetail.client.name
+        : projectsDetail?.kind === 'orphan'
+          ? projectsDetail.displayName
+          : '';
+
     return (
       <div className="space-y-6 animate-fade-in">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Projets par client</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Demandes de projet personnalisé regroupées par client</p>
-        </div>
-        <div className="dashboard-widget-card rounded-2xl p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
-            <User className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Projets par client</h1>
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm sm:text-base mt-1.5 max-w-2xl">
+              Demandes de projet (vitrine) regroupées par client CRM. Les e-mails identiques à la fiche client sont reliés automatiquement.
+            </p>
           </div>
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Vue Projets — bientôt</h3>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-sm mx-auto">
-            Cette vue affichera les demandes de projet personnalisé regroupées par client. Elle sera disponible dans une prochaine mise à jour.
-          </p>
-          <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-4">
-            En attendant, consultez les demandes dans <strong>Demandes → Projets</strong>.
-          </p>
         </div>
+
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+          <input
+            type="search"
+            value={projectsSearch}
+            onChange={(e) => setProjectsSearch(e.target.value)}
+            placeholder="Rechercher un client ou une demande…"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-sm"
+            aria-label="Rechercher dans les projets par client"
+          />
+        </div>
+
+        {filteredProjectRows.length === 0 ? (
+          <div className="dashboard-widget-card rounded-2xl p-12 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+              <FolderKanban className="w-8 h-8 text-zinc-500 dark:text-zinc-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+              {projectRequests.length === 0 ? 'Aucune demande de projet' : 'Aucun résultat'}
+            </h3>
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-md mx-auto">
+              {projectRequests.length === 0
+                ? 'Les projets soumis depuis ta vitrine apparaîtront ici, classés par client dès qu’il existe une correspondance d’e-mail dans le CRM.'
+                : 'Essaie un autre terme de recherche.'}
+            </p>
+            {projectRequests.length === 0 && (
+              <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-4">
+                Tu peux aussi traiter les demandes dans <strong>Demandes → Projets</strong>.
+              </p>
+            )}
+          </div>
+        ) : (
+          <ul className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredProjectRows.map((row) => {
+              const counts = countProjectStatuses(row.requests);
+              const name = row.kind === 'crm' ? row.client.name : row.displayName;
+              const email = row.kind === 'crm' ? row.client.email : row.email;
+              const isOrphan = row.kind === 'orphan';
+
+              return (
+                <li key={row.kind === 'crm' ? row.client.id : `orphan-${row.email}`}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setProjectsDetail(
+                        row.kind === 'crm'
+                          ? { kind: 'crm', client: row.client, requests: row.requests }
+                          : { kind: 'orphan', email: row.email, displayName: row.displayName, requests: row.requests },
+                      )
+                    }
+                    className="w-full text-left rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-4 sm:p-5 shadow-sm hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/30 transition-all active:scale-[0.98] flex flex-col gap-3 min-h-[120px]"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-11 h-11 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center shrink-0">
+                          <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">{name.slice(0, 2).toUpperCase()}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-zinc-900 dark:text-white truncate">{name}</p>
+                          <p className="text-xs text-zinc-500 truncate">{email}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-zinc-400 shrink-0 mt-1" />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                        {row.requests.length} projet{row.requests.length > 1 ? 's' : ''}
+                      </span>
+                      {counts.pending > 0 && (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/30">
+                          {counts.pending} en attente
+                        </span>
+                      )}
+                      {counts.accepted > 0 && (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-500/30">
+                          {counts.accepted} accepté{counts.accepted > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {counts.rejected > 0 && (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-red-50 text-red-800 border-red-200 dark:bg-red-500/15 dark:text-red-200 dark:border-red-500/30">
+                          {counts.rejected} refusé{counts.rejected > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {isOrphan && (
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-600 text-amber-800 dark:text-amber-300">
+                          Hors CRM
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {projectsDetail && (
+          <Modal
+            isOpen
+            onClose={() => setProjectsDetail(null)}
+            title={detailTitle}
+            size="lg"
+          >
+            <div className="space-y-4 min-w-0">
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                {projectsDetail.kind === 'crm' ? projectsDetail.client.email : projectsDetail.email}
+              </p>
+              {projectsDetail.kind === 'orphan' && (
+                <p className="text-xs text-amber-700 dark:text-amber-400 rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50/80 dark:bg-amber-500/10 px-3 py-2">
+                  Aucune fiche client avec cet e-mail — la demande reste visible ici. Ajoute le client au CRM avec le même e-mail pour lier les prochains projets.
+                </p>
+              )}
+              <ul className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                {projectsDetail.requests.map((pr) => (
+                  <li
+                    key={pr.id}
+                    className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-950/40 p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${projectStatusClass(pr.status)}`}>
+                        {pr.status === 'pending' && <Clock className="w-3.5 h-3.5" />}
+                        {pr.status === 'accepted' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                        {pr.status === 'rejected' && <XCircle className="w-3.5 h-3.5" />}
+                        {projectStatusLabel(pr.status)}
+                      </span>
+                      <span className="text-xs text-zinc-500">
+                        {new Date(pr.createdAt).toLocaleString('fr-FR', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap">{pr.description}</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      {pr.placement && <span>Emplacement : {pr.placement}</span>}
+                      {(pr.estimatedSize || pr.size) && <span>Taille : {pr.estimatedSize || pr.size}</span>}
+                      {pr.budget && <span>Budget : {pr.budget}</span>}
+                    </div>
+                    {pr.referenceImages?.length > 0 && (
+                      <div className="flex gap-2 mt-3 flex-wrap">
+                        {pr.referenceImages.slice(0, 4).map((url, i) => (
+                          <a
+                            key={i}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-16 h-16 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-600"
+                          >
+                            <img src={url} alt="" className="w-full h-full object-cover" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {onUpdateProjectRequest && pr.status === 'pending' && (
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        <button
+                          type="button"
+                          disabled={projectActionId === pr.id}
+                          onClick={() => handleProjectStatusChange(pr.id, 'accepted')}
+                          className="min-h-[44px] px-4 py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2"
+                        >
+                          {projectActionId === pr.id ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                          Accepter
+                        </button>
+                        <button
+                          type="button"
+                          disabled={projectActionId === pr.id}
+                          onClick={() => handleProjectStatusChange(pr.id, 'rejected')}
+                          className="min-h-[44px] px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-600 text-sm font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:opacity-50"
+                        >
+                          Refuser
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Modal>
+        )}
       </div>
     );
   }

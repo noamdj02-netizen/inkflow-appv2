@@ -15,8 +15,11 @@ import {
   Medal,
   Target,
   Heart,
+  History,
+  RefreshCw,
 } from 'lucide-react';
-import type { LoyaltyEntry, Client, LoyaltyTier } from '../../types';
+import type { LoyaltyEntry, Client, LoyaltyTier, LoyaltyTransaction } from '../../types';
+import { Modal } from '../ui/Modal';
 
 interface LoyaltyManagerProps {
   entries: LoyaltyEntry[];
@@ -26,11 +29,18 @@ interface LoyaltyManagerProps {
   onUpdateSettings: (settings: LoyaltySettings) => void;
   /** Nom du studio — titre du programme si programName vide */
   studioName?: string;
+  /** Derniers mouvements de points (studio) */
+  history?: LoyaltyTransaction[];
+  /** Recalcul des points à partir du CRM (dépenses + nombre de RDV) */
+  onSyncFromCrm?: () => void;
+  syncing?: boolean;
 }
 
 export interface LoyaltySettings {
   enabled: boolean;
   pointsPerEuro: number;
+  /** Points crédités par rendez-vous enregistré (fiche CRM) */
+  pointsPerAppointment: number;
   referralBonus: number;
   tierThresholds: { silver: number; gold: number; platinum: number };
   rewards: { name: string; cost: number }[];
@@ -49,6 +59,7 @@ export interface LoyaltySettings {
 const DEFAULT_SETTINGS: LoyaltySettings = {
   enabled: true,
   pointsPerEuro: 1,
+  pointsPerAppointment: 25,
   referralBonus: 50,
   tierThresholds: { silver: 200, gold: 500, platinum: 1000 },
   rewards: [
@@ -79,7 +90,24 @@ const TIER_LABELS: Record<LoyaltyTier, string> = {
 };
 
 function mergeSettings(s: LoyaltySettings | undefined): LoyaltySettings {
-  return { ...DEFAULT_SETTINGS, ...s, tierThresholds: { ...DEFAULT_SETTINGS.tierThresholds, ...s?.tierThresholds }, rewards: s?.rewards?.length ? s.rewards : DEFAULT_SETTINGS.rewards };
+  return {
+    ...DEFAULT_SETTINGS,
+    ...s,
+    pointsPerAppointment: s?.pointsPerAppointment ?? DEFAULT_SETTINGS.pointsPerAppointment,
+    tierThresholds: { ...DEFAULT_SETTINGS.tierThresholds, ...s?.tierThresholds },
+    rewards: s?.rewards?.length ? s.rewards : DEFAULT_SETTINGS.rewards,
+  };
+}
+
+/** Paliers à partir du solde de points (seuils configurables) */
+export function computeLoyaltyTier(
+  points: number,
+  th: { silver: number; gold: number; platinum: number },
+): LoyaltyTier {
+  if (points >= th.platinum) return 'platinum';
+  if (points >= th.gold) return 'gold';
+  if (points >= th.silver) return 'silver';
+  return 'bronze';
 }
 
 /** Tampons remplis à partir des points (plafonné sur stampSlots) */
@@ -142,19 +170,30 @@ function StampSlotsVisual({
 export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({
   entries,
   clients,
-  onUpdatePoints: _onUpdatePoints,
+  onUpdatePoints,
   settings,
   onUpdateSettings,
   studioName,
+  history = [],
+  onSyncFromCrm,
+  syncing = false,
 }) => {
   const cfg = useMemo(() => mergeSettings(settings), [settings]);
   const [showSettings, setShowSettings] = useState(false);
   const [draftSettings, setDraftSettings] = useState<LoyaltySettings>(cfg);
   const [saving, setSaving] = useState(false);
+  const [adjustClientId, setAdjustClientId] = useState<string | null>(null);
+  const [adjustPointsInput, setAdjustPointsInput] = useState('');
 
   useEffect(() => {
     if (showSettings) setDraftSettings(mergeSettings(settings));
   }, [showSettings, settings]);
+
+  useEffect(() => {
+    if (!adjustClientId) return;
+    const e = entries.find((x) => x.clientId === adjustClientId);
+    if (e) setAdjustPointsInput(String(e.points));
+  }, [adjustClientId, entries]);
 
   const displayTitle = (cfg.programName?.trim() || studioName?.trim() || 'Programme fidélité').trim();
   const displaySubtitle =
@@ -190,6 +229,10 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({
       rewards: (draftSettings.rewards || []).filter((r) => r.name.trim() !== ''),
       stampSlots: Math.min(20, Math.max(3, Number(draftSettings.stampSlots) || DEFAULT_SETTINGS.stampSlots)),
       pointsPerStamp: Math.max(1, Number(draftSettings.pointsPerStamp) || DEFAULT_SETTINGS.pointsPerStamp),
+      pointsPerAppointment: Math.max(
+        0,
+        Number(draftSettings.pointsPerAppointment) || DEFAULT_SETTINGS.pointsPerAppointment,
+      ),
     };
     onUpdateSettings(cleaned);
     setShowSettings(false);
@@ -222,13 +265,26 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({
             )}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowSettings(true)}
-          className="flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl font-medium border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98] shrink-0"
-        >
-          <Settings className="w-4 h-4" /> Personnaliser
-        </button>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          {onSyncFromCrm && (
+            <button
+              type="button"
+              disabled={syncing || clients.length === 0}
+              onClick={() => onSyncFromCrm()}
+              className="flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl font-medium border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              Synchro CRM
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowSettings(true)}
+            className="flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl font-medium border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98]"
+          >
+            <Settings className="w-4 h-4" /> Personnaliser
+          </button>
+        </div>
       </div>
 
       {/* KPIs — cartes alignées ClientList */}
@@ -386,7 +442,7 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({
                           )}
                         </div>
                       </div>
-                      <div className="flex flex-col sm:items-end gap-2 pl-11 sm:pl-0">
+                        <div className="flex flex-col sm:items-end gap-2 pl-11 sm:pl-0">
                         <div className="flex flex-wrap items-center gap-2 justify-end">
                           <span
                             className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${TIER_COLORS[entry.tier]}`}
@@ -396,6 +452,13 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({
                           <span className="font-bold text-sm tabular-nums text-zinc-900 dark:text-white">
                             {entry.points} pts
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => setAdjustClientId(entry.clientId)}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]"
+                          >
+                            Ajuster
+                          </button>
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           <span className="text-[10px] uppercase tracking-wide text-zinc-500">Tampons</span>
@@ -482,19 +545,105 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({
             </div>
           </div>
 
+          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 overflow-hidden shadow-sm">
+            <div className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-2">
+              <History className="w-5 h-5 text-zinc-500" />
+              <h3 className="font-bold text-zinc-900 dark:text-white">Historique des points</h3>
+            </div>
+            {history.length === 0 ? (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 px-5 py-8 text-center">
+                Aucun mouvement enregistré. Utilise « Synchro CRM » ou ajuste un solde depuis le classement.
+              </p>
+            ) : (
+              <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 max-h-72 overflow-y-auto">
+                {history.slice(0, 40).map((h) => {
+                  const c = clients.find((cl) => cl.id === h.clientId);
+                  return (
+                    <li key={h.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <div className="min-w-0">
+                        <p className="font-medium text-zinc-900 dark:text-white truncate">{c?.name ?? 'Client'}</p>
+                        <p className="text-xs text-zinc-500 truncate">{h.reason}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span
+                          className={`font-bold tabular-nums ${h.delta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}
+                        >
+                          {h.delta >= 0 ? '+' : ''}
+                          {h.delta} pts
+                        </span>
+                        <p className="text-[10px] text-zinc-500">
+                          {new Date(h.at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
           <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-4 sm:p-5 bg-zinc-50/80 dark:bg-zinc-900/40">
             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed flex gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                 <Info className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
               </span>
               <span>
-                Les tampons sont calculés à partir des points (configurable). Branchement Supabase à venir pour
-                synchroniser les soldes avec l’espace client.
+                Les points peuvent refléter les euros dépensés et le nombre de RDV (règles dans Personnaliser). Les
+                récompenses listées sont des objectifs indicatifs pour ton équipe et tes clients.
               </span>
             </p>
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={adjustClientId !== null}
+        onClose={() => setAdjustClientId(null)}
+        title="Ajuster le solde"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Définis le nombre de points pour{' '}
+            <strong className="text-zinc-900 dark:text-white">
+              {clients.find((c) => c.id === adjustClientId)?.name ?? 'ce client'}
+            </strong>
+            . Un mouvement sera ajouté à l’historique.
+          </p>
+          <div>
+            <label className="block text-sm font-semibold mb-1 text-zinc-900 dark:text-white">Points</label>
+            <input
+              type="number"
+              value={adjustPointsInput}
+              onChange={(e) => setAdjustPointsInput(e.target.value)}
+              min={0}
+              className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setAdjustClientId(null)}
+              className="min-h-[44px] px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-600 text-sm font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!adjustClientId) return;
+                const v = Number.parseInt(adjustPointsInput, 10);
+                if (!Number.isFinite(v) || v < 0) return;
+                onUpdatePoints(adjustClientId, v);
+                setAdjustClientId(null);
+              }}
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98]"
+            >
+              Enregistrer
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {showSettings && (
         <div
@@ -588,6 +737,22 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({
                   className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   min={0}
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1 text-zinc-900 dark:text-white">Points par rendez-vous (CRM)</label>
+                <input
+                  type="number"
+                  value={draftSettings.pointsPerAppointment ?? DEFAULT_SETTINGS.pointsPerAppointment}
+                  onChange={(e) =>
+                    setDraftSettings((p) => ({
+                      ...p,
+                      pointsPerAppointment: Math.max(0, Number(e.target.value)),
+                    }))
+                  }
+                  className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  min={0}
+                />
+                <p className="text-[11px] text-zinc-500 mt-1">Utilisé lors de la synchronisation avec le CRM.</p>
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1 text-zinc-900 dark:text-white">Bonus parrainage (points)</label>

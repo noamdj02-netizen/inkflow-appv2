@@ -334,3 +334,12 @@ export interface LoyaltyEntry {
   totalRedeemed: number;
   createdAt: string;
 }
+
+/** Mouvement de points (historique studio) */
+export interface LoyaltyTransaction {
+  id: string;
+  at: string;
+  clientId: string;
+  delta: number;
+  reason: string;
+}

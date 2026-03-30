@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen, Award } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
@@ -42,13 +42,13 @@ import { DashboardOverviewTab } from './DashboardOverviewTab';
 import { PlanningSidebar } from './PlanningSidebar';
 import { WaitlistManager } from './WaitlistManager';
 import { ArtistManager } from './ArtistManager';
-import { LoyaltyManager, type LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
+import { LoyaltyManager, type LoyaltySettings as LoyaltySettingsType, computeLoyaltyTier } from './LoyaltyManager';
 import { NotificationsPage } from './NotificationsPage';
 import { ConsentFormEditor } from '../consent/ConsentFormEditor';
 import { CalendarSettings } from './CalendarSettings';
 import { AccountPage } from './AccountPage';
 import { EtablissementPage } from './EtablissementPage';
-import { Appointment, FlashDesign, BookingFormData, WaitlistEntry, ArtistAccount, LoyaltyEntry, MessageThread, type SubscriptionPlan } from '../../types';
+import { Appointment, FlashDesign, BookingFormData, WaitlistEntry, ArtistAccount, LoyaltyEntry, LoyaltyTransaction, MessageThread, type SubscriptionPlan } from '../../types';
 import type { Client } from '../../types';
 import { ClientPreviewPanel, type ClientPreviewData } from './ClientPreviewPanel';
 import { ClientPreviewDrawer } from './ClientPreviewDrawer';
@@ -70,7 +70,7 @@ import { safeJsonParse } from '../../lib/utils';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
-type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'finance' | 'messaging' | 'portfolio' | 'settings' | 'notifications' | 'account' | 'etablissement';
+type TabId = 'overview' | 'analytics' | 'requests' | 'appointments' | 'flash' | 'clients' | 'loyalty' | 'finance' | 'messaging' | 'portfolio' | 'settings' | 'notifications' | 'account' | 'etablissement';
 
 const iconProps = { className: 'w-5 h-5', strokeWidth: 1.5 };
 
@@ -82,6 +82,7 @@ const tabs: { id: TabId | 'referral'; label: string; icon: React.ReactNode; badg
   { id: 'appointments', label: 'Rendez-vous', icon: <Calendar {...iconProps} /> },
   { id: 'flash', label: 'Galerie Flash', icon: <Image {...iconProps} /> },
   { id: 'clients', label: 'Clients', icon: <Users {...iconProps} /> },
+  { id: 'loyalty', label: 'Fidélité', icon: <Award {...iconProps} /> },
   { id: 'messaging', label: 'Messagerie', icon: <Inbox {...iconProps} /> },
   { id: 'portfolio', label: 'Portfolio', icon: <Image {...iconProps} /> },
   { id: 'finance', label: 'Finance', icon: <Wallet {...iconProps} /> },
@@ -131,7 +132,7 @@ export const DashboardPro: React.FC = () => {
   const [requestsSubTab, setRequestsSubTab] = useState<'rdv' | 'bookings' | 'projects' | 'history'>('rdv');
   const [planningView, setPlanningView] = useState<'week' | 'month'>('week');
   const [financeView, setFinanceView] = useState<'revenus' | 'acomptes' | 'stats'>('revenus');
-  const [clientsView, setClientsView] = useState<'overview' | 'projects' | 'loyalty'>('overview');
+  const [clientsView, setClientsView] = useState<'overview' | 'projects'>('overview');
   const [showWidgetModal, setShowWidgetModal] = useState(false);
   const [customWidgets, setCustomWidgets] = useDashboardWidgets(studioId, useSupabase ?? false, {
     onError: () => toast.error('Erreur de sauvegarde des widgets'),
@@ -144,9 +145,12 @@ export const DashboardPro: React.FC = () => {
   const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>([]);
   const [artistAccounts, setArtistAccounts] = useState<ArtistAccount[]>([]);
   const [loyaltyEntries, setLoyaltyEntries] = useState<LoyaltyEntry[]>([]);
+  const [loyaltyHistory, setLoyaltyHistory] = useState<LoyaltyTransaction[]>([]);
+  const [loyaltySyncing, setLoyaltySyncing] = useState(false);
   const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettingsType>({
     enabled: true,
     pointsPerEuro: 1,
+    pointsPerAppointment: 25,
     referralBonus: 50,
     tierThresholds: { silver: 200, gold: 500, platinum: 1000 },
     rewards: [
@@ -275,6 +279,7 @@ export const DashboardPro: React.FC = () => {
     const defaultLoyalty: LoyaltySettingsType = {
       enabled: true,
       pointsPerEuro: 1,
+      pointsPerAppointment: 25,
       referralBonus: 50,
       tierThresholds: { silver: 200, gold: 500, platinum: 1000 },
       rewards: [
@@ -292,6 +297,8 @@ export const DashboardPro: React.FC = () => {
     if (ly && Object.keys(ly).length > 0) setLoyaltySettings(ly);
     const le = safeJsonParse<LoyaltyEntry[]>(localStorage.getItem(storageKey('inkflow_loyalty_entries')), []);
     if (le.length > 0) setLoyaltyEntries(le);
+    const lh = safeJsonParse<LoyaltyTransaction[]>(localStorage.getItem(storageKey('inkflow_loyalty_history')), []);
+    if (lh.length > 0) setLoyaltyHistory(lh);
   }, [user?.email, studioId, useSupabase]);
 
   // Load waitlist from Supabase when useSupabase
@@ -332,6 +339,140 @@ export const DashboardPro: React.FC = () => {
       localStorage.setItem(storageKey('inkflow_loyalty_entries'), JSON.stringify(loyaltyEntries));
     } catch (_) { /* ignore */ }
   }, [loyaltyEntries, user?.email, studioId]);
+  useEffect(() => {
+    if (!user) return;
+    try {
+      localStorage.setItem(storageKey('inkflow_loyalty_history'), JSON.stringify(loyaltyHistory));
+    } catch (_) { /* ignore */ }
+  }, [loyaltyHistory, user?.email, studioId]);
+
+  // Nouveaux clients CRM → entrée fidélité (points estimés depuis dépenses + RDV)
+  useEffect(() => {
+    if (!studioId) return;
+    setLoyaltyEntries((prev) => {
+      const have = new Set(prev.map((e) => e.clientId));
+      const additions: LoyaltyEntry[] = [];
+      for (const c of clients) {
+        if (have.has(c.id)) continue;
+        const ppa = loyaltySettings.pointsPerAppointment ?? 25;
+        const pts = Math.round(c.totalSpent * loyaltySettings.pointsPerEuro) + c.appointmentsCount * ppa;
+        additions.push({
+          id: `loy_${c.id}`,
+          studioId,
+          clientId: c.id,
+          points: pts,
+          tier: computeLoyaltyTier(pts, loyaltySettings.tierThresholds),
+          totalEarned: pts,
+          totalRedeemed: 0,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      return additions.length ? [...prev, ...additions] : prev;
+    });
+  }, [
+    clients,
+    studioId,
+    loyaltySettings.pointsPerEuro,
+    loyaltySettings.pointsPerAppointment,
+    loyaltySettings.tierThresholds.silver,
+    loyaltySettings.tierThresholds.gold,
+    loyaltySettings.tierThresholds.platinum,
+  ]);
+
+  const handleLoyaltyUpdatePoints = useCallback(
+    (clientId: string, points: number) => {
+      const newPts = Math.max(0, Math.round(points));
+      const prevEntry = loyaltyEntries.find((e) => e.clientId === clientId);
+      if (!prevEntry) return;
+      const delta = newPts - prevEntry.points;
+      if (delta === 0) return;
+      setLoyaltyEntries((prev) =>
+        prev.map((e) =>
+          e.clientId === clientId
+            ? {
+                ...e,
+                points: newPts,
+                tier: computeLoyaltyTier(newPts, loyaltySettings.tierThresholds),
+                totalEarned: e.totalEarned + Math.max(0, delta),
+                totalRedeemed: delta < 0 ? e.totalRedeemed + Math.abs(delta) : e.totalRedeemed,
+              }
+            : e,
+        ),
+      );
+      setLoyaltyHistory((h) =>
+        [
+          {
+            id: `ltx_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+            at: new Date().toISOString(),
+            clientId,
+            delta,
+            reason: 'Ajustement manuel du solde',
+          },
+          ...h,
+        ].slice(0, 500),
+      );
+      toast.success('Solde fidélité mis à jour');
+    },
+    [loyaltyEntries, loyaltySettings.tierThresholds, toast],
+  );
+
+  const handleLoyaltySyncFromCrm = useCallback(() => {
+    if (!studioId) {
+      toast.error('Studio non chargé');
+      return;
+    }
+    setLoyaltySyncing(true);
+    const ppe = loyaltySettings.pointsPerEuro;
+    const ppa = loyaltySettings.pointsPerAppointment ?? 25;
+    const th = loyaltySettings.tierThresholds;
+    const historyRows: LoyaltyTransaction[] = [];
+    const byClient = new Map(loyaltyEntries.map((e) => [e.clientId, { ...e }]));
+
+    for (const c of clients) {
+      const target = Math.round(c.totalSpent * ppe) + c.appointmentsCount * ppa;
+      const existing = byClient.get(c.id);
+      const cur =
+        existing ?? {
+          id: `loy_${c.id}`,
+          studioId,
+          clientId: c.id,
+          points: 0,
+          tier: 'bronze' as const,
+          totalEarned: 0,
+          totalRedeemed: 0,
+          createdAt: new Date().toISOString(),
+        };
+      const delta = target - cur.points;
+      if (delta !== 0) {
+        historyRows.push({
+          id: `ltx_${Date.now()}_${c.id.slice(0, 8)}_${Math.random().toString(36).slice(2, 7)}`,
+          at: new Date().toISOString(),
+          clientId: c.id,
+          delta,
+          reason: existing ? 'Synchronisation CRM' : 'Première synchro CRM',
+        });
+      }
+      byClient.set(c.id, {
+        ...cur,
+        studioId,
+        points: target,
+        tier: computeLoyaltyTier(target, th),
+        totalEarned: cur.totalEarned + Math.max(0, delta),
+        totalRedeemed: delta < 0 ? cur.totalRedeemed + Math.abs(delta) : cur.totalRedeemed,
+      });
+    }
+
+    setLoyaltyEntries(Array.from(byClient.values()));
+    if (historyRows.length > 0) {
+      setLoyaltyHistory((h) => [...historyRows, ...h].slice(0, 500));
+    }
+    toast.success(
+      historyRows.length > 0
+        ? `${historyRows.length} mouvement(s) — points alignés sur le CRM`
+        : 'Déjà aligné avec le CRM',
+    );
+    setLoyaltySyncing(false);
+  }, [clients, loyaltyEntries, loyaltySettings, studioId, toast]);
 
   // Auto-checkout: when landing with ?subscribe=starter|pro|studio, redirect to Stripe Payment Link; solo|studio use createSubscription
   const subscribeAttempted = React.useRef(false);
@@ -1071,7 +1212,7 @@ export const DashboardPro: React.FC = () => {
                   <button
                     onClick={() => setExpandedMenus(prev => ({ ...prev, clients: !prev.clients }))}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                      activeTab === 'clients'
+                      activeTab === 'clients' || activeTab === 'loyalty'
                         ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
                         : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
                     }`}
@@ -1090,8 +1231,8 @@ export const DashboardPro: React.FC = () => {
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Projets
                       </button>
-                      <button onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setClientsView('loyalty'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'loyalty' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'loyalty' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                      <button onClick={() => handleSidebarNav(() => { setActiveTab('loyalty'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'loyalty' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'loyalty' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Fidélité
                       </button>
                     </div>
@@ -1633,18 +1774,6 @@ export const DashboardPro: React.FC = () => {
           {!loading && activeTab === 'clients' && (
             <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
-            {clientsView === 'loyalty' ? (
-              <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-6xl mx-auto w-full">
-                <LoyaltyManager
-                  entries={loyaltyEntries}
-                  clients={clients}
-                  onUpdatePoints={() => {}}
-                  settings={loyaltySettings}
-                  onUpdateSettings={setLoyaltySettings}
-                  studioName={user?.studioName ?? undefined}
-                />
-              </div>
-            ) : (
               <ClientList
                 clients={clients}
                 onAddClient={addClient}
@@ -1664,9 +1793,28 @@ export const DashboardPro: React.FC = () => {
                 openAddModal={openAddClientModal}
                 onAddModalClose={() => setOpenAddClientModal(false)}
                 view={clientsView}
+                projectRequests={projectRequests}
+                onUpdateProjectRequest={updateProjectRequestStatus}
               />
-            )}
             </Suspense>
+            </div>
+          )}
+
+          {!loading && activeTab === 'loyalty' && (
+            <div className="min-w-0">
+              <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-6xl mx-auto w-full">
+                <LoyaltyManager
+                  entries={loyaltyEntries}
+                  clients={clients}
+                  onUpdatePoints={handleLoyaltyUpdatePoints}
+                  settings={loyaltySettings}
+                  onUpdateSettings={setLoyaltySettings}
+                  studioName={user?.studioName ?? undefined}
+                  history={loyaltyHistory}
+                  onSyncFromCrm={handleLoyaltySyncFromCrm}
+                  syncing={loyaltySyncing}
+                />
+              </div>
             </div>
           )}
 
@@ -2124,10 +2272,13 @@ export const DashboardPro: React.FC = () => {
                 <LoyaltyManager
                   entries={loyaltyEntries}
                   clients={clients}
-                  onUpdatePoints={() => {}}
+                  onUpdatePoints={handleLoyaltyUpdatePoints}
                   settings={loyaltySettings}
                   onUpdateSettings={setLoyaltySettings}
                   studioName={user?.studioName ?? undefined}
+                  history={loyaltyHistory}
+                  onSyncFromCrm={handleLoyaltySyncFromCrm}
+                  syncing={loyaltySyncing}
                 />
               )}
               {settingsTab === 'calendar' && <CalendarSettings studioId={studioId || ''} appointments={appointments} onToast={(msg, type) => type === 'success' ? toast.success(msg) : toast.error(msg)} />}
