@@ -936,18 +936,34 @@ const GuestLoginForm: React.FC = () => {
 // ARTIST BOTTOM SHEET
 // ══════════════════════════════════════════════════════════════════════════════
 const GuestConnectPanel: React.FC<{ title: string; body: string }> = ({ title, body }) => (
-  <div className="rounded-3xl border p-8 flex flex-col items-center text-center gap-3" style={{ borderColor: N.border, background: N.elevated }}>
-    <User className="w-10 h-10 opacity-25" style={{ color: N.neon }} />
-    <h3 className="text-base font-black" style={{ color: N.text }}>{title}</h3>
-    <p className="text-sm leading-relaxed max-w-xs" style={{ color: N.muted }}>{body}</p>
-    <a
-      href="/client"
-      className="mt-2 inline-flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-bold text-sm active:scale-[0.98] transition-all"
-      style={{ background: N.neon, color: N.bg, boxShadow: N.neonGlow }}
-    >
-      Se connecter ou créer un compte
-    </a>
-  </div>
+  <motion.div
+    initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+    transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+    className="rounded-3xl overflow-hidden"
+    style={{ background: 'linear-gradient(145deg, #1a1008 0%, #2d1f0e 60%, #1a1008 100%)', boxShadow: '0 12px 40px rgba(0,0,0,0.12)' }}
+  >
+    {/* Top accent line */}
+    <div className="h-1" style={{ background: `linear-gradient(90deg, ${N.neon}, #D4BC96, ${N.neon})` }} />
+    <div className="p-8 flex flex-col items-center text-center gap-4">
+      <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
+        style={{ background: 'rgba(201,169,110,0.15)', border: '1px solid rgba(201,169,110,0.25)' }}>
+        ✦
+      </div>
+      <div>
+        <h3 className="text-lg font-black text-white mb-1">{title}</h3>
+        <p className="text-sm leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>{body}</p>
+      </div>
+      <motion.a
+        href="/client"
+        whileTap={{ scale: 0.97 }}
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-sm"
+        style={{ background: '#c9a96e', color: '#1a1008', boxShadow: '0 6px 24px rgba(201,169,110,0.35)' }}
+      >
+        Se connecter ou créer un compte
+      </motion.a>
+      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Aucune carte bancaire requise</p>
+    </div>
+  </motion.div>
 );
 
 const ArtistSheet: React.FC<{ studio: SheetStudio | null; onClose: () => void; isGuest?: boolean }> = ({ studio, onClose, isGuest }) => (
@@ -1065,9 +1081,9 @@ const ArtistSheet: React.FC<{ studio: SheetStudio | null; onClose: () => void; i
 // PAGE TRANSITIONS
 // ══════════════════════════════════════════════════════════════════════════════
 const pageV = {
-  enter: (d: number) => ({ x: d > 0 ? 50 : -50, opacity: 0, filter: 'blur(3px)' }),
-  center: { x: 0, opacity: 1, filter: 'blur(0px)' },
-  exit:   (d: number) => ({ x: d > 0 ? -50 : 50, opacity: 0, filter: 'blur(3px)' }),
+  enter: (d: number) => ({ x: d > 0 ? 48 : -48, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit:   (d: number) => ({ x: d > 0 ? -24 : 24, opacity: 0 }),
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2844,7 +2860,7 @@ export const ClientDashboard: React.FC = () => {
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ type: 'spring', stiffness: 380, damping: 38, mass: 0.8 }}
           >
 
             {/* ════ EXPLORER ════ */}
@@ -3101,10 +3117,10 @@ export const ClientDashboard: React.FC = () => {
                     {filteredExploreStudios.map((s, i) => (
                       <motion.div
                         key={s.id}
-                        initial={{ opacity: 0, y: 8 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.06 }}
-                        whileTap={{ scale: 0.99 }}
+                        transition={{ delay: i * 0.055, type: 'spring', stiffness: 340, damping: 28 }}
+                        whileTap={{ scale: 0.97 }}
                         onClick={() => setArtistSheet(s)}
                         className="flex items-center gap-3 p-3 rounded-2xl border cursor-pointer"
                         style={{ borderColor: N.border, background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}
@@ -3126,13 +3142,14 @@ export const ClientDashboard: React.FC = () => {
                           <p className="text-[12px] font-semibold mt-1" style={{ color: N.textSub }}>{s.distLabel}</p>
                         </div>
                         {/* Route button */}
-                        <button type="button"
-                          className="flex-shrink-0 px-4 py-2 rounded-2xl text-[13px] font-semibold transition-all active:scale-[0.98]"
-                          style={{ background: UI.fill, color: UI.onFill }}
+                        <motion.button type="button"
+                          whileTap={{ scale: 0.93 }}
+                          className="flex-shrink-0 px-4 py-2.5 rounded-2xl text-[13px] font-bold"
+                          style={{ background: N.neon, color: '#fff', boxShadow: '0 2px 10px rgba(107,83,69,0.22)' }}
                           onClick={e => { e.stopPropagation(); setArtistSheet(s); }}
                         >
                           Voir
-                        </button>
+                        </motion.button>
                       </motion.div>
                     ))}
                   </div>
@@ -3449,15 +3466,26 @@ export const ClientDashboard: React.FC = () => {
                 <section>
                   <h2 className="text-[13px] font-bold uppercase tracking-widest mb-4" style={{ color: N.muted }}>À venir</h2>
                   {upcoming.length === 0 ? (
-                    <div className="rounded-3xl border p-10 flex flex-col items-center gap-3" style={{ borderColor: N.border, background: N.elevated }}>
-                      <CalendarDays className="w-10 h-10 opacity-20" />
-                      <p className="text-sm" style={{ color: N.muted }}>Aucun rendez-vous à venir</p>
-                      <button type="button" onClick={() => goTab('explore')}
-                        className="text-xs font-semibold px-4 py-2 rounded-xl border"
-                        style={{ borderColor: N.border, background: N.surface, color: N.neonText }}>
-                        Trouver un tatoueur
-                      </button>
-                    </div>
+                    <motion.div
+                      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+                      className="rounded-3xl overflow-hidden"
+                      style={{ background: 'linear-gradient(145deg, #f9f6f2 0%, #f0ebe3 100%)', border: `1px solid ${N.border}` }}
+                    >
+                      <div className="p-8 flex flex-col items-center text-center gap-4">
+                        <div className="text-4xl">🗓️</div>
+                        <div>
+                          <p className="font-black text-base mb-1" style={{ color: N.text }}>Aucun RDV à venir</p>
+                          <p className="text-sm" style={{ color: N.muted }}>Réserve ta prochaine session directement depuis l'app.</p>
+                        </div>
+                        <motion.button type="button" whileTap={{ scale: 0.97 }}
+                          onClick={() => goTab('explore')}
+                          className="w-full py-3.5 rounded-2xl text-sm font-bold"
+                          style={{ background: N.neon, color: '#fff', boxShadow: N.neonGlow }}>
+                          Trouver un tatoueur
+                        </motion.button>
+                      </div>
+                    </motion.div>
                   ) : (
                     <div className="space-y-3">
                       {upcoming.map((a, i) => {
@@ -4046,11 +4074,13 @@ export const ClientDashboard: React.FC = () => {
           ] as const).map(({ id, Icon, label, badge }) => {
             const active = tab === id;
             return (
-              <button
+              <motion.button
                 key={id}
                 type="button"
                 onClick={() => goTab(id)}
-                className="flex-1 flex flex-col items-center py-2.5 sm:py-3 gap-0.5 min-w-0 relative transition-colors"
+                whileTap={{ scale: 0.88 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+                className="flex-1 flex flex-col items-center py-2.5 sm:py-3 gap-0.5 min-w-0 relative"
                 style={{ color: active ? N.neonOnDark : N.muted }}
               >
                 {active && (
@@ -4067,7 +4097,7 @@ export const ClientDashboard: React.FC = () => {
                   )}
                 </div>
                 <span className="text-[8px] sm:text-[9px] font-semibold tracking-tight relative z-10 truncate max-w-full px-0.5">{label}</span>
-              </button>
+              </motion.button>
             );
           })}
         </nav>
