@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { StudioPrivacyProvider } from '../contexts/StudioPrivacyContext';
 import { DashboardPro } from '../components/dashboard/DashboardPro';
 import { SEO } from '../components/SEO';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -33,7 +34,9 @@ export const DashboardPage: React.FC = () => {
   return (
     <ErrorBoundary errorContext="dashboard">
       <SEO title="Tableau de bord" noindex />
-      <DashboardPro />
+      <StudioPrivacyProvider>
+        <DashboardPro />
+      </StudioPrivacyProvider>
     </ErrorBoundary>
   );
 }

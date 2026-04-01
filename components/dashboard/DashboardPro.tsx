@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen, Smartphone, Heart, Globe, FileCheck, Crown, ListOrdered, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen, Smartphone, Heart, Globe, FileCheck, Crown, ListOrdered, Eye, EyeOff, PanelsTopLeft, HelpCircle, type LucideIcon } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
@@ -27,7 +27,16 @@ import { PublicAppSettings } from '../settings/PublicAppSettings';
 import { InstagramConnect } from '../settings/InstagramConnect';
 import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 import { VitrineLinkButton } from './VitrineLinkButton';
-import { SidebarPwaInstallButton } from './SidebarPwaInstallButton';
+import { useStudioPrivacy } from '../../contexts/StudioPrivacyContext';
+import { StudioCommandPalette } from './StudioCommandPalette';
+import { ModulesSettings } from './ModulesSettings';
+import { StudioDataExportCard } from './StudioDataExportCard';
+import { InkflowHelpDrawer, type InkflowHelpContext } from './InkflowHelpDrawer';
+import type { StudioDashboardPreferences } from '../../types/studioPreferences';
+import { DEFAULT_STUDIO_DASHBOARD_PREFERENCES } from '../../types/studioPreferences';
+import { isModuleEnabled } from '../../lib/dashboardModuleVisibility';
+import { isStudioAvailabilityConfigured } from '../../lib/studioAvailabilityConfigured';
+import { isStudioStripeConnected } from '../../lib/studioPaymentConfigured';
 
 const FinanceDashboard = lazy(() => import('./FinanceDashboard').then(m => ({ default: m.FinanceDashboard })));
 const DepositsPage = lazy(() => import('./DepositsPage').then(m => ({ default: m.DepositsPage })));
@@ -56,7 +65,7 @@ import { ClientPreviewDrawer } from './ClientPreviewDrawer';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
 import { WelcomeOnboardingFlow, shouldShowWelcomeFlow } from '../onboarding/WelcomeOnboardingFlow';
 import { supabase } from '../../lib/supabase';
-import { getWaitlistFromSupabase, addWaitlistEntryToSupabase, updateWaitlistStatusInSupabase, deleteWaitlistEntryFromSupabase, ensureStudio } from '../../lib/supabaseDashboard';
+import { getWaitlistFromSupabase, addWaitlistEntryToSupabase, updateWaitlistStatusInSupabase, deleteWaitlistEntryFromSupabase, ensureStudio, getDashboardPreferencesFromSupabase } from '../../lib/supabaseDashboard';
 import { syncArtistAccountsToSupabase } from '../../lib/inkflowArtistsSync';
 import { createSubscription } from '../../lib/stripeClient';
 import { getSubscription } from '../../lib/subscriptionGuard';
@@ -93,6 +102,7 @@ const tabs: { id: TabId | 'referral'; label: string; icon: React.ReactNode; badg
 
 type SettingsTabId =
   | 'general'
+  | 'modules'
   | 'payments'
   | 'billing'
   | 'care'
@@ -115,6 +125,12 @@ const SETTINGS_TAB_META: Record<
     Icon: Settings,
     description:
       'Identité du studio, photo, coordonnées, lien vitrine, slug d’URL personnalisé et position sur la carte pour la découverte client.',
+  },
+  modules: {
+    label: 'Modules',
+    Icon: PanelsTopLeft,
+    description:
+      'Activez ou masquez les sections du menu (finance, planning, vitrine, fidélité, etc.) pour adapter l’interface à votre studio.',
   },
   payments: {
     label: 'Paiements',
@@ -192,6 +208,7 @@ const SETTINGS_TAB_META: Record<
 
 const SETTINGS_MAIN_TABS: { id: SettingsTabId; label: string }[] = [
   { id: 'general', label: 'Général' },
+  { id: 'modules', label: 'Modules' },
   { id: 'payments', label: 'Paiements' },
   { id: 'billing', label: 'Abonnement' },
   { id: 'care', label: 'Soins post-tattoo' },
@@ -199,12 +216,8 @@ const SETTINGS_MAIN_TABS: { id: SettingsTabId; label: string }[] = [
   { id: 'availability', label: 'Disponibilités' },
   { id: 'calendar', label: 'Calendrier' },
   { id: 'vitrine', label: 'Page vitrine' },
-  { id: 'public_app', label: 'App client & public' },
+  { id: 'public_app', label: 'App client' },
 ];
-
-/** Mobile : 5 onglets en haut (grille), le reste en bas de page — évite la bande horizontale illisible */
-const SETTINGS_TABS_MOBILE_TOP = SETTINGS_MAIN_TABS.slice(0, 5);
-const SETTINGS_TABS_MOBILE_BOTTOM = SETTINGS_MAIN_TABS.slice(5);
 
 export const DashboardPro: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
@@ -213,8 +226,8 @@ export const DashboardPro: React.FC = () => {
   /** Thème effectif — fallback DOM pour mobile/PWA (resolvedTheme peut être undefined avant hydration) */
   const effectiveTheme = resolvedTheme ?? (typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null : null) ?? 'light';
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
-  const { studioId, studioSlug, studioCsvImportSlots, refreshStudioSlug, subscriptionStatus, trialEndsAt, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, importClientsFromCsvRows, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, retry } = useSupabaseSync();
-  const { projectRequests, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
+  const { studioId, studioSlug, studioCsvImportSlots, refreshStudioSlug, subscriptionStatus, trialEndsAt, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, importClientsFromCsvRows, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, lastSyncedAt, retry } = useSupabaseSync();
+  const { projectRequests, loading: projectRequestsLoading, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
   const pendingRequestsCount = usePendingProjectRequestsCount(projectRequests);
   const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false);
   const { canAccessFeature, hasReachedLimit, getLimit } = useSubscriptionPermissions(studioId);
@@ -234,7 +247,10 @@ export const DashboardPro: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
-  const [settingsTab, setSettingsTab] = useState<'general' | 'payments' | 'care' | 'availability' | 'vitrine' | 'public_app' | 'billing' | 'consent' | 'artists' | 'waitlist' | 'loyalty' | 'calendar' | 'messagerie'>('general');
+  const [settingsTab, setSettingsTab] = useState<SettingsTabId>('general');
+  const [dashboardPreferences, setDashboardPreferences] = useState<StudioDashboardPreferences>(() => ({
+    ...DEFAULT_STUDIO_DASHBOARD_PREFERENCES,
+  }));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarFavTab, setSidebarFavTab] = useState<'favorites' | 'recent'>('favorites');
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
@@ -248,11 +264,75 @@ export const DashboardPro: React.FC = () => {
   const [requestsSubTab, setRequestsSubTab] = useState<'rdv' | 'bookings' | 'projects' | 'history'>('rdv');
   const [planningView, setPlanningView] = useState<'week' | 'month'>('week');
   const [financeView, setFinanceView] = useState<'revenus' | 'acomptes' | 'stats'>('revenus');
-  const [clientsView, setClientsView] = useState<'overview' | 'projects' | 'messages'>('overview');
+  const [clientsView, setClientsView] = useState<'overview' | 'projects' | 'loyalty'>('overview');
   const [showWidgetModal, setShowWidgetModal] = useState(false);
   const [customWidgets, setCustomWidgets] = useDashboardWidgets(studioId, useSupabase ?? false, {
     onError: () => toast.error('Erreur de sauvegarde des widgets'),
   });
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [helpDrawerOpen, setHelpDrawerOpen] = useState(false);
+  const { privacyMode, togglePrivacyMode } = useStudioPrivacy();
+
+  const helpContext: InkflowHelpContext = useMemo(() => {
+    const map: Partial<Record<TabId, InkflowHelpContext>> = {
+      overview: 'overview',
+      requests: 'requests',
+      appointments: 'appointments',
+      flash: 'flash',
+      clients: 'clients',
+      finance: 'finance',
+      messaging: 'messaging',
+      portfolio: 'portfolio',
+      settings: 'settings',
+    };
+    if (activeTab === 'settings') return 'settings';
+    return map[activeTab] ?? 'general';
+  }, [activeTab]);
+
+  const handleSetupNavigate = useCallback(
+    (target: 'settings-vitrine' | 'settings-availability' | 'settings-payments' | 'flash' | 'appointments') => {
+      if (target === 'settings-vitrine') {
+        setActiveTab('settings');
+        setSettingsTab('vitrine');
+      } else if (target === 'settings-availability') {
+        setActiveTab('settings');
+        setSettingsTab('availability');
+      } else if (target === 'settings-payments') {
+        setActiveTab('settings');
+        setSettingsTab('payments');
+      } else if (target === 'flash') {
+        setActiveTab('flash');
+      } else {
+        setActiveTab('appointments');
+      }
+    },
+    []
+  );
+
+  const [availabilitySetupComplete, setAvailabilitySetupComplete] = useState<boolean | undefined>(undefined);
+  const [paymentsSetupComplete, setPaymentsSetupComplete] = useState<boolean | undefined>(undefined);
+
+  const refetchStudioSetupChecklistFlags = useCallback(async () => {
+    if (!studioId || !useSupabase) {
+      setAvailabilitySetupComplete(undefined);
+      setPaymentsSetupComplete(undefined);
+      return;
+    }
+    const [studioRes, payRes] = await Promise.all([
+      supabase.from('inkflow_studios').select('availability_settings').eq('id', studioId).maybeSingle(),
+      supabase.from('inkflow_payment_settings').select('settings').eq('studio_id', studioId).maybeSingle(),
+    ]);
+    setAvailabilitySetupComplete(isStudioAvailabilityConfigured(studioRes.data?.availability_settings));
+    setPaymentsSetupComplete(isStudioStripeConnected(payRes.data?.settings));
+  }, [studioId, useSupabase]);
+
+  useEffect(() => {
+    void refetchStudioSetupChecklistFlags();
+  }, [refetchStudioSetupChecklistFlags]);
+
+  useEffect(() => {
+    if (activeTab === 'overview') void refetchStudioSetupChecklistFlags();
+  }, [activeTab, refetchStudioSetupChecklistFlags]);
 
   // New feature states — portfolio synced with vitrine (single source of truth)
   const [vitrineData, setVitrineData] = useState<VitrineData | null>(null);
@@ -298,6 +378,24 @@ export const DashboardPro: React.FC = () => {
   /** Compte restreint : essai terminé ou subscription_status = restricted */
   const isRestricted = subscriptionStatus === 'restricted'
     || (!!trialEndsAt && new Date(trialEndsAt) <= new Date() && subscriptionStatus !== 'active');
+
+  const moduleFlags = useMemo(
+    () => ({
+      finance: isModuleEnabled(dashboardPreferences, 'finance'),
+      planning: isModuleEnabled(dashboardPreferences, 'planning'),
+      flashShop: isModuleEnabled(dashboardPreferences, 'flash_shop'),
+      vitrine: isModuleEnabled(dashboardPreferences, 'vitrine'),
+      loyalty: isModuleEnabled(dashboardPreferences, 'loyalty'),
+    }),
+    [dashboardPreferences]
+  );
+
+  const visibleSettingsTabs = useMemo(() => {
+    return SETTINGS_MAIN_TABS.filter((tab) => {
+      if (tab.id === 'vitrine' || tab.id === 'public_app') return moduleFlags.vitrine;
+      return true;
+    });
+  }, [moduleFlags]);
 
   /** Si le compte est restreint (essai expiré), on redirige vers Abonnement — sauf si `allowWhenRestricted` (abonnement, page vitrine / personnalisation). */
   const handleSidebarNav = useCallback((action: () => void, allowWhenRestricted = false) => {
@@ -365,6 +463,43 @@ export const DashboardPro: React.FC = () => {
     })();
     return () => { cancelled = true; };
   }, [toast]);
+
+  useEffect(() => {
+    if (!studioId || !useSupabase) return;
+    let cancelled = false;
+    getDashboardPreferencesFromSupabase(studioId)
+      .then((p) => {
+        if (!cancelled) setDashboardPreferences(p);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [studioId, useSupabase]);
+
+  useEffect(() => {
+    if (!moduleFlags.finance && activeTab === 'finance') {
+      setActiveTab('overview');
+      setFinanceView('revenus');
+    }
+  }, [moduleFlags.finance, activeTab]);
+
+  useEffect(() => {
+    if (!moduleFlags.planning && activeTab === 'appointments') setActiveTab('overview');
+  }, [moduleFlags.planning, activeTab]);
+
+  useEffect(() => {
+    if (!moduleFlags.flashShop && (activeTab === 'flash' || activeTab === 'portfolio')) setActiveTab('overview');
+  }, [moduleFlags.flashShop, activeTab]);
+
+  useEffect(() => {
+    if (!moduleFlags.loyalty && clientsView === 'loyalty') setClientsView('overview');
+  }, [moduleFlags.loyalty, clientsView]);
+
+  useEffect(() => {
+    if (activeTab !== 'settings') return;
+    if ((settingsTab === 'vitrine' || settingsTab === 'public_app') && !moduleFlags.vitrine) setSettingsTab('general');
+  }, [activeTab, settingsTab, moduleFlags.vitrine]);
 
   // Persist consent/waitlist/artists/loyalty in localStorage so they survive refresh (until Supabase load/save is wired)
   const storageKey = (prefix: string) => `${prefix}_${studioId || user?.email || 'default'}`;
@@ -930,6 +1065,17 @@ export const DashboardPro: React.FC = () => {
     if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <div className="app-shell bg-zinc-50 dark:bg-black">
       {showWelcome && (
@@ -1058,6 +1204,7 @@ export const DashboardPro: React.FC = () => {
                 </button>
 
                 {/* Finance avec sous-menu */}
+                {moduleFlags.finance && (
                 <div>
                   <button
                     onClick={() => setExpandedMenus(prev => ({ ...prev, finance: !prev.finance }))}
@@ -1085,8 +1232,10 @@ export const DashboardPro: React.FC = () => {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Planning avec sous-menu */}
+                {moduleFlags.planning && (
                 <div>
                   <button
                     onClick={() => setExpandedMenus(prev => ({ ...prev, planning: !prev.planning }))}
@@ -1117,6 +1266,7 @@ export const DashboardPro: React.FC = () => {
                     </div>
                   )}
                 </div>
+                )}
               </div>
             </div>
 
@@ -1189,12 +1339,19 @@ export const DashboardPro: React.FC = () => {
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Projets
                       </button>
+                      {moduleFlags.loyalty && (
+                      <button onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setClientsView('loyalty'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'loyalty' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'loyalty' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Fidélité
+                      </button>
+                      )}
                       {/* V2: Messagerie avancée masquée pour le MVP */}
                     </div>
                   )}
                 </div>
 
                 {/* Ma vitrine avec sous-menu */}
+                {(moduleFlags.flashShop || moduleFlags.vitrine) && (
                 <div>
                   <button
                     onClick={() => setExpandedMenus(prev => ({ ...prev, vitrine: !prev.vitrine }))}
@@ -1210,19 +1367,25 @@ export const DashboardPro: React.FC = () => {
                   </button>
                   {expandedMenus.vitrine && (
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
+                      {moduleFlags.flashShop && (
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('flash'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'flash' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'flash' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Galerie Flash
                       </button>
+                      )}
+                      {moduleFlags.flashShop && (
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('portfolio'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'portfolio' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'portfolio' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Portfolio
                       </button>
+                      )}
+                      {moduleFlags.vitrine && (
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('vitrine'); setSidebarOpen(false); }, true)} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Personnaliser
                       </button>
-                      {studioSlug && (
+                      )}
+                      {moduleFlags.vitrine && studioSlug && (
                         isRestricted ? (
                           <button onClick={() => handleSidebarNav(() => {})} className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left">
                             <ExternalLink className="w-3 h-3 flex-shrink-0" />
@@ -1238,6 +1401,7 @@ export const DashboardPro: React.FC = () => {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Paramètres avec sous-menu */}
                 <div>
@@ -1267,21 +1431,18 @@ export const DashboardPro: React.FC = () => {
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'billing' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Abonnement
                       </button>
+                      {moduleFlags.vitrine && (
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('vitrine'); setSidebarOpen(false); }, true)} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Vitrine
                       </button>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
             </div>
           </nav>
-
-          {/* PWA : hors du nav scrollable pour rester visible au-dessus de Déconnexion */}
-          <div className="relative z-10 flex-shrink-0">
-            <SidebarPwaInstallButton onAfterAction={() => setSidebarOpen(false)} />
-          </div>
 
           {/* Footer — Espace Client + Déconnexion */}
           <div className="relative z-10 mt-auto px-3 py-3 border-t border-zinc-100 dark:border-zinc-800/50 safe-bottom space-y-0.5">
@@ -1335,6 +1496,24 @@ export const DashboardPro: React.FC = () => {
               </button>
             </div>
           )}
+          {useSupabase && isOnline && !connectionError && lastSyncedAt && (
+            <div className="bg-zinc-100/90 dark:bg-zinc-900/50 border-b border-zinc-200/80 dark:border-zinc-800 px-4 py-1.5 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
+              <span>
+                Dernière synchro des données :{' '}
+                <time dateTime={lastSyncedAt} className="font-medium text-zinc-600 dark:text-zinc-300">
+                  {new Date(lastSyncedAt).toLocaleString('fr-FR', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </time>
+              </span>
+              <span className="hidden sm:inline text-zinc-400 dark:text-zinc-500">
+                Les changements temps réel mettent à jour l’affichage automatiquement.
+              </span>
+            </div>
+          )}
           {/* Header — slim bar (non-overview) or transparent (overview, greeting is inline) */}
           <header
             className={`app-shell-header safe-top px-4 sm:px-5 md:px-6 flex items-center justify-between gap-4 transition-all duration-300 shrink-0 overflow-visible ${
@@ -1369,23 +1548,30 @@ export const DashboardPro: React.FC = () => {
                   <div className="hidden lg:block flex-1 min-w-0" aria-hidden />
                 </>
               ) : (
-                <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)] min-w-0">{activeTab === 'account' ? 'Mon compte' : tabs.find(t => t.id === activeTab)?.label}</h2>
+                <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)] min-w-0">
+                  {activeTab === 'account'
+                    ? 'Mon compte'
+                    : activeTab === 'clients' && clientsView === 'loyalty'
+                      ? 'Fidélité'
+                      : activeTab === 'clients' && clientsView === 'projects'
+                        ? 'Projets'
+                        : tabs.find(t => t.id === activeTab)?.label}
+                </h2>
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {/* Barre de recherche globale (style Command Palette) — desktop only */}
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-colors w-64 lg:w-72">
-              <Search className="w-4 h-4 text-zinc-500 dark:text-zinc-400 flex-shrink-0" />
-              <input
-                type="search"
-                placeholder="Chercher un client, RDV..."
-                className="bg-transparent border-none outline-none text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-500 w-full min-w-0"
-                aria-label="Recherche globale"
-              />
+            <button
+              type="button"
+              onClick={() => setCommandPaletteOpen(true)}
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:border-violet-500/35 dark:hover:border-violet-500/30 transition-colors duration-100 w-64 lg:w-72 text-left"
+            >
+              <Search className="w-4 h-4 text-zinc-500 dark:text-zinc-400 flex-shrink-0" aria-hidden />
+              <span className="text-sm text-zinc-500 dark:text-zinc-400 flex-1 min-w-0 truncate">Recherche rapide…</span>
               <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-200 dark:bg-zinc-800 rounded border border-zinc-300 dark:border-zinc-700 flex-shrink-0">
                 ⌘K
               </kbd>
-            </div>
+            </button>
             {/* Planning — visible sur mobile/tablette, ouvre le sheet planning */}
             <button
               onClick={() => setShowPlanningSheet(true)}
@@ -1393,6 +1579,25 @@ export const DashboardPro: React.FC = () => {
               aria-label="Ouvrir le planning"
             >
               <Calendar className="w-5 h-5 text-[var(--text-secondary)]" />
+            </button>
+            <button
+              type="button"
+              onClick={togglePrivacyMode}
+              className={`hidden sm:flex p-2.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] items-center justify-center transition-colors duration-100 ${privacyMode ? 'text-violet-600 dark:text-violet-400' : 'text-[var(--text-secondary)]'}`}
+              title={privacyMode ? 'Afficher les montants' : 'Mode atelier — masquer les montants'}
+              aria-pressed={privacyMode}
+              aria-label={privacyMode ? 'Afficher les montants' : 'Masquer les montants (mode client)'}
+            >
+              {privacyMode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setHelpDrawerOpen(true)}
+              className="flex p-2.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] items-center justify-center transition-colors duration-100 text-[var(--text-secondary)]"
+              title="Aide — raccourcis et fiabilité"
+              aria-label="Ouvrir l’aide"
+            >
+              <HelpCircle className="w-5 h-5" />
             </button>
             {/* Theme toggle — toujours visible */}
             <ThemeToggle />
@@ -1665,6 +1870,10 @@ export const DashboardPro: React.FC = () => {
               overviewHeaderBgUrl={vitrineData?.coverImage ?? null}
               onAvatarClick={() => avatarInputRef.current?.click()}
               avatarUploading={avatarUploading}
+              flashDesigns={flashDesigns}
+              availabilitySetupComplete={availabilitySetupComplete}
+              paymentsSetupComplete={paymentsSetupComplete}
+              onSetupNavigate={handleSetupNavigate}
             />
             </div>
           )}
@@ -1728,6 +1937,15 @@ export const DashboardPro: React.FC = () => {
 
           {!loading && activeTab === 'clients' && (
             <div className="min-w-0">
+            {clientsView === 'loyalty' ? (
+              <LoyaltyManager
+                entries={loyaltyEntries}
+                clients={clients}
+                onUpdatePoints={() => {}}
+                settings={loyaltySettings}
+                onUpdateSettings={setLoyaltySettings}
+              />
+            ) : (
             <Suspense fallback={<DashboardLoadingSkeleton />}>
             <ClientList
               clients={clients}
@@ -1748,8 +1966,16 @@ export const DashboardPro: React.FC = () => {
               openAddModal={openAddClientModal}
               onAddModalClose={() => setOpenAddClientModal(false)}
               view={clientsView}
+              projectRequests={projectRequests}
+              projectRequestsLoading={projectRequestsLoading}
+              onOpenRequestsProjects={() => {
+                setActiveTab('requests');
+                setRequestsSubTab('projects');
+                setSidebarOpen(false);
+              }}
             />
             </Suspense>
+            )}
             </div>
           )}
 
@@ -1864,16 +2090,13 @@ export const DashboardPro: React.FC = () => {
             <div className="min-w-0">
             <div className="settings-page-landing">
               {/* Onglets : en premier — desktop = défilement horizontal ; mobile = grille haut + grille bas (fin de page) */}
-              <div className="md:hidden sticky top-0 z-20 -mx-4 px-4 py-2 mb-4 bg-zinc-50/95 dark:bg-black/95 backdrop-blur-md border-b border-zinc-200/70 dark:border-zinc-800">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2 px-0.5">
-                  Sections
-                </p>
+              <div className="md:hidden -mx-4 px-4 mb-4">
                 <div
-                  className="grid grid-cols-2 gap-2"
+                  className="flex gap-1 overflow-x-auto overflow-y-hidden pb-1 -mx-1 px-1 scrollbar-hide snap-x snap-mandatory scroll-pl-1"
                   role="tablist"
-                  aria-label="Sections des paramètres (partie haute)"
+                  aria-label="Sections des paramètres"
                 >
-                  {SETTINGS_TABS_MOBILE_TOP.map((tab) => {
+                  {visibleSettingsTabs.map((tab) => {
                     const { Icon } = SETTINGS_TAB_META[tab.id];
                     const active = settingsTab === tab.id;
                     return (
@@ -1884,14 +2107,14 @@ export const DashboardPro: React.FC = () => {
                         aria-selected={active}
                         onClick={() => setSettingsTab(tab.id)}
                         title={SETTINGS_TAB_META[tab.id].description}
-                        className={`inline-flex items-center gap-2 rounded-xl px-2.5 py-2.5 text-left text-xs font-medium transition-all duration-200 min-h-[44px] active:scale-[0.98] ${
+                        className={`inline-flex items-center gap-1.5 shrink-0 snap-start pl-2 pr-2.5 py-1.5 rounded-lg text-[11px] font-medium leading-none transition-colors active:scale-[0.98] min-h-[36px] ${
                           active
-                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-                            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white border border-zinc-200/50 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/30'
+                            ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                            : 'bg-zinc-100/90 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 border border-zinc-200/80 dark:border-zinc-700'
                         }`}
                       >
-                        <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : 'opacity-80'}`} aria-hidden />
-                        <span className="leading-tight">{tab.label}</span>
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? 'opacity-100' : 'opacity-80'}`} aria-hidden />
+                        <span className="whitespace-nowrap">{tab.label}</span>
                       </button>
                     );
                   })}
@@ -1916,7 +2139,7 @@ export const DashboardPro: React.FC = () => {
                   role="tablist"
                   aria-label="Sections des paramètres"
                 >
-                  {SETTINGS_MAIN_TABS.map((tab) => {
+                  {visibleSettingsTabs.map((tab) => {
                     const { Icon } = SETTINGS_TAB_META[tab.id];
                     const active = settingsTab === tab.id;
                     return (
@@ -2058,6 +2281,10 @@ export const DashboardPro: React.FC = () => {
                       studioId={studioId}
                       studioSlug={studioSlug ?? ''}
                     />
+                  )}
+
+                  {useSupabase && studioId && (
+                    <StudioDataExportCard studioSlug={studioSlug} clients={clients} appointments={appointments} />
                   )}
 
                   {/* Carte Profil */}
@@ -2240,6 +2467,14 @@ export const DashboardPro: React.FC = () => {
                   </div>
                 </div>
               )}
+              {settingsTab === 'modules' && studioId && (
+                <ModulesSettings studioId={studioId} value={dashboardPreferences} onChange={setDashboardPreferences} />
+              )}
+              {settingsTab === 'modules' && !studioId && (
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 max-w-xl">
+                  <p className="text-sm text-zinc-600 dark:text-zinc-300">Connectez un studio pour configurer les modules.</p>
+                </div>
+              )}
               {settingsTab === 'payments' && <PaymentsSettings userEmail={user?.email} studioName={user?.studioName} />}
               {settingsTab === 'billing' && <BillingSettings studioId={studioId} userEmail={user?.email || ''} trialEndsAt={trialEndsAt} />}
               {settingsTab === 'care' && <CareSheetsSettings userEmail={user?.email} studioName={user?.studioName} />}
@@ -2382,40 +2617,6 @@ export const DashboardPro: React.FC = () => {
               )}
               {settingsTab === 'messagerie' && studioId && <InstagramConnect studioId={studioId} />}
 
-              {/* Mobile : 2e rangée d’onglets en bas (planning, vitrine, app client) */}
-              <div
-                id="settings-nav-bottom"
-                className="md:hidden mt-10 pt-6 pb-2 border-t border-zinc-200/80 dark:border-zinc-800"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-2 px-0.5">
-                  Planning & vitrine
-                </p>
-                <nav className="grid grid-cols-2 gap-2" aria-label="Autres sections des paramètres">
-                  {SETTINGS_TABS_MOBILE_BOTTOM.map((tab) => {
-                    const { Icon } = SETTINGS_TAB_META[tab.id];
-                    const active = settingsTab === tab.id;
-                    return (
-                      <button
-                        key={`bottom-${tab.id}`}
-                        type="button"
-                        onClick={() => {
-                          setSettingsTab(tab.id);
-                          document.querySelector('.app-shell-content')?.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
-                        title={SETTINGS_TAB_META[tab.id].description}
-                        className={`inline-flex items-center gap-2 rounded-xl px-2.5 py-2.5 text-left text-xs font-medium transition-all duration-200 min-h-[44px] active:scale-[0.98] ${
-                          active
-                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-                            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white border border-zinc-200/50 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/30'
-                        }`}
-                      >
-                        <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : 'opacity-80'}`} aria-hidden />
-                        <span className="leading-tight">{tab.label}</span>
-                      </button>
-                    );
-                  })}
-                </nav>
-              </div>
             </div>
             </div>
           )}
@@ -2812,6 +3013,32 @@ export const DashboardPro: React.FC = () => {
         </div>
       </nav>
 
+      <InkflowHelpDrawer
+        isOpen={helpDrawerOpen}
+        onClose={() => setHelpDrawerOpen(false)}
+        context={helpContext}
+      />
+      <StudioCommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        clients={clients}
+        onSelectClient={(id) => {
+          try {
+            sessionStorage.setItem('inkflow-focus-client', id);
+          } catch {
+            //
+          }
+          setActiveTab('clients');
+          setClientsView('overview');
+        }}
+        onNewBooking={() => setShowBookingModal(true)}
+        onGoToTab={(tab) => {
+          if (tab === 'overview') setActiveTab('overview');
+          else if (tab === 'clients') setActiveTab('clients');
+          else if (tab === 'appointments') setActiveTab('appointments');
+          else if (tab === 'requests') setActiveTab('requests');
+        }}
+      />
       <ClientPreviewDrawer
         isOpen={!!selectedAppointment}
         onClose={() => setSelectedAppointment(null)}

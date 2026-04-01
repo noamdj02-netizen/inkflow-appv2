@@ -96,7 +96,8 @@ export function usePushSubscription(studioId: string | null): UsePushSubscriptio
         return false;
       }
 
-      const { error: dbError } = await supabase.from('inkflow_push_subscriptions').upsert(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: dbError } = await (supabase as any).from('inkflow_push_subscriptions').upsert(
         {
           studio_id: studioId,
           endpoint: json.endpoint!,

@@ -106,7 +106,7 @@ export const LoyaltyCard: React.FC<LoyaltyCardProps> = ({
             ok: true,
             platform,
             configured: false,
-            userMessage: result.success ? 'Réponse inattendue.' : result.error,
+            userMessage: result.success ? 'Réponse inattendue.' : (result as { success: false; error: string }).error,
             clientCode: code,
             balanceEuros: (cents / 100).toFixed(0),
           },

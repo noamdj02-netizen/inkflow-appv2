@@ -38,18 +38,18 @@ export const ReferralWidget: React.FC<ReferralWidgetProps> = ({
       return;
     }
     let cancelled = false;
-    supabase
-      .from('inkflow_studios')
-      .select('referral_code')
-      .eq('id', studioId)
-      .single()
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        setCode(error || !data?.referral_code ? 'ABC123' : data.referral_code);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    void Promise.resolve(
+      supabase
+        .from('inkflow_studios')
+        .select('referral_code')
+        .eq('id', studioId)
+        .single()
+    ).then(({ data, error }) => {
+      if (cancelled) return;
+      setCode(error || !data?.referral_code ? 'ABC123' : data.referral_code);
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
     return () => { cancelled = true; };
   }, [studioId, useSupabase, propCode]);
 

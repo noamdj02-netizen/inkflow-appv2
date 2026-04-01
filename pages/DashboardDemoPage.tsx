@@ -240,6 +240,7 @@ const navSections: NavSectionType[] = [
 ];
 
 interface NavItemProps {
+  key?: React.Key;
   item: NavItemType;
   depth?: number;
   activeId: string;

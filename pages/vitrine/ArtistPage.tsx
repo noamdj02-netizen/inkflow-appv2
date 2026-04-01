@@ -130,7 +130,8 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
 
   const joinWaitlist = async () => {
     if (!sessionEmail || !artist) return;
-    await supabase.from('inkflow_waitlist').upsert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('inkflow_waitlist').upsert({
       client_email: sessionEmail,
       artist_id: artist.id,
       studio_id: artist.studio_id,

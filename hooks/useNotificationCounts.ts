@@ -8,7 +8,7 @@ import type { ProjectRequest } from '../types';
  */
 export function usePendingProjectRequestsCount(projectRequests: ProjectRequest[]): number {
   return useMemo(
-    () => projectRequests.filter((p) => p.status === 'PENDING').length,
+    () => projectRequests.filter((p) => p.status === 'pending').length,
     [projectRequests]
   );
 }

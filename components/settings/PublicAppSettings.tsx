@@ -191,7 +191,7 @@ export const PublicAppSettings: React.FC<PublicAppSettingsProps> = ({
   }, [flashDesigns, artistAccounts, studioName]);
 
   const anyAvailableNow = useMemo(
-    () => Object.values(drafts).some((x) => x.available_now),
+    () => Object.values(drafts).some((x) => (x as { available_now?: boolean }).available_now),
     [drafts]
   );
 

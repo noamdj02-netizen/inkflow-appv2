@@ -7,6 +7,7 @@ import {
 import { Appointment } from '../../types';
 import { Modal } from '../ui/Modal';
 import { useToast } from '../../contexts/ToastContext';
+import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 import { markDepositAsPaid } from '../../lib/supabaseDashboard';
 import { createCheckoutSession } from '../../lib/stripeClient';
 
@@ -24,6 +25,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
   onDepositUpdated,
 }) => {
   const toast = useToast();
+  const { privacyMode } = useStudioPrivacy();
   
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -95,13 +97,14 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
       const result = await createCheckoutSession({
         studioId,
         amount: appointmentToSend.deposit,
-        clientEmail: appointmentToSend.clientEmail || undefined,
+        clientEmail: appointmentToSend.clientEmail || '',
         clientName: appointmentToSend.clientName,
         appointmentId: appointmentToSend.id,
-        description: `Acompte pour ${appointmentToSend.service} - ${new Date(appointmentToSend.date).toLocaleDateString('fr-FR')}`,
+        serviceName: appointmentToSend.service,
+        type: 'deposit',
       });
-      
-      if (result.url) {
+
+      if ('url' in result) {
         setGeneratedPaymentUrl(result.url);
         toast.success('Lien de paiement généré !');
       }
@@ -126,7 +129,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
     setIsMarkingPaid(apt.id);
     try {
       await markDepositAsPaid(apt.id, studioId);
-      toast.success(`Acompte de ${apt.deposit}€ marqué comme payé`);
+      toast.success(privacyMode ? 'Acompte marqué comme payé' : `Acompte de ${apt.deposit}€ marqué comme payé`);
       onDepositUpdated?.();
     } catch (error) {
       console.error('Erreur mise à jour:', error);
@@ -134,7 +137,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
     } finally {
       setIsMarkingPaid(null);
     }
-  }, [studioId, toast, onDepositUpdated]);
+  }, [studioId, toast, onDepositUpdated, privacyMode]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -156,7 +159,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-            {depositsData.totalReceived.toLocaleString('fr-FR')}€
+            {formatEuroPrivacy(depositsData.totalReceived, privacyMode)}
           </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{depositsData.received.length} reçus</p>
         </div>
@@ -169,7 +172,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">
-            {depositsData.totalPending.toLocaleString('fr-FR')}€
+            {formatEuroPrivacy(depositsData.totalPending, privacyMode)}
           </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{depositsData.pending.length} en attente</p>
         </div>
@@ -182,7 +185,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
-            {depositsData.totalExpected.toLocaleString('fr-FR')}€
+            {formatEuroPrivacy(depositsData.totalExpected, privacyMode)}
           </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{depositsData.all.length} acomptes</p>
         </div>
@@ -282,9 +285,9 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
                         ? 'text-emerald-600 dark:text-emerald-400' 
                         : 'text-zinc-900 dark:text-zinc-100'
                     }`}>
-                      {apt.deposit}€
+                      {formatEuroPrivacy(apt.deposit, privacyMode)}
                     </p>
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500">sur {apt.price}€</p>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">sur {formatEuroPrivacy(apt.price, privacyMode)}</p>
                   </div>
 
                   {!apt.depositPaid && (
@@ -339,7 +342,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
                 </p>
               </div>
               <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
-                {appointmentToSend.deposit}€
+                {formatEuroPrivacy(appointmentToSend.deposit, privacyMode)}
               </p>
             </div>
 

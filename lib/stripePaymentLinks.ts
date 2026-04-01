@@ -20,7 +20,7 @@ const BILLING_BASE = {
 } as const;
 
 function getBillingLinks(): Record<'solo' | 'pro' | 'studio', { monthly: string; annual: string }> {
-  const env = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
+  const env = (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {}) as Record<string, string | undefined>;
   return {
     solo: {
       monthly: BILLING_BASE.solo.monthly,

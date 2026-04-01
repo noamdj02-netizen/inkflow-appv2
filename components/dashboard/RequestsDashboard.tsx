@@ -241,7 +241,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         if (result.errorDetails) {
           toast.warning(result.errorDetails, { duration: 8000 });
         } else {
-          toast.warning('Envoi d\'email échoué (502). Vérifiez Supabase → Edge Functions → send-client-conversation-link → Logs pour la cause (clé Resend ou domaine).', { duration: 6000 });
+          toast.warning(
+            'Envoi automatique indisponible. Le lien a été copié : envoyez-le au client (message, e-mail). Si le problème persiste, vérifiez l’e-mail du studio dans les paramètres.',
+            { duration: 6000 }
+          );
         }
         toast.info('Lien copié : envoyez-le au client par email ou SMS pour qu\'il puisse vous répondre.');
       }

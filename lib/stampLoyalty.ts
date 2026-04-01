@@ -46,7 +46,7 @@ export async function saveStampLoyaltySettings(studioId: string, settings: Stamp
   const { error } = await supabase
     .from('inkflow_studios')
     .update({
-      stamp_loyalty_settings: parseStampLoyaltySettings(settings),
+      stamp_loyalty_settings: parseStampLoyaltySettings(settings) as unknown as import('../types/database').Json,
       updated_at: new Date().toISOString(),
     })
     .eq('id', studioId);

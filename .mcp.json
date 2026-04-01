@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "framer": {
+      "type": "sse",
+      "url": "https://mcp.unframer.co/mcp?
+  }
+}

@@ -23,8 +23,11 @@ import { RevenueChart } from './RevenueChart';
 import { AppointmentDayList } from './AppointmentDayList';
 import { getVitrineSlug } from '../../lib/vitrineStorage';
 import { getLayoutFromStorage, setLayoutToStorage, DEFAULT_LAYOUT, type DashboardLayout } from '../../lib/dashboardWidgetOrder';
+import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 import type { Appointment, Client, FlashDesign, ProjectRequest } from '../../types';
 import type { DashboardWidget } from './DashboardWidgets';
+import { IconInkCap } from '../icons/InkCraftIcons';
+import { StudioSetupChecklist } from './StudioSetupChecklist';
 
 /** Image d’en-tête mobile si aucune image vitrine (fichier dans /public) */
 const MOBILE_OVERVIEW_HEADER_BG_FALLBACK = '/images/hero-tattoo-artist.png';
@@ -32,6 +35,7 @@ const MOBILE_OVERVIEW_HEADER_BG_FALLBACK = '/images/hero-tattoo-artist.png';
 /** Composants sortables au niveau module : évite de recréer un type de composant à chaque rendu
  * (React #310 / hooks + @dnd-kit + Framer Motion en prod). */
 interface OverviewSortableWidgetProps {
+  key?: React.Key;
   id: string;
   children: React.ReactNode;
   className?: string;
@@ -88,6 +92,7 @@ function OverviewSortableWidget({
 }
 
 interface OverviewSortableKpiProps {
+  key?: React.Key;
   id: string;
   children: React.ReactNode;
   canRemove?: boolean;
@@ -190,6 +195,14 @@ export interface DashboardOverviewTabProps {
   /** Clic sur l’avatar mobile : photo de **profil** compte (fichier caché dans DashboardPro) */
   onAvatarClick?: () => void;
   avatarUploading?: boolean;
+  /** Flashs du studio — module « Flash du jour » (aperçu + lien vitrine) */
+  flashDesigns?: FlashDesign[];
+  /** Checklist onboarding : navigation vers vitrine / flash / agenda */
+  onSetupNavigate?: (target: 'settings-vitrine' | 'settings-availability' | 'settings-payments' | 'flash' | 'appointments') => void;
+  /** false = étape « Disponibilités » dans la checklist ; undefined = chargement ou mode local */
+  availabilitySetupComplete?: boolean;
+  /** false = étape « Paiements / Stripe » ; undefined = chargement ou mode local */
+  paymentsSetupComplete?: boolean;
 }
 
 export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
@@ -225,7 +238,14 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   overviewHeaderBgUrl,
   onAvatarClick,
   avatarUploading = false,
+  flashDesigns = [],
+  onSetupNavigate,
+  availabilitySetupComplete,
+  paymentsSetupComplete,
 }) => {
+  const { privacyMode } = useStudioPrivacy();
+  const euro = (n: number) => formatEuroPrivacy(n, privacyMode);
+
   const mobileHeaderBgUrl =
     typeof overviewHeaderBgUrl === 'string' && overviewHeaderBgUrl.trim() !== ''
       ? overviewHeaderBgUrl.trim()
@@ -446,11 +466,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   }
                 >
                   {isMdUp ? (
-                    <>{monthlyRevenue.toLocaleString('fr-FR')}€</>
+                    <>{euro(monthlyRevenue)}</>
                   ) : (
                     <>
-                      <span className={iosKpiMetricValue}>{monthlyRevenue.toLocaleString('fr-FR')}</span>
-                      <span className={iosKpiMetricSuffix}>€</span>
+                      <span className={iosKpiMetricValue}>{privacyMode ? '••••' : monthlyRevenue.toLocaleString('fr-FR')}</span>
+                      {!privacyMode && <span className={iosKpiMetricSuffix}>€</span>}
                     </>
                   )}
                 </p>
@@ -458,11 +478,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   {monthlyForecast > 0 && (
                     isMdUp ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 dark:bg-sky-500/15 text-sky-700 dark:text-sky-400 w-fit">
-                        +{monthlyForecast.toLocaleString('fr-FR')}€ en attente
+                        {privacyMode ? '••••' : `+${monthlyForecast.toLocaleString('fr-FR')}€`} en attente
                       </span>
                     ) : (
                       <p className="text-[12px] text-sky-600 dark:text-sky-400">
-                        +{monthlyForecast.toLocaleString('fr-FR')}€ prévisionnel
+                        {privacyMode ? '•••• prévisionnel' : `+${monthlyForecast.toLocaleString('fr-FR')}€ prévisionnel`}
                       </p>
                     )
                   )}
@@ -534,11 +554,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   }
                 >
                   {isMdUp ? (
-                    <>{pendingDeposits.toLocaleString('fr-FR')}€</>
+                    <>{euro(pendingDeposits)}</>
                   ) : (
                     <>
-                      <span className={iosKpiMetricValue}>{pendingDeposits.toLocaleString('fr-FR')}</span>
-                      <span className={iosKpiMetricSuffix}>€</span>
+                      <span className={iosKpiMetricValue}>{privacyMode ? '••••' : pendingDeposits.toLocaleString('fr-FR')}</span>
+                      {!privacyMode && <span className={iosKpiMetricSuffix}>€</span>}
                     </>
                   )}
                 </p>
@@ -863,6 +883,19 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           </div>
         </div>
 
+        {onSetupNavigate && (
+          <div className="px-3 min-[400px]:px-4 pb-2">
+            <StudioSetupChecklist
+              studioSlug={studioSlug}
+              flashDesigns={flashDesigns}
+              appointments={appointments}
+              availabilitySetupComplete={availabilitySetupComplete}
+              paymentsSetupComplete={paymentsSetupComplete}
+              onGoTo={onSetupNavigate}
+            />
+          </div>
+        )}
+
         {/* Mode widgets — même logique que desktop (KPI réordonnables) */}
         {isEditMode && (
           <div className="px-3 min-[400px]:px-4 mt-2 sm:mt-3 mb-1">
@@ -894,6 +927,42 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 >
                   Terminer
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {flashDesigns[0] && (
+          <div className="px-3 min-[400px]:px-4 mb-2">
+            <div className="rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 p-3 flex gap-3 items-center shadow-[0_1px_0_0_rgba(0,0,0,0.04)] dark:shadow-none">
+              <div className="w-16 h-16 rounded-md overflow-hidden border border-zinc-200 dark:border-zinc-700 shrink-0 bg-zinc-100 dark:bg-zinc-800">
+                <img src={flashDesigns[0].imageUrl} alt="" className="w-full h-full object-cover" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400 flex items-center gap-1.5">
+                  <IconInkCap className="w-3.5 h-3.5" aria-hidden />
+                  Flash du jour
+                </p>
+                <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{flashDesigns[0].title}</p>
+                <div className="flex flex-wrap gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('flash')}
+                    className="text-xs font-semibold text-violet-700 dark:text-violet-300 hover:underline transition-colors duration-100"
+                  >
+                    Galerie Flash
+                  </button>
+                  {vitrineSlug ? (
+                    <a
+                      href={`/studio/${vitrineSlug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors duration-100"
+                    >
+                      Vitrine publique
+                    </a>
+                  ) : null}
+                </div>
               </div>
             </div>
           </div>
@@ -1106,7 +1175,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 dark:text-amber-400 dark:fill-amber-400 shrink-0" />
                         )}
                       </div>
-                      <span className="text-[15px] text-zinc-500 dark:text-zinc-400">{client.totalSpent}€ dépensés</span>
+                      <span className="text-[15px] text-zinc-500 dark:text-zinc-400">
+                        {privacyMode ? '••••' : `${client.totalSpent}€`} dépensés
+                      </span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 flex-shrink-0" />
                   </button>
@@ -1203,6 +1274,19 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           </div>
         </div>
 
+        {onSetupNavigate && (
+          <div className="px-5 sm:px-8 lg:px-10 pb-4">
+            <StudioSetupChecklist
+              studioSlug={studioSlug}
+              flashDesigns={flashDesigns}
+              appointments={appointments}
+              availabilitySetupComplete={availabilitySetupComplete}
+              paymentsSetupComplete={paymentsSetupComplete}
+              onGoTo={onSetupNavigate}
+            />
+          </div>
+        )}
+
         {/* Edit Mode Banner */}
         {isEditMode && (
           <div className="px-5 sm:px-8 lg:px-10 mb-4">
@@ -1264,7 +1348,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Évolution du revenu</p>
                                 <div className="flex items-baseline gap-2 flex-wrap">
                                   <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
-                                    {(periodRevenue ?? totalRevenue).toLocaleString('fr-FR')}€
+                                    {euro(periodRevenue ?? totalRevenue)}
                                   </p>
                                   {periodTrend !== null && (
                                     <span className={`text-sm font-semibold ${periodTrend >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
@@ -1280,7 +1364,12 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     Détails <ArrowUpRight className="w-3 h-3" />
                   </button>
                 </div>
-                            <RevenueChart appointments={appointments} totalRevenue={totalRevenue} onPeriodChange={handlePeriodChange} />
+                            <RevenueChart
+                              appointments={appointments}
+                              totalRevenue={totalRevenue}
+                              onPeriodChange={handlePeriodChange}
+                              privacyMode={privacyMode}
+                            />
               </div>
                         </OverviewSortableWidget>
                       );
@@ -1323,7 +1412,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           </div>
                           <div className="flex items-center gap-2">
                             {apt.price && (
-                              <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-300 tabular-nums">{apt.price}€</span>
+                              <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-300 tabular-nums">
+                                {privacyMode ? '••••' : `${apt.price}€`}
+                              </span>
                             )}
                             <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
                           </div>
@@ -1410,7 +1501,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">En attente</p>
                               </div>
                               <div className="text-center p-3 rounded-2xl bg-blue-50 dark:bg-blue-500/10">
-                                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{avgPrice}€</p>
+                                <p className="text-2xl font-bold text-zinc-900 dark:text-white">{privacyMode ? '••••' : `${avgPrice}€`}</p>
                                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Prix moy.</p>
                               </div>
                             </div>
@@ -1516,7 +1607,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         <p className="text-sm text-white/70">{nextClient.service || 'Tatouage'}</p>
                         <div className="flex items-center gap-3 mt-2 text-xs">
                                 {nextClient.duration && <span className="flex items-center gap-1 text-white/70"><Clock className="w-3 h-3" /> {nextClient.duration}min</span>}
-                                {nextClient.price && <span className="font-bold text-white">{nextClient.price}€</span>}
+                                {nextClient.price && (
+                                  <span className="font-bold text-white">{privacyMode ? '••••' : `${nextClient.price}€`}</span>
+                                )}
                         </div>
                       </div>
                     </div>
@@ -1564,7 +1657,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                               </div>
                               <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5"><span className="text-sm font-medium text-zinc-900 dark:text-white truncate">{client.name}</span>{(client.totalSpent ?? 0) >= 500 && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}</div>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-500">{client.totalSpent}€</span>
+                                <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                                  {privacyMode ? '••••' : `${client.totalSpent}€`}
+                                </span>
                               </div>
                             </button>
                           ))}
@@ -1579,7 +1674,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                     <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="w-full flex items-center gap-3 p-3 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors text-left">
                                       <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center flex-shrink-0"><CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /></div>
                               <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate flex-1">{apt.clientName || 'Client'}</span>
-                              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">+{apt.deposit}€</span>
+                              <span className="text-sm font-bold text-zinc-900 dark:text-white tabular-nums">
+                                {privacyMode ? '+••••' : `+${apt.deposit}€`}
+                              </span>
                             </button>
                           ))}
                         </div>
@@ -1685,8 +1782,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         </div>
                         <div className="mb-3">
                           <div className="flex items-end justify-between mb-2">
-                            <span className="text-2xl font-bold">{monthlyRevenue.toLocaleString('fr-FR')}€</span>
-                            <span className="text-sm text-white/70">/ {monthlyGoal.toLocaleString('fr-FR')}€</span>
+                            <span className="text-2xl font-bold">{euro(monthlyRevenue)}</span>
+                            <span className="text-sm text-white/70">
+                              / {privacyMode ? '••••' : `${monthlyGoal.toLocaleString('fr-FR')}€`}
+                            </span>
                           </div>
                           <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                             <div 

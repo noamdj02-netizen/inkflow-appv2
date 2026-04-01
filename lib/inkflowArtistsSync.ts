@@ -38,7 +38,8 @@ export async function syncArtistAccountsToSupabase(studioId: string, artists: Ar
     };
   });
 
-  const { error } = await supabase.from('inkflow_artists').upsert(rows, { onConflict: 'id' });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).from('inkflow_artists').upsert(rows, { onConflict: 'id' });
   if (error) throw error;
 }
 

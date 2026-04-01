@@ -55,10 +55,10 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({ entries, clients
 
   const totalPoints = entries.reduce((sum, e) => sum + e.points, 0);
   const totalEarned = entries.reduce((sum, e) => sum + e.totalEarned, 0);
-  const tierCounts = entries.reduce<Record<string, number>>((acc, e) => {
+  const tierCounts = entries.reduce((acc: Record<string, number>, e) => {
     acc[e.tier] = (acc[e.tier] || 0) + 1;
     return acc;
-  }, {});
+  }, {} as Record<string, number>);
 
   const sortedEntries = [...entries].sort((a, b) => b.points - a.points);
   const topEntries = sortedEntries.slice(0, 10);

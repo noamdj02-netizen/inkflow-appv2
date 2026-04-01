@@ -11,8 +11,8 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({ height = 180 }) => (
     style={{ height, background: CX.surface, border: `1px solid ${CX.border}` }}
   >
     <div className="h-full flex flex-col justify-end p-3">
-      <div className="h-3 w-3/4 rounded-full mb-2" style={{ background: CX.glass }} />
-      <div className="h-2 w-1/2 rounded-full" style={{ background: CX.glass }} />
+      <div className="h-3 w-3/4 rounded-full mb-2" style={{ background: CX.surfaceGlass }} />
+      <div className="h-2 w-1/2 rounded-full" style={{ background: CX.surfaceGlass }} />
     </div>
   </div>
 );

@@ -62,6 +62,8 @@ export const useSupabaseDashboard = () => {
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [connectionError, setConnectionError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  /** Dernière synchro réussie des listes (RDV, clients, flash, notifs) */
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const initializedRef = useRef(false);
 
   // Écouter le mode hors-ligne (navigateur)
@@ -105,6 +107,7 @@ export const useSupabaseDashboard = () => {
     setClients(clis);
     setFlashDesigns(flash);
     setNotifications(notifs);
+    setLastSyncedAt(new Date().toISOString());
   }, []);
 
   useEffect(() => {
@@ -116,6 +119,7 @@ export const useSupabaseDashboard = () => {
       setSubscriptionStatus(null);
       setTrialEndsAt(null);
       setStudioCsvImportSlots(undefined);
+      setLastSyncedAt(null);
       setLoading(false);
       initializedRef.current = false;
       return;
@@ -362,6 +366,7 @@ export const useSupabaseDashboard = () => {
     useSupabase,
     isOnline,
     connectionError,
+    lastSyncedAt,
     retry,
     addAppointment,
     updateAppointment,

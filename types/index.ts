@@ -345,3 +345,12 @@ export interface LoyaltyEntry {
   totalRedeemed: number;
   createdAt: string;
 }
+
+export type {
+  StudioModuleId,
+  StudioDashboardPreferences,
+  StudioModuleToggle,
+  SidebarGroupId,
+  StudioSidebarItemConfig,
+} from './studioPreferences';
+export { STUDIO_PREFERENCES_SCHEMA_VERSION, DEFAULT_STUDIO_DASHBOARD_PREFERENCES } from './studioPreferences';

@@ -39,7 +39,15 @@ export const CX = {
 } as const;
 
 // ── Types ───────────────────────────────────────────────────────────────────
-export type ClientTab = 'explore' | 'inspire' | 'rdv' | 'wallet' | 'profile';
+/** Onglets du portail client (nav bas + accueil / wallet hors barre). */
+export type ClientTab =
+  | 'accueil'
+  | 'explore'
+  | 'inspire'
+  | 'rdv'
+  | 'loyalty'
+  | 'wallet'
+  | 'profile';
 
 export interface ClientAppointment {
   id: string;

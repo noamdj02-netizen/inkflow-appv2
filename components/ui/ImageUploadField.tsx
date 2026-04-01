@@ -105,7 +105,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
     ? `overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-[var(--border)] ${shapeClasses[shape]}`
     : `${sizeClasses[previewSize]} overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-[var(--border)] flex-shrink-0 ${shapeClasses[shape]}`;
 
-  const aspect = shapeToAspect(shape);
+  const aspect = shapeToAspect(shape as 'cover' | 'round' | 'square');
   const cropShape = shape === 'round' ? 'round' : 'rect';
 
   return (

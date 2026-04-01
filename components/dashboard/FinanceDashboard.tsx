@@ -5,6 +5,9 @@ import { InvoiceButton } from './InvoiceButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Modal } from '../ui/Modal';
+import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
+import { useToast } from '../../contexts/ToastContext';
+import { buildFinanceLedgerCsv, downloadTextFile } from '../../lib/studioDataExport';
 
 type BilanPeriod = 'today' | 'week' | 'month';
 
@@ -44,9 +47,10 @@ interface FinanceBilanModalProps {
   onClose: () => void;
   appointments: Appointment[];
   cashEntries: CashEntry[];
+  privacyMode: boolean;
 }
 
-function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: FinanceBilanModalProps) {
+function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacyMode }: FinanceBilanModalProps) {
   const [period, setPeriod] = useState<BilanPeriod>('today');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { start, end, label } = getDateRange(period);
@@ -160,7 +164,7 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
       doc.setFont('helvetica', 'bold');
       doc.text('Chiffre d\'affaires:', margin, yPos);
       doc.setFont('helvetica', 'normal');
-      doc.text(`${totalCA}€`, pageWidth - margin, yPos, { align: 'right' });
+      doc.text(privacyMode ? '••••' : `${totalCA}€`, pageWidth - margin, yPos, { align: 'right' });
       yPos += 7;
       doc.setFont('helvetica', 'bold');
       doc.text('Nombre de clients:', margin, yPos);
@@ -170,12 +174,12 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
       doc.setFont('helvetica', 'bold');
       doc.text('Acomptes reçus:', margin, yPos);
       doc.setFont('helvetica', 'normal');
-      doc.text(`${depositsReceived}€`, pageWidth - margin, yPos, { align: 'right' });
+      doc.text(privacyMode ? '••••' : `${depositsReceived}€`, pageWidth - margin, yPos, { align: 'right' });
       yPos += 7;
       doc.setFont('helvetica', 'bold');
       doc.text('Reste à payer encaissé:', margin, yPos);
       doc.setFont('helvetica', 'normal');
-      doc.text(`${restPaid}€`, pageWidth - margin, yPos, { align: 'right' });
+      doc.text(privacyMode ? '••••' : `${restPaid}€`, pageWidth - margin, yPos, { align: 'right' });
       yPos += 12;
 
       if (totalMinutes > 0) {
@@ -223,7 +227,7 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
           doc.text(line.length > 18 ? line.slice(0, 15) + '…' : line, colX[0], yPos);
           doc.text(t.label.length > 22 ? t.label.slice(0, 19) + '…' : t.label, colX[1], yPos);
           doc.text(t.sub.length > 18 ? t.sub.slice(0, 15) + '…' : t.sub, colX[2], yPos);
-          doc.text(`${t.amount}€`, pageWidth - margin, yPos, { align: 'right' });
+          doc.text(privacyMode ? '••••' : `${t.amount}€`, pageWidth - margin, yPos, { align: 'right' });
           yPos += 6;
         }
       }
@@ -243,7 +247,7 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [label, totalCA, clientCount, depositsReceived, restPaid, totalMinutes, hoursTattooed, minsTattooed, transactions, start, end]);
+  }, [label, totalCA, clientCount, depositsReceived, restPaid, totalMinutes, hoursTattooed, minsTattooed, transactions, start, end, privacyMode]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Bilan & Rapports" size="lg">
@@ -272,7 +276,7 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="dashboard-widget-card p-4">
               <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Chiffre d'affaires</div>
-              <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 tabular-nums">{totalCA}€</div>
+              <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 tabular-nums">{formatEuroPrivacy(totalCA, privacyMode)}</div>
             </div>
             <div className="dashboard-widget-card p-4">
               <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Nombre de clients</div>
@@ -280,11 +284,11 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
             </div>
             <div className="dashboard-widget-card p-4">
               <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Acomptes reçus</div>
-              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{depositsReceived}€</div>
+              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{formatEuroPrivacy(depositsReceived, privacyMode)}</div>
             </div>
             <div className="dashboard-widget-card p-4">
               <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Reste à payer encaissé</div>
-              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{restPaid}€</div>
+              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{formatEuroPrivacy(restPaid, privacyMode)}</div>
             </div>
           </div>
 
@@ -320,7 +324,7 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries }: Finan
                         </td>
                         <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">{t.label}</td>
                         <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{t.sub}</td>
-                        <td className="px-4 py-3 text-right font-bold text-neutral-900 dark:text-neutral-100">{t.amount}€</td>
+                        <td className="px-4 py-3 text-right font-bold text-neutral-900 dark:text-neutral-100">{formatEuroPrivacy(t.amount, privacyMode)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -389,6 +393,8 @@ function saveCashEntries(userId: string, entries: CashEntry[]): void {
 
 export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments }) => {
   const { user } = useAuth();
+  const toast = useToast();
+  const { privacyMode } = useStudioPrivacy();
   const userId = user?.id ?? user?.email ?? 'default';
   const [cashEntries, setCashEntries] = useState<CashEntry[]>(() => loadCashEntries(userId));
   const [showAddCash, setShowAddCash] = useState(false);
@@ -501,6 +507,34 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
     return cashEntries.filter((e) => e.date === today).reduce((s, e) => s + e.amount, 0);
   }, [cashEntries]);
 
+  const handleExportLedgerCsv = useCallback(() => {
+    const fromApts = appointments
+      .filter((a) => a.status === 'completed' || a.depositPaid)
+      .map((a) => ({
+        date: a.date,
+        type: a.status === 'completed' ? 'rdv_termine' : 'acompte',
+        label: a.clientName,
+        detail: a.service || 'RDV',
+        amount: a.price,
+      }));
+    const fromCash = cashEntries.map((e) => ({
+      date: e.date,
+      type: 'especes',
+      label: e.label,
+      detail: 'Caisse',
+      amount: e.amount,
+    }));
+    const rows = [...fromApts, ...fromCash].sort((a, b) => b.date.localeCompare(a.date));
+    if (rows.length === 0) {
+      toast.error('Aucune ligne à exporter');
+      return;
+    }
+    const uid = (user?.id || user?.email || 'studio').replace(/[^a-z0-9-_]/gi, '_');
+    const d = new Date().toISOString().slice(0, 10);
+    downloadTextFile(`inkflow-finance-${uid}-${d}.csv`, buildFinanceLedgerCsv(rows));
+    toast.success('Export CSV téléchargé');
+  }, [appointments, cashEntries, user?.id, user?.email, toast]);
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -510,6 +544,14 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
           <p className="text-zinc-500 dark:text-zinc-400 mt-1">Gérez vos revenus, acomptes et encaissements</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={handleExportLedgerCsv}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-[0.98]"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
           <button
             onClick={() => setShowBilan(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-[0.98]"
@@ -536,7 +578,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{totalGlobal.toLocaleString('fr-FR')}€</div>
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{formatEuroPrivacy(totalGlobal, privacyMode)}</div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">RDV + espèces</p>
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
@@ -546,7 +588,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
               <CreditCard className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{totalRevenue.toLocaleString('fr-FR')}€</div>
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{formatEuroPrivacy(totalRevenue, privacyMode)}</div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Carte / virement</p>
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
@@ -556,9 +598,11 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
               <Banknote className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">{totalCash.toLocaleString('fr-FR')}€</div>
+          <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">{formatEuroPrivacy(totalCash, privacyMode)}</div>
           {todayCash > 0 && (
-            <p className="text-xs text-green-600 dark:text-green-400 mt-1">+{todayCash}€ aujourd'hui</p>
+            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+              {privacyMode ? '+•••• aujourd\'hui' : `+${todayCash.toLocaleString('fr-FR')}€ aujourd'hui`}
+            </p>
           )}
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
@@ -568,7 +612,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
               <Receipt className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">{totalDeposits.toLocaleString('fr-FR')}€</div>
+          <div className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">{formatEuroPrivacy(totalDeposits, privacyMode)}</div>
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5 col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between mb-3">
@@ -577,7 +621,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400 tabular-nums">{pendingDeposits.toLocaleString('fr-FR')}€</div>
+          <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400 tabular-nums">{formatEuroPrivacy(pendingDeposits, privacyMode)}</div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{completedCount} RDV terminés</p>
         </div>
       </div>
@@ -589,46 +633,53 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
             <h3 className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-white">Évolution des revenus</h3>
             <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg">6 mois</span>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#171717" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#171717" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#059669" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
-              <XAxis dataKey="month" stroke="#737373" style={{ fontSize: 12 }} />
-              <YAxis stroke="#737373" style={{ fontSize: 12 }} />
-              <Tooltip
-                formatter={(v: number, name: string) => [
-                  `${v}€`,
-                  name === 'revenue' ? 'Revenus RDV' : name === 'cash' ? 'Espèces' : 'Total',
-                ]}
-                contentStyle={{ borderRadius: 12, border: '1px solid #e5e5e5' }}
-              />
-              <Area
-                type="monotone"
-                dataKey="revenue"
-                stroke="#171717"
-                strokeWidth={2}
-                fill="url(#colorRevenue)"
-                name="revenue"
-              />
-              <Area
-                type="monotone"
-                dataKey="cash"
-                stroke="#059669"
-                strokeWidth={2}
-                fill="url(#colorCash)"
-                name="cash"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div className="relative">
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#171717" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#171717" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorCash" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+                <XAxis dataKey="month" stroke="#737373" style={{ fontSize: 12 }} />
+                <YAxis stroke="#737373" style={{ fontSize: 12 }} />
+                <Tooltip
+                  formatter={(v: number, name: string) => [
+                    formatEuroPrivacy(Number(v), privacyMode),
+                    name === 'revenue' ? 'Revenus RDV' : name === 'cash' ? 'Espèces' : 'Total',
+                  ]}
+                  contentStyle={{ borderRadius: 12, border: '1px solid #e5e5e5' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#171717"
+                  strokeWidth={2}
+                  fill="url(#colorRevenue)"
+                  name="revenue"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="cash"
+                  stroke="#059669"
+                  strokeWidth={2}
+                  fill="url(#colorCash)"
+                  name="cash"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+            {privacyMode && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-zinc-100/90 dark:bg-zinc-900/85 backdrop-blur-[2px] pointer-events-none">
+                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Graphique masqué</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Caisse espèces */}
@@ -670,7 +721,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
                         <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{e.date}</div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-green-600 dark:text-green-400">+{e.amount}€</span>
+                        <span className="text-sm font-semibold text-green-600 dark:text-green-400">+{formatEuroPrivacy(e.amount, privacyMode)}</span>
                         <button
                           onClick={() => removeCashEntry(e.id)}
                           className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition-all"
@@ -731,7 +782,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="font-bold text-neutral-900 dark:text-neutral-100">{t.amount}€</span>
+                  <span className="font-bold text-neutral-900 dark:text-neutral-100">{formatEuroPrivacy(t.amount, privacyMode)}</span>
                   {t.type === 'rdv' && t.appointment && user && (
                     <InvoiceButton
                       appointment={t.appointment}
@@ -751,6 +802,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
           onClose={() => setShowBilan(false)}
           appointments={appointments}
           cashEntries={cashEntries}
+          privacyMode={privacyMode}
         />
       )}
 

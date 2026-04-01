@@ -19,6 +19,8 @@ import {
   PartyPopper, FileText, Images, Users,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const anyDb: any = supabase;
 import { clientNeedsPassword, clientOnboardingComplete } from '../../lib/clientAuth';
 import { getInviteBaseUrl } from '../../lib/urls';
 import { type ClientAppointment, type ClientTab } from '../../components/client/clientExperienceTypes';
@@ -79,7 +81,7 @@ const UI = {
   shadowPill:   '0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08)',
 } as const;
 
-const TAB_ORDER: ClientTab[] = ['explore', 'inspire', 'rdv', 'wallet', 'profile'];
+const TAB_ORDER: ClientTab[] = ['explore', 'inspire', 'rdv', 'loyalty', 'profile', 'accueil', 'wallet'];
 
 /** Grille inspiration — une image = une carte (portfolio studio + flashs à proximité) */
 interface InspirePin {
@@ -1327,7 +1329,7 @@ const CommissionModal: React.FC<{
     if (!style || !desc.trim()) { toast.error('Remplis le style et la description'); return; }
     setLoading(true);
     try {
-      await supabase.from('inkflow_commissions').insert({
+      await (supabase as any).from('inkflow_commissions').insert({
         client_email: sessionEmail,
         style,
         body_zone: zone || null,
@@ -1495,7 +1497,7 @@ const GiftCardSection: React.FC<{ sessionEmail: string }> = ({ sessionEmail }) =
       const seed = `${sessionEmail}-${em}-${amount}-${Date.now()}`;
       for (let i = 0; i < seed.length; i++) h = ((h << 5) + h) + seed.charCodeAt(i);
       const giftCode = 'GIFT-' + Math.abs(h).toString(36).toUpperCase().slice(0, 8);
-      await supabase.from('inkflow_gift_cards').insert({
+      await (supabase as any).from('inkflow_gift_cards').insert({
         sender_email: sessionEmail,
         recipient_email: em,
         amount_cents: parseInt(amount) * 100,
@@ -1516,7 +1518,8 @@ const GiftCardSection: React.FC<{ sessionEmail: string }> = ({ sessionEmail }) =
     if (!redeemCode.trim()) return;
     setRedeeming(true);
     try {
-      const { data } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any)
         .from('inkflow_gift_cards')
         .select('id, amount_cents, status')
         .eq('code', redeemCode.trim().toUpperCase())
@@ -1528,7 +1531,7 @@ const GiftCardSection: React.FC<{ sessionEmail: string }> = ({ sessionEmail }) =
       const d = data as { id: string; amount_cents: number; status: string };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase.rpc as any)('inkflow_credit_wallet', { p_email: sessionEmail, p_cents: d.amount_cents });
-      await supabase.from('inkflow_gift_cards').update({ status: 'used', used_at: new Date().toISOString() }).eq('id', d.id);
+      await (supabase as any).from('inkflow_gift_cards').update({ status: 'used', used_at: new Date().toISOString() }).eq('id', d.id);
       toast.success(`+${(d.amount_cents / 100).toFixed(0)}€ crédités sur ton wallet !`);
       setRedeemCode('');
     } catch {
@@ -1761,7 +1764,7 @@ const ReviewModal: React.FC<{
     if (rating === 0) return;
     setLoading(true);
     try {
-      await supabase.from('inkflow_client_reviews').upsert({
+      await anyDb.from('inkflow_client_reviews').upsert({
         client_email: sessionEmail,
         appointment_id: appointment.id,
         rating,
@@ -1976,8 +1979,8 @@ export const ClientDashboard: React.FC = () => {
   };
 
   // ── Tab state ──
-  const [tab, setTab] = useState<ClientTab>('explore');
-  const tabRef = useRef<ClientTab>('explore');
+  const [tab, setTab] = useState<ClientTab>('accueil');
+  const tabRef = useRef<ClientTab>('accueil');
   const [slideDir, setSlideDir] = useState(1);
   const goTab = (t: ClientTab) => {
     setSlideDir(TAB_ORDER.indexOf(t) > TAB_ORDER.indexOf(tabRef.current) ? 1 : -1);
@@ -2158,7 +2161,7 @@ export const ClientDashboard: React.FC = () => {
 
         // ── Wallet transactions (table réelle ou dérivé des RDV complétés) ──
         try {
-          const { data: txData, error: txErr } = await supabase
+          const { data: txData, error: txErr } = await anyDb
             .from('inkflow_wallet_transactions')
             .select('id, label, amount_cents, type, created_at')
             .eq('client_email', sessionEmail)
@@ -2746,6 +2749,65 @@ export const ClientDashboard: React.FC = () => {
     [displayStudios, toast],
   );
 
+  const toggleExploreStudioFavorite = useCallback(
+    async (studioId: string) => {
+      const wasFav = favStudios.has(studioId);
+      const adding = !wasFav;
+      if (!sessionEmail) {
+        setFavStudios((prev) => {
+          const next = new Set(prev);
+          if (adding) next.add(studioId);
+          else next.delete(studioId);
+          try {
+            localStorage.setItem(GUEST_STUDIO_FAV_KEY, JSON.stringify([...next]));
+          } catch {
+            /* quota */
+          }
+          return next;
+        });
+        return;
+      }
+      try {
+        if (adding) {
+          const { error } = await supabase
+            .from('inkflow_client_studio_favorites')
+            .insert({ client_email: sessionEmail, studio_id: studioId });
+          if (error) throw error;
+          setFavStudios((prev) => new Set(prev).add(studioId));
+          toast.success('Studio enregistré dans ton profil');
+        } else {
+          const { error } = await supabase
+            .from('inkflow_client_studio_favorites')
+            .delete()
+            .eq('client_email', sessionEmail)
+            .eq('studio_id', studioId);
+          if (error) throw error;
+          setFavStudios((prev) => {
+            const next = new Set(prev);
+            next.delete(studioId);
+            return next;
+          });
+          toast.success('Retiré des favoris');
+        }
+      } catch {
+        toast.error('Impossible de mettre à jour les favoris');
+      }
+    },
+    [sessionEmail, favStudios, toast],
+  );
+
+  const studiosWithMapCoords = useMemo(
+    () =>
+      nearbyStudios.filter(
+        (s) =>
+          s.latitude != null &&
+          s.longitude != null &&
+          Number.isFinite(s.latitude) &&
+          Number.isFinite(s.longitude),
+      ),
+    [nearbyStudios],
+  );
+
   const shareUrl = `${getInviteBaseUrl()}/${code || 'demo'}`;
 
   const copyCode = async () => {
@@ -2764,10 +2826,12 @@ export const ClientDashboard: React.FC = () => {
   const isGuest = !sessionEmail;
 
   const TAB_TITLES: Record<ClientTab, string> = {
-    explore: 'Découvrir',
+    accueil: 'Accueil',
+    explore: 'Explorer',
     inspire: 'Inspiration',
     rdv: 'Mes RDV',
-    wallet: 'Wallet',
+    loyalty: 'Fidélité',
+    wallet: 'Portefeuille',
     profile: 'Profil',
   };
 
@@ -2787,7 +2851,7 @@ export const ClientDashboard: React.FC = () => {
             <span className="text-2xl font-black tracking-tighter" style={{ color: N.text, letterSpacing: '-0.04em' }}>
               IF.
             </span>
-            {tab !== 'explore' && (
+            {tab !== 'accueil' && (
               <span className="text-base font-semibold" style={{ color: N.textSub }}>
                 {TAB_TITLES[tab]}
               </span>
@@ -2863,328 +2927,372 @@ export const ClientDashboard: React.FC = () => {
             transition={{ type: 'spring', stiffness: 380, damping: 38, mass: 0.8 }}
           >
 
-            {/* ════ EXPLORER ════ */}
-            {tab === 'explore' && (
+            {/* ════ ACCUEIL ════ */}
+            {tab === 'accueil' && (
               <div className="pb-6">
-
-                {/* Hero heading + search */}
-                <div className="px-5 pt-6 pb-4">
-                  <motion.h1
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                    className="text-[30px] font-black leading-tight mb-4"
-                    style={{ color: N.text, letterSpacing: '-0.02em' }}
-                  >
-                    Trouve ton<br />prochain Tattoo.
-                  </motion.h1>
-
-                  {/* Search bar */}
-                  <div className="relative">
-                    <input
-                      value={search} onChange={e => setSearch(e.target.value)}
-                      placeholder="Rechercher un style, un artiste, un flash..."
-                      className="w-full rounded-full border py-3.5 pl-5 pr-12 text-sm outline-none transition-all"
-                      style={{ background: N.surface, borderColor: N.border, color: N.text, caretColor: UI.label }}
-                      onFocus={e => (e.currentTarget.style.borderColor = UI.borderHair)}
-                      onBlur={e => (e.currentTarget.style.borderColor = N.border)}
-                    />
-                    <button
-                      type="button"
-                      aria-label={search ? 'Effacer la recherche' : 'Rechercher'}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center transition-colors active:scale-[0.97]"
-                      style={{ background: UI.chrome, color: UI.label }}
-                      onClick={() => { if (search) setSearch(''); }}
+                <div className="px-5 pt-5">
+                  {/* Studio card */}
+                  <div className="flex items-center gap-3 mb-5">
+                    <div
+                      className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shrink-0"
+                      style={{ background: N.neonDim, color: N.neon }}
                     >
-                      {search
-                        ? <X className="w-4 h-4" style={{ color: UI.label }} />
-                        : <Search className="w-4 h-4" style={{ color: UI.labelMuted }} />
-                      }
-                    </button>
+                      IF.
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: N.muted }}>
+                        Ton Studio
+                      </p>
+                      <h1 className="text-xl font-black leading-tight" style={{ color: N.text }}>
+                        {completed[0]?.studio_name || upcoming[0]?.studio_name || 'Studio Inkflow'}
+                      </h1>
+                    </div>
                   </div>
 
-                  {/* Geo pill */}
-                  <div className="flex items-center gap-2 mt-3">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border" style={{ borderColor: N.border, background: N.surface }}>
-                      {geoLoading
-                        ? <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: UI.labelMuted }} />
-                        : <MapPin className="w-3 h-3" style={{ color: UI.labelMuted }} />
-                      }
-                      <span className="text-xs font-medium" style={{ color: N.textSub }}>
-                        {geoLoading
-                          ? 'Chargement des studios…'
-                          : userPos
-                            ? `${nearbyStudios.length} studio${nearbyStudios.length > 1 ? 's' : ''} (tri par distance)`
-                            : `${nearbyStudios.length} studio${nearbyStudios.length > 1 ? 's' : ''} Inkflow`}
-                      </span>
+                  {/* Stats row */}
+                  <div className="grid grid-cols-3 gap-2 mb-5">
+                    <div className="rounded-2xl border px-3 py-3 text-center" style={{ borderColor: N.border, background: N.surface }}>
+                      <p className="text-2xl font-black" style={{ color: N.text }}>{completed.length}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide mt-0.5" style={{ color: N.muted }}>Tattoos</p>
                     </div>
-                    {!userPos && !geoLoading && (
-                      <button type="button"
-                        onClick={() => {
-                          setGeoLoading(true);
-                          navigator.geolocation?.getCurrentPosition(
-                            async (pos) => {
-                              const { latitude, longitude } = pos.coords;
-                              setUserPos({ lat: latitude, lng: longitude });
-                              setGeoLoading(true);
-                              const studios = await loadClientDiscoveryStudios(latitude, longitude, 80, 40);
-                              setNearbyStudios(studios);
-                              setGeoLoading(false);
-                            },
-                            () => setGeoLoading(false),
-                            { timeout: 8000 },
-                          );
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all active:scale-[0.98]"
-                        style={{ background: '#fff', color: UI.label, borderColor: UI.borderHair }}
-                      >
-                        <Navigation className="w-3 h-3" style={{ color: UI.labelMuted }} />
-                        Activer
-                      </button>
-                    )}
+                    <div className="rounded-2xl border px-3 py-3 text-center" style={{ borderColor: N.border, background: N.surface }}>
+                      <p className="text-2xl font-black" style={{ color: N.neonText }}>{(cents / 100).toFixed(0)}€</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide mt-0.5" style={{ color: N.muted }}>Wallet</p>
+                    </div>
+                    <div className="rounded-2xl border px-3 py-3 text-center" style={{ borderColor: N.border, background: N.surface }}>
+                      <p className="text-2xl font-black" style={{ color: N.text }}>{appointments.length}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide mt-0.5" style={{ color: N.muted }}>RDV total</p>
+                    </div>
                   </div>
-                </div>
 
-                {/* ── POPULAR (horizontal scroll cards) — prod : uniquement studios réels Supabase ── */}
-                {!search && (
-                  <section className="mb-6">
-                    <div className="flex items-center justify-between px-5 mb-3">
-                      <h2 className="text-xl font-black" style={{ color: N.text }}>À découvrir</h2>
-                      {displayStudios.length > 0 ? (
-                        <span className="text-sm font-semibold" style={{ color: N.muted }}>{displayStudios.length}</span>
-                      ) : null}
-                    </div>
-                    {displayStudios.length === 0 && !geoLoading ? (
-                      <div className="mx-5 rounded-2xl border px-4 py-6 text-center" style={{ borderColor: N.border, background: N.surface }}>
-                        <p className="text-sm font-semibold mb-1" style={{ color: N.text }}>
-                          Aucun studio à afficher pour l’instant
-                        </p>
-                        <p className="text-xs leading-relaxed" style={{ color: N.muted }}>
-                          {import.meta.env.PROD
-                            ? 'Les tatoueurs inscrits sur Inkflow apparaîtront ici. Vérifie ta connexion ou réessaie plus tard.'
-                            : 'En production, seuls les vrais comptes studio sont listés. En local, ajoute VITE_SUPABASE_* ou utilise le fallback démo (dev uniquement).'}
+                  {/* Prochain RDV */}
+                  {upcoming.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-3xl border overflow-hidden mb-4"
+                      style={{ borderColor: N.borderMid, background: N.surface }}
+                    >
+                      <div className="px-4 pt-3.5 pb-2 border-b" style={{ borderColor: N.border }}>
+                        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>
+                          Prochain RDV
                         </p>
                       </div>
-                    ) : null}
-                    <div className="flex gap-4 overflow-x-auto pl-5 pr-3 pb-2" style={{ scrollbarWidth: 'none' }}>
-                      {displayStudios.map((s, i) => (
-                        <motion.div
-                          key={s.id}
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.08, type: 'spring', stiffness: 280, damping: 24 }}
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => setArtistSheet(s)}
-                          className="flex-shrink-0 rounded-3xl overflow-hidden cursor-pointer"
-                          style={{ width: 200, background: N.surface, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
-                        >
-                          {/* Image */}
-                          <div className="relative" style={{ height: 220 }}>
-                            <div
-                              className="absolute inset-0"
-                              style={{ background: `linear-gradient(145deg, ${s.grad[0]}, ${s.grad[1]})` }}
-                            />
-                            {s.avatarUrl && (
-                              <img src={s.avatarUrl} alt={s.name}
-                                className="absolute inset-0 w-full h-full object-cover object-top"
-                                onError={hideBrokenImage}
-                              />
-                            )}
-                            {/* Top badges */}
-                            <div className="absolute top-3 left-3 flex items-center gap-1">
-                              {s.rating > 0 && (
-                                <div className="flex items-center gap-0.5 px-2 py-1 rounded-full text-[10px] font-bold"
-                                  style={{ background: 'rgba(255,255,255,0.92)', color: N.text }}>
-                                  <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                                  {s.rating}
-                                </div>
-                              )}
-                            </div>
-                            {/* Fav */}
-                            <button type="button"
-                              aria-label={favStudios.has(s.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                              className="absolute top-2 right-2 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center"
-                              style={{ background: 'rgba(255,255,255,0.92)' }}
-                              onClick={e => {
-                                e.stopPropagation();
-                                setFavStudios((p) => {
-                                  const n2 = new Set(p);
-                                  if (n2.has(s.id)) n2.delete(s.id);
-                                  else n2.add(s.id);
-                                  try {
-                                    localStorage.setItem(GUEST_STUDIO_FAV_KEY, JSON.stringify([...n2]));
-                                  } catch {
-                                    /* quota / private mode */
-                                  }
-                                  return n2;
-                                });
-                              }}
-                            >
-                              <Heart className="w-5 h-5"
-                                style={{ color: favStudios.has(s.id) ? '#fb7185' : '#aaa', fill: favStudios.has(s.id) ? '#fb7185' : 'none' }}
-                              />
-                            </button>
-                            {/* Bottom frosted overlay */}
-                            <div className="absolute inset-x-0 bottom-0 p-3 rounded-b-none"
-                              style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(12px)' }}>
-                              <p className="text-[13px] font-bold truncate" style={{ color: N.text }}>{s.name}</p>
-                              <div className="flex items-center gap-1 mb-2">
-                                <MapPin className="w-2.5 h-2.5" style={{ color: N.muted }} />
-                                <p className="text-[11px] truncate" style={{ color: N.muted }}>
-                                  {s.artistLabel}
-                                </p>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-[12px] font-semibold" style={{ color: N.textSub }}>{s.distLabel}</span>
-                                <button type="button"
-                                  className="px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all active:scale-[0.98]"
-                                  style={{ background: UI.fill, color: UI.onFill }}
-                                  onClick={e => { e.stopPropagation(); setArtistSheet(s); }}
-                                >
-                                  Voir
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* ── NEAREST PLACES (vertical list) ── */}
-                <section className="px-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-xl font-black" style={{ color: N.text }}>
-                      {search ? `Résultats` : 'Studios'}
-                    </h2>
-                    {filteredExploreStudios.length > 0 ? (
-                      <span className="text-sm font-semibold" style={{ color: N.muted }}>{filteredExploreStudios.length}</span>
-                    ) : null}
-                  </div>
-
-                  {/* Google Maps map view */}
-                  {showMap && userPos && (
-                    <div className="mb-4 rounded-3xl overflow-hidden">
-                      <NearbyMapView
-                        userPos={userPos}
-                        studios={nearbyStudios.filter(
-                          (s) => s.latitude != null && s.longitude != null && Number.isFinite(s.latitude) && Number.isFinite(s.longitude),
+                      <div className="px-4 py-3.5">
+                        <p className="font-bold truncate" style={{ color: N.text }}>
+                          {parseAppointmentService(upcoming[0].service).title}
+                        </p>
+                        <p className="text-sm mt-0.5" style={{ color: N.textSub }}>
+                          {formatRdvDateTimeHeader(upcoming[0].date, upcoming[0].time)}
+                        </p>
+                        {upcoming[0].studio_name && (
+                          <p className="text-xs mt-0.5" style={{ color: N.muted }}>{upcoming[0].studio_name}</p>
                         )}
-                        onSelectStudio={(s) => setArtistSheet(nearbyToSheet(s))}
-                      />
-                    </div>
+                      </div>
+                    </motion.div>
                   )}
 
-                  {/* View toggle — segmented façon iOS */}
-                  <div className="flex gap-0.5 p-1 mb-4 rounded-full w-fit" style={{ background: UI.segmentedBg }}>
-                    <button type="button" onClick={() => setShowMap(false)}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-[0.98]"
-                      style={{
-                        background: !showMap ? '#fff' : 'transparent',
-                        color: !showMap ? UI.label : UI.labelMuted,
-                        boxShadow: !showMap ? UI.shadowPill : 'none',
-                      }}>
-                      <LayoutGrid className="w-3 h-3" /> Liste
-                    </button>
-                    <button type="button" onClick={() => setShowMap(true)}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-[0.98]"
-                      style={{
-                        background: showMap ? '#fff' : 'transparent',
-                        color: showMap ? UI.label : UI.labelMuted,
-                        boxShadow: showMap ? UI.shadowPill : 'none',
-                      }}>
-                      <MapIcon className="w-3 h-3" /> Carte
-                    </button>
-                  </div>
+                  {/* Fidélité progress */}
+                  {walletProgressByStudio.length > 0 && (() => {
+                    const top = walletProgressByStudio[0];
+                    const cap = Math.max(1, top.targetStamps);
+                    const filled = Math.min(top.completed, cap);
+                    const pct = Math.round((filled / cap) * 100);
+                    return (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.08 }}
+                        className="rounded-3xl border overflow-hidden mb-5"
+                        style={{ borderColor: N.borderMid, background: N.surface }}
+                      >
+                        <div className="px-4 pt-3.5 pb-2 border-b" style={{ borderColor: N.border }}>
+                          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>
+                            Fidélité — {top.label}
+                          </p>
+                        </div>
+                        <div className="px-4 py-3.5">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm font-bold" style={{ color: N.text }}>
+                              {filled} séance{filled !== 1 ? 's' : ''} sur {cap}
+                            </p>
+                            <span className="text-xs font-black tabular-nums" style={{ color: N.neonText }}>
+                              {pct}%
+                            </span>
+                          </div>
+                          <div
+                            className="h-2 rounded-full overflow-hidden"
+                            style={{ background: N.elevated }}
+                            role="progressbar"
+                            aria-valuenow={filled}
+                            aria-valuemin={0}
+                            aria-valuemax={cap}
+                          >
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{ width: `${pct}%`, background: N.neon }}
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })()}
 
-                  {/* Studio list */}
-                  <div className="space-y-3">
-                    {filteredExploreStudios.length === 0 && !geoLoading ? (
-                      <div className="rounded-2xl border px-4 py-8 text-center" style={{ borderColor: N.border, background: N.surface }}>
+                  {/* CTA Réserver */}
+                  {(upcoming[0]?.studio_slug || completed[0]?.studio_slug) ? (
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        const slug = upcoming[0]?.studio_slug || completed[0]?.studio_slug;
+                        if (slug) window.location.href = `/studio/${slug}`;
+                      }}
+                      className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2"
+                      style={{ background: N.neon, color: N.bg, boxShadow: N.neonGlow }}
+                    >
+                      Réserver une séance
+                      <ArrowUpRight className="w-5 h-5" />
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => { window.location.href = '/book'; }}
+                      className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2"
+                      style={{ background: N.neon, color: N.bg, boxShadow: N.neonGlow }}
+                    >
+                      Trouver un tatoueur
+                      <ArrowUpRight className="w-5 h-5" />
+                    </motion.button>
+                  )}
+                </div>
+
+                {/* Healing banner */}
+                {lastTattoo && healingDays < 15 && (
+                  <div className="mx-5 mt-5">
+                    <HealingBanner daysSinceCompletion={healingDays} serviceName={lastTattoo.service} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ════ EXPLORER (carte + studios + flashs) ════ */}
+            {tab === 'explore' && (
+              <div className="px-4 pt-5 pb-6 space-y-5">
+                <div>
+                  <motion.h1
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-2xl font-black leading-tight mb-2"
+                    style={{ color: N.text, letterSpacing: '-0.02em' }}
+                  >
+                    Découvrir
+                  </motion.h1>
+                  <p className="text-sm leading-relaxed" style={{ color: N.textSub }}>
+                    Studios et flashs autour de toi. Touche une carte pour ouvrir la vitrine ou enregistrer un coup de cœur.
+                  </p>
+                </div>
+
+                <div className="relative">
+                  <Search
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                    style={{ color: N.muted }}
+                  />
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Rechercher un studio, un style…"
+                    className="w-full rounded-2xl border pl-10 pr-4 py-3 text-sm outline-none"
+                    style={{ borderColor: N.border, background: N.surface, color: N.text }}
+                    autoComplete="off"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowMap(false)}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold border active:scale-[0.98] transition-transform"
+                    style={{
+                      borderColor: !showMap ? N.neon : N.border,
+                      background: !showMap ? N.neonDim : N.elevated,
+                      color: !showMap ? N.neonText : N.textSub,
+                    }}
+                  >
+                    <List className="w-4 h-4" />
+                    Liste
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowMap(true)}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold border active:scale-[0.98] transition-transform"
+                    style={{
+                      borderColor: showMap ? N.neon : N.border,
+                      background: showMap ? N.neonDim : N.elevated,
+                      color: showMap ? N.neonText : N.textSub,
+                    }}
+                  >
+                    <MapIcon className="w-4 h-4" />
+                    Carte
+                  </button>
+                </div>
+
+                {showMap && (
+                  <div className="space-y-2">
+                    {userPos && studiosWithMapCoords.length > 0 ? (
+                      <NearbyMapView
+                        userPos={userPos}
+                        studios={studiosWithMapCoords}
+                        onSelectStudio={(s) => setArtistSheet(nearbyToSheet(s))}
+                      />
+                    ) : (
+                      <div
+                        className="rounded-2xl border px-4 py-8 text-center"
+                        style={{ borderColor: N.border, background: N.surface }}
+                      >
+                        <MapPin className="w-8 h-8 mx-auto mb-2 opacity-30" style={{ color: N.muted }} />
                         <p className="text-sm font-semibold mb-1" style={{ color: N.text }}>
-                          {search.trim() ? 'Aucun studio ne correspond à ta recherche' : 'Aucun studio dans la liste'}
+                          {userPos ? 'Aucun studio géolocalisé' : 'Active la géolocalisation'}
                         </p>
                         <p className="text-xs leading-relaxed" style={{ color: N.muted }}>
-                          {search.trim()
-                            ? 'Essaie un autre mot-clé ou efface la recherche.'
-                            : import.meta.env.PROD
-                              ? 'Seuls les comptes tatoueurs actifs sur Inkflow sont affichés ici.'
-                              : 'En production, pas de profils factices — configure Supabase et la RPC de découverte pour voir les vrais studios.'}
+                          {userPos
+                            ? 'Les studios sans coordonnées GPS n’apparaissent pas sur la carte — vois la liste ci-dessous.'
+                            : 'Autorise la position dans ton navigateur pour afficher la carte et les distances.'}
                         </p>
                       </div>
-                    ) : null}
-                    {filteredExploreStudios.map((s, i) => (
-                      <motion.div
-                        key={s.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.055, type: 'spring', stiffness: 340, damping: 28 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => setArtistSheet(s)}
-                        className="flex items-center gap-3 p-3 rounded-2xl border cursor-pointer"
-                        style={{ borderColor: N.border, background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}
-                      >
-                        {/* Round thumbnail */}
-                        <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 relative"
-                          style={{ background: `linear-gradient(135deg, ${s.grad[0]}, ${s.grad[1]})` }}>
-                          {s.avatarUrl && (
-                            <img src={s.avatarUrl} alt={s.name} className="absolute inset-0 w-full h-full object-cover object-top" onError={hideBrokenImage} />
-                          )}
-                        </div>
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-[14px] truncate" style={{ color: N.text }}>{s.name}</p>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: N.muted }} />
-                            <p className="text-[12px] truncate" style={{ color: N.muted }}>{s.artistLabel}</p>
-                          </div>
-                          <p className="text-[12px] font-semibold mt-1" style={{ color: N.textSub }}>{s.distLabel}</p>
-                        </div>
-                        {/* Route button */}
-                        <motion.button type="button"
-                          whileTap={{ scale: 0.93 }}
-                          className="flex-shrink-0 px-4 py-2.5 rounded-2xl text-[13px] font-bold"
-                          style={{ background: N.neon, color: '#fff', boxShadow: '0 2px 10px rgba(107,83,69,0.22)' }}
-                          onClick={e => { e.stopPropagation(); setArtistSheet(s); }}
-                        >
-                          Voir
-                        </motion.button>
-                      </motion.div>
-                    ))}
+                    )}
                   </div>
+                )}
 
-                  {/* Flashs section under nearest places */}
-                  {!search && filteredFlash.length > 0 && (
-                    <div className="mt-6">
-                      <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-xl font-black" style={{ color: N.text }}>Flashs</h2>
-                        <span className="text-sm" style={{ color: N.muted }}>{filteredFlash.length} designs</span>
-                      </div>
-                      <div className="flex gap-3">
-                        <div className="flex-1 space-y-3">
-                          {colA.map(f => (
-                            <FlashCard key={f.id} f={f} fav={favFlash.has(f.id)}
-                              onFav={() => { void toggleFlashFavorite(f.id); }} />
-                          ))}
+                {geoLoading && (
+                  <p className="text-[11px] text-center font-medium" style={{ color: N.muted }}>
+                    Mise à jour des studios…
+                  </p>
+                )}
+
+                <section>
+                  <h2 className="text-[13px] font-bold uppercase tracking-widest mb-3" style={{ color: N.muted }}>
+                    À découvrir
+                  </h2>
+                  {filteredExploreStudios.length === 0 ? (
+                    <div
+                      className="rounded-3xl border px-4 py-8 text-center"
+                      style={{ borderColor: N.border, background: N.surface }}
+                    >
+                      <LayoutGrid className="w-10 h-10 mx-auto mb-3 opacity-30" style={{ color: N.muted }} />
+                      <p className="text-sm font-semibold" style={{ color: N.text }}>
+                        Aucun studio pour cette recherche
+                      </p>
+                      <p className="text-xs mt-1.5 leading-relaxed" style={{ color: N.muted }}>
+                        Vérifie ta connexion ou élargis ta zone (géolocalisation).
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {filteredExploreStudios.map((s, i) => (
+                        <div key={s.id} className="relative">
+                          <motion.button
+                            type="button"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: Math.min(i * 0.05, 0.4) }}
+                            whileTap={{ scale: 0.99 }}
+                            onClick={() => setArtistSheet(s)}
+                            className="w-full flex items-center gap-3.5 p-4 rounded-3xl border text-left pr-14"
+                            style={{ borderColor: N.border, background: N.surface }}
+                          >
+                            <div
+                              className="w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-black text-white shrink-0 overflow-hidden"
+                              style={{ background: `linear-gradient(135deg, ${s.grad[0]}, ${s.grad[1]})` }}
+                            >
+                              {s.avatarUrl ? (
+                                <img
+                                  src={s.avatarUrl}
+                                  alt=""
+                                  className="w-full h-full object-cover object-top"
+                                  onError={hideBrokenImage}
+                                />
+                              ) : (
+                                s.name.slice(0, 2)
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold truncate" style={{ color: N.text }}>
+                                {s.name}
+                              </p>
+                              <p className="text-[11px] truncate mt-0.5" style={{ color: N.muted }}>
+                                {s.artistLabel}
+                                {s.styleLabel ? ` · ${s.styleLabel}` : ''}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className="text-xs font-semibold" style={{ color: N.muted }}>
+                                {s.distLabel}
+                              </span>
+                              <ChevronRight className="w-4 h-4" style={{ color: N.border }} />
+                            </div>
+                          </motion.button>
+                          <button
+                            type="button"
+                            aria-label={favStudios.has(s.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                            aria-pressed={favStudios.has(s.id)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              void toggleExploreStudioFavorite(s.id);
+                            }}
+                            className="absolute top-1/2 -translate-y-1/2 right-3 z-10 w-11 h-11 rounded-full flex items-center justify-center border active:scale-95 transition-transform"
+                            style={{
+                              background: 'rgba(255,255,255,0.95)',
+                              borderColor: N.border,
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                            }}
+                          >
+                            <Heart
+                              className="w-5 h-5"
+                              style={{ color: favStudios.has(s.id) ? '#ef4444' : N.muted }}
+                              fill={favStudios.has(s.id) ? '#ef4444' : 'none'}
+                              strokeWidth={2}
+                            />
+                          </button>
                         </div>
-                        <div className="flex-1 space-y-3 pt-10">
-                          {colB.map(f => (
-                            <FlashCard key={f.id} f={f} fav={favFlash.has(f.id)}
-                              onFav={() => { void toggleFlashFavorite(f.id); }} />
-                          ))}
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   )}
                 </section>
 
-                {/* Community Feed */}
-                {!search && <CommunityFeed />}
+                {filteredFlash.length > 0 && (
+                  <section>
+                    <h2 className="text-[13px] font-bold uppercase tracking-widest mb-3" style={{ color: N.muted }}>
+                      Flash du moment
+                    </h2>
+                    <div className="flex gap-2">
+                      <div className="flex-1 flex flex-col gap-2">
+                        {colA.map((f) => (
+                          <FlashCard
+                            key={f.id}
+                            f={f}
+                            fav={favFlash.has(f.id)}
+                            onFav={() => void toggleFlashFavorite(f.id)}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex-1 flex flex-col gap-2">
+                        {colB.map((f) => (
+                          <FlashCard
+                            key={f.id}
+                            f={f}
+                            fav={favFlash.has(f.id)}
+                            onFav={() => void toggleFlashFavorite(f.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                )}
               </div>
             )}
 
-            {/* ════ INSPIRATION (Pinterest / portfolio + flashs) ════ */}
+            {/* ════ INSPIRATION ════ */}
             {tab === 'inspire' && (
               <div className="px-4 pt-5 pb-6">
                 <div className="mb-4">
@@ -3599,6 +3707,145 @@ export const ClientDashboard: React.FC = () => {
                     </div>
                   )}
                 </section>
+                </>
+                )}
+              </div>
+            )}
+
+            {/* ════ FIDÉLITÉ ════ */}
+            {tab === 'loyalty' && (
+              <div className="px-4 pt-5 space-y-6 pb-6">
+                {isGuest ? (
+                  <GuestConnectPanel
+                    title="Fidélité & parrainage"
+                    body="Crée un compte ou connecte-toi pour voir tes tampons, ta progression et ton code parrainage."
+                  />
+                ) : (
+                <>
+                {/* Carte fidélité 3D flip */}
+                <LoyaltyCard
+                  firstName={firstName}
+                  code={code || 'XXXXXX'}
+                  cents={cents}
+                  stampsCount={completed.length}
+                  lastStudio={completed[0] ? (completed[0].studio_name ?? undefined) : undefined}
+                  accessToken={accessToken}
+                />
+
+                {/* Progression par studio */}
+                <section>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Users className="w-4 h-4 shrink-0" style={{ color: N.muted }} aria-hidden />
+                    <h2 className="text-[13px] font-bold uppercase tracking-widest" style={{ color: N.muted }}>
+                      Tes tatoueurs
+                    </h2>
+                  </div>
+                  {walletProgressByStudio.length === 0 ? (
+                    <p className="text-sm rounded-2xl border px-4 py-4" style={{ borderColor: N.border, color: N.muted, background: N.surface }}>
+                      Dès que tu auras un rendez-vous, ta progression par tatoueur / studio apparaîtra ici.
+                    </p>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {walletProgressByStudio.map((row, i) => {
+                        const cap = Math.max(1, row.targetStamps);
+                        const filled = Math.min(row.completed, cap);
+                        const pct = Math.min(100, Math.round((filled / cap) * 100));
+                        return (
+                          <motion.div
+                            key={row.studioKey}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            className="rounded-2xl border px-4 py-3.5"
+                            style={{ borderColor: N.border, background: N.surface }}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold truncate" style={{ color: N.text }}>{row.label}</p>
+                                <p className="text-[11px] mt-0.5" style={{ color: N.muted }}>
+                                  {row.completed} séance{row.completed !== 1 ? 's' : ''} terminée{row.completed !== 1 ? 's' : ''}
+                                  {row.upcoming > 0 ? ` · ${row.upcoming} RDV à venir` : ''}
+                                </p>
+                              </div>
+                              <span className="text-xs font-black tabular-nums shrink-0" style={{ color: N.neonText }}>
+                                {filled}/{cap}
+                              </span>
+                            </div>
+                            <div
+                              className="mt-2.5 h-1.5 rounded-full overflow-hidden"
+                              style={{ background: N.elevated }}
+                              role="progressbar"
+                              aria-valuenow={filled}
+                              aria-valuemin={0}
+                              aria-valuemax={cap}
+                              aria-label={`Progression fidélité ${row.label}`}
+                            >
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{ width: `${pct}%`, background: N.neon }}
+                              />
+                            </div>
+                            {row.slug ? (
+                              <button
+                                type="button"
+                                className="mt-3 text-xs font-semibold inline-flex items-center gap-1 active:scale-[0.98] transition-transform"
+                                style={{ color: N.neonText }}
+                                onClick={() => { window.location.href = `/studio/${row.slug}`; }}
+                              >
+                                Voir la vitrine
+                                <ChevronRight className="w-3.5 h-3.5" aria-hidden />
+                              </button>
+                            ) : null}
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+
+                {/* Parrainage */}
+                <div className="rounded-3xl border overflow-hidden" style={{ borderColor: N.borderMid, background: N.surface }}>
+                  <div className="px-5 pt-5 pb-4" style={{ background: `linear-gradient(135deg, rgba(212,188,150,0.08), rgba(212,188,150,0.02))` }}>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: N.neon }}>Parrainage</p>
+                        <h3 className="text-lg font-black" style={{ color: N.text }}>Gagne 10€ par ami</h3>
+                        <p className="text-xs mt-1" style={{ color: N.muted }}>Pour chaque ami qui réserve son 1er tattoo via ton lien.</p>
+                      </div>
+                      {referralCount > 0 && (
+                        <div className="flex flex-col items-center px-3 py-2 rounded-2xl border ml-3 shrink-0"
+                          style={{ borderColor: N.border, background: N.elevated }}>
+                          <span className="text-xl font-black tabular-nums" style={{ color: N.neonText }}>{referralCount}</span>
+                          <span className="text-[9px] uppercase tracking-wider mt-0.5" style={{ color: N.muted }}>amis</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="px-5 pb-5 pt-3 space-y-3">
+                    <div className="flex items-center gap-2 px-3.5 py-3 rounded-2xl border" style={{ borderColor: N.border, background: N.elevated }}>
+                      <span className="flex-1 text-xs font-mono truncate" style={{ color: N.textSub }}>
+                        {shareUrl.replace(/^https?:\/\//, '')}
+                      </span>
+                      <motion.button type="button" whileTap={{ scale: 0.9 }} onClick={copyCode}
+                        className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: copiedCode ? 'rgba(94,219,154,0.15)' : N.neonDim, color: copiedCode ? N.success : N.neon }}>
+                        <AnimatePresence mode="wait" initial={false}>
+                          {copiedCode
+                            ? <motion.span key="c" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><Check className="w-4 h-4" /></motion.span>
+                            : <motion.span key="p" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}><Copy className="w-4 h-4" /></motion.span>
+                          }
+                        </AnimatePresence>
+                      </motion.button>
+                    </div>
+                    <motion.button type="button" whileTap={{ scale: 0.98 }}
+                      onClick={() => navigator.share?.({ title: 'Inkflow', url: shareUrl }).catch(() => {})}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm"
+                      style={{ background: N.neon, color: N.bg, boxShadow: N.neonGlow }}>
+                      <Share2 className="w-4 h-4" />
+                      Partager mon invitation
+                    </motion.button>
+                  </div>
+                </div>
                 </>
                 )}
               </div>
@@ -4066,11 +4313,11 @@ export const ClientDashboard: React.FC = () => {
           }}
         >
           {([
-            { id: 'explore' as const, Icon: MapIcon,          label: 'Explorer', badge: false },
-            { id: 'inspire' as const, Icon: Images,           label: 'Inspi',    badge: false },
-            { id: 'rdv'     as const, Icon: CalendarDays,     label: 'RDV',      badge: rdvUrgent },
-            { id: 'wallet'  as const, Icon: Wallet,           label: 'Wallet',   badge: false },
-            { id: 'profile' as const, Icon: User,             label: 'Profil',   badge: false },
+            { id: 'explore' as const, Icon: MapIcon,      label: 'Explorer', badge: false },
+            { id: 'inspire' as const, Icon: Images,       label: 'Inspi',    badge: false },
+            { id: 'rdv'     as const, Icon: CalendarDays, label: 'RDV',      badge: rdvUrgent },
+            { id: 'loyalty' as const, Icon: Gift,         label: 'Fidélité', badge: false },
+            { id: 'profile' as const, Icon: User,         label: 'Profil',   badge: false },
           ] as const).map(({ id, Icon, label, badge }) => {
             const active = tab === id;
             return (

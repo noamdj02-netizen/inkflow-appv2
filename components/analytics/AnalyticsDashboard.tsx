@@ -12,6 +12,7 @@ import {
   PieChart,
 } from 'lucide-react';
 import { Appointment, Client } from '../../types';
+import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 
 interface AnalyticsDashboardProps {
   appointments: Appointment[];
@@ -22,19 +23,12 @@ interface AnalyticsDashboardProps {
 
 const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
 
-function formatEuro(value: number): string {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(Math.round(value));
-}
-
 export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   appointments,
   clients,
   studioName = 'Studio',
 }) => {
+  const { privacyMode } = useStudioPrivacy();
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
   const [guideOpen, setGuideOpen] = useState(false);
 
@@ -142,40 +136,43 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     { id: 'year', label: 'Cette année' },
   ];
 
-  const stats = [
-    {
-      label: 'Revenu total',
-      value: formatEuro(totalRevenue),
-      hint: 'Somme des tarifs des RDV sur la période sélectionnée.',
-      icon: DollarSign,
-      accent: 'text-blue-600 dark:text-blue-400',
-      iconBg: 'bg-blue-100 dark:bg-blue-500/15',
-    },
-    {
-      label: 'Acomptes reçus',
-      value: formatEuro(totalDeposits),
-      hint: 'Montants encaissés pour les RDV marqués avec acompte payé.',
-      icon: Target,
-      accent: 'text-emerald-600 dark:text-emerald-400',
-      iconBg: 'bg-emerald-100 dark:bg-emerald-500/15',
-    },
-    {
-      label: 'Rendez-vous',
-      value: String(filteredAppointments.length),
-      hint: 'Nombre de créneaux dans l’agenda pour cette période.',
-      icon: Calendar,
-      accent: 'text-violet-600 dark:text-violet-400',
-      iconBg: 'bg-violet-100 dark:bg-violet-500/15',
-    },
-    {
-      label: 'Taux de complétion',
-      value: `${completionRate.toFixed(1)} %`,
-      hint: 'Part des RDV au statut « terminé » sur la période.',
-      icon: Award,
-      accent: 'text-amber-600 dark:text-amber-400',
-      iconBg: 'bg-amber-100 dark:bg-amber-500/15',
-    },
-  ];
+  const stats = useMemo(
+    () => [
+      {
+        label: 'Revenu total',
+        value: formatEuroPrivacy(totalRevenue, privacyMode),
+        hint: 'Somme des tarifs des RDV sur la période sélectionnée.',
+        icon: DollarSign,
+        accent: 'text-blue-600 dark:text-blue-400',
+        iconBg: 'bg-blue-100 dark:bg-blue-500/15',
+      },
+      {
+        label: 'Acomptes reçus',
+        value: formatEuroPrivacy(totalDeposits, privacyMode),
+        hint: 'Montants encaissés pour les RDV marqués avec acompte payé.',
+        icon: Target,
+        accent: 'text-emerald-600 dark:text-emerald-400',
+        iconBg: 'bg-emerald-100 dark:bg-emerald-500/15',
+      },
+      {
+        label: 'Rendez-vous',
+        value: String(filteredAppointments.length),
+        hint: 'Nombre de créneaux dans l’agenda pour cette période.',
+        icon: Calendar,
+        accent: 'text-violet-600 dark:text-violet-400',
+        iconBg: 'bg-violet-100 dark:bg-violet-500/15',
+      },
+      {
+        label: 'Taux de complétion',
+        value: `${completionRate.toFixed(1)} %`,
+        hint: 'Part des RDV au statut « terminé » sur la période.',
+        icon: Award,
+        accent: 'text-amber-600 dark:text-amber-400',
+        iconBg: 'bg-amber-100 dark:bg-amber-500/15',
+      },
+    ],
+    [totalRevenue, totalDeposits, filteredAppointments.length, completionRate, privacyMode]
+  );
 
   const generatedAt = new Date().toLocaleString('fr-FR', {
     dateStyle: 'long',
@@ -356,12 +353,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             { label: 'Avec acompte', value: String(appointmentsWithDeposit) },
             {
               label: 'Panier moyen',
-              value: filteredAppointments.length ? formatEuro(averagePerAppointment) : '—',
+              value: filteredAppointments.length ? formatEuroPrivacy(averagePerAppointment, privacyMode) : '—',
             },
             {
               label: 'Acompte moyen (payés)',
               value: appointmentsWithDeposit
-                ? formatEuro(totalDeposits / appointmentsWithDeposit)
+                ? formatEuroPrivacy(totalDeposits / appointmentsWithDeposit, privacyMode)
                 : '—',
             },
           ].map((cell) => (
@@ -395,19 +392,24 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <div className="text-right">
               <span className="text-[10px] font-semibold uppercase text-zinc-400 dark:text-zinc-500">Total YTD</span>
               <div className="text-xl font-bold tabular-nums text-zinc-900 dark:text-white print:text-zinc-900">
-                {formatEuro(ytdRevenue)}
+                {formatEuroPrivacy(ytdRevenue, privacyMode)}
               </div>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 relative">
+            {privacyMode && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-zinc-100/90 dark:bg-zinc-900/85 backdrop-blur-[2px] pointer-events-none">
+                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Graphique masqué</span>
+              </div>
+            )}
             {revenueByMonth.map((data, idx) => {
               const pct = maxAmount > 0 ? (data.amount / maxAmount) * 100 : 0;
               return (
-                <div key={idx} className="space-y-1.5">
+                <div key={idx} className={`space-y-1.5 ${privacyMode ? 'opacity-40' : ''}`}>
                   <div className="flex items-baseline justify-between gap-2 text-sm">
                     <span className="font-medium text-zinc-700 dark:text-zinc-300">{data.month}</span>
                     <span className="font-bold tabular-nums text-zinc-900 dark:text-white print:text-zinc-900">
-                      {formatEuro(data.amount)}
+                      {formatEuroPrivacy(data.amount, privacyMode)}
                     </span>
                   </div>
                   <div className="relative h-9 bg-zinc-100 dark:bg-zinc-800 rounded-xl overflow-hidden">
@@ -429,7 +431,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 Moyenne / RDV (période filtre)
               </span>
               <div className="text-xl font-bold tabular-nums text-zinc-900 dark:text-white mt-1 print:text-zinc-900">
-                {filteredAppointments.length ? formatEuro(averagePerAppointment) : '—'}
+                {filteredAppointments.length ? formatEuroPrivacy(averagePerAppointment, privacyMode) : '—'}
               </div>
             </div>
             <div>
@@ -437,7 +439,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 Somme revenus YTD (graphique)
               </span>
               <div className="text-xl font-bold tabular-nums text-zinc-900 dark:text-white mt-1 print:text-zinc-900">
-                {formatEuro(ytdRevenue)}
+                {formatEuroPrivacy(ytdRevenue, privacyMode)}
               </div>
             </div>
           </div>
@@ -493,7 +495,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 Dépense moyenne
               </span>
               <div className="text-xl font-bold tabular-nums text-zinc-900 dark:text-white mt-2 print:text-zinc-900">
-                {clients.length ? formatEuro(avgSpendPerClient) : '—'}
+                {clients.length ? formatEuroPrivacy(avgSpendPerClient, privacyMode) : '—'}
               </div>
               <div className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">par client (total dépensé / fiches)</div>
             </div>
@@ -511,7 +513,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                       {bestClient.name}
                     </div>
                     <div className="text-sm text-blue-600 dark:text-blue-400 font-semibold tabular-nums">
-                      {formatEuro(bestClient.totalSpent)}
+                      {formatEuroPrivacy(bestClient.totalSpent, privacyMode)}
                     </div>
                   </div>
                 </div>

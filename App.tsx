@@ -288,6 +288,7 @@ const UnhandledRejectionHandler: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
+      {/* @ts-expect-error next-themes ThemeProvider children — React 19 compat */}
       <ThemeProvider attribute="data-theme" defaultTheme="dark" storageKey="inkflow-theme">
         <div className="app-root">
           <AuthProvider>

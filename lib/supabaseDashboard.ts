@@ -1,9 +1,13 @@
 import { supabase, getStudioId } from './supabase';
 import { buildFlashSlug } from './flashSlug';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db: any = supabase;
 import { sendReferralNotification } from './sendNotification';
 import type { VitrineData } from '../types/vitrine';
 import type { Appointment, Client, FlashDesign, Notification, ProjectRequest, ProjectRequestStatus, WaitlistEntry } from '../types';
 import type { DashboardWidget } from '../components/dashboard/DashboardWidgets';
+import type { StudioDashboardPreferences } from '../types/studioPreferences';
+import { DEFAULT_STUDIO_DASHBOARD_PREFERENCES, STUDIO_PREFERENCES_SCHEMA_VERSION } from '../types/studioPreferences';
 
 export function getStudioSlug(studioName: string): string {
   return (studioName || 'mon-studio')
@@ -86,7 +90,7 @@ export async function ensureStudio(
     };
     if (referredBy) payload.referred_by = referredBy;
 
-    const { error } = await supabase.from('inkflow_studios').upsert(payload, { onConflict: 'id' });
+    const { error } = await (supabase as any).from('inkflow_studios').upsert(payload, { onConflict: 'id' });
     if (!error) {
       if (referredBy) {
         const { error: refErr } = await supabase.from('inkflow_referrals').insert({
@@ -296,8 +300,8 @@ export async function getVitrineDataBySlugFromSupabase(slug: string, defaultData
 }
 
 export async function saveVitrineDataToSupabase(studioId: string, data: VitrineData): Promise<void> {
-  const { error } = await supabase.from('inkflow_vitrine_data').upsert(
-    { studio_id: studioId, data: data as unknown as object, updated_at: new Date().toISOString() },
+  const { error } = await db.from('inkflow_vitrine_data').upsert(
+    { studio_id: studioId, data, updated_at: new Date().toISOString() },
     { onConflict: 'studio_id' }
   );
   if (error) throw error;
@@ -307,12 +311,12 @@ export async function saveVitrineDataToSupabase(studioId: string, data: VitrineD
 export async function getWidgetsFromSupabase(studioId: string): Promise<DashboardWidget[]> {
   const { data, error } = await supabase.from('inkflow_widgets').select('widgets').eq('studio_id', studioId).maybeSingle();
   if (error || !data?.widgets) return [];
-  return data.widgets as DashboardWidget[];
+  return data.widgets as unknown as DashboardWidget[];
 }
 
 export async function saveWidgetsToSupabase(studioId: string, widgets: DashboardWidget[]): Promise<void> {
-  const { error } = await supabase.from('inkflow_widgets').upsert(
-    { studio_id: studioId, widgets: widgets as unknown as object[], updated_at: new Date().toISOString() },
+  const { error } = await db.from('inkflow_widgets').upsert(
+    { studio_id: studioId, widgets, updated_at: new Date().toISOString() },
     { onConflict: 'studio_id' }
   );
   if (error) throw error;
@@ -320,9 +324,11 @@ export async function saveWidgetsToSupabase(studioId: string, widgets: Dashboard
 
 /** Ordre des widgets Vue d'ensemble (KPI + personnalisés) */
 export async function getWidgetOrderFromSupabase(studioId: string): Promise<string[]> {
-  const { data, error } = await supabase.from('inkflow_widgets').select('widget_order').eq('studio_id', studioId).maybeSingle();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('inkflow_widgets') as any)
+    .select('widget_order').eq('studio_id', studioId).maybeSingle();
   if (error || !data?.widget_order) return [];
-  const arr = data.widget_order as unknown;
+  const arr: unknown = data.widget_order;
   if (!Array.isArray(arr)) return [];
   return arr.filter((id): id is string => typeof id === 'string');
 }
@@ -330,7 +336,7 @@ export async function getWidgetOrderFromSupabase(studioId: string): Promise<stri
 export async function saveWidgetOrderToSupabase(studioId: string, order: string[]): Promise<void> {
   const { data: existing } = await supabase.from('inkflow_widgets').select('widgets').eq('studio_id', studioId).maybeSingle();
   const widgets = (existing?.widgets as unknown[]) ?? [];
-  const { error } = await supabase.from('inkflow_widgets').upsert(
+  const { error } = await db.from('inkflow_widgets').upsert(
     { studio_id: studioId, widgets, widget_order: order, updated_at: new Date().toISOString() },
     { onConflict: 'studio_id' }
   );
@@ -352,7 +358,7 @@ export async function getVitrineLinkSettingsBySlug(slug: string): Promise<Record
 }
 
 export async function saveVitrineLinkSettingsToSupabase(studioId: string, settings: Record<string, unknown>): Promise<void> {
-  const { error } = await supabase.from('inkflow_vitrine_link_settings').upsert(
+  const { error } = await db.from('inkflow_vitrine_link_settings').upsert(
     { studio_id: studioId, settings, updated_at: new Date().toISOString() },
     { onConflict: 'studio_id' }
   );
@@ -367,7 +373,7 @@ export async function getPaymentSettingsFromSupabase(studioId: string): Promise<
 }
 
 export async function savePaymentSettingsToSupabase(studioId: string, settings: Record<string, unknown>): Promise<void> {
-  const { error } = await supabase.from('inkflow_payment_settings').upsert(
+  const { error } = await db.from('inkflow_payment_settings').upsert(
     { studio_id: studioId, settings, updated_at: new Date().toISOString() },
     { onConflict: 'studio_id' }
   );
@@ -382,7 +388,7 @@ export async function getCareTemplatesFromSupabase(studioId: string): Promise<un
 }
 
 export async function saveCareTemplatesToSupabase(studioId: string, templates: unknown[]): Promise<void> {
-  const { error } = await supabase.from('inkflow_care_templates').upsert(
+  const { error } = await db.from('inkflow_care_templates').upsert(
     { studio_id: studioId, templates, updated_at: new Date().toISOString() },
     { onConflict: 'studio_id' }
   );
@@ -431,7 +437,7 @@ export async function saveClientToSupabase(studioId: string, client: Client): Pr
     first_visit: client.firstVisit,
     status: client.status,
     tags: client.tags,
-    tattoos: client.tattoos,
+    tattoos: client.tattoos as unknown as import('../types/database').Json,
     notes: client.notes || null,
     updated_at: new Date().toISOString()
   };
@@ -466,7 +472,7 @@ export async function bulkInsertClientsToSupabase(studioId: string, clients: Cli
       first_visit: c.firstVisit,
       status: c.status,
       tags: c.tags,
-      tattoos: c.tattoos,
+      tattoos: c.tattoos as unknown as import('../types/database').Json,
       notes: c.notes ?? null,
       updated_at: now,
     }));
@@ -689,7 +695,7 @@ export async function saveFlashDesignToSupabase(studioId: string, flash: FlashDe
     featured: flash.featured ?? false,
     display_order: flash.displayOrder ?? 0,
   };
-  const { error } = await supabase.from('inkflow_flash_designs').upsert(row, { onConflict: 'id' });
+  const { error } = await db.from('inkflow_flash_designs').upsert(row, { onConflict: 'id' });
   if (error) throw error;
 }
 
@@ -756,6 +762,34 @@ export async function getProjectRequestsFromSupabase(studioId: string): Promise<
 
 export async function updateProjectRequestStatus(id: string, status: ProjectRequestStatus): Promise<void> {
   const { error } = await supabase.from('inkflow_project_requests').update({ status }).eq('id', id);
+  if (error) throw error;
+}
+
+/** Préférences dashboard / modules (JSONB sur inkflow_studios) */
+export async function getDashboardPreferencesFromSupabase(studioId: string): Promise<StudioDashboardPreferences> {
+  const { data, error } = await supabase.from('inkflow_studios').select('dashboard_preferences').eq('id', studioId).maybeSingle();
+  if (error || !data?.dashboard_preferences) {
+    return { ...DEFAULT_STUDIO_DASHBOARD_PREFERENCES, schema_version: STUDIO_PREFERENCES_SCHEMA_VERSION };
+  }
+  const raw = data.dashboard_preferences as Record<string, unknown>;
+  if (!raw || typeof raw !== 'object') {
+    return { ...DEFAULT_STUDIO_DASHBOARD_PREFERENCES, schema_version: STUDIO_PREFERENCES_SCHEMA_VERSION };
+  }
+  return {
+    ...DEFAULT_STUDIO_DASHBOARD_PREFERENCES,
+    ...raw,
+    schema_version: STUDIO_PREFERENCES_SCHEMA_VERSION,
+  } as StudioDashboardPreferences;
+}
+
+export async function saveDashboardPreferencesToSupabase(studioId: string, prefs: StudioDashboardPreferences): Promise<void> {
+  const { error } = await db
+    .from('inkflow_studios')
+    .update({
+      dashboard_preferences: prefs,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', studioId);
   if (error) throw error;
 }
 

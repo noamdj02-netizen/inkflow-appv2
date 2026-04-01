@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Google Maps types loaded at runtime via script tag
+declare const google: any;
+
 /**
  * Apercu carte + avis Google Maps (Maps JavaScript API).
  * Affiche la localisation du studio et les 5 premiers avis Places API.
@@ -82,9 +86,10 @@ export const GooglePlaceMapPreview: React.FC<GooglePlaceMapPreviewProps> = ({ pl
         if (cancelled || !mapDivRef.current) return;
 
         const [{ Map }, { AdvancedMarkerElement }, { Place }] = await Promise.all([
-          google.maps.importLibrary('maps')   as Promise<google.maps.MapsLibrary>,
-          google.maps.importLibrary('marker') as Promise<google.maps.MarkerLibrary>,
-          google.maps.importLibrary('places') as Promise<google.maps.PlacesLibrary>,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          google.maps.importLibrary('maps')   as Promise<any>,
+          google.maps.importLibrary('marker') as Promise<any>,
+          google.maps.importLibrary('places') as Promise<any>,
         ]);
 
         if (cancelled || !mapDivRef.current) return;

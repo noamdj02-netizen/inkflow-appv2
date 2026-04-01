@@ -50,6 +50,7 @@ interface DraggableDashboardProps {
 }
 
 interface SortableWidgetProps {
+  key?: React.Key;
   id: string;
   children: React.ReactNode;
   disabled?: boolean;

@@ -211,7 +211,7 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
         
         // Jours fermés (calculés depuis schedule)
         offDays: Object.entries(schedule)
-          .filter(([, v]) => !v.enabled)
+          .filter(([, v]) => !(v as { enabled?: boolean }).enabled)
           .map(([k]) => ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'].indexOf(k))
           .filter((i) => i >= 0),
         

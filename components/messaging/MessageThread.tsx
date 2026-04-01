@@ -22,6 +22,7 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const toast = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const selectedThread = threads.find(t => t.threadId === selectedThreadId);

@@ -35,7 +35,7 @@ const schema = z.object({
   estimatedSizeCm: z.string().optional(),
   requestedDate: z.string().min(1, 'Choisissez une date'),
   requestedTime: z.string().min(1, 'Choisissez un créneau'),
-  acceptTerms: z.literal(true, { errorMap: () => ({ message: 'Vous devez accepter les CGV et la politique de confidentialité.' }) }),
+  acceptTerms: z.literal(true, { error: 'Vous devez accepter les CGV et la politique de confidentialité.' }),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -229,7 +229,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
       estimatedSizeCm: '',
       requestedDate: '',
       requestedTime: '',
-      acceptTerms: false,
+      acceptTerms: false as unknown as true,
     },
   });
 
@@ -342,8 +342,10 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
 
   const todayStr = toLocalDateString(new Date());
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleSubmitAny = handleSubmit as any;
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmitAny(onSubmit)} className="space-y-6">
       <div>
         <h3 className={`text-xl font-bold mb-1 ${isDark ? 'text-white' : ''}`}>Demande de rendez-vous</h3>
         <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-neutral-500'}`}>

@@ -305,7 +305,8 @@ export async function loadClientDiscoveryStudios(
   ]);
 
   const vitrineMap = new Map<string, Record<string, unknown>>(
-    (vitrineRows ?? []).map((v: { studio_id: string; data: Record<string, unknown> }) => [
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (vitrineRows ?? []).map((v: any) => [
       v.studio_id,
       v.data ?? {},
     ]),

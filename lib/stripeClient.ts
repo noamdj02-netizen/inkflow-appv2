@@ -47,7 +47,7 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
       },
       body: JSON.stringify(params),
     });
-    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string };
+    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string; message?: string };
     if (res.ok) {
       if (data?.url) return { url: data.url };
       return { error: data?.error || data?.details || 'La fonction n\'a pas renvoyé de lien.' };
@@ -100,7 +100,7 @@ export async function createThemeCheckoutSession(params: {
       },
       body: JSON.stringify(params),
     });
-    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string };
+    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string; message?: string };
     if (res.ok) {
       if (data?.url) return { url: data.url };
       return { error: data?.error || data?.details || 'La fonction n\'a pas renvoyé de lien.' };
@@ -158,7 +158,7 @@ export async function createPortalSession(params: {
       body: JSON.stringify(params),
     });
 
-    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string };
+    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string; message?: string };
 
     if (res.ok && data?.url) return { url: data.url };
 

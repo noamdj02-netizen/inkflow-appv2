@@ -53,7 +53,8 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
   }, [messages]);
 
   const loadMessages = async () => {
-    const { data } = await supabase.rpc('get_public_thread_messages', { p_thread_id: threadId });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any).rpc('get_public_thread_messages', { p_thread_id: threadId });
     if (data && Array.isArray(data)) {
       setMessages(data.map((row: Record<string, unknown>) => ({
         id: row.id as string,
