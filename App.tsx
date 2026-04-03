@@ -40,6 +40,9 @@ const ClientPortalLoginPage = lazy(() => import('./pages/client/ClientPortalLogi
 const ClientDashboard = lazy(() => import('./pages/public/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
 const ArtistPage = lazy(() => import('./pages/vitrine/ArtistPage').then(m => ({ default: m.ArtistPage })));
 const FlashPage = lazy(() => import('./pages/vitrine/FlashPage').then(m => ({ default: m.FlashPage })));
+const DiscoverHomePage = lazy(() => import('./pages/discover/DiscoverHomePage').then(m => ({ default: m.DiscoverHomePage })));
+const DiscoverCityPage = lazy(() => import('./pages/discover/DiscoverCityPage').then(m => ({ default: m.DiscoverCityPage })));
+const DiscoverCityStylePage = lazy(() => import('./pages/discover/DiscoverCityStylePage').then(m => ({ default: m.DiscoverCityStylePage })));
 
 interface Route {
   path: string | RegExp;
@@ -143,6 +146,10 @@ const Router: React.FC = () => {
     // ── Portail client "My Inkflow" ─────────────────────────────────────────
     { path: '/client', component: ClientPortalLoginPage },
     { path: /^\/client\/dashboard\/?$/, component: ClientDashboard },
+    // ── Discover — directory public ─────────────────────────────────────────
+    { path: '/discover', component: DiscoverHomePage },
+    { path: /^\/discover\/([a-z0-9-]+)\/([a-z0-9-]+)\/?$/, component: DiscoverCityStylePage, getProps: (m) => ({ citySlug: m[1], styleSlug: m[2] }) },
+    { path: /^\/discover\/([a-z0-9-]+)\/?$/, component: DiscoverCityPage, getProps: (m) => ({ citySlug: m[1] }) },
     // ── Pages vitrines publiques (artistes & flashs) ────────────────────────
     { path: /^\/artist\/([a-z0-9-]+)\/?$/, component: ArtistPage, getProps: (m) => ({ artistSlug: m[1] }) },
     { path: /^\/flash\/([a-z0-9-]+)\/?$/, component: FlashPage, getProps: (m) => ({ flashSlug: m[1] }) },
