@@ -38,6 +38,10 @@ const D = {
 const STYLE_TABS = ['Tous', 'Flash', 'Fine line', 'Blackwork', 'Réalisme', 'Japonais', 'Géométrique'] as const;
 
 // ─── Utils ───────────────────────────────────────────────────────────────────
+/** Exclut les photos de banques d'images web — seules les URLs Supabase Storage sont affichées. */
+function isStockPhoto(url: string): boolean {
+  return /unsplash\.com|pexels\.com|pixabay\.com|stocksnap\.io/i.test(url);
+}
 function initials(name: string) {
   return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
 }
@@ -188,7 +192,7 @@ function ArtistPill({ studio, index, onClick }: { studio: NearbyStudio; index: n
         background: pal.bg,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        {studio.avatar_url && !broken ? (
+        {studio.avatar_url && !broken && !isStockPhoto(studio.avatar_url) ? (
           <img
             src={studio.avatar_url}
             alt={studio.studio_name}
@@ -243,7 +247,7 @@ function FlashCard({
 }) {
   const pal = PALETTES[studioIdx % PALETTES.length];
   const [broken, setBroken] = useState(false);
-  const hasImg = flash.imageUrl && !broken;
+  const hasImg = flash.imageUrl && !broken && !isStockPhoto(flash.imageUrl);
   const deposit = Math.round(flash.price * 0.2);
 
   return (
