@@ -64,12 +64,12 @@ const PALETTES = [
 ] as const;
 
 // ─── Fake map dots (MVP — remplacer par Leaflet/Mapbox quand dispo) ───────────
-function MapHero({ studios, onDotClick }: { studios: NearbyStudio[]; onDotClick: (s: NearbyStudio) => void }) {
+function MapHero({ studios, onDotClick, bigMode }: { studios: NearbyStudio[]; onDotClick: (s: NearbyStudio) => void; bigMode?: boolean }) {
   const dots = studios.slice(0, 12);
   return (
     <div style={{
       position: 'relative',
-      height: 220,
+      height: bigMode ? 260 : 220,
       background: '#0E1117',
       overflow: 'hidden',
       borderRadius: D.r.xl,
@@ -501,9 +501,9 @@ function FlashSheet({
                 <button key={i} onClick={() => !s.full && setSlot(i)} style={{
                   flex: 1, borderRadius: D.r.md, padding: '12px 0',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                  cursor: s.full ? 'not-allowed' : 'pointer', border: 'none',
+                  cursor: s.full ? 'not-allowed' : 'pointer',
                   background: sel ? D.gold : s.full ? D.surface : D.card,
-                  border: `1.5px solid ${sel ? D.gold : s.full ? D.border : D.border}` as any,
+                  outline: `1.5px solid ${sel ? D.gold : D.border}`,
                   opacity: s.full ? 0.4 : 1, transition: 'all 0.15s',
                 }}>
                   <div style={{ fontSize: 10, fontWeight: 500, color: sel ? '#0A0A0A' : D.muted }}>{s.day}</div>
@@ -643,12 +643,401 @@ function BottomNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => vo
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// TAB — EXPLORER
+// ══════════════════════════════════════════════════════════════════════════════
+function TabExplore({
+  studios, allFlashes, onFlashClick,
+}: {
+  studios: NearbyStudio[];
+  allFlashes: { flash: FlashPreview; studioIdx: number; studio: NearbyStudio | null }[];
+  onFlashClick: (f: FlashPreview, si: number, s: NearbyStudio | null) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<string>('Tous');
+
+  const filtered = allFlashes.filter(({ flash: f, studio: s }) => {
+    const matchStyle = filter === 'Tous' || f.style?.toLowerCase().includes(filter.toLowerCase());
+    const matchQ = !query || f.title.toLowerCase().includes(query.toLowerCase())
+      || s?.studio_name.toLowerCase().includes(query.toLowerCase());
+    return matchStyle && matchQ;
+  });
+
+  return (
+    <div style={{ padding: '20px 20px 0' }}>
+      {/* Search input */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        background: D.card, border: `1px solid ${D.borderMid}`,
+        borderRadius: D.r.full, padding: '12px 18px', marginBottom: 16,
+      }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={D.muted} strokeWidth="2" strokeLinecap="round">
+          <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+        </svg>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Artiste, style, ville…"
+          style={{
+            flex: 1, background: 'none', border: 'none', outline: 'none',
+            fontSize: 14, color: D.text, fontFamily: 'inherit',
+          }}
+        />
+        {query && (
+          <button onClick={() => setQuery('')} style={{ background: 'none', border: 'none', color: D.muted, cursor: 'pointer', fontSize: 16, padding: 0, lineHeight: 1 }}>×</button>
+        )}
+      </div>
+
+      {/* Filter chips */}
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', marginBottom: 20, paddingBottom: 2 }}>
+        {STYLE_TABS.map((f) => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            flexShrink: 0, padding: '8px 16px', borderRadius: D.r.full,
+            fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer',
+            background: filter === f ? D.gold : D.card,
+            color: filter === f ? '#0A0A0A' : D.muted,
+            transition: 'all 0.15s',
+          }}>{f}</button>
+        ))}
+      </div>
+
+      {/* Results label */}
+      <div style={{ fontSize: 12, color: D.muted, marginBottom: 14 }}>
+        {filtered.length} flash{filtered.length !== 1 ? 's' : ''} disponible{filtered.length !== 1 ? 's' : ''}
+      </div>
+
+      {/* Grid */}
+      {filtered.length > 0 ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14, marginBottom: 32 }}>
+          {filtered.map(({ flash, studioIdx, studio: s }) => (
+            <FlashCard key={flash.id} flash={flash} studioIdx={studioIdx} studioCity={s?.city ?? null} onClick={() => onFlashClick(flash, studioIdx, s)} />
+          ))}
+        </div>
+      ) : (
+        <div style={{ padding: '64px 0', textAlign: 'center', color: D.muted, fontSize: 14 }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>
+          Aucun résultat pour « {query || filter} »
+        </div>
+      )}
+
+      {/* Studios section */}
+      {studios.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: D.text, letterSpacing: '-0.03em', marginBottom: 14 }}>
+            Studios ({studios.length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {studios.map((s, i) => (
+              <div key={s.id} style={{
+                background: D.card, border: `1px solid ${D.border}`,
+                borderRadius: D.r.lg, padding: '14px 16px',
+                display: 'flex', alignItems: 'center', gap: 14,
+              }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: D.r.full, flexShrink: 0,
+                  background: PALETTES[i % PALETTES.length].bg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 14, fontWeight: 800, color: PALETTES[i % PALETTES.length].dot,
+                }}>
+                  {initials(s.studio_name)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: D.text, letterSpacing: '-0.02em' }}>{s.studio_name}</div>
+                  <div style={{ fontSize: 11, color: D.muted, marginTop: 2 }}>
+                    {[s.city, s.distance_km != null ? distLabel(s.distance_km) : null].filter(Boolean).join(' · ')}
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: D.gold, fontWeight: 600 }}>
+                  {s.flash.length} flash
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TAB — CARTE
+// ══════════════════════════════════════════════════════════════════════════════
+function TabMap({
+  studios, loading, onDotClick,
+}: {
+  studios: NearbyStudio[];
+  loading: boolean;
+  onDotClick: (s: NearbyStudio) => void;
+}) {
+  const [selected, setSelected] = useState<NearbyStudio | null>(null);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 130px)' }}>
+      {/* Big map */}
+      <div style={{ flex: '0 0 300px', padding: '12px 20px 0' }}>
+        <MapHero studios={studios} onDotClick={(s) => { setSelected(s); }} bigMode />
+      </div>
+
+      {/* Studio list below map */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+        {loading ? (
+          <div style={{ color: D.muted, fontSize: 13, textAlign: 'center', paddingTop: 24 }}>Chargement…</div>
+        ) : studios.length === 0 ? (
+          <div style={{ color: D.muted, fontSize: 13, textAlign: 'center', paddingTop: 24 }}>
+            Aucun studio dans la zone
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 12, color: D.muted, marginBottom: 12 }}>
+              {studios.length} studio{studios.length > 1 ? 's' : ''} trouvé{studios.length > 1 ? 's' : ''}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {studios.map((s, i) => {
+                const isSel = selected?.id === s.id;
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => { setSelected(s); onDotClick(s); }}
+                    style={{
+                      background: isSel ? D.goldDim : D.card,
+                      border: `1.5px solid ${isSel ? D.gold : D.border}`,
+                      borderRadius: D.r.lg, padding: '14px 16px',
+                      display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <div style={{
+                      width: 44, height: 44, borderRadius: D.r.full, flexShrink: 0,
+                      background: PALETTES[i % PALETTES.length].bg,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 14, fontWeight: 800, color: PALETTES[i % PALETTES.length].dot,
+                    }}>
+                      {initials(s.studio_name)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: D.text }}>{s.studio_name}</div>
+                      <div style={{ fontSize: 11, color: D.muted, marginTop: 2 }}>
+                        {[s.city, s.distance_km != null ? distLabel(s.distance_km) : null].filter(Boolean).join(' · ')}
+                      </div>
+                    </div>
+                    {s.flash.length > 0 && (
+                      <div style={{
+                        background: D.goldDim, border: `1px solid ${D.gold}33`,
+                        borderRadius: D.r.full, padding: '3px 10px',
+                        fontSize: 11, fontWeight: 700, color: D.gold,
+                      }}>
+                        {s.flash.length} flash
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TAB — MES RDV
+// ══════════════════════════════════════════════════════════════════════════════
+interface ClientBooking {
+  id: string;
+  studio_name?: string;
+  requested_date: string;
+  requested_time?: string | null;
+  status: string;
+  description?: string;
+  deposit_paid?: boolean;
+}
+
+const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
+  pending:   { label: 'En attente', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
+  accepted:  { label: 'Confirmé',   color: '#22C55E', bg: 'rgba(34,197,94,0.12)'  },
+  confirmed: { label: 'Confirmé',   color: '#22C55E', bg: 'rgba(34,197,94,0.12)'  },
+  rejected:  { label: 'Refusé',     color: '#EF4444', bg: 'rgba(239,68,68,0.12)'  },
+  cancelled: { label: 'Annulé',     color: '#EF4444', bg: 'rgba(239,68,68,0.12)'  },
+  completed: { label: 'Terminé',    color: '#6366F1', bg: 'rgba(99,102,241,0.12)' },
+};
+
+function TabRDV({ userEmail }: { userEmail: string }) {
+  const [bookings, setBookings] = useState<ClientBooking[]>([]);
+  const [rdvLoading, setRdvLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    ;(supabase as any)
+      .from('inkflow_bookings')
+      .select('id, studio_name, requested_date, requested_time, status, description, deposit_paid')
+      .eq('client_email', userEmail)
+      .order('requested_date', { ascending: false })
+      .limit(50)
+      .then(({ data }: { data: ClientBooking[] | null }) => {
+        setBookings(data ?? []);
+        setRdvLoading(false);
+      })
+      .catch(() => setRdvLoading(false));
+  }, [userEmail]);
+
+  const formatDate = (d: string) => {
+    try {
+      return new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+    } catch { return d; }
+  };
+
+  return (
+    <div style={{ padding: '20px 20px 0' }}>
+      <div style={{ fontSize: 17, fontWeight: 800, color: D.text, letterSpacing: '-0.03em', marginBottom: 18 }}>
+        Mes réservations
+      </div>
+
+      {rdvLoading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{ background: D.card, borderRadius: D.r.lg, height: 88, border: `1px solid ${D.border}` }} />
+          ))}
+        </div>
+      ) : bookings.length === 0 ? (
+        <div style={{
+          padding: '64px 24px', textAlign: 'center',
+          background: D.card, borderRadius: D.r.xl, border: `1px solid ${D.border}`,
+        }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>📅</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: D.text, marginBottom: 8 }}>Aucune réservation</div>
+          <div style={{ fontSize: 13, color: D.muted, lineHeight: 1.5 }}>
+            Trouve un tatoueur et réserve ton prochain flash directement depuis l'app.
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+          {bookings.map((b) => {
+            const st = STATUS_LABEL[b.status] ?? { label: b.status, color: D.muted, bg: D.card };
+            return (
+              <div key={b.id} style={{
+                background: D.card, border: `1px solid ${D.border}`,
+                borderRadius: D.r.lg, padding: '16px 16px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: D.text, letterSpacing: '-0.02em' }}>
+                    {b.studio_name ?? 'Studio'}
+                  </div>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: D.r.full,
+                    color: st.color, background: st.bg,
+                  }}>{st.label}</span>
+                </div>
+                <div style={{ fontSize: 12, color: D.muted }}>
+                  {formatDate(b.requested_date)}{b.requested_time ? ` · ${b.requested_time}` : ''}
+                </div>
+                {b.description && (
+                  <div style={{ fontSize: 12, color: D.textSub, marginTop: 6, lineHeight: 1.4 }}>
+                    {b.description.slice(0, 80)}{b.description.length > 80 ? '…' : ''}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TAB — PROFIL
+// ══════════════════════════════════════════════════════════════════════════════
+function TabProfile({ userName, userInit, userEmail }: { userName: string; userInit: string; userEmail: string }) {
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/client';
+  };
+
+  const menuItems = [
+    { icon: '📅', label: 'Mes réservations', sub: 'Voir l\'historique complet' },
+    { icon: '❤️', label: 'Artistes favoris', sub: 'Tes studios sauvegardés' },
+    { icon: '🔔', label: 'Notifications', sub: 'Rappels et confirmations' },
+    { icon: '⚙️', label: 'Paramètres', sub: 'Compte, confidentialité' },
+  ];
+
+  return (
+    <div style={{ padding: '28px 20px 0' }}>
+      {/* Avatar block */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 32 }}>
+        <div style={{
+          width: 80, height: 80, borderRadius: D.r.full,
+          background: D.gold, color: '#0A0A0A',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 28, fontWeight: 800, marginBottom: 14,
+          boxShadow: `0 8px 32px ${D.gold}44`,
+        }}>
+          {userInit || '?'}
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: D.text, letterSpacing: '-0.03em', marginBottom: 4 }}>
+          {userName || 'Mon profil'}
+        </div>
+        {userEmail && (
+          <div style={{ fontSize: 12, color: D.muted }}>{userEmail}</div>
+        )}
+      </div>
+
+      {/* Menu list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 28 }}>
+        {menuItems.map(({ icon, label, sub }) => (
+          <div key={label} style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            background: D.card, borderRadius: D.r.md, padding: '14px 16px',
+            cursor: 'pointer',
+          }}>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>{icon}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: D.text }}>{label}</div>
+              <div style={{ fontSize: 11, color: D.muted, marginTop: 2 }}>{sub}</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={D.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </div>
+        ))}
+      </div>
+
+      {/* Tu es tatoueur ? */}
+      <div style={{
+        background: D.goldGlow, border: `1px solid ${D.goldDim}`,
+        borderRadius: D.r.xl, padding: '18px 20px',
+        marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+      }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: D.text, marginBottom: 4 }}>Tu es tatoueur ?</div>
+          <div style={{ fontSize: 12, color: D.muted, lineHeight: 1.4 }}>Crée ta vitrine gratuite.</div>
+        </div>
+        <a href="/signup" style={{
+          padding: '10px 16px', background: D.gold, borderRadius: D.r.md,
+          fontSize: 12, fontWeight: 800, color: '#0A0A0A', textDecoration: 'none',
+        }}>Rejoindre →</a>
+      </div>
+
+      {/* Sign out */}
+      <button onClick={handleSignOut} style={{
+        width: '100%', padding: '14px 0',
+        background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+        borderRadius: D.r.lg, fontSize: 14, fontWeight: 700, color: D.red,
+        cursor: 'pointer', marginBottom: 32,
+      }}>
+        Se déconnecter
+      </button>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // PAGE PRINCIPALE
 // ══════════════════════════════════════════════════════════════════════════════
 export function ClientDashboard() {
   const [tab, setTab]             = useState<Tab>('home');
   const [userName, setUserName]   = useState('');
   const [userInit, setUserInit]   = useState('');
+  const [userEmail, setUserEmail] = useState('');
   const [studios, setStudios]     = useState<NearbyStudio[]>([]);
   const [loading, setLoading]     = useState(true);
   const [activeFilter, setFilter] = useState<string>('Tous');
@@ -663,6 +1052,7 @@ export function ClientDashboard() {
       const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || '';
       setUserName(name);
       setUserInit(initials(name) || u.email?.[0]?.toUpperCase() || '?');
+      setUserEmail(u.email ?? '');
     });
   }, []);
 
@@ -780,8 +1170,17 @@ export function ClientDashboard() {
           </div>
         </div>
 
-        {/* ── BODY ── */}
-        <div style={{ padding: '20px 20px 0' }}>
+        {/* ── BODY — tab switch ── */}
+        {tab === 'explore' && (
+          <TabExplore studios={studios} allFlashes={allFlashes} onFlashClick={openFlash} />
+        )}
+        {tab === 'map' && (
+          <TabMap studios={studios} loading={loading} onDotClick={(s) => { const f = s.flash?.[0]; if (f) openFlash(f, studios.indexOf(s), s); }} />
+        )}
+        {tab === 'rdv' && <TabRDV userEmail={userEmail} />}
+        {tab === 'profile' && <TabProfile userName={userName} userInit={userInit} userEmail={userEmail} />}
+
+        {tab === 'home' && <div style={{ padding: '20px 20px 0' }}>
 
           {/* MAP HERO */}
           {loading ? (
@@ -934,7 +1333,7 @@ export function ClientDashboard() {
             </a>
           </div>
 
-        </div>
+        </div>}
       </div>
 
       {/* ── BOTTOM NAV ── */}
