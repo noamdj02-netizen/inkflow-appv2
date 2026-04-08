@@ -45,7 +45,7 @@ const ONBOARD_SLIDES = [
     Icon: Heart,
   },
   {
-    img: '/images/referral-hero-studio4.png',
+    img: '/images/collin-wigger-n4kHuY-2va0-unsplash.jpg',
     logo: false,
     title: 'Découvrir les studios',
     sub: 'Flashs disponibles, artistes proches, réservation instantanée. Tout est là.',
