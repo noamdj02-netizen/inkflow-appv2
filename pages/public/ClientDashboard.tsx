@@ -22,6 +22,9 @@ import {
   CircleHelp,
   Palette,
   Star,
+  Camera,
+  Maximize2,
+  X,
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { supabase } from '../../lib/supabase';
@@ -35,6 +38,15 @@ import {
   type NearbyStudio,
   type FlashPreview,
 } from '../../lib/supabaseGeo';
+import { getStudioByEmail } from '../../lib/supabaseDashboard';
+import {
+  fetchPortalAvatarUrl,
+  formatClientAvatarError,
+  oauthAvatarFromUserMetadata,
+  removeClientPortalAvatar,
+  trySyncClientCrmProfile,
+  uploadClientPortalAvatarJpegWithFallback,
+} from '../../lib/clientPortalProfile';
 
 const D = buildClientDesignTokens(CLIENT_DASHBOARD_THEME);
 
@@ -478,21 +490,34 @@ function FlashCard({
 
 // ─── Flash detail sheet ───────────────────────────────────────────────────────
 function FlashSheet({
-  flash, studioIdx, studio, onClose, onFavoritesDirty,
+  flash, studioIdx, studio, onClose, onFavoritesDirty, viewerStudioSlug,
 }: {
   flash: FlashPreview;
   studioIdx: number;
   studio: NearbyStudio | null;
   onClose: () => void;
   onFavoritesDirty?: () => void;
+  /** Slug du studio connecté (tatoueur) — si égal au flash, affiche les liens d’édition */
+  viewerStudioSlug?: string | null;
 }) {
   const toast = useToast();
   const pal = PALETTES[studioIdx % PALETTES.length];
   const [broken, setBroken] = useState(false);
+  const [fullImageOpen, setFullImageOpen] = useState(false);
+  const [studioRowAvatarBroken, setStudioRowAvatarBroken] = useState(false);
   const [slot, setSlot] = useState(1);
   const deposit = Math.round(flash.price * 0.2);
   const studioSlug = (studio?.slug?.trim() || flash.studioSlug?.trim() || '');
-  const displayStudioName = studio?.studio_name?.trim() || flash.studioName?.trim() || 'Studio';
+  const rawFlashName = flash.studioName?.trim() || '';
+  const rawStudioName = studio?.studio_name?.trim() || '';
+  const displayStudioName =
+    rawStudioName
+    || (rawFlashName && !/^mon\s+studio$/i.test(rawFlashName) ? rawFlashName : '')
+    || rawFlashName
+    || 'Studio';
+  const studioAvatarRaw = studio?.avatar_url?.trim() || '';
+  const showStudioAvatarImg =
+    Boolean(studioAvatarRaw) && !studioRowAvatarBroken && !isStockPhoto(studioAvatarRaw);
   const fav = isFavoriteFlashId(flash.id);
   const today = new Date();
   const slots = Array.from({ length: 4 }, (_, i) => {
@@ -508,6 +533,19 @@ function FlashSheet({
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
+
+  useEffect(() => {
+    if (!fullImageOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullImageOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [fullImageOpen]);
+
+  useEffect(() => {
+    setStudioRowAvatarBroken(false);
+  }, [studio?.id, studio?.avatar_url]);
 
   const goStudio = () => {
     if (!studioSlug) {
@@ -532,6 +570,10 @@ function FlashSheet({
     toast.success(now ? 'Ajouté aux favoris' : 'Retiré des favoris');
   };
 
+  const sheetSlug = (studio?.slug?.trim() || flash.studioSlug?.trim() || '').toLowerCase();
+  const viewerSlug = (viewerStudioSlug?.trim() || '').toLowerCase();
+  const isMyStudioFlash = Boolean(viewerSlug && sheetSlug && viewerSlug === sheetSlug);
+
   return (
     <>
       <div onClick={onClose} style={{
@@ -554,7 +596,7 @@ function FlashSheet({
         {/* Handle */}
         <div style={{ width: 40, height: 4, borderRadius: 2, background: D.sheetHandle, margin: '14px auto 0' }} />
 
-        {/* Hero */}
+        {/* Hero — tap = voir le tatouage en entier (plein écran) */}
         <div style={{
           height: 220, margin: '16px 16px 0',
           borderRadius: D.r.lg, overflow: 'hidden',
@@ -562,10 +604,39 @@ function FlashSheet({
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {flash.imageUrl && !broken ? (
-            <img src={flash.imageUrl} alt={flash.title}
-              onError={() => setBroken(true)}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFullImageOpen(true);
+                }}
+                aria-label="Voir le tatouage en entier"
+                className="absolute inset-0 z-[1] border-0 p-0 m-0 cursor-zoom-in touch-manipulation active:opacity-95"
+                style={{ background: 'transparent' }}
+              >
+                <img
+                  src={flash.imageUrl}
+                  alt=""
+                  onError={() => setBroken(true)}
+                  className="pointer-events-none absolute inset-0 w-full h-full"
+                  style={{ objectFit: 'cover' }}
+                />
+              </button>
+              <div
+                className="absolute bottom-12 right-3 z-[15] flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-bold pointer-events-none sm:bottom-3"
+                style={{
+                  borderColor: D.border,
+                  background: D.contentCardBg,
+                  color: D.text,
+                  boxShadow: D.shadow,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                <Maximize2 className="w-3.5 h-3.5 shrink-0 opacity-80" strokeWidth={2.25} aria-hidden />
+                En entier
+              </div>
+            </>
           ) : (
             <svg width="72" height="72" viewBox="0 0 56 56" fill="none">
               <path d="M28 6L33 21H48L36 29L40 44L28 36L16 44L20 29L8 21H23Z"
@@ -573,7 +644,7 @@ function FlashSheet({
             </svg>
           )}
           <button type="button" onClick={onClose} aria-label="Fermer" style={{
-            position: 'absolute', top: 12, left: 12,
+            position: 'absolute', top: 12, left: 12, zIndex: 20,
             width: 36, height: 36, borderRadius: D.r.full,
             background: D.mediaOverlayBtnBg, backdropFilter: D.blur,
             border: `1px solid ${D.border}`,
@@ -589,7 +660,7 @@ function FlashSheet({
             onClick={onSheetHeart}
             aria-label={fav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
             style={{
-              position: 'absolute', top: 12, right: 12,
+              position: 'absolute', top: 12, right: 12, zIndex: 20,
               width: 40, height: 40, borderRadius: D.r.full,
               background: D.mediaOverlayBtnBg, backdropFilter: D.blur,
               border: `1px solid ${D.border}`,
@@ -601,7 +672,7 @@ function FlashSheet({
             <Heart className="w-5 h-5" fill={fav ? 'currentColor' : 'none'} strokeWidth={2} />
           </button>
           <div style={{
-            position: 'absolute', bottom: 12, left: 12,
+            position: 'absolute', bottom: 12, left: 12, zIndex: 15,
             background: D.contentCardBg, border: `1px solid ${D.gold}`,
             borderRadius: D.r.full, padding: '4px 12px',
             fontSize: 9, fontWeight: 800, color: D.gold, letterSpacing: '0.08em',
@@ -644,13 +715,32 @@ function FlashSheet({
               font: 'inherit',
             }}
           >
-            <div style={{
-              width: 42, height: 42, borderRadius: D.r.full,
-              background: pal.bg,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 15, fontWeight: 800, color: pal.dot, flexShrink: 0,
-            }}>
-              {initials(displayStudioName)}
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: D.r.full,
+                flexShrink: 0,
+                overflow: 'hidden',
+                background: pal.bg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 15,
+                fontWeight: 800,
+                color: pal.dot,
+              }}
+            >
+              {showStudioAvatarImg ? (
+                <img
+                  src={studioAvatarRaw}
+                  alt=""
+                  onError={() => setStudioRowAvatarBroken(true)}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                initials(displayStudioName)
+              )}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: D.text }}>{displayStudioName}</div>
@@ -714,8 +804,108 @@ function FlashSheet({
           <div style={{ textAlign: 'center', fontSize: 12, color: D.muted }}>
             Reste {flash.price - deposit}€ à régler en studio
           </div>
+
+          {isMyStudioFlash ? (
+            <div
+              style={{
+                marginTop: 22,
+                paddingTop: 18,
+                borderTop: `1px solid ${D.border}`,
+              }}
+            >
+              <div style={{ fontSize: 10, fontWeight: 700, color: D.muted, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
+                Ton studio
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <a
+                  href="/client/vitrine"
+                  className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border text-center text-sm font-semibold transition-transform active:scale-[0.99] touch-manipulation"
+                  style={{ borderColor: D.border, background: D.card, color: D.text, textDecoration: 'none' }}
+                >
+                  <Palette className="w-4 h-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  Personnaliser la vitrine
+                </a>
+                <a
+                  href="/client/studio/flash"
+                  className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border text-center text-sm font-semibold transition-transform active:scale-[0.99] touch-manipulation"
+                  style={{ borderColor: D.border, background: D.card, color: D.text, textDecoration: 'none' }}
+                >
+                  <LayoutGrid className="w-4 h-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                  Gérer les flashs
+                </a>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
+
+      {/* Plein écran : tatouage en entier (contain + scroll) */}
+      {fullImageOpen && flash.imageUrl && !broken ? (
+        <div
+          role="dialog"
+          aria-modal
+          aria-label={`${flash.title} — vue entière`}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9000,
+            background: 'rgba(0,0,0,0.94)',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+          onClick={() => setFullImageOpen(false)}
+        >
+          <div
+            className="flex shrink-0 items-center justify-between gap-3 px-4 py-3"
+            style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="min-w-0 truncate text-sm font-semibold" style={{ color: '#fafafa' }}>
+              {flash.title}
+            </span>
+            <button
+              type="button"
+              onClick={() => setFullImageOpen(false)}
+              className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full border touch-manipulation active:scale-95 transition-transform"
+              style={{
+                borderColor: 'rgba(255,255,255,0.25)',
+                background: 'rgba(255,255,255,0.08)',
+                color: '#fff',
+              }}
+              aria-label="Fermer la vue entière"
+            >
+              <X className="h-6 w-6" strokeWidth={2} />
+            </button>
+          </div>
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden flex flex-col items-stretch"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              paddingLeft: 'max(12px, env(safe-area-inset-left))',
+              paddingRight: 'max(12px, env(safe-area-inset-right))',
+              paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setFullImageOpen(false);
+            }}
+          >
+            <img
+              src={flash.imageUrl}
+              alt={flash.title}
+              onClick={(e) => e.stopPropagation()}
+              className="mx-auto block w-auto max-w-full select-none"
+              style={{
+                height: 'auto',
+                maxHeight: 'none',
+                objectFit: 'contain',
+              }}
+            />
+            <p className="mt-4 shrink-0 text-center text-xs px-2" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Touche le fond noir ou ✕ pour fermer · Échap
+            </p>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -1124,12 +1314,12 @@ const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }>
 
 interface ClientBooking {
   id: string;
+  /** Nom du studio (jointure) ; sinon libellé générique en UI */
   studio_name?: string;
   requested_date: string;
   requested_time?: string | null;
   status: string;
   description?: string;
-  deposit_paid?: boolean;
 }
 
 function toBookingDateKey(iso: string): string {
@@ -1504,48 +1694,170 @@ function TabRDV({
 // TAB — PROFIL
 // ══════════════════════════════════════════════════════════════════════════════
 function TabProfile({
-  userName, userInit, userEmail, onNavigateTab,
+  userName,
+  userInit,
+  userEmail,
+  onNavigateTab,
+  ownedStudioSlug,
+  avatarUrl,
+  avatarBroken,
+  onAvatarImgError,
+  avatarUploading,
+  onAvatarFile,
+  onRemovePortalAvatar,
+  onSaveDisplayName,
+  hasCustomPortalAvatar,
 }: {
   userName: string;
   userInit: string;
   userEmail: string;
   onNavigateTab: (t: Tab) => void;
+  /** Si l’utilisateur a un studio Inkflow (même email), lien vitrine / dashboard */
+  ownedStudioSlug: string | null;
+  avatarUrl: string | null;
+  avatarBroken: boolean;
+  onAvatarImgError: () => void;
+  avatarUploading: boolean;
+  onAvatarFile: (file: File) => void;
+  onRemovePortalAvatar: () => void;
+  onSaveDisplayName: (name: string) => void | Promise<void>;
+  /** Photo uploadée (storage), pas seulement OAuth */
+  hasCustomPortalAvatar: boolean;
 }) {
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [draftName, setDraftName] = useState(userName);
+  const [nameSaving, setNameSaving] = useState(false);
+
+  useEffect(() => {
+    setDraftName(userName);
+  }, [userName]);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     window.location.href = '/client';
   };
 
+  const showPhoto = Boolean(avatarUrl) && !avatarBroken;
+  const showRemovePortal = hasCustomPortalAvatar && Boolean(avatarUrl) && !avatarBroken;
+
   return (
     <div className="px-2 pt-4 pb-8 sm:px-4 md:px-6">
-      <a
-        href="/dashboard"
-        className="mb-6 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 min-h-[52px] transition-transform active:scale-[0.98] touch-manipulation"
-        style={{ borderColor: D.border, background: D.card, color: D.text }}
-      >
-        <div className="min-w-0">
-          <div className="text-sm font-semibold">Espace tatoueur</div>
-          <div className="text-xs mt-0.5 truncate" style={{ color: D.muted }}>Dashboard studio InkFlow</div>
-        </div>
-        <ExternalLink className="w-4 h-4 shrink-0 opacity-60" />
-      </a>
-
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/jpg"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (avatarInputRef.current) avatarInputRef.current.value = '';
+          if (f) void onAvatarFile(f);
+        }}
+      />
       {/* Avatar block */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 32 }}>
-        <div style={{
-          width: 80, height: 80, borderRadius: D.r.full,
-          background: D.gold, color: D.onAccent,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 28, fontWeight: 800, marginBottom: 14,
-          boxShadow: `0 8px 32px ${D.accentShadow}`,
-        }}>
-          {userInit || '?'}
+        <div className="relative" style={{ marginBottom: 14 }}>
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={avatarUploading}
+            className="relative block rounded-full overflow-hidden touch-manipulation active:scale-[0.98] transition-transform disabled:opacity-60"
+            style={{
+              width: 80,
+              height: 80,
+              boxShadow: `0 8px 32px ${D.accentShadow}`,
+              border: 'none',
+              padding: 0,
+              cursor: avatarUploading ? 'wait' : 'pointer',
+            }}
+            aria-label="Changer la photo de profil"
+          >
+            {showPhoto ? (
+              <img
+                src={avatarUrl!}
+                alt=""
+                className="w-full h-full object-cover"
+                onError={onAvatarImgError}
+              />
+            ) : (
+              <div
+                className="w-full h-full flex items-center justify-center"
+                style={{
+                  background: D.gold,
+                  color: D.onAccent,
+                  fontSize: 28,
+                  fontWeight: 800,
+                }}
+              >
+                {userInit || '?'}
+              </div>
+            )}
+            {avatarUploading && (
+              <div
+                className="absolute inset-0 flex items-center justify-center rounded-full"
+                style={{ background: 'rgba(0,0,0,0.45)' }}
+              >
+                <span className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={avatarUploading}
+            className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border shadow-md touch-manipulation active:scale-95 transition-transform disabled:opacity-50"
+            style={{ borderColor: D.border, background: D.card, color: D.text }}
+            aria-label="Changer la photo"
+          >
+            <Camera className="w-4 h-4" strokeWidth={1.75} />
+          </button>
         </div>
-        <div className="font-display font-display-hero" style={{ fontSize: 18, color: D.text, marginBottom: 4 }}>
-          {userName || 'Mon profil'}
+        {showRemovePortal ? (
+          <button
+            type="button"
+            onClick={() => void onRemovePortalAvatar()}
+            disabled={avatarUploading}
+            className="mb-3 text-xs font-semibold touch-manipulation active:opacity-70 disabled:opacity-40"
+            style={{ color: D.muted, background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            Retirer la photo enregistrée
+          </button>
+        ) : null}
+
+        <div className="w-full max-w-sm space-y-2">
+          <label className="block text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
+            Nom affiché
+          </label>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              maxLength={120}
+              className="flex-1 min-w-0 rounded-xl border px-3 py-2.5 text-[15px] font-medium"
+              style={{ borderColor: D.border, background: D.card, color: D.text }}
+              placeholder="Ton nom"
+              autoComplete="name"
+            />
+            <button
+              type="button"
+              disabled={nameSaving || draftName.trim() === userName.trim()}
+              onClick={async () => {
+                setNameSaving(true);
+                try {
+                  await onSaveDisplayName(draftName);
+                } finally {
+                  setNameSaving(false);
+                }
+              }}
+              className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold touch-manipulation active:scale-[0.98] transition-transform disabled:opacity-40"
+              style={{ background: D.gold, color: D.onAccent }}
+            >
+              {nameSaving ? '…' : 'Enregistrer'}
+            </button>
+          </div>
         </div>
         {userEmail && (
-          <div style={{ fontSize: 12, color: D.muted }}>{userEmail}</div>
+          <div className="mt-3 text-center" style={{ fontSize: 12, color: D.muted }}>{userEmail}</div>
         )}
       </div>
 
@@ -1625,21 +1937,58 @@ function TabProfile({
         </a>
       </div>
 
-      {/* Tu es tatoueur ? */}
-      <div style={{
-        background: D.goldGlow, border: `1px solid ${D.goldDim}`,
-        borderRadius: D.r.xl, padding: '18px 20px',
-        marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-      }}>
-        <div>
-          <div className="font-display font-display-hero" style={{ fontSize: 14, color: D.text, marginBottom: 4 }}>Tu es tatoueur ?</div>
-          <div style={{ fontSize: 12, color: D.muted, lineHeight: 1.4 }}>Crée ta vitrine gratuite.</div>
+      {!ownedStudioSlug ? (
+        <div style={{
+          background: D.goldGlow, border: `1px solid ${D.goldDim}`,
+          borderRadius: D.r.xl, padding: '18px 20px',
+          marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+        }}>
+          <div>
+            <div className="font-display font-display-hero" style={{ fontSize: 14, color: D.text, marginBottom: 4 }}>Tu es tatoueur ?</div>
+            <div style={{ fontSize: 12, color: D.muted, lineHeight: 1.4 }}>Crée ta vitrine gratuite.</div>
+          </div>
+          <a href="/signup" style={{
+            padding: '10px 16px', background: D.gold, borderRadius: D.r.md,
+            fontSize: 12, fontWeight: 800, color: D.onAccent, textDecoration: 'none',
+          }}>Rejoindre →</a>
         </div>
-        <a href="/signup" style={{
-          padding: '10px 16px', background: D.gold, borderRadius: D.r.md,
-          fontSize: 12, fontWeight: 800, color: D.onAccent, textDecoration: 'none',
-        }}>Rejoindre →</a>
-      </div>
+      ) : null}
+
+      <a
+        href="/dashboard"
+        className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 min-h-[52px] transition-transform active:scale-[0.98] touch-manipulation ${ownedStudioSlug ? 'mb-3' : 'mb-6'}`}
+        style={{ borderColor: D.border, background: D.card, color: D.text }}
+      >
+        <div className="min-w-0">
+          <div className="text-sm font-semibold">Espace tatoueur</div>
+          <div className="text-xs mt-0.5 truncate" style={{ color: D.muted }}>Dashboard studio InkFlow</div>
+        </div>
+        <ExternalLink className="w-4 h-4 shrink-0 opacity-60" />
+      </a>
+
+      {ownedStudioSlug ? (
+        <a
+          href="/client/vitrine"
+          className="mb-6 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 min-h-[52px] transition-transform active:scale-[0.98] touch-manipulation"
+          style={{ borderColor: D.goldDim, background: D.goldGlow, color: D.text }}
+        >
+          <div className="min-w-0 flex items-center gap-3">
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border"
+              style={{ borderColor: D.border, background: D.card }}
+            >
+              <Palette className="w-5 h-5" style={{ color: D.gold }} strokeWidth={1.65} aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold">Personnaliser ma vitrine</div>
+              <div className="text-xs mt-0.5 truncate" style={{ color: D.muted }}>
+                Thème, textes, flashs publics · {ownedStudioSlug}
+              </div>
+            </div>
+          </div>
+          <ExternalLink className="w-4 h-4 shrink-0 opacity-60" />
+        </a>
+      ) : null}
 
       {/* Sign out */}
       <button
@@ -1659,15 +2008,29 @@ function TabProfile({
   );
 }
 
+function readInitialClientTab(): Tab {
+  if (typeof window === 'undefined') return 'home';
+  const t = new URLSearchParams(window.location.search).get('tab');
+  const allowed: Tab[] = ['home', 'explore', 'favorites', 'map', 'rdv', 'profile'];
+  if (t && (allowed as string[]).includes(t)) return t as Tab;
+  return 'home';
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // PAGE PRINCIPALE
 // ══════════════════════════════════════════════════════════════════════════════
 export function ClientDashboard() {
   const toast = useToast();
-  const [tab, setTab]             = useState<Tab>('home');
+  const [tab, setTab]             = useState<Tab>(readInitialClientTab);
   const [userName, setUserName]   = useState('');
   const [userInit, setUserInit]   = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+  const [hasCustomPortalAvatar, setHasCustomPortalAvatar] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [ownedStudioSlug, setOwnedStudioSlug] = useState<string | null>(null);
   const [studios, setStudios]     = useState<NearbyStudio[]>([]);
   const [loading, setLoading]     = useState(true);
   const [userPos, setUserPos]     = useState<{ lat: number; lng: number } | null>(null);
@@ -1679,17 +2042,133 @@ export function ClientDashboard() {
   const [exploreSearchFocusNonce, setExploreSearchFocusNonce] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auth
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.has('tab')) {
+      window.history.replaceState({}, '', '/client/dashboard');
+    }
+  }, []);
+
+  // Auth + studio tatoueur (même email qu’inkflow_studios) + profil portail (photo)
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(async ({ data }) => {
       const u = data.user;
       if (!u) return;
+      setUserId(u.id);
       const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || '';
       setUserName(name);
       setUserInit(initials(name) || u.email?.[0]?.toUpperCase() || '?');
       setUserEmail(u.email ?? '');
+
+      let portalUrl: string | null = null;
+      try {
+        portalUrl = await fetchPortalAvatarUrl(u.id);
+      } catch {
+        portalUrl = null;
+      }
+      if (cancelled) return;
+      const oauthUrl = oauthAvatarFromUserMetadata(u.user_metadata as Record<string, unknown>);
+      setHasCustomPortalAvatar(Boolean(portalUrl));
+      setUserAvatarUrl(portalUrl || oauthUrl || null);
+      setAvatarBroken(false);
+
+      if (u.email) {
+        try {
+          const row = await getStudioByEmail(u.email);
+          if (!cancelled && row?.slug) setOwnedStudioSlug(row.slug);
+        } catch {
+          if (!cancelled) setOwnedStudioSlug(null);
+        }
+      }
     });
+    return () => { cancelled = true; };
   }, []);
+
+  const handleClientAvatarFile = useCallback(
+    async (file: File) => {
+      if (!userId) {
+        toast.error('Session introuvable.');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast.error('Choisis une image (JPG, PNG, WebP).');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Image trop lourde (max 10 Mo).');
+        return;
+      }
+      setAvatarUploading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          toast.error('Session expirée. Reconnecte-toi puis réessaie.');
+          return;
+        }
+        await supabase.auth.refreshSession().catch(() => {});
+        const url = await uploadClientPortalAvatarJpegWithFallback(file, userId);
+        setUserAvatarUrl(url);
+        setAvatarBroken(false);
+        setHasCustomPortalAvatar(true);
+        toast.success('Photo enregistrée');
+        void trySyncClientCrmProfile(userName, url);
+      } catch (e) {
+        if (import.meta.env.DEV) console.error(e);
+        toast.error(formatClientAvatarError(e));
+      } finally {
+        setAvatarUploading(false);
+      }
+    },
+    [toast, userId, userName],
+  );
+
+  const handleRemovePortalAvatar = useCallback(async () => {
+    if (!userId) return;
+    setAvatarUploading(true);
+    try {
+      await removeClientPortalAvatar(userId);
+      const { data: { user } } = await supabase.auth.getUser();
+      const oauth = user ? oauthAvatarFromUserMetadata(user.user_metadata as Record<string, unknown>) : null;
+      setUserAvatarUrl(oauth || null);
+      setAvatarBroken(false);
+      setHasCustomPortalAvatar(false);
+      toast.success('Photo retirée');
+      void trySyncClientCrmProfile(userName, oauth || null);
+    } catch (e) {
+      if (import.meta.env.DEV) console.error(e);
+      toast.error('Impossible de retirer la photo.');
+    } finally {
+      setAvatarUploading(false);
+    }
+  }, [toast, userId, userName]);
+
+  const handleSaveDisplayName = useCallback(
+    async (raw: string) => {
+      const trimmed = raw.trim();
+      if (!trimmed) {
+        toast.error('Indique un nom.');
+        return;
+      }
+      const { error, data } = await supabase.auth.updateUser({
+        data: { full_name: trimmed, name: trimmed },
+      });
+      if (error) {
+        toast.error('Impossible de mettre à jour le nom.');
+        return;
+      }
+      const u = data.user;
+      const next =
+        (u?.user_metadata as { full_name?: string; name?: string } | undefined)?.full_name
+        || (u?.user_metadata as { name?: string } | undefined)?.name
+        || trimmed;
+      setUserName(next);
+      setUserInit(initials(next) || userEmail?.[0]?.toUpperCase() || '?');
+      toast.success('Nom enregistré');
+      void trySyncClientCrmProfile(next, userAvatarUrl);
+    },
+    [toast, userEmail, userAvatarUrl],
+  );
 
   // Studios
   useEffect(() => {
@@ -1721,22 +2200,88 @@ export function ClientDashboard() {
     }
     setRdvLoading(true);
     let cancelled = false;
-    void supabase
-      .from('inkflow_bookings')
-      .select('id, studio_name, requested_date, requested_time, status, description, deposit_paid')
-      .eq('client_email', userEmail)
-      .order('requested_date', { ascending: false })
-      .limit(50)
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          toast.error('Impossible de charger tes réservations.');
-          setBookings([]);
-        } else {
-          setBookings((data as ClientBooking[]) ?? []);
-        }
+
+    type RowWithStudio = {
+      id: string;
+      client_name: string;
+      requested_date: string;
+      requested_time: string | null;
+      status: string;
+      description: string;
+      inkflow_studios?: { studio_name: string } | null;
+    };
+    type RowFlat = {
+      id: string;
+      client_name: string;
+      requested_date: string;
+      requested_time: string | null;
+      status: string;
+      description: string;
+      studio_id: string;
+    };
+
+    const mapToClientBookings = (rows: RowWithStudio[] | RowFlat[], withStudio: boolean): ClientBooking[] =>
+      rows.map((r) => ({
+        id: r.id,
+        studio_name: withStudio
+          ? (r as RowWithStudio).inkflow_studios?.studio_name?.trim() || undefined
+          : undefined,
+        requested_date: r.requested_date,
+        requested_time: r.requested_time,
+        status: r.status,
+        description: r.description,
+      }));
+
+    void (async () => {
+      const q1 = await supabase
+        .from('inkflow_bookings')
+        .select(
+          `
+          id,
+          client_name,
+          requested_date,
+          requested_time,
+          status,
+          description,
+          studio_id,
+          inkflow_studios ( studio_name )
+        `
+        )
+        .eq('client_email', userEmail)
+        .order('requested_date', { ascending: false })
+        .limit(50);
+
+      if (cancelled) return;
+
+      if (!q1.error && q1.data) {
+        setBookings(mapToClientBookings(q1.data as RowWithStudio[], true));
         setRdvLoading(false);
-      });
+        return;
+      }
+
+      if (import.meta.env.DEV && q1.error) {
+        console.warn('[ClientDashboard] bookings (sans jointure studio)', q1.error.message);
+      }
+
+      const q2 = await supabase
+        .from('inkflow_bookings')
+        .select('id, client_name, requested_date, requested_time, status, description, studio_id')
+        .eq('client_email', userEmail)
+        .order('requested_date', { ascending: false })
+        .limit(50);
+
+      if (cancelled) return;
+
+      if (q2.error) {
+        if (import.meta.env.DEV) console.error('[ClientDashboard] bookings', q2.error);
+        toast.error('Impossible de charger tes réservations.');
+        setBookings([]);
+      } else {
+        setBookings(mapToClientBookings((q2.data ?? []) as RowFlat[], false));
+      }
+      setRdvLoading(false);
+    })();
+
     return () => {
       cancelled = true;
     };
@@ -1786,8 +2331,11 @@ export function ClientDashboard() {
             <a href={LANDING_URL} className="flex items-center gap-3 min-w-0 group rounded-xl active:scale-[0.98] transition-transform" aria-label="InkFlow">
               <Logo size="lg" className="rounded-xl group-hover:opacity-90 transition-opacity shrink-0" />
               <div className="min-w-0">
-                <span className="block text-[15px] tracking-tight font-display font-display-hero truncate" style={{ color: D.text }}>
-                  InkFlow
+                <span
+                  className="block text-[15px] uppercase font-client-brand-ink truncate"
+                  style={{ color: D.text }}
+                >
+                  INK
                 </span>
                 <span className="block text-[11px] truncate" style={{ color: D.muted }}>
                   Espace client
@@ -1917,11 +2465,20 @@ export function ClientDashboard() {
                 <button
                   type="button"
                   onClick={() => setTab('profile')}
-                  className="flex min-w-[44px] min-h-[44px] w-11 h-11 items-center justify-center rounded-full text-sm font-bold transition-all active:scale-[0.98] touch-manipulation"
+                  className="flex min-w-[44px] min-h-[44px] w-11 h-11 items-center justify-center rounded-full text-sm font-bold transition-all active:scale-[0.98] touch-manipulation overflow-hidden shrink-0"
                   style={{ background: D.gold, color: D.onAccent }}
                   aria-label="Profil"
                 >
-                  {userInit}
+                  {userAvatarUrl && !avatarBroken ? (
+                    <img
+                      src={userAvatarUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={() => setAvatarBroken(true)}
+                    />
+                  ) : (
+                    userInit
+                  )}
                 </button>
               ) : null}
             </div>
@@ -1964,26 +2521,19 @@ export function ClientDashboard() {
             userInit={userInit}
             userEmail={userEmail}
             onNavigateTab={setTab}
+            ownedStudioSlug={ownedStudioSlug}
+            avatarUrl={userAvatarUrl}
+            avatarBroken={avatarBroken}
+            onAvatarImgError={() => setAvatarBroken(true)}
+            avatarUploading={avatarUploading}
+            onAvatarFile={handleClientAvatarFile}
+            onRemovePortalAvatar={handleRemovePortalAvatar}
+            onSaveDisplayName={handleSaveDisplayName}
+            hasCustomPortalAvatar={hasCustomPortalAvatar}
           />
         )}
 
         {tab === 'home' && <div className="px-2 pb-6 pt-3 sm:px-4 sm:pb-8 sm:pt-4 md:px-6">
-
-          {/* MAP HERO */}
-          {loading ? (
-            <div style={{ height: 'clamp(168px, 32dvh, 240px)', background: D.card, borderRadius: D.r.xl, border: `1px solid ${D.border}`, marginBottom: 24 }} />
-          ) : (
-            <div style={{ marginBottom: 24 }}>
-              <MapHero
-                studios={studios}
-                userPos={userPos}
-                onDotClick={(s) => {
-                  const flash = s.flash?.[0];
-                  if (flash) openFlash(flash, studios.indexOf(s), s);
-                }}
-              />
-            </div>
-          )}
 
           {/* ARTISTES PROCHES */}
           <div style={{ marginBottom: 28 }}>
@@ -2010,18 +2560,21 @@ export function ClientDashboard() {
               {loading
                 ? Array.from({ length: 4 }, (_, i) => <SkeletonPill key={i} />)
                 : studios.length > 0
-                  ? studios.slice(0, 8).map((s, i) => (
+                  ? [...studios].slice(0, 8).reverse().map((s) => {
+                      const studioIdx = studios.indexOf(s);
+                      return (
                       <div key={s.id} className="snap-start shrink-0">
                         <ArtistPill
                           studio={s}
-                          index={i}
+                          index={studioIdx}
                           onClick={() => {
                             const f = s.flash?.[0];
-                            if (f) openFlash(f, i, s);
+                            if (f) openFlash(f, studioIdx, s);
                           }}
                         />
                       </div>
-                    ))
+                      );
+                    })
                   : (
                     <div style={{ padding: '20px 0', color: D.muted, fontSize: 13 }}>
                       Aucun studio trouvé près de toi
@@ -2031,7 +2584,7 @@ export function ClientDashboard() {
             </div>
           </div>
 
-          {/* FILTER CHIPS */}
+          {/* FILTER CHIPS — au-dessus de la carte */}
           <div
             className="flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x pb-2 -mx-1 px-1"
             style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', marginBottom: 20 }}
@@ -2056,6 +2609,22 @@ export function ClientDashboard() {
               </button>
             ))}
           </div>
+
+          {/* MAP HERO */}
+          {loading ? (
+            <div style={{ height: 'clamp(168px, 32dvh, 240px)', background: D.card, borderRadius: D.r.xl, border: `1px solid ${D.border}`, marginBottom: 24 }} />
+          ) : (
+            <div style={{ marginBottom: 24 }}>
+              <MapHero
+                studios={studios}
+                userPos={userPos}
+                onDotClick={(s) => {
+                  const flash = s.flash?.[0];
+                  if (flash) openFlash(flash, studios.indexOf(s), s);
+                }}
+              />
+            </div>
+          )}
 
           {/* FLASH SECTION */}
           <div style={{ marginBottom: 32 }}>
@@ -2169,6 +2738,7 @@ export function ClientDashboard() {
           studio={selectedFlash.studio}
           onClose={() => setFlash(null)}
           onFavoritesDirty={bumpFavs}
+          viewerStudioSlug={ownedStudioSlug}
         />
       )}
     </div>

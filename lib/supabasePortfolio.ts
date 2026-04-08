@@ -10,6 +10,14 @@ const FOLDER = 'portfolio';
 
 const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'webp'];
 
+/** MIME valide pour Storage (évite `image/jpg`, rejeté par certains backends). */
+function contentTypeForExt(ext: string): string {
+  const e = ext.toLowerCase();
+  if (e === 'png') return 'image/png';
+  if (e === 'webp') return 'image/webp';
+  return 'image/jpeg';
+}
+
 export async function uploadPortfolioImage(
   studioId: string,
   file: File | Blob,
@@ -33,7 +41,7 @@ export async function uploadPortfolioImage(
 
   const { data, error } = await supabase.storage
     .from(BUCKET)
-    .upload(path, file, { upsert: false, contentType: `image/${safeExt}` });
+    .upload(path, file, { upsert: false, contentType: contentTypeForExt(safeExt) });
 
   if (error) throw error;
 

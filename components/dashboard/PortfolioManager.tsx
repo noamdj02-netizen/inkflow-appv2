@@ -36,6 +36,15 @@ interface PortfolioManagerProps {
 const CATEGORIES = ['Realisme', 'Traditionnel', 'Neo-traditionnel', 'Japonais', 'Minimaliste', 'Geometrique', 'Aquarelle', 'Dotwork', 'Lettering', 'Autre'];
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 Mo
 
+/** Appareil photo / Android : MIME souvent vide ou `application/octet-stream` malgré une image valide. */
+const IMAGE_NAME_EXT_RE = /\.(jpe?g|png|gif|webp|heic|heif|bmp|avif)$/i;
+
+function isLikelyImageFile(file: File): boolean {
+  if (file.type.startsWith('image/')) return true;
+  if (file.type === 'application/octet-stream' && IMAGE_NAME_EXT_RE.test(file.name)) return true;
+  return IMAGE_NAME_EXT_RE.test(file.name);
+}
+
 export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAddItem, onDeleteItem, onEditItem, artists, studioId, studioSlug, studioName, appointments = [], onEnsureStudio }) => {
   const toast = useToast();
   const [filterCategory, setFilterCategory] = useState('all');
@@ -102,11 +111,20 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
     .sort((a, b) => `${b.date}${b.time}`.localeCompare(`${a.date}${a.time}`))
     .slice(0, 10);
 
+  const [deleteMode, setDeleteMode] = useState(false);
+
   const filtered = items.filter(item => {
     if (filterCategory !== 'all' && item.category !== filterCategory) return false;
     if (filterArtist !== 'all' && item.artist !== filterArtist) return false;
     return true;
   });
+
+  const confirmAndDelete = (item: PortfolioItem) => {
+    if (!window.confirm('Supprimer cette photo du portfolio et de la vitrine ?')) return;
+    onDeleteItem(item.id);
+    toast.success('Photo supprimée');
+    if (selectedItem?.id === item.id) setSelectedItem(null);
+  };
 
   useEffect(() => {
     if (!selectedItem) setShowShareMenu(false);
@@ -140,7 +158,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
     setDragOver(false);
     if (imageLoading) return;
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file && isLikelyImageFile(file)) {
       if (file.size > MAX_IMAGE_SIZE_BYTES) {
         toast.error('Image trop lourde (max 5 Mo)');
         return;
@@ -155,8 +173,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
     if (!file) {
       return;
     }
-    if (!file.type.startsWith('image/')) {
-      toast.error('Seules les images sont acceptées');
+    if (!isLikelyImageFile(file)) {
+      toast.error('Seules les images sont acceptées (JPEG, PNG, WebP…)');
       e.target.value = '';
       return;
     }
@@ -177,7 +195,14 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
   };
 
   const handleAdd = async () => {
-    if (!newItem.url || !newItem.category) return;
+    if (!newItem.url) {
+      toast.error('Ajoute une image et valide le recadrage.');
+      return;
+    }
+    if (!newItem.category) {
+      toast.error('Choisis un style / catégorie.');
+      return;
+    }
     setUploading(true);
     setUploadError(null);
 
@@ -380,14 +405,31 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
             {artists.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
         )}
-        {(filterCategory !== 'all' || filterArtist !== 'all') && (
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
           <button
-            onClick={() => { setFilterCategory('all'); setFilterArtist('all'); }}
-            className="ml-auto text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline underline-offset-2"
+            type="button"
+            onClick={() => setDeleteMode((v) => !v)}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all active:scale-[0.98] touch-manipulation min-h-[40px] ${
+              deleteMode
+                ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+                : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-700'
+            }`}
+            aria-pressed={deleteMode}
+            title={deleteMode ? 'Désactiver le mode suppression' : 'Supprimer en tapant une photo'}
           >
-            Réinitialiser
+            <Trash2 className="w-3.5 h-3.5 shrink-0" />
+            {deleteMode ? 'Mode suppression' : 'Supprimer des photos'}
           </button>
-        )}
+          {(filterCategory !== 'all' || filterArtist !== 'all') && (
+            <button
+              type="button"
+              onClick={() => { setFilterCategory('all'); setFilterArtist('all'); }}
+              className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline underline-offset-2"
+            >
+              Réinitialiser filtres
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Empty state */}
@@ -419,20 +461,60 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
           {filtered.map((item, index) => (
             <div
               key={item.id}
-              className="group relative aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-zinc-800 cursor-pointer border border-slate-200/80 dark:border-zinc-700 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-lg transition-shadow duration-300"
-              onClick={() => setSelectedItem(item)}
+              className={`group relative aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-zinc-800 border border-slate-200/80 dark:border-zinc-700 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-lg transition-shadow duration-300 ${
+                deleteMode ? 'ring-2 ring-red-400 dark:ring-red-600 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900' : ''
+              }`}
             >
-              <img
-                src={item.url}
-                alt={item.description || 'Portfolio'}
-                loading="eager"
-                decoding="async"
-                fetchPriority={index < 8 ? 'high' : undefined}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              {/* Hover overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
-                {/* Bottom info */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (deleteMode) {
+                    confirmAndDelete(item);
+                    return;
+                  }
+                  setSelectedItem(item);
+                }}
+                className="absolute inset-0 z-0 block w-full h-full cursor-pointer p-0 border-0 bg-transparent"
+                aria-label={deleteMode ? 'Supprimer cette photo' : 'Agrandir la photo'}
+              >
+                <img
+                  src={item.url}
+                  alt={item.description || 'Portfolio'}
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority={index < 8 ? 'high' : undefined}
+                  className="pointer-events-none w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </button>
+              {/* Actions toujours visibles (mobile sans hover) */}
+              <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 pointer-events-auto">
+                {onEditItem && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditItem(item);
+                    }}
+                    className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center bg-black/50 backdrop-blur-sm text-white rounded-xl hover:bg-black/65 transition-colors shadow-lg active:scale-95 touch-manipulation"
+                    aria-label="Modifier"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    confirmAndDelete(item);
+                  }}
+                  className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center bg-red-600/90 backdrop-blur-sm text-white rounded-xl hover:bg-red-600 transition-colors shadow-lg active:scale-95 touch-manipulation"
+                  aria-label="Supprimer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+              {/* Infos au survol (desktop) */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                   <span className="inline-block text-xs font-medium bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full mb-2">
                     {item.category}
@@ -445,23 +527,6 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                       <ImageIcon className="w-3 h-3" /> Avant/Après
                     </span>
                   )}
-                </div>
-                {/* Action buttons */}
-                <div className="absolute top-3 right-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  {onEditItem && (
-                    <button
-                      onClick={e => { e.stopPropagation(); onEditItem(item); }}
-                      className="p-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-sm text-slate-700 dark:text-slate-200 rounded-xl hover:bg-white dark:hover:bg-zinc-700 transition-colors shadow-lg"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                  )}
-                  <button
-                    onClick={e => { e.stopPropagation(); onDeleteItem(item.id); }}
-                    className="p-2 bg-red-500/90 backdrop-blur-sm text-white rounded-xl hover:bg-red-600 transition-colors shadow-lg"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             </div>
@@ -681,6 +746,15 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                   </>
                 )}
               </button>
+              {(!newItem.url || !newItem.category) && !uploading && !imageLoading && (
+                <p className="text-xs text-center text-slate-500 dark:text-zinc-400 mt-2">
+                  {!newItem.url && !newItem.category
+                    ? 'Prends ou choisis une image, valide le cadrage, puis sélectionne un style.'
+                    : !newItem.url
+                      ? 'Après le recadrage, l’aperçu doit apparaître ci-dessus.'
+                      : 'Choisis un style / catégorie pour activer le bouton.'}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -807,6 +881,34 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                   ))}
                 </div>
               )}
+              <div className="mt-8 pb-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 max-w-md mx-auto px-2">
+                {onEditItem && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const item = selectedItem;
+                      setSelectedItem(null);
+                      onEditItem(item);
+                    }}
+                    className="min-h-[48px] px-5 py-3 rounded-xl border border-white/25 text-white font-semibold hover:bg-white/10 transition-colors touch-manipulation active:scale-[0.98]"
+                  >
+                    Modifier les infos
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!selectedItem) return;
+                    confirmAndDelete(selectedItem);
+                  }}
+                  className="min-h-[48px] px-5 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold shadow-lg transition-colors touch-manipulation active:scale-[0.98] inline-flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-5 h-5 shrink-0" />
+                  Supprimer du portfolio
+                </button>
+              </div>
             </div>
           </div>
         </div>

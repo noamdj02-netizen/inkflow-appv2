@@ -1,8 +1,11 @@
 import React, { useEffect } from 'react';
-import { ArrowLeft, CreditCard, HelpCircle } from 'lucide-react';
+import { ArrowLeft, CreditCard, HelpCircle, Mail } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { SEO } from '../components/SEO';
 import { LANDING_URL } from '../lib/urls';
+
+/** Playbook déploiement — uniquement en dev local (jamais en prod pour clients / utilisateurs finaux). */
+const SHOW_INTERNAL_TECH = import.meta.env.DEV;
 
 export const AidePage: React.FC = () => {
   useEffect(() => {
@@ -17,9 +20,9 @@ export const AidePage: React.FC = () => {
     <div className="landing-scroll bg-neutral-50 min-h-screen flex flex-col">
       <SEO
         title="Centre d'aide"
-        description="FAQ InkFlow : compte, réservations, Stripe, vitrine publique et paramètres de votre studio de tatouage."
+        description="FAQ InkFlow : compte, réservations et paiement."
         canonical="/aide"
-        keywords="aide InkFlow, FAQ tatoueur, support InkFlow"
+        keywords="aide InkFlow, FAQ tatouage, support InkFlow"
         ogImageAlt="Aide InkFlow"
       />
       <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-neutral-200/80 safe-top">
@@ -41,27 +44,79 @@ export const AidePage: React.FC = () => {
           Aide
         </h1>
         <p className="text-neutral-500 text-sm mb-10">
-          Solutions aux problèmes courants.
+          Réponses aux questions les plus fréquentes.
         </p>
 
-        <section id="paiement" className="scroll-mt-24">
+        <section id="paiement" className="scroll-mt-24 mb-12">
           <h2 className="text-xl font-semibold text-neutral-900 mb-3 flex items-center gap-2">
             <CreditCard className="w-6 h-6 text-indigo-600" />
-            Lien de paiement (acompte) indisponible
+            Paiement et acompte
           </h2>
           <p className="text-neutral-700 mb-4">
-            Si vous voyez un message d&apos;erreur lors de la génération d&apos;un lien de paiement Stripe (depuis la vitrine ou le dashboard), vérifiez les points suivants.
+            Lors d&apos;une réservation, le studio peut vous envoyer un lien pour payer un acompte en ligne (carte bancaire sécurisée).
           </p>
           <ul className="list-disc pl-6 space-y-2 text-neutral-700 mb-4">
-            <li><strong>Projet Supabase en pause</strong> : sur le <a href="https://app.supabase.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">Dashboard Supabase</a>, si une bannière indique que le projet est en pause, cliquez sur « Restore project » et attendez la fin de la restauration.</li>
-            <li><strong>Fonction non déployée</strong> : l&apos;Edge Function <code className="bg-neutral-200 px-1.5 py-0.5 rounded text-sm">create-checkout-session</code> doit être déployée. À la racine du projet, exécutez : <code className="block mt-2 bg-neutral-800 text-neutral-100 p-3 rounded-lg text-sm overflow-x-auto">npx supabase login</code> puis <code className="block mt-1 bg-neutral-800 text-neutral-100 p-3 rounded-lg text-sm overflow-x-auto">npx supabase link --project-ref VOTRE_REF</code> et <code className="block mt-1 bg-neutral-800 text-neutral-100 p-3 rounded-lg text-sm overflow-x-auto">npx supabase functions deploy create-checkout-session</code>.</li>
-            <li><strong>Secrets Stripe manquants</strong> : dans Supabase → Edge Functions → Secrets, définissez <code className="bg-neutral-200 px-1.5 py-0.5 rounded text-sm">STRIPE_SECRET_KEY</code> (clé secrète Stripe) et <code className="bg-neutral-200 px-1.5 py-0.5 rounded text-sm">SITE_URL</code> (URL de votre site, ex. https://votredomaine.com). Redéployez la fonction après avoir ajouté les secrets.</li>
-            <li><strong>Erreur Stripe (clé invalide, etc.)</strong> : le message d&apos;erreur affiché dans la modale provient de Stripe ou de Supabase. Consultez les logs dans Supabase → Edge Functions → create-checkout-session pour plus de détails.</li>
+            <li>Si le lien ne s&apos;ouvre pas ou affiche une erreur, réessayez plus tard ou contactez directement le studio.</li>
+            <li>Le studio configure lui-même son compte de paiement ; en cas de problème persistant, ils peuvent vous proposer un autre moyen (sur place, virement, etc.).</li>
+            <li>Pour toute question sur un montant ou un remboursement, adressez-vous au studio concerné.</li>
           </ul>
-          <p className="text-neutral-600 text-sm">
-            Pour une procédure détaillée, reportez-vous à la documentation du projet (déploiement de l&apos;Edge Function create-checkout-session).
+        </section>
+
+        <section className="mb-12">
+          <h2 className="text-xl font-semibold text-neutral-900 mb-3 flex items-center gap-2">
+            <Mail className="w-6 h-6 text-indigo-600" />
+            Besoin d&apos;autre chose ?
+          </h2>
+          <p className="text-neutral-700">
+            Pour le support produit InkFlow (compte, bug, suggestion), utilisez les canaux indiqués sur{' '}
+            <a href={LANDING_URL} className="text-indigo-600 hover:underline font-medium">
+              ink-flow.me
+            </a>
+            .
           </p>
         </section>
+
+        {SHOW_INTERNAL_TECH ? (
+          <section id="paiement-interne" className="scroll-mt-24 border-t border-dashed border-neutral-300 pt-10 mt-10">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-6">
+              Visible uniquement en environnement de développement — ne pas exposer aux utilisateurs finaux.
+            </p>
+            <h2 className="text-xl font-semibold text-neutral-900 mb-3 flex items-center gap-2">
+              <CreditCard className="w-6 h-6 text-indigo-600" />
+              Lien de paiement (acompte) — diagnostic technique
+            </h2>
+            <p className="text-neutral-700 mb-4">
+              Si un message d&apos;erreur apparaît lors de la génération d&apos;un lien Stripe (vitrine ou dashboard), vérifier :
+            </p>
+            <ul className="list-disc pl-6 space-y-2 text-neutral-700 mb-4">
+              <li>
+                <strong>Projet Supabase en pause</strong> : sur le{' '}
+                <a href="https://app.supabase.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+                  Dashboard Supabase
+                </a>
+                , si une bannière indique que le projet est en pause, « Restore project » puis attendre la fin de la restauration.
+              </li>
+              <li>
+                <strong>Fonction non déployée</strong> : déployer l&apos;Edge Function{' '}
+                <code className="bg-neutral-200 px-1.5 py-0.5 rounded text-sm">create-checkout-session</code> — à la racine du projet :{' '}
+                <code className="block mt-2 bg-neutral-800 text-neutral-100 p-3 rounded-lg text-sm overflow-x-auto">npx supabase login</code>
+                <code className="block mt-1 bg-neutral-800 text-neutral-100 p-3 rounded-lg text-sm overflow-x-auto">npx supabase link --project-ref VOTRE_REF</code>
+                <code className="block mt-1 bg-neutral-800 text-neutral-100 p-3 rounded-lg text-sm overflow-x-auto">npx supabase functions deploy create-checkout-session</code>
+              </li>
+              <li>
+                <strong>Secrets Stripe</strong> : Supabase → Edge Functions → Secrets —{' '}
+                <code className="bg-neutral-200 px-1.5 py-0.5 rounded text-sm">STRIPE_SECRET_KEY</code>,{' '}
+                <code className="bg-neutral-200 px-1.5 py-0.5 rounded text-sm">SITE_URL</code>, puis redéployer la fonction.
+              </li>
+              <li>
+                <strong>Logs</strong> : Supabase → Edge Functions → create-checkout-session pour le détail des erreurs Stripe.
+              </li>
+            </ul>
+            <p className="text-neutral-600 text-sm">
+              Documentation interne du repo : déploiement de l&apos;Edge Function create-checkout-session.
+            </p>
+          </section>
+        ) : null}
       </main>
     </div>
   );

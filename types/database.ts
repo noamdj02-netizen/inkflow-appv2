@@ -2743,8 +2743,10 @@ export type Database = {
       get_studio_public_by_slug: {
         Args: { p_slug: string }
         Returns: {
+          avatar_url: string | null
           id: string
           name: string
+          portfolio_cover_url: string | null
           siret: string
           slug: string
           studio_name: string
@@ -2752,6 +2754,10 @@ export type Database = {
         }[]
       }
       process_referral_reward: { Args: { p_referee_id: string }; Returns: Json }
+      sync_client_crm_from_portal: {
+        Args: { p_avatar_url: string | null; p_display_name: string }
+        Returns: undefined
+      }
       studio_exists: { Args: { sid: string }; Returns: boolean }
     }
     Enums: {

@@ -37,6 +37,8 @@ const InstagramCallbackPage = lazy(() => import('./pages/InstagramCallbackPage')
 const AddToHomeScreenPage = lazy(() => import('./pages/AddToHomeScreenPage').then(m => ({ default: m.AddToHomeScreenPage })));
 const DebugExperiencePage = lazy(() => import('./pages/admin/DebugExperiencePage').then(m => ({ default: m.DebugExperiencePage })));
 const ClientPortalLoginPage = lazy(() => import('./pages/client/ClientPortalLoginPage').then(m => ({ default: m.ClientPortalLoginPage })));
+const ClientVitrineEmbedPage = lazy(() => import('./pages/client/ClientStudioEmbedPage').then(m => ({ default: m.ClientVitrineEmbedPage })));
+const ClientFlashToolsEmbedPage = lazy(() => import('./pages/client/ClientStudioEmbedPage').then(m => ({ default: m.ClientFlashToolsEmbedPage })));
 const ClientDashboard = lazy(() => import('./pages/public/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
 const ArtistPage = lazy(() => import('./pages/vitrine/ArtistPage').then(m => ({ default: m.ArtistPage })));
 const FlashPage = lazy(() => import('./pages/vitrine/FlashPage').then(m => ({ default: m.FlashPage })));
@@ -145,6 +147,8 @@ const Router: React.FC = () => {
     { path: '/admin/debug-experience', component: DebugExperiencePage, requiresAuth: true },
     // ── Portail client "My Inkflow" ─────────────────────────────────────────
     { path: '/client', component: ClientPortalLoginPage },
+    { path: /^\/client\/vitrine\/?$/, component: ClientVitrineEmbedPage },
+    { path: /^\/client\/studio\/flash\/?$/, component: ClientFlashToolsEmbedPage },
     { path: /^\/client\/dashboard\/?$/, component: ClientDashboard },
     // ── Discover — directory public ─────────────────────────────────────────
     { path: '/discover', component: DiscoverHomePage },

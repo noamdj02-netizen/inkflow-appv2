@@ -1003,6 +1003,12 @@ input, select, textarea {
   font-weight: 500;
   letter-spacing: 0.02em;
 }
+/* Marque header sidebar — Inter Black (aligné onboarding login) */
+.client-dashboard-shell .font-client-brand-ink {
+  font-family: var(--font-inter), 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
 
 /* 7. MOBILE CARDS */
 .mobile-card {
