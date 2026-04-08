@@ -1,8 +1,12 @@
+/* Map */
+@import 'leaflet/dist/leaflet.css';
+
 /* Fonts: self-hosted, latin subset only, font-display: swap (non-blocking FCP) */
 @import '@fontsource/inter/latin-400.css';
 @import '@fontsource/inter/latin-500.css';
 @import '@fontsource/inter/latin-600.css';
 @import '@fontsource/inter/latin-700.css';
+@import '@fontsource/inter/latin-900.css';
 @import '@fontsource/plus-jakarta-sans/latin-400.css';
 @import '@fontsource/plus-jakarta-sans/latin-500.css';
 @import '@fontsource/plus-jakarta-sans/latin-600.css';
@@ -946,6 +950,58 @@ input, select, textarea {
   .app-shell-content {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 16px) !important;
   }
+}
+
+/* App client (/client/dashboard) — mobile-first : sa propre tab bar + safe areas (annule la réserve studio ci-dessus) */
+.client-dashboard-shell .app-shell-content {
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 1023.98px) {
+  .client-dashboard-shell .app-shell-content {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px) + 10px) !important;
+  }
+}
+@media (min-width: 1024px) {
+  .client-dashboard-shell .app-shell-content {
+    padding-left: max(1.5rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(1.5rem, env(safe-area-inset-right, 0px)) !important;
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* App client — typo : Inter + Syne (hiérarchie de graisses) + Playfair (un mot d’accroche) */
+.client-dashboard-shell {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+/* Titres de section / cartes : Syne 700, tracking serré */
+.client-dashboard-shell .font-display {
+  font-family: 'Syne', 'Inter', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.038em;
+}
+/* Titre principal header + moments forts : Syne 800 */
+.client-dashboard-shell .font-display-hero {
+  font-weight: 800;
+  letter-spacing: -0.048em;
+}
+/* Inter « app » — remplace Syne pour titres d’écran / fiches (look produit neutre) */
+.client-dashboard-shell .font-client-app {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.client-dashboard-shell .font-client-app.font-client-app--price {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+/* Un seul mot « édito » (salutation) — Playfair italic, déjà self-hosted */
+.client-dashboard-shell .font-client-accent {
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 /* 7. MOBILE CARDS */

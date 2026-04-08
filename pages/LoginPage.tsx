@@ -5,15 +5,15 @@ import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { SEO } from '../components/SEO';
 import { LANDING_URL, APP_URL } from '../lib/urls';
-import loginHeroImg from '../src/assets/login-hero.jpg';
+import { CLIENT_DASHBOARD_THEME } from '../lib/clientDashboardTheme';
 
-const LOGIN_HERO_FALLBACK = '/images/login-hero.jpg';
+const LOGIN_HERO_PRIMARY = '/images/login-hero.jpg';
 const LOGIN_HERO_ABSOLUTE = `${APP_URL}/images/login-hero.jpg`;
 
 /* ── Onboarding slides ──────────────────────────────────────────────────────── */
 const ONBOARD_SLIDES = [
   {
-    img: '/images/allef-vinicius-hxNiXP498UI-unsplash.jpg',
+    img: '/images/client-hero1.jpg',
     logo: true,
     title: 'INKFLOW',
     sub: 'Trouve ton tatoueur près de chez toi.',
@@ -21,7 +21,7 @@ const ONBOARD_SLIDES = [
     Icon: null as React.ElementType | null,
   },
   {
-    img: '/images/akram-huseyn-smtP9zIj6qU-unsplash.jpg',
+    img: '/images/referral-hero-studio.png',
     logo: false,
     title: 'Tes RDV en un clin d\'œil',
     sub: 'Rappels automatiques, statuts en temps réel et historique de tous tes tatouages.',
@@ -29,7 +29,7 @@ const ONBOARD_SLIDES = [
     Icon: CalendarDays,
   },
   {
-    img: '/images/nathan-dumlao-C7yye4vULlA-unsplash.jpg',
+    img: '/images/referral-hero-studio.png',
     logo: false,
     title: 'Wallet & Fidélité',
     sub: 'Cumule des points à chaque session et profite de remises exclusives dans tes studios préférés.',
@@ -37,7 +37,7 @@ const ONBOARD_SLIDES = [
     Icon: Wallet,
   },
   {
-    img: '/images/ravi-sharma-7KMzdNfIlQY-unsplash.jpg',
+    img: '/images/referral-hero-studio.png',
     logo: false,
     title: 'Découvrir les studios',
     sub: 'Flashs disponibles, artistes proches, réservation instantanée. Tout est là.',
@@ -51,16 +51,10 @@ function ClientOnboarding({ onDone }: { onDone: () => void }) {
   const [dir, setDir] = useState(1);
   const total = ONBOARD_SLIDES.length;
   const s = ONBOARD_SLIDES[slide];
-
-  // Load Pacifico font for the script logo
-  useEffect(() => {
-    if (document.getElementById('pacifico-font')) return;
-    const link = document.createElement('link');
-    link.id = 'pacifico-font';
-    link.rel = 'stylesheet';
-    link.href = 'https://fonts.googleapis.com/css2?family=Pacifico&display=swap';
-    document.head.appendChild(link);
-  }, []);
+  const clientAccent = CLIENT_DASHBOARD_THEME.accent;
+  const clientOnAccent = CLIENT_DASHBOARD_THEME.onAccent;
+  const clientAccentShadow = CLIENT_DASHBOARD_THEME.accentShadow;
+  const clientAccentSoft = CLIENT_DASHBOARD_THEME.accentMuted;
 
   const goNext = () => {
     if (slide < total - 1) { setDir(1); setSlide(slide + 1); }
@@ -151,15 +145,21 @@ function ClientOnboarding({ onDone }: { onDone: () => void }) {
           >
             {s.Icon && (
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-                style={{ background: 'rgba(201,169,110,0.22)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                style={{ background: clientAccentSoft, backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)' }}>
                 <s.Icon className="w-6 h-6 text-white" />
               </div>
             )}
 
             {slide === 0 && (
-              <p className="text-white mb-2 leading-none"
-                style={{ fontFamily: "'Pacifico', cursive", fontSize: 'clamp(3rem, 14vw, 5rem)' }}>
-                Inkflow
+              <p
+                className="text-white mb-2 leading-none font-black uppercase tracking-tight"
+                style={{
+                  fontFamily: 'var(--font-inter), Inter, system-ui, sans-serif',
+                  letterSpacing: '-0.04em',
+                  fontSize: 'clamp(2.75rem, 13vw, 4.5rem)',
+                }}
+              >
+                INKFLOW
               </p>
             )}
 
@@ -178,7 +178,7 @@ function ClientOnboarding({ onDone }: { onDone: () => void }) {
               {ONBOARD_SLIDES.map((_, i) => (
                 <button key={i} type="button" onClick={() => { setDir(i > slide ? 1 : -1); setSlide(i); }}
                   className="rounded-full transition-all duration-300"
-                  style={{ width: i === slide ? 20 : 6, height: 6, background: i === slide ? '#c9a96e' : 'rgba(255,255,255,0.35)' }}
+                  style={{ width: i === slide ? 20 : 6, height: 6, background: i === slide ? clientAccent : 'rgba(255,255,255,0.35)' }}
                 />
               ))}
             </div>
@@ -188,7 +188,12 @@ function ClientOnboarding({ onDone }: { onDone: () => void }) {
               whileTap={{ scale: 0.97 }}
               onClick={goNext}
               className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-black tracking-wide"
-              style={{ background: '#c9a96e', color: '#1a1008', boxShadow: '0 8px 28px rgba(201,169,110,0.35)', letterSpacing: '0.06em' }}
+              style={{
+                background: clientAccent,
+                color: clientOnAccent,
+                boxShadow: `0 8px 28px ${clientAccentShadow}`,
+                letterSpacing: '0.06em',
+              }}
             >
               {slide === 0 || slide === total - 1 ? 'COMMENCER' : 'Suivant'}
               {slide > 0 && slide < total - 1 && <ArrowRight className="w-4 h-4" />}
@@ -202,12 +207,11 @@ function ClientOnboarding({ onDone }: { onDone: () => void }) {
 
 export const LoginPage: React.FC = () => {
   const [checkEmailMessage, setCheckEmailMessage] = useState(false);
-  const [heroSrc, setHeroSrc] = useState(loginHeroImg);
+  const [heroSrc, setHeroSrc] = useState(LOGIN_HERO_PRIMARY);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const handleHeroError = () => {
     setHeroSrc((prev) => {
-      if (prev === loginHeroImg) return LOGIN_HERO_FALLBACK;
-      if (prev === LOGIN_HERO_FALLBACK) return LOGIN_HERO_ABSOLUTE;
+      if (prev === LOGIN_HERO_PRIMARY) return LOGIN_HERO_ABSOLUTE;
       return prev;
     });
   };

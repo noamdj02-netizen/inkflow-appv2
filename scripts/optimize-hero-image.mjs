@@ -14,7 +14,6 @@ const root = join(__dirname, '..');
 const images = [
   { input: 'public/images/mockup-profil.png', output: 'public/images/mockup-profil.webp' },
   { input: 'public/images/login-hero.jpg', output: 'public/images/login-hero.webp' },
-  { input: 'src/assets/login-hero.jpg', output: 'public/images/login-hero.webp' },
   { input: 'public/images/ravi-sharma-7KMzdNfIlQY-unsplash.jpg', output: 'public/images/client-hero.webp' },
 ];
 

@@ -124,10 +124,7 @@ export const defaultVitrineData = (slug: string): VitrineData => {
     { name: "Marie Laurent", rating: 5, date: "Il y a 2 jours", text: "Expérience incroyable ! Alex a parfaitement compris ma vision.", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop", tattoo: "Fleurs sur avant-bras", verified: true },
     { name: "Thomas Bernard", rating: 5, date: "Il y a 1 semaine", text: "Sophie est une vraie artiste. Mon tatouage géométrique est parfait.", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop", tattoo: "Mandala dos", verified: true }
   ],
-  portfolio: [
-    { url: "https://images.unsplash.com/photo-1598371839696-5c5bb00bdc28?w=800", category: "Neo-Traditional", artist: "Alex Martin", likes: 234, description: "Composition florale avec oiseau" },
-    { url: "https://images.unsplash.com/photo-1590246814883-57c511e76917?w=800", category: "Blackwork", artist: "Sophie Dubois", likes: 189, description: "Mandala géométrique" }
-  ],
+  portfolio: [],
   flashDesigns: [
     { id: 'f1', title: 'Dragon Minimaliste', imageUrl: 'https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=600', price: 120, duration: 60, placement: ['Avant-bras', 'Épaule', 'Mollet'], size: 'S (8-10cm)', available: true, description: 'Design épuré inspiré de l\'art japonais traditionnel.', style: 'Minimaliste' },
     { id: 'f2', title: 'Rose Traditional', imageUrl: 'https://images.unsplash.com/photo-1590246814883-57c511e76917?w=600', price: 180, duration: 120, placement: ['Bras', 'Cuisse', 'Épaule'], size: 'M (12-15cm)', available: true, description: 'Rose old school avec palette de couleurs vibrantes.', style: 'Traditional' }
