@@ -21,7 +21,7 @@ const ONBOARD_SLIDES = [
     Icon: null as React.ElementType | null,
   },
   {
-    img: '/images/referral-hero-studio.png',
+    img: '/images/referral-hero-studio1.png',
     logo: false,
     title: 'Tes RDV en un clin d\'œil',
     sub: 'Rappels automatiques, statuts en temps réel et historique de tous tes tatouages.',
@@ -29,7 +29,7 @@ const ONBOARD_SLIDES = [
     Icon: CalendarDays,
   },
   {
-    img: '/images/referral-hero-studio.png',
+    img: '/images/referral-hero-studio2.jpg',
     logo: false,
     title: 'Wallet & Fidélité',
     sub: 'Cumule des points à chaque session et profite de remises exclusives dans tes studios préférés.',
@@ -37,7 +37,15 @@ const ONBOARD_SLIDES = [
     Icon: Wallet,
   },
   {
-    img: '/images/referral-hero-studio.png',
+    img: '/images/referral-hero-studio3.png',
+    logo: false,
+    title: 'Ton univers tatouage',
+    sub: 'Portfolio, avis et actu de tes artistes préférés — au même endroit.',
+    desc: '',
+    Icon: Heart,
+  },
+  {
+    img: '/images/referral-hero-studio4.png',
     logo: false,
     title: 'Découvrir les studios',
     sub: 'Flashs disponibles, artistes proches, réservation instantanée. Tout est là.',

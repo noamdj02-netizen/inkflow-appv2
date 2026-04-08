@@ -82,6 +82,26 @@ const STYLE_TABS = ['Tous', 'Flash', 'Fine line', 'Blackwork', 'Réalisme', 'Jap
 function isStockPhoto(url: string): boolean {
   return /unsplash\.com|pexels\.com|pixabay\.com|stocksnap\.io/i.test(url);
 }
+
+/** Avatar studio ou première image flash / portfolio (hors banques d’images génériques). */
+function getStudioThumbnailUrl(s: NearbyStudio): string | null {
+  const ok = (u: string | null | undefined) => {
+    const t = (u ?? '').trim();
+    return t.length > 0 && !isStockPhoto(t) ? t : null;
+  };
+  const fromAvatar = ok(s.avatar_url);
+  if (fromAvatar) return fromAvatar;
+  for (const f of s.flash) {
+    const u = ok(f.imageUrl);
+    if (u) return u;
+  }
+  for (const p of s.portfolio) {
+    const u = ok(p.url);
+    if (u) return u;
+  }
+  return null;
+}
+
 function initials(name: string) {
   return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
 }
@@ -1208,6 +1228,56 @@ function TabFavorites({
 // ══════════════════════════════════════════════════════════════════════════════
 // TAB — CARTE
 // ══════════════════════════════════════════════════════════════════════════════
+function TabMapStudioAvatar({ studio, index }: { studio: NearbyStudio; index: number }) {
+  const pal = PALETTES[index % PALETTES.length];
+  const [broken, setBroken] = useState(false);
+  const thumb = getStudioThumbnailUrl(studio);
+  const showImg = Boolean(thumb) && !broken;
+
+  if (showImg) {
+    return (
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: D.r.full,
+          flexShrink: 0,
+          overflow: 'hidden',
+          border: `1.5px solid ${D.border}`,
+          background: pal.bg,
+        }}
+      >
+        <img
+          src={thumb!}
+          alt=""
+          onError={() => setBroken(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: D.r.full,
+        flexShrink: 0,
+        background: pal.bg,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 14,
+        fontWeight: 800,
+        color: pal.dot,
+      }}
+    >
+      {initials(studio.studio_name)}
+    </div>
+  );
+}
+
 function TabMap({
   studios, loading, onDotClick, userPos,
 }: {
@@ -1266,14 +1336,7 @@ function TabMap({
                       transition: 'all 0.15s',
                     }}
                   >
-                    <div style={{
-                      width: 44, height: 44, borderRadius: D.r.full, flexShrink: 0,
-                      background: PALETTES[i % PALETTES.length].bg,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 14, fontWeight: 800, color: PALETTES[i % PALETTES.length].dot,
-                    }}>
-                      {initials(s.studio_name)}
-                    </div>
+                    <TabMapStudioAvatar studio={s} index={i} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: D.text }}>{s.studio_name}</div>
                       <div style={{ fontSize: 11, color: D.muted, marginTop: 2 }}>
@@ -1944,7 +2007,7 @@ function TabProfile({
           marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
         }}>
           <div>
-            <div className="font-display font-display-hero" style={{ fontSize: 14, color: D.text, marginBottom: 4 }}>Tu es tatoueur ?</div>
+            <div className="font-client-app" style={{ fontSize: 14, color: D.text, marginBottom: 4 }}>Tu es tatoueur ?</div>
             <div style={{ fontSize: 12, color: D.muted, lineHeight: 1.4 }}>Crée ta vitrine gratuite.</div>
           </div>
           <a href="/signup" style={{
@@ -2487,12 +2550,9 @@ export function ClientDashboard() {
 
           <div
             ref={scrollRef}
-            className="app-shell-content pt-3 sm:pt-5 md:pt-6 dashboard-pages-bg min-w-0"
+            className="app-shell-content pt-2 sm:pt-4 md:pt-5 dashboard-pages-bg min-w-0"
           >
-            <div
-              className="rounded-xl sm:rounded-2xl border shadow-sm min-h-0 lg:min-h-[min(70dvh,720px)] max-w-full overflow-x-hidden"
-              style={{ borderColor: D.border, background: D.contentCardBg, boxShadow: D.shadow }}
-            >
+            <div className="min-h-0 w-full max-w-full flex-1 overflow-x-hidden lg:min-h-[min(70dvh,720px)]">
         {tab === 'explore' && (
           <TabExplore
             studios={studios}
@@ -2533,7 +2593,7 @@ export function ClientDashboard() {
           />
         )}
 
-        {tab === 'home' && <div className="px-2 pb-6 pt-3 sm:px-4 sm:pb-8 sm:pt-4 md:px-6">
+        {tab === 'home' && <div className="pb-6 pt-1 sm:pb-8 sm:pt-2">
 
           {/* ARTISTES PROCHES */}
           <div style={{ marginBottom: 28 }}>
@@ -2702,7 +2762,7 @@ export function ClientDashboard() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
           }}>
             <div>
-              <div className="font-display font-display-hero" style={{ fontSize: 15, color: D.text, marginBottom: 4 }}>
+              <div className="font-client-app" style={{ fontSize: 15, color: D.text, marginBottom: 4 }}>
                 Tu es tatoueur ?
               </div>
               <div style={{ fontSize: 12, color: D.muted, lineHeight: 1.4 }}>

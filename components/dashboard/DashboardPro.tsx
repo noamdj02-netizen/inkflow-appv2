@@ -629,6 +629,26 @@ export const DashboardPro: React.FC = () => {
     }
   }, [toast]);
 
+  /** Liens depuis l’espace client : ?vitrine=1 → Paramètres > Vitrine ; ?tab=… → onglet studio */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('vitrine') === '1') {
+      window.history.replaceState({}, '', '/dashboard');
+      setActiveTab('settings');
+      setSettingsTab('vitrine');
+      return;
+    }
+    const tabParam = params.get('tab');
+    const allowed: TabId[] = [
+      'overview', 'analytics', 'requests', 'appointments', 'flash', 'clients', 'finance',
+      'messaging', 'portfolio', 'settings', 'notifications', 'account', 'etablissement',
+    ];
+    if (tabParam && allowed.includes(tabParam as TabId)) {
+      window.history.replaceState({}, '', '/dashboard');
+      setActiveTab(tabParam as TabId);
+    }
+  }, []);
+
   const handlePaymentSuccessModalClose = useCallback(() => {
     setPaymentSuccessModalOpen(false);
     window.setTimeout(() => setWelcomePaidPlan(null), 450);

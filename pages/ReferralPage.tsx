@@ -14,7 +14,7 @@ import { Logo } from '../components/Logo';
 import { getInviteBaseUrl } from '../lib/urls';
 import { SEO } from '../components/SEO';
 
-const heroWorkstationImg = '/images/referral-hero-studio.png';
+const heroWorkstationImg = '/images/referral-hero-studio1.png';
 
 /* Icônes brand pour partage */
 const WhatsAppIcon = ({ className }: { className?: string }) => (

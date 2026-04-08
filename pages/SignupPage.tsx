@@ -110,7 +110,7 @@ export const SignupPage: React.FC = () => {
       >
         {/* Photo étirée pleine hauteur, ancrée en bas, responsive */}
         <img
-          src="/images/referral-hero-studio.png"
+          src="/images/referral-hero-studio1.png"
           alt="Studio de tatouage"
           className="absolute inset-0 w-full min-h-full object-cover object-bottom"
           loading="eager"

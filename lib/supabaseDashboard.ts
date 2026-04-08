@@ -279,8 +279,14 @@ export async function getStudioIdBySlug(slug: string): Promise<string | null> {
   return row.id as string;
 }
 
-/** Récupère id + vitrine_theme + siret à partir du slug (pour la page publique). */
-export async function getStudioPublicBySlug(slug: string): Promise<{ id: string; vitrineTheme: string; siret?: string | null } | null> {
+/** Récupère id + thème + SIRET + URLs photo studio (repli vitrine) à partir du slug. */
+export async function getStudioPublicBySlug(slug: string): Promise<{
+  id: string;
+  vitrineTheme: string;
+  siret?: string | null;
+  avatarUrl: string | null;
+  portfolioCoverUrl: string | null;
+} | null> {
   const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: slug });
   const row = Array.isArray(data) ? data[0] : data;
   if (error || !row?.id) return null;
@@ -288,6 +294,8 @@ export async function getStudioPublicBySlug(slug: string): Promise<{ id: string;
     id: row.id as string,
     vitrineTheme: (row.vitrine_theme as string) || 'light',
     siret: (row.siret as string | null) ?? null,
+    avatarUrl: (row.avatar_url as string | null) ?? null,
+    portfolioCoverUrl: (row.portfolio_cover_url as string | null) ?? null,
   };
 }
 
@@ -296,7 +304,27 @@ export async function getVitrineDataBySlugFromSupabase(slug: string, defaultData
   const studio = await getStudioPublicBySlug(slug);
   if (!studio) return defaultData;
   const data = await getVitrineDataFromSupabase(studio.id, defaultData);
-  return { ...data, theme: studio.vitrineTheme, siret: studio.siret ?? undefined };
+
+  const rowAvatar = studio.avatarUrl?.trim() || '';
+  const rowCover = studio.portfolioCoverUrl?.trim() || '';
+  let coverImage = (data.coverImage || '').trim();
+  let avatar = (data.avatar || '').trim();
+  const firstPortfolioUrl = (data.portfolio ?? []).map((p) => p.url?.trim()).find(Boolean) || '';
+
+  if (!coverImage) {
+    if (rowCover) coverImage = rowCover;
+    else if (rowAvatar) coverImage = rowAvatar;
+    else if (firstPortfolioUrl) coverImage = firstPortfolioUrl;
+  }
+  if (!avatar && rowAvatar) avatar = rowAvatar;
+
+  return {
+    ...data,
+    coverImage,
+    avatar,
+    theme: studio.vitrineTheme,
+    siret: studio.siret ?? undefined,
+  };
 }
 
 export async function saveVitrineDataToSupabase(studioId: string, data: VitrineData): Promise<void> {

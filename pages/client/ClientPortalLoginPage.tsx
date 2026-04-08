@@ -176,7 +176,7 @@ export const ClientPortalLoginPage: React.FC = () => {
 
   return (
     <motion.div
-      className="min-h-[100dvh] flex"
+      className="relative min-h-[100dvh] flex flex-col overflow-hidden"
       style={{ background: T.bg, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -191,39 +191,47 @@ export const ClientPortalLoginPage: React.FC = () => {
         noindex
       />
 
-      {/* ── LEFT — Form panel ─────────────────────────────────── */}
-      <div className="flex-1 flex flex-col relative overflow-hidden">
-        {/* Subtle mesh glow */}
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            inset: 0,
-            background: 'radial-gradient(ellipse 60% 50% at 20% 80%, rgba(201,169,110,0.06) 0%, transparent 70%)',
-          }}
-          aria-hidden
+      {/* Fond plein écran (image + voiles) — même rendu mobile & desktop */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden>
+        <img
+          src={heroSrc}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          style={{ opacity: 0.32, filter: 'brightness(0.55) saturate(0.85)' }}
+          loading="eager"
+          fetchPriority="high"
+          onError={handleHeroError}
         />
+        <div
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(160deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.92) 100%)' }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 20%, rgba(201,169,110,0.08) 0%, transparent 55%)' }}
+        />
+      </div>
 
-        {/* Header */}
-        <header className="relative z-10 px-6 pt-safe-top pt-10 sm:pt-12 flex-shrink-0">
-          <a
-            href="/login"
-            className="inline-flex items-center gap-2 text-sm transition-colors group"
-            style={{ color: T.muted }}
-            onMouseEnter={e => (e.currentTarget.style.color = T.text)}
-            onMouseLeave={e => (e.currentTarget.style.color = T.muted)}
-          >
-            <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
-            <span>Espace Pro</span>
-          </a>
-        </header>
+      <header className="relative z-20 px-6 pt-safe-top pt-10 sm:pt-12 flex-shrink-0">
+        <a
+          href="/login"
+          className="inline-flex items-center gap-2 text-sm transition-colors group"
+          style={{ color: T.muted }}
+          onMouseEnter={e => (e.currentTarget.style.color = T.text)}
+          onMouseLeave={e => (e.currentTarget.style.color = T.muted)}
+        >
+          <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
+          <span>Espace Pro</span>
+        </a>
+      </header>
 
-        <div className="relative z-10 flex-1 flex items-center justify-center px-6 sm:px-10 py-10">
-          <motion.div
-            className="w-full max-w-[360px]"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-          >
+      <div className="relative z-10 flex-1 flex flex-col items-center px-6 sm:px-10 pb-10 pt-4 min-h-0 overflow-y-auto overscroll-contain">
+        <motion.div
+          className="w-full max-w-[360px] py-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+        >
             {/* Brand mark */}
             <div className="flex items-center gap-3 mb-10">
               <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
@@ -418,7 +426,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                   )}
                 </motion.button>
 
-                <p className="text-center text-xs pt-1" style={{ color: '#333333' }}>
+                <p className="text-center text-xs pt-1" style={{ color: T.muted }}>
                   Pas encore de tatouage réservé ?{' '}
                   <a
                     href="/"
@@ -432,104 +440,63 @@ export const ClientPortalLoginPage: React.FC = () => {
                 </p>
               </form>
             )}
-          </motion.div>
-        </div>
-
-        {/* Bottom divider line */}
-        <div
-          className="hidden lg:block absolute right-0 top-[10%] bottom-[10%] w-px"
-          style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.06) 30%, rgba(255,255,255,0.06) 70%, transparent)' }}
-          aria-hidden
-        />
-      </div>
-
-      {/* ── RIGHT — Composition panel (desktop) ───────────────── */}
-      <motion.div
-        className="hidden lg:flex lg:w-[480px] xl:w-[560px] h-[100dvh] flex-shrink-0 relative overflow-hidden"
-        style={{ background: '#080808' }}
-        initial={{ opacity: 0, x: 24 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.6, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-      >
-        {/* Hero photo */}
-        <img
-          src={heroSrc}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover object-center"
-          style={{ opacity: 0.28, filter: 'brightness(0.7) saturate(0.8)' }}
-          loading="eager"
-          fetchPriority="high"
-          onError={handleHeroError}
-          aria-hidden
-        />
-
-        {/* Gradient overlays */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'linear-gradient(160deg, rgba(201,169,110,0.05) 0%, transparent 40%, rgba(0,0,0,0.85) 100%)' }}
-          aria-hidden
-        />
-        <div
-          className="absolute inset-x-0 bottom-0 h-2/3 pointer-events-none"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)' }}
-          aria-hidden
-        />
-
-        {/* Floating review card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute rounded-3xl border p-5 backdrop-blur-2xl"
-          style={{
-            left: '10%', right: '10%', top: '50%', transform: 'translateY(-50%)',
-            background: 'rgba(14,14,14,0.75)',
-            borderColor: T.border,
-            boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)',
-          }}
-        >
-          {/* Stars */}
-          <div className="flex gap-0.5 mb-3">
-            {Array.from({ length: REVIEW.rating }).map((_, i) => (
-              <svg key={i} width="14" height="14" viewBox="0 0 14 14" fill={T.accent}>
-                <path d="M7 1l1.55 3.15L12 4.74l-2.5 2.43.59 3.43L7 8.9l-3.09 1.7.59-3.43L2 4.74l3.45-.59z" />
-              </svg>
-            ))}
-          </div>
-          <p className="text-sm leading-relaxed mb-4" style={{ color: '#c8c0b4', fontStyle: 'italic' }}>
-            "{REVIEW.quote}"
-          </p>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: 'rgba(201,169,110,0.2)', color: T.accent }}>
-              {REVIEW.author.slice(0, 1)}
-            </div>
-            <div>
-              <p className="text-xs font-semibold" style={{ color: T.text }}>{REVIEW.author}</p>
-              <p className="text-[10px]" style={{ color: T.muted }}>{REVIEW.studio} · client Inkflow</p>
-            </div>
-          </div>
         </motion.div>
 
-        {/* Bottom tagline */}
-        <div className="absolute bottom-0 left-0 right-0 px-10 pb-12 pointer-events-none">
-          <h2
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-lg mt-4 mb-6 space-y-8"
+        >
+          <div
+            className="rounded-3xl border p-5 backdrop-blur-2xl w-full"
             style={{
-              fontFamily: SERIF,
-              fontSize: '2.4rem',
-              lineHeight: 1.1,
-              fontStyle: 'italic',
-              fontWeight: 300,
-              color: T.text,
-              marginBottom: '0.5rem',
+              background: 'rgba(14,14,14,0.72)',
+              borderColor: T.border,
+              boxShadow: '0 32px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04)',
             }}
           >
-            Ton tatouage,<br />ton histoire.
-          </h2>
-          <p className="text-sm" style={{ color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.7rem' }}>
-            RDV · Cicatrisation · Parrainage
-          </p>
-        </div>
-      </motion.div>
+            <div className="flex gap-0.5 mb-3">
+              {Array.from({ length: REVIEW.rating }).map((_, i) => (
+                <svg key={i} width="14" height="14" viewBox="0 0 14 14" fill={T.accent}>
+                  <path d="M7 1l1.55 3.15L12 4.74l-2.5 2.43.59 3.43L7 8.9l-3.09 1.7.59-3.43L2 4.74l3.45-.59z" />
+                </svg>
+              ))}
+            </div>
+            <p className="text-sm leading-relaxed mb-4" style={{ color: '#c8c0b4', fontStyle: 'italic' }}>
+              &ldquo;{REVIEW.quote}&rdquo;
+            </p>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: 'rgba(201,169,110,0.2)', color: T.accent }}>
+                {REVIEW.author.slice(0, 1)}
+              </div>
+              <div>
+                <p className="text-xs font-semibold" style={{ color: T.text }}>{REVIEW.author}</p>
+                <p className="text-[10px]" style={{ color: T.muted }}>{REVIEW.studio} · client Inkflow</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="pb-safe-bottom text-center sm:text-left">
+            <h2
+              style={{
+                fontFamily: SERIF,
+                fontSize: 'clamp(1.75rem, 5vw, 2.4rem)',
+                lineHeight: 1.1,
+                fontStyle: 'italic',
+                fontWeight: 300,
+                color: T.text,
+                marginBottom: '0.5rem',
+              }}
+            >
+              Ton tatouage,<br />ton histoire.
+            </h2>
+            <p className="text-sm" style={{ color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.7rem' }}>
+              RDV · Cicatrisation · Parrainage
+            </p>
+          </div>
+        </motion.div>
+      </div>
     </motion.div>
   );
 };

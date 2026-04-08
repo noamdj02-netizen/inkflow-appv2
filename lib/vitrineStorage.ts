@@ -1,6 +1,6 @@
 import type { VitrineData } from '../types/vitrine';
 import { defaultVitrineData } from './vitrineStorageDefault';
-import { getVitrineDataFromSupabase, saveVitrineDataToSupabase, getVitrineDataBySlugFromSupabase, getStudioPublicBySlug, ensureStudio, getStudioId } from './supabaseDashboard';
+import { getVitrineDataFromSupabase, saveVitrineDataToSupabase, getVitrineDataBySlugFromSupabase, ensureStudio, getStudioId } from './supabaseDashboard';
 
 const STORAGE_PREFIX = 'inkflow-vitrine-';
 
@@ -99,11 +99,23 @@ export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineDa
     if (typeof window !== 'undefined' && !localRaw) {
       localStorage.setItem(key, JSON.stringify({ ...fromDb, slug }));
     }
-    // Préférer le draft local (même navigateur) pour que les photos modifiées s'affichent après un échec de sync
+    // Brouillon local : fusionner avec le serveur — ne pas écraser avatar/couverture par des chaînes vides
     if (localRaw) {
       try {
-        const localData = { ...defaultData, ...(JSON.parse(localRaw) as object), slug } as VitrineData;
-        return { ...localData, theme: fromDb.theme ?? localData.theme };
+        const localParsed = JSON.parse(localRaw) as Partial<VitrineData>;
+        const localData = { ...defaultData, ...localParsed, slug } as VitrineData;
+        const pickUrl = (localVal: string | undefined, remoteVal: string) => {
+          const l = (typeof localVal === 'string' ? localVal : '').trim();
+          const r = (remoteVal || '').trim();
+          return l || r;
+        };
+        return {
+          ...fromDb,
+          ...localData,
+          theme: fromDb.theme ?? localData.theme,
+          coverImage: pickUrl(localData.coverImage, fromDb.coverImage),
+          avatar: pickUrl(localData.avatar, fromDb.avatar),
+        };
       } catch {
         return fromDb;
       }
