@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { STYLES_LIST, STYLE_SLUGS } from '../../lib/constants/styles';
+import { DISCOVER_UI as U } from '../../lib/discoverUiTheme';
 
 interface SearchBarProps {
   defaultCity?: string;
@@ -32,9 +33,9 @@ export function SearchBar({ defaultCity = '', defaultStyle = '', defaultQ = '' }
     minHeight: 44,
     padding: '0 16px',
     borderRadius: 12,
-    background: '#161616',
-    border: '1.5px solid #2a2a2a',
-    color: '#e8e3dc',
+    background: U.surface,
+    border: `1.5px solid ${U.border}`,
+    color: U.text,
     fontSize: 14,
     outline: 'none',
     fontFamily: 'inherit',
@@ -88,8 +89,8 @@ export function SearchBar({ defaultCity = '', defaultStyle = '', defaultQ = '' }
           minHeight: 44,
           padding: '0 28px',
           borderRadius: 12,
-          background: '#c9a96e',
-          color: '#0d0d0d',
+          background: U.chipActiveBg,
+          color: U.chipActiveFg,
           fontWeight: 700,
           fontSize: 14,
           border: 'none',

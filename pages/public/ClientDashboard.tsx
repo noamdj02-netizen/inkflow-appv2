@@ -10,9 +10,10 @@ import {
   Search,
   MapPin,
   Calendar,
-  User,
+  User as UserIcon,
   Bell,
   LogOut,
+  LogIn,
   ExternalLink,
   ChevronLeft,
   ChevronRight,
@@ -25,6 +26,7 @@ import {
   Camera,
   Maximize2,
   X,
+  ClipboardList,
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { supabase } from '../../lib/supabase';
@@ -47,6 +49,7 @@ import {
   trySyncClientCrmProfile,
   uploadClientPortalAvatarJpegWithFallback,
 } from '../../lib/clientPortalProfile';
+import type { User } from '@supabase/supabase-js';
 
 const D = buildClientDesignTokens(CLIENT_DASHBOARD_THEME);
 
@@ -71,6 +74,63 @@ function ClientMenuGlyph({ children }: { children: React.ReactNode }) {
     >
       {children}
     </div>
+  );
+}
+
+/** Invité : valeur produit + accès /client (connexion / inscription). */
+function ClientGuestAuthCard({ layout }: { layout: 'home' | 'profile' }) {
+  const primaryBtn =
+    'inline-flex min-h-[48px] flex-1 items-center justify-center rounded-xl px-4 text-sm font-bold transition-transform active:scale-[0.98] touch-manipulation';
+  const secondaryBtn =
+    'inline-flex min-h-[48px] flex-1 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition-transform active:scale-[0.98] touch-manipulation';
+  return (
+    <section
+      aria-labelledby="client-guest-auth-title"
+      style={{
+        background: `linear-gradient(135deg, ${D.goldGlow}, transparent)`,
+        border: `1px solid ${D.goldDim}`,
+        borderRadius: D.r.xl,
+        padding: layout === 'home' ? '20px 20px' : '22px 20px',
+        marginBottom: layout === 'home' ? 28 : 24,
+      }}
+    >
+      <h2
+        id="client-guest-auth-title"
+        className="font-display"
+        style={{ fontSize: layout === 'home' ? 17 : 18, color: D.text, marginBottom: 8 }}
+      >
+        Créer mon compte ou me connecter
+      </h2>
+      <p style={{ fontSize: 13, color: D.muted, lineHeight: 1.55, marginBottom: 14 }}>
+        L’espace client sert à trouver ton tatoueur, suivre tes rendez-vous et garder tes idées au même endroit.
+      </p>
+      <ul className="mb-5 space-y-2.5" style={{ fontSize: 12, color: D.textSub, lineHeight: 1.45 }}>
+        <li className="flex gap-2.5">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: D.gold }} strokeWidth={1.65} aria-hidden />
+          <span>Explorer des artistes et flashs près de toi</span>
+        </li>
+        <li className="flex gap-2.5">
+          <Calendar className="mt-0.5 h-4 w-4 shrink-0" style={{ color: D.gold }} strokeWidth={1.65} aria-hidden />
+          <span>Voir l’historique et le statut de tes réservations</span>
+        </li>
+        <li className="flex gap-2.5">
+          <Palette className="mt-0.5 h-4 w-4 shrink-0" style={{ color: D.gold }} strokeWidth={1.65} aria-hidden />
+          <span>Enregistrer de l’inspiration (favoris) sur ton compte</span>
+        </li>
+      </ul>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+        <a href="/client" className={primaryBtn} style={{ background: D.gold, color: D.onAccent, textDecoration: 'none' }}>
+          Se connecter
+        </a>
+        <a
+          href="/client?register=1"
+          className={secondaryBtn}
+          style={{ borderColor: D.border, background: D.card, color: D.text, textDecoration: 'none' }}
+        >
+          Créer mon compte
+        </a>
+      </div>
+    </section>
   );
 }
 
@@ -975,7 +1035,7 @@ const SIDEBAR_NAV: { id: Tab; label: string; tabBarLabel: string; Icon: typeof H
   { id: 'favorites', label: 'Favoris', tabBarLabel: 'Favoris', Icon: Heart },
   { id: 'map', label: 'Carte', tabBarLabel: 'Carte', Icon: MapPin },
   { id: 'rdv', label: 'Mes RDV', tabBarLabel: 'RDV', Icon: Calendar },
-  { id: 'profile', label: 'Profil', tabBarLabel: 'Profil', Icon: User },
+  { id: 'profile', label: 'Profil', tabBarLabel: 'Profil', Icon: UserIcon },
 ];
 
 /** Tab bar fixe mobile — zones ≥ 44px, safe area, masquée sur desktop (sidebar). */
@@ -1651,13 +1711,22 @@ function TabRDV({
           <div style={{ fontSize: 13, color: D.muted, lineHeight: 1.5, marginBottom: 20 }}>
             Connecte-toi pour voir tes demandes de réservation liées à ton e-mail.
           </div>
-          <a
-            href="/client"
-            className="inline-flex min-h-[48px] items-center justify-center rounded-xl px-6 text-sm font-bold transition-transform active:scale-[0.98] touch-manipulation"
-            style={{ background: D.gold, color: D.onAccent, textDecoration: 'none' }}
-          >
-            Me connecter
-          </a>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <a
+              href="/client"
+              className="inline-flex min-h-[48px] flex-1 items-center justify-center rounded-xl px-6 text-sm font-bold transition-transform active:scale-[0.98] touch-manipulation sm:flex-initial"
+              style={{ background: D.gold, color: D.onAccent, textDecoration: 'none' }}
+            >
+              Me connecter
+            </a>
+            <a
+              href="/client?register=1"
+              className="inline-flex min-h-[48px] flex-1 items-center justify-center rounded-xl border px-6 text-sm font-semibold transition-transform active:scale-[0.98] touch-manipulation sm:flex-initial"
+              style={{ borderColor: D.border, background: D.card, color: D.text, textDecoration: 'none' }}
+            >
+              Créer mon compte
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -1757,6 +1826,7 @@ function TabRDV({
 // TAB — PROFIL
 // ══════════════════════════════════════════════════════════════════════════════
 function TabProfile({
+  sessionReady,
   userName,
   userInit,
   userEmail,
@@ -1771,6 +1841,7 @@ function TabProfile({
   onSaveDisplayName,
   hasCustomPortalAvatar,
 }: {
+  sessionReady: boolean;
   userName: string;
   userInit: string;
   userEmail: string;
@@ -1802,6 +1873,92 @@ function TabProfile({
 
   const showPhoto = Boolean(avatarUrl) && !avatarBroken;
   const showRemovePortal = hasCustomPortalAvatar && Boolean(avatarUrl) && !avatarBroken;
+  const isLoggedIn = sessionReady && Boolean(userEmail.trim());
+
+  if (!sessionReady) {
+    return (
+      <div className="px-2 pt-8 pb-12 sm:px-4 md:px-6">
+        <div
+          className="mx-auto max-w-md space-y-4 rounded-2xl border p-8"
+          style={{ borderColor: D.border, background: D.contentCardBg }}
+        >
+          <div className="mx-auto h-20 w-20 animate-pulse rounded-full" style={{ background: D.skeleton }} />
+          <div className="mx-auto h-4 w-full max-w-[200px] animate-pulse rounded-md" style={{ background: D.skeleton }} />
+          <div className="h-3 w-full max-w-[280px] animate-pulse rounded-md mx-auto" style={{ background: D.skeleton }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div className="px-2 pt-4 pb-8 sm:px-4 md:px-6">
+        <ClientGuestAuthCard layout="profile" />
+        {!ownedStudioSlug ? (
+          <div
+            style={{
+              background: D.goldGlow,
+              border: `1px solid ${D.goldDim}`,
+              borderRadius: D.r.xl,
+              padding: '18px 20px',
+              marginBottom: 24,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+            }}
+          >
+            <div>
+              <div className="font-client-app" style={{ fontSize: 14, color: D.text, marginBottom: 4 }}>
+                Tu es tatoueur ?
+              </div>
+              <div style={{ fontSize: 12, color: D.muted, lineHeight: 1.4 }}>Crée ta vitrine gratuite.</div>
+            </div>
+            <a
+              href="/signup"
+              style={{
+                padding: '10px 16px',
+                background: D.gold,
+                borderRadius: D.r.md,
+                fontSize: 12,
+                fontWeight: 800,
+                color: D.onAccent,
+                textDecoration: 'none',
+              }}
+            >
+              Rejoindre →
+            </a>
+          </div>
+        ) : null}
+        <a
+          href="/dashboard"
+          className="mb-6 flex min-h-[52px] items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-transform active:scale-[0.98] touch-manipulation"
+          style={{ borderColor: D.border, background: D.card, color: D.text }}
+        >
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">Espace tatoueur</div>
+            <div className="mt-0.5 truncate text-xs" style={{ color: D.muted }}>
+              Dashboard studio InkFlow
+            </div>
+          </div>
+          <ExternalLink className="h-4 w-4 shrink-0 opacity-60" />
+        </a>
+        <a
+          href="/aide"
+          className="flex min-h-[52px] items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-transform active:scale-[0.98] touch-manipulation"
+          style={{ borderColor: D.border, background: D.card, color: D.text }}
+        >
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">Aide</div>
+            <div className="mt-0.5 truncate text-xs" style={{ color: D.muted }}>
+              FAQ et support
+            </div>
+          </div>
+          <ExternalLink className="h-4 w-4 shrink-0 opacity-60" />
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div className="px-2 pt-4 pb-8 sm:px-4 md:px-6">
@@ -1964,6 +2121,24 @@ function TabProfile({
           </div>
           <ChevronRight className="w-4 h-4 shrink-0" style={{ color: D.muted }} aria-hidden />
         </button>
+        <a
+          href="/client/compte-sante"
+          className="touch-manipulation active:scale-[0.99] transition-transform"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            background: D.card, borderRadius: D.r.md, padding: '14px 16px',
+            minHeight: 52, textDecoration: 'none', color: 'inherit',
+          }}
+        >
+          <ClientMenuGlyph>
+            <ClipboardList className="w-5 h-5" style={{ color: D.textSub }} strokeWidth={1.65} aria-hidden />
+          </ClientMenuGlyph>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: D.text }}>Questionnaire santé</div>
+            <div style={{ fontSize: 11, color: D.muted, marginTop: 2 }}>Rempli une fois — réservations plus rapides</div>
+          </div>
+          <ChevronRight className="w-4 h-4 shrink-0" style={{ color: D.muted }} aria-hidden />
+        </a>
         <div
           style={{
             display: 'flex', alignItems: 'center', gap: 14,
@@ -2103,7 +2278,9 @@ export function ClientDashboard() {
   const [rdvLoading, setRdvLoading] = useState(true);
   const [, bumpFavs] = useReducer((n: number) => n + 1, 0);
   const [exploreSearchFocusNonce, setExploreSearchFocusNonce] = useState(0);
+  const [authHydrated, setAuthHydrated] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastAppliedUserIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -2115,9 +2292,32 @@ export function ClientDashboard() {
   // Auth + studio tatoueur (même email qu’inkflow_studios) + profil portail (photo)
   useEffect(() => {
     let cancelled = false;
-    supabase.auth.getUser().then(async ({ data }) => {
-      const u = data.user;
-      if (!u) return;
+
+    const clearGuest = () => {
+      setUserId(null);
+      setUserName('');
+      setUserInit('');
+      setUserEmail('');
+      setUserAvatarUrl(null);
+      setAvatarBroken(false);
+      setHasCustomPortalAvatar(false);
+      setOwnedStudioSlug(null);
+    };
+
+    const applyUser = async (u: User | null) => {
+      const nextId = u?.id ?? null;
+      if (lastAppliedUserIdRef.current === nextId && lastAppliedUserIdRef.current !== undefined) {
+        setAuthHydrated(true);
+        return;
+      }
+      lastAppliedUserIdRef.current = nextId;
+
+      if (!u) {
+        clearGuest();
+        setAuthHydrated(true);
+        return;
+      }
+
       setUserId(u.id);
       const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || '';
       setUserName(name);
@@ -2140,12 +2340,32 @@ export function ClientDashboard() {
         try {
           const row = await getStudioByEmail(u.email);
           if (!cancelled && row?.slug) setOwnedStudioSlug(row.slug);
+          else if (!cancelled) setOwnedStudioSlug(null);
         } catch {
           if (!cancelled) setOwnedStudioSlug(null);
         }
+      } else if (!cancelled) {
+        setOwnedStudioSlug(null);
       }
+      setAuthHydrated(true);
+    };
+
+    void supabase.auth.getUser().then(({ data }) => {
+      if (cancelled) return;
+      void applyUser(data.user ?? null);
     });
-    return () => { cancelled = true; };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+      void applyUser(session?.user ?? null);
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleClientAvatarFile = useCallback(
@@ -2454,18 +2674,39 @@ export function ClientDashboard() {
               <span>Dashboard studio</span>
               <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
             </a>
-            <button
-              type="button"
-              onClick={async () => {
-                await supabase.auth.signOut();
-                window.location.href = '/client';
-              }}
-              className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
-              style={{ color: D.muted }}
-            >
-              <LogOut className="w-4 h-4 shrink-0" strokeWidth={1.5} />
-              <span>Déconnexion</span>
-            </button>
+            {userId ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  window.location.href = '/client';
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
+                style={{ color: D.muted }}
+              >
+                <LogOut className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+                <span>Déconnexion</span>
+              </button>
+            ) : (
+              <>
+                <a
+                  href="/client"
+                  className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
+                  style={{ color: D.muted }}
+                >
+                  <LogIn className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+                  <span>Connexion client</span>
+                </a>
+                <a
+                  href="/client?register=1"
+                  className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
+                  style={{ color: D.muted }}
+                >
+                  <UserIcon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+                  <span>Créer mon compte</span>
+                </a>
+              </>
+            )}
           </div>
         </aside>
 
@@ -2524,7 +2765,13 @@ export function ClientDashboard() {
               >
                 <Bell className="w-[18px] h-[18px]" strokeWidth={1.5} />
               </button>
-              {userInit ? (
+              {!authHydrated ? (
+                <div
+                  className="h-11 w-11 shrink-0 animate-pulse rounded-full"
+                  style={{ background: D.skeleton }}
+                  aria-hidden
+                />
+              ) : userId ? (
                 <button
                   type="button"
                   onClick={() => setTab('profile')}
@@ -2543,7 +2790,24 @@ export function ClientDashboard() {
                     userInit
                   )}
                 </button>
-              ) : null}
+              ) : (
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <a
+                    href="/client?register=1"
+                    className="hidden min-h-[44px] items-center rounded-xl border px-2.5 text-xs font-semibold transition-all active:scale-[0.98] touch-manipulation sm:inline-flex"
+                    style={{ borderColor: D.border, background: D.card, color: D.text }}
+                  >
+                    S’inscrire
+                  </a>
+                  <a
+                    href="/client"
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl px-3 text-xs font-bold transition-all active:scale-[0.98] touch-manipulation"
+                    style={{ background: D.gold, color: D.onAccent }}
+                  >
+                    Connexion
+                  </a>
+                </div>
+              )}
             </div>
             </div>
           </header>
@@ -2577,6 +2841,7 @@ export function ClientDashboard() {
         )}
         {tab === 'profile' && (
           <TabProfile
+            sessionReady={authHydrated}
             userName={userName}
             userInit={userInit}
             userEmail={userEmail}
@@ -2594,6 +2859,7 @@ export function ClientDashboard() {
         )}
 
         {tab === 'home' && <div className="pb-6 pt-1 sm:pb-8 sm:pt-2">
+          {authHydrated && !userId ? <ClientGuestAuthCard layout="home" /> : null}
 
           {/* ARTISTES PROCHES */}
           <div style={{ marginBottom: 28 }}>

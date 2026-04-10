@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { User, Mail, FileText, Calendar, Clock, ChevronLeft, ChevronRight, MapPin, Ruler } from 'lucide-react';
 import { ReferenceImageUpload } from './ReferenceImageUpload';
 import { createBooking, uploadBookingReferenceImages } from '../../lib/supabaseBookings';
+import { getCurrentClientAvatarUrlForBooking } from '../../lib/clientPortalProfile';
 import { LANDING_TERMS_URL, LANDING_PRIVACY_URL } from '../../lib/urls';
 import { toLocalDateString } from '../../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS } from '../../lib/studioAvailability';
@@ -319,6 +320,14 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
       return;
     }
 
+    let clientAvatarUrl: string | undefined;
+    try {
+      const av = await getCurrentClientAvatarUrlForBooking();
+      if (av) clientAvatarUrl = av;
+    } catch {
+      /* session optionnelle */
+    }
+
     const payload: VitrineBookingFormData = {
       clientName: data.clientName,
       clientEmail: data.clientEmail,
@@ -326,6 +335,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
       requestedDate: data.requestedDate,
       requestedTime: data.requestedTime || undefined,
       referenceImages: refUrls.length > 0 ? refUrls : undefined,
+      ...(clientAvatarUrl ? { clientAvatarUrl } : {}),
     };
     try {
       await createBooking(payload, studioId);

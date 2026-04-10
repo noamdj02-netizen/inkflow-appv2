@@ -1,6 +1,21 @@
 import type { VitrineData } from '../types/vitrine';
 import { defaultVitrineData } from './vitrineStorageDefault';
-import { getVitrineDataFromSupabase, saveVitrineDataToSupabase, getVitrineDataBySlugFromSupabase, ensureStudio, getStudioId } from './supabaseDashboard';
+import {
+  getVitrineDataFromSupabase,
+  saveVitrineDataToSupabase,
+  getVitrineDataBySlugFromSupabase,
+  ensureStudio,
+  getStudioByEmail,
+  normalizePublicStudioSlug,
+} from './supabaseDashboard';
+
+/** ID studio en base = celui lié à l’email (inchangé si le nom du studio change). */
+async function resolveStudioIdForVitrine(userEmail: string, studioName: string): Promise<string> {
+  const existing = await getStudioByEmail(userEmail);
+  if (existing?.id) return existing.id;
+  const ensured = await ensureStudio(userEmail, 'User', studioName);
+  return ensured.studioId;
+}
 
 const STORAGE_PREFIX = 'inkflow-vitrine-';
 
@@ -33,37 +48,37 @@ export function getVitrineData(slug: string, userEmail?: string, studioName?: st
   return defaultData;
 }
 
-export function setVitrineData(slug: string, data: VitrineData, userEmail?: string, studioName?: string): void {
+/** Persistance locale uniquement. La sync Supabase passe par `saveVitrineDataAsync` (résout le bon `studio_id`). */
+export function setVitrineData(slug: string, data: VitrineData, _userEmail?: string, _studioName?: string): void {
   if (typeof window === 'undefined') return;
   const key = `${STORAGE_PREFIX}${slug}`;
   localStorage.setItem(key, JSON.stringify({ ...data, slug }));
-  if (useSupabase() && userEmail && studioName) {
-    const studioId = getStudioId(userEmail, studioName);
-    saveVitrineDataToSupabase(studioId, data).catch(() => {});
-  }
 }
 
 export async function getVitrineDataAsync(slug: string, userEmail: string, studioName: string): Promise<VitrineData> {
-  const defaultData = defaultVitrineData(slug);
-  if (!useSupabase()) return getVitrineData(slug);
+  const slugNorm = normalizePublicStudioSlug(slug);
+  const defaultData = defaultVitrineData(slugNorm);
+  if (!useSupabase()) return getVitrineData(slugNorm);
   try {
-    await ensureStudio(userEmail, 'User', studioName);
-    const studioId = getStudioId(userEmail, studioName);
+    const studioId = await resolveStudioIdForVitrine(userEmail, studioName);
     const fromDb = await getVitrineDataFromSupabase(studioId, defaultData);
-    const key = `${STORAGE_PREFIX}${slug}`;
-    localStorage.setItem(key, JSON.stringify({ ...fromDb, slug }));
-    return fromDb;
+    const key = `${STORAGE_PREFIX}${slugNorm}`;
+    const merged = { ...fromDb, slug: slugNorm };
+    localStorage.setItem(key, JSON.stringify(merged));
+    return merged;
   } catch (e) {
     if (import.meta.env.DEV) console.error('getVitrineDataAsync:', e);
-    return getVitrineData(slug);
+    return getVitrineData(slugNorm);
   }
 }
 
 export async function saveVitrineDataAsync(slug: string, data: VitrineData, userEmail: string, studioName: string): Promise<void> {
-  setVitrineData(slug, data, userEmail, studioName);
+  const slugNorm = normalizePublicStudioSlug(slug);
+  const payload = { ...data, slug: slugNorm };
+  setVitrineData(slugNorm, payload, userEmail, studioName);
   if (useSupabase()) {
-    const studioId = getStudioId(userEmail, studioName);
-    await saveVitrineDataToSupabase(studioId, data);
+    const studioId = await resolveStudioIdForVitrine(userEmail, studioName);
+    await saveVitrineDataToSupabase(studioId, payload);
   }
 }
 
@@ -80,13 +95,14 @@ export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineDa
     }
     return data;
   }
-  const defaultData = defaultVitrineData(slug);
-  const key = `${STORAGE_PREFIX}${slug}`;
+  const normalized = normalizePublicStudioSlug(slug);
+  const defaultData = defaultVitrineData(normalized);
+  const key = `${STORAGE_PREFIX}${normalized}`;
   const localRaw = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
   if (!useSupabase()) {
     if (localRaw) {
       try {
-        return { ...defaultData, ...(JSON.parse(localRaw) as object), slug } as VitrineData;
+        return { ...defaultData, ...(JSON.parse(localRaw) as object), slug: normalized } as VitrineData;
       } catch {
         return defaultData;
       }
@@ -94,16 +110,16 @@ export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineDa
     return defaultData;
   }
   try {
-    const fromDb = await getVitrineDataBySlugFromSupabase(slug, defaultData);
+    const fromDb = await getVitrineDataBySlugFromSupabase(normalized, defaultData);
     // Ne pas écraser le localStorage s'il contient déjà des données (draft local après échec sync)
     if (typeof window !== 'undefined' && !localRaw) {
-      localStorage.setItem(key, JSON.stringify({ ...fromDb, slug }));
+      localStorage.setItem(key, JSON.stringify({ ...fromDb, slug: normalized }));
     }
     // Brouillon local : fusionner avec le serveur — ne pas écraser avatar/couverture par des chaînes vides
     if (localRaw) {
       try {
         const localParsed = JSON.parse(localRaw) as Partial<VitrineData>;
-        const localData = { ...defaultData, ...localParsed, slug } as VitrineData;
+        const localData = { ...defaultData, ...localParsed, slug: normalized } as VitrineData;
         const pickUrl = (localVal: string | undefined, remoteVal: string) => {
           const l = (typeof localVal === 'string' ? localVal : '').trim();
           const r = (remoteVal || '').trim();
@@ -112,6 +128,7 @@ export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineDa
         return {
           ...fromDb,
           ...localData,
+          slug: normalized,
           theme: fromDb.theme ?? localData.theme,
           coverImage: pickUrl(localData.coverImage, fromDb.coverImage),
           avatar: pickUrl(localData.avatar, fromDb.avatar),
@@ -124,7 +141,7 @@ export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineDa
   } catch (e) {
     if (localRaw) {
       try {
-        return { ...defaultData, ...(JSON.parse(localRaw) as object), slug } as VitrineData;
+        return { ...defaultData, ...(JSON.parse(localRaw) as object), slug: normalized } as VitrineData;
       } catch {
         return defaultData;
       }

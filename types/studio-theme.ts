@@ -10,6 +10,10 @@ export interface FlashItem {
   title?: string;
   price?: number;
   isAvailable: boolean;
+  /** Durée indicative (minutes), depuis la fiche flash */
+  duration?: number;
+  /** Style / catégorie court */
+  style?: string;
 }
 
 export interface PortfolioItem {
@@ -32,6 +36,8 @@ export interface StudioThemeProps {
     website: string | null;
     instagramHandle: string | null;
     bookingUrl: string | null;
+    /** Lien fiche Google (Maps / avis), déjà validé http(s) ou null */
+    googleBusinessUrl: string | null;
     themeName: string;
   };
   flashItems: FlashItem[];

@@ -3,7 +3,8 @@ import { sendProjectNotification } from './sendNotification';
 import type { ProjectRequestFormData } from '../types';
 
 export async function createProjectRequest(data: ProjectRequestFormData, studioId: string): Promise<string> {
-  const id = `pr_${Date.now()}`;
+  const id = `pr_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const refs = Array.isArray(data.referenceImages) ? data.referenceImages.filter((u) => typeof u === 'string' && u.trim()) : [];
   const row = {
     id,
     studio_id: studioId,
@@ -16,7 +17,8 @@ export async function createProjectRequest(data: ProjectRequestFormData, studioI
     budget: data.budget || null,
     status: 'pending',
     project_type: 'custom',
-    reference_images: data.referenceImages || []
+    reference_images: refs,
+    reference_image_url: refs[0] ?? data.referenceImageUrl?.trim() ?? null,
   };
   const { error } = await supabase.from('inkflow_project_requests').insert(row);
   if (error) throw error;

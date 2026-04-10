@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CityPage } from '../../lib/discover';
+import { DISCOVER_UI as U } from '../../lib/discoverUiTheme';
 
 export function CityLinks({ cities }: { cities: CityPage[] }) {
   if (!cities.length) return null;
@@ -7,7 +8,7 @@ export function CityLinks({ cities }: { cities: CityPage[] }) {
   return (
     <section style={{ padding: '0 16px 40px' }}>
       <h2 style={{
-        fontSize: 20, fontWeight: 700, color: '#e8e3dc',
+        fontSize: 20, fontWeight: 700, color: U.text,
         letterSpacing: '-0.03em', marginBottom: 16,
       }}>
         Parcourir par ville
@@ -25,17 +26,18 @@ export function CityLinks({ cities }: { cities: CityPage[] }) {
               display: 'flex',
               flexDirection: 'column',
               padding: '14px 16px',
-              background: '#161616',
-              border: '1px solid #2a2a2a',
+              background: U.surface,
+              border: `1px solid ${U.border}`,
               borderRadius: 14,
               textDecoration: 'none',
               transition: 'border-color 0.2s',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(201,169,110,0.4)')}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#2a2a2a')}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = U.chipActiveBg)}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = U.border)}
           >
-            <span style={{ fontSize: 15, fontWeight: 600, color: '#e8e3dc' }}>{c.name}</span>
-            <span style={{ fontSize: 11, color: '#6b6b6b', marginTop: 3 }}>
+            <span style={{ fontSize: 15, fontWeight: 600, color: U.text }}>{c.name}</span>
+            <span style={{ fontSize: 11, color: U.textMuted, marginTop: 3 }}>
               {c.artist_count} artiste{c.artist_count !== 1 ? 's' : ''}
             </span>
           </a>

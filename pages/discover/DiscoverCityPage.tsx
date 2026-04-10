@@ -1,6 +1,5 @@
 /**
  * /discover/:city — Page par ville
- * Ex: /discover/paris, /discover/lyon
  */
 import React, { useEffect, useState } from 'react';
 import { ArtistCard } from '../../components/discover/ArtistCard';
@@ -12,7 +11,8 @@ import {
   type DiscoverStudio,
   type CityPage,
 } from '../../lib/discover';
-import { STYLES_LIST, SLUG_TO_STYLE, STYLE_SLUGS } from '../../lib/constants/styles';
+import { STYLES_LIST, STYLE_SLUGS } from '../../lib/constants/styles';
+import { DISCOVER_UI as U } from '../../lib/discoverUiTheme';
 
 interface Props {
   citySlug: string;
@@ -25,54 +25,43 @@ function DiscoverNav({ cityName }: { cityName?: string }) {
     <nav style={{
       display: 'flex', alignItems: 'center', gap: 8,
       padding: '16px 24px',
-      borderBottom: '1px solid #1a1a1a',
+      borderBottom: `1px solid ${U.border}`,
       position: 'sticky', top: 0, zIndex: 10,
-      background: 'rgba(13,13,13,0.95)',
+      background: U.navBg,
       backdropFilter: 'blur(12px)',
     }}>
-      <a href="/discover" style={{ fontSize: 13, color: '#6b6b6b', textDecoration: 'none' }}>Directory</a>
-      <span style={{ color: '#2a2a2a' }}>/</span>
-      <span style={{ fontSize: 13, color: '#e8e3dc', fontWeight: 600 }}>{cityName ?? '…'}</span>
+      <a href="/discover" style={{ fontSize: 13, color: U.textMuted, textDecoration: 'none' }}>Directory</a>
+      <span style={{ color: U.borderStrong }}>/</span>
+      <span style={{ fontSize: 13, color: U.text, fontWeight: 600 }}>{cityName ?? '…'}</span>
     </nav>
   );
 }
 
 function StyleFilterChips({ citySlug, activeStyleSlug }: { citySlug: string; activeStyleSlug?: string }) {
+  const chip = (active: boolean) => ({
+    display: 'inline-block' as const,
+    fontSize: 12,
+    fontWeight: 600,
+    padding: '6px 14px',
+    borderRadius: 100,
+    background: active ? U.chipActiveBg : U.chipInactiveBg,
+    color: active ? U.chipActiveFg : U.chipInactiveFg,
+    border: `1.5px solid ${active ? U.chipActiveBg : U.chipInactiveBorder}`,
+  });
   return (
     <div style={{
       display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none',
       paddingBottom: 4,
     }}>
-      <a
-        href={`/discover/${citySlug}`}
-        style={{ textDecoration: 'none', flexShrink: 0 }}
-      >
-        <span style={{
-          display: 'inline-block',
-          fontSize: 12, fontWeight: 600,
-          padding: '6px 14px', borderRadius: 100,
-          background: !activeStyleSlug ? '#c9a96e' : '#161616',
-          color: !activeStyleSlug ? '#0d0d0d' : '#6b6b6b',
-          border: `1.5px solid ${!activeStyleSlug ? '#c9a96e' : '#2a2a2a'}`,
-        }}>
-          Tous
-        </span>
+      <a href={`/discover/${citySlug}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
+        <span style={chip(!activeStyleSlug)}>Tous</span>
       </a>
       {STYLES_LIST.map((s) => {
         const slug = STYLE_SLUGS[s] ?? s.replace(/\s+/g, '-');
         const active = activeStyleSlug === slug;
         return (
           <a key={s} href={`/discover/${citySlug}/${slug}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
-            <span style={{
-              display: 'inline-block',
-              fontSize: 12, fontWeight: 600,
-              padding: '6px 14px', borderRadius: 100,
-              background: active ? '#c9a96e' : '#161616',
-              color: active ? '#0d0d0d' : '#6b6b6b',
-              border: `1.5px solid ${active ? '#c9a96e' : '#2a2a2a'}`,
-            }}>
-              {s}
-            </span>
+            <span style={chip(active)}>{s}</span>
           </a>
         );
       })}
@@ -82,34 +71,25 @@ function StyleFilterChips({ citySlug, activeStyleSlug }: { citySlug: string; act
 
 function Pagination({ page, totalPages, baseUrl }: { page: number; totalPages: number; baseUrl: string }) {
   if (totalPages <= 1) return null;
+  const linkStyle = {
+    padding: '10px 20px',
+    borderRadius: 12,
+    background: U.surface,
+    border: `1px solid ${U.border}`,
+    color: U.text,
+    textDecoration: 'none',
+    fontSize: 14,
+  };
   return (
     <div style={{ display: 'flex', gap: 8, justifyContent: 'center', padding: '32px 0' }}>
       {page > 1 && (
-        <a
-          href={`${baseUrl}?page=${page - 1}`}
-          style={{
-            padding: '10px 20px', borderRadius: 12,
-            background: '#161616', border: '1px solid #2a2a2a',
-            color: '#e8e3dc', textDecoration: 'none', fontSize: 14,
-          }}
-        >
-          ← Précédent
-        </a>
+        <a href={`${baseUrl}?page=${page - 1}`} style={linkStyle}>← Précédent</a>
       )}
-      <span style={{ padding: '10px 16px', fontSize: 14, color: '#6b6b6b', alignSelf: 'center' }}>
+      <span style={{ padding: '10px 16px', fontSize: 14, color: U.textMuted, alignSelf: 'center' }}>
         {page} / {totalPages}
       </span>
       {page < totalPages && (
-        <a
-          href={`${baseUrl}?page=${page + 1}`}
-          style={{
-            padding: '10px 20px', borderRadius: 12,
-            background: '#161616', border: '1px solid #2a2a2a',
-            color: '#e8e3dc', textDecoration: 'none', fontSize: 14,
-          }}
-        >
-          Suivant →
-        </a>
+        <a href={`${baseUrl}?page=${page + 1}`} style={linkStyle}>Suivant →</a>
       )}
     </div>
   );
@@ -145,66 +125,61 @@ export function DiscoverCityPage({ citySlug }: Props) {
   const cityName = cityData?.name ?? citySlug.charAt(0).toUpperCase() + citySlug.slice(1);
   const baseUrl = `/discover/${citySlug}`;
 
+  const sortChip = (active: boolean) => ({
+    fontSize: 12,
+    fontWeight: 600,
+    padding: '6px 14px',
+    borderRadius: 100,
+    background: active ? U.chipActiveBg : U.chipInactiveBg,
+    color: active ? U.chipActiveFg : U.chipInactiveFg,
+    border: `1.5px solid ${active ? U.chipActiveBg : U.chipInactiveBorder}`,
+    textDecoration: 'none',
+  });
+
   return (
     <div style={{
       minHeight: '100dvh',
-      background: '#0d0d0d',
-      color: '#e8e3dc',
+      background: U.pageBg,
+      color: U.text,
       fontFamily: 'Inter, system-ui, sans-serif',
       WebkitFontSmoothing: 'antialiased',
     }}>
       <DiscoverNav cityName={cityName} />
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px' }}>
-        {/* Titre */}
         <div style={{ marginBottom: 24 }}>
           <h1 style={{
             fontSize: 'clamp(24px, 5vw, 40px)',
             fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.1,
             marginBottom: 6,
           }}>
-            Tatoueurs à <span style={{ color: '#c9a96e' }}>{cityName}</span>
+            Tatoueurs à <span style={{ color: U.chipActiveBg }}>{cityName}</span>
           </h1>
-          <p style={{ fontSize: 13, color: '#6b6b6b' }}>
+          <p style={{ fontSize: 13, color: U.textMuted }}>
             {loading ? '…' : `${total} artiste${total !== 1 ? 's' : ''} référencé${total !== 1 ? 's' : ''}`}
           </p>
         </div>
 
-        {/* Search */}
         <div style={{ marginBottom: 24 }}>
           <SearchBar defaultCity={cityName} />
         </div>
 
-        {/* Style filters */}
         <div style={{ marginBottom: 28 }}>
           <StyleFilterChips citySlug={citySlug} />
         </div>
 
-        {/* Sort */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
           {([
             { val: 'rank',   label: 'Pertinence' },
             { val: 'rating', label: 'Mieux notés' },
             { val: 'recent', label: 'Récents' },
           ] as const).map(({ val, label }) => (
-            <a
-              key={val}
-              href={`${baseUrl}?sort=${val}`}
-              style={{
-                fontSize: 12, fontWeight: 600,
-                padding: '6px 14px', borderRadius: 100,
-                background: sort === val ? '#c9a96e' : '#161616',
-                color: sort === val ? '#0d0d0d' : '#6b6b6b',
-                border: `1.5px solid ${sort === val ? '#c9a96e' : '#2a2a2a'}`,
-                textDecoration: 'none',
-              }}
-            >
+            <a key={val} href={`${baseUrl}?sort=${val}`} style={sortChip(sort === val)}>
               {label}
             </a>
           ))}
         </div>
 
-        {/* Grid */}
         {loading ? (
           <div style={{
             display: 'grid',
@@ -213,13 +188,13 @@ export function DiscoverCityPage({ citySlug }: Props) {
           }}>
             {Array.from({ length: 6 }, (_, i) => (
               <div key={i} style={{
-                background: '#161616', border: '1px solid #2a2a2a',
+                background: U.surface, border: `1px solid ${U.border}`,
                 borderRadius: 16, overflow: 'hidden',
               }}>
-                <div style={{ aspectRatio: '4/3', background: '#1a1a1a' }} />
+                <div style={{ aspectRatio: '4/3', background: U.skeleton }} />
                 <div style={{ padding: 14 }}>
-                  <div style={{ height: 14, width: '60%', background: '#1a1a1a', borderRadius: 6, marginBottom: 8 }} />
-                  <div style={{ height: 11, width: '40%', background: '#1a1a1a', borderRadius: 5 }} />
+                  <div style={{ height: 14, width: '60%', background: U.skeletonInner, borderRadius: 6, marginBottom: 8 }} />
+                  <div style={{ height: 11, width: '40%', background: U.skeletonInner, borderRadius: 5 }} />
                 </div>
               </div>
             ))}
@@ -234,11 +209,11 @@ export function DiscoverCityPage({ citySlug }: Props) {
           </div>
         ) : (
           <div style={{
-            padding: '80px 0', textAlign: 'center', color: '#6b6b6b', fontSize: 14,
+            padding: '80px 0', textAlign: 'center', color: U.textMuted, fontSize: 14,
           }}>
             Aucun artiste trouvé à {cityName} pour le moment.
             <br />
-            <a href="/discover" style={{ color: '#c9a96e', marginTop: 12, display: 'inline-block' }}>
+            <a href="/discover" style={{ color: U.accent, marginTop: 12, display: 'inline-block' }}>
               ← Retour au directory
             </a>
           </div>

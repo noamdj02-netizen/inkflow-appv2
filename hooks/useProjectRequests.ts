@@ -47,6 +47,14 @@ export function useProjectRequests(studioId: string | null) {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible' && studioId && supabaseEnabled) load();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [studioId, supabaseEnabled, load]);
+
   const updateStatus = useCallback(async (id: string, status: ProjectRequestStatus) => {
     mutation.update(
       id,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StarRating } from './StarRating';
 import { StyleBadge } from './StyleBadge';
 import type { DiscoverStudio } from '../../lib/discover';
+import { DISCOVER_UI as U } from '../../lib/discoverUiTheme';
 
 interface ArtistCardProps {
   studio: DiscoverStudio;
@@ -25,21 +26,22 @@ export function ArtistCard({ studio, onClick }: ArtistCardProps) {
     <div
       onClick={handleClick}
       style={{
-        background: '#161616',
-        border: '1px solid #2a2a2a',
+        background: U.surface,
+        border: `1px solid ${U.border}`,
         borderRadius: 16,
         overflow: 'hidden',
         cursor: 'pointer',
         transition: 'border-color 0.2s',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(201,169,110,0.4)')}
-      onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#2a2a2a')}
+      onMouseEnter={(e) => (e.currentTarget.style.borderColor = U.chipActiveBg)}
+      onMouseLeave={(e) => (e.currentTarget.style.borderColor = U.border)}
     >
       {/* Cover photo */}
       <div style={{
         position: 'relative',
         aspectRatio: '4/3',
-        background: '#0d0d0d',
+        background: U.surfaceMuted,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         overflow: 'hidden',
       }}>
@@ -51,13 +53,13 @@ export function ArtistCard({ studio, onClick }: ArtistCardProps) {
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
         ) : (
-          <span style={{ fontSize: 12, color: '#6b6b6b' }}>Portfolio bientôt disponible</span>
+          <span style={{ fontSize: 12, color: U.textSoft }}>Portfolio bientôt disponible</span>
         )}
         {studio.rating_count >= 3 && (
           <span style={{
             position: 'absolute', top: 8, right: 8,
-            background: 'rgba(201,169,110,0.9)',
-            color: '#0d0d0d', fontSize: 10, fontWeight: 700,
+            background: U.chipActiveBg,
+            color: U.chipActiveFg, fontSize: 10, fontWeight: 700,
             padding: '3px 9px', borderRadius: 100,
           }}>
             ✓ Vérifié
@@ -70,7 +72,7 @@ export function ArtistCard({ studio, onClick }: ArtistCardProps) {
         <div style={{ display: 'flex', gap: 2, height: 52 }}>
           {preview.map((url, i) => (
             <div key={i} style={{
-              flex: 1, overflow: 'hidden', background: '#0d0d0d',
+              flex: 1, overflow: 'hidden', background: U.surfaceMuted,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               {!previewBroken[i] ? (
@@ -89,14 +91,14 @@ export function ArtistCard({ studio, onClick }: ArtistCardProps) {
       {/* Body */}
       <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#e8e3dc', lineHeight: 1.2 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: U.text, lineHeight: 1.2 }}>
             {studio.studio_name || studio.name}
           </div>
           {studio.studio_name && studio.name !== studio.studio_name && (
-            <div style={{ fontSize: 12, color: '#6b6b6b', marginTop: 2 }}>{studio.name}</div>
+            <div style={{ fontSize: 12, color: U.textMuted, marginTop: 2 }}>{studio.name}</div>
           )}
           {studio.city && (
-            <div style={{ fontSize: 11, color: '#6b6b6b', marginTop: 2 }}>📍 {studio.city}</div>
+            <div style={{ fontSize: 11, color: U.textSoft, marginTop: 2 }}>📍 {studio.city}</div>
           )}
         </div>
 
@@ -104,7 +106,7 @@ export function ArtistCard({ studio, onClick }: ArtistCardProps) {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {studio.styles.slice(0, 3).map((s) => <StyleBadge key={s} style={s} />)}
             {studio.styles.length > 3 && (
-              <span style={{ fontSize: 11, color: '#6b6b6b', alignSelf: 'center' }}>
+              <span style={{ fontSize: 11, color: U.textSoft, alignSelf: 'center' }}>
                 +{studio.styles.length - 3}
               </span>
             )}
@@ -114,7 +116,7 @@ export function ArtistCard({ studio, onClick }: ArtistCardProps) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <StarRating avg={studio.rating_avg} count={studio.rating_count} />
           {studio.price_min != null && (
-            <span style={{ fontSize: 11, color: '#c9a96e', fontWeight: 500 }}>
+            <span style={{ fontSize: 11, color: U.accent, fontWeight: 500 }}>
               à partir de {studio.price_min}€
             </span>
           )}

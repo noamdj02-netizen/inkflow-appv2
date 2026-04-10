@@ -3,6 +3,7 @@ import { ExternalLink } from 'lucide-react';
 import type { StudioThemeProps } from '../../types/studio-theme';
 import { GoogleReviews } from '../vitrine/GoogleReviews';
 import { StudioThemeContactBlock } from './StudioThemeContactBlock';
+import { StudioThemeFlashSection } from './StudioThemeFlashSection';
 
 /**
  * SplitTheme — 2 colonnes : gauche sticky (profil), droite scroll (contenu).
@@ -51,35 +52,7 @@ export const SplitTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, por
 
         {/* Colonne droite — scroll */}
         <main className="p-6 lg:p-10 overflow-y-auto">
-          {/* Flashs */}
-          {flashItems.length > 0 && (
-            <section className="mb-12">
-              <h2 className="text-xl font-semibold text-white mb-6">Flashs</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {flashItems.map((item) => (
-                  <a
-                    key={item.id}
-                    href={`${bookingUrl}?flash=${item.id}`}
-                    className="group block rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800 transition-transform hover:scale-[1.02]"
-                  >
-                    <div className="aspect-square">
-                      <img
-                        src={item.imageUrl}
-                        alt={item.title ?? 'Flash'}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-3">
-                      <p className="font-medium text-sm text-white truncate">{item.title}</p>
-                      {item.price != null && (
-                        <p className="text-xs text-violet-400">{item.price}€</p>
-                      )}
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </section>
-          )}
+          <StudioThemeFlashSection items={flashItems} bookingUrl={bookingUrl} variant="split" />
 
           {/* Portfolio */}
           {portfolioItems.length > 0 && (
@@ -111,6 +84,19 @@ export const SplitTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, por
             <section className="mt-12">
               <GoogleReviews data={googleReviews} className="border-neutral-800" />
             </section>
+          )}
+          {studio.googleBusinessUrl && (
+            <div className="mt-8 flex justify-center lg:justify-start">
+              <a
+                href={studio.googleBusinessUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl border border-neutral-600 text-neutral-200 text-sm font-medium hover:bg-neutral-900 active:scale-[0.98] transition-all"
+              >
+                Google Maps
+                <ExternalLink className="w-4 h-4 shrink-0" aria-hidden />
+              </a>
+            </div>
           )}
         </main>
       </div>

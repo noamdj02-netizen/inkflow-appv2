@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { STYLES_LIST } from '../../lib/constants/styles';
 import { postReview } from '../../lib/discover';
+import { DISCOVER_UI as U } from '../../lib/discoverUiTheme';
 
 interface WriteReviewDrawerProps {
   studioId: string;
@@ -47,9 +48,9 @@ export function WriteReviewDrawer({ studioId, studioName, onClose }: WriteReview
     minHeight: 44,
     padding: '10px 14px',
     borderRadius: 12,
-    background: '#1a1a1a',
-    border: '1.5px solid #2a2a2a',
-    color: '#e8e3dc',
+    background: U.surface,
+    border: `1.5px solid ${U.border}`,
+    color: U.text,
     fontSize: 14,
     outline: 'none',
     fontFamily: 'inherit',
@@ -72,9 +73,10 @@ export function WriteReviewDrawer({ studioId, studioName, onClose }: WriteReview
       <div style={{
         position: 'fixed',
         bottom: 0, left: 0, right: 0,
-        background: '#161616',
+        background: U.surface,
         borderRadius: '24px 24px 0 0',
-        borderTop: '1px solid #2a2a2a',
+        borderTop: `1px solid ${U.border}`,
+        boxShadow: '0 -8px 32px rgba(0,0,0,0.08)',
         padding: '24px 20px',
         paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))',
         zIndex: 201,
@@ -84,23 +86,23 @@ export function WriteReviewDrawer({ studioId, studioName, onClose }: WriteReview
         {/* Handle */}
         <div style={{
           width: 36, height: 4, borderRadius: 2,
-          background: '#2a2a2a', margin: '0 auto 20px',
+          background: U.border, margin: '0 auto 20px',
         }} />
 
         {success ? (
           <div style={{ textAlign: 'center', padding: '24px 0' }}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>✓</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#e8e3dc', marginBottom: 8 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: U.text, marginBottom: 8 }}>
               Merci pour votre avis !
             </div>
-            <div style={{ fontSize: 13, color: '#6b6b6b', marginBottom: 24 }}>
+            <div style={{ fontSize: 13, color: U.textMuted, marginBottom: 24 }}>
               Votre avis sera publié après modération.
             </div>
             <button
               onClick={onClose}
               style={{
                 minHeight: 44, padding: '0 24px', borderRadius: 12,
-                background: '#c9a96e', color: '#0d0d0d',
+                background: U.chipActiveBg, color: U.chipActiveFg,
                 fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer',
               }}
             >
@@ -110,15 +112,15 @@ export function WriteReviewDrawer({ studioId, studioName, onClose }: WriteReview
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
-              <div style={{ fontSize: 17, fontWeight: 700, color: '#e8e3dc' }}>
+              <div style={{ fontSize: 17, fontWeight: 700, color: U.text }}>
                 Laisser un avis
               </div>
-              <div style={{ fontSize: 12, color: '#6b6b6b', marginTop: 2 }}>{studioName}</div>
+              <div style={{ fontSize: 12, color: U.textMuted, marginTop: 2 }}>{studioName}</div>
             </div>
 
             {/* Étoiles */}
             <div>
-              <div style={{ fontSize: 12, color: '#6b6b6b', marginBottom: 8 }}>Note *</div>
+              <div style={{ fontSize: 12, color: U.textMuted, marginBottom: 8 }}>Note *</div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {[1, 2, 3, 4, 5].map((i) => (
                   <button
@@ -128,7 +130,7 @@ export function WriteReviewDrawer({ studioId, studioName, onClose }: WriteReview
                     onMouseLeave={() => setHovered(0)}
                     style={{
                       fontSize: 32, background: 'none', border: 'none', cursor: 'pointer',
-                      color: i <= (hovered || rating) ? '#c9a96e' : '#2a2a2a',
+                      color: i <= (hovered || rating) ? U.chipActiveBg : U.borderStrong,
                       padding: 4, minWidth: 44, minHeight: 44,
                       transition: 'color 0.1s',
                     }}
@@ -142,7 +144,7 @@ export function WriteReviewDrawer({ studioId, studioName, onClose }: WriteReview
             {/* Infos */}
             <div style={{ display: 'flex', gap: 10 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, color: '#6b6b6b', marginBottom: 6 }}>Prénom *</div>
+                <div style={{ fontSize: 12, color: U.textMuted, marginBottom: 6 }}>Prénom *</div>
                 <input
                   type="text"
                   value={name}
@@ -152,7 +154,7 @@ export function WriteReviewDrawer({ studioId, studioName, onClose }: WriteReview
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, color: '#6b6b6b', marginBottom: 6 }}>Email *</div>
+                <div style={{ fontSize: 12, color: U.textMuted, marginBottom: 6 }}>Email *</div>
                 <input
                   type="email"
                   value={email}
@@ -165,7 +167,7 @@ export function WriteReviewDrawer({ studioId, studioName, onClose }: WriteReview
 
             {/* Style */}
             <div>
-              <div style={{ fontSize: 12, color: '#6b6b6b', marginBottom: 6 }}>Style de tatouage</div>
+              <div style={{ fontSize: 12, color: U.textMuted, marginBottom: 6 }}>Style de tatouage</div>
               <select
                 value={style}
                 onChange={(e) => setStyle(e.target.value)}
@@ -178,8 +180,8 @@ export function WriteReviewDrawer({ studioId, studioName, onClose }: WriteReview
 
             {/* Commentaire */}
             <div>
-              <div style={{ fontSize: 12, color: '#6b6b6b', marginBottom: 6 }}>
-                Votre avis <span style={{ color: '#2a2a2a' }}>(optionnel)</span>
+              <div style={{ fontSize: 12, color: U.textMuted, marginBottom: 6 }}>
+                Votre avis <span style={{ color: U.textSoft }}>(optionnel)</span>
               </div>
               <textarea
                 value={body}
@@ -194,7 +196,7 @@ export function WriteReviewDrawer({ studioId, studioName, onClose }: WriteReview
                   lineHeight: 1.5,
                 }}
               />
-              <div style={{ fontSize: 10, color: '#6b6b6b', textAlign: 'right', marginTop: 4 }}>
+              <div style={{ fontSize: 10, color: U.textSoft, textAlign: 'right', marginTop: 4 }}>
                 {body.length}/1000
               </div>
             </div>
@@ -216,8 +218,8 @@ export function WriteReviewDrawer({ studioId, studioName, onClose }: WriteReview
               style={{
                 minHeight: 48, width: '100%',
                 borderRadius: 14,
-                background: canSubmit ? '#c9a96e' : '#2a2a2a',
-                color: canSubmit ? '#0d0d0d' : '#6b6b6b',
+                background: canSubmit ? U.chipActiveBg : U.skeleton,
+                color: canSubmit ? U.chipActiveFg : U.textMuted,
                 fontWeight: 700, fontSize: 15, border: 'none',
                 cursor: canSubmit ? 'pointer' : 'not-allowed',
                 transition: 'all 0.15s',
@@ -226,7 +228,7 @@ export function WriteReviewDrawer({ studioId, studioName, onClose }: WriteReview
               {loading ? 'Envoi en cours…' : 'Publier mon avis'}
             </button>
 
-            <div style={{ fontSize: 11, color: '#6b6b6b', textAlign: 'center' }}>
+            <div style={{ fontSize: 11, color: U.textMuted, textAlign: 'center' }}>
               Votre email ne sera jamais affiché publiquement.
             </div>
           </div>

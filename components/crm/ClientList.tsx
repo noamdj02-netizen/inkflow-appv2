@@ -110,7 +110,7 @@ interface ClientListProps {
   /** Demandes projet (Supabase) — vue Projets */
   projectRequests?: ProjectRequest[];
   projectRequestsLoading?: boolean;
-  /** Ouvre l’onglet Demandes → Projets (actions complètes : accepter, messagerie, etc.) */
+  /** Ouvre l’onglet Demandes → Projets (accepter, refuser, e-mail / Instagram, acompte) */
   onOpenRequestsProjects?: () => void;
 }
 
@@ -314,7 +314,7 @@ export const ClientList: React.FC<ClientListProps> = ({
               Projets par client
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-1 text-sm sm:text-base max-w-2xl">
-              Demandes de projet personnalisé regroupées par e-mail client. Pour accepter, refuser ou ouvrir la messagerie,
+              Demandes de projet personnalisé regroupées par e-mail client. Pour accepter, refuser ou contacter le client (e-mail / Instagram),
               passez par <span className="font-medium text-zinc-700 dark:text-zinc-300">Demandes → Projets</span>.
             </p>
           </div>

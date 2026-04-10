@@ -18,7 +18,7 @@ export function StarRating({ avg, count, size = 'sm' }: StarRatingProps) {
             key={i}
             style={{
               fontSize,
-              color: i <= filled ? '#c9a96e' : '#2a2a2a',
+              color: i <= filled ? '#2563eb' : '#d4d4d8',
               lineHeight: 1,
             }}
           >

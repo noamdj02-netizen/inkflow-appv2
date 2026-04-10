@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { MessageSquare, CheckCircle, XCircle, Calendar, FileText, Mail, Clock, CreditCard, Copy, Loader2, AlertTriangle, MapPin, Ruler, Sparkles, Gift } from 'lucide-react';
+import { History, CheckCircle, XCircle, Calendar, FileText, Mail, Clock, CreditCard, Copy, Loader2, AlertTriangle, MapPin, Ruler, Sparkles, Gift, AtSign } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
 import { Appointment, ProjectRequest, Booking, BookingStatus, Client } from '../../types';
 import { RequestQuickViewSheet } from './RequestQuickViewSheet';
@@ -11,9 +11,11 @@ import { useToast } from '../../contexts/ToastContext';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { saveAppointmentToSupabase } from '../../lib/supabaseDashboard';
 import { isSlotAvailableForBooking } from '../../lib/supabaseBookings';
-import { sendConversationLinkToClient, sendBookingConfirmation, sendBookingRefusal } from '../../lib/sendNotification';
-import { supabase } from '../../lib/supabase';
+import { sendBookingConfirmation, sendBookingRefusal } from '../../lib/sendNotification';
 import type { PendingStampReward } from '../../lib/stampLoyalty';
+import { parseInstagramHandle, instagramProfileUrl, instagramMessageUrl } from '../../lib/instagramUtils';
+import { buildMailtoHref, handleMailtoClick } from '../../lib/mailto';
+import { ProposeAlternativeDateModal } from './ProposeAlternativeDateModal';
 
 interface RequestsDashboardProps {
   studioId: string | null;
@@ -27,8 +29,6 @@ interface RequestsDashboardProps {
   onAddAppointment?: (appointment: Appointment) => void;
   projectRequests?: ProjectRequest[];
   onUpdateProjectRequest?: (id: string, status: ProjectRequest['status']) => void;
-  /** Après "Accepter & Discuter", ouvre l’onglet Messagerie avec ce fil (thread_id). */
-  onOpenMessageThread?: (threadId: string) => void;
   bookings?: Booking[];
   onUpdateBookingStatus?: (id: string, status: BookingStatus) => Promise<void>;
   bookingsLoading?: boolean;
@@ -62,7 +62,6 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   onAddAppointment,
   projectRequests = [],
   onUpdateProjectRequest,
-  onOpenMessageThread,
   bookings = [],
   onUpdateBookingStatus,
   bookingsLoading = false,
@@ -117,7 +116,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   const [depositModalAppointment, setDepositModalAppointment] = useState<Appointment | null>(null);
   // Modale acompte depuis une demande vitrine (booking) → crée un RDV puis génère le lien
   const [depositModalBooking, setDepositModalBooking] = useState<Booking | null>(null);
-  // Modale acompte depuis une demande de projet → crée un RDV puis génère le lien (flux recommandé : discuter sur Instagram puis envoyer le lien)
+  // Modale acompte depuis une demande de projet → crée un RDV puis génère le lien
   const [depositModalProject, setDepositModalProject] = useState<ProjectRequest | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
   const [depositLoading, setDepositLoading] = useState(false);
@@ -127,6 +126,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   // Sheet Quick View (aperçu rapide au clic sur une demande)
   type SheetItem = (ProjectRequest & { _type: 'project' }) | (Booking & { _type: 'booking' });
   const [sheetItem, setSheetItem] = useState<SheetItem | null>(null);
+  const [proposeDateItem, setProposeDateItem] = useState<SheetItem | null>(null);
 
   const inferRequestType = (desc: string, placement?: string): 'flash' | 'custom' => {
     const d = (desc || '').toLowerCase();
@@ -195,62 +195,6 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       description: `${apt.service} — ${apt.date} à ${apt.time}`,
     });
     toast.info('Rendez-vous refusé — un email a été envoyé au client');
-  };
-
-  const handleApproveProject = async (pr: ProjectRequest) => {
-    if (!studioId || !user?.name) {
-      toast.error('Données manquantes');
-      return;
-    }
-    const threadId = `pr_${pr.id}`;
-    try {
-      const { error: insertErr } = await supabase.from('inkflow_messages').insert({
-        id: `msg_pr_${Date.now()}`,
-        studio_id: studioId,
-        thread_id: threadId,
-        sender_type: 'artist',
-        sender_name: user.name,
-        content: `Votre demande a été acceptée. Répondez ici pour échanger avec le studio.`,
-        read: false,
-      });
-      if (insertErr) {
-        toast.error('Impossible de créer la conversation');
-        return;
-      }
-      await onUpdateProjectRequest?.(pr.id, 'accepted');
-      toast.success('Demande acceptée — conversation créée');
-      onOpenMessageThread?.(threadId);
-      const link = `${typeof window !== 'undefined' ? window.location.origin : ''}/c/${threadId}`;
-      const result = await sendConversationLinkToClient({
-        clientEmail: pr.clientEmail,
-        clientName: pr.clientName,
-        studioName: user.studioName || undefined,
-        threadId,
-      });
-      if (result.sent) {
-        toast.success('Un email avec le lien de conversation a été envoyé au client.');
-      } else if (result.unauthorized) {
-        if (navigator.clipboard?.writeText) {
-          navigator.clipboard.writeText(link).catch(() => { toast.error('Impossible de copier le lien'); });
-        }
-        toast.warning('Lien copié. L\'envoi automatique de l\'email a échoué — envoyez le lien au client vous-même (DM Instagram, SMS, etc.).');
-      } else {
-        if (navigator.clipboard?.writeText) {
-          navigator.clipboard.writeText(link).catch(() => { toast.error('Impossible de copier le lien'); });
-        }
-        if (result.errorDetails) {
-          toast.warning(result.errorDetails, { duration: 8000 });
-        } else {
-          toast.warning(
-            'Envoi automatique indisponible. Le lien a été copié : envoyez-le au client (message, e-mail). Si le problème persiste, vérifiez l’e-mail du studio dans les paramètres.',
-            { duration: 6000 }
-          );
-        }
-        toast.info('Lien copié : envoyez-le au client par email ou SMS pour qu\'il puisse vous répondre.');
-      }
-    } catch {
-      toast.error('Erreur lors de la mise a jour');
-    }
   };
 
   const handleRejectProject = async (pr: ProjectRequest) => {
@@ -476,7 +420,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       }
     }
 
-    // Cas 3 : depuis une demande de projet → créer un RDV puis générer le lien (flux : discuter sur Instagram puis envoyer le lien)
+    // Cas 3 : depuis une demande de projet → créer un RDV puis générer le lien
     if (depositModalProject && onAddAppointment) {
       setDepositLoading(true);
       setDepositUrl(null);
@@ -647,7 +591,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 : 'bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-zinc-700'
             }`}
           >
-            <MessageSquare className="w-4 h-4" />
+            <History className="w-4 h-4" />
             Historique
           </button>
         </div>
@@ -750,7 +694,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-zinc-800">
               {/* Sub-filter : Toutes / Flash / Projet sur mesure */}
-              <div className="px-5 sm:px-6 py-3 flex gap-2 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-800/30">
+              <div className="px-4 sm:px-6 py-3 flex gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide border-b border-slate-100 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-800/30 -mx-px">
                 <button
                   onClick={() => setBookingSubTab('all')}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
@@ -806,17 +750,22 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 </div>
               ) : filteredBookings.map(bk => {
                 const thumbUrl = (bk.referenceImages && bk.referenceImages[0]) || null;
+                const crmAvatar = getAvatar(bk.clientEmail, undefined, bk.clientName);
+                const displayThumb = bk.clientAvatarUrl || crmAvatar || thumbUrl;
+                const isProfileThumb = Boolean(bk.clientAvatarUrl || crmAvatar);
                 const reqType = inferRequestType(bk.description);
                 const placement = bk.placement;
                 const size = bk.size;
                 const stampRwBk = stampRewardForEmail(bk.clientEmail);
+                const igHandle = parseInstagramHandle(undefined, bk.description);
+                const bookingMailtoHref = buildMailtoHref(bk.clientEmail, 'Votre demande de tatouage');
                 return (
                 <div key={bk.id} className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors border-b border-slate-100 dark:border-zinc-800 last:border-b-0">
                   <button type="button" onClick={() => setSheetItem({ ...bk, _type: 'booking' })} className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto">
                     <div className="flex gap-4 items-start md:items-center">
-                      <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700">
-                        {thumbUrl ? (
-                          <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+                      <div className={`w-16 h-16 ${isProfileThumb ? 'rounded-full' : 'rounded-xl'} bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700`}>
+                        {displayThumb ? (
+                          <img src={displayThumb} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
                             <FileText className="w-8 h-8" />
@@ -824,10 +773,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-lg text-slate-900 dark:text-white">{bk.clientName}</div>
-                        <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
-                          <Mail className="w-3.5 h-3.5 shrink-0" />
-                          {bk.clientEmail}
+                        <div className="font-semibold text-lg text-slate-900 dark:text-white break-words">{bk.clientName}</div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-start gap-2 min-w-0">
+                          <Mail className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                          <span className="min-w-0 break-all sm:break-words">{bk.clientEmail}</span>
                         </div>
                         {stampRwBk && (
                           <div className="mt-2.5 flex items-start gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/90 dark:border-emerald-500/35 dark:bg-emerald-500/10 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-100">
@@ -876,18 +825,68 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     </div>
                   </button>
                   {bk.status === 'pending' && (
-                    <div className="flex flex-wrap items-center gap-2 flex-shrink-0 md:ml-4" onClick={(e) => e.stopPropagation()}>
+                    <div
+                      className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 flex-shrink-0 w-full pt-3 mt-1 border-t border-slate-100 dark:border-zinc-800 sm:pt-0 sm:mt-0 sm:border-t-0 md:ml-4 md:w-auto"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {igHandle && (
+                        <>
+                          <a
+                            href={instagramMessageUrl(igHandle)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-pink-500/15 to-purple-500/15 border border-pink-200/80 dark:border-pink-500/30 text-pink-700 dark:text-pink-300 text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <AtSign className="w-4 h-4 shrink-0" /> Instagram
+                          </a>
+                          <a
+                            href={bookingMailtoHref ?? '#'}
+                            className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-600 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all touch-manipulation"
+                            aria-disabled={!bookingMailtoHref}
+                            onClick={(e) => {
+                              if (!bookingMailtoHref) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toast.error('Adresse e-mail du client invalide ou manquante.');
+                                return;
+                              }
+                              handleMailtoClick(e, bookingMailtoHref);
+                            }}
+                          >
+                            <Mail className="w-4 h-4 shrink-0" /> Email
+                          </a>
+                        </>
+                      )}
+                      {!igHandle && (
+                        <a
+                          href={bookingMailtoHref ?? '#'}
+                          className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-600 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all touch-manipulation"
+                          aria-disabled={!bookingMailtoHref}
+                          onClick={(e) => {
+                            if (!bookingMailtoHref) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toast.error('Adresse e-mail du client invalide ou manquante.');
+                              return;
+                            }
+                            handleMailtoClick(e, bookingMailtoHref);
+                          }}
+                        >
+                          <Mail className="w-4 h-4 shrink-0" /> Email
+                        </a>
+                      )}
                       {studioId && onAddAppointment && (
                         <button
                           onClick={() => openDepositModalForBooking(bk)}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all text-sm shadow-sm"
+                          className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all text-sm shadow-sm"
                         >
-                          <CreditCard className="w-4 h-4" /> Accepter & Acompte
+                          <CreditCard className="w-4 h-4 shrink-0" /> Lien d&apos;acompte
                         </button>
                       )}
                       <button onClick={() => handleRejectBooking(bk)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm">
-                        <XCircle className="w-4 h-4" /> Refuser
+                        className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm">
+                        <XCircle className="w-4 h-4 shrink-0" /> Refuser
                       </button>
                     </div>
                   )}
@@ -914,12 +913,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               <div className="px-5 sm:px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50/50 dark:from-blue-950/40 dark:to-indigo-950/20 border-b border-blue-100/80 dark:border-blue-900/40">
                 <p className="text-sm text-blue-700 dark:text-blue-300 font-medium flex items-center gap-2">
                   <Sparkles className="w-4 h-4" />
-                  <span><strong>Conseil :</strong> Discutez avec le client sur Instagram puis envoyez le lien d&apos;acompte.</span>
+                  <span><strong>Conseil :</strong> Proposez une autre date depuis le détail, contactez par Instagram ou e-mail — l&apos;acompte peut venir après.</span>
                 </p>
               </div>
               {pendingProjects.map(pr => {
                 const thumbUrl = (pr.referenceImages && pr.referenceImages[0]) || null;
                 const reqType = inferRequestType(pr.description, pr.placement);
+                const igProject = parseInstagramHandle(pr.clientInstagram, pr.description);
+                const projectMailtoHref = buildMailtoHref(pr.clientEmail, 'Votre projet tatouage');
                 return (
                 <div key={pr.id} className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
                   <button type="button" onClick={() => setSheetItem({ ...pr, _type: 'project' })} className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto">
@@ -940,8 +941,16 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                             <Mail className="w-3.5 h-3.5 shrink-0" />
                             {pr.clientEmail}
                           </span>
-                          {pr.clientInstagram && (
-                            <span className="text-blue-600 dark:text-blue-400 font-medium">{pr.clientInstagram}</span>
+                          {igProject && (
+                            <a
+                              href={instagramProfileUrl(igProject)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1 text-pink-600 dark:text-pink-400 font-medium hover:underline"
+                            >
+                              <AtSign className="w-3.5 h-3.5" /> @{igProject}
+                            </a>
                           )}
                         </div>
                         <div className="flex flex-wrap gap-1.5 mt-2.5">
@@ -969,20 +978,39 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     </div>
                   </button>
                   <div className="flex flex-wrap items-center gap-2 flex-shrink-0 md:ml-4" onClick={(e) => e.stopPropagation()}>
+                    {igProject && (
+                      <a
+                        href={instagramMessageUrl(igProject)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-pink-500/15 to-purple-500/15 border border-pink-200/80 dark:border-pink-500/30 text-pink-700 dark:text-pink-300 text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
+                      >
+                        <AtSign className="w-4 h-4" /> Instagram
+                      </a>
+                    )}
+                    <a
+                      href={projectMailtoHref ?? '#'}
+                      className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-600 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all touch-manipulation"
+                      aria-disabled={!projectMailtoHref}
+                      onClick={(e) => {
+                        if (!projectMailtoHref) {
+                          e.preventDefault();
+                          toast.error('Adresse e-mail du client invalide ou manquante.');
+                          return;
+                        }
+                        handleMailtoClick(e, projectMailtoHref);
+                      }}
+                    >
+                      <Mail className="w-4 h-4" /> Email
+                    </a>
                     {studioId && onAddAppointment && (
                       <button
                         onClick={() => openDepositModalForProject(pr)}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all text-sm shadow-sm"
                       >
-                        <CreditCard className="w-4 h-4" /> Acompte
+                        <CreditCard className="w-4 h-4" /> Lien d&apos;acompte
                       </button>
                     )}
-                    <button
-                      onClick={() => handleApproveProject(pr)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all text-sm shadow-sm"
-                    >
-                      <CheckCircle className="w-4 h-4" /> Accepter
-                    </button>
                     <button onClick={() => handleRejectProject(pr)}
                       className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm"
                     >
@@ -1066,7 +1094,9 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         onClose={() => setSheetItem(null)}
         item={sheetItem}
         thumbnailUrl={sheetItem && '_type' in sheetItem
-          ? (sheetItem._type === 'project' ? (sheetItem as ProjectRequest).referenceImages?.[0] : (sheetItem as Booking).referenceImages?.[0])
+          ? (sheetItem._type === 'project'
+            ? (sheetItem as ProjectRequest).referenceImages?.[0]
+            : (sheetItem as Booking).referenceImages?.[0] || (sheetItem as Booking).clientAvatarUrl)
           : null}
         requestType={sheetItem && 'description' in sheetItem ? inferRequestType(sheetItem.description, (sheetItem as ProjectRequest).placement) : 'custom'}
         placement={sheetItem && '_type' in sheetItem
@@ -1076,7 +1106,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           ? (sheetItem._type === 'project' ? (sheetItem as ProjectRequest).size : (sheetItem as Booking).size)
           : null}
         studioId={studioId}
-        onAccept={sheetItem && sheetItem._type === 'project' ? (item) => handleApproveProject(item as ProjectRequest) : undefined}
+        instagramHandle={
+          sheetItem && '_type' in sheetItem
+            ? parseInstagramHandle(
+                sheetItem._type === 'project' ? (sheetItem as ProjectRequest).clientInstagram : undefined,
+                sheetItem.description
+              )
+            : undefined
+        }
         onAcceptAndDeposit={studioId && onAddAppointment
           ? (item) => {
               if (item._type === 'project') openDepositModalForProject(item as ProjectRequest);
@@ -1089,9 +1126,26 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           setSheetItem(null);
         }}
         onProposeDate={(item) => {
-          toast.info('Proposez une date via la messagerie ou en répondant au client.');
+          setProposeDateItem(item);
           setSheetItem(null);
         }}
+      />
+
+      <ProposeAlternativeDateModal
+        isOpen={!!proposeDateItem && !!studioId}
+        onClose={() => setProposeDateItem(null)}
+        item={proposeDateItem}
+        studioId={studioId}
+        studioName={user?.studioName || 'Le studio'}
+        replyToEmail={user?.email}
+        instagramHandle={
+          proposeDateItem && '_type' in proposeDateItem
+            ? parseInstagramHandle(
+                proposeDateItem._type === 'project' ? proposeDateItem.clientInstagram : undefined,
+                proposeDateItem.description
+              )
+            : null
+        }
       />
 
       {/* Modale : montant acompte → génération lien Stripe → copier */}
@@ -1109,7 +1163,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                   {depositModalBooking
                     ? "Un RDV sera créé et un email contenant le lien de paiement Stripe sera automatiquement envoyé au client pour confirmer sa réservation."
                     : depositModalProject
-                      ? "Un RDV sera créé avec les infos du projet, puis un lien de paiement sera généré. Envoyez-le au client (ex. par DM Instagram) pour encaisser l'acompte."
+                      ? "Un RDV sera créé avec les infos du projet, puis un lien de paiement sera généré. Partagez-le au client par e-mail ou Instagram pour encaisser l'acompte."
                       : "Montant de l'acompte à demander au client. Le lien de paiement Stripe sera généré."}
                 </p>
                 <div>

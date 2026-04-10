@@ -1,8 +1,13 @@
 import { supabase } from './supabase';
+import { safeExternalHttpUrl } from './urls';
 import type { Booking, BookingStatus, VitrineBookingFormData } from '../types';
 
 export function mapBookingFromDb(row: Record<string, unknown>): Booking {
   const refImages = row.reference_images;
+  const rawAvatar = row.client_avatar_url as string | undefined;
+  const clientAvatarUrl = typeof rawAvatar === 'string' && rawAvatar.trim()
+    ? safeExternalHttpUrl(rawAvatar.trim()) ?? rawAvatar.trim()
+    : undefined;
   return {
     id: row.id as string,
     studioId: row.studio_id as string,
@@ -13,6 +18,7 @@ export function mapBookingFromDb(row: Record<string, unknown>): Booking {
     requestedTime: (row.requested_time as string) ?? null,
     status: (row.status as BookingStatus) || 'pending',
     referenceImages: Array.isArray(refImages) ? (refImages as string[]) : undefined,
+    clientAvatarUrl,
     placement: row.placement as string | undefined,
     size: row.size as string | undefined,
     createdAt: row.created_at as string,
@@ -132,6 +138,10 @@ export async function createBooking(data: VitrineBookingFormData, studioId: stri
   const descriptionBody = data.description.trim();
   const description =
     ig ? `${descriptionBody}\n\nInstagram : ${ig}` : descriptionBody;
+  const avatarStored = data.clientAvatarUrl?.trim()
+    ? safeExternalHttpUrl(data.clientAvatarUrl.trim())
+    : null;
+
   const row = {
     id,
     studio_id: studioId,
@@ -142,6 +152,7 @@ export async function createBooking(data: VitrineBookingFormData, studioId: stri
     requested_time: data.requestedTime?.trim() || null,
     status: 'pending',
     reference_images: data.referenceImages ?? [],
+    client_avatar_url: avatarStored,
     created_at: now,
     updated_at: now,
   };

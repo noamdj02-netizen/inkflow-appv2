@@ -6,6 +6,7 @@ import { SEO } from '../SEO';
 import type { StudioThemeProps } from '../../types/studio-theme';
 import type { VitrineData } from '../../types/vitrine';
 import type { GoogleReviewsPayload } from '../../types/googlePlaces';
+import { safeExternalHttpUrl } from '../../lib/urls';
 
 /**
  * Thèmes structurels = famille « Focus & conversion » (page courte). Les thèmes Full Studio
@@ -26,6 +27,15 @@ const STRUCTURAL_THEME_IDS = ['classic', 'split', 'vintage'] as const;
 
 function isStructuralTheme(themeId: string | undefined): themeId is (typeof STRUCTURAL_THEME_IDS)[number] {
   return themeId != null && STRUCTURAL_THEME_IDS.includes(themeId as (typeof STRUCTURAL_THEME_IDS)[number]);
+}
+
+/** Même logique que PublicStudioPagePro : fiche Google si renseignée, sinon recherche Maps sur l’adresse */
+function resolvePublicGoogleMapsUrl(data: VitrineData): string | null {
+  const custom = safeExternalHttpUrl(data.googleBusinessUrl ?? '');
+  if (custom) return custom;
+  const addr = (data.address ?? '').trim();
+  if (!addr) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`;
 }
 
 function vitrineToStudioThemeProps(data: VitrineData, baseUrl: string): StudioThemeProps {
@@ -51,6 +61,7 @@ function vitrineToStudioThemeProps(data: VitrineData, baseUrl: string): StudioTh
       website: trimOrNull(data.website),
       instagramHandle,
       bookingUrl,
+      googleBusinessUrl: resolvePublicGoogleMapsUrl(data),
       themeName: data.theme ?? 'classic',
     },
     flashItems: data.flashDesigns.map((f) => ({
@@ -59,6 +70,8 @@ function vitrineToStudioThemeProps(data: VitrineData, baseUrl: string): StudioTh
       title: f.title,
       price: f.price,
       isAvailable: f.available,
+      duration: f.duration,
+      style: f.style,
     })),
     portfolioItems: data.portfolio.map((p, i) => ({
       id: `p-${i}`,

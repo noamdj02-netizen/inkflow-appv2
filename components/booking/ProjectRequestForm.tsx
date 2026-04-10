@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Mail, Instagram, MapPin, Ruler, Euro, FileText } from 'lucide-react';
 import type { ProjectRequestFormData } from '../../types';
+import { ReferenceImageUpload } from './ReferenceImageUpload';
+import { uploadBookingReferenceImages } from '../../lib/supabaseBookings';
+import { useToast } from '../../contexts/ToastContext';
 
 const schema = z.object({
   clientName: z.string().min(2, 'Nom requis (min. 2 caractères)'),
@@ -41,13 +44,18 @@ interface ProjectRequestFormProps {
   onSubmit: (data: ProjectRequestFormData) => Promise<void>;
   onCancel?: () => void;
   submitLabel?: string;
+  /** Studio cible (upload Storage). Si null au moment de l’envoi, les photos ne pourront pas être jointes. */
+  studioId: string | null;
 }
 
 export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
   onSubmit,
   onCancel,
-  submitLabel = 'Envoyer ma demande'
+  submitLabel = 'Envoyer ma demande',
+  studioId,
 }) => {
+  const toast = useToast();
+  const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
   const {
     register,
     handleSubmit,
@@ -65,8 +73,36 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
     }
   });
 
+  const submitWithUpload = async (data: FormData) => {
+    if (referenceFiles.length > 0 && !studioId) {
+      toast.error('Chargement du studio… Réessayez dans une seconde ou rafraîchissez la page.');
+      return;
+    }
+    let referenceImages: string[] | undefined;
+    if (referenceFiles.length > 0 && studioId) {
+      try {
+        referenceImages = await uploadBookingReferenceImages(studioId, referenceFiles);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        toast.error(msg || 'Impossible d’envoyer les images. Réessayez.');
+        return;
+      }
+    }
+    const payload: ProjectRequestFormData = {
+      clientName: data.clientName,
+      clientEmail: data.clientEmail,
+      clientInstagram: data.clientInstagram?.trim() || undefined,
+      description: data.description,
+      placement: data.placement?.trim() || undefined,
+      size: data.size?.trim() || undefined,
+      budget: data.budget?.trim() || undefined,
+      referenceImages: referenceImages && referenceImages.length > 0 ? referenceImages : undefined,
+    };
+    await onSubmit(payload);
+  };
+
   return (
-    <form onSubmit={handleSubmit(async (data) => onSubmit(data as ProjectRequestFormData))} className="space-y-6">
+    <form onSubmit={handleSubmit(submitWithUpload)} className="space-y-6">
       <div>
         <h3 className="text-xl font-bold mb-4">Votre demande de projet</h3>
         <p className="text-sm text-neutral-600 mb-6">
@@ -171,6 +207,20 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
           placeholder="Ex: 150-300€ ou À partir de 150€"
           className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
         />
+      </div>
+
+      <div>
+        <ReferenceImageUpload
+          value={referenceFiles}
+          onChange={setReferenceFiles}
+          variant="light"
+          label="Photos d’inspiration (optionnel)"
+          inputId="project-ref-images"
+          className="mt-1"
+        />
+        <p className="text-xs text-neutral-500 mt-2">
+          Le tatoueur verra ces images dans son onglet Demandes &gt; Projets.
+        </p>
       </div>
 
       <div className="flex items-center gap-3 pt-4 border-t border-neutral-200">

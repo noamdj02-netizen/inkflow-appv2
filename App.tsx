@@ -1,4 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { useTheme } from 'next-themes';
 import { useClientManifest } from './hooks/useClientManifest';
 import { ThemeProvider } from 'next-themes';
 import { LANDING_URL } from './lib/urls';
@@ -21,6 +22,7 @@ import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { InviteRedirectPage } from './pages/InviteRedirectPage';
 import { ReferralPage } from './pages/ReferralPage';
+import { ClientPortalLoginPage } from './pages/client/ClientPortalLoginPage';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const PublicStudioPagePro = lazy(() => import('./pages/public/PublicStudioPagePro').then(m => ({ default: m.PublicStudioPagePro })));
@@ -36,10 +38,10 @@ const FeatureDetailPage = lazy(() => import('./pages/features/FeatureDetailPage'
 const InstagramCallbackPage = lazy(() => import('./pages/InstagramCallbackPage').then(m => ({ default: m.InstagramCallbackPage })));
 const AddToHomeScreenPage = lazy(() => import('./pages/AddToHomeScreenPage').then(m => ({ default: m.AddToHomeScreenPage })));
 const DebugExperiencePage = lazy(() => import('./pages/admin/DebugExperiencePage').then(m => ({ default: m.DebugExperiencePage })));
-const ClientPortalLoginPage = lazy(() => import('./pages/client/ClientPortalLoginPage').then(m => ({ default: m.ClientPortalLoginPage })));
 const ClientVitrineEmbedPage = lazy(() => import('./pages/client/ClientStudioEmbedPage').then(m => ({ default: m.ClientVitrineEmbedPage })));
 const ClientFlashToolsEmbedPage = lazy(() => import('./pages/client/ClientStudioEmbedPage').then(m => ({ default: m.ClientFlashToolsEmbedPage })));
 const ClientDashboard = lazy(() => import('./pages/public/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
+const ClientHealthOnboardingPage = lazy(() => import('./pages/client/ClientHealthOnboardingPage').then(m => ({ default: m.ClientHealthOnboardingPage })));
 const ArtistPage = lazy(() => import('./pages/vitrine/ArtistPage').then(m => ({ default: m.ArtistPage })));
 const FlashPage = lazy(() => import('./pages/vitrine/FlashPage').then(m => ({ default: m.FlashPage })));
 const DiscoverHomePage = lazy(() => import('./pages/discover/DiscoverHomePage').then(m => ({ default: m.DiscoverHomePage })));
@@ -70,7 +72,16 @@ const FullScreenSpinner: React.FC = () => (
 const Router: React.FC = () => {
   const [currentPath, setCurrentPath] = useState(window.location.pathname + window.location.search);
   const { isAuthenticated, authLoading } = useAuth();
+  const { setTheme } = useTheme();
   useClientManifest(currentPath.startsWith('/client'));
+
+  /** Thème sombre uniquement sur le dashboard tatoueur ; vitrine, /client, discover, etc. en clair. */
+  useEffect(() => {
+    let pathname = currentPath.split('?')[0];
+    if (pathname.length > 1 && pathname.endsWith('/')) pathname = pathname.replace(/\/+$/, '');
+    const isProDashboard = pathname === '/dashboard';
+    setTheme(isProDashboard ? 'dark' : 'light');
+  }, [currentPath, setTheme]);
 
   useEffect(() => {
     const handleLocationChange = () => setCurrentPath(window.location.pathname + window.location.search);
@@ -80,6 +91,14 @@ const Router: React.FC = () => {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const anchor = target.closest('a');
+      const rawHref = anchor?.getAttribute('href')?.trim() ?? '';
+      if (
+        rawHref.startsWith('mailto:') ||
+        rawHref.startsWith('tel:') ||
+        rawHref.startsWith('sms:')
+      ) {
+        return;
+      }
       if (anchor && anchor.href.startsWith(window.location.origin) && !anchor.target) {
         e.preventDefault();
         const url = new URL(anchor.href);
@@ -149,6 +168,7 @@ const Router: React.FC = () => {
     { path: '/client', component: ClientPortalLoginPage },
     { path: /^\/client\/vitrine\/?$/, component: ClientVitrineEmbedPage },
     { path: /^\/client\/studio\/flash\/?$/, component: ClientFlashToolsEmbedPage },
+    { path: /^\/client\/compte-sante\/?$/, component: ClientHealthOnboardingPage },
     { path: /^\/client\/dashboard\/?$/, component: ClientDashboard },
     // ── Discover — directory public ─────────────────────────────────────────
     { path: '/discover', component: DiscoverHomePage },
@@ -300,7 +320,7 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       {/* @ts-expect-error next-themes ThemeProvider children — React 19 compat */}
-      <ThemeProvider attribute="data-theme" defaultTheme="dark" storageKey="inkflow-theme">
+      <ThemeProvider attribute="data-theme" defaultTheme="light" storageKey="inkflow-theme" enableSystem={false}>
         <div className="app-root">
           <AuthProvider>
             <AppSplashGate>

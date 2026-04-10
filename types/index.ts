@@ -183,6 +183,8 @@ export interface Booking {
   requestedTime: string | null;
   status: BookingStatus;
   referenceImages?: string[];
+  /** Photo profil client (URL) si connecté via l’espace client / OAuth au moment de la demande */
+  clientAvatarUrl?: string;
   /** Zone du corps (optionnel, depuis formulaire vitrine) */
   placement?: string;
   /** Taille estimée (optionnel) */
@@ -201,6 +203,8 @@ export interface VitrineBookingFormData {
   referenceImages?: string[];
   /** Pseudo / lien Instagram (optionnel) — fluidifie l’échange avec le tatoueur */
   clientInstagram?: string;
+  /** Photo profil si le client est connecté (espace client) */
+  clientAvatarUrl?: string;
 }
 
 export interface StudioSettings {

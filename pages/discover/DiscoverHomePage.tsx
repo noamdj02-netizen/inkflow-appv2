@@ -1,6 +1,5 @@
 /**
  * /discover — Page d'accueil du directory tatoueurs
- * TripAdvisor du Tatouage — dark theme Inkflow
  */
 import React, { useEffect, useState } from 'react';
 import { SearchBar } from '../../components/discover/SearchBar';
@@ -9,6 +8,7 @@ import { CityLinks } from '../../components/discover/CityLinks';
 import { StyleBadge } from '../../components/discover/StyleBadge';
 import { getTrendingStudios, getActiveCities, type DiscoverStudio, type CityPage } from '../../lib/discover';
 import { STYLES_LIST, STYLE_SLUGS } from '../../lib/constants/styles';
+import { DISCOVER_UI as U } from '../../lib/discoverUiTheme';
 
 function ArtistGridSkeleton() {
   return (
@@ -19,14 +19,14 @@ function ArtistGridSkeleton() {
     }}>
       {Array.from({ length: 4 }, (_, i) => (
         <div key={i} style={{
-          background: '#161616', border: '1px solid #2a2a2a',
+          background: U.surface, border: `1px solid ${U.border}`,
           borderRadius: 16, overflow: 'hidden',
         }}>
-          <div style={{ aspectRatio: '4/3', background: '#1a1a1a' }} />
+          <div style={{ aspectRatio: '4/3', background: U.skeleton }} />
           <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ height: 14, width: '65%', background: '#1a1a1a', borderRadius: 6 }} />
-            <div style={{ height: 11, width: '45%', background: '#1a1a1a', borderRadius: 5 }} />
-            <div style={{ height: 10, width: '55%', background: '#1a1a1a', borderRadius: 5 }} />
+            <div style={{ height: 14, width: '65%', background: U.skeletonInner, borderRadius: 6 }} />
+            <div style={{ height: 11, width: '45%', background: U.skeletonInner, borderRadius: 5 }} />
+            <div style={{ height: 10, width: '55%', background: U.skeletonInner, borderRadius: 5 }} />
           </div>
         </div>
       ))}
@@ -55,35 +55,34 @@ export function DiscoverHomePage() {
   return (
     <div style={{
       minHeight: '100dvh',
-      background: '#0d0d0d',
-      color: '#e8e3dc',
+      background: U.pageBg,
+      color: U.text,
       fontFamily: 'Inter, system-ui, sans-serif',
       WebkitFontSmoothing: 'antialiased',
     }}>
-      {/* ── Header nav ── */}
       <nav style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '16px 24px',
-        borderBottom: '1px solid #1a1a1a',
+        borderBottom: `1px solid ${U.border}`,
         position: 'sticky', top: 0, zIndex: 10,
-        background: 'rgba(13,13,13,0.95)',
+        background: U.navBg,
         backdropFilter: 'blur(12px)',
       }}>
         <a href="/" style={{
           display: 'flex', alignItems: 'center', gap: 8,
           textDecoration: 'none',
         }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: '#e8e3dc', letterSpacing: '-0.04em' }}>
-            ink<span style={{ color: '#c9a96e' }}>flow</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: U.text, letterSpacing: '-0.04em' }}>
+            ink<span style={{ color: U.accent }}>flow</span>
           </span>
         </a>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <a
             href="/discover"
             style={{
-              fontSize: 13, fontWeight: 600, color: '#c9a96e',
+              fontSize: 13, fontWeight: 600, color: U.chipActiveBg,
               textDecoration: 'none', padding: '8px 14px',
-              background: 'rgba(201,169,110,0.1)',
+              background: 'rgba(37,99,235,0.08)',
               borderRadius: 10,
             }}
           >
@@ -92,7 +91,7 @@ export function DiscoverHomePage() {
           <a
             href="/login"
             style={{
-              fontSize: 13, fontWeight: 500, color: '#6b6b6b',
+              fontSize: 13, fontWeight: 500, color: U.textMuted,
               textDecoration: 'none', padding: '8px 14px',
             }}
           >
@@ -101,7 +100,6 @@ export function DiscoverHomePage() {
         </div>
       </nav>
 
-      {/* ── Hero ── */}
       <section style={{
         padding: '72px 24px 56px',
         textAlign: 'center',
@@ -111,9 +109,9 @@ export function DiscoverHomePage() {
         <div style={{
           display: 'inline-block',
           fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-          color: '#c9a96e', background: 'rgba(201,169,110,0.1)',
+          color: U.chipActiveBg, background: 'rgba(37,99,235,0.08)',
           padding: '6px 16px', borderRadius: 100,
-          border: '1px solid rgba(201,169,110,0.2)',
+          border: '1px solid rgba(37,99,235,0.2)',
           marginBottom: 24,
         }}>
           Le directory des tatoueurs en France
@@ -123,14 +121,14 @@ export function DiscoverHomePage() {
           fontWeight: 800,
           letterSpacing: '-0.04em',
           lineHeight: 1.05,
-          color: '#e8e3dc',
+          color: U.text,
           marginBottom: 16,
         }}>
           Trouve ton tatoueur{' '}
-          <span style={{ color: '#c9a96e' }}>idéal</span>
+          <span style={{ color: U.chipActiveBg }}>idéal</span>
         </h1>
         <p style={{
-          fontSize: 16, color: '#6b6b6b', lineHeight: 1.6,
+          fontSize: 16, color: U.textMuted, lineHeight: 1.6,
           maxWidth: 480, margin: '0 auto 40px',
         }}>
           Parcours des centaines de portfolios vérifiés.
@@ -139,9 +137,8 @@ export function DiscoverHomePage() {
         <SearchBar />
       </section>
 
-      {/* ── Styles populaires ── */}
       <section style={{ padding: '0 24px 48px', maxWidth: 1100, margin: '0 auto' }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: '#e8e3dc', letterSpacing: '-0.03em', marginBottom: 14 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: U.text, letterSpacing: '-0.03em', marginBottom: 14 }}>
           Parcourir par style
         </h2>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -157,15 +154,14 @@ export function DiscoverHomePage() {
         </div>
       </section>
 
-      {/* ── Artistes tendance ── */}
       <section style={{ padding: '0 24px 56px', maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#e8e3dc', letterSpacing: '-0.03em' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: U.text, letterSpacing: '-0.03em' }}>
             🔥 En ce moment
           </h2>
           <a
             href="/discover/trending"
-            style={{ fontSize: 12, color: '#6b6b6b', textDecoration: 'none' }}
+            style={{ fontSize: 12, color: U.textMuted, textDecoration: 'none' }}
           >
             Voir tout
           </a>
@@ -182,36 +178,34 @@ export function DiscoverHomePage() {
           </div>
         ) : (
           <div style={{
-            padding: '48px 0', textAlign: 'center', color: '#6b6b6b', fontSize: 14,
+            padding: '48px 0', textAlign: 'center', color: U.textMuted, fontSize: 14,
           }}>
             Les premiers artistes arrivent bientôt 🎨
           </div>
         )}
       </section>
 
-      {/* ── Villes ── */}
       {!loadingC && cities.length > 0 && (
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <CityLinks cities={cities} />
         </div>
       )}
 
-      {/* ── Footer ── */}
       <footer style={{
-        borderTop: '1px solid #1a1a1a',
+        borderTop: `1px solid ${U.footerBorder}`,
         padding: '32px 24px',
         textAlign: 'center',
-        color: '#6b6b6b', fontSize: 12,
+        color: U.textMuted, fontSize: 12,
       }}>
         <p>
           © 2026 Inkflow ·{' '}
-          <a href="/legal/privacy" style={{ color: '#6b6b6b' }}>Confidentialité</a>
+          <a href="/legal/privacy" style={{ color: U.textMuted }}>Confidentialité</a>
           {' · '}
-          <a href="/legal/terms" style={{ color: '#6b6b6b' }}>CGU</a>
+          <a href="/legal/terms" style={{ color: U.textMuted }}>CGU</a>
         </p>
         <p style={{ marginTop: 6 }}>
           Tu es tatoueur ?{' '}
-          <a href="/signup" style={{ color: '#c9a96e' }}>Rejoins Inkflow gratuitement →</a>
+          <a href="/signup" style={{ color: U.accent }}>Rejoins Inkflow gratuitement →</a>
         </p>
       </footer>
     </div>

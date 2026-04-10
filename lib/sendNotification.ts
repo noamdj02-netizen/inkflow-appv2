@@ -277,6 +277,38 @@ export interface SendMessageNotificationToStudioParams {
  * Notifie le client par email qu'il a reçu un nouveau message du studio.
  * Non bloquant : en cas d'erreur, on ne remonte pas.
  */
+export interface SendAlternativeDateProposalParams {
+  clientEmail: string;
+  clientName: string;
+  studioName: string;
+  proposedDate: string;
+  proposedTime: string | null;
+  previousContext?: string;
+  /** Réponse « Répondre » du client vers le tatoueur */
+  replyToEmail?: string | null;
+}
+
+/**
+ * E-mail de contre-proposition de date (Reply-To = boîte pro si fournie).
+ */
+export async function sendAlternativeDateProposal(params: SendAlternativeDateProposalParams): Promise<void> {
+  try {
+    const body = {
+      clientEmail: sanitizeEmail(params.clientEmail),
+      clientName: sanitizeText(params.clientName, MAX_NAME_LENGTH) ?? '',
+      studioName: sanitizeText(params.studioName, MAX_NAME_LENGTH) ?? '',
+      proposedDate: params.proposedDate,
+      proposedTime: params.proposedTime ?? null,
+      previousContext: params.previousContext ? sanitizeText(params.previousContext, 500) : undefined,
+      replyToEmail: params.replyToEmail ? sanitizeEmail(params.replyToEmail) : undefined,
+    };
+    const { error } = await supabase.functions.invoke('send-alternative-date-proposal', { body });
+    if (error) logEdgeInvokeError('send-alternative-date-proposal', error);
+  } catch (err) {
+    logEdgeInvokeError('send-alternative-date-proposal', err);
+  }
+}
+
 export async function sendMessageNotificationToClient(params: SendMessageNotificationToClientParams): Promise<void> {
   try {
     const { error } = await supabase.functions.invoke('send-message-notification', {

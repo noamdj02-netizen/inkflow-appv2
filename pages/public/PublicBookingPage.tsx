@@ -12,7 +12,9 @@ import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 import { toLocalDateString } from '../../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS, type StudioAvailabilityResponse } from '../../lib/studioAvailability';
 import { createCheckoutSession } from '../../lib/stripeClient';
-import { createBooking } from '../../lib/supabaseBookings';
+import { createBooking, uploadBookingReferenceImages } from '../../lib/supabaseBookings';
+import { getCurrentClientAvatarUrlForBooking } from '../../lib/clientPortalProfile';
+import { fetchClientHealthProfile, isHealthFormComplete, upsertClientHealthProfile } from '../../lib/clientHealthProfile';
 import { supabase } from '../../lib/supabase';
 import { SEO } from '../../components/SEO';
 
@@ -157,6 +159,35 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
   const [showHealthForm, setShowHealthForm] = useState(false);
   const [healthFormData, setHealthFormData] = useState<HealthFormData | null>(null);
   const [healthFormCompleted, setHealthFormCompleted] = useState(false);
+
+  /** Client connecté avec questionnaire déjà enregistré sur le compte → étape santé sautée au paiement. */
+  useEffect(() => {
+    if (!supabaseEnabled) return;
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user || cancelled) return;
+      const hp = await fetchClientHealthProfile(session.user.id);
+      if (!hp || !isHealthFormComplete(hp) || cancelled) return;
+      setHealthFormCompleted(true);
+      setHealthFormData(hp);
+      setForm((f) => {
+        const parts = hp.clientName.trim().split(/\s+/).filter(Boolean);
+        const first = parts[0] ?? '';
+        const rest = parts.slice(1).join(' ');
+        return {
+          ...f,
+          firstName: f.firstName || first,
+          lastName: f.lastName || rest,
+          email: f.email || session.user.email || '',
+          instagram: f.instagram || (hp.clientInstagram?.trim() ?? ''),
+        };
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [studioSlug]);
 
   useEffect(() => {
     if (supabaseEnabled) {
@@ -318,16 +349,41 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     setProjectSubmitting(true);
     setProjectError(null);
     try {
+      let refUrls: string[] = [];
+      if (projectImages.length > 0) {
+        try {
+          refUrls = await uploadBookingReferenceImages(studioId, projectImages);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          setProjectError(msg || 'Impossible d’envoyer les images. Vérifiez le format (JPG, PNG, WebP) et la taille (max 5 Mo).');
+          return;
+        }
+      }
+
+      let descriptionBody = projectForm.description.trim();
+      if (refUrls.length > 0) {
+        descriptionBody += `\n\n--- Détails ---\n${refUrls.length} image(s) de référence jointes`;
+      }
+
+      let clientAvatarUrl: string | undefined;
+      try {
+        const av = await getCurrentClientAvatarUrlForBooking();
+        if (av) clientAvatarUrl = av;
+      } catch {
+        /* non connecté */
+      }
       await createBooking({
         clientName: `${projectForm.firstName} ${projectForm.lastName}`,
         clientEmail: projectForm.email,
-        description: projectForm.description,
+        description: descriptionBody,
         requestedDate: new Date().toISOString().split('T')[0],
         requestedTime: null,
-        referenceImages: [],
+        referenceImages: refUrls.length > 0 ? refUrls : undefined,
         clientInstagram: projectForm.instagram.trim() || undefined,
+        ...(clientAvatarUrl ? { clientAvatarUrl } : {}),
       }, studioId);
       setProjectSubmitted(true);
+      setProjectImages([]);
     } catch {
       setProjectError('Erreur lors de l\'envoi. Veuillez réessayer.');
     } finally {
@@ -371,6 +427,10 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
       if (error) {
         console.error('Erreur sauvegarde questionnaire santé:', error);
         return false;
+      }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await upsertClientHealthProfile(session.user.id, data);
       }
       return true;
     } catch (err) {

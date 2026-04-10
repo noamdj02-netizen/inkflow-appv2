@@ -66,3 +66,20 @@ export const LANDING_PRIVACY_URL = `${LANDING_URL}/politique-confidentialite`;
 export const LANDING_TERMS_URL = `${LANDING_URL}/conditions-utilisation`;
 export const LANDING_LEGAL_URL = `${LANDING_URL}/mentions-legales`;
 
+/**
+ * Normalise une URL saisie (sans schéma → https://) et ne retourne que http(s).
+ * Rejette javascript:, data:, etc.
+ */
+export function safeExternalHttpUrl(raw: string | undefined | null): string | null {
+  const t = (raw ?? '').trim();
+  if (!t) return null;
+  const withScheme = /^https?:\/\//i.test(t) ? t : `https://${t}`;
+  try {
+    const u = new URL(withScheme);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return u.href;
+  } catch {
+    return null;
+  }
+}
+

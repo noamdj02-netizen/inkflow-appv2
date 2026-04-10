@@ -3,8 +3,39 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 
 const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET") || "";
+const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+/** Lien reçu PDF officiel Stripe (carte), si la clé secrète est configurée. */
+async function fetchStripeReceiptUrl(sessionId: string): Promise<string | null> {
+  if (!STRIPE_SECRET_KEY) return null;
+  try {
+    const u = new URL(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`);
+    u.searchParams.append("expand[]", "payment_intent.latest_charge");
+    const res = await fetch(u.toString(), { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } });
+    if (!res.ok) return null;
+    const sess = await res.json() as {
+      payment_intent?: { latest_charge?: { receipt_url?: string } | string } | string;
+    };
+    const pi = sess.payment_intent;
+    if (!pi || typeof pi !== "object") return null;
+    let ch = pi.latest_charge;
+    if (typeof ch === "string") {
+      const chRes = await fetch(`https://api.stripe.com/v1/charges/${ch}`, {
+        headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
+      });
+      if (!chRes.ok) return null;
+      ch = await chRes.json() as { receipt_url?: string };
+    }
+    if (!ch || typeof ch !== "object") return null;
+    const url = ch.receipt_url;
+    return typeof url === "string" && url.startsWith("http") ? url : null;
+  } catch (e) {
+    console.error("[stripe-webhook] fetchStripeReceiptUrl:", e);
+    return null;
+  }
+}
 
 /** Aligné sur lib/subscriptionPlans.ts — limite clients CRM par plan (-1 = illimité) */
 const PLAN_CLIENTS_CRM: Record<string, number> = {
@@ -320,6 +351,16 @@ Deno.serve(async (req: Request) => {
 
         let amountRemaining = 0;
         let studioName = "Le studio";
+        type AptEmailRow = {
+          price: number | null;
+          deposit: number | null;
+          date: string;
+          time: string;
+          duration: number | null;
+          service: string;
+        };
+        let aptForEmail: AptEmailRow | null = null;
+        let studioForEmail: { city: string | null; siret: string | null; slug: string } | null = null;
 
         if (appointmentId) {
           if (type === "deposit") {
@@ -335,10 +376,11 @@ Deno.serve(async (req: Request) => {
           }
           const { data: apt } = await supabase
             .from("inkflow_appointments")
-            .select("price, deposit")
+            .select("price, deposit, date, time, duration, service")
             .eq("id", appointmentId)
             .single();
           if (apt) {
+            aptForEmail = apt as AptEmailRow;
             const total = Number(apt.price) || 0;
             amountRemaining = Math.max(0, total - amountPaid);
           }
@@ -347,10 +389,17 @@ Deno.serve(async (req: Request) => {
         if (studioId) {
           const { data: studio } = await supabase
             .from("inkflow_studios")
-            .select("studio_name, email")
+            .select("studio_name, email, city, siret, slug")
             .eq("id", studioId)
             .single();
           if (studio?.studio_name) studioName = studio.studio_name;
+          if (studio) {
+            studioForEmail = {
+              city: studio.city as string | null,
+              siret: studio.siret as string | null,
+              slug: studio.slug as string,
+            };
+          }
 
           await supabase.from("inkflow_notifications").insert({
             id: `n_${Date.now()}`,
@@ -397,22 +446,36 @@ Deno.serve(async (req: Request) => {
         if (clientEmail) {
           try {
             const fnUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-payment-confirmation`;
+            const stripeReceiptUrl = await fetchStripeReceiptUrl(session.id);
+            const emailPayload: Record<string, unknown> = {
+              clientEmail,
+              clientName,
+              studioName,
+              amountPaid,
+              amountRemaining,
+              totalAmount: aptForEmail ? Number(aptForEmail.price) || 0 : undefined,
+              depositOnRecord: aptForEmail ? Number(aptForEmail.deposit) : undefined,
+              paymentDate: new Date().toISOString(),
+              serviceName,
+              type,
+              stripeSessionId: session.id,
+              stripeReceiptUrl: stripeReceiptUrl || undefined,
+              appointmentId: appointmentId || undefined,
+              rdvDate: aptForEmail?.date,
+              rdvTime: aptForEmail?.time,
+              durationMinutes: aptForEmail?.duration ?? undefined,
+              rdvService: aptForEmail?.service,
+              studioCity: studioForEmail?.city ?? undefined,
+              studioSiret: studioForEmail?.siret ?? undefined,
+              studioSlug: studioForEmail?.slug ?? undefined,
+            };
             const emailRes = await fetch(fnUrl, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
               },
-              body: JSON.stringify({
-                clientEmail,
-                clientName,
-                studioName,
-                amountPaid,
-                amountRemaining,
-                paymentDate: new Date().toISOString(),
-                serviceName,
-                type,
-              }),
+              body: JSON.stringify(emailPayload),
             });
             if (!emailRes.ok) {
               const errBody = await emailRes.text();

@@ -18,7 +18,7 @@ import { useToast } from '../../contexts/ToastContext';
 import type { VitrineData, VitrineFlashDesign } from '../../types/vitrine';
 import type { ProjectRequestFormData } from '../../types';
 import { DemoTour, type TourStep } from '../../components/demo/DemoTour';
-import { LANDING_URL, LANDING_TERMS_URL, LANDING_PRIVACY_URL } from '../../lib/urls';
+import { LANDING_URL, LANDING_TERMS_URL, LANDING_PRIVACY_URL, safeExternalHttpUrl } from '../../lib/urls';
 import { getVitrineTheme } from '../../lib/themes';
 import { StudioThemeRouter } from '../../components/studio-themes/StudioThemeRouter';
 import { GoogleReviews } from '../../components/vitrine/GoogleReviews';
@@ -36,10 +36,12 @@ function VitrineSectionHeading({
   eyebrow,
   title,
   icon: Icon,
+  action,
 }: {
   eyebrow: string;
   title: string;
   icon: VitrineHeadingIcon;
+  action?: React.ReactNode;
 }) {
   return (
     <header className="mb-8 sm:mb-10 border-b border-neutral-200/70 pb-5 sm:pb-6">
@@ -47,7 +49,10 @@ function VitrineSectionHeading({
         <Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} aria-hidden />
         <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.2em]">{eyebrow}</span>
       </div>
-      <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-neutral-900 tracking-tight">{title}</h2>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between gap-x-4 gap-y-2">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-neutral-900 tracking-tight min-w-0">{title}</h2>
+        {action != null && action !== false ? <div className="shrink-0 flex sm:justify-end">{action}</div> : null}
+      </div>
     </header>
   );
 }
@@ -84,6 +89,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [showProjectRequestForm, setShowProjectRequestForm] = useState(false);
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [bookingStudioId, setBookingStudioId] = useState<string | null>(null);
+  /** Résolu tôt pour l’upload des images « demande de projet » (même bucket que réservations). */
+  const [projectRequestStudioId, setProjectRequestStudioId] = useState<string | null>(null);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
@@ -120,6 +127,16 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
   useEffect(() => {
     let cancelled = false;
+    getStudioIdBySlug(studioSlug).then((id) => {
+      if (!cancelled) setProjectRequestStudioId(id ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [studioSlug]);
+
+  useEffect(() => {
+    let cancelled = false;
     const slug = (studio?.slug ?? studioSlug).trim().toLowerCase();
     if (!slug) return;
     fetchPublicGoogleReviews(slug).then((res) => {
@@ -149,12 +166,6 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   }, [loadVitrine]);
 
   useRealtimeVitrine(studioSlug, setStudio);
-
-  useEffect(() => {
-    const isDark = ['classic', 'split', 'dark', 'neon'].includes(studio?.theme ?? 'light');
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    return () => { document.documentElement.setAttribute('data-theme', 'light'); };
-  }, [studio?.theme]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -232,6 +243,15 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     };
   }, [studio]);
 
+  /** Lien Maps public : URL fiche Google (paramètres) ou recherche Maps sur l’adresse du studio */
+  const publicGoogleMapsHref = useMemo(() => {
+    const custom = safeExternalHttpUrl(studio?.googleBusinessUrl ?? '');
+    if (custom) return custom;
+    const addr = (studio?.address ?? '').trim();
+    if (!addr) return null;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`;
+  }, [studio?.googleBusinessUrl, studio?.address]);
+
   const navSections = useMemo(() => {
     const all = [
       { id: 'about', label: 'À propos' },
@@ -246,7 +266,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   }, [studio?.showServicesSection]);
 
   const handleProjectRequestSubmit = async (data: ProjectRequestFormData) => {
-    const studioId = await getStudioIdBySlug(studioSlug);
+    const studioId = projectRequestStudioId ?? (await getStudioIdBySlug(studioSlug));
     if (!studioId) {
       toast.error('Ce studio n\'est pas encore configuré. Contactez-nous directement.');
       return;
@@ -608,9 +628,22 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
               <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
                 <VitrineSectionHeading eyebrow="Le studio" title="À propos" icon={Sparkles} />
                 <p className="text-neutral-600 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8 max-w-3xl">{studioDisplay.description}</p>
-                <div className="aspect-video rounded-lg overflow-hidden mb-6 sm:mb-8 bg-neutral-100">
-                  <img src={studioDisplay.coverImage} alt="Couverture du studio" loading="lazy" className="w-full h-full object-cover" />
-                </div>
+                {(() => {
+                  const aboutPhoto = (studioDisplay.coverImage || '').trim() || (studioDisplay.avatar || '').trim();
+                  if (!aboutPhoto) return null;
+                  return (
+                    <div className="w-full mb-6 sm:mb-8 rounded-xl overflow-hidden ring-1 ring-neutral-200/80 shadow-sm">
+                      <img
+                        src={aboutPhoto}
+                        alt="Couverture du studio"
+                        loading="lazy"
+                        decoding="async"
+                        sizes="(max-width: 1024px) 100vw, min(896px, 66vw)"
+                        className="block w-full h-auto max-w-full max-h-[min(80vh,900px)] min-h-0"
+                      />
+                    </div>
+                  );
+                })()}
                 <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 pt-6 sm:pt-8 border-t border-neutral-200/70">
                   {studioDisplay.whyChooseUs.map((item, idx) => {
                     const Icon = item.icon;
@@ -830,7 +863,25 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             {/* Testimonials */}
             <section id="testimonials" className="scroll-mt-24 sm:scroll-mt-32">
               <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
-                <VitrineSectionHeading eyebrow="Témoignages" title="Avis clients" icon={Star} />
+                <VitrineSectionHeading
+                  eyebrow="Témoignages"
+                  title="Avis clients"
+                  icon={Star}
+                  action={
+                    publicGoogleMapsHref ? (
+                      <a
+                        href={publicGoogleMapsHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg border border-neutral-300 bg-white text-neutral-900 text-sm font-medium hover:bg-neutral-50 active:scale-[0.98] transition-all"
+                      >
+                        <MapPin className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
+                        Google Maps
+                        <ExternalLink className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
+                      </a>
+                    ) : undefined
+                  }
+                />
                 <p className="text-neutral-500 text-sm sm:text-base mb-8 sm:mb-10 -mt-4 max-w-xl">Retours de clients après leur séance.</p>
                 <div className="grid md:grid-cols-2 gap-4 sm:gap-5">
                   {studioDisplay.testimonials.map((testimonial, idx) => (
@@ -864,10 +915,24 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400 mb-2">Réserver</p>
                   <h3 className="text-lg sm:text-xl font-semibold text-neutral-900 mb-1">Une place avec nous</h3>
                   <p className="text-sm text-neutral-500 mb-5 max-w-sm mx-auto">{studioDisplay.satisfactionRate}% de clients satisfaits — rejoignez-les.</p>
-                  <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 bg-[var(--vitrine-primary)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity w-full sm:w-auto min-h-[44px] cursor-pointer">
-                    Prendre rendez-vous
-                    <ArrowRight className="w-4 h-4" strokeWidth={2} />
-                  </a>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 max-w-md mx-auto">
+                    <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 bg-[var(--vitrine-primary)] text-white rounded-lg font-medium hover:opacity-90 transition-opacity w-full sm:w-auto min-h-[44px] cursor-pointer active:scale-[0.98]">
+                      Prendre rendez-vous
+                      <ArrowRight className="w-4 h-4" strokeWidth={2} />
+                    </a>
+                    {publicGoogleMapsHref && (
+                      <a
+                        href={publicGoogleMapsHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 rounded-lg border border-neutral-300 bg-white text-neutral-900 text-sm font-medium hover:bg-neutral-50 w-full sm:w-auto min-h-[44px] active:scale-[0.98] transition-all"
+                      >
+                        <MapPin className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
+                        Google Maps
+                        <ExternalLink className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             </section>
@@ -1296,6 +1361,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
               </button>
             </div>
             <ProjectRequestForm
+              studioId={projectRequestStudioId}
               onSubmit={handleProjectRequestSubmit}
               onCancel={() => setShowProjectRequestForm(false)}
               submitLabel="Envoyer ma demande"

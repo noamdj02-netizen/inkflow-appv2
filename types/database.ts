@@ -614,6 +614,7 @@ export type Database = {
       }
       inkflow_bookings: {
         Row: {
+          client_avatar_url: string | null
           client_email: string
           client_name: string
           created_at: string | null
@@ -627,6 +628,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          client_avatar_url?: string | null
           client_email: string
           client_name: string
           created_at?: string | null
@@ -640,6 +642,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          client_avatar_url?: string | null
           client_email?: string
           client_name?: string
           created_at?: string | null
@@ -863,16 +866,22 @@ export type Database = {
       }
       inkflow_client_portal_profiles: {
         Row: {
+          health_profile: Json | null
+          health_profile_updated_at: string | null
           portal_avatar_url: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          health_profile?: Json | null
+          health_profile_updated_at?: string | null
           portal_avatar_url?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          health_profile?: Json | null
+          health_profile_updated_at?: string | null
           portal_avatar_url?: string | null
           updated_at?: string
           user_id?: string

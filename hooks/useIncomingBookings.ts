@@ -4,6 +4,7 @@ import { getBookingsFromSupabase, mapBookingFromDb } from '../lib/supabaseBookin
 import { useToast } from '../contexts/ToastContext';
 import type { Booking, BookingStatus } from '../types';
 import { updateBookingStatus as updateBookingStatusInSupabase } from '../lib/supabaseBookings';
+import { notifyNewBookingRequest } from '../lib/sendNotification';
 
 /** Son de notification (optionnel). Placez un fichier public/notification.mp3 ou désactivez. */
 const NOTIFICATION_SOUND_URL = '/notification.mp3';
@@ -49,6 +50,15 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
     load();
   }, [load]);
 
+  // Si Realtime est désactivé côté projet Supabase, recharger au retour sur l’onglet
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible' && studioId && enabled) load();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [studioId, enabled, load]);
+
   // Realtime : INSERT ajoute au state et déclenche toast + son
   useEffect(() => {
     if (!enabled || !studioId) return;
@@ -71,6 +81,12 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
             if (initialLoadDone.current) {
               toast.success(`Nouvelle demande de ${newBooking.clientName} !`);
               playNotificationSound();
+              void notifyNewBookingRequest(
+                studioId,
+                newBooking.clientName,
+                newBooking.description,
+                newBooking.requestedDate
+              );
             }
           } catch {
             // ignore map error

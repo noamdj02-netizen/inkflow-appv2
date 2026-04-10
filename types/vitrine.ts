@@ -113,4 +113,6 @@ export interface VitrineData {
   whyChooseUs: VitrineWhyChooseUs[];
   /** SIRET du studio (mentions légales) */
   siret?: string | null;
+  /** URL de la fiche Google (Maps / avis) — affiche un bouton « Voir sur Google » sur la vitrine */
+  googleBusinessUrl?: string;
 }

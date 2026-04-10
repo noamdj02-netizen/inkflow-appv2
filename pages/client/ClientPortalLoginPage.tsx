@@ -1,79 +1,61 @@
+/**
+ * Entrée espace client — /client
+ * Connexion par e-mail (lien), création de compte, définition du mot de passe.
+ * UI alignée sur CLIENT_DASHBOARD_THEME (même famille que /client/dashboard).
+ */
 import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ArrowLeft, Mail, ArrowRight, CheckCircle, Loader2, Lock,
-} from 'lucide-react';
+import { ArrowLeft, Mail, ArrowRight, CheckCircle, Loader2, Lock, User as UserIcon } from 'lucide-react';
 import { SEO } from '../../components/SEO';
-import { APP_URL, getClientMagicLinkRedirectTo } from '../../lib/urls';
+import { Logo } from '../../components/Logo';
+import { getClientMagicLinkRedirectTo } from '../../lib/urls';
 import { supabase } from '../../lib/supabase';
 import { clientNeedsPassword, clientOnboardingComplete } from '../../lib/clientAuth';
 import { consumeSupabaseAuthUrlError } from '../../lib/supabaseAuthUrl';
+import { fetchClientHealthProfile, isHealthFormComplete } from '../../lib/clientHealthProfile';
+import { CLIENT_DASHBOARD_THEME } from '../../lib/clientDashboardTheme';
 import type { User } from '@supabase/supabase-js';
 
-const CLIENT_HERO_WEBP = '/images/client-hero.webp';
-const CLIENT_HERO_JPG = '/images/ravi-sharma-7KMzdNfIlQY-unsplash.jpg';
-const CLIENT_HERO_FALLBACK = '/images/fallon-michael-EQucs66pts0-unsplash.jpg';
-const CLIENT_HERO_ABSOLUTE = `${APP_URL}${CLIENT_HERO_JPG}`;
+type Phase = 'boot' | 'email' | 'sent' | 'password' | 'register' | 'sent_register';
 
-type Phase = 'boot' | 'email' | 'sent' | 'password';
+const D = CLIENT_DASHBOARD_THEME;
 
-const T = {
-  bg: '#000000',
-  surface: 'rgba(18,18,18,0.85)',
-  border: 'rgba(255,255,255,0.07)',
-  text: '#e8e3dc',
-  muted: '#5a5a5a',
-  accent: '#c9a96e',
-};
+async function getClientDestinationAfterAuth(user: User): Promise<string> {
+  const meta = user.user_metadata ?? {};
+  if (meta.client_pending_health === true) {
+    const hp = await fetchClientHealthProfile(user.id);
+    if (hp && isHealthFormComplete(hp)) {
+      await supabase.auth.updateUser({ data: { client_pending_health: false } });
+    } else {
+      return '/client/compte-sante';
+    }
+  }
+  return clientOnboardingComplete(meta as Record<string, unknown>)
+    ? '/client/dashboard'
+    : '/client/welcome';
+}
 
-const SERIF = '"Cormorant Garamond", "Cormorant", Georgia, serif';
+const inputClass =
+  'w-full pl-11 pr-4 py-3.5 rounded-2xl text-sm border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 outline-none transition-all focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500';
 
-/* ── Input shared styles ─────────────────────────── */
-const inputBase: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  borderColor: 'rgba(255,255,255,0.09)',
-  color: T.text,
-  caretColor: T.accent,
-};
-
-/* ── Review testimonial (right panel) ─────────────── */
-const REVIEW = {
-  quote: "Suivi impeccable, j\u2019ai adoré recevoir les rappels de cicatrisation.",
-  author: 'Chloé R.',
-  studio: 'Vénus Ink',
-  rating: 5,
-};
+const inputClassNoIcon =
+  'w-full px-4 py-3.5 rounded-2xl text-sm border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 outline-none transition-all focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500';
 
 export const ClientPortalLoginPage: React.FC = () => {
-  const [email, setEmail]         = useState('');
-  const [phase, setPhase]         = useState<Phase>('boot');
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState('');
-  const [heroSrc, setHeroSrc]     = useState(CLIENT_HERO_WEBP);
-  const [password, setPassword]   = useState('');
+  const [email, setEmail] = useState('');
+  const [phase, setPhase] = useState<Phase>('boot');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
-  const [savingPw, setSavingPw]   = useState(false);
-  const [pwError, setPwError]     = useState('');
-  const redirectedRef             = useRef(false);
-
-  /* Inject editorial font once */
-  useEffect(() => {
-    if (document.querySelector('[data-ink-editorial]')) return;
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400;1,500&display=swap';
-    link.setAttribute('data-ink-editorial', '');
-    document.head.appendChild(link);
-  }, []);
-
-  const handleHeroError = () => {
-    setHeroSrc((prev) => {
-      if (prev === CLIENT_HERO_WEBP) return CLIENT_HERO_JPG;
-      if (prev === CLIENT_HERO_JPG) return CLIENT_HERO_FALLBACK;
-      if (prev === CLIENT_HERO_FALLBACK) return CLIENT_HERO_ABSOLUTE;
-      return prev;
-    });
-  };
+  const [savingPw, setSavingPw] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const redirectedRef = useRef(false);
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPw, setRegPw] = useState('');
+  const [regPw2, setRegPw2] = useState('');
+  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -81,7 +63,9 @@ export const ClientPortalLoginPage: React.FC = () => {
     if (authUrlError) {
       setError(authUrlError);
       setPhase('email');
-      return () => { cancelled = true; };
+      return () => {
+        cancelled = true;
+      };
     }
     const cleanAuthUrl = () => {
       if (window.location.hash)
@@ -93,38 +77,58 @@ export const ClientPortalLoginPage: React.FC = () => {
       if (redirectedRef.current || cancelled) return;
       const meta = user.user_metadata ?? {};
       if (clientNeedsPassword(meta as Record<string, unknown>)) {
-        cleanAuthUrl(); setPhase('password'); return;
+        cleanAuthUrl();
+        setPhase('password');
+        return;
       }
+      const dest = await getClientDestinationAfterAuth(user);
       redirectedRef.current = true;
       cleanAuthUrl();
-      const dest = clientOnboardingComplete(meta as Record<string, unknown>)
-        ? '/client/dashboard' : '/client/welcome';
       window.location.replace(dest);
     };
     const resolve = async () => {
       for (let i = 0; i < 14; i++) {
         if (cancelled) return;
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) { await routeLoggedInUser(session.user); return; }
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.user) {
+          await routeLoggedInUser(session.user);
+          return;
+        }
         await new Promise((r) => setTimeout(r, 70 + i * 35));
       }
       if (cancelled) return;
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) { await routeLoggedInUser(session.user); return; }
-      cleanAuthUrl(); setPhase('email');
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        await routeLoggedInUser(session.user);
+        return;
+      }
+      cleanAuthUrl();
+      const sp = new URLSearchParams(window.location.search);
+      const openRegister = sp.get('register') === '1' || sp.get('mode') === 'register';
+      setPhase(openRegister ? 'register' : 'email');
     };
     void resolve();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (cancelled || !session?.user) return;
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') await routeLoggedInUser(session.user);
     });
-    return () => { cancelled = true; subscription.unsubscribe(); };
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    setLoading(true); setError('');
+    setLoading(true);
+    setError('');
     try {
       const redirectTo = getClientMagicLinkRedirectTo();
       const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
@@ -142,361 +146,429 @@ export const ClientPortalLoginPage: React.FC = () => {
           const data = JSON.parse(raw) as { error?: string; details?: string };
           msg = data.error || data.details || msg;
           if (data.details && data.error && import.meta.env.DEV) msg = `${data.error} — ${data.details}`;
-        } catch { msg = raw ? raw.slice(0, 280) : `Erreur ${res.status}`; }
+        } catch {
+          msg = raw ? raw.slice(0, 280) : `Erreur ${res.status}`;
+        }
         throw new Error(msg);
       }
       setPhase('sent');
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors de l'envoi. Réessaie.");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const p = password.trim();
-    if (p.length < 8) { setPwError('Au moins 8 caractères.'); return; }
-    if (p !== password2) { setPwError('Les mots de passe ne correspondent pas.'); return; }
-    setSavingPw(true); setPwError('');
-    const { error: updErr } = await supabase.auth.updateUser({ password: p, data: { client_password_set: true } });
+    if (p.length < 8) {
+      setPwError('Au moins 8 caractères.');
+      return;
+    }
+    if (p !== password2) {
+      setPwError('Les mots de passe ne correspondent pas.');
+      return;
+    }
+    setSavingPw(true);
+    setPwError('');
+    const { error: updErr } = await supabase.auth.updateUser({
+      password: p,
+      data: { client_password_set: true },
+    });
     setSavingPw(false);
-    if (updErr) { setPwError(updErr.message); return; }
-    const { data: { user } } = await supabase.auth.getUser();
-    const meta = user?.user_metadata ?? {};
-    const dest = clientOnboardingComplete(meta as Record<string, unknown>)
-      ? '/client/dashboard' : '/client/welcome';
+    if (updErr) {
+      setPwError(updErr.message);
+      return;
+    }
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const dest = await getClientDestinationAfterAuth(user);
     window.location.href = dest;
   };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    setPassword(''); setPassword2(''); setPwError(''); setPhase('email');
+    setPassword('');
+    setPassword2('');
+    setPwError('');
+    setPhase('email');
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = regName.trim();
+    const em = regEmail.trim().toLowerCase();
+    const p = regPw.trim();
+    if (name.length < 2) {
+      setRegError('Indique ton nom ou un pseudo.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+      setRegError('E-mail invalide.');
+      return;
+    }
+    if (p.length < 8) {
+      setRegError('Mot de passe : au moins 8 caractères.');
+      return;
+    }
+    if (p !== regPw2) {
+      setRegError('Les mots de passe ne correspondent pas.');
+      return;
+    }
+    setRegLoading(true);
+    setRegError('');
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: em,
+        password: p,
+        options: {
+          data: {
+            name,
+            client_account: true,
+            client_password_set: true,
+            client_pending_health: true,
+            client_onboarding_complete: true,
+          },
+        },
+      });
+      if (error) throw error;
+      if (data.session) {
+        window.location.href = '/client/compte-sante';
+        return;
+      }
+      setPhase('sent_register');
+    } catch (err) {
+      setRegError(err instanceof Error ? err.message : 'Inscription impossible.');
+    } finally {
+      setRegLoading(false);
+    }
   };
 
   const sent = phase === 'sent';
+  const sentRegister = phase === 'sent_register';
 
   return (
-    <motion.div
-      className="relative min-h-[100dvh] flex flex-col overflow-hidden"
-      style={{ background: T.bg, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
+    <div
+      className="min-h-[100dvh] flex flex-col"
+      style={{
+        background: D.pageBg,
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
     >
       <SEO
-        title="Espace client My Inkflow"
-        description="Connecte-toi à ton espace client Inkflow : rendez-vous, cicatrisation et parrainage."
+        title="Espace client — Inkflow"
+        description="Connecte-toi à ton espace client : rendez-vous, suivi et fidélité."
         canonical="/client"
-        keywords="espace client tatouage, My Inkflow, lien magique, suivi RDV"
-        ogImageAlt="Espace client My Inkflow"
+        keywords="espace client tatouage, lien magique, suivi RDV Inkflow"
+        ogImageAlt="Espace client Inkflow"
         noindex
       />
 
-      {/* Fond plein écran (image + voiles) — même rendu mobile & desktop */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden>
-        <img
-          src={heroSrc}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover object-center"
-          style={{ opacity: 0.32, filter: 'brightness(0.55) saturate(0.85)' }}
-          loading="eager"
-          fetchPriority="high"
-          onError={handleHeroError}
-        />
-        <div
-          className="absolute inset-0"
-          style={{ background: 'linear-gradient(160deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.92) 100%)' }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 20%, rgba(201,169,110,0.08) 0%, transparent 55%)' }}
-        />
-      </div>
-
-      <header className="relative z-20 px-6 pt-safe-top pt-10 sm:pt-12 flex-shrink-0">
+      <header className="px-4 sm:px-6 pt-[max(12px,env(safe-area-inset-top))] pb-2 flex-shrink-0">
         <a
           href="/login"
-          className="inline-flex items-center gap-2 text-sm transition-colors group"
-          style={{ color: T.muted }}
-          onMouseEnter={e => (e.currentTarget.style.color = T.text)}
-          onMouseLeave={e => (e.currentTarget.style.color = T.muted)}
+          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors min-h-[44px]"
         >
-          <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
-          <span>Espace Pro</span>
+          <ArrowLeft className="w-4 h-4" />
+          Espace Pro
         </a>
       </header>
 
-      <div className="relative z-10 flex-1 flex flex-col items-center px-6 sm:px-10 pb-10 pt-4 min-h-0 overflow-y-auto overscroll-contain">
-        <motion.div
-          className="w-full max-w-[360px] py-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-        >
-            {/* Brand mark */}
-            <div className="flex items-center gap-3 mb-10">
-              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                <path d="M14 2L26 8V20L14 26L2 20V8L14 2Z" stroke={T.accent} strokeWidth="1.5" fill="none" />
-                <path d="M14 7L20 10.5V17.5L14 21L8 17.5V10.5L14 7Z" fill={T.accent} fillOpacity="0.2" stroke={T.accent} strokeWidth="1" />
-                <circle cx="14" cy="14" r="2" fill={T.accent} />
-              </svg>
-              <span className="text-base font-semibold tracking-wide" style={{ color: T.text, letterSpacing: '0.06em' }}>
-                MY INKFLOW
-              </span>
+      <div className="flex-1 flex flex-col items-center px-4 sm:px-6 pb-10 pt-4 min-h-0 overflow-y-auto">
+        <div className="w-full max-w-md">
+          <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-sm p-6 sm:p-8">
+            <div className="flex items-center gap-2 mb-6">
+              <Logo className="rounded-xl" size="md" />
+              <span className="text-lg font-bold tracking-tight text-zinc-900 font-display">Inkflow</span>
             </div>
 
-            {/* Headline block */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={phase}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-                className="mb-8"
-              >
-                {phase === 'boot' && (
-                  <>
-                    <h1 style={{ fontFamily: SERIF, fontSize: '2.8rem', lineHeight: 1.1, fontStyle: 'italic', fontWeight: 300, color: T.text, marginBottom: '0.5rem' }}>
-                      Connexion…
-                    </h1>
-                    <p className="text-sm" style={{ color: T.muted }}>Vérification de ta session.</p>
-                  </>
-                )}
-                {phase === 'email' && (
-                  <>
-                    <h1 style={{ fontFamily: SERIF, fontSize: '2.8rem', lineHeight: 1.1, fontStyle: 'italic', fontWeight: 300, color: T.text, marginBottom: '0.5rem' }}>
-                      Ton espace client<br />t'attend.
-                    </h1>
-                    <p className="text-sm leading-relaxed" style={{ color: T.muted, maxWidth: '26ch' }}>
-                      Entre l'email de ta réservation — on t'envoie un lien instantané.
-                    </p>
-                  </>
-                )}
-                {sent && (
-                  <>
-                    <h1 style={{ fontFamily: SERIF, fontSize: '2.8rem', lineHeight: 1.1, fontStyle: 'italic', fontWeight: 300, color: T.text, marginBottom: '0.5rem' }}>
-                      Vérifie ta boîte mail.
-                    </h1>
-                    <p className="text-sm" style={{ color: T.muted }}>
-                      Lien envoyé à <strong style={{ color: T.text, fontWeight: 500 }}>{email}</strong>.
-                    </p>
-                  </>
-                )}
-                {phase === 'password' && (
-                  <>
-                    <h1 style={{ fontFamily: SERIF, fontSize: '2.8rem', lineHeight: 1.1, fontStyle: 'italic', fontWeight: 300, color: T.text, marginBottom: '0.5rem' }}>
-                      Choisis ton mot<br />de passe.
-                    </h1>
-                    <p className="text-sm" style={{ color: T.muted }}>
-                      Accès sécurisé à ton espace RDV et suivi.
-                    </p>
-                  </>
-                )}
-              </motion.div>
-            </AnimatePresence>
-
-            {/* Boot spinner */}
             {phase === 'boot' && (
-              <div className="flex items-center gap-3 py-8">
-                <div className="w-5 h-5 rounded-full border border-t-transparent animate-spin" style={{ borderColor: T.accent, borderTopColor: 'transparent' }} />
-                <span className="text-sm" style={{ color: T.muted }}>Chargement…</span>
+              <div className="flex items-center gap-3 py-10 justify-center">
+                <Loader2 className="w-6 h-6 text-blue-600 animate-spin" aria-hidden />
+                <span className="text-sm text-zinc-500">Vérification de la session…</span>
               </div>
             )}
 
-            {/* Sent confirmation */}
-            {sent && (
-              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="space-y-4">
-                <div
-                  className="flex items-start gap-3 p-4 rounded-2xl border"
-                  style={{ background: 'rgba(201,169,110,0.06)', borderColor: 'rgba(201,169,110,0.2)' }}
-                >
-                  <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: T.accent }} />
-                  <p className="text-sm leading-relaxed" style={{ color: T.text }}>
-                    Ouvre l'email et clique sur le lien pour accéder à ton espace.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { setPhase('email'); setEmail(''); }}
-                  className="text-sm transition-colors"
-                  style={{ color: T.muted }}
-                  onMouseEnter={e => (e.currentTarget.style.color = T.text)}
-                  onMouseLeave={e => (e.currentTarget.style.color = T.muted)}
-                >
-                  ← Modifier l'adresse
-                </button>
-              </motion.div>
-            )}
-
-            {/* Password form */}
-            {phase === 'password' && (
-              <form onSubmit={handlePasswordSubmit} className="space-y-3">
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: T.muted }} />
-                  <input
-                    id="client-pw"
-                    type="password"
-                    autoComplete="new-password"
-                    autoFocus
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Au moins 8 caractères"
-                    className="w-full pl-11 pr-4 py-3.5 rounded-2xl text-sm border outline-none transition-all"
-                    style={inputBase}
-                    onFocus={e => (e.currentTarget.style.borderColor = 'rgba(201,169,110,0.5)')}
-                    onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)')}
-                  />
-                </div>
-                <input
-                  id="client-pw2"
-                  type="password"
-                  autoComplete="new-password"
-                  value={password2}
-                  onChange={(e) => setPassword2(e.target.value)}
-                  placeholder="Confirmer le mot de passe"
-                  className="w-full px-4 py-3.5 rounded-2xl text-sm border outline-none transition-all"
-                  style={inputBase}
-                  onFocus={e => (e.currentTarget.style.borderColor = 'rgba(201,169,110,0.5)')}
-                  onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)')}
-                />
-                {pwError && (
-                  <p className="text-xs px-4 py-3 rounded-xl border" style={{ background: 'rgba(248,113,113,0.06)', borderColor: 'rgba(248,113,113,0.2)', color: '#f87171' }}>
-                    {pwError}
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  disabled={savingPw || password.length < 8 || password !== password2}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold transition-all disabled:opacity-40"
-                  style={{ background: T.accent, color: '#0a0a0a' }}
-                >
-                  {savingPw ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Continuer <ArrowRight className="w-4 h-4" /></>}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  className="w-full text-sm py-2 transition-colors"
-                  style={{ color: T.muted }}
-                  onMouseEnter={e => (e.currentTarget.style.color = T.text)}
-                  onMouseLeave={e => (e.currentTarget.style.color = T.muted)}
-                >
-                  Ce n'est pas toi ? Se déconnecter
-                </button>
-              </form>
-            )}
-
-            {/* Email form */}
-            {phase === 'email' && (
-              <form onSubmit={handleSend} className="space-y-3">
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: T.muted }} />
-                  <input
-                    id="client-email"
-                    type="email"
-                    autoComplete="email"
-                    autoFocus
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="toi@exemple.com"
-                    required
-                    className="w-full pl-11 pr-4 py-3.5 rounded-2xl text-sm border outline-none transition-all"
-                    style={inputBase}
-                    onFocus={e => (e.currentTarget.style.borderColor = 'rgba(201,169,110,0.5)')}
-                    onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)')}
-                  />
-                </div>
-
-                {error && (
-                  <p className="text-xs px-4 py-3 rounded-xl border" style={{ background: 'rgba(248,113,113,0.06)', borderColor: 'rgba(248,113,113,0.2)', color: '#f87171' }}>
-                    {error}
-                  </p>
-                )}
-
-                <motion.button
-                  type="submit"
-                  disabled={loading || !email.trim()}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold transition-all disabled:opacity-40"
-                  style={{ background: T.accent, color: '#0a0a0a' }}
-                >
-                  {loading ? (
-                    <span className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                  ) : (
-                    <>Recevoir mon lien de connexion <ArrowRight className="w-4 h-4" /></>
+            {phase !== 'boot' && (
+              <>
+                <div className="mb-6 space-y-2">
+                  {phase === 'email' && (
+                    <>
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                        Espace client
+                      </h1>
+                      <p className="text-sm text-zinc-500">
+                        Saisis l’e-mail utilisé pour ta réservation — nous t’envoyons un lien de connexion.
+                      </p>
+                    </>
                   )}
-                </motion.button>
+                  {sent && (
+                    <>
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                        Vérifie ta boîte mail
+                      </h1>
+                      <p className="text-sm text-zinc-500">
+                        Lien envoyé à <strong className="text-zinc-800">{email}</strong>.
+                      </p>
+                    </>
+                  )}
+                  {phase === 'password' && (
+                    <>
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                        Choisis ton mot de passe
+                      </h1>
+                      <p className="text-sm text-zinc-500">Accès sécurisé à ton espace.</p>
+                    </>
+                  )}
+                  {phase === 'register' && (
+                    <>
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                        Créer un compte
+                      </h1>
+                      <p className="text-sm text-zinc-500">
+                        E-mail et mot de passe, puis le questionnaire santé (une fois).
+                      </p>
+                    </>
+                  )}
+                  {sentRegister && (
+                    <>
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                        Confirme ton e-mail
+                      </h1>
+                      <p className="text-sm text-zinc-500">
+                        Lien d’activation envoyé à <strong className="text-zinc-800">{regEmail}</strong>.
+                      </p>
+                    </>
+                  )}
+                </div>
 
-                <p className="text-center text-xs pt-1" style={{ color: T.muted }}>
-                  Pas encore de tatouage réservé ?{' '}
-                  <a
-                    href="/"
-                    className="transition-colors underline underline-offset-2"
-                    style={{ color: T.muted }}
-                    onMouseEnter={e => (e.currentTarget.style.color = T.text)}
-                    onMouseLeave={e => (e.currentTarget.style.color = T.muted)}
-                  >
-                    Découvrir Inkflow
-                  </a>
-                </p>
-              </form>
+                {sent && (
+                  <div className="space-y-4 mb-2">
+                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-200/80">
+                      <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                      <p className="text-sm text-emerald-900">Ouvre l’e-mail et clique sur le lien pour accéder à ton espace.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhase('email');
+                        setEmail('');
+                      }}
+                      className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+                    >
+                      ← Modifier l’adresse
+                    </button>
+                  </div>
+                )}
+
+                {sentRegister && (
+                  <div className="space-y-4 mb-2">
+                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-200/80">
+                      <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                      <p className="text-sm text-emerald-900">
+                        Clique sur le lien dans l’e-mail. Tu seras redirigé vers le questionnaire santé.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhase('register');
+                        setRegError('');
+                      }}
+                      className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+                    >
+                      ← Modifier l’inscription
+                    </button>
+                  </div>
+                )}
+
+                {phase === 'password' && (
+                  <form onSubmit={handlePasswordSubmit} className="space-y-3">
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                      <input
+                        id="client-pw"
+                        type="password"
+                        autoComplete="new-password"
+                        autoFocus
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Au moins 8 caractères"
+                        className={inputClass}
+                      />
+                    </div>
+                    <input
+                      id="client-pw2"
+                      type="password"
+                      autoComplete="new-password"
+                      value={password2}
+                      onChange={(e) => setPassword2(e.target.value)}
+                      placeholder="Confirmer le mot de passe"
+                      className={inputClassNoIcon}
+                    />
+                    {pwError && (
+                      <p className="text-xs px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">{pwError}</p>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={savingPw || password.length < 8 || password !== password2}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-40 active:scale-[0.98] transition-all"
+                    >
+                      {savingPw ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          Continuer <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="w-full text-sm py-2 text-zinc-500 hover:text-zinc-800"
+                    >
+                      Ce n’est pas toi ? Se déconnecter
+                    </button>
+                  </form>
+                )}
+
+                {phase === 'email' && (
+                  <form onSubmit={handleSend} className="space-y-3">
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                      <input
+                        id="client-email"
+                        type="email"
+                        autoComplete="email"
+                        autoFocus
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="toi@exemple.com"
+                        required
+                        className={inputClass}
+                      />
+                    </div>
+                    {error && (
+                      <p className="text-xs px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">{error}</p>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={loading || !email.trim()}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-40 active:scale-[0.98] transition-all"
+                    >
+                      {loading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          Recevoir mon lien <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                    <p className="text-center text-xs text-zinc-500 pt-1">
+                      Pas encore de réservation ?{' '}
+                      <a href="/" className="font-medium text-zinc-700 underline underline-offset-2 hover:text-zinc-900">
+                        Découvrir Inkflow
+                      </a>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhase('register');
+                        setError('');
+                        setRegEmail(email);
+                      }}
+                      className="w-full text-center text-sm py-2 text-zinc-500 hover:text-zinc-900"
+                    >
+                      Pas de compte ? <span className="font-semibold text-blue-600">Créer un compte</span>
+                    </button>
+                  </form>
+                )}
+
+                {phase === 'register' && (
+                  <form onSubmit={handleRegister} className="space-y-3">
+                    <div className="relative">
+                      <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                      <input
+                        id="client-reg-name"
+                        type="text"
+                        autoComplete="name"
+                        autoFocus
+                        value={regName}
+                        onChange={(e) => setRegName(e.target.value)}
+                        placeholder="Ton nom ou pseudo"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                      <input
+                        id="client-reg-email"
+                        type="email"
+                        autoComplete="email"
+                        value={regEmail}
+                        onChange={(e) => setRegEmail(e.target.value)}
+                        placeholder="toi@exemple.com"
+                        required
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                      <input
+                        id="client-reg-pw"
+                        type="password"
+                        autoComplete="new-password"
+                        value={regPw}
+                        onChange={(e) => setRegPw(e.target.value)}
+                        placeholder="Mot de passe (8+ caractères)"
+                        className={inputClass}
+                      />
+                    </div>
+                    <input
+                      id="client-reg-pw2"
+                      type="password"
+                      autoComplete="new-password"
+                      value={regPw2}
+                      onChange={(e) => setRegPw2(e.target.value)}
+                      placeholder="Confirmer le mot de passe"
+                      className={inputClassNoIcon}
+                    />
+                    {regError && (
+                      <p className="text-xs px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">{regError}</p>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={regLoading || !regName.trim() || !regEmail.trim() || regPw.length < 8}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-40 active:scale-[0.98] transition-all"
+                    >
+                      {regLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          Continuer <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhase('email');
+                        setRegError('');
+                      }}
+                      className="w-full text-center text-sm py-2 text-zinc-500 hover:text-zinc-900"
+                    >
+                      ← Connexion par e-mail (lien)
+                    </button>
+                  </form>
+                )}
+              </>
             )}
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-lg mt-4 mb-6 space-y-8"
-        >
-          <div
-            className="rounded-3xl border p-5 backdrop-blur-2xl w-full"
-            style={{
-              background: 'rgba(14,14,14,0.72)',
-              borderColor: T.border,
-              boxShadow: '0 32px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04)',
-            }}
-          >
-            <div className="flex gap-0.5 mb-3">
-              {Array.from({ length: REVIEW.rating }).map((_, i) => (
-                <svg key={i} width="14" height="14" viewBox="0 0 14 14" fill={T.accent}>
-                  <path d="M7 1l1.55 3.15L12 4.74l-2.5 2.43.59 3.43L7 8.9l-3.09 1.7.59-3.43L2 4.74l3.45-.59z" />
-                </svg>
-              ))}
-            </div>
-            <p className="text-sm leading-relaxed mb-4" style={{ color: '#c8c0b4', fontStyle: 'italic' }}>
-              &ldquo;{REVIEW.quote}&rdquo;
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: 'rgba(201,169,110,0.2)', color: T.accent }}>
-                {REVIEW.author.slice(0, 1)}
-              </div>
-              <div>
-                <p className="text-xs font-semibold" style={{ color: T.text }}>{REVIEW.author}</p>
-                <p className="text-[10px]" style={{ color: T.muted }}>{REVIEW.studio} · client Inkflow</p>
-              </div>
-            </div>
           </div>
-
-          <div className="pb-safe-bottom text-center sm:text-left">
-            <h2
-              style={{
-                fontFamily: SERIF,
-                fontSize: 'clamp(1.75rem, 5vw, 2.4rem)',
-                lineHeight: 1.1,
-                fontStyle: 'italic',
-                fontWeight: 300,
-                color: T.text,
-                marginBottom: '0.5rem',
-              }}
-            >
-              Ton tatouage,<br />ton histoire.
-            </h2>
-            <p className="text-sm" style={{ color: T.muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.7rem' }}>
-              RDV · Cicatrisation · Parrainage
-            </p>
-          </div>
-        </motion.div>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 };

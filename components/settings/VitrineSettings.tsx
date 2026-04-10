@@ -483,6 +483,21 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
         {activeSection === 'testimonials' && (
           <div className="space-y-6">
             <h3 className="font-bold text-lg">Avis clients</h3>
+            <div className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] space-y-3">
+              <label className="block text-sm font-semibold text-[var(--text-primary)]">Lien fiche Google (avis / Maps)</label>
+              <input
+                type="url"
+                inputMode="url"
+                autoComplete="url"
+                value={data.googleBusinessUrl ?? ''}
+                onChange={(e) => update('googleBusinessUrl', e.target.value)}
+                placeholder="https://g.page/… ou lien Maps"
+                className="w-full px-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--bg-primary)] text-[var(--text-primary)]"
+              />
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Collez l’URL de votre fiche Google (Maps / avis). Sinon, la vitrine propose un lien « Google Maps » vers une recherche basée sur l’adresse du studio.
+              </p>
+            </div>
             {data.testimonials.map((t, idx) => (
               <div key={idx} className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4">
                 <div className="flex justify-between items-center">

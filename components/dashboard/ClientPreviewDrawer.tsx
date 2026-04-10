@@ -10,7 +10,6 @@ interface ClientPreviewDrawerProps {
   data: ClientPreviewData | null;
   studioId: string;
   artistName: string;
-  onOpenMessaging?: () => void;
   /** Actions RDV (pour la page Rendez-vous) */
   appointment?: Appointment | null;
   onUpdateAppointment?: (id: string, updates: Partial<Appointment>) => void;
@@ -22,7 +21,6 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
   data,
   studioId,
   artistName,
-  onOpenMessaging,
   appointment,
   onUpdateAppointment,
 }) => {
@@ -61,10 +59,10 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
       />
       {/* Drawer — slide depuis la droite, ne recouvre jamais la sidebar */}
       <div
-        className={`fixed z-40 flex flex-col shadow-2xl border-l border-[var(--border)]
+        className={`fixed z-40 flex min-h-0 flex-col shadow-2xl border-l border-[var(--border)]
           right-0 inset-y-0
           w-full md:w-96
-          max-h-[90dvh] md:max-h-none rounded-t-3xl md:rounded-none border-t md:border-t-0
+          max-h-[90dvh] md:max-h-none md:h-full rounded-t-3xl md:rounded-none border-t md:border-t-0
           transition-transform duration-300 ease-out safe-bottom overflow-hidden
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
         style={{ backgroundColor: 'var(--bg-primary)' }}
@@ -81,13 +79,15 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain touch-pan-y p-5 space-y-5"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           <ClientPreviewPanel
             data={data}
             studioId={studioId}
             artistName={artistName}
             compact
-            onOpenMessaging={onOpenMessaging}
           />
           {appointment && onUpdateAppointment && (
             <div className="pt-4 border-t border-[var(--border)] space-y-2">

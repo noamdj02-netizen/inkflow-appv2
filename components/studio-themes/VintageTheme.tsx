@@ -3,6 +3,7 @@ import { ExternalLink } from 'lucide-react';
 import type { StudioThemeProps } from '../../types/studio-theme';
 import { GoogleReviews } from '../vitrine/GoogleReviews';
 import { StudioThemeContactBlock } from './StudioThemeContactBlock';
+import { StudioThemeFlashSection } from './StudioThemeFlashSection';
 
 /**
  * VintageTheme — Élégance tatouage old-school / studio parisien.
@@ -58,37 +59,7 @@ export const VintageTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, p
 
         <hr className="border-stone-300 my-12" />
 
-        {/* Flashs */}
-        {flashItems.length > 0 && (
-          <section className="mb-16">
-            <h2 className="font-serif text-3xl font-normal tracking-wide text-amber-950 mb-8">
-              Flashs disponibles
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-8">
-              {flashItems.map((item) => (
-                <a
-                  key={item.id}
-                  href={`${bookingUrl}?flash=${item.id}`}
-                  className="block bg-white border border-stone-300 shadow-sm p-0 overflow-hidden hover:shadow-md transition-shadow"
-                >
-                  <div className="aspect-square">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.title ?? 'Flash'}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <p className="font-medium text-amber-950">{item.title}</p>
-                    {item.price != null && (
-                      <p className="text-sm text-stone-600">{item.price}€</p>
-                    )}
-                  </div>
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
+        <StudioThemeFlashSection items={flashItems} bookingUrl={bookingUrl} variant="vintage" />
 
         <hr className="border-stone-300 my-12" />
 
@@ -126,6 +97,22 @@ export const VintageTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, p
             <section className="max-w-xl mx-auto">
               <GoogleReviews data={googleReviews} />
             </section>
+          </>
+        )}
+        {studio.googleBusinessUrl && (
+          <>
+            <hr className="border-stone-300 my-12" />
+            <div className="flex justify-center">
+              <a
+                href={studio.googleBusinessUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 min-h-[44px] border border-stone-400 bg-white text-amber-950 text-sm font-medium hover:bg-stone-50 active:scale-[0.98] transition-all"
+              >
+                Google Maps
+                <ExternalLink className="w-4 h-4 shrink-0" aria-hidden />
+              </a>
+            </div>
           </>
         )}
       </main>

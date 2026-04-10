@@ -34,6 +34,18 @@ export function oauthAvatarFromUserMetadata(meta: Record<string, unknown> | unde
   return null;
 }
 
+/**
+ * Photo à joindre à une demande de RDV (vitrine) : priorité profil portail, puis OAuth.
+ * À appeler côté client connecté uniquement.
+ */
+export async function getCurrentClientAvatarUrlForBooking(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.id) return null;
+  const portal = await fetchPortalAvatarUrl(user.id);
+  if (portal) return portal;
+  return oauthAvatarFromUserMetadata(user.user_metadata as Record<string, unknown>);
+}
+
 function errMsg(e: unknown): string {
   if (e && typeof e === 'object' && 'message' in e && typeof (e as { message: string }).message === 'string') {
     return (e as { message: string }).message;

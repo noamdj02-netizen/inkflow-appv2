@@ -19,6 +19,11 @@ export function getStudioSlug(studioName: string): string {
     .replace(/-+/g, '-') || 'mon-studio';
 }
 
+/** Slug URL vitrine (/studio/:slug) — toujours comparer en minuscules (évite les ratés RPC si la casse diverge). */
+export function normalizePublicStudioSlug(slug: string): string {
+  return (slug || '').trim().toLowerCase();
+}
+
 /** Suffixe déterministe à partir de l'id pour rendre un slug unique */
 function uniqueSlugSuffix(id: string): string {
   const hash = Math.abs(
@@ -179,7 +184,7 @@ export async function getStudioSlugByStudioId(studioId: string): Promise<string 
 
 /** Vérifie si un slug est disponible (non pris par un autre studio). Si excludeStudioId est fourni, le slug est considéré dispo si c'est le nôtre. */
 export async function checkSlugAvailable(slug: string, excludeStudioId?: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: slug });
+  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: normalizePublicStudioSlug(slug) });
   if (error) {
     console.warn('[checkSlugAvailable] RPC error — slug traité comme indisponible:', error.message);
     return false;
@@ -273,7 +278,7 @@ export async function getVitrineDataFromSupabase(studioId: string, defaultData: 
 
 /** Récupère le studio_id à partir du slug (pour la page publique). Utilise la RPC sécurisée pour ne pas exposer les emails. */
 export async function getStudioIdBySlug(slug: string): Promise<string | null> {
-  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: slug });
+  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: normalizePublicStudioSlug(slug) });
   const row = Array.isArray(data) ? data[0] : data;
   if (error || !row?.id) return null;
   return row.id as string;
@@ -287,7 +292,7 @@ export async function getStudioPublicBySlug(slug: string): Promise<{
   avatarUrl: string | null;
   portfolioCoverUrl: string | null;
 } | null> {
-  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: slug });
+  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: normalizePublicStudioSlug(slug) });
   const row = Array.isArray(data) ? data[0] : data;
   if (error || !row?.id) return null;
   return {
@@ -301,9 +306,10 @@ export async function getStudioPublicBySlug(slug: string): Promise<{
 
 /** Récupère les données vitrine par slug (pour la page publique /studio/:slug). Inclut le thème et SIRET du studio. */
 export async function getVitrineDataBySlugFromSupabase(slug: string, defaultData: VitrineData): Promise<VitrineData> {
-  const studio = await getStudioPublicBySlug(slug);
-  if (!studio) return defaultData;
-  const data = await getVitrineDataFromSupabase(studio.id, defaultData);
+  const normalized = normalizePublicStudioSlug(slug);
+  const studio = await getStudioPublicBySlug(normalized);
+  if (!studio) return { ...defaultData, slug: normalized };
+  const data = await getVitrineDataFromSupabase(studio.id, { ...defaultData, slug: normalized });
 
   const rowAvatar = studio.avatarUrl?.trim() || '';
   const rowCover = studio.portfolioCoverUrl?.trim() || '';
@@ -320,6 +326,7 @@ export async function getVitrineDataBySlugFromSupabase(slug: string, defaultData
 
   return {
     ...data,
+    slug: normalized,
     coverImage,
     avatar,
     theme: studio.vitrineTheme,
@@ -756,8 +763,35 @@ export async function markNotificationReadInSupabase(notificationId: string): Pr
   if (error) throw error;
 }
 
+/** JSONB / legacy : tableau d’URLs d’images de référence */
+function parseProjectReferenceImages(row: Record<string, unknown>): string[] {
+  const raw = row.reference_images;
+  const single = row.reference_image_url;
+  const fromJsonb = (): string[] => {
+    if (Array.isArray(raw)) {
+      return raw.map((x) => String(x)).filter((u) => u.length > 0 && /^https?:\/\//i.test(u));
+    }
+    if (typeof raw === 'string' && raw.trim()) {
+      try {
+        const p = JSON.parse(raw) as unknown;
+        if (Array.isArray(p)) return p.map(String).filter((u) => u.length > 0 && /^https?:\/\//i.test(u));
+      } catch {
+        /* ignore */
+      }
+    }
+    return [];
+  };
+  const urls = fromJsonb();
+  if (urls.length > 0) return urls;
+  if (typeof single === 'string' && single.trim() && /^https?:\/\//i.test(single.trim())) {
+    return [single.trim()];
+  }
+  return [];
+}
+
 // Project requests (Demandes de projet)
 export function mapProjectRequestFromDb(row: Record<string, unknown>): ProjectRequest {
+  const referenceImages = parseProjectReferenceImages(row);
   return {
     id: row.id as string,
     studioId: row.studio_id as string,
@@ -771,8 +805,8 @@ export function mapProjectRequestFromDb(row: Record<string, unknown>): ProjectRe
     size: (row.size || row.estimated_size) as string | undefined,
     budget: row.budget as string | undefined,
     status: (row.status as ProjectRequestStatus) || 'pending',
-    referenceImageUrl: row.reference_image_url as string | undefined,
-    referenceImages: (row.reference_images as string[]) || [],
+    referenceImageUrl: referenceImages[0] ?? (row.reference_image_url as string | undefined),
+    referenceImages,
     createdAt: (row.created_at as string) || new Date().toISOString()
   };
 }
