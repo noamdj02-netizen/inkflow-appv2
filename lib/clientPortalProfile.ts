@@ -62,16 +62,43 @@ export function formatClientAvatarError(e: unknown): string {
   if (m.includes('row-level security') || m.includes('permission denied') || m.includes('42501') || m.includes('403')) {
     return 'Droits insuffisants ou session invalide. Déconnecte-toi et reconnecte-toi.';
   }
+  if (
+    m.includes('413') ||
+    m.includes('payload too large') ||
+    m.includes('entity too large') ||
+    (m.includes('maximum') && m.includes('size'))
+  ) {
+    return 'Fichier trop lourd pour le serveur après compression. Essaie une autre photo ou un export JPEG depuis ton téléphone.';
+  }
   if (m.includes('does not exist') || m.includes('42p01') || m.includes('relation')) {
     return 'Service photo indisponible (base à jour). Réessaie plus tard ou contacte le support.';
   }
   if (m.includes('network') || m.includes('fetch') || m.includes('failed to fetch')) {
     return 'Problème réseau. Vérifie ta connexion.';
   }
+  if (m.includes('heic') || m.includes('heif')) {
+    return 'Format HEIC limité selon les navigateurs. Ouvre la photo dans l’app Photos → Partager → « Enregistrer en tant qu’image » (JPEG), ou choisis « Le plus compatible » à l’export.';
+  }
   if (m.includes('image') || m.includes('blob') || m.includes('canvas')) {
-    return 'Ce fichier image n’a pas pu être lu. Essaie JPG ou PNG.';
+    return 'Ce fichier image n’a pas pu être lue. Essaie JPG ou PNG (évite les fichiers très lourds ou les captures HDR brutes).';
   }
   return 'Impossible d’enregistrer la photo.';
+}
+
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|tif|tiff|heic|heif)$/i;
+
+/** Fichier probablement une image (MIME vide sur certains mobiles). */
+export function isLikelyClientAvatarImageFile(file: File): boolean {
+  const t = (file.type || '').toLowerCase();
+  if (t.startsWith('image/')) return true;
+  if (t.startsWith('video/')) return false;
+  return IMAGE_EXT.test(file.name || '');
+}
+
+export function isHeicLikeFile(file: File): boolean {
+  const t = (file.type || '').toLowerCase();
+  if (t.includes('heic') || t.includes('heif')) return true;
+  return /\.(heic|heif)$/i.test(file.name || '');
 }
 
 type WH = { w: number; h: number };
@@ -97,6 +124,11 @@ async function getBitmapOrImageDimensions(file: File): Promise<{ source: CanvasI
       img.onerror = () => reject(new Error('image'));
       img.src = url;
     });
+    try {
+      await img.decode();
+    } catch {
+      /* Safari / certaines images : continuer avec naturalWidth */
+    }
     const w = img.naturalWidth;
     const h = img.naturalHeight;
     if (!w || !h) throw new Error('image');
@@ -165,6 +197,40 @@ export async function resizeImageFileToJpegBlob(
   }
 }
 
+/** Taille max bucket Supabase (10 Mo) — on vise bien en dessous après compression. */
+const MAX_AVATAR_UPLOAD_BYTES = 9 * 1024 * 1024;
+
+/**
+ * Plusieurs passes (pixels + qualité JPEG) pour rester léger et passer le quota storage.
+ */
+export async function compressImageToClientAvatarJpeg(file: File): Promise<Blob> {
+  const presets: { sizePx: number; quality: number }[] = [
+    { sizePx: 512, quality: 0.88 },
+    { sizePx: 448, quality: 0.82 },
+    { sizePx: 400, quality: 0.78 },
+    { sizePx: 360, quality: 0.72 },
+    { sizePx: 320, quality: 0.68 },
+    { sizePx: 288, quality: 0.62 },
+    { sizePx: 256, quality: 0.56 },
+    { sizePx: 256, quality: 0.5 },
+    { sizePx: 256, quality: 0.45 },
+  ];
+
+  let lastErr: unknown;
+  for (const p of presets) {
+    try {
+      const blob = await resizeImageFileToJpegBlob(file, p.sizePx, p.quality);
+      if (blob.size <= MAX_AVATAR_UPLOAD_BYTES) {
+        return blob;
+      }
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  if (lastErr) throw lastErr;
+  throw new Error('image');
+}
+
 export async function uploadClientPortalAvatarJpeg(jpegBlob: Blob, userId: string): Promise<string> {
   const path = clientAvatarStoragePath(userId, 'jpg');
   const { error: upErr } = await supabase.storage
@@ -192,22 +258,33 @@ export async function uploadClientPortalAvatarJpeg(jpegBlob: Blob, userId: strin
 
 /** Si le redimensionnement échoue, envoie un JPEG déjà compatible tel quel (même chemin .jpg). */
 export async function uploadClientPortalAvatarJpegWithFallback(file: File, userId: string): Promise<string> {
-  const tryBlob = async (blob: Blob) => uploadClientPortalAvatarJpeg(blob, userId);
+  const tryBlob = async (blob: Blob) => {
+    if (blob.size > MAX_AVATAR_UPLOAD_BYTES) {
+      throw new Error('Payload too large after processing');
+    }
+    return uploadClientPortalAvatarJpeg(blob, userId);
+  };
 
   try {
-    const blob = await resizeImageFileToJpegBlob(file);
+    const blob = await compressImageToClientAvatarJpeg(file);
     return await tryBlob(blob);
-  } catch (resizeErr) {
+  } catch (firstErr) {
     const t = (file.type || '').toLowerCase();
-    if (t === 'image/jpeg' || t === 'image/jpg') {
-      if (file.size > 10 * 1024 * 1024) throw resizeErr;
+    try {
+      const blob = await resizeImageFileToJpegBlob(file, 256, 0.42);
+      return await tryBlob(blob);
+    } catch {
+      /* continue */
+    }
+    if (t === 'image/jpeg' || t === 'image/jpg' || t === '') {
+      if (file.size > MAX_AVATAR_UPLOAD_BYTES) throw firstErr;
       try {
         return await tryBlob(file);
       } catch (uploadErr) {
         throw uploadErr;
       }
     }
-    throw resizeErr;
+    throw firstErr;
   }
 }
 

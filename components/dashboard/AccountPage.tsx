@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import {
   ChevronRight, ChevronLeft, User, Mail, Hash, Camera, Trash2,
-  Users, CreditCard, Bell, LogOut, Check, Building2, Shield,
+  Users, CreditCard, Bell, LogOut, Check, Building2,
 } from 'lucide-react';
-import { ArtistManager } from './ArtistManager';
 import { BillingSettings } from './BillingSettings';
 import type { ArtistAccount } from '../../types';
 
-type AccountView = 'home' | 'profil' | 'equipe' | 'facturation';
+type AccountView = 'home' | 'profil' | 'facturation';
 
 interface AccountPageProps {
   // User
@@ -28,12 +27,10 @@ interface AccountPageProps {
   avatarUploading: boolean;
   onAvatarClick: () => void;
   onAvatarRemove: () => void;
-  // Team
+  /** Pour afficher le nombre sur la ligne Collaborateurs */
   artists: ArtistAccount[];
-  onAddArtist: (a: ArtistAccount) => void;
-  onUpdateArtist: (a: ArtistAccount) => void;
-  onDeleteArtist: (id: string) => void;
-  maxArtists: number;
+  /** Ouvre l’onglet Établissement (liste, rôles, invitations) — seule entrée pour éviter le doublon avec « Mon équipe » */
+  onGoToCollaborateurs: () => void;
   // Navigation
   onGoToBilling: () => void;
   onGoToNotifications: () => void;
@@ -41,6 +38,8 @@ interface AccountPageProps {
   // Subscription
   subscriptionStatus?: string;
   trialEndsAt?: string | null;
+  /** Recharge le statut studio (après fin d’essai, etc.) */
+  onRefreshStudioSubscription?: () => void | Promise<void>;
 }
 
 // ─── Row atom ─────────────────────────────────────────────────────────────────
@@ -172,9 +171,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({
   onStudioNameChange, onEmailChange, onSiretChange,
   saving, saved, onSave,
   avatarInputRef, avatarUploading, onAvatarClick, onAvatarRemove,
-  artists, onAddArtist, onUpdateArtist, onDeleteArtist, maxArtists,
+  artists,
+  onGoToCollaborateurs,
   onGoToBilling, onGoToNotifications, onLogout,
-  subscriptionStatus, trialEndsAt,
+  subscriptionStatus, trialEndsAt, onRefreshStudioSubscription,
 }) => {
   const [view, setView] = useState<AccountView>('home');
   const firstName = user?.name?.split(' ')[0] || user?.studioName || 'Tatoueur';
@@ -265,9 +265,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         <Section title="Mon studio">
           <Row
             icon={<Users className="w-4 h-4" />}
-            label="Mon équipe"
-            value={`${artists.length} artiste${artists.length !== 1 ? 's' : ''}`}
-            onClick={() => setView('equipe')}
+            label="Collaborateurs"
+            value={`${artists.length} membre${artists.length !== 1 ? 's' : ''}`}
+            onClick={onGoToCollaborateurs}
           />
           <Row
             icon={<Bell className="w-4 h-4" />}
@@ -401,31 +401,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     );
   }
 
-  // ── ÉQUIPE ────────────────────────────────────────────────────────────────
-  if (view === 'equipe') {
-    return (
-      <div className="w-full max-w-2xl mx-auto pb-24 px-1">
-        <SubPageHeader title="Mon équipe" onBack={() => setView('home')} />
-
-        {/* Info banner */}
-        <div className="mb-5 px-4 py-3.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl flex items-start gap-3">
-          <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-amber-700 dark:text-amber-300">
-            Les membres de l'équipe peuvent contrôler certaines fonctionnalités selon leurs permissions.
-          </p>
-        </div>
-
-        <ArtistManager
-          artists={artists}
-          onAdd={onAddArtist}
-          onUpdate={onUpdateArtist}
-          onDelete={onDeleteArtist}
-          maxArtists={maxArtists}
-        />
-      </div>
-    );
-  }
-
   // ── FACTURATION ──────────────────────────────────────────────────────────
   if (view === 'facturation') {
     return (
@@ -435,6 +410,8 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           studioId={studioId}
           userEmail={email}
           trialEndsAt={trialEndsAt}
+          studioSubscriptionStatus={subscriptionStatus}
+          onStudioSubscriptionRefresh={onRefreshStudioSubscription}
         />
       </div>
     );

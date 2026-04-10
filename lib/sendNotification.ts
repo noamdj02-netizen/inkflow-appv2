@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { invokeWithJwtRetry } from './edgeFunctionInvoke';
 import type { Notification } from '../types';
 
 const MAX_TEXT_LENGTH = 2000;
@@ -48,13 +49,26 @@ async function parseEdgeInvokeErrorDetails(error: InvokeErrorLike, data: unknown
 /**
  * Test Resend + secrets Supabase depuis le dashboard (Edge Function `send-email-test`).
  */
+/**
+ * Email de bienvenue tatoueur (Edge `send-tattooer-welcome`) après confirmation + ensureStudio.
+ * Non bloquant pour l’UX : en cas d’échec, la connexion continue.
+ */
+export async function sendTattooerWelcomeEmailIfNeeded(): Promise<void> {
+  try {
+    const { error } = await invokeWithJwtRetry('send-tattooer-welcome', {});
+    if (error) logEdgeInvokeError('send-tattooer-welcome', error);
+  } catch (err) {
+    logEdgeInvokeError('send-tattooer-welcome', err);
+  }
+}
+
 export async function testEmailConnection(): Promise<{
   ok: boolean;
   message: string;
   details?: string;
 }> {
   try {
-    const { data, error } = await supabase.functions.invoke('send-email-test', { body: {} });
+    const { data, error } = await invokeWithJwtRetry('send-email-test', {});
     if (error) {
       const details = await parseEdgeInvokeErrorDetails(error, data);
       logEdgeInvokeError('send-email-test', error, data);
@@ -107,7 +121,7 @@ export async function sendProjectNotification(data: ProjectNotificationData): Pr
       size: sanitizeText(data.size, 100),
       budget: sanitizeText(data.budget, 100),
     };
-    const { error } = await supabase.functions.invoke('send-project-notification', { body });
+    const { error } = await invokeWithJwtRetry('send-project-notification', body);
     if (error) logEdgeInvokeError('send-project-notification', error);
   } catch (err) {
     logEdgeInvokeError('send-project-notification', err);
@@ -146,7 +160,7 @@ export async function sendBookingConfirmation(params: SendBookingConfirmationPar
       paymentLink: params.paymentLink ? sanitizeText(params.paymentLink, 500) : undefined,
       studioAddress: params.studioAddress ? sanitizeText(params.studioAddress, 300) : undefined,
     };
-    const { error } = await supabase.functions.invoke('send-booking-confirmation', { body });
+    const { error } = await invokeWithJwtRetry('send-booking-confirmation', body);
     if (error) logEdgeInvokeError('send-booking-confirmation', error);
   } catch (err) {
     logEdgeInvokeError('send-booking-confirmation', err);
@@ -173,7 +187,7 @@ export async function sendBookingRefusal(params: SendBookingRefusalParams): Prom
       studioName: sanitizeText(params.studioName, MAX_NAME_LENGTH) ?? '',
       description: params.description ? sanitizeText(params.description, 500) : undefined,
     };
-    const { error } = await supabase.functions.invoke('send-booking-refusal', { body });
+    const { error } = await invokeWithJwtRetry('send-booking-refusal', body);
     if (error) logEdgeInvokeError('send-booking-refusal', error);
   } catch (err) {
     logEdgeInvokeError('send-booking-refusal', err);
@@ -193,31 +207,13 @@ export interface SendConversationLinkToClientParams {
  * @returns { sent: true } si l'email a été envoyé, { sent: false, unauthorized?: boolean, errorDetails?: string } sinon
  */
 export async function sendConversationLinkToClient(params: SendConversationLinkToClientParams): Promise<{ sent: boolean; unauthorized?: boolean; errorDetails?: string }> {
-  const invoke = async () => {
-    const { data, error } = await supabase.functions.invoke('send-client-conversation-link', {
-      body: {
-        clientEmail: params.clientEmail,
-        clientName: params.clientName,
-        studioName: params.studioName || undefined,
-        threadId: params.threadId,
-      },
-    });
-    return { data, error };
-  };
-
   try {
-    let { data, error } = await invoke();
-    const status = (error as { context?: { status?: number } })?.context?.status;
-    const is401Or461 = status === 401 || status === 461
-      || error?.message?.includes('401')
-      || error?.message?.includes('461')
-      || error?.message?.toLowerCase().includes('unauthorized');
-    if (is401Or461) {
-      await supabase.auth.refreshSession();
-      const retry = await invoke();
-      data = retry.data;
-      error = retry.error;
-    }
+    const { data, error } = await invokeWithJwtRetry('send-client-conversation-link', {
+      clientEmail: params.clientEmail,
+      clientName: params.clientName,
+      studioName: params.studioName || undefined,
+      threadId: params.threadId,
+    });
     const getErrorDetails = async (): Promise<string | undefined> => {
       const fromData = (data as { userMessage?: string } | undefined)?.userMessage;
       if (fromData) return fromData;
@@ -302,7 +298,7 @@ export async function sendAlternativeDateProposal(params: SendAlternativeDatePro
       previousContext: params.previousContext ? sanitizeText(params.previousContext, 500) : undefined,
       replyToEmail: params.replyToEmail ? sanitizeEmail(params.replyToEmail) : undefined,
     };
-    const { error } = await supabase.functions.invoke('send-alternative-date-proposal', { body });
+    const { error } = await invokeWithJwtRetry('send-alternative-date-proposal', body);
     if (error) logEdgeInvokeError('send-alternative-date-proposal', error);
   } catch (err) {
     logEdgeInvokeError('send-alternative-date-proposal', err);
@@ -311,16 +307,14 @@ export async function sendAlternativeDateProposal(params: SendAlternativeDatePro
 
 export async function sendMessageNotificationToClient(params: SendMessageNotificationToClientParams): Promise<void> {
   try {
-    const { error } = await supabase.functions.invoke('send-message-notification', {
-      body: {
-        type: 'to_client',
-        clientEmail: params.clientEmail,
-        clientName: params.clientName,
-        studioName: params.studioName || undefined,
-        senderName: params.senderName,
-        messagePreview: params.messagePreview,
-        threadId: params.threadId,
-      },
+    const { error } = await invokeWithJwtRetry('send-message-notification', {
+      type: 'to_client',
+      clientEmail: params.clientEmail,
+      clientName: params.clientName,
+      studioName: params.studioName || undefined,
+      senderName: params.senderName,
+      messagePreview: params.messagePreview,
+      threadId: params.threadId,
     });
     if (error) logEdgeInvokeError('send-message-notification (to_client)', error);
   } catch (err) {
@@ -344,7 +338,7 @@ export async function sendAftercareEmail(params: SendAftercareEmailParams): Prom
       appointmentId: params.appointmentId,
       studioId: params.studioId,
     };
-    const { error } = await supabase.functions.invoke('send-aftercare-email', { body });
+    const { error } = await invokeWithJwtRetry('send-aftercare-email', body);
     if (error) logEdgeInvokeError('send-aftercare-email', error);
   } catch (err) {
     logEdgeInvokeError('send-aftercare-email', err);
@@ -367,7 +361,7 @@ export async function sendReferralNotification(params: SendReferralNotificationP
       referrerId: params.referrerId,
       refereeStudioName: sanitizeText(params.refereeStudioName, MAX_NAME_LENGTH) ?? 'Un studio',
     };
-    const { error } = await supabase.functions.invoke('send-referral-notification', { body });
+    const { error } = await invokeWithJwtRetry('send-referral-notification', body);
     if (error) logEdgeInvokeError('send-referral-notification', error);
   } catch (err) {
     logEdgeInvokeError('send-referral-notification', err);
@@ -380,14 +374,12 @@ export async function sendReferralNotification(params: SendReferralNotificationP
  */
 export async function sendMessageNotificationToStudio(params: SendMessageNotificationToStudioParams): Promise<void> {
   try {
-    const { error } = await supabase.functions.invoke('send-message-notification', {
-      body: {
-        type: 'to_studio',
-        studioId: params.studioId,
-        senderName: params.senderName,
-        messagePreview: params.messagePreview,
-        threadId: params.threadId,
-      },
+    const { error } = await invokeWithJwtRetry('send-message-notification', {
+      type: 'to_studio',
+      studioId: params.studioId,
+      senderName: params.senderName,
+      messagePreview: params.messagePreview,
+      threadId: params.threadId,
     });
     if (error) logEdgeInvokeError('send-message-notification (to_studio)', error);
   } catch (err) {
@@ -411,6 +403,7 @@ export interface CreateInAppNotificationParams {
 export async function createInAppNotification(params: CreateInAppNotificationParams): Promise<void> {
   try {
     const payload = {
+      id: crypto.randomUUID(),
       studio_id: params.studioId,
       type: params.type,
       title: sanitizeText(params.title, 200) ?? '',

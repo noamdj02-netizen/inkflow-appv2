@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
-import { Plus, X, User, Mail, Edit2, Trash2, Shield, Check } from 'lucide-react';
+import { Plus, X, User, Edit2, Trash2, Shield, Send, Loader2 } from 'lucide-react';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import type { ArtistAccount } from '../../types';
 
 interface ArtistManagerProps {
   artists: ArtistAccount[];
-  onAdd: (artist: ArtistAccount) => void;
+  onAdd: (artist: ArtistAccount) => void | Promise<void>;
   onUpdate: (artist: ArtistAccount) => void;
   onDelete: (id: string) => void;
   maxArtists: number;
+  /**
+   * Dans Établissement, l’ajout se fait via le formulaire du dessus — on masque le doublon « Ajouter » ici.
+   */
+  hideAddButton?: boolean;
+  /** E-mail d’invitation (Edge Function) — affiche « Envoyer l’invitation » sur chaque fiche */
+  onSendInvite?: (artist: ArtistAccount) => void | Promise<void>;
 }
 
 const PERMISSIONS = [
@@ -20,7 +26,16 @@ const PERMISSIONS = [
   { key: 'manage_vitrine', label: 'Modifier la vitrine' },
 ];
 
-export const ArtistManager: React.FC<ArtistManagerProps> = ({ artists, onAdd, onUpdate, onDelete, maxArtists }) => {
+export const ArtistManager: React.FC<ArtistManagerProps> = ({
+  artists,
+  onAdd,
+  onUpdate,
+  onDelete,
+  maxArtists,
+  hideAddButton = false,
+  onSendInvite,
+}) => {
+  const [sendingInviteId, setSendingInviteId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', email: '', role: 'artist', specialties: '', avatar: '' });
@@ -81,22 +96,47 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({ artists, onAdd, on
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-[var(--text-primary)]">Artistes</h2>
-          <p className="text-[var(--text-secondary)] text-sm mt-1">
-            {artists.length} artiste{artists.length > 1 ? 's' : ''}
-            {maxArtists !== -1 && ` / ${maxArtists} max`}
+      <div className={`flex items-start gap-3 ${hideAddButton ? '' : 'justify-between'}`}>
+        <div className="min-w-0 flex-1">
+          <h2
+            className={
+              hideAddButton
+                ? 'text-sm font-semibold text-zinc-900 dark:text-white'
+                : 'text-xl font-bold text-[var(--text-primary)]'
+            }
+          >
+            {hideAddButton ? 'Droits par personne' : 'Accès & permissions'}
+          </h2>
+          <p
+            className={
+              hideAddButton
+                ? 'text-xs text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed'
+                : 'text-[var(--text-secondary)] text-sm mt-1'
+            }
+          >
+            {hideAddButton ? (
+              <>
+                Ouvrez <span className="font-medium text-zinc-700 dark:text-zinc-300">Modifier</span> sur une fiche pour
+                cocher RDV, clients, vitrine, etc. Utilisez <span className="font-medium">Envoyer l&apos;invitation</span>{' '}
+                sur chaque carte pour envoyer l&apos;e-mail au collaborateur (ou le bouton <span className="font-medium">Ajouter</span>{' '}
+                plus haut pour un nouveau membre).
+              </>
+            ) : (
+              <>
+                {artists.length} profil{artists.length !== 1 ? 's' : ''}
+                {maxArtists !== -1 ? ` / ${maxArtists} max` : ''} · cochez ce que chacun peut faire dans l’app.
+              </>
+            )}
           </p>
         </div>
-        {canAdd && (
+        {!hideAddButton && canAdd && (
           <button onClick={() => { setShowAdd(true); setEditing(null); }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600">
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 shrink-0">
             <Plus className="w-4 h-4" /> Ajouter
           </button>
         )}
-        {!canAdd && (
-          <div className="text-sm text-[var(--text-secondary)] font-medium">Limite atteinte - Passez au plan superieur</div>
+        {!hideAddButton && !canAdd && (
+          <div className="text-sm text-[var(--text-secondary)] font-medium shrink-0">Limite atteinte - Passez au plan superieur</div>
         )}
       </div>
 
@@ -129,6 +169,30 @@ export const ArtistManager: React.FC<ArtistManagerProps> = ({ artists, onAdd, on
                 </button>
               </div>
             </div>
+            {onSendInvite && (
+              <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setSendingInviteId(artist.id);
+                    try {
+                      await onSendInvite(artist);
+                    } finally {
+                      setSendingInviteId(null);
+                    }
+                  }}
+                  disabled={sendingInviteId === artist.id}
+                  className="w-full flex items-center justify-center gap-2 min-h-[44px] px-3 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-800 dark:text-zinc-200 bg-white dark:bg-zinc-900/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
+                >
+                  {sendingInviteId === artist.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden />
+                  ) : (
+                    <Send className="w-4 h-4 shrink-0" aria-hidden />
+                  )}
+                  Envoyer l&apos;invitation
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>

@@ -34,6 +34,8 @@ export interface NearbyStudio {
   slug: string;
   studio_name: string;
   avatar_url: string | null;
+  /** Première ligne d’adresse depuis la vitrine (JSON), si renseignée */
+  address: string | null;
   city: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -178,6 +180,7 @@ function mergeNearbyStudios(primary: NearbyStudio, secondary: NearbyStudio): Nea
     portfolio: portfolio.length > 0 ? portfolio : winner.portfolio ?? [],
     tags: tags.length > 0 ? tags : winner.tags ?? [],
     avatar_url: winner.avatar_url?.trim() || loser.avatar_url?.trim() || null,
+    address: winner.address?.trim() || loser.address?.trim() || null,
     distance_km: pickPreferredStudio(primary, secondary).distance_km,
   };
 }
@@ -359,11 +362,19 @@ export async function loadClientDiscoveryStudios(
       .filter(Boolean)
       .slice(0, 3);
 
+    const rawAddr = typeof vd.address === 'string' ? vd.address.trim() : '';
+    const addressLine =
+      rawAddr
+        .split('\n')
+        .map((line) => line.trim())
+        .find((line) => line.length > 0) ?? null;
+
     return {
       id: s.id,
       slug: s.slug,
       studio_name: s.studio_name,
       avatar_url: resolvedAvatar,
+      address: addressLine,
       city: s.city,
       latitude: s.latitude,
       longitude: s.longitude,
@@ -400,11 +411,25 @@ export interface GeocodeResult {
   formattedAddress: string;
 }
 
-export async function geocodeAddress(address: string): Promise<GeocodeResult | null> {
+/** Retour détaillé pour l’UI (messages d’erreur Google : clé, restriction, facturation). */
+export type GeocodeDetailedResult =
+  | { ok: true; data: GeocodeResult }
+  | {
+      ok: false;
+      reason: 'no_api_key' | 'no_results' | 'network' | 'google_error';
+      message: string;
+    };
+
+export async function geocodeAddressDetailed(address: string): Promise<GeocodeDetailedResult> {
   const apiKey = getGoogleMapsBrowserApiKey();
   if (!apiKey) {
     console.warn('[supabaseGeo] Clé Google Maps navigateur manquante (VITE_GOOGLE_MAPS_JS_API_KEY ou VITE_GOOGLE_MAPS_API_KEY)');
-    return null;
+    return {
+      ok: false,
+      reason: 'no_api_key',
+      message:
+        'Clé API Google Maps manquante. Ajoutez VITE_GOOGLE_MAPS_JS_API_KEY dans votre .env (Geocoding API activée).',
+    };
   }
 
   try {
@@ -412,6 +437,7 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
     const res = await fetch(url);
     const json = await res.json() as {
       status: string;
+      error_message?: string;
       results: Array<{
         formatted_address: string;
         geometry: { location: { lat: number; lng: number } };
@@ -419,23 +445,53 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
       }>;
     };
 
-    if (json.status !== 'OK' || !json.results.length) return null;
+    if (json.status === 'OK' && json.results.length) {
+      const result = json.results[0];
+      const loc = result.geometry.location;
+      const cityComp = result.address_components.find(
+        (c) => c.types.includes('locality') || c.types.includes('postal_town'),
+      );
+      return {
+        ok: true,
+        data: {
+          lat: loc.lat,
+          lng: loc.lng,
+          city: cityComp?.long_name ?? '',
+          formattedAddress: result.formatted_address,
+        },
+      };
+    }
 
-    const result = json.results[0];
-    const loc = result.geometry.location;
-    const cityComp = result.address_components.find(
-      (c) => c.types.includes('locality') || c.types.includes('postal_town'),
-    );
+    if (json.status === 'ZERO_RESULTS') {
+      return {
+        ok: false,
+        reason: 'no_results',
+        message: "Aucun résultat pour cette adresse. Précisez rue, code postal et ville.",
+      };
+    }
 
+    const detail = json.error_message?.trim();
     return {
-      lat: loc.lat,
-      lng: loc.lng,
-      city: cityComp?.long_name ?? '',
-      formattedAddress: result.formatted_address,
+      ok: false,
+      reason: 'google_error',
+      message:
+        detail ||
+        (json.status === 'REQUEST_DENIED'
+          ? 'Géocodage refusé : vérifiez la clé API, les restrictions (domaine) et que l’API Geocoding est activée.'
+          : `Géocodage impossible (${json.status}).`),
     };
   } catch {
-    return null;
+    return {
+      ok: false,
+      reason: 'network',
+      message: 'Réseau indisponible ou requête bloquée. Réessayez.',
+    };
   }
+}
+
+export async function geocodeAddress(address: string): Promise<GeocodeResult | null> {
+  const r = await geocodeAddressDetailed(address);
+  return r.ok ? r.data : null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

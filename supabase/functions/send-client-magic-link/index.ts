@@ -4,6 +4,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { addPreviewBccToPayload } from "../_shared/resend.ts";
 import { wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 
 const RESEND_API_KEY       = Deno.env.get("RESEND_API_KEY") || "";
@@ -103,12 +104,14 @@ Deno.serve(async (req) => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        from: RESEND_FROM,
-        to: [email],
-        subject: "Ton espace client My Inkflow ✦",
-        html,
-      }),
+      body: JSON.stringify(
+        addPreviewBccToPayload({
+          from: RESEND_FROM,
+          to: [email],
+          subject: "Ton espace client My Inkflow ✦",
+          html,
+        }),
+      ),
     });
 
     if (!resendRes.ok) {

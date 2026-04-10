@@ -44,7 +44,19 @@ export async function ensureStudio(
   studioName: string,
   referralCode?: string | null
 ): Promise<{ studioId: string; slug: string }> {
-  const id = getStudioId(email, studioName);
+  const emailNorm = email.trim().toLowerCase();
+  /** Un seul studio par email : évite un 2e essai d’inscription avec un autre nom de studio → 2e ligne / 2e trial. */
+  const existingByEmail = await getStudioByEmail(emailNorm);
+  if (existingByEmail?.id) {
+    const now = new Date().toISOString();
+    await supabase
+      .from('inkflow_studios')
+      .update({ name, studio_name: studioName, updated_at: now })
+      .eq('id', existingByEmail.id);
+    return { studioId: existingByEmail.id, slug: existingByEmail.slug };
+  }
+
+  const id = getStudioId(emailNorm, studioName);
   const baseSlug = getStudioSlug(studioName);
   const now = new Date().toISOString();
 
@@ -87,7 +99,7 @@ export async function ensureStudio(
 
     const payload: Record<string, unknown> = {
       id,
-      email,
+      email: emailNorm,
       name,
       studio_name: studioName,
       slug: finalSlug,
@@ -169,6 +181,24 @@ export async function getStudioByEmail(email: string): Promise<{
     plan_type: (fallback as { plan_type?: string }).plan_type,
     csv_import_slots_remaining: (fallback as { csv_import_slots_remaining?: number | null }).csv_import_slots_remaining,
   };
+}
+
+/**
+ * URL d’avatar studio persistée (`inkflow_studios.avatar_url`).
+ * À la déconnexion le localStorage est vidé : il faut relire la base au login pour retrouver la photo.
+ */
+export async function getStudioAvatarUrlByEmail(email: string): Promise<string | null> {
+  const emailNorm = email.trim().toLowerCase();
+  if (!emailNorm) return null;
+  const { data: rows, error } = await supabase
+    .from('inkflow_studios')
+    .select('avatar_url')
+    .ilike('email', emailNorm)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+  if (error || !rows?.length) return null;
+  const url = (rows[0] as { avatar_url?: string | null }).avatar_url?.trim();
+  return url || null;
 }
 
 /** Récupère le slug du studio depuis la base (pour le dashboard quand on a déjà studioId). */

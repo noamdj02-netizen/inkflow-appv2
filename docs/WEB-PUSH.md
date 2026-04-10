@@ -159,3 +159,17 @@ Le tatoueur active les notifications push dans **Paramètres → Notifications**
 2. Installer l’app en PWA (Add to Home Screen sur mobile)
 3. Accepter la permission « Notifications » dans le navigateur
 4. Avoir `VITE_VAPID_PUBLIC_KEY` configuré dans le build frontend
+
+---
+
+## 8. Web Push (VAPID) vs FCM / Expo
+
+| Technologie | Contexte InkFlow |
+|-------------|------------------|
+| **Web Push + VAPID** | C’est ce que fait `send-push-notification` : abonnements dans `inkflow_push_subscriptions`, clés `VAPID_*`. Fonctionne dans le **navigateur** / PWA. |
+| **Firebase Cloud Messaging (FCM)** | Push natif Android / intégrations Google — **non utilisé** dans ce dépôt web. |
+| **Expo Push** | Notifications pour apps **Expo/React Native** — **non présent** ici. |
+
+Une **notification de bienvenue au moment du clic sur le lien de confirmation d’email** n’est en pratique **pas réaliste** sur le web : l’utilisateur n’a en général **pas encore** souscrit au Web Push dans le navigateur à cette étape. Les événements Auth (`auth.users`) ne déclenchent pas non plus le même pipeline que les webhooks métier (`notification-webhook`).
+
+**Recommandation MVP web** : considérer un « welcome push » comme **hors scope** ; faire activer les notifications depuis **Paramètres → Notifications** après la première connexion. Une phase ultérieure (app native, FCM/Expo) pourrait reprendre ce besoin hors navigateur.

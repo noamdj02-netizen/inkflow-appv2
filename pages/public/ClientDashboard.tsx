@@ -44,6 +44,8 @@ import { getStudioByEmail } from '../../lib/supabaseDashboard';
 import {
   fetchPortalAvatarUrl,
   formatClientAvatarError,
+  isHeicLikeFile,
+  isLikelyClientAvatarImageFile,
   oauthAvatarFromUserMetadata,
   removeClientPortalAvatar,
   trySyncClientCrmProfile,
@@ -168,6 +170,18 @@ function initials(name: string) {
 function distLabel(km: number | null) {
   if (km == null) return null;
   return km < 1 ? '< 1 km' : `${Math.round(km)} km`;
+}
+
+/** Première ligne d’adresse vitrine si présente, sinon ville (table studio). */
+function discoveryLocationLine(s: NearbyStudio | null | undefined): string | null {
+  if (!s) return null;
+  const raw = s.address?.trim();
+  if (raw) {
+    const first = raw.split('\n').map((l) => l.trim()).find((l) => l.length > 0);
+    if (first) return first;
+  }
+  const c = s.city?.trim();
+  return c || null;
 }
 function ratingLabel(n: number) {
   return n.toFixed(1);
@@ -373,7 +387,7 @@ function ArtistPill({ studio, index, onClick }: { studio: NearbyStudio; index: n
             <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
           </svg>
           <span style={{ fontSize: 10, color: D.muted }}>
-            {[studio.city, dist].filter(Boolean).join(' · ')}
+            {[discoveryLocationLine(studio), dist].filter(Boolean).join(' · ')}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -779,7 +793,7 @@ function FlashSheet({
             </div>
           </div>
           <div style={{ fontSize: 12, color: D.muted, marginBottom: 20 }}>
-            {[flash.style, studio?.city].filter(Boolean).join(' · ')}
+            {[flash.style, discoveryLocationLine(studio)].filter(Boolean).join(' · ')}
           </div>
 
           {/* Artist / studio row — ouvre la vitrine publique */}
@@ -825,8 +839,8 @@ function FlashSheet({
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: D.text }}>{displayStudioName}</div>
               <div style={{ fontSize: 11, color: D.muted, marginTop: 2 }}>
-                {[studio?.city].filter(Boolean).join('')}
-                {studio?.city ? ' · ' : ''}
+                {[discoveryLocationLine(studio)].filter(Boolean).join('')}
+                {discoveryLocationLine(studio) ? ' · ' : ''}
                 <span style={{ color: D.gold }}>Voir le profil studio</span>
               </div>
             </div>
@@ -1180,7 +1194,7 @@ function TabExplore({
               key={flash.id}
               flash={flash}
               studioIdx={studioIdx}
-              studioCity={s?.city ?? null}
+              studioCity={discoveryLocationLine(s)}
               onFavoritesDirty={onFavoritesDirty}
               onClick={() => onFlashClick(flash, studioIdx, s)}
             />
@@ -1219,7 +1233,7 @@ function TabExplore({
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: D.text, letterSpacing: '-0.02em' }}>{s.studio_name}</div>
                   <div style={{ fontSize: 11, color: D.muted, marginTop: 2 }}>
-                    {[s.city, s.distance_km != null ? distLabel(s.distance_km) : null].filter(Boolean).join(' · ')}
+                    {[discoveryLocationLine(s), s.distance_km != null ? distLabel(s.distance_km) : null].filter(Boolean).join(' · ')}
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: D.gold, fontWeight: 600 }}>
@@ -1274,7 +1288,7 @@ function TabFavorites({
               key={flash.id}
               flash={flash}
               studioIdx={studioIdx}
-              studioCity={s?.city ?? null}
+              studioCity={discoveryLocationLine(s)}
               onFavoritesDirty={onFavoritesDirty}
               onClick={() => onFlashClick(flash, studioIdx, s)}
             />
@@ -1400,7 +1414,7 @@ function TabMap({
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: D.text }}>{s.studio_name}</div>
                       <div style={{ fontSize: 11, color: D.muted, marginTop: 2 }}>
-                        {[s.city, s.distance_km != null ? distLabel(s.distance_km) : null].filter(Boolean).join(' · ')}
+                        {[discoveryLocationLine(s), s.distance_km != null ? distLabel(s.distance_km) : null].filter(Boolean).join(' · ')}
                       </div>
                     </div>
                     {s.flash.length > 0 && (
@@ -1965,7 +1979,7 @@ function TabProfile({
       <input
         ref={avatarInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/jpg"
+        accept="image/jpeg,image/png,image/webp,image/gif,image/tiff,.jpg,.jpeg,.png,.webp,.heic,.heif"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -2031,6 +2045,9 @@ function TabProfile({
             <Camera className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
+        <p className="text-center text-[11px] leading-snug max-w-[280px] mb-3" style={{ color: D.muted }}>
+          JPG, PNG, WebP, GIF — la photo est réduite automatiquement. Fichiers jusqu’à 25&nbsp;Mo (les photos iPhone très lourdes peuvent prendre quelques secondes).
+        </p>
         {showRemovePortal ? (
           <button
             type="button"
@@ -2374,12 +2391,18 @@ export function ClientDashboard() {
         toast.error('Session introuvable.');
         return;
       }
-      if (!file.type.startsWith('image/')) {
-        toast.error('Choisis une image (JPG, PNG, WebP).');
+      const t = (file.type || '').toLowerCase();
+      if (t.startsWith('video/')) {
+        toast.error('Choisis une photo, pas une vidéo.');
         return;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('Image trop lourde (max 10 Mo).');
+      if (!isLikelyClientAvatarImageFile(file)) {
+        toast.error('Format non reconnu. Utilise une photo JPG, PNG ou WebP.');
+        return;
+      }
+      const maxIn = 25 * 1024 * 1024;
+      if (file.size > maxIn) {
+        toast.error('Fichier trop lourd (max 25 Mo avant compression). Essaie une photo plus petite.');
         return;
       }
       setAvatarUploading(true);
@@ -2390,6 +2413,11 @@ export function ClientDashboard() {
           return;
         }
         await supabase.auth.refreshSession().catch(() => {});
+        if (isHeicLikeFile(file)) {
+          toast.info('Ouverture du format HEIC… si ça échoue, exporte la photo en JPEG depuis l’app Photos.');
+        } else if (file.size > 4 * 1024 * 1024) {
+          toast.info('Compression de la photo…');
+        }
         const url = await uploadClientPortalAvatarJpegWithFallback(file, userId);
         setUserAvatarUrl(url);
         setAvatarBroken(false);
@@ -2987,7 +3015,7 @@ export function ClientDashboard() {
                     key={flash.id}
                     flash={flash}
                     studioIdx={studioIdx}
-                    studioCity={s.city}
+                    studioCity={discoveryLocationLine(s)}
                     onFavoritesDirty={bumpFavs}
                     onClick={() => openFlash(flash, studioIdx, s)}
                   />

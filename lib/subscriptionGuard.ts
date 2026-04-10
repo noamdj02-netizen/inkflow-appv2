@@ -73,5 +73,31 @@ export function isSubscriptionActive(sub: Subscription | null): boolean {
   return sub.status === 'active' || sub.status === 'trialing';
 }
 
+/**
+ * Met fin tout de suite à la période d’essai **studio** (inkflow_studios), sans passer par Stripe.
+ * Passe le compte en `restricted` comme à l’expiration naturelle du trial.
+ * Ne concerne pas l’essai d’un abonnement Stripe — pour celui‑là, utiliser le portail client Stripe.
+ */
+export async function endStudioTrialEarly(studioId: string): Promise<void> {
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from('inkflow_studios')
+    .update({
+      subscription_status: 'restricted',
+      trial_ends_at: now,
+      updated_at: now,
+    })
+    .eq('id', studioId)
+    .eq('subscription_status', 'trialing')
+    .select('id');
+
+  if (error) throw error;
+  if (!data?.length) {
+    throw new Error(
+      'Impossible de mettre fin à l’essai : le statut a peut‑être déjà changé. Recharge la page.',
+    );
+  }
+}
+
 // Réexport des helpers basés sur les plans (Stripe)
 export { canAccessFeature, hasReachedLimit, getPlanLimit, getPlanConfig } from './subscriptionPlans';

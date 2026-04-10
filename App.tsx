@@ -1,11 +1,10 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { useTheme } from 'next-themes';
 import { useClientManifest } from './hooks/useClientManifest';
 import { ThemeProvider } from 'next-themes';
 import { LANDING_URL } from './lib/urls';
 import { SEO } from './components/SEO';
 import { Analytics } from '@vercel/analytics/react';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider, useAuth, REDIRECT_AFTER_LOGIN_KEY } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
@@ -56,6 +55,44 @@ interface Route {
   getProps?: (match: RegExpMatchArray) => Record<string, string>;
 }
 
+/** Normalise le chemin pour le routage thème (slash final, sans query). */
+function normalizePathnameForTheme(pathname: string): string {
+  let p = pathname.split('?')[0];
+  if (p.length > 1 && p.endsWith('/')) p = p.replace(/\/+$/, '');
+  return p;
+}
+
+/**
+ * Mode clair forcé partout sauf sur `/dashboard` (Dashboard Pro), où le thème
+ * reste piloté par le stockage + le bouton jour/nuit.
+ * Évite que les `!important` dark (`index.css`) n’écrasent l’app client / vitrine.
+ */
+const InkflowThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [pathname, setPathname] = useState(() => normalizePathnameForTheme(window.location.pathname));
+  useEffect(() => {
+    const sync = () => setPathname(normalizePathnameForTheme(window.location.pathname));
+    window.addEventListener('popstate', sync);
+    window.addEventListener('inkflow-navigate', sync);
+    return () => {
+      window.removeEventListener('popstate', sync);
+      window.removeEventListener('inkflow-navigate', sync);
+    };
+  }, []);
+  const isDashboardPro = pathname === '/dashboard';
+  return (
+    /* @ts-expect-error next-themes ThemeProvider children — React 19 compat */
+    <ThemeProvider
+      attribute="data-theme"
+      defaultTheme="light"
+      storageKey="inkflow-theme"
+      enableSystem={false}
+      forcedTheme={isDashboardPro ? undefined : 'light'}
+    >
+      {children}
+    </ThemeProvider>
+  );
+};
+
 const FullScreenSpinner: React.FC = () => (
   <div className="min-h-screen bg-black flex flex-col items-center justify-center">
     <Logo size="lg" className="rounded-2xl" />
@@ -72,16 +109,7 @@ const FullScreenSpinner: React.FC = () => (
 const Router: React.FC = () => {
   const [currentPath, setCurrentPath] = useState(window.location.pathname + window.location.search);
   const { isAuthenticated, authLoading } = useAuth();
-  const { setTheme } = useTheme();
   useClientManifest(currentPath.startsWith('/client'));
-
-  /** Thème sombre uniquement sur le dashboard tatoueur ; vitrine, /client, discover, etc. en clair. */
-  useEffect(() => {
-    let pathname = currentPath.split('?')[0];
-    if (pathname.length > 1 && pathname.endsWith('/')) pathname = pathname.replace(/\/+$/, '');
-    const isProDashboard = pathname === '/dashboard';
-    setTheme(isProDashboard ? 'dark' : 'light');
-  }, [currentPath, setTheme]);
 
   useEffect(() => {
     const handleLocationChange = () => setCurrentPath(window.location.pathname + window.location.search);
@@ -207,6 +235,11 @@ const Router: React.FC = () => {
     return <FullScreenSpinner />;
   }
   if (route.requiresAuth && !isAuthenticated) {
+    try {
+      sessionStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, currentPath);
+    } catch {
+      /* quota / privé */
+    }
     window.location.href = '/login';
     return (
       <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center">
@@ -319,8 +352,7 @@ const UnhandledRejectionHandler: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      {/* @ts-expect-error next-themes ThemeProvider children — React 19 compat */}
-      <ThemeProvider attribute="data-theme" defaultTheme="light" storageKey="inkflow-theme" enableSystem={false}>
+      <InkflowThemeProvider>
         <div className="app-root">
           <AuthProvider>
             <AppSplashGate>
@@ -335,7 +367,7 @@ const App: React.FC = () => {
             </AppSplashGate>
           </AuthProvider>
         </div>
-      </ThemeProvider>
+      </InkflowThemeProvider>
       <Analytics />
     </ErrorBoundary>
   );

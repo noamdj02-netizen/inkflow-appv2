@@ -1,7 +1,13 @@
 import React from 'react';
 import { Instagram, Mail } from 'lucide-react';
 import { Logo } from './Logo';
-import { LANDING_URL, LANDING_PRIVACY_URL, LANDING_TERMS_URL, LANDING_LEGAL_URL } from '../lib/urls';
+import {
+  LANDING_URL,
+  LANDING_PRIVACY_URL,
+  LANDING_TERMS_URL,
+  LANDING_LEGAL_URL,
+  INKFLOW_INSTAGRAM_URL,
+} from '../lib/urls';
 
 export const Footer: React.FC = () => {
   return (
@@ -16,7 +22,15 @@ export const Footer: React.FC = () => {
           </div>
 
           <div className="flex gap-6 text-neutral-400">
-            <a href="https://instagram.com/inkflow.app" target="_blank" rel="noopener noreferrer" aria-label="Instagram InkFlow" className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100 min-w-[44px] min-h-[44px] flex items-center justify-center"><Instagram className="w-5 h-5" /></a>
+            <a
+              href={INKFLOW_INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram InkFlow"
+              className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            >
+              <Instagram className="w-5 h-5" />
+            </a>
             <a href="mailto:contact@ink-flow.me" aria-label="Nous contacter par email" className="hover:text-neutral-900 transition-colors duration-200 p-2 rounded-lg hover:bg-neutral-100 min-w-[44px] min-h-[44px] flex items-center justify-center"><Mail className="w-5 h-5" /></a>
           </div>
         </div>

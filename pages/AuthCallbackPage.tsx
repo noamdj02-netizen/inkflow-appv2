@@ -3,7 +3,9 @@ import { AlertCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { sendTattooerWelcomeEmailIfNeeded } from '../lib/sendNotification';
 import { ensureStudio } from '../lib/supabaseDashboard';
+import { sanitizePostAuthRedirect } from '../lib/urls';
 
 export const AuthCallbackPage: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -26,15 +28,20 @@ export const AuthCallbackPage: React.FC = () => {
      * Le paramètre redirect_to en query est souvent perdu après redirection.
      * URL dédiée /auth/callback/client → renvoie vers /client (mot de passe puis welcome ou dashboard).
      */
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const linkType = hashParams.get('type');
+    if (linkType === 'signup' || linkType === 'email_change') {
+      setMessage('Compte confirmé ! Ouverture de ton espace…');
+    }
     const pathname = window.location.pathname.replace(/\/$/, '') || '/';
     const isClientCallback = pathname === '/auth/callback/client';
     const redirectToParam = params.get('redirect_to');
     const fromStorage =
       typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY) : null;
-    const redirectUrl =
-      redirectToParam ||
-      fromStorage ||
-      (isClientCallback ? '/client' : '/dashboard');
+    const defaultPath = isClientCallback ? '/client' : '/dashboard';
+    const redirectUrl = sanitizePostAuthRedirect(redirectToParam || fromStorage || defaultPath, {
+      defaultPath,
+    });
     try {
       sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
     } catch {
@@ -71,6 +78,7 @@ export const AuthCallbackPage: React.FC = () => {
       if (!isClientFlow) {
         try {
           await ensureStudio(u.email ?? '', name, studioName, referralCode);
+          await sendTattooerWelcomeEmailIfNeeded();
         } catch {
           // Ne pas bloquer la redirection
         }
@@ -90,16 +98,16 @@ export const AuthCallbackPage: React.FC = () => {
 
   if (status === 'error') {
     return (
-      <div className="landing-scroll bg-neutral-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl p-8 border border-neutral-200 shadow-sm">
+      <div className="landing-scroll bg-ink-bg flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-ink-surface rounded-2xl p-8 border border-ink-border shadow-sm">
           <div className="text-center">
-            <AlertCircle className="text-red-600 mx-auto mb-4" size={44} />
-            <h1 className="text-2xl font-bold text-neutral-900 mb-2">Erreur</h1>
-            <p className="text-neutral-600">{message}</p>
+            <AlertCircle className="text-red-400 mx-auto mb-4" size={44} />
+            <h1 className="text-2xl font-bold text-ink-text mb-2">Erreur</h1>
+            <p className="text-ink-muted">{message}</p>
             <button
               type="button"
               onClick={goLogin}
-              className="mt-6 w-full bg-neutral-900 text-white font-semibold py-3 rounded-xl hover:bg-neutral-800 transition-colors"
+              className="mt-6 w-full bg-ink-accent text-ink-bg font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity"
             >
               Retour à la connexion
             </button>
@@ -110,8 +118,9 @@ export const AuthCallbackPage: React.FC = () => {
   }
 
   return (
-    <div className="landing-scroll min-h-screen bg-neutral-50 flex items-center justify-center">
+    <div className="landing-scroll min-h-screen bg-ink-bg flex flex-col items-center justify-center gap-4 p-6">
       <Logo size="lg" className="rounded-2xl" />
+      <p className="text-sm text-neutral-600 text-center max-w-sm">{message}</p>
     </div>
   );
 };

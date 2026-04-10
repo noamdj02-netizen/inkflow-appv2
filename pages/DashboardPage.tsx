@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
 import { StudioPrivacyProvider } from '../contexts/StudioPrivacyContext';
 import { DashboardPro } from '../components/dashboard/DashboardPro';
 import { SEO } from '../components/SEO';
@@ -11,6 +11,11 @@ export const DashboardPage: React.FC = () => {
 
   React.useEffect(() => {
     if (!authLoading && !isAuthenticated) {
+      try {
+        sessionStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, window.location.pathname + window.location.search);
+      } catch {
+        /* ignore */
+      }
       window.location.href = '/login';
     }
   }, [isAuthenticated, authLoading]);

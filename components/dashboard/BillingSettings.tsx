@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Check, X, AlertTriangle, Zap, Crown, Shield, FileText, Sparkles, ArrowRight, Clock, Users, Image, BarChart3, MessageSquare, Bot, Palette, Calendar, Receipt } from 'lucide-react';
-import { getSubscription, isSubscriptionActive } from '../../lib/subscriptionGuard';
+import { CreditCard, Check, X, AlertTriangle, Zap, Crown, Shield, FileText, Sparkles, ArrowRight, Clock, Users, Image, BarChart3, MessageSquare, Bot, Palette, Calendar, Receipt, Database } from 'lucide-react';
+import { endStudioTrialEarly, getSubscription, isSubscriptionActive } from '../../lib/subscriptionGuard';
 import { createSubscription, createPortalSession } from '../../lib/stripeClient';
 import { getStripeBillingLink } from '../../lib/stripePaymentLinks';
 import { TrialCountdown } from '../TrialCountdown';
@@ -11,6 +11,10 @@ interface BillingSettingsProps {
   studioId: string | null;
   userEmail: string;
   trialEndsAt?: string | null;
+  /** Statut `inkflow_studios.subscription_status` (trialing, active, restricted…) */
+  studioSubscriptionStatus?: string | null;
+  /** Après mise à jour du statut studio (fin d’essai, etc.) */
+  onStudioSubscriptionRefresh?: () => void | Promise<void>;
 }
 
 const plans: { 
@@ -70,7 +74,13 @@ const features = [
   { name: 'Assistant IA', solo: false, pro: false, studio: true, icon: <Bot className="w-4 h-4" /> },
 ];
 
-export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, userEmail, trialEndsAt }) => {
+export const BillingSettings: React.FC<BillingSettingsProps> = ({
+  studioId,
+  userEmail,
+  trialEndsAt,
+  studioSubscriptionStatus,
+  onStudioSubscriptionRefresh,
+}) => {
   const toast = useToast();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,12 +88,26 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
+  const [endingStudioTrial, setEndingStudioTrial] = useState(false);
 
-  useEffect(() => {
-    if (!studioId) { setLoading(false); return; }
+  const reloadStripeSubscription = () => {
+    if (!studioId) return;
     getSubscription(studioId)
       .then(setSubscription)
-      .catch(() => { toast.error('Une erreur est survenue'); })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!studioId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    getSubscription(studioId)
+      .then(setSubscription)
+      .catch(() => {
+        toast.error('Une erreur est survenue');
+      })
       .finally(() => setLoading(false));
   }, [studioId]);
 
@@ -110,6 +134,32 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
   };
 
   const active = isSubscriptionActive(subscription);
+
+  const canEndInkflowStudioTrial =
+    Boolean(studioId) &&
+    studioSubscriptionStatus === 'trialing' &&
+    !active;
+
+  const handleEndStudioTrial = async () => {
+    if (!studioId || !canEndInkflowStudioTrial) return;
+    const ok = window.confirm(
+      "Mettre fin à l'essai gratuit Inkflow maintenant ?\n\n" +
+        "Ton accès passera en mode restreint (comme après expiration des 14 jours) jusqu'à ce que tu souscrives à un plan. " +
+        "Tu pourras toujours choisir un plan plus tard depuis cette page.",
+    );
+    if (!ok) return;
+    setEndingStudioTrial(true);
+    try {
+      await endStudioTrialEarly(studioId);
+      await onStudioSubscriptionRefresh?.();
+      reloadStripeSubscription();
+      toast.success('Période d’essai terminée. Tu peux souscrire à un plan quand tu veux.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Impossible de mettre fin à l’essai.');
+    } finally {
+      setEndingStudioTrial(false);
+    }
+  };
 
   const handleManageSubscription = async () => {
     if (!studioId) return;
@@ -145,11 +195,14 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white font-display">Abonnement</h2>
           <p className="text-zinc-500 dark:text-zinc-400 text-sm sm:text-base mt-1.5 max-w-xl">
-            Choisissez le plan adapté à votre activité : Solo pour les artistes indépendants, Pro pour les studios en croissance, Studio pour les équipes. Facturation mensuelle ou annuelle, sans engagement.
+            Choisissez le plan adapté à votre activité : Solo pour les artistes indépendants, Pro pour les studios en croissance, Studio pour les équipes. Facturation mensuelle ou annuelle, sans engagement.{' '}
+            <span className="text-zinc-600 dark:text-zinc-300">
+              Passer de Solo à Pro ou Studio ne supprime pas vos données : vous gardez votre historique, et seules les limites et les fonctionnalités prévues par votre formule s’appliquent.
+            </span>
           </p>
         </div>
         {active && (
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-col items-end gap-1 max-w-[min(100%,280px)] text-right">
             <button
               onClick={handleManageSubscription}
               disabled={portalLoading}
@@ -162,7 +215,14 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
               )}
               Gérer / Factures
             </button>
-            <span className="text-xs text-zinc-400 dark:text-zinc-500">Modifier le plan, moyen de paiement ou télécharger les factures</span>
+            <span className="text-xs text-zinc-400 dark:text-zinc-500">
+              Modifier le plan, moyen de paiement ou télécharger les factures
+            </span>
+            {subscription?.status === 'trialing' && (
+              <span className="text-xs text-amber-600 dark:text-amber-400/90 mt-1">
+                Essai Stripe : tu peux annuler ou modifier l’essai depuis ce portail avant la première facturation.
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -206,6 +266,27 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
               <div className="mt-3">
                 <TrialCountdown trialEndsAt={trialEndsAt} />
               </div>
+              {canEndInkflowStudioTrial && (
+                <div className="mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                    Tu n’as pas encore souscrit via Stripe : tu peux mettre fin tout de suite à l’essai gratuit Inkflow
+                    (accès restreint jusqu’à souscription), par exemple si tu testais pour une démo.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void handleEndStudioTrial()}
+                    disabled={endingStudioTrial || !studioId}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-600 text-sm font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {endingStudioTrial ? (
+                      <span className="w-4 h-4 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    )}
+                    Mettre fin à l’essai maintenant
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -435,7 +516,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
       )}
 
       {/* Trust badges — style landing */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="flex items-center gap-3 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50">
           <div className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800">
             <Shield className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
@@ -463,7 +544,31 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({ studioId, user
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Gratuit, sans CB</p>
           </div>
         </div>
+        <div className="flex items-center gap-3 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 border-l-4 border-l-emerald-500">
+          <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/15">
+            <Database className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-zinc-900 dark:text-white">Données conservées</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Changement de plan : pas de suppression de votre studio, CRM ou historique. Accès selon la formule choisie.
+            </p>
+          </div>
+        </div>
       </div>
+
+      <p className="text-center text-xs text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto">
+        Cadre contractuel :{' '}
+        <a
+          href="/conditions-utilisation"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-zinc-700 dark:text-zinc-300 underline underline-offset-2 hover:text-zinc-900 dark:hover:text-white transition-colors"
+        >
+          conditions d&apos;utilisation
+        </a>
+        {' '}(section Abonnement et paiement).
+      </p>
     </div>
   );
 };

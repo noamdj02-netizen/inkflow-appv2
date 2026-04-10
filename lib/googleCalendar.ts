@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { invokeWithJwtRetry } from './edgeFunctionInvoke';
 
 export interface GoogleCalendarEvent {
   googleId: string;
@@ -27,7 +28,7 @@ function toUserFriendlyMessage(fnName: string, raw: string): string {
 }
 
 async function invokeEdge<T = unknown>(fnName: string, body: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.functions.invoke(fnName, { body });
+  const { data, error } = await invokeWithJwtRetry(fnName, body);
   if (error) {
     const errData = typeof data === 'object' && data && 'error' in data ? (data as { error?: string }).error : null;
     const raw = errData || error.message || 'Edge function error';

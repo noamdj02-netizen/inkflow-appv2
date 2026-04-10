@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Palette,
   Sparkles,
@@ -8,11 +8,9 @@ import {
   X,
   ExternalLink,
   LayoutTemplate,
-  Zap,
-  LayoutGrid,
 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
-import { VITRINE_THEMES, type VitrineTheme } from '../../lib/themes';
+import { VITRINE_THEMES, VITRINE_THEMES_SELECTOR, type VitrineTheme } from '../../lib/themes';
 import { getStudioVitrineTheme, getStudioUnlockedThemes, updateStudioVitrineTheme } from '../../lib/supabaseDashboard';
 import { createThemeCheckoutSession } from '../../lib/stripeClient';
 
@@ -190,7 +188,6 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
   const [applying, setApplying] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [previewTheme, setPreviewTheme] = useState<VitrineTheme | null>(null);
-  const [activeTab, setActiveTab] = useState<'free' | 'premium'>('free');
 
   const fetchData = useCallback(async () => {
     if (!studioId) {
@@ -218,11 +215,6 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
   }, [fetchData]);
 
   /** Toujours avant tout return — ne pas placer après `if (loading)` (règles des hooks). */
-  const focusThemes = useMemo(() => VITRINE_THEMES.filter((t) => t.productTier === 'focus'), []);
-  const fullThemes = useMemo(() => VITRINE_THEMES.filter((t) => t.productTier === 'full'), []);
-  const focusThemeNames = focusThemes.map((t) => t.name).join(' · ');
-  const fullThemeNames = fullThemes.map((t) => t.name).join(' · ');
-
   const hasUnlockedTheme = (theme: VitrineTheme) => !theme.premium || unlockedThemes.includes(theme.id);
 
   const currentThemeName = VITRINE_THEMES.find((t) => t.id === currentThemeId)?.name ?? currentThemeId;
@@ -270,18 +262,14 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
     return (
       <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-4 sm:p-6">
         <div className="h-8 w-48 bg-zinc-200 dark:bg-zinc-800 rounded-lg animate-pulse mb-4" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="aspect-[3/4] bg-zinc-100 dark:bg-zinc-800 rounded-2xl animate-pulse" />
-          ))}
+        <div className="max-w-sm">
+          <div className="aspect-[3/4] bg-zinc-100 dark:bg-zinc-800 rounded-2xl animate-pulse" />
         </div>
       </div>
     );
   }
 
-  const freeThemes = VITRINE_THEMES.filter((t) => !t.premium);
-  const premiumThemes = VITRINE_THEMES.filter((t) => t.premium);
-  const visibleThemes = activeTab === 'free' ? freeThemes : premiumThemes;
+  const visibleThemes = VITRINE_THEMES_SELECTOR;
 
   return (
     <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-4 sm:p-6 md:p-8 space-y-6 shadow-sm">
@@ -294,45 +282,19 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
             Thème de la vitrine
           </h3>
           <p className="text-zinc-500 dark:text-zinc-400 text-sm sm:text-base max-w-2xl">
-            Choisissez l’apparence de votre page publique. Aperçu en grand, puis application en un geste — même sur
-            mobile.
+            Aperçu en grand, puis application en un geste. D’autres styles de vitrine arriveront plus tard.
           </p>
-
-          <div
-            className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-900/40 p-4 sm:p-5 space-y-3 max-w-3xl"
-            aria-label="Types de thèmes vitrine"
-          >
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              Deux familles de thèmes
-            </p>
-            <div className="grid gap-4 sm:grid-cols-2 sm:gap-6">
-              <div className="flex gap-3 min-w-0">
-                <Zap className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" aria-hidden />
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm text-zinc-900 dark:text-white">Focus & conversion</p>
-                  <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1 leading-relaxed">
-                    <span className="text-zinc-700 dark:text-zinc-300">{focusThemeNames}</span> — page courte : flashs,
-                    contact, réservation. Idéal depuis Instagram ou le lien en bio.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3 min-w-0">
-                <LayoutGrid className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" aria-hidden />
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm text-zinc-900 dark:text-white">Full Studio</p>
-                  <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1 leading-relaxed">
-                    <span className="text-zinc-700 dark:text-zinc-300">{fullThemeNames}</span> — vitrine complète :
-                    services, artistes, FAQ, contenu riche. Idéal pour le SEO et les studios avec plusieurs artistes.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-500">
             Thème actuel :{' '}
             <span className="font-semibold text-zinc-900 dark:text-zinc-200">{currentThemeName}</span>
           </p>
+          {currentThemeId !== 'light' && (
+            <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200/90 rounded-xl border border-amber-200/80 dark:border-amber-800/60 bg-amber-50/90 dark:bg-amber-950/40 px-3 py-2 max-w-2xl">
+              Un ancien thème est encore enregistré. Appliquez <strong className="font-semibold">Minimalist Light</strong>{' '}
+              ci-dessous pour aligner la vitrine sur le thème proposé aujourd’hui.
+            </p>
+          )}
         </div>
         {publicVitrineUrl ? (
           <a
@@ -347,42 +309,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
         ) : null}
       </div>
 
-      {/* Onglets Gratuits / Premium (style pill) */}
-      <div
-        className="inline-flex rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800 p-1 gap-0.5 w-full sm:w-auto"
-        role="tablist"
-        aria-label="Type de thèmes"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'free'}
-          onClick={() => setActiveTab('free')}
-          className={`flex-1 sm:flex-none min-h-[44px] px-4 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] ${
-            activeTab === 'free'
-              ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-        >
-          Gratuits ({freeThemes.length})
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'premium'}
-          onClick={() => setActiveTab('premium')}
-          className={`flex-1 sm:flex-none min-h-[44px] px-4 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] inline-flex items-center justify-center gap-1.5 ${
-            activeTab === 'premium'
-              ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-500" aria-hidden />
-          Premium ({premiumThemes.length})
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:max-w-md gap-4">
         {visibleThemes.map((theme) => (
           <ThemeCard
             key={theme.id}

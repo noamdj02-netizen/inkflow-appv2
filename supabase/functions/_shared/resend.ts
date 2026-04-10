@@ -7,6 +7,18 @@
 export const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 
+/** Longueur max du corps d’erreur Resend dans les logs (évite les dumps énormes). */
+const RESEND_ERROR_BODY_MAX = 2000;
+
+/**
+ * Journalisation uniforme des erreurs API Resend : contexte, statut HTTP, extrait du corps (sans secrets).
+ */
+export function logResendApiError(context: string, status: number, errBody: string): void {
+  const excerpt =
+    errBody.length > RESEND_ERROR_BODY_MAX ? `${errBody.slice(0, RESEND_ERROR_BODY_MAX)}…` : errBody;
+  console.error(`[resend] ${context}: HTTP ${status}`, excerpt);
+}
+
 /**
  * Copie invisible de tous les mails transactionnels (clients + tatoueurs) vers une adresse interne
  * pour prévisualiser les rendus en prod. Définir le secret Supabase : EMAIL_BCC_PREVIEW=noamdj02@gmail.com
@@ -87,7 +99,7 @@ export async function sendEmail(params: SendEmailParams): Promise<{ id: string }
     });
     if (!res.ok) {
       const errBody = await res.text();
-      console.error("[resend] API error:", res.status, errBody);
+      logResendApiError("sendEmail", res.status, errBody);
       return null;
     }
     const result = await res.json();
@@ -129,7 +141,7 @@ export async function sendWithTemplate(params: SendWithTemplateParams): Promise<
     });
     if (!res.ok) {
       const errBody = await res.text();
-      console.error("[resend] sendWithTemplate API error:", res.status, errBody);
+      logResendApiError("sendWithTemplate", res.status, errBody);
       return null;
     }
     const result = await res.json();

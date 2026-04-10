@@ -3,7 +3,7 @@
  * Design premium InkFlow : minimaliste, anthracite, CTA noir/bleu, sans vert.
  */
 
-import { escapeHtml } from "../_shared/emailLayout.ts";
+import { escapeHtml, wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
@@ -19,8 +19,6 @@ function ensureAbsoluteUrl(url: string | undefined, base: string): string {
   if (u.startsWith("http://") || u.startsWith("https://")) return u;
   return base + (u.startsWith("/") ? u : "/" + u);
 }
-// Logo InkFlow — Colle ton URL ici ou définis le secret LOGO_URL dans Supabase (Edge Functions → Secrets)
-const LOGO_URL = Deno.env.get("LOGO_URL") || "https://ink-flow.me/icon.svg";
 const SUPPORT_PHONE = Deno.env.get("SUPPORT_PHONE") || "06 33 43 89 26";
 const SUPPORT_ADDRESS = Deno.env.get("SUPPORT_ADDRESS") || "Paris, France";
 
@@ -115,107 +113,43 @@ function buildRdvConfirmeHtml(payload: Payload): string {
   const ctaLabel = hasPaymentLink ? "Régler mon acompte" : "Confirmer mon rendez-vous";
   const safeClientName = escapeHtml(payload.clientName);
   const safeStudioName = escapeHtml(payload.studioName);
-  const safePaymentUrl = hasPaymentLink ? escapeHtml(payload.paymentLink!) : "";
+  const rawPaymentUrl = hasPaymentLink ? payload.paymentLink!.trim() : "";
   const safeDescription = escapeHtml(payload.description.length > 120 ? payload.description.slice(0, 117) + "..." : payload.description);
 
   const intro = hasPaymentLink
-    ? `Bonjour ${safeClientName}, le studio a bien reçu votre demande et a validé votre créneau. Pour bloquer définitivement cette date dans l'agenda, il ne vous reste plus qu'à régler votre acompte.`
-    : `Bonjour ${safeClientName}, votre rendez-vous chez ${safeStudioName} est confirmé. Nous avons hâte de vous accueillir.`;
+    ? `${safeClientName}, le studio a bien reçu votre demande et a validé votre créneau. Pour bloquer définitivement cette date dans l'agenda, il ne vous reste plus qu'à régler votre acompte.`
+    : `${safeClientName}, votre rendez-vous chez ${safeStudioName} est confirmé. Nous avons hâte de vous accueillir.`;
 
-  return `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <!--[if mso]>
-  <noscript>
-    <xml>
-      <o:OfficeDocumentSettings>
-        <o:PixelsPerInch>96</o:PixelsPerInch>
-      </o:OfficeDocumentSettings>
-    </xml>
-  </noscript>
-  <![endif]-->
-</head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:#FAFAFA;">
-  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#FAFAFA" style="background-color:#FAFAFA;">
-    <tr><td style="padding:32px 16px;">
-      <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width:560px;margin:0 auto;background-color:#FFFFFF;overflow:hidden;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-        <!-- En-tête : logo InkFlow centré -->
-        <tr>
-          <td align="center" style="padding:32px 40px 24px;">
-            <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;">
-              <tr>
-                <td align="center" style="padding:0 0 24px;">
-                  <img src="${escapeHtml(LOGO_URL)}" alt="InkFlow" width="150" style="max-width:150px;width:150px;height:auto;display:block;margin:0 auto;border:0;" />
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <!-- Header minimaliste -->
-        <tr><td style="padding:0 40px 24px;border-bottom:1px solid #F4F4F5;">
-          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="color:#171717;font-size:22px;font-weight:700;font-style:italic;letter-spacing:-0.5px;">IF.</td>
-              <td style="color:#71717a;font-size:12px;letter-spacing:1.5px;text-align:right;text-transform:uppercase;">InkFlow</td>
-            </tr>
-          </table>
-        </td></tr>
-        <!-- Contenu principal -->
-        <tr><td style="padding:40px;">
-          <h1 style="margin:0 0 24px;font-size:24px;font-weight:700;color:#171717;line-height:1.3;letter-spacing:-0.3px;">
-            Bonne nouvelle, votre projet est accepté.
-          </h1>
-          <p style="margin:0 0 28px;font-size:16px;color:#171717;line-height:1.6;">
-            ${intro}
-          </p>
-          <!-- Encart récapitulatif -->
-          <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin:0 0 28px;background-color:#F4F4F5;border:1px solid #E4E4E7;border-radius:8px;">
-            <tr><td style="padding:20px 24px;">
-              <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                <tr><td style="padding:0 0 12px;font-size:14px;color:#71717a;font-weight:600;">Date</td></tr>
-                <tr><td style="padding:0 0 16px;font-size:16px;color:#171717;font-weight:500;">${escapeHtml(dateDisplay)}</td></tr>
-                <tr><td style="padding:0 0 12px;font-size:14px;color:#71717a;font-weight:600;">Projet</td></tr>
-                <tr><td style="padding:0;font-size:16px;color:#171717;line-height:1.5;">${safeDescription}</td></tr>
-              </table>
-            </td></tr>
-          </table>
-          <!-- Bouton CTA -->
-          <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
-            <tr><td>
-              <a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background-color:#0A0A0A;color:#FFFFFF;text-decoration:none;padding:16px 24px;border-radius:8px;font-size:16px;font-weight:700;">${escapeHtml(ctaLabel)}</a>
-            </td></tr>
-          </table>
-          ${hasPaymentLink ? `
-          <p style="margin:0;font-size:13px;color:#71717a;line-height:1.5;">
-            Si le bouton ne s'affiche pas, copiez ce lien dans votre navigateur :<br>
-            <a href="${safePaymentUrl}" style="color:#2563eb;word-break:break-all;">${safePaymentUrl}</a>
-          </p>
-          ` : ""}
-        </td></tr>
-        <!-- Clôture -->
-        <tr><td style="padding:0 40px 40px;">
-          <p style="margin:0;font-size:16px;color:#171717;line-height:1.6;">
-            À très vite,<br>
-            <strong>L'équipe ${safeStudioName}</strong>
-          </p>
-        </td></tr>
-        <!-- Footer discret -->
-        <tr><td style="padding:24px 40px;background-color:#FAFAFA;border-top:1px solid #F4F4F5;">
-          <p style="margin:0 0 8px;font-size:13px;color:#71717a;line-height:1.5;">
-            Besoin d'aide ? <a href="tel:${SUPPORT_PHONE.replace(/\s/g, "")}" style="color:#171717;font-weight:600;text-decoration:none;">${escapeHtml(SUPPORT_PHONE)}</a>
-          </p>
-          <p style="margin:0;font-size:12px;color:#a1a1aa;">
-            <a href="${escapeHtml(SITE_URL)}/parametres" style="color:#71717a;text-decoration:underline;">Se désabonner</a> · ${escapeHtml(SUPPORT_ADDRESS)}
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+  const recap = emailInfoBox(`
+    <p style="${EMAIL_STYLES.label}">Date</p>
+    <p style="margin:0 0 16px;font-size:16px;color:#1A202C;font-weight:600;">${escapeHtml(dateDisplay)}</p>
+    <p style="${EMAIL_STYLES.label}">Projet</p>
+    <p style="margin:0;font-size:16px;color:#1A202C;line-height:1.5;">${safeDescription}</p>
+  `);
+
+  const bodyHtml = `
+    <p style="${EMAIL_STYLES.text}">Bonjour <strong>${safeClientName}</strong>, ${intro}</p>
+    ${recap}
+    <p style="${EMAIL_STYLES.text}">À très vite,<br/><strong>L'équipe ${safeStudioName}</strong></p>
+    <p style="${EMAIL_STYLES.small}">
+      Besoin d'aide ? <a href="tel:${SUPPORT_PHONE.replace(/\s/g, "")}" style="color:#4299E1;font-weight:600;text-decoration:none;">${escapeHtml(SUPPORT_PHONE)}</a>
+      · <a href="${escapeHtml(APP_URL)}/parametres" style="color:#718096;text-decoration:underline;">Préférences e-mail</a>
+      · ${escapeHtml(SUPPORT_ADDRESS)}
+    </p>
+  `;
+
+  return wrapEmailLayout({
+    tag: hasPaymentLink ? "PAIEMENT" : "CONFIRMATION DE RDV",
+    title: hasPaymentLink ? "Finalisez votre réservation" : "Votre rendez-vous est confirmé",
+    subtitle: hasPaymentLink
+      ? "Réglez votre acompte pour bloquer définitivement le créneau."
+      : "Récapitulatif de votre demande.",
+    bodyHtml,
+    button: { text: ctaLabel, url: ctaUrl },
+    linkHint: hasPaymentLink
+      ? { label: "Si le bouton ne s'affiche pas, copiez ce lien :", url: rawPaymentUrl }
+      : undefined,
+  });
 }
 
 Deno.serve(async (req: Request) => {

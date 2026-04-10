@@ -7,9 +7,10 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import type { ArtistAccount } from '../../types';
-import { looksLikeShortMapsShareLink, parsePlaceIdFromPaste } from '../../lib/parseGooglePlaceId';
-import { resolveMapsPasteViaEdge } from '../../lib/googlePlaces';
+import { looksLikeShortMapsShareLink, normalizeMapsPasteInput, parsePlaceIdFromPaste } from '../../lib/parseGooglePlaceId';
+import { resolveMapsPasteViaEdge, searchGooglePlaces, formatGooglePlacesInvokeError } from '../../lib/googlePlaces';
 import { GooglePlaceMapPreview } from './GooglePlaceMapPreview';
+import { ArtistManager } from './ArtistManager';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,8 +38,13 @@ interface EtablissementPageProps {
   user: { avatar?: string; studioName?: string; email?: string } | null;
   artists: ArtistAccount[];
   onSaveIdentity: (form: IdentityForm) => Promise<void>;
-  onAddArtist: (a: Omit<ArtistAccount, 'id' | 'createdAt' | 'studioId'>) => void;
+  onAddArtist: (a: Omit<ArtistAccount, 'id' | 'createdAt' | 'studioId'> | ArtistAccount) => void | Promise<void>;
+  onUpdateArtist: (a: ArtistAccount) => void;
   onDeleteArtist: (id: string) => void;
+  /** E-mail d’invitation (Edge Function) — optionnel si pas de cloud */
+  onSendCollaboratorInvite?: (artist: ArtistAccount) => void | Promise<void>;
+  /** Limite du plan (collaborateurs) */
+  maxArtists: number;
   onGoToBilling: () => void;
   subscriptionStatus?: string;
   trialEndsAt?: string | null;
@@ -88,7 +94,10 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
   artists,
   onSaveIdentity,
   onAddArtist,
+  onUpdateArtist,
   onDeleteArtist,
+  onSendCollaboratorInvite,
+  maxArtists,
   onGoToBilling,
   subscriptionStatus,
   trialEndsAt,
@@ -144,7 +153,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
   const [addingMember, setAddingMember] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const handleAddMember = () => {
+  const handleAddMember = async () => {
     if (!newMember.name.trim() || !newMember.email.trim()) {
       toast.error('Nom et email requis');
       return;
@@ -154,19 +163,21 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
       return;
     }
     setAddingMember(true);
-    onAddArtist({
-      name: newMember.name.trim(),
-      email: newMember.email.trim(),
-      role: newMember.role,
-      specialties: [],
-      permissions: {},
-      active: true,
-      avatar: undefined,
-    });
-    setNewMember({ name: '', email: '', role: 'tatoueur' });
-    setShowAddMember(false);
-    toast.success('Collaborateur ajouté');
-    setTimeout(() => setAddingMember(false), 400);
+    try {
+      await onAddArtist({
+        name: newMember.name.trim(),
+        email: newMember.email.trim(),
+        role: newMember.role,
+        specialties: [],
+        permissions: {},
+        active: true,
+        avatar: undefined,
+      });
+      setNewMember({ name: '', email: '', role: 'tatoueur' });
+      setShowAddMember(false);
+    } finally {
+      setAddingMember(false);
+    }
   };
 
   // ── Section 3 — Billing / Plan ────────────────────────────────────────────
@@ -176,7 +187,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
     ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
     : 0;
 
-  // ── Google Place (avis vitrine) — collage uniquement (pas d’API recherche côté serveur) ──
+  // ── Google Place (avis vitrine) : URL / Place ID / nom (Text Search côté Edge) ──
   const [savingGooglePlace, setSavingGooglePlace] = useState(false);
   const [googlePlacePaste, setGooglePlacePaste] = useState('');
 
@@ -230,17 +241,29 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
       toast.error('Collez d’abord le lien ou le code de votre fiche');
       return;
     }
+    const cleaned = normalizeMapsPasteInput(idRaw);
     setSavingGooglePlace(true);
     try {
-      let parsed = parsePlaceIdFromPaste(idRaw);
+      let parsed = parsePlaceIdFromPaste(idRaw) ?? parsePlaceIdFromPaste(cleaned);
       if (!parsed) {
+        parsed = await resolveMapsPasteViaEdge(cleaned);
+      }
+      if (!parsed && cleaned !== idRaw) {
         parsed = await resolveMapsPasteViaEdge(idRaw);
+      }
+      if (!parsed && useSupabase && cleaned.length >= 3) {
+        try {
+          const hits = await searchGooglePlaces(cleaned.slice(0, 200));
+          if (hits.length > 0) parsed = hits[0].placeId;
+        } catch {
+          /* Edge + client search indisponibles */
+        }
       }
       if (!parsed) {
         toast.error(
           looksLikeShortMapsShareLink(idRaw)
             ? 'Ouvrez ce lien dans le navigateur, puis copiez l’adresse en haut (barre d’URL) et collez-la ici.'
-            : 'Impossible de lire ce lien. Sur Google Maps, ouvrez votre fiche, puis copiez l’URL dans la barre d’adresse (pas le bouton Partager).'
+            : 'Impossible d’extraire l’identifiant Google. Ouvrez votre fiche sur Google Maps, copiez l’URL complète dans la barre d’adresse (pas le menu Partager), ou collez le code commençant par ChIJ.'
         );
         return;
       }
@@ -248,7 +271,9 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
       toast.success('Fiche Google enregistrée');
       setGooglePlacePaste('');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Impossible d’enregistrer');
+      toast.error(
+        e instanceof Error ? formatGooglePlacesInvokeError(e.message) : 'Impossible d’enregistrer'
+      );
     } finally {
       setSavingGooglePlace(false);
     }
@@ -564,8 +589,10 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
               <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">Gestion d'équipe</h2>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500">{artists.length} collaborateur{artists.length !== 1 ? 's' : ''}</p>
+              <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">Collaborateurs</h2>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                Invitations, rôles (admin, tatoueur…) et droits dans l’app (RDV, vitrine…) — tout est sur cette page.
+              </p>
             </div>
           </div>
           <button
@@ -700,6 +727,20 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
             );
           })}
         </div>
+
+        {artists.length > 0 && (
+          <div className="border-t border-zinc-100 dark:border-zinc-800 px-5 py-6 bg-zinc-50/50 dark:bg-zinc-900/40">
+            <ArtistManager
+              hideAddButton
+              artists={artists}
+              onAdd={onAddArtist}
+              onUpdate={onUpdateArtist}
+              onDelete={onDeleteArtist}
+              onSendInvite={onSendCollaboratorInvite}
+              maxArtists={maxArtists}
+            />
+          </div>
+        )}
       </section>
 
       {/* ══ Section 3 — Facturation & Documents ══ */}

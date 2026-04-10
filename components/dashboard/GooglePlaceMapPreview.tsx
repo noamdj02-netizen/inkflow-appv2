@@ -1,20 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// Google Maps types loaded at runtime via script tag
-declare const google: any;
-
 /**
- * Apercu carte + avis Google Maps (Maps JavaScript API).
- * Affiche la localisation du studio et les 5 premiers avis Places API.
- *
- * Requiert : VITE_GOOGLE_MAPS_JS_API_KEY (ou VITE_GOOGLE_MAPS_API_KEY) dans .env.local + Vercel
- * Clé à restreindre par domaine (HTTP referrer) dans Google Cloud Console.
- * APIs a activer : Maps JavaScript API, Places API (New).
+ * Aperçu fiche Google : iframe Maps publique (aucune clé Inkflow / aucun appel Places depuis le navigateur)
+ * + liste d’avis via `fetchAuthenticatedPlaceDetails` → Edge Function `google-places` (clé serveur uniquement).
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Star, ExternalLink, Loader2, MapPin } from 'lucide-react';
-import { getGoogleMapsBrowserApiKey } from '../../lib/googleMapsBrowserKey';
-
-// ── Types ──────────────────────────────────────────────────────────────────────
+import { fetchAuthenticatedPlaceDetails } from '../../lib/googlePlaces';
 
 interface PlaceReview {
   rating: number;
@@ -27,29 +17,6 @@ interface PlaceReview {
 interface GooglePlaceMapPreviewProps {
   placeId: string;
   className?: string;
-}
-
-// ── Globals ───────────────────────────────────────────────────────────────────
-
-const MAPS_KEY = getGoogleMapsBrowserApiKey();
-
-let scriptPromise: Promise<void> | null = null;
-
-function loadMapsScript(apiKey: string): Promise<void> {
-  if (scriptPromise) return scriptPromise;
-  if (typeof window !== 'undefined' && (window as Window & { google?: unknown }).google) {
-    return Promise.resolve();
-  }
-  scriptPromise = new Promise<void>((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=beta&libraries=places,marker`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Maps JS API failed to load'));
-    document.head.appendChild(script);
-  });
-  return scriptPromise;
 }
 
 function StarRating({ rating }: { rating: number }) {
@@ -65,141 +32,96 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-// ── Component ──────────────────────────────────────────────────────────────────
-
 export const GooglePlaceMapPreview: React.FC<GooglePlaceMapPreviewProps> = ({ placeId, className }) => {
-  const mapDivRef   = useRef<HTMLDivElement>(null);
-  const [reviews, setReviews]     = useState<PlaceReview[]>([]);
-  const [placeName, setPlaceName] = useState('');
-  const [address, setAddress]     = useState('');
-  const [loading, setLoading]     = useState(true);
-  const [err, setErr]             = useState<string | null>(null);
+  const [reviews, setReviews] = useState<PlaceReview[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!MAPS_KEY || !placeId) { setLoading(false); return; }
-
-    let cancelled = false;
-
-    async function init() {
-      try {
-        await loadMapsScript(MAPS_KEY!);
-        if (cancelled || !mapDivRef.current) return;
-
-        const [{ Map }, { AdvancedMarkerElement }, { Place }] = await Promise.all([
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          google.maps.importLibrary('maps')   as Promise<any>,
-          google.maps.importLibrary('marker') as Promise<any>,
-          google.maps.importLibrary('places') as Promise<any>,
-        ]);
-
-        if (cancelled || !mapDivRef.current) return;
-
-        const place = new Place({ id: placeId });
-
-        await place.fetchFields({
-          fields: ['displayName', 'formattedAddress', 'location', 'reviews'],
-        });
-
-        if (cancelled) return;
-
-        setPlaceName(place.displayName || '');
-        setAddress(place.formattedAddress || '');
-
-        if (place.reviews && place.reviews.length > 0) {
-          setReviews(
-            place.reviews.slice(0, 5).map((r) => ({
-              rating:       r.rating ?? 0,
-              text:         r.text ?? '',
-              authorName:   r.authorAttribution?.displayName ?? 'Anonyme',
-              authorUri:    r.authorAttribution?.uri ?? '',
-              relativeTime: (r as { relativePublishTimeDescription?: string }).relativePublishTimeDescription ?? '',
-            }))
-          );
-        }
-
-        if (!mapDivRef.current) return;
-
-        const map = new Map(mapDivRef.current, {
-          center:             place.location,
-          zoom:               15,
-          mapId:              'inkflow-place-preview',
-          disableDefaultUI:   true,
-          gestureHandling:    'cooperative',
-          zoomControl:        true,
-        });
-
-        new AdvancedMarkerElement({
-          map,
-          position: place.location,
-          title:    place.displayName || '',
-        });
-
-      } catch (e) {
-        if (!cancelled) setErr('Impossible de charger la carte Google Maps.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    if (!placeId.trim()) {
+      setLoading(false);
+      return;
     }
 
-    init();
-    return () => { cancelled = true; };
+    let cancelled = false;
+    setLoading(true);
+    setErr(null);
+
+    void fetchAuthenticatedPlaceDetails(placeId.trim())
+      .then((payload) => {
+        if (cancelled || !payload) {
+          if (!cancelled && !payload) setErr('Impossible de charger les avis (vérifiez la clé Places serveur).');
+          return;
+        }
+        const mapped = (payload.reviews ?? []).slice(0, 5).map((r) => ({
+          rating: r.rating ?? 0,
+          text: r.text ?? '',
+          authorName: r.authorName ?? 'Anonyme',
+          authorUri: '',
+          relativeTime: r.relativeTimeDescription ?? '',
+        }));
+        setReviews(mapped);
+      })
+      .catch(() => {
+        if (!cancelled) setErr('Impossible de charger les avis Google.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [placeId]);
 
-  // Pas de clé configuree
-  if (!MAPS_KEY) return null;
+  const mapsHref = `https://www.google.com/maps/search/?api=1&query_place_id=${encodeURIComponent(placeId.trim())}`;
+  const embedSrc = `https://www.google.com/maps?q=${encodeURIComponent(`place_id:${placeId.trim()}`)}&output=embed`;
 
   return (
     <div className={`rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 ${className ?? ''}`}>
-      {/* ── Carte ── */}
       <div className="relative w-full h-44 bg-zinc-100 dark:bg-zinc-800">
-        <div ref={mapDivRef} className="w-full h-full" />
+        <iframe
+          title="Aperçu Google Maps"
+          className="w-full h-full border-0"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          src={embedSrc}
+        />
 
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
-            <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
-          </div>
-        )}
-        {err && (
-          <div className="absolute inset-0 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
-            <p className="text-xs text-zinc-400">{err}</p>
-          </div>
-        )}
       </div>
 
-      {/* ── Infos etablissement ── */}
-      {!loading && !err && placeName && (
-        <div className="px-4 py-3 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-          <div className="flex items-start gap-2">
+      <div className="px-4 py-3 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2 min-w-0">
             <MapPin className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{placeName}</p>
-              {address && <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate mt-0.5">{address}</p>}
-            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Aperçu basé sur votre Place ID. Les avis sont chargés côté serveur.
+              {loading && (
+                <span className="inline-flex items-center gap-1 ml-1">
+                  <Loader2 className="w-3 h-3 animate-spin inline text-zinc-400" />
+                </span>
+              )}
+              {err && <span className="block text-amber-700 dark:text-amber-400 mt-1">{err}</span>}
+            </p>
           </div>
+          <a
+            href={mapsHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:underline"
+          >
+            Ouvrir dans Maps
+            <ExternalLink className="w-3 h-3" />
+          </a>
         </div>
-      )}
+      </div>
 
-      {/* ── Avis ── */}
-      {!loading && !err && reviews.length > 0 && (
+      {!loading && reviews.length > 0 && (
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800 border-t border-zinc-100 dark:border-zinc-800">
           {reviews.map((r, i) => (
             <div key={i} className="px-4 py-3 bg-white dark:bg-zinc-900">
               <div className="flex items-center justify-between gap-2 mb-1">
-                <div className="flex items-center gap-2 min-w-0">
-                  {r.authorUri ? (
-                    <a
-                      href={r.authorUri}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:underline flex items-center gap-1 truncate"
-                    >
-                      {r.authorName}
-                      <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
-                    </a>
-                  ) : (
-                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 truncate">{r.authorName}</span>
-                  )}
-                </div>
+                <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 truncate">{r.authorName}</span>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <StarRating rating={r.rating} />
                   {r.relativeTime && (
@@ -207,17 +129,15 @@ export const GooglePlaceMapPreview: React.FC<GooglePlaceMapPreviewProps> = ({ pl
                   )}
                 </div>
               </div>
-              {r.text && (
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-3">{r.text}</p>
-              )}
+              {r.text && <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-3">{r.text}</p>}
             </div>
           ))}
         </div>
       )}
 
-      {!loading && !err && reviews.length === 0 && placeName && (
+      {!loading && reviews.length === 0 && !err && (
         <div className="px-4 py-3 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">Aucun avis disponible pour cette fiche.</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">Aucun avis texte renvoyé pour cette fiche (la note peut quand même s’afficher sur la vitrine).</p>
         </div>
       )}
     </div>

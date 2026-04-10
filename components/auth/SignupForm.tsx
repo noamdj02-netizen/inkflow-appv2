@@ -9,7 +9,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { GoogleSignInButton } from '../GoogleSignInButton';
 import { signupSchema } from '../../lib/authValidation';
 import { getAuthErrorMessage } from './LoginForm';
-import { LANDING_TERMS_URL, LANDING_PRIVACY_URL } from '../../lib/urls';
+import { LANDING_TERMS_URL, LANDING_PRIVACY_URL, getPostSignupDashboardPath } from '../../lib/urls';
+import { REDIRECT_AFTER_LOGIN_KEY } from '../../contexts/AuthContext';
 
 const inputBase =
   'w-full pl-12 pr-4 py-3.5 min-h-[48px] text-base border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all';
@@ -30,14 +31,28 @@ export const SignupForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [inviteStudioLabel, setInviteStudioLabel] = useState<string | null>(null);
   const { signup, loginWithGoogle, isGoogleAuthEnabled } = useAuth();
 
   // Pré-remplir le code de parrainage depuis ?ref= (lien /invite/:code)
+  // Invitation équipe : ?email=…&studio_invite=nom du studio (lien mail collaborateur)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref')?.trim().toUpperCase();
     if (ref) {
       setFormData((prev) => ({ ...prev, referralCode: ref }));
+    }
+    const emailParam = params.get('email')?.trim();
+    if (emailParam && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailParam)) {
+      setFormData((prev) => ({ ...prev, email: emailParam }));
+    }
+    const studioInv = params.get('studio_invite')?.trim();
+    if (studioInv) {
+      try {
+        setInviteStudioLabel(decodeURIComponent(studioInv));
+      } catch {
+        setInviteStudioLabel(studioInv);
+      }
     }
   }, []);
 
@@ -61,6 +76,12 @@ export const SignupForm: React.FC = () => {
     }
     setLoading(true);
     try {
+      const postAuthPath = getPostSignupDashboardPath(window.location.search);
+      try {
+        sessionStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, postAuthPath);
+      } catch {
+        /* ignore */
+      }
       const { needsEmailConfirmation } = await signup(
         parsed.data.email,
         parsed.data.password,
@@ -73,15 +94,7 @@ export const SignupForm: React.FC = () => {
         window.location.href = '/login?message=check-email';
         return;
       }
-      const params = new URLSearchParams(window.location.search);
-      const plan = params.get('plan');
-      const interval = params.get('interval') || 'monthly';
-      const paidPlans = ['solo', 'studio', 'starter', 'pro'];
-      const redirect =
-        plan && paidPlans.includes(plan)
-          ? `/dashboard?subscribe=${plan}&interval=${interval}`
-          : '/dashboard';
-      window.location.href = redirect;
+      window.location.href = postAuthPath;
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {
@@ -91,6 +104,19 @@ export const SignupForm: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {inviteStudioLabel && (
+        <div
+          className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800"
+          role="status"
+        >
+          <Building2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" aria-hidden />
+          <p className="text-sm text-emerald-900 dark:text-emerald-100">
+            Invitation pour rejoindre l&apos;équipe de{' '}
+            <span className="font-semibold">{inviteStudioLabel}</span>. Finalisez votre compte avec l&apos;adresse email
+            indiquée ci-dessous.
+          </p>
+        </div>
+      )}
       {error && (
         <div
           className="flex items-start gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800"
@@ -301,6 +327,11 @@ export const SignupForm: React.FC = () => {
               setError('');
               setGoogleLoading(true);
               try {
+                try {
+                  sessionStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, getPostSignupDashboardPath(window.location.search));
+                } catch {
+                  /* ignore */
+                }
                 await loginWithGoogle();
               } catch (err) {
                 setError(getAuthErrorMessage(err));

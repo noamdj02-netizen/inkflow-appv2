@@ -4,7 +4,7 @@
  * lien reçu officiel Stripe si disponible.
  */
 
-import { escapeHtml } from "../_shared/emailLayout.ts";
+import { escapeHtml, wrapEmailLayout, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
@@ -148,84 +148,65 @@ function buildPaymentConfirmationHtml(payload: Payload): string {
 
   const stripeBtn = payload.stripeReceiptUrl
     ? `<p style="margin:0 0 24px;">
-            <a href="${escapeHtml(payload.stripeReceiptUrl)}" style="display:inline-block;padding:12px 20px;background:#171717;color:#fff!important;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">Télécharger le reçu Stripe (PDF)</a>
+            <a href="${escapeHtml(payload.stripeReceiptUrl)}" style="display:inline-block;padding:12px 20px;background:#4299E1;color:#fff!important;text-decoration:none;border-radius:9999px;font-size:14px;font-weight:600;">Télécharger le reçu Stripe (PDF)</a>
           </p>`
     : "";
 
   const bookLink =
     payload.studioSlug && /^[a-z0-9-]+$/.test(payload.studioSlug)
-      ? `<p style="margin:0;font-size:14px;color:#52525b;">
-            <a href="${escapeHtml(`${SITE_URL}/studio/${payload.studioSlug}`)}" style="color:#2563eb;text-decoration:underline;">Page vitrine du studio</a>
+      ? `<p style="margin:0;font-size:14px;color:#718096;">
+            <a href="${escapeHtml(`${SITE_URL}/studio/${payload.studioSlug}`)}" style="color:#4299E1;text-decoration:underline;">Page vitrine du studio</a>
             ${
     hasRdv
       ? ""
-      : ` · <a href="${escapeHtml(`${SITE_URL}/book/${payload.studioSlug}`)}" style="color:#2563eb;text-decoration:underline;">Réserver</a>`
+      : ` · <a href="${escapeHtml(`${SITE_URL}/book/${payload.studioSlug}`)}" style="color:#4299E1;text-decoration:underline;">Réserver</a>`
   }
           </p>`
       : "";
 
-  return `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-</head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:#FAFAFA;">
-  <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#FAFAFA">
-    <tr><td style="padding:32px 16px;">
-      <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-        <tr><td style="padding:32px 40px 24px;border-bottom:1px solid #F4F4F5;">
-          <p style="margin:0;font-size:22px;font-weight:700;color:#171717;">IF.</p>
-        </td></tr>
-        <tr><td style="padding:40px;">
-          <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#171717;">
-            ${escapeHtml(title)} — ${safeStudioName}
-          </h1>
-          <p style="margin:0 0 24px;font-size:16px;color:#171717;line-height:1.6;">
+  const bodyHtml = `
+          <p style="${EMAIL_STYLES.text}">
             Bonjour ${safeClientName}, nous vous confirmons la bonne réception de votre paiement${
     hasRdv ? " et la réservation de votre créneau." : "."
   }
           </p>
           ${studioMetaHtml}
           ${rdvBlock}
-          <p style="margin:0 0 12px;font-size:14px;color:#71717a;font-weight:600;">Détail du paiement</p>
-          <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#FAFAFA;border:1px solid #E4E4E7;border-radius:8px;">
+          <p style="margin:0 0 12px;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:0.06em;">Détail du paiement</p>
+          <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#F7FAFC;border:1px solid #E2E8F0;border-radius:12px;">
             <tr><td style="padding:20px 24px;">
               <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                <tr><td style="padding:0 0 8px;font-size:14px;color:#71717a;font-weight:600;">Libellé</td></tr>
-                <tr><td style="padding:0 0 16px;font-size:16px;color:#171717;">${safeServiceName}</td></tr>
-                <tr><td style="padding:0 0 8px;font-size:14px;color:#71717a;font-weight:600;">Montant encaissé</td></tr>
+                <tr><td style="padding:0 0 8px;font-size:14px;color:#718096;font-weight:600;">Libellé</td></tr>
+                <tr><td style="padding:0 0 16px;font-size:16px;color:#1A202C;">${safeServiceName}</td></tr>
+                <tr><td style="padding:0 0 8px;font-size:14px;color:#718096;font-weight:600;">Montant encaissé</td></tr>
                 <tr><td style="padding:0 0 16px;font-size:20px;font-weight:700;color:#16a34a;">${amountPaidStr} €</td></tr>
                 ${
     payload.amountRemaining > 0 && !hasRdv
       ? `
-                <tr><td style="padding:0 0 8px;font-size:14px;color:#71717a;font-weight:600;">Reste à payer (estimation)</td></tr>
-                <tr><td style="padding:0 0 16px;font-size:16px;color:#171717;">${amountRemainingStr} €</td></tr>`
+                <tr><td style="padding:0 0 8px;font-size:14px;color:#718096;font-weight:600;">Reste à payer (estimation)</td></tr>
+                <tr><td style="padding:0 0 16px;font-size:16px;color:#1A202C;">${amountRemainingStr} €</td></tr>`
       : ""
   }
-                <tr><td style="padding:0 0 8px;font-size:14px;color:#71717a;font-weight:600;">Date du paiement</td></tr>
-                <tr><td style="padding:0;font-size:16px;color:#171717;">${escapeHtml(dateFormatted)}</td></tr>
+                <tr><td style="padding:0 0 8px;font-size:14px;color:#718096;font-weight:600;">Date du paiement</td></tr>
+                <tr><td style="padding:0;font-size:16px;color:#1A202C;">${escapeHtml(dateFormatted)}</td></tr>
               </table>
             </td></tr>
           </table>
           ${invoiceBlock}
           ${stripeBtn}
-          <p style="margin:0 0 20px;font-size:16px;color:#171717;line-height:1.6;">
+          <p style="${EMAIL_STYLES.text}">
             À très vite,<br>
             <strong>L'équipe ${safeStudioName}</strong>
           </p>
           ${bookLink}
-        </td></tr>
-        <tr><td style="padding:24px 40px;background:#FAFAFA;border-top:1px solid #F4F4F5;">
-          <p style="margin:0;font-size:12px;color:#a1a1aa;">
-            <a href="${escapeHtml(SITE_URL)}" style="color:#71717a;text-decoration:underline;">InkFlow</a>
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+  `;
+
+  return wrapEmailLayout({
+    tag: "REÇU",
+    title: `${title} — ${payload.studioName}`,
+    subtitle: "Récapitulatif de votre transaction.",
+    bodyHtml,
+  });
 }
 
 Deno.serve(async (req: Request) => {

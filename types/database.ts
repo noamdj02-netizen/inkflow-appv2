@@ -1910,6 +1910,7 @@ export type Database = {
           google_business_token_expiry: number | null
           google_calendar_id: string | null
           google_place_id: string | null
+          google_reviews_cache: Json | null
           google_refresh_token: string | null
           google_token_expiry: number | null
           id: string
@@ -1947,6 +1948,7 @@ export type Database = {
           google_place_id?: string | null
           google_refresh_token?: string | null
           google_token_expiry?: number | null
+          google_reviews_cache?: Json | null
           id: string
           latitude?: number | null
           location_visible?: boolean
@@ -1980,6 +1982,7 @@ export type Database = {
           google_business_token_expiry?: number | null
           google_calendar_id?: string | null
           google_place_id?: string | null
+          google_reviews_cache?: Json | null
           google_refresh_token?: string | null
           google_token_expiry?: number | null
           id?: string

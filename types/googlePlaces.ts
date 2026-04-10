@@ -1,4 +1,4 @@
-/** Avis renvoyé par l’Edge Function (données Places API filtrées, sans clé). */
+/** Avis renvoyé par l’Edge Function `google-places` (Places API côté serveur uniquement ; pas de clé côté navigateur). */
 export interface GooglePlaceReviewDTO {
   authorName: string;
   rating: number;

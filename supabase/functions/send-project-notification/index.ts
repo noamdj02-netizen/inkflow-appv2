@@ -4,7 +4,8 @@ import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayou
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+/** URL de l'app dashboard (jamais la landing Framer). Définir APP_URL dans les secrets Supabase. */
+const APP_URL = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
 
 interface NotificationPayload {
   studioId: string;
@@ -97,7 +98,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const dashboardUrl = `${SITE_URL}/dashboard`;
+    const dashboardUrl = `${APP_URL}/dashboard`;
     const artistName = studio.name || "Artiste";
     const artistHtml = buildEmailHtml(payload, artistName, dashboardUrl);
     const placementLabel = payload.placement ? ` - ${payload.placement}` : "";

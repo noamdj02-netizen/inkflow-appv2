@@ -51,9 +51,9 @@ import { DashboardWidgets, AddWidgetModal, useDashboardWidgets, WidgetCard } fro
 import { DashboardOverviewTab } from './DashboardOverviewTab';
 import { PlanningSidebar } from './PlanningSidebar';
 import { WaitlistManager } from './WaitlistManager';
-import { ArtistManager } from './ArtistManager';
 import { LoyaltyManager, type LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
 import { NotificationsPage } from './NotificationsPage';
+import { ThemeToggle } from '../ThemeToggle';
 import { ConsentFormEditor } from '../consent/ConsentFormEditor';
 import { CalendarSettings } from './CalendarSettings';
 import { AccountPage } from './AccountPage';
@@ -67,6 +67,8 @@ import { WelcomeOnboardingFlow, shouldShowWelcomeFlow } from '../onboarding/Welc
 import { supabase } from '../../lib/supabase';
 import { getWaitlistFromSupabase, addWaitlistEntryToSupabase, updateWaitlistStatusInSupabase, deleteWaitlistEntryFromSupabase, ensureStudio, getDashboardPreferencesFromSupabase } from '../../lib/supabaseDashboard';
 import { syncArtistAccountsToSupabase } from '../../lib/inkflowArtistsSync';
+import { sendCollaboratorInviteEmail } from '../../lib/collaboratorInvite';
+import { syncStudioGoogleReviewsCache } from '../../lib/googlePlaces';
 import { createSubscription } from '../../lib/stripeClient';
 import { getSubscription } from '../../lib/subscriptionGuard';
 import { getPlanLimit } from '../../lib/subscriptionPlans';
@@ -75,7 +77,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from 'next-themes';
 import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
-import { LANDING_URL, LANDING_PRICING_URL } from '../../lib/urls';
+import { LANDING_PRICING_URL } from '../../lib/urls';
 import { safeJsonParse } from '../../lib/utils';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
@@ -110,7 +112,6 @@ type SettingsTabId =
   | 'calendar'
   | 'vitrine'
   | 'public_app'
-  | 'artists'
   | 'waitlist'
   | 'loyalty'
   | 'messagerie';
@@ -122,8 +123,7 @@ const SETTINGS_TAB_META: Record<
   general: {
     label: 'Général',
     Icon: Settings,
-    description:
-      'Identité du studio, photo, coordonnées, lien vitrine, slug d’URL personnalisé et position sur la carte pour la découverte client.',
+    description: 'Fiche studio, liens publics, carte de découverte, export et notifications.',
   },
   modules: {
     label: 'Modules',
@@ -179,12 +179,6 @@ const SETTINGS_TAB_META: Record<
     description:
       'Bio studio, profils tatoueurs, flashs « vedette », aperçu mobile : cohérence entre vitrine et app client.',
   },
-  artists: {
-    label: 'Équipe',
-    Icon: Users,
-    description:
-      'Artistes du studio, rôles et fiches publiques pour la réservation et la vitrine.',
-  },
   waitlist: {
     label: 'Liste d’attente',
     Icon: ListOrdered,
@@ -225,7 +219,7 @@ export const DashboardPro: React.FC = () => {
   /** Thème effectif — fallback DOM pour mobile/PWA (resolvedTheme peut être undefined avant hydration) */
   const effectiveTheme = resolvedTheme ?? (typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null : null) ?? 'light';
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
-  const { studioId, studioSlug, studioCsvImportSlots, refreshStudioSlug, subscriptionStatus, trialEndsAt, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, importClientsFromCsvRows, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, lastSyncedAt, retry } = useSupabaseSync();
+  const { studioId, studioSlug, studioCsvImportSlots, refreshStudioSlug, refreshStudioSubscription, subscriptionStatus, trialEndsAt, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, importClientsFromCsvRows, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, lastSyncedAt, retry } = useSupabaseSync();
   const { projectRequests, loading: projectRequestsLoading, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
   const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false);
   const demandes = usePendingDemandesCounts(appointments, bookings, projectRequests);
@@ -408,17 +402,70 @@ export const DashboardPro: React.FC = () => {
     action();
   }, [isRestricted, toast]);
 
+  /** Ajoute un collaborateur (l’e-mail d’invitation s’envoie depuis la fiche : « Envoyer l’invitation »). */
+  const handleAddCollaborator = useCallback(
+    async (input: Omit<ArtistAccount, 'id' | 'createdAt' | 'studioId'> | ArtistAccount) => {
+      const row: ArtistAccount =
+        'id' in input && (input as ArtistAccount).id
+          ? {
+              ...(input as ArtistAccount),
+              studioId: studioId || (input as ArtistAccount).studioId || '',
+            }
+          : {
+              ...(input as Omit<ArtistAccount, 'id' | 'createdAt' | 'studioId'>),
+              id: crypto.randomUUID(),
+              studioId: studioId || '',
+              createdAt: new Date().toISOString(),
+            };
+      setArtistAccounts((prev) => [...prev, row]);
+      toast.success('Collaborateur ajouté');
+    },
+    [toast]
+  );
+
+  /** Renvoie l’e-mail d’invitation (Edge Function Resend) pour un collaborateur déjà listé. */
+  const handleSendCollaboratorInvite = useCallback(
+    async (artist: ArtistAccount) => {
+      if (!studioId || !useSupabase) {
+        toast.info('Connexion cloud requise pour envoyer l’e-mail d’invitation.');
+        return;
+      }
+      const result = await sendCollaboratorInviteEmail({
+        studioId,
+        collaboratorEmail: artist.email.trim(),
+        collaboratorName: artist.name.trim(),
+      });
+      if (result.ok) {
+        toast.success(`Invitation envoyée à ${artist.email.trim()}`);
+      } else {
+        toast.warning(
+          result.message ??
+            "L'invitation n'a pas pu être envoyée. Réessayez ou partagez le lien d'inscription manuellement."
+        );
+      }
+    },
+    [studioId, useSupabase, toast]
+  );
+
   const handleSaveGooglePlaceId = useCallback(async (placeId: string | null) => {
     if (!studioId) throw new Error('Studio manquant');
     const { error } = await supabase
       .from('inkflow_studios')
       .update({
         google_place_id: placeId,
+        ...(placeId === null ? { google_reviews_cache: null } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('id', studioId);
     if (error) throw error;
     setGeneralGooglePlaceId(placeId);
+    if (placeId) {
+      try {
+        await syncStudioGoogleReviewsCache(studioId, placeId);
+      } catch {
+        /* fiche enregistrée ; cache rempli au prochain chargement vitrine */
+      }
+    }
   }, [studioId]);
 
   // Sync general settings form when user changes (e.g. from Supabase session or localStorage)
@@ -1046,7 +1093,15 @@ export const DashboardPro: React.FC = () => {
       .slice(0, 3);
   }, [appointments]);
 
-  const showWelcome = useSupabase && shouldShowWelcomeFlow() && !welcomeComplete && studioId && studioSlug && user?.email;
+  const welcomeUserKey = user?.id ?? user?.email ?? '';
+  const showWelcome =
+    useSupabase &&
+    welcomeUserKey &&
+    shouldShowWelcomeFlow(welcomeUserKey) &&
+    !welcomeComplete &&
+    studioId &&
+    studioSlug &&
+    user?.email;
 
   const paymentSuccessTattooerName = user?.name?.trim() || user?.studioName?.trim() || '';
 
@@ -1095,6 +1150,7 @@ export const DashboardPro: React.FC = () => {
     <div className="app-shell bg-zinc-50 dark:bg-black">
       {showWelcome && (
         <WelcomeOnboardingFlow
+          userScopedId={welcomeUserKey}
           studioId={studioId}
           studioSlug={studioSlug}
           userEmail={user.email}
@@ -1121,7 +1177,7 @@ export const DashboardPro: React.FC = () => {
           
           {/* Zone logo — style ByeWind */}
           <div className="relative z-10 px-4 py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between safe-top">
-            <a href={LANDING_URL} className="flex items-center gap-3 min-w-0 group" aria-label="Retour à l'accueil">
+            <a href="/dashboard" className="flex items-center gap-3 min-w-0 group" aria-label="Tableau de bord">
               <Logo size="lg" className="rounded-xl group-hover:opacity-90 transition-opacity" />
               <div className="min-w-0">
                 <span className="block text-[15px] font-bold tracking-tight text-zinc-900 dark:text-white">InkFlow</span>
@@ -1623,6 +1679,9 @@ export const DashboardPro: React.FC = () => {
             >
               <HelpCircle className="w-5 h-5" />
             </button>
+            <div className="flex items-center justify-center" title="Mode clair ou sombre">
+              <ThemeToggle />
+            </div>
             <div className="relative">
               <button
                 onClick={() => { setShowNotifications(!showNotifications); setShowProfileDropdown(false); }}
@@ -2210,24 +2269,14 @@ export const DashboardPro: React.FC = () => {
                     <p className="text-zinc-600 dark:text-zinc-400 mt-2 text-sm sm:text-base max-w-2xl leading-relaxed">
                       {user?.studioName?.trim() ? (
                         <>
-                          Personnalisez <span className="font-semibold text-zinc-800 dark:text-zinc-200">{user.studioName.trim()}</span> : image publique, réservations, paiements, équipe et expérience dans l&apos;app client — tout se pilote ici, par thématique.
+                          Paramètres de <span className="font-semibold text-zinc-800 dark:text-zinc-200">{user.studioName.trim()}</span> par thématique. L&apos;équipe et les avis Google se gèrent dans <span className="font-medium">Établissement</span> et <span className="font-medium">App client</span>.
                         </>
                       ) : (
                         <>
-                          Configurez votre studio pas à pas : identité, vitrine, disponibilités, paiements et lien avec l&apos;app client.
+                          Identité, liens publics, carte, données et notifications — le reste (vitrine détaillée, équipe) est dans les autres onglets.
                         </>
                       )}
                     </p>
-                    <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-zinc-500 dark:text-zinc-400">
-                      <li className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                        Même design que vos pages publiques (zinc, cartes arrondies)
-                      </li>
-                      <li className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                        Sauvegarde cloud quand Supabase est connecté
-                      </li>
-                    </ul>
                   </div>
                   {studioSlug ? (
                     <div className="flex flex-col sm:flex-row gap-2 shrink-0">
@@ -2253,61 +2302,16 @@ export const DashboardPro: React.FC = () => {
                 </div>
               </div>
 
-              {/* Bandeau contextuel : section active + aide à la personnalisation */}
-              <div
-                className="mb-8 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-900/40 px-4 py-4 sm:px-5 sm:py-4"
-                role="region"
-                aria-live="polite"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                  {(() => {
-                    const meta = SETTINGS_TAB_META[settingsTab];
-                    const SectionIcon = meta.Icon;
-                    return (
-                      <>
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 shadow-sm">
-                          <SectionIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" aria-hidden />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                            {meta.label}
-                          </p>
-                          <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed mt-1">{meta.description}</p>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-
               {settingsTab === 'general' && (
-                <div className="space-y-6 max-w-2xl w-full overflow-hidden">
-                  {/* Lien vitrine */}
-                  {user?.studioName && (
-                    <VitrineLinkButton studioName={user.studioName} userEmail={user.email} studioSlug={studioSlug} />
-                  )}
-                  
-                  {/* Slug personnalisé */}
-                  {studioId && studioSlug && (
-                    <SlugSettings
-                      studioId={studioId}
-                      currentSlug={studioSlug}
-                      onSlugUpdated={refreshStudioSlug}
-                    />
-                  )}
-
-                  {/* Géolocalisation — carte de découverte client */}
-                  {studioId && (
-                    <GeoSettings
-                      studioId={studioId}
-                      studioSlug={studioSlug ?? ''}
-                    />
-                  )}
-
-                  {useSupabase && studioId && (
-                    <StudioDataExportCard studioSlug={studioSlug} clients={clients} appointments={appointments} />
-                  )}
-
+                <div className="space-y-10 max-w-2xl w-full overflow-hidden">
+                  {/* Identité en premier : moins de va-et-vient avec vitrine / carte */}
+                  <section className="space-y-4" aria-labelledby="settings-general-identity">
+                    <div className="px-0.5">
+                      <h2 id="settings-general-identity" className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                        Identité & fiche
+                      </h2>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Nom, email, SIRET et photo affichés sur votre vitrine.</p>
+                    </div>
                   {/* Carte Profil */}
                   <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
                     <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
@@ -2475,17 +2479,99 @@ export const DashboardPro: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Notifications Push */}
-                  <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
-                      <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Notifications</h3>
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">Configurez vos préférences de notification</p>
+                  </section>
+
+                  <section className="space-y-4" aria-labelledby="settings-general-links">
+                    <div className="px-0.5">
+                      <h2 id="settings-general-links" className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                        Lien public & URL
+                      </h2>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Vitrine et adresse web du studio.</p>
                     </div>
-                    <div className="p-6">
-                      <PushNotificationsSettings studioId={studioId} />
+                    <div className="space-y-6">
+                      {user?.studioName && (
+                        <VitrineLinkButton studioName={user.studioName} userEmail={user.email} studioSlug={studioSlug} />
+                      )}
+                      {studioId && studioSlug && (
+                        <SlugSettings
+                          studioId={studioId}
+                          currentSlug={studioSlug}
+                          onSlugUpdated={refreshStudioSlug}
+                        />
+                      )}
                     </div>
-                  </div>
+                  </section>
+
+                  <section className="space-y-4" aria-labelledby="settings-general-discovery">
+                    <div className="px-0.5">
+                      <h2 id="settings-general-discovery" className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                        Carte & découverte
+                      </h2>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                        Apparition sur la carte « à proximité » dans l&apos;app client. Les avis Google se règlent dans{' '}
+                        <span className="font-medium text-zinc-600 dark:text-zinc-300">Établissement</span>.
+                      </p>
+                    </div>
+                    {studioId && (
+                      <GeoSettings
+                        studioId={studioId}
+                        studioSlug={studioSlug ?? ''}
+                        studioAddress={vitrineData?.address?.split('\n')[0]?.trim() ?? ''}
+                        onGeoAddressSynced={async (nextAddress) => {
+                          if (!user?.email || !user?.studioName || !nextAddress.trim()) return;
+                          const slug =
+                            studioSlug != null && studioSlug !== ''
+                              ? studioSlug
+                              : getVitrineSlug(user.studioName);
+                          const base = vitrineData ?? defaultVitrineData(slug);
+                          const newData: VitrineData = { ...base, address: nextAddress.trim() };
+                          try {
+                            await saveVitrineDataAsync(slug, newData, user.email, user.studioName);
+                            setVitrineData(newData);
+                          } catch {
+                            toast.warning(
+                              'Position enregistrée. La mise à jour de l’adresse sur la vitrine a échoué — réessayez depuis l’onglet Page vitrine.',
+                            );
+                          }
+                        }}
+                      />
+                    )}
+                  </section>
+
+                  {useSupabase && studioId && (
+                    <section className="space-y-4" aria-labelledby="settings-general-export">
+                      <div className="px-0.5">
+                        <h2 id="settings-general-export" className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                          Export
+                        </h2>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Fichiers CSV pour sauvegarde ou comptabilité.</p>
+                      </div>
+                      <StudioDataExportCard
+                        studioId={studioId}
+                        studioSlug={studioSlug}
+                        clients={clients}
+                        appointments={appointments}
+                      />
+                    </section>
+                  )}
+
+                  <section className="space-y-4" aria-labelledby="settings-general-notifications">
+                    <div className="px-0.5">
+                      <h2 id="settings-general-notifications" className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                        Notifications
+                      </h2>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Préférences pour les alertes dans le navigateur.</p>
+                    </div>
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                      <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
+                        <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Notifications push</h3>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">Activation et comportement des alertes</p>
+                      </div>
+                      <div className="p-6">
+                        <PushNotificationsSettings studioId={studioId} />
+                      </div>
+                    </div>
+                  </section>
                 </div>
               )}
               {settingsTab === 'modules' && studioId && (
@@ -2497,19 +2583,18 @@ export const DashboardPro: React.FC = () => {
                 </div>
               )}
               {settingsTab === 'payments' && <PaymentsSettings userEmail={user?.email} studioName={user?.studioName} />}
-              {settingsTab === 'billing' && <BillingSettings studioId={studioId} userEmail={user?.email || ''} trialEndsAt={trialEndsAt} />}
+              {settingsTab === 'billing' && (
+                <BillingSettings
+                  studioId={studioId}
+                  userEmail={user?.email || ''}
+                  trialEndsAt={trialEndsAt}
+                  studioSubscriptionStatus={subscriptionStatus}
+                  onStudioSubscriptionRefresh={refreshStudioSubscription}
+                />
+              )}
               {settingsTab === 'care' && <CareSheetsSettings userEmail={user?.email} studioName={user?.studioName} />}
               {settingsTab === 'consent' && <ConsentFormEditor templates={consentTemplates} onSave={setConsentTemplates} />}
               {settingsTab === 'availability' && <AvailabilitySettings />}
-              {settingsTab === 'artists' && (
-                <ArtistManager
-                  artists={artistAccounts}
-                  onAdd={(a) => setArtistAccounts(prev => [...prev, { ...a, studioId: studioId || '' }])}
-                  onUpdate={(a) => setArtistAccounts(prev => prev.map(x => x.id === a.id ? a : x))}
-                  onDelete={(id) => setArtistAccounts(prev => prev.filter(x => x.id !== id))}
-                  maxArtists={5}
-                />
-              )}
               {settingsTab === 'waitlist' && (
                 <WaitlistManager
                   entries={waitlistEntries}
@@ -2681,8 +2766,13 @@ export const DashboardPro: React.FC = () => {
                     setGeneralSaving(false);
                   }
                 }}
-                onAddArtist={(a) => setArtistAccounts(prev => [...prev, { ...a, id: crypto.randomUUID(), studioId: studioId || '', createdAt: new Date().toISOString() }])}
+                onAddArtist={handleAddCollaborator}
+                onUpdateArtist={(a) => setArtistAccounts((prev) => prev.map((x) => (x.id === a.id ? a : x)))}
                 onDeleteArtist={(id) => setArtistAccounts(prev => prev.filter(x => x.id !== id))}
+                onSendCollaboratorInvite={
+                  studioId && useSupabase ? handleSendCollaboratorInvite : undefined
+                }
+                maxArtists={getLimit('artists')}
                 onGoToBilling={() => { setActiveTab('settings'); setSettingsTab('billing'); }}
                 subscriptionStatus={subscriptionStatus ?? undefined}
                 trialEndsAt={trialEndsAt}
@@ -2738,15 +2828,18 @@ export const DashboardPro: React.FC = () => {
                 onAvatarClick={() => avatarInputRef.current?.click()}
                 onAvatarRemove={handleAvatarRemove}
                 artists={artistAccounts}
-                onAddArtist={(a) => setArtistAccounts(prev => [...prev, { ...a, studioId: studioId || '' }])}
-                onUpdateArtist={(a) => setArtistAccounts(prev => prev.map(x => x.id === a.id ? a : x))}
-                onDeleteArtist={(id) => setArtistAccounts(prev => prev.filter(x => x.id !== id))}
-                maxArtists={5}
+                onGoToCollaborateurs={() => {
+                  handleSidebarNav(() => {
+                    setActiveTab('etablissement');
+                    setSidebarOpen(false);
+                  });
+                }}
                 onGoToBilling={() => { setActiveTab('settings'); setSettingsTab('billing'); }}
                 onGoToNotifications={() => { setActiveTab('settings'); setSettingsTab('general'); }}
                 onLogout={logout}
                 subscriptionStatus={subscriptionStatus ?? undefined}
                 trialEndsAt={trialEndsAt}
+                onRefreshStudioSubscription={refreshStudioSubscription}
               />
             </div>
             </div>

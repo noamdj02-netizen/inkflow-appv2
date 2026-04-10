@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, ReactNode } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
-import { ensureStudio } from '../lib/supabaseDashboard';
+import { ensureStudio, getStudioAvatarUrlByEmail } from '../lib/supabaseDashboard';
 import { clearAllInkflowStorage } from '../lib/clearAuthStorage';
 import { getAuthCallbackRedirectTo, LANDING_URL } from '../lib/urls';
 import { useSupabaseEnabled } from '../hooks/useSupabaseEnabled';
@@ -131,6 +131,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
+  /** Après login, la photo ne doit pas dépendre du localStorage (vidé à la déconnexion) : relire `avatar_url` en base. */
+  useEffect(() => {
+    if (!isSupabaseAuthEnabled || !user?.email) return;
+    let cancelled = false;
+    void getStudioAvatarUrlByEmail(user.email).then((url) => {
+      if (cancelled || !url) return;
+      setUser((prev) => {
+        if (!prev || prev.email?.toLowerCase() !== user.email?.toLowerCase()) return prev;
+        if (prev.avatar === url) return prev;
+        const updated = { ...prev, avatar: url };
+        localStorage.setItem('inkflow_user', JSON.stringify(updated));
+        return updated;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSupabaseAuthEnabled, user?.email, user?.id]);
+
   const loginWithGoogle = useCallback(async () => {
     if (!isSupabaseAuthEnabled) return;
     const redirectTo = getAuthCallbackRedirectTo();
@@ -190,7 +209,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { name, studio_name: studioName, referral_code: referralCode || null } }
+        options: {
+          data: { name, studio_name: studioName, referral_code: referralCode || null },
+          /** Toujours l'app (ex. app.ink-flow.me/auth/callback), jamais la Site URL landing Framer. */
+          emailRedirectTo: getAuthCallbackRedirectTo(),
+        },
       });
       if (!error && data?.user) {
         const needsEmailConfirmation = !data.session;

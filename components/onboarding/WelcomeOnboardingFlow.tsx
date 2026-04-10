@@ -6,12 +6,19 @@ import React, { useState, useCallback } from 'react';
 import { OnboardingFounderStep } from './OnboardingFounderStep';
 import { OnboardingStudioStep } from './OnboardingStudioStep';
 import { OnboardingAvailabilityStep } from './OnboardingAvailabilityStep';
-import { isWelcomeDone, setWelcomeDone } from '../../lib/welcomeStorage';
+import {
+  isWelcomeDone,
+  setWelcomeDone,
+  setFounderNoteDone,
+  isFounderNoteDone,
+} from '../../lib/welcomeStorage';
 import { supabase } from '../../lib/supabase';
 import { getVitrineDataFromSupabase, saveVitrineDataToSupabase } from '../../lib/supabaseDashboard';
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
 
 export interface WelcomeOnboardingFlowProps {
+  /** Identifiant stable du compte (id Supabase ou email) — clés localStorage */
+  userScopedId: string;
   studioId: string;
   studioSlug: string;
   userEmail: string;
@@ -20,13 +27,16 @@ export interface WelcomeOnboardingFlowProps {
 }
 
 export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
+  userScopedId,
   studioId,
   studioSlug,
   userEmail,
   initialStudioName,
   onComplete,
 }) => {
-  const [step, setStep] = useState<'founder' | 'studio' | 'availability'>('founder');
+  const [step, setStep] = useState<'founder' | 'studio' | 'availability'>(() =>
+    isFounderNoteDone(userScopedId) ? 'studio' : 'founder',
+  );
   const [pendingStudioName, setPendingStudioName] = useState<string | undefined>();
   const [pendingStyles, setPendingStyles] = useState<string[]>([]);
 
@@ -66,14 +76,21 @@ export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
         await saveVitrineDataToSupabase(studioId, merged);
       }
 
-      setWelcomeDone();
+      setWelcomeDone(userScopedId);
       onComplete(studioName);
     },
-    [studioId, studioSlug, onComplete, pendingStudioName, pendingStyles, initialStudioName]
+    [userScopedId, studioId, studioSlug, onComplete, pendingStudioName, pendingStyles, initialStudioName]
   );
 
   if (step === 'founder') {
-    return <OnboardingFounderStep onNext={() => setStep('studio')} />;
+    return (
+      <OnboardingFounderStep
+        onNext={() => {
+          setFounderNoteDone(userScopedId);
+          setStep('studio');
+        }}
+      />
+    );
   }
 
   if (step === 'studio') {
@@ -88,6 +105,6 @@ export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
   return <OnboardingAvailabilityStep onComplete={handleAvailabilityComplete} />;
 };
 
-export function shouldShowWelcomeFlow(): boolean {
-  return !isWelcomeDone();
+export function shouldShowWelcomeFlow(userScopedId: string | null | undefined): boolean {
+  return !isWelcomeDone(userScopedId);
 }

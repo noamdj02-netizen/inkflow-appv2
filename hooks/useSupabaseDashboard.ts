@@ -351,11 +351,26 @@ export const useSupabaseDashboard = () => {
     setStudioSlug(newSlug);
   }, []);
 
+  /** Recharge subscription_status / trial_ends_at depuis la ligne studio (ex. après « fin d’essai »). */
+  const refreshStudioSubscription = useCallback(async () => {
+    if (!user?.email || !useSupabase) return;
+    try {
+      const existing = await getStudioByEmail(user.email);
+      if (existing) {
+        setSubscriptionStatus(existing.subscription_status ?? null);
+        setTrialEndsAt(existing.trial_ends_at ?? null);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [user?.email, useSupabase]);
+
   return {
     studioId,
     studioSlug,
     studioCsvImportSlots,
     refreshStudioSlug,
+    refreshStudioSubscription,
     subscriptionStatus,
     trialEndsAt,
     appointments,

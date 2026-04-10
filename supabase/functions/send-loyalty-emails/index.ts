@@ -20,6 +20,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
+import { escapeHtml, wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -32,10 +33,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function escapeHtml(s: string): string {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
 /** Date du RDV (colonne `date` YYYY-MM-DD) = aujourd’hui UTC − N jours — évite le décalage jour J+7/J+30 selon le fuseau du serveur. */
 function dateOffsetUtc(days: number): string {
   const d = new Date();
@@ -44,140 +41,71 @@ function dateOffsetUtc(days: number): string {
 }
 
 function buildJ1Html(clientName: string, service: string, studioName: string): string {
-  const s = escapeHtml(studioName), c = escapeHtml(clientName), sv = escapeHtml(service);
-  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><title>Soins J+1 — ${s}</title></head>
-<body style="margin:0;padding:0;background:#0d0d0d;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0d0d0d;padding:40px 16px;">
-  <tr><td align="center">
-    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background:#161616;border-radius:16px;border:1px solid #2a2a2a;overflow:hidden;">
-      <tr><td style="padding:28px 32px 20px;border-bottom:1px solid #2a2a2a;">
-        <p style="margin:0;font-size:11px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;">${s}</p>
-        <h1 style="margin:10px 0 0;font-size:22px;font-weight:700;color:#e8e3dc;">
-          Prends soin de ton <span style="color:#c9a96e;">tatouage</span> 🌿
-        </h1>
-      </td></tr>
-      <tr><td style="padding:24px 32px;">
-        <p style="margin:0 0 16px;font-size:15px;color:#e8e3dc;">Bonjour <strong>${c}</strong>,</p>
-        <p style="margin:0 0 20px;font-size:14px;color:#a0998f;line-height:1.6;">
-          Ta séance <strong style="color:#e8e3dc;">${sv}</strong> date d'hier — bravo pour le saut !
-          Voici les essentiels pour une belle cicatrisation.
-        </p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#1e1e1e;border-radius:12px;border:1px solid #2a2a2a;margin-bottom:24px;">
-          <tr><td style="padding:20px 24px;">
-            <p style="margin:0 0 12px;font-size:12px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.06em;">Les 5 règles d'or</p>
-            <ul style="margin:0;padding:0 0 0 18px;color:#a0998f;font-size:14px;line-height:1.8;">
-              <li>Garder le film protecteur <strong style="color:#e8e3dc;">24–48h</strong></li>
-              <li>Laver doucement au savon surgras, 2× par jour</li>
-              <li>Appliquer une crème cicatrisante en fine couche</li>
-              <li><strong style="color:#e8e3dc;">Pas de soleil</strong>, pas de piscine, pas de bain pendant 3 semaines</li>
-              <li>Ne jamais gratter — laisser peler naturellement</li>
-            </ul>
-          </td></tr>
-        </table>
-        <p style="margin:0;font-size:13px;color:#6b6b6b;text-align:center;line-height:1.5;">
-          Des questions ? Réponds directement à cet email — ${s} te répondra rapidement.
-        </p>
-      </td></tr>
-      <tr><td style="padding:16px 32px;border-top:1px solid #2a2a2a;">
-        <p style="margin:0;font-size:11px;color:#6b6b6b;text-align:center;">
-          <a href="${APP_URL}" style="color:#c9a96e;text-decoration:none;">ink-flow.me</a>
-        </p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>`;
+  const rules = `
+    <p style="${EMAIL_STYLES.label}">Les 5 règles d'or</p>
+    <ul style="margin:0;padding:0 0 0 18px;color:#718096;font-size:14px;line-height:1.8;">
+      <li>Garder le film protecteur <strong style="color:#1A202C;">24–48h</strong></li>
+      <li>Laver doucement au savon surgras, 2× par jour</li>
+      <li>Appliquer une crème cicatrisante en fine couche</li>
+      <li><strong style="color:#1A202C;">Pas de soleil</strong>, pas de piscine, pas de bain pendant 3 semaines</li>
+      <li>Ne jamais gratter — laisser peler naturellement</li>
+    </ul>
+  `;
+  return wrapEmailLayout({
+    tag: "SOINS J+1",
+    titleBlue: "Prends soin",
+    titleBlack: "de ton tatouage 🌿",
+    subtitle: studioName,
+    greetingName: clientName,
+    introLine: `Ta séance ${service} date d'hier — bravo pour le saut ! Voici les essentiels pour une belle cicatrisation.`,
+    bodyHtml: `
+      ${emailInfoBox(rules)}
+      <p style="${EMAIL_STYLES.small};text-align:center;">Des questions ? Réponds directement à cet e-mail — ${escapeHtml(studioName)} te répondra rapidement.</p>
+    `,
+  });
 }
 
 function buildJ7Html(clientName: string, service: string, studioName: string): string {
-  const s = escapeHtml(studioName), c = escapeHtml(clientName), sv = escapeHtml(service);
-  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><title>1 semaine — ${s}</title></head>
-<body style="margin:0;padding:0;background:#0d0d0d;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0d0d0d;padding:40px 16px;">
-  <tr><td align="center">
-    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background:#161616;border-radius:16px;border:1px solid #2a2a2a;overflow:hidden;">
-      <tr><td style="padding:28px 32px 20px;border-bottom:1px solid #2a2a2a;">
-        <p style="margin:0;font-size:11px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;">${s}</p>
-        <h1 style="margin:10px 0 0;font-size:22px;font-weight:700;color:#e8e3dc;">
-          1 semaine déjà — comment <span style="color:#c9a96e;">ça cicatrise</span> ?
-        </h1>
-      </td></tr>
-      <tr><td style="padding:24px 32px;">
-        <p style="margin:0 0 16px;font-size:15px;color:#e8e3dc;">Bonjour <strong>${c}</strong>,</p>
-        <p style="margin:0 0 20px;font-size:14px;color:#a0998f;line-height:1.6;">
-          Une semaine s'est écoulée depuis ton <strong style="color:#e8e3dc;">${sv}</strong>.
-          La peau pèle peut-être encore un peu, c'est normal !
-        </p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#1e1e1e;border-radius:12px;border:1px solid #2a2a2a;margin-bottom:24px;">
-          <tr><td style="padding:20px 24px;">
-            <p style="margin:0 0 12px;font-size:12px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.06em;">À ce stade c'est normal si…</p>
-            <ul style="margin:0;padding:0 0 0 18px;color:#a0998f;font-size:14px;line-height:1.8;">
-              <li>La peau <strong style="color:#e8e3dc;">pèle et tire</strong> légèrement</li>
-              <li>Les couleurs semblent ternes — elles <strong style="color:#e8e3dc;">s'aviveront</strong> après cicatrisation</li>
-              <li>Des démangeaisons légères (ne pas gratter !)</li>
-            </ul>
-            <p style="margin:14px 0 0;font-size:13px;color:#6b6b6b;border-top:1px solid #2a2a2a;padding-top:14px;">
-              ⚠️ Si rougeur persistante, gonflement ou suintement — contacte ${s} ou un médecin.
-            </p>
-          </td></tr>
-        </table>
-        <p style="margin:0;font-size:13px;color:#6b6b6b;text-align:center;">Continue avec la crème encore quelques jours 🌿</p>
-      </td></tr>
-      <tr><td style="padding:16px 32px;border-top:1px solid #2a2a2a;">
-        <p style="margin:0;font-size:11px;color:#6b6b6b;text-align:center;">
-          <a href="${APP_URL}" style="color:#c9a96e;text-decoration:none;">ink-flow.me</a>
-        </p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>`;
+  const sEsc = escapeHtml(studioName);
+  const block = `
+    <p style="${EMAIL_STYLES.label}">À ce stade c'est normal si…</p>
+    <ul style="margin:0;padding:0 0 0 18px;color:#718096;font-size:14px;line-height:1.8;">
+      <li>La peau <strong style="color:#1A202C;">pèle et tire</strong> légèrement</li>
+      <li>Les couleurs semblent ternes — elles <strong style="color:#1A202C;">s'aviveront</strong> après cicatrisation</li>
+      <li>Des démangeaisons légères (ne pas gratter !)</li>
+    </ul>
+    <p style="margin:14px 0 0;padding-top:14px;border-top:1px solid #E2E8F0;font-size:13px;color:#718096;">
+      Si rougeur persistante, gonflement ou suintement — contacte ${sEsc} ou un médecin.
+    </p>
+  `;
+  return wrapEmailLayout({
+    tag: "SUIVI J+7",
+    titleBlue: "1 semaine",
+    titleBlack: "déjà — comment ça cicatrise ?",
+    subtitle: studioName,
+    greetingName: clientName,
+    introLine:
+      `Une semaine s'est écoulée depuis ton ${service}. La peau pèle peut-être encore un peu, c'est normal !`,
+    bodyHtml: `
+      ${emailInfoBox(block)}
+      <p style="${EMAIL_STYLES.small};text-align:center;">Continue avec la crème encore quelques jours 🌿</p>
+    `,
+  });
 }
 
 function buildJ30Html(clientName: string, service: string, studioName: string, vitrineSlug: string): string {
-  const s = escapeHtml(studioName), c = escapeHtml(clientName), sv = escapeHtml(service);
   const vitrineUrl = vitrineSlug ? `${APP_URL}/p/${vitrineSlug}` : APP_URL;
-  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><title>30 jours — ${s}</title></head>
-<body style="margin:0;padding:0;background:#0d0d0d;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0d0d0d;padding:40px 16px;">
-  <tr><td align="center">
-    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;background:#161616;border-radius:16px;border:1px solid #2a2a2a;overflow:hidden;">
-      <tr><td style="padding:28px 32px 20px;border-bottom:1px solid #2a2a2a;">
-        <p style="margin:0;font-size:11px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.08em;">${s}</p>
-        <h1 style="margin:10px 0 0;font-size:22px;font-weight:700;color:#e8e3dc;">
-          Ton tattoo a <span style="color:#c9a96e;">1 mois</span> — déjà ! 🎉
-        </h1>
-      </td></tr>
-      <tr><td style="padding:24px 32px;">
-        <p style="margin:0 0 16px;font-size:15px;color:#e8e3dc;">Bonjour <strong>${c}</strong>,</p>
-        <p style="margin:0 0 20px;font-size:14px;color:#a0998f;line-height:1.6;">
-          30 jours se sont écoulés depuis ton <strong style="color:#e8e3dc;">${sv}</strong>.
-          Ta peau est maintenant complètement cicatrisée — le résultat final est là !
-        </p>
-        <p style="margin:0 0 24px;font-size:14px;color:#a0998f;line-height:1.6;">
-          Tu penses à ton prochain projet ? On serait ravis de te retrouver 🙌
-        </p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
-          <tr><td align="center">
-            <a href="${vitrineUrl}"
-               style="display:inline-block;padding:13px 28px;background:#c9a96e;color:#0d0d0d;font-size:14px;font-weight:700;border-radius:10px;text-decoration:none;">
-              Voir la vitrine de ${s}
-            </a>
-          </td></tr>
-        </table>
-        <p style="margin:0;font-size:12px;color:#6b6b6b;text-align:center;">
-          Pense à protéger ton tatouage du soleil avec un SPF 50+ ☀️
-        </p>
-      </td></tr>
-      <tr><td style="padding:16px 32px;border-top:1px solid #2a2a2a;">
-        <p style="margin:0;font-size:11px;color:#6b6b6b;text-align:center;">
-          <a href="${APP_URL}" style="color:#c9a96e;text-decoration:none;">ink-flow.me</a>
-        </p>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>`;
+  return wrapEmailLayout({
+    tag: "FIDÉLITÉ J+30",
+    titleBlue: "1 mois",
+    titleBlack: "déjà — ton tattoo 🎉",
+    subtitle: studioName,
+    greetingName: clientName,
+    introLine:
+      `30 jours se sont écoulés depuis ton ${service}. Ta peau est cicatrisée — le résultat final est là ! Tu penses à ton prochain projet ? On serait ravis de te retrouver.`,
+    bodyHtml: `<p style="${EMAIL_STYLES.textMuted};text-align:center;">Pense à protéger ton tatouage du soleil avec un SPF 50+ ☀️</p>`,
+    button: { text: `Voir la vitrine — ${studioName}`, url: vitrineUrl },
+  });
 }
 
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {

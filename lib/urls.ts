@@ -39,6 +39,54 @@ export function getPasswordRecoveryRedirectTo(): string {
 }
 
 /**
+ * Chemin interne après inscription (tunnel pricing ?plan= / ?interval=).
+ */
+export function getPostSignupDashboardPath(search: string): string {
+  const params = new URLSearchParams(search);
+  const plan = params.get('plan');
+  const interval = params.get('interval') || 'monthly';
+  const paidPlans = ['solo', 'studio', 'starter', 'pro'];
+  if (plan && paidPlans.includes(plan)) {
+    return `/dashboard?subscribe=${encodeURIComponent(plan)}&interval=${encodeURIComponent(interval)}`;
+  }
+  return '/dashboard';
+}
+
+/**
+ * Après auth (callback, sessionStorage, query), n'accepte que des chemins internes ou l'origine de l'app.
+ * Rejette la landing Framer et les URLs externes (open redirect).
+ */
+export function sanitizePostAuthRedirect(
+  raw: string | null | undefined,
+  options?: { defaultPath?: string }
+): string {
+  const fallback = options?.defaultPath ?? '/dashboard';
+  if (raw == null || !String(raw).trim()) return fallback;
+  const t = String(raw).trim();
+  if (t.startsWith('/')) {
+    if (t.startsWith('//') || t.toLowerCase().startsWith('/\\')) return fallback;
+    const noHash = t.split('#')[0] ?? t;
+    return noHash || fallback;
+  }
+  try {
+    const u = new URL(t);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return fallback;
+    if (LANDING_HOSTNAMES.has(u.hostname.toLowerCase())) return fallback;
+    const here = typeof window !== 'undefined' ? window.location.origin : APP_URL;
+    if (u.origin === here.replace(/\/+$/, '')) {
+      return `${u.pathname}${u.search}`;
+    }
+    const host = u.hostname.toLowerCase();
+    if (host === 'app.ink-flow.me' || host === 'localhost' || host === '127.0.0.1') {
+      return `${u.pathname}${u.search}`;
+    }
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
  * Origine publique pour les liens /invite (parrainage).
  * En local, `window.location.origin` vaut localhost — les amis ne peuvent pas ouvrir le lien.
  * Définir `VITE_PUBLIC_INVITE_ORIGIN=https://app.ink-flow.me` (ou ton domaine Vercel) dans .env.local et Vercel.
@@ -65,6 +113,10 @@ export const LANDING_PRICING_URL = `${LANDING_URL}/#pricing`;
 export const LANDING_PRIVACY_URL = `${LANDING_URL}/politique-confidentialite`;
 export const LANDING_TERMS_URL = `${LANDING_URL}/conditions-utilisation`;
 export const LANDING_LEGAL_URL = `${LANDING_URL}/mentions-legales`;
+
+/** Compte Instagram officiel InkFlow (lien partage / footer). */
+export const INKFLOW_INSTAGRAM_URL =
+  'https://www.instagram.com/inkflowme?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==';
 
 /**
  * Normalise une URL saisie (sans schéma → https://) et ne retourne que http(s).

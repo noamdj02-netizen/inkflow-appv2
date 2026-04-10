@@ -370,7 +370,7 @@ export const PublicAppSettings: React.FC<PublicAppSettingsProps> = ({
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-[0.98]"
             >
               <MapPin className="w-4 h-4 text-blue-500" />
-              Position & carte (studio)
+              Carte & proximité
             </button>
           </div>
 

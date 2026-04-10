@@ -1,3 +1,11 @@
+/**
+ * Google Places — côté navigateur uniquement via la Edge Function Supabase `google-places`.
+ *
+ * - Aucun appel à `maps.googleapis.com/maps/api/place/*` ni `places.googleapis.com` depuis le front
+ *   (pas de clé VITE, pas d’erreur de restriction HTTP referrer sur Places Details / Search).
+ * - La clé serveur `GOOGLE_PLACES_SERVER_KEY` est lue dans `supabase/functions/google-places/index.ts`
+ *   (`Deno.env.get`). Les réponses JSON (avis, note, etc.) sont renvoyées au client après succès.
+ */
 import { supabase } from './supabase';
 import type {
   GooglePlaceSearchResultDTO,
@@ -9,6 +17,13 @@ import type {
 
 function friendlyError(_fn: string, raw: string): string {
   const lower = raw.toLowerCase();
+  if (
+    lower.includes('invalid jwt') ||
+    lower.includes('jwt expired') ||
+    (lower.includes('jwt') && lower.includes('malformed'))
+  ) {
+    return 'Session expirée ou invalide. Déconnectez-vous, reconnectez-vous, puis réessayez.';
+  }
   if (
     lower.includes('failed to send') ||
     lower.includes('edge function') ||
@@ -41,14 +56,62 @@ function friendlyError(_fn: string, raw: string): string {
   return raw.length > 180 ? `${raw.slice(0, 177)}...` : raw;
 }
 
-/** Avis publics pour une vitrine (slug). Pas de cle API cote navigateur. */
+/** Message utilisateur pour les toasts (évite « Invalid JWT » brut côté Supabase). */
+export function formatGooglePlacesInvokeError(raw: string): string {
+  return friendlyError('google-places', raw);
+}
+
+/** Les Edge Functions envoient le JWT : on rafraîchit avant appel si expiration proche, puis retry si refus. */
+async function ensureFreshAuthForEdge(): Promise<void> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.expires_at) return;
+  if (session.expires_at * 1000 < Date.now() + 120_000) {
+    await supabase.auth.refreshSession().catch(() => {});
+  }
+}
+
+function isJwtRejectedMessage(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return lower.includes('invalid jwt') || lower.includes('jwt expired');
+}
+
+/**
+ * Appelle uniquement `supabase.functions.invoke('google-places', …)` — aucune autre origine pour Places.
+ * Utilisé pour les actions publiques (sans rafraîchissement JWT).
+ */
+async function invokeGooglePlacesEdge<T>(
+  body: Record<string, unknown>
+): Promise<{ data: T | null; error: { message: string } | null }> {
+  const res = await supabase.functions.invoke<T>('google-places', { body });
+  return { data: res.data ?? null, error: res.error as { message: string } | null };
+}
+
+async function invokeGooglePlacesJwt<T>(
+  body: Record<string, unknown>
+): Promise<{ data: T | null; error: { message: string } | null }> {
+  await ensureFreshAuthForEdge();
+  let res = await supabase.functions.invoke<T>('google-places', { body });
+  if (res.error && isJwtRejectedMessage(res.error.message)) {
+    await supabase.auth.refreshSession().catch(() => {});
+    res = await supabase.functions.invoke<T>('google-places', { body });
+  }
+  return { data: res.data ?? null, error: res.error as { message: string } | null };
+}
+
+/**
+ * Avis Google pour la vitrine publique (slug).
+ * L’Edge Function appelle Places Details côté serveur puis retourne `rating`, `userRatingsTotal`, `reviews`.
+ */
 export async function fetchPublicGoogleReviews(
   slug: string
 ): Promise<(GoogleReviewsPayload & { configured: boolean }) | null> {
-  const { data, error } = await supabase.functions.invoke<
+  const { data, error } = await invokeGooglePlacesEdge<
     GoogleReviewsPayload & { configured?: boolean; error?: string }
-  >('google-places', {
-    body: { action: 'public_reviews', slug: slug.trim().toLowerCase() },
+  >({
+    action: 'public_reviews',
+    slug: slug.trim().toLowerCase(),
   });
 
   if (error) {
@@ -139,10 +202,11 @@ export async function disconnectGoogleBusiness(studioId: string): Promise<void> 
 export async function fetchBusinessPublicReviews(
   slug: string
 ): Promise<(GoogleBusinessReviewsPayload & { configured: boolean; source: 'business' }) | null> {
-  const { data, error } = await supabase.functions.invoke<
+  const { data, error } = await invokeGooglePlacesEdge<
     GoogleBusinessReviewsPayload & { configured?: boolean; source?: string; error?: string }
-  >('google-places', {
-    body: { action: 'business_public_reviews', slug: slug.trim().toLowerCase() },
+  >({
+    action: 'business_public_reviews',
+    slug: slug.trim().toLowerCase(),
   });
   if (error) { console.warn('[google-business]', error.message); return null; }
   if (data?.error) { console.warn('[google-business]', data.error); return null; }
@@ -163,10 +227,10 @@ export async function fetchBusinessPublicReviews(
  * Ne dépend pas de GOOGLE_PLACES_API_KEY (résolution HTTP).
  */
 export async function resolveMapsPasteViaEdge(input: string): Promise<string | null> {
-  const { data, error } = await supabase.functions.invoke<{ placeId?: string | null; error?: string }>(
-    'google-places',
-    { body: { action: 'resolve_maps_paste', input: input.trim() } }
-  );
+  const { data, error } = await invokeGooglePlacesJwt<{ placeId?: string | null; error?: string }>({
+    action: 'resolve_maps_paste',
+    input: input.trim(),
+  });
   if (error) {
     console.warn('[google-places] resolve_maps_paste', error.message);
     return null;
@@ -178,10 +242,10 @@ export async function resolveMapsPasteViaEdge(input: string): Promise<string | n
 
 /** Recherche d'etablissements (JWT requis). */
 export async function searchGooglePlaces(query: string): Promise<GooglePlaceSearchResultDTO[]> {
-  const { data, error } = await supabase.functions.invoke<{ results?: GooglePlaceSearchResultDTO[]; error?: string }>(
-    'google-places',
-    { body: { action: 'text_search', query: query.trim() } }
-  );
+  const { data, error } = await invokeGooglePlacesJwt<{ results?: GooglePlaceSearchResultDTO[]; error?: string }>({
+    action: 'text_search',
+    query: query.trim(),
+  });
 
   if (error) {
     throw new Error(friendlyError('google-places', error.message));
@@ -190,4 +254,47 @@ export async function searchGooglePlaces(query: string): Promise<GooglePlaceSear
     throw new Error(friendlyError('google-places', data.error));
   }
   return data?.results ?? [];
+}
+
+/**
+ * Détail lieu + avis pour l’aperçu dashboard (`action: place_details` sur l’Edge Function).
+ * Même chaîne que la vitrine : Places API uniquement sur le serveur.
+ */
+export async function fetchAuthenticatedPlaceDetails(
+  placeId: string
+): Promise<GoogleReviewsPayload | null> {
+  const { data, error } = await invokeGooglePlacesJwt<GoogleReviewsPayload & { error?: string }>({
+    action: 'place_details',
+    placeId: placeId.trim(),
+  });
+  if (error) {
+    console.warn('[google-places] place_details', error.message);
+    return null;
+  }
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
+    return null;
+  }
+  if (!data || typeof data !== 'object') return null;
+  return {
+    rating: data.rating ?? null,
+    userRatingsTotal: data.userRatingsTotal ?? 0,
+    reviews: Array.isArray(data.reviews) ? data.reviews : [],
+  };
+}
+
+/** Met en cache les avis dans `inkflow_studios.google_reviews_cache` (vitrine + repli API). */
+export async function syncStudioGoogleReviewsCache(
+  studioId: string,
+  placeId?: string | null
+): Promise<void> {
+  const body: Record<string, unknown> = {
+    action: 'sync_studio_google_reviews',
+    studioId,
+    ...(placeId != null && placeId !== '' ? { placeId } : {}),
+  };
+  const { data, error } = await invokeGooglePlacesJwt<{ ok?: boolean; error?: string }>(body);
+  if (error) throw new Error(friendlyError('google-places', error.message));
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
+    throw new Error(friendlyError('google-places', String(data.error)));
+  }
 }

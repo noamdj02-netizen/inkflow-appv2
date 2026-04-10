@@ -4,7 +4,8 @@ import { ArrowLeft, ArrowRight, CalendarDays, Heart, Mail, Map, MapPin, User, Wa
 import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { SEO } from '../components/SEO';
-import { LANDING_URL, APP_URL } from '../lib/urls';
+import { LANDING_URL, APP_URL, sanitizePostAuthRedirect } from '../lib/urls';
+import { REDIRECT_AFTER_LOGIN_KEY, useAuth } from '../contexts/AuthContext';
 import { CLIENT_DASHBOARD_THEME } from '../lib/clientDashboardTheme';
 
 const LOGIN_HERO_PRIMARY = '/images/login-hero.jpg';
@@ -214,6 +215,7 @@ function ClientOnboarding({ onDone }: { onDone: () => void }) {
 }
 
 export const LoginPage: React.FC = () => {
+  const { isAuthenticated, authLoading } = useAuth();
   const [checkEmailMessage, setCheckEmailMessage] = useState(false);
   const [heroSrc, setHeroSrc] = useState(LOGIN_HERO_PRIMARY);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -226,11 +228,46 @@ export const LoginPage: React.FC = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const redirectParam = params.get('redirect') || params.get('returnTo') || params.get('next');
+    if (redirectParam) {
+      const safe = sanitizePostAuthRedirect(decodeURIComponent(redirectParam));
+      try {
+        sessionStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, safe);
+      } catch {
+        /* ignore */
+      }
+    }
     if (params.get('message') === 'check-email') {
       setCheckEmailMessage(true);
       window.history.replaceState({}, '', '/login');
+    } else if (redirectParam) {
+      window.history.replaceState({}, '', '/login');
     }
   }, []);
+
+  /** Déjà connecté : ne pas afficher le formulaire — renvoie vers le tableau de bord ou la cible sauvegardée. */
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+    let next = '/dashboard';
+    try {
+      const stored = sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY);
+      if (stored) next = sanitizePostAuthRedirect(stored);
+      sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
+    } catch {
+      /* ignore */
+    }
+    window.history.replaceState({}, '', next);
+    window.dispatchEvent(new Event('inkflow-navigate'));
+  }, [authLoading, isAuthenticated]);
+
+  if (!authLoading && isAuthenticated) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-black">
+        <Logo className="dark:invert" />
+        <p className="mt-4 text-sm text-zinc-500">Redirection…</p>
+      </div>
+    );
+  }
 
   return (
     <>

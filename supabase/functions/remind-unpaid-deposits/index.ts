@@ -15,15 +15,13 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
-import { escapeHtml } from "../_shared/emailLayout.ts";
+import { escapeHtml, wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
-const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -51,94 +49,32 @@ function buildReminderEmail(
   depositAmount: number | null,
   depositLink: string,
 ): string {
-  const safeName = escapeHtml(clientName);
-  const safeStudio = escapeHtml(studioName);
   const safeService = service ? escapeHtml(service) : "Tatouage";
   const safeDate = escapeHtml(date);
   const safeTime = time ? escapeHtml(time) : "";
   const amountLabel = depositAmount ? `${depositAmount}€` : "l'acompte";
 
-  return `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Votre acompte est en attente — ${safeStudio}</title>
-</head>
-<body style="margin:0;padding:0;background:#0d0d0d;font-family:'Inter',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d0d0d;padding:40px 16px;">
-    <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#161616;border-radius:16px;overflow:hidden;border:1px solid #2a2a2a;">
-          <!-- Header -->
-          <tr>
-            <td style="padding:32px 32px 24px;border-bottom:1px solid #2a2a2a;">
-              <p style="margin:0;font-size:13px;color:#6b6b6b;letter-spacing:0.06em;text-transform:uppercase;">
-                ${safeStudio}
-              </p>
-              <h1 style="margin:10px 0 0;font-size:26px;font-weight:700;color:#e8e3dc;line-height:1.2;">
-                Votre réservation attend
-                <span style="color:#c9a96e;">votre acompte</span>
-              </h1>
-            </td>
-          </tr>
-          <!-- Body -->
-          <tr>
-            <td style="padding:28px 32px;">
-              <p style="margin:0 0 20px;font-size:15px;color:#e8e3dc;line-height:1.6;">
-                Bonjour <strong>${safeName}</strong>,
-              </p>
-              <p style="margin:0 0 20px;font-size:15px;color:#a0998f;line-height:1.6;">
-                Votre demande de RDV chez <strong style="color:#e8e3dc;">${safeStudio}</strong>
-                est bien enregistrée, mais l'acompte de <strong style="color:#c9a96e;">${amountLabel}</strong>
-                n'a pas encore été réglé.
-              </p>
-              <!-- Détails RDV -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#1e1e1e;border-radius:10px;border:1px solid #2a2a2a;margin-bottom:24px;">
-                <tr>
-                  <td style="padding:16px 20px;">
-                    <p style="margin:0 0 6px;font-size:11px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.06em;">Prestation</p>
-                    <p style="margin:0;font-size:15px;color:#e8e3dc;font-weight:600;">${safeService}</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:0 20px 16px;">
-                    <p style="margin:0 0 6px;font-size:11px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.06em;">Date souhaitée</p>
-                    <p style="margin:0;font-size:15px;color:#e8e3dc;font-weight:600;">${safeDate}${safeTime ? " • " + safeTime : ""}</p>
-                  </td>
-                </tr>
-              </table>
-              <!-- CTA -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
-                <tr>
-                  <td align="center">
-                    <a href="${depositLink}"
-                       style="display:inline-block;padding:14px 32px;background:#c9a96e;color:#0d0d0d;font-size:15px;font-weight:700;border-radius:10px;text-decoration:none;letter-spacing:0.02em;">
-                      Payer l'acompte (${amountLabel})
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              <p style="margin:0;font-size:13px;color:#6b6b6b;line-height:1.5;text-align:center;">
-                Sans paiement, votre créneau pourrait être libéré.
-              </p>
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="padding:20px 32px;border-top:1px solid #2a2a2a;">
-              <p style="margin:0;font-size:12px;color:#6b6b6b;text-align:center;">
-                Vous recevez cet email car vous avez soumis une demande via la vitrine de ${safeStudio}.<br/>
-                <a href="${SITE_URL}" style="color:#c9a96e;text-decoration:none;">ink-flow.me</a>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+  const detailsHtml = `
+    <p style="${EMAIL_STYLES.label}">Prestation</p>
+    <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1A202C;">${safeService}</p>
+    <p style="${EMAIL_STYLES.label}">Date souhaitée</p>
+    <p style="margin:0;font-size:16px;font-weight:600;color:#1A202C;">${safeDate}${safeTime ? " • " + safeTime : ""}</p>
+  `;
+
+  const bodyHtml = emailInfoBox(detailsHtml);
+
+  return wrapEmailLayout({
+    tag: "RELANCE ACOMPTE",
+    titleBlue: "Votre réservation",
+    titleBlack: "attend votre acompte",
+    subtitle: studioName,
+    greetingName: clientName,
+    introLine:
+      `Votre demande de RDV chez ${studioName} est bien enregistrée, mais l'acompte de ${amountLabel} n'a pas encore été réglé.`,
+    bodyHtml,
+    button: { text: `Payer l'acompte (${amountLabel})`, url: depositLink },
+    buttonSubtext: "Sans paiement, votre créneau pourrait être libéré.",
+  });
 }
 
 async function sendReminderEmail(
@@ -286,33 +222,17 @@ Deno.serve(async (req: Request) => {
         // Email d'annulation au client (si email disponible)
         if (apt.client_email) {
           const studioName = (apt.inkflow_studios as { name: string | null } | null)?.name || "Votre studio";
-          const cancelHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><title>Réservation annulée</title></head>
-<body style="margin:0;padding:0;background:#0d0d0d;font-family:Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d0d0d;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#161616;border-radius:16px;border:1px solid #2a2a2a;">
-        <tr><td style="padding:28px 32px 20px;border-bottom:1px solid #2a2a2a;">
-          <p style="margin:0;font-size:13px;color:#6b6b6b;text-transform:uppercase;letter-spacing:0.06em;">${escapeHtml(studioName)}</p>
-          <h1 style="margin:10px 0 0;font-size:22px;font-weight:700;color:#e8e3dc;">Réservation <span style="color:#ef4444;">annulée</span></h1>
-        </td></tr>
-        <tr><td style="padding:24px 32px;">
-          <p style="margin:0 0 16px;font-size:15px;color:#e8e3dc;">Bonjour <strong>${escapeHtml(apt.client_name)}</strong>,</p>
-          <p style="margin:0 0 16px;font-size:14px;color:#a0998f;line-height:1.6;">
-            Votre demande de RDV du <strong style="color:#e8e3dc;">${escapeHtml(apt.date)}</strong> chez
-            <strong style="color:#e8e3dc;">${escapeHtml(studioName)}</strong> a été annulée
-            car l'acompte n'a pas été réglé dans les 24 heures.
-          </p>
-          <p style="margin:0;font-size:13px;color:#6b6b6b;">Pour prendre un nouveau rendez-vous, contactez directement le studio.</p>
-        </td></tr>
-        <tr><td style="padding:16px 32px;border-top:1px solid #2a2a2a;">
-          <p style="margin:0;font-size:12px;color:#6b6b6b;text-align:center;">
-            <a href="${SITE_URL}" style="color:#c9a96e;text-decoration:none;">ink-flow.me</a>
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
+          const cancelHtml = wrapEmailLayout({
+            tag: "ANNULATION",
+            titleBlue: "Réservation",
+            titleBlack: "annulée",
+            subtitle: studioName,
+            greetingName: apt.client_name,
+            introLine:
+              `Votre demande de RDV du ${apt.date} chez ${studioName} a été annulée car l'acompte n'a pas été réglé dans les 24 heures.`,
+            bodyHtml: `<p style="${EMAIL_STYLES.textMuted}">Pour prendre un nouveau rendez-vous, contactez directement le studio.</p>`,
+            hideAppPromo: true,
+          });
 
           await fetch("https://api.resend.com/emails", {
             method: "POST",

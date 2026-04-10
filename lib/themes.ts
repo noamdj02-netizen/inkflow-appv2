@@ -122,6 +122,12 @@ export const VITRINE_THEMES: VitrineTheme[] = [
 
 export const DEFAULT_VITRINE_THEME_ID = 'light';
 
+/**
+ * Thèmes listés dans Paramètres → vitrine. Les autres entrées de {@link VITRINE_THEMES}
+ * restent supportées pour l’affichage des pages déjà publiées avec un ancien id.
+ */
+export const VITRINE_THEMES_SELECTOR: readonly VitrineTheme[] = VITRINE_THEMES.filter((t) => t.id === 'light');
+
 export function getVitrineTheme(id: string): VitrineTheme | undefined {
   return VITRINE_THEMES.find((t) => t.id === id);
 }

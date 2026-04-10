@@ -71,8 +71,14 @@ export const TermsOfServicePage: React.FC = () => {
 
           <section>
             <h2 className="text-xl font-semibold text-neutral-900 mb-3">5. Abonnement et paiement</h2>
-            <p>
+            <p className="mb-3">
               Certaines fonctionnalités sont payantes. Les tarifs sont indiqués sur le site. Les paiements sont traités par Stripe. En cas d'impayé, l'accès aux fonctionnalités premium peut être suspendu.
+            </p>
+            <p className="mb-3">
+              Les formules (Solo, Pro, Studio, etc.) déterminent les plafonds (nombre d’artistes, de fiches clients, etc.) et les fonctionnalités accessibles. Un changement de formule (montée ou descente de gamme) ne constitue pas une création d’un nouveau compte : vos données hébergées dans le cadre du service (dont clients, rendez-vous et contenus associés à votre studio) ne sont pas supprimées du seul fait de ce changement, sous réserve des lois applicables et de la continuité du service.
+            </p>
+            <p>
+              Les fonctionnalités effectivement disponibles correspondent à la formule souscrite au moment considéré ; certaines actions (ajout de clients, d’utilisateurs, etc.) peuvent être limitées lorsque les plafonds de la formule sont atteints.
             </p>
           </section>
 

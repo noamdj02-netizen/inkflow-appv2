@@ -124,19 +124,13 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
   return (
     <div className="space-y-6 max-w-4xl w-full overflow-hidden">
       <VitrineLinkButton studioName={studioName} userEmail={userEmail} studioSlug={studioSlugFromDb} />
+      {slugConflict && (
+        <p className="text-xs text-zinc-600 dark:text-zinc-400 rounded-lg border border-amber-200/80 dark:border-amber-800/50 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2">
+          Ce nom de studio était déjà pris — l’URL dans le bloc « Lien de votre vitrine » est votre lien unique.
+        </p>
+      )}
       {studioId && (
         <ThemeSelector studioId={studioId} userEmail={userEmail} publicVitrineUrl={publicUrl || undefined} />
-      )}
-      {publicUrl && (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card-secondary)] p-4">
-          <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">Votre lien public</p>
-          <p className="text-sm text-[var(--text-secondary)] break-all font-mono">{publicUrl}</p>
-          {slugConflict && (
-            <p className="text-xs text-zinc-700 dark:text-zinc-400 mt-2">
-              Ce nom était déjà pris, votre lien unique est ci-dessus.
-            </p>
-          )}
-        </div>
       )}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-lg sm:text-xl font-bold">Personnaliser votre page vitrine</h2>

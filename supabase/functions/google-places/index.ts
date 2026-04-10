@@ -1,11 +1,17 @@
 /**
- * Google Places — clé API uniquement ici (GOOGLE_PLACES_API_KEY), jamais côté client.
+ * Google Places — clés API uniquement ici, jamais côté client.
+ *
+ * Utiliser `GOOGLE_PLACES_SERVER_KEY` (sans restriction referrer) pour Places Details / Text Search /
+ * Nearby ; une clé « applications Web » avec referrer provoque l’erreur API sur ces endpoints.
+ * Fallback : `GOOGLE_PLACES_API_KEY` / `GOOGLE_MAPS_API_KEY`.
  *
  * Actions (POST JSON) :
- * - public_reviews          : { action, slug } — sans JWT ; retourne avis via Places API (5 max)
- * - business_public_reviews : { action, slug } — sans JWT ; retourne TOUS les avis via Business Profile OAuth
- * - resolve_maps_paste      : { action, input } — JWT requis ; suit URL Google (goo.gl / maps) et extrait Place ID
- * - text_search             : { action, query } — JWT requis ; recherche d’établissements
+ * - public_reviews            : { action, slug } — sans JWT ; avis (cache DB en secours)
+ * - business_public_reviews   : { action, slug } — sans JWT ; avis Google Business OAuth
+ * - resolve_maps_paste        : { action, input } — JWT ; URL / texte → Place ID
+ * - text_search               : { action, query } — JWT
+ * - place_details             : { action, placeId } — JWT ; détails + avis (aperçu dashboard)
+ * - sync_studio_google_reviews: { action, studioId, placeId? } — JWT ; met en cache les avis
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
@@ -14,7 +20,11 @@ import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const GOOGLE_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY") || "";
+const PLACES_SERVER_KEY =
+  Deno.env.get("GOOGLE_PLACES_SERVER_KEY") ||
+  Deno.env.get("GOOGLE_PLACES_API_KEY") ||
+  Deno.env.get("GOOGLE_MAPS_API_KEY") ||
+  "";
 const GOOGLE_CLIENT_ID     = Deno.env.get("GOOGLE_CLIENT_ID") || "";
 const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET") || "";
 
@@ -25,6 +35,15 @@ const PLACES_TEXTSEARCH = "https://maps.googleapis.com/maps/api/place/textsearch
 const PLACES_NEARBY = "https://maps.googleapis.com/maps/api/place/nearbysearch/json";
 const PLACES_NEW_SEARCH = "https://places.googleapis.com/v1/places:searchText";
 const PLACES_NEW_GET_BASE = "https://places.googleapis.com/v1/places";
+
+/** Toutes les requêtes Places ci-dessous utilisent uniquement `PLACES_SERVER_KEY` (secret Supabase, ex. GOOGLE_PLACES_SERVER_KEY). */
+function assertPlacesServerKey(): void {
+  if (!String(PLACES_SERVER_KEY || "").trim()) {
+    throw new Error(
+      "Places API : définissez le secret GOOGLE_PLACES_SERVER_KEY (ou GOOGLE_PLACES_API_KEY) sur le projet Supabase.",
+    );
+  }
+}
 
 type SearchHit = { placeId: string; name: string; formattedAddress: string };
 
@@ -38,11 +57,12 @@ function mapLegacyResults(results: unknown[]): SearchHit[] {
 
 /** Fallback si l’API Text Search « classique » est désactivée (souvent seule Places API (New) est activée). */
 async function textSearchPlacesNew(query: string): Promise<SearchHit[]> {
+  assertPlacesServerKey();
   const res = await fetch(PLACES_NEW_SEARCH, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Goog-Api-Key": GOOGLE_KEY,
+      "X-Goog-Api-Key": PLACES_SERVER_KEY,
       "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress",
     },
     body: JSON.stringify({ textQuery: query, languageCode: "fr" }),
@@ -74,9 +94,10 @@ async function textSearchPlacesNew(query: string): Promise<SearchHit[]> {
 }
 
 async function textSearchPlaces(query: string): Promise<SearchHit[]> {
+  assertPlacesServerKey();
   const params = new URLSearchParams({
     query,
-    key: GOOGLE_KEY,
+    key: PLACES_SERVER_KEY,
     language: "fr",
   });
   const res = await fetch(`${PLACES_TEXTSEARCH}?${params}`);
@@ -116,6 +137,59 @@ function extractLatLngFromMapsUrl(rawUrl: string): { lat: number; lng: number } 
   return { lat, lng };
 }
 
+/**
+ * Coordonnées dans le bloc `data=` récent (souvent sans `@lat,lng` visible dans la barre d’adresse).
+ * Format typique : `!3d48.8566!4d2.3522`
+ */
+function extractLatLngFromMapsDataBlock(rawUrl: string): { lat: number; lng: number } | null {
+  const m34 = rawUrl.match(/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/i);
+  if (m34?.[1] != null && m34[2] != null) {
+    const lat = Number.parseFloat(m34[1]);
+    const lng = Number.parseFloat(m34[2]);
+    if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { lat, lng };
+    }
+  }
+  const m43 = rawUrl.match(/!4d(-?\d+\.?\d*)!3d(-?\d+\.?\d*)/i);
+  if (m43?.[1] != null && m43[2] != null) {
+    const lng = Number.parseFloat(m43[1]);
+    const lat = Number.parseFloat(m43[2]);
+    if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { lat, lng };
+    }
+  }
+  return null;
+}
+
+function extractLatLngFromQueryParams(rawUrl: string): { lat: number; lng: number } | null {
+  try {
+    const u = new URL(rawUrl);
+    const ll = u.searchParams.get("ll") ?? u.searchParams.get("center");
+    if (ll) {
+      const parts = ll.split(",").map((x) => x.trim());
+      if (parts.length >= 2) {
+        const lat = Number.parseFloat(parts[0]);
+        const lng = Number.parseFloat(parts[1]);
+        if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+          return { lat, lng };
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+/** `@lat,lng`, puis `!3d!4d` dans data, puis `?ll=` / `center=` */
+function extractLatLngFromMapsUrlExtended(rawUrl: string): { lat: number; lng: number } | null {
+  return (
+    extractLatLngFromMapsUrl(rawUrl) ??
+    extractLatLngFromMapsDataBlock(rawUrl) ??
+    extractLatLngFromQueryParams(rawUrl)
+  );
+}
+
 /** Nom affiché dans `/place/Nom+…/` (apostrophe, %27, +) */
 function extractPlaceTitleFromMapsPath(rawUrl: string): string | null {
   const m = rawUrl.match(/\/place\/([^/@]+)/);
@@ -133,13 +207,14 @@ function extractPlaceTitleFromMapsPath(rawUrl: string): string | null {
 
 /** Recherche « nearby » : meilleure pour les URLs avec `0x…:0x…` sans ChIJ (nom + coordonnées dans l’URL). */
 async function nearbySearchPlaces(lat: number, lng: number, keyword: string): Promise<SearchHit[]> {
+  assertPlacesServerKey();
   const kw = keyword.replace(/'/g, " ").replace(/\s+/g, " ").trim().slice(0, 100);
   if (kw.length < 2) return [];
   const params = new URLSearchParams({
     location: `${lat},${lng}`,
-    radius: "120",
+    radius: "250",
     keyword: kw,
-    key: GOOGLE_KEY,
+    key: PLACES_SERVER_KEY,
     language: "fr",
   });
   const res = await fetch(`${PLACES_NEARBY}?${params}`);
@@ -163,13 +238,13 @@ function pickBestPlaceHit(hits: SearchHit[], placeTitle: string): string {
   return best.placeId;
 }
 
-/** Dernier recours : nom `/place/…` + optionnellement coordonnées `@lat,lng` → Nearby puis Text Search (nécessite GOOGLE_KEY) */
+/** Dernier recours : nom `/place/…` + optionnellement coordonnées `@lat,lng` → Nearby puis Text Search (nécessite PLACES_SERVER_KEY) */
 async function resolvePlaceFromPlacePathName(rawUrl: string): Promise<string | null> {
-  if (!GOOGLE_KEY) return null;
+  if (!PLACES_SERVER_KEY) return null;
   const name = extractPlaceTitleFromMapsPath(rawUrl);
   if (!name) return null;
 
-  const ll = extractLatLngFromMapsUrl(rawUrl);
+  const ll = extractLatLngFromMapsUrlExtended(rawUrl);
   if (ll) {
     try {
       const nearby = await nearbySearchPlaces(ll.lat, ll.lng, name);
@@ -212,45 +287,113 @@ function json(origin: string | null, body: unknown, status = 200) {
   });
 }
 
+/**
+ * Extrait l'email depuis le JWT de la requête.
+ * Décodage local du payload (la signature est déjà vérifiée par verify_jwt:true côté Supabase),
+ * ce qui évite un aller-retour réseau vers Supabase Auth qui échoue de manière non déterministe
+ * depuis l'intérieur de l'edge function.
+ */
 async function getUserEmailFromJwt(req: Request): Promise<string | null> {
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return null;
   const jwt = auth.slice(7);
-  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const { data, error } = await client.auth.getUser(jwt);
-  if (error || !data.user?.email) return null;
-  return data.user.email;
+  try {
+    const parts = jwt.split(".");
+    if (parts.length !== 3) return null;
+    // base64url → base64 → JSON
+    const pad = (s: string) => s + "=".repeat((4 - (s.length % 4)) % 4);
+    const payload = JSON.parse(
+      atob(pad(parts[1].replace(/-/g, "+").replace(/_/g, "/")))
+    ) as Record<string, unknown>;
+    // Rejeter clé anon et service_role — uniquement les sessions utilisateur
+    if (payload?.role !== "authenticated") return null;
+    const email = typeof payload?.email === "string" ? payload.email.trim() : "";
+    if (email) return email;
+    // Repli : email absent du payload (rare) → lookup par sub avec service role
+    const sub = typeof payload?.sub === "string" ? payload.sub.trim() : "";
+    if (!sub) return null;
+    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data } = await admin.auth.admin.getUserById(sub);
+    return data.user?.email ?? null;
+  } catch {
+    return null;
+  }
 }
 
 const PLACE_ID_RX = /^[A-Za-z0-9_-]{12,200}$/;
 
-function extractFromDataSegment(s: string): string | null {
-  const m = s.match(/(?:^|[?&/])data=([^?#]+)/);
-  if (!m?.[1]) return null;
-  let part = m[1];
+/** Aligné sur `lib/parseGooglePlaceId.ts` — nettoie collage multi-lignes / texte + URL */
+function normalizeMapsPasteInput(raw: string): string {
+  let s = raw.trim();
+  if (!s) return s;
+  const urlMatch = s.match(/https?:\/\/[^\s<>"'[\]()]+/i);
+  if (urlMatch) {
+    s = urlMatch[0].replace(/[.,);'"\]]+$/u, "").trim();
+  }
+  s = s.replace(/\r?\n/g, "").replace(/\u00a0/g, " ").replace(/\s{2,}/g, " ").trim();
+  s = s.replace(/^[<"'[\(]+|[>")\]',.;:]+$/u, "").trim();
+  return s;
+}
+
+function placeIdFromDataChunk(part: string): string | null {
+  let p = part;
   try {
-    part = decodeURIComponent(part);
+    p = decodeURIComponent(part);
   } catch {
     /* ignore */
   }
-  const chij = part.match(/!1s(ChIJ[A-Za-z0-9_-]{10,200})/);
-  if (chij?.[1] && PLACE_ID_RX.test(chij[1])) return chij[1];
+  try {
+    p = decodeURIComponent(p);
+  } catch {
+    /* ignore */
+  }
+  const patterns = [
+    /!1s(ChIJ[A-Za-z0-9_-]{10,200})/,
+    /!2s(ChIJ[A-Za-z0-9_-]{10,200})/,
+    /!3m[0-9]+![^!]*!1s(ChIJ[A-Za-z0-9_-]{10,200})/,
+    /!4m[0-9]+![^!]*!1s(ChIJ[A-Za-z0-9_-]{10,200})/,
+  ];
+  for (const re of patterns) {
+    const chij = p.match(re);
+    if (chij?.[1] && PLACE_ID_RX.test(chij[1])) return chij[1];
+  }
   return null;
 }
 
+/** Tous les blocs `data=` (URLs longues avec plusieurs segments) */
+function extractFromAllDataSegments(s: string): string | null {
+  const re = /(?:^|[?&/])data=([^?&#]+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s)) !== null) {
+    const id = placeIdFromDataChunk(m[1]);
+    if (id) return id;
+  }
+  return null;
+}
+
+function extractFromDataSegment(s: string): string | null {
+  const m = s.match(/(?:^|[?&/])data=([^?#]+)/);
+  if (!m?.[1]) return null;
+  return placeIdFromDataChunk(m[1]);
+}
+
 function extractPlaceIdFromString(s: string): string | null {
+  const fromAll = extractFromAllDataSegments(s);
+  if (fromAll) return fromAll;
   const fromData = extractFromDataSegment(s);
   if (fromData) return fromData;
   const normalized = s.replace(/%21/gi, "!").replace(/%26/gi, "&");
   if (normalized !== s) {
-    const d2 = extractFromDataSegment(normalized);
+    const d2 = extractFromAllDataSegments(normalized) ?? extractFromDataSegment(normalized);
     if (d2) return d2;
   }
+  const placePathChij = s.match(/\/place\/(ChIJ[A-Za-z0-9_-]{10,200})(?:\/|[@?#]|$)/i);
+  if (placePathChij?.[1] && PLACE_ID_RX.test(placePathChij[1])) return placePathChij[1];
   const chij = s.match(/(ChIJ[A-Za-z0-9_-]{10,200})/);
   if (chij?.[1] && PLACE_ID_RX.test(chij[1])) return chij[1];
   const q = s.match(/(?:[?&])(?:query_)?place_id=([A-Za-z0-9_-]{12,200})/i);
   if (q?.[1] && PLACE_ID_RX.test(q[1])) return q[1];
-  const d1 = s.match(/!1s(ChIJ[A-Za-z0-9_-]{10,200})/);
+  const d1 = s.match(/[!&]1s(ChIJ[A-Za-z0-9_-]{10,200})/);
   if (d1?.[1] && PLACE_ID_RX.test(d1[1])) return d1[1];
   return null;
 }
@@ -276,25 +419,55 @@ function isAllowedMapsResolveHost(hostname: string): boolean {
     h === "maps.google.com" ||
     h === "www.google.fr" ||
     h === "google.fr" ||
-    h === "share.google.com"
+    h === "share.google.com" ||
+    h === "www.google.co.uk" ||
+    h === "google.co.uk" ||
+    h === "www.google.be" ||
+    h === "google.be" ||
+    h === "www.google.de" ||
+    h === "google.de"
   );
 }
 
 /** Suit les redirections (liens courts) et extrait un Place ID depuis l’URL finale, le HTML, ou la recherche texte sur /place/Nom/ */
 async function resolveMapsPasteToPlaceId(input: string): Promise<string | null> {
-  let hit = extractPlaceIdFromString(input);
-  if (hit) return hit;
-  try {
-    const dec = decodeURIComponent(input);
-    if (dec !== input) {
-      hit = extractPlaceIdFromString(dec);
-      if (hit) return hit;
+  const cleaned = normalizeMapsPasteInput(input);
+  const firstPass = [...new Set([input.trim(), cleaned].filter((x) => x.length >= 8))];
+  for (const chunk of firstPass) {
+    let hit = extractPlaceIdFromString(chunk);
+    if (hit) return hit;
+    try {
+      const dec = decodeURIComponent(chunk);
+      if (dec !== chunk) {
+        hit = extractPlaceIdFromString(dec);
+        if (hit) return hit;
+      }
+    } catch {
+      /* ignore */
     }
-  } catch {
-    /* ignore */
   }
 
-  const trimmed = input.trim();
+  const trimmed = (cleaned.length >= 8 ? cleaned : input.trim()).replace(/^http:\/\//i, "https://");
+
+  /** Nom ou requête sans URL complète → Text Search (Places API). */
+  if (
+    !/^https?:\/\//i.test(trimmed) &&
+    trimmed.length >= 3 &&
+    PLACES_SERVER_KEY &&
+    !extractPlaceIdFromString(trimmed)
+  ) {
+    try {
+      const q = trimmed.slice(0, 200);
+      const hits = await textSearchPlaces(q);
+      if (hits.length > 0) {
+        return hits.length === 1 ? hits[0].placeId : pickBestPlaceHit(hits, q);
+      }
+    } catch (e) {
+      console.warn("[google-places] resolve_maps_paste textSearch:", e);
+    }
+    return null;
+  }
+
   if (!/^https:\/\//i.test(trimmed)) return null;
   let u: URL;
   try {
@@ -305,12 +478,12 @@ async function resolveMapsPasteToPlaceId(input: string): Promise<string | null> 
   if (u.protocol !== "https:") return null;
   if (!isAllowedMapsResolveHost(u.hostname)) return null;
 
-  /** Sans ChIJ : URL barre complète avec `/place/Nom/` + `@lat,lng` → Nearby / Text Search (évite d’attendre le fetch HTML). */
+  /** Sans ChIJ : `/place/Nom/` + coordonnées (@, !3d!4d dans data, ou ll=) → Nearby / Text Search */
   if (
-    GOOGLE_KEY &&
+    PLACES_SERVER_KEY &&
     !extractPlaceIdFromString(trimmed) &&
     extractPlaceTitleFromMapsPath(trimmed) &&
-    extractLatLngFromMapsUrl(trimmed)
+    extractLatLngFromMapsUrlExtended(trimmed)
   ) {
     const resolved = await resolvePlaceFromPlacePathName(trimmed);
     if (resolved) return resolved;
@@ -334,13 +507,13 @@ async function resolveMapsPasteToPlaceId(input: string): Promise<string | null> 
       },
     });
     urlAfterFetch = res.url || trimmed;
-    hit = extractPlaceIdFromString(urlAfterFetch);
-    if (hit) return hit;
+    const fromFinalUrl = extractPlaceIdFromString(urlAfterFetch);
+    if (fromFinalUrl) return fromFinalUrl;
     const html = await res.text();
-    hit = extractPlaceIdFromString(html);
-    if (hit) return hit;
-    hit = extractPlaceIdFromHtml(html);
-    if (hit) return hit;
+    const fromHtml = extractPlaceIdFromString(html);
+    if (fromHtml) return fromHtml;
+    const fromHtmlMeta = extractPlaceIdFromHtml(html);
+    if (fromHtmlMeta) return fromHtmlMeta;
   } catch (e) {
     console.warn("[google-places] resolve_maps_paste fetch:", e);
   } finally {
@@ -369,11 +542,12 @@ type PlaceDetailsResult = {
 };
 
 async function fetchPlaceDetailsFromNewApi(placeId: string, language: string): Promise<PlaceDetailsResult> {
+  assertPlacesServerKey();
   const id = normalizePlaceIdForApi(placeId);
   const url = `${PLACES_NEW_GET_BASE}/${encodeURIComponent(id)}`;
   const res = await fetch(url, {
     headers: {
-      "X-Goog-Api-Key": GOOGLE_KEY,
+      "X-Goog-Api-Key": PLACES_SERVER_KEY,
       "X-Goog-FieldMask": "rating,userRatingCount,reviews",
       "Accept-Language": language,
     },
@@ -409,12 +583,13 @@ async function fetchPlaceDetailsFromNewApi(placeId: string, language: string): P
 }
 
 async function fetchPlaceDetails(placeId: string, language = "fr"): Promise<PlaceDetailsResult> {
+  assertPlacesServerKey();
   const id = normalizePlaceIdForApi(placeId);
   const params = new URLSearchParams({
     place_id: id,
     fields: "rating,user_ratings_total,reviews",
     language,
-    key: GOOGLE_KEY,
+    key: PLACES_SERVER_KEY,
   });
   const res = await fetch(`${PLACES_DETAILS}?${params}`);
   const data = (await res.json()) as {
@@ -467,22 +642,22 @@ Deno.serve(async (req: Request) => {
 
   const action = String(payload.action || "");
 
-  /** Résolution lien Maps (redirections goo.gl / maps.app) — ne nécessite pas GOOGLE_PLACES_API_KEY */
+  /** Résolution collage (URL, Place ID, ou nom via Text Search si clé serveur configurée). */
   if (action === "resolve_maps_paste") {
     const email = await getUserEmailFromJwt(req);
     if (!email) {
       return json(origin, { error: "Non authentifié" }, 401);
     }
     const input = String(payload.input || "").trim();
-    if (input.length < 8 || input.length > 2500) {
+    if (input.length < 3 || input.length > 2500) {
       return json(origin, { error: "Texte invalide" }, 400);
     }
     const placeId = await resolveMapsPasteToPlaceId(input);
     return json(origin, { placeId: placeId || null });
   }
 
-  if (!GOOGLE_KEY) {
-    console.error("[google-places] GOOGLE_PLACES_API_KEY manquante");
+  if (!PLACES_SERVER_KEY) {
+    console.error("[google-places] Aucune clé Places serveur (GOOGLE_PLACES_SERVER_KEY / GOOGLE_PLACES_API_KEY)");
     return json(origin, { error: "Configuration serveur incomplète" }, 503);
   }
 
@@ -496,7 +671,7 @@ Deno.serve(async (req: Request) => {
       const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       const { data: row, error } = await admin
         .from("inkflow_studios")
-        .select("google_place_id")
+        .select("google_place_id, google_reviews_cache")
         .eq("slug", slug)
         .maybeSingle();
 
@@ -506,6 +681,17 @@ Deno.serve(async (req: Request) => {
       }
 
       const placeId = (row?.google_place_id as string | null)?.trim();
+      const rawCache = row?.google_reviews_cache as Record<string, unknown> | null | undefined;
+      const fromCache = (c: Record<string, unknown> | null | undefined): PlaceDetailsResult | null => {
+        if (!c || typeof c !== "object") return null;
+        const reviews = Array.isArray(c.reviews) ? c.reviews as PlaceDetailsResult["reviews"] : [];
+        const rating = typeof c.rating === "number" ? c.rating : null;
+        const userRatingsTotal = typeof c.userRatingsTotal === "number" ? c.userRatingsTotal : 0;
+        if (reviews.length === 0 && rating == null && userRatingsTotal === 0) return null;
+        return { rating, userRatingsTotal, reviews };
+      };
+      const cached = fromCache(rawCache);
+
       if (!placeId) {
         return json(origin, {
           rating: null,
@@ -515,8 +701,22 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      const details = await fetchPlaceDetails(placeId);
-      return json(origin, { ...details, configured: true });
+      try {
+        const details = await fetchPlaceDetails(placeId);
+        return json(origin, { ...details, configured: true });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Places error";
+        console.warn("[google-places] public_reviews fetch:", msg);
+        if (cached) {
+          return json(origin, { ...cached, configured: true, stale: true });
+        }
+        return json(origin, {
+          rating: null,
+          userRatingsTotal: 0,
+          reviews: [],
+          configured: true,
+        });
+      }
     }
 
     if (action === "business_public_reviews") {
@@ -645,6 +845,65 @@ Deno.serve(async (req: Request) => {
         configured: true,
         source: "business",
       });
+    }
+
+    if (action === "place_details") {
+      const email = await getUserEmailFromJwt(req);
+      if (!email) {
+        return json(origin, { error: "Non authentifié" }, 401);
+      }
+      const placeId = String(payload.placeId || "").trim();
+      if (!placeId) {
+        return json(origin, { error: "placeId requis" }, 400);
+      }
+      const details = await fetchPlaceDetails(placeId);
+      return json(origin, details);
+    }
+
+    if (action === "sync_studio_google_reviews") {
+      const email = await getUserEmailFromJwt(req);
+      if (!email) {
+        return json(origin, { error: "Non authentifié" }, 401);
+      }
+      const studioId = String(payload.studioId || "").trim();
+      const placeIdOpt = typeof payload.placeId === "string" ? payload.placeId.trim() : "";
+      if (!studioId) {
+        return json(origin, { error: "studioId requis" }, 400);
+      }
+
+      const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: row, error: rowErr } = await admin
+        .from("inkflow_studios")
+        .select("id, email, google_place_id")
+        .eq("id", studioId)
+        .maybeSingle();
+
+      if (rowErr || !row?.id) {
+        return json(origin, { error: "Studio introuvable" }, 404);
+      }
+      const ownerEmail = String(row.email || "").toLowerCase();
+      if (ownerEmail !== email.toLowerCase()) {
+        return json(origin, { error: "Accès refusé" }, 403);
+      }
+
+      const pid = (placeIdOpt || (row.google_place_id as string | null) || "").trim();
+      if (!pid) {
+        return json(origin, { error: "Aucun lieu Google (place_id)" }, 400);
+      }
+
+      const details = await fetchPlaceDetails(pid);
+      const cache = {
+        rating: details.rating,
+        userRatingsTotal: details.userRatingsTotal,
+        reviews: details.reviews.slice(0, 12),
+        cachedAt: new Date().toISOString(),
+      };
+      await admin.from("inkflow_studios").update({
+        google_reviews_cache: cache,
+        updated_at: new Date().toISOString(),
+      }).eq("id", studioId);
+
+      return json(origin, { ok: true, ...details });
     }
 
     if (action === "text_search") {
