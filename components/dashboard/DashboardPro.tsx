@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen, Smartphone, Heart, Globe, FileCheck, Crown, ListOrdered, Eye, EyeOff, PanelsTopLeft, HelpCircle, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, ClipboardList, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen, Smartphone, Heart, Globe, FileCheck, Crown, ListOrdered, Eye, EyeOff, PanelsTopLeft, HelpCircle, type LucideIcon } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
 import { useProjectRequests } from '../../hooks/useProjectRequests';
 import { useIncomingBookings } from '../../hooks/useIncomingBookings';
-import { usePendingProjectRequestsCount } from '../../hooks/useNotificationCounts';
+import { usePendingDemandesCounts } from '../../hooks/usePendingDemandesCounts';
 import { useNotificationSync } from '../../hooks/useNotificationSync';
 import { BadgeNotification } from '../ui/BadgeNotification';
 import { useSubscriptionPermissions } from '../../hooks/useSubscriptionPermissions';
@@ -72,7 +72,6 @@ import { getSubscription } from '../../lib/subscriptionGuard';
 import { getPlanLimit } from '../../lib/subscriptionPlans';
 import { getStripePaymentLink, STRIPE_PAYMENT_LINKS } from '../../lib/stripePaymentLinks';
 import { useToast } from '../../contexts/ToastContext';
-import { ThemeToggle } from '../ThemeToggle';
 import { useTheme } from 'next-themes';
 import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
@@ -89,7 +88,7 @@ const iconProps = { className: 'w-5 h-5', strokeWidth: 1.5 };
 const tabs: { id: TabId | 'referral'; label: string; icon: React.ReactNode; badge?: 'pending'; href?: string }[] = [
   { id: 'overview', label: 'Vue d\'ensemble', icon: <LayoutDashboard {...iconProps} /> },
   // { id: 'analytics', label: 'Statistiques', icon: <BarChart3 {...iconProps} /> }, // V2
-  { id: 'requests', label: 'Demandes', icon: <MessageSquare {...iconProps} />, badge: 'pending' },
+  { id: 'requests', label: 'Demandes', icon: <ClipboardList {...iconProps} />, badge: 'pending' },
   { id: 'appointments', label: 'Rendez-vous', icon: <Calendar {...iconProps} /> },
   { id: 'flash', label: 'Galerie Flash', icon: <Image {...iconProps} /> },
   { id: 'clients', label: 'Clients', icon: <Users {...iconProps} /> },
@@ -228,8 +227,8 @@ export const DashboardPro: React.FC = () => {
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
   const { studioId, studioSlug, studioCsvImportSlots, refreshStudioSlug, subscriptionStatus, trialEndsAt, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, importClientsFromCsvRows, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, lastSyncedAt, retry } = useSupabaseSync();
   const { projectRequests, loading: projectRequestsLoading, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
-  const pendingRequestsCount = usePendingProjectRequestsCount(projectRequests);
   const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false);
+  const demandes = usePendingDemandesCounts(appointments, bookings, projectRequests);
   const { canAccessFeature, hasReachedLimit, getLimit } = useSubscriptionPermissions(studioId);
   const [paymentSuccessModalOpen, setPaymentSuccessModalOpen] = useState(false);
   const [welcomePaidPlan, setWelcomePaidPlan] = useState<SubscriptionPlan | null>(null);
@@ -1023,15 +1022,11 @@ export const DashboardPro: React.FC = () => {
       c.email?.toLowerCase() === apt.clientEmail?.toLowerCase() ||
       c.name?.toLowerCase() === apt.clientName?.toLowerCase()
     );
-    const threadMatch = messageThreads.find(t =>
-      t.clientEmail?.toLowerCase() === apt.clientEmail?.toLowerCase()
-    );
     return {
       appointment: apt,
       client: clientMatch ?? null,
-      thread: threadMatch ?? null,
     };
-  }, [clients, messageThreads]);
+  }, [clients]);
 
   const previewDataForDrawer = useMemo(() =>
     selectedAppointment ? buildClientPreviewData(selectedAppointment) : null,
@@ -1306,9 +1301,9 @@ export const DashboardPro: React.FC = () => {
                   >
                     <MessageSquare className="w-4 h-4 flex-shrink-0" />
                     <span className="flex-1 text-left">Demandes</span>
-                    {pendingRequestsCount > 0 && (
-                      <span className="min-w-[18px] h-[18px] px-1.5 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold rounded-full">
-                        {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+                    {demandes.total > 0 && (
+                      <span className="min-w-[18px] h-[18px] px-1.5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-sm">
+                        {demandes.total > 99 ? '99+' : demandes.total}
                       </span>
                     )}
                     <ChevronRight className={`w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 transition-transform duration-200 ${expandedMenus.requests ? 'rotate-90' : ''}`} />
@@ -1317,15 +1312,24 @@ export const DashboardPro: React.FC = () => {
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setRequestsSubTab('rdv'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
-                        En attente
+                        <span className="flex-1 text-left">En attente</span>
+                        {demandes.pendingRdv > 0 && (
+                          <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">{demandes.pendingRdv > 9 ? '9+' : demandes.pendingRdv}</span>
+                        )}
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setRequestsSubTab('bookings'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
-                        Vitrine
+                        <span className="flex-1 text-left">Vitrine</span>
+                        {demandes.pendingVitrine > 0 && (
+                          <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">{demandes.pendingVitrine > 9 ? '9+' : demandes.pendingVitrine}</span>
+                        )}
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setRequestsSubTab('projects'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
-                        Projets
+                        <span className="flex-1 text-left">Projets</span>
+                        {demandes.pendingProjects > 0 && (
+                          <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">{demandes.pendingProjects > 9 ? '9+' : demandes.pendingProjects}</span>
+                        )}
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setRequestsSubTab('history'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'history' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'history' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
@@ -1619,8 +1623,6 @@ export const DashboardPro: React.FC = () => {
             >
               <HelpCircle className="w-5 h-5" />
             </button>
-            {/* Theme toggle — toujours visible */}
-            <ThemeToggle />
             <div className="relative">
               <button
                 onClick={() => { setShowNotifications(!showNotifications); setShowProfileDropdown(false); }}
@@ -1885,7 +1887,7 @@ export const DashboardPro: React.FC = () => {
               setShowBookingModal={setShowBookingModal}
               setSelectedFlash={setSelectedFlash}
               setShowWidgetModal={setShowWidgetModal}
-              pendingRequestsCount={pendingRequestsCount}
+              pendingDemandesCount={demandes.total}
               recentDeposits={recentDeposits}
               overviewHeaderBgUrl={vitrineData?.coverImage ?? null}
               onAvatarClick={() => avatarInputRef.current?.click()}
@@ -1923,7 +1925,6 @@ export const DashboardPro: React.FC = () => {
               onAddAppointment={addAppointment}
               projectRequests={projectRequests}
               onUpdateProjectRequest={updateProjectRequestStatus}
-              onOpenMessageThread={(threadId) => { setOpenMessageThreadId(threadId); setActiveTab('messaging'); }}
               bookings={bookings}
               onUpdateBookingStatus={updateBookingStatus}
               bookingsLoading={bookingsLoading}
@@ -2886,9 +2887,9 @@ export const DashboardPro: React.FC = () => {
                       <Inbox className="w-4 h-4 text-neutral-600 dark:text-[var(--text-secondary)]" />
                     </div>
                     <span className="text-sm">Demandes</span>
-                    {pendingRequestsCount > 0 && (
-                      <span className="absolute top-2 right-2 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] font-bold">
-                        {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+                    {demandes.total > 0 && (
+                      <span className="absolute top-2 right-2 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold shadow-sm">
+                        {demandes.total > 99 ? '99+' : demandes.total}
                       </span>
                     )}
                   </button>
@@ -3008,7 +3009,7 @@ export const DashboardPro: React.FC = () => {
           >
             <span className="relative flex flex-col items-center">
               <Inbox className="w-6 h-6" />
-              <BadgeNotification count={pendingRequestsCount} className="-top-1 -right-2" />
+              <BadgeNotification count={demandes.total} showCount className="-top-1 -right-2" />
             </span>
             <span className="text-[10px] font-medium">Demandes</span>
           </button>
@@ -3065,7 +3066,6 @@ export const DashboardPro: React.FC = () => {
         data={previewDataForDrawer}
         studioId={studioId || ''}
         artistName={user?.name || 'Artiste'}
-        onOpenMessaging={() => { setSelectedAppointment(null); setActiveTab('messaging'); }}
         appointment={selectedAppointment}
         onUpdateAppointment={updateAppointment}
       />

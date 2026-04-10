@@ -188,7 +188,8 @@ export interface DashboardOverviewTabProps {
   setShowBookingModal: (show: boolean) => void;
   setSelectedFlash: (f: FlashDesign | null) => void;
   setShowWidgetModal: (show: boolean) => void;
-  pendingRequestsCount: number;
+  /** RDV + vitrine + projets en attente (pastilles / raccourcis) */
+  pendingDemandesCount: number;
   recentDeposits: Appointment[];
   /** Image de couverture vitrine (Paramètres → Vitrine) ; sinon image par défaut ci-dessus */
   overviewHeaderBgUrl?: string | null;
@@ -230,7 +231,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   setShowBookingModal,
   setSelectedFlash,
   setShowWidgetModal,
-  pendingRequestsCount,
+  pendingDemandesCount,
   studioSlug,
   studioId,
   useSupabase = false,
@@ -872,9 +873,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             onClick={() => setActiveTab('requests')}
               className="relative flex min-w-0 flex-col items-center gap-0.5 min-[400px]:gap-1 py-2 min-[400px]:py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] active:opacity-95 transition-all touch-manipulation"
           >
-            {pendingRequestsCount > 0 && (
+            {pendingDemandesCount > 0 && (
                 <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 text-[9px] font-bold flex items-center justify-center tabular-nums leading-none">
-                  {pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}
+                  {pendingDemandesCount > 9 ? '9+' : pendingDemandesCount}
                 </span>
             )}
               <Inbox className="w-[1.125rem] h-[1.125rem] min-[400px]:w-5 min-[400px]:h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} />
@@ -1005,19 +1006,19 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           )}
 
           {/* Widget "Actions Requises" — affiché uniquement si demandes en attente */}
-          {pendingRequestsCount > 0 && (
+          {pendingDemandesCount > 0 && (
             <button
               type="button"
               onClick={() => setActiveTab('requests')}
               className="w-full rounded-2xl border border-amber-400/30 dark:border-amber-500/25 bg-amber-50/80 dark:bg-amber-500/10 p-3 flex items-center gap-3 text-left active:scale-[0.99] transition-transform touch-manipulation min-h-[52px]"
-              aria-label={`Voir les ${pendingRequestsCount} demande${pendingRequestsCount > 1 ? 's' : ''} en attente`}
+              aria-label={`Voir les ${pendingDemandesCount} demande${pendingDemandesCount > 1 ? 's' : ''} en attente`}
             >
               <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center shrink-0">
                 <Inbox className="w-5 h-5 text-amber-600 dark:text-amber-400" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 leading-tight">
-                  {pendingRequestsCount} demande{pendingRequestsCount > 1 ? 's' : ''} en attente
+                  {pendingDemandesCount} demande{pendingDemandesCount > 1 ? 's' : ''} en attente
                 </p>
                 <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 mt-0.5">
                   Action requise · Répondre maintenant
@@ -1700,13 +1701,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 }
 
                 if (widgetId === 'requests-pending') {
-                  return pendingRequestsCount > 0 ? (
+                  return pendingDemandesCount > 0 ? (
                     <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
                       <button onClick={() => !isEditMode && setActiveTab('requests')} className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] transition-all text-left group">
                         <div className="flex items-center gap-4">
                           <div className="p-3 rounded-xl bg-violet-100 dark:bg-violet-500/10"><Inbox className="w-5 h-5 text-violet-600 dark:text-violet-400" /></div>
                           <div className="flex-1">
-                            <p className="text-sm font-semibold text-zinc-900 dark:text-white">{pendingRequestsCount} demandes</p>
+                            <p className="text-sm font-semibold text-zinc-900 dark:text-white">{pendingDemandesCount} demandes</p>
                             <p className="text-xs text-zinc-500 dark:text-zinc-500">En attente de réponse</p>
                           </div>
                           <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />

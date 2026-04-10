@@ -4,6 +4,8 @@ import { ArrowLeft, Heart, Calendar, Share2, MapPin, Clock, Ruler, Instagram, Ex
 import { supabase } from '../../lib/supabase';
 import { CX } from '../../components/client/clientExperienceTypes';
 import { useToast } from '../../contexts/ToastContext';
+import { SEO } from '../../components/SEO';
+import { APP_URL } from '../../lib/urls';
 
 interface FlashData {
   id: string;
