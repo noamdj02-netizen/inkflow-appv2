@@ -6,7 +6,7 @@ import { AlertCircle, Loader2, Check, Eye, EyeOff } from 'lucide-react';
 import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../../contexts/AuthContext';
 import { GoogleSignInButton } from '../GoogleSignInButton';
 import { loginSchema } from '../../lib/authValidation';
-import { sanitizePostAuthRedirect } from '../../lib/urls';
+import { resolvePostLoginPath } from '../../lib/postLoginRedirect';
 
 /** Mappe les erreurs Supabase Auth vers messages utilisateur */
 function getAuthErrorMessage(err: unknown): string {
@@ -49,10 +49,15 @@ export const LoginForm: React.FC = () => {
     try {
       await login(parsed.data.email, parsed.data.password);
       setSuccess(true);
-      const redirectUrl = sanitizePostAuthRedirect(
-        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) || '/dashboard'
-      );
-      try { sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY); } catch { /* ignore */ }
+      const rawFallback =
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) ||
+        '/dashboard';
+      try {
+        sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
+      } catch {
+        /* ignore */
+      }
+      const redirectUrl = await resolvePostLoginPath(rawFallback);
       window.history.pushState({}, '', redirectUrl);
       window.dispatchEvent(new Event('inkflow-navigate'));
     } catch (err) {

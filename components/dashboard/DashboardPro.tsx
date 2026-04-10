@@ -353,6 +353,11 @@ export const DashboardPro: React.FC = () => {
   const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null);
   const avatarCropBlobRef = React.useRef<string | null>(null);
   const [openMessageThreadId, setOpenMessageThreadId] = useState<string | null>(null);
+  /** Ouvre la fiche Demandes (feuille) depuis la messagerie */
+  const [openRequestSheetProjectId, setOpenRequestSheetProjectId] = useState<string | null>(null);
+  const [openRequestSheetBookingId, setOpenRequestSheetBookingId] = useState<string | null>(null);
+  const clearOpenRequestSheetProjectId = useCallback(() => setOpenRequestSheetProjectId(null), []);
+  const clearOpenRequestSheetBookingId = useCallback(() => setOpenRequestSheetBookingId(null), []);
   const [welcomeComplete, setWelcomeComplete] = useState(false);
   /** Onglet initial pour Demandes (ex: 'history' quand on clique sur l'alerte RDV sans acompte) */
   const [requestsInitialTab, setRequestsInitialTab] = useState<'rdv' | 'bookings' | 'projects' | 'history' | null>(null);
@@ -849,6 +854,11 @@ export const DashboardPro: React.FC = () => {
     return () => { supabase.removeChannel(channel); };
   }, [studioId, useSupabase]);
 
+  const messagingUnreadTotal = useMemo(
+    () => messageThreads.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0),
+    [messageThreads]
+  );
+
   // Portfolio items for PortfolioManager: derived from vitrine (single source of truth for page vitrine)
   const portfolioItemsFromVitrine = useMemo(() => {
     const list = vitrineData?.portfolio ?? [];
@@ -1129,6 +1139,13 @@ export const DashboardPro: React.FC = () => {
     if (activeTab !== 'requests') setRequestsInitialTab(null);
   }, [activeTab]);
 
+  /** Cible explicite (Clients → Projets, alerte acompte, etc.) : on synchronise la sidebar puis on libère pour ne pas écraser l’onglet interne ensuite. */
+  useEffect(() => {
+    if (activeTab !== 'requests' || requestsInitialTab == null) return;
+    setRequestsSubTab(requestsInitialTab);
+    setRequestsInitialTab(null);
+  }, [activeTab, requestsInitialTab]);
+
   // Scroll to top au changement d'onglet (fluidité UX)
   useEffect(() => {
     const el = document.querySelector('.app-shell-content');
@@ -1355,7 +1372,7 @@ export const DashboardPro: React.FC = () => {
                         : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
                     }`}
                   >
-                    <MessageSquare className="w-4 h-4 flex-shrink-0" />
+                    <ClipboardList className="w-4 h-4 flex-shrink-0" />
                     <span className="flex-1 text-left">Demandes</span>
                     {demandes.total > 0 && (
                       <span className="min-w-[18px] h-[18px] px-1.5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-sm">
@@ -1395,6 +1412,30 @@ export const DashboardPro: React.FC = () => {
                   )}
                 </div>
 
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleSidebarNav(() => {
+                      setOpenMessageThreadId(null);
+                      setActiveTab('messaging');
+                      setSidebarOpen(false);
+                    })
+                  }
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                    activeTab === 'messaging'
+                      ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                  }`}
+                >
+                  <MessageSquare className="w-4 h-4 flex-shrink-0" />
+                  <span className="flex-1 text-left">Messagerie</span>
+                  {messagingUnreadTotal > 0 && (
+                    <span className="min-w-[18px] h-[18px] px-1.5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-sm">
+                      {messagingUnreadTotal > 99 ? '99+' : messagingUnreadTotal}
+                    </span>
+                  )}
+                </button>
+
                 {/* Clients avec sous-menu */}
                 <div>
                   <button
@@ -1425,7 +1466,6 @@ export const DashboardPro: React.FC = () => {
                         Fidélité
                       </button>
                       )}
-                      {/* V2: Messagerie avancée masquée pour le MVP */}
                     </div>
                   )}
                 </div>
@@ -1934,6 +1974,7 @@ export const DashboardPro: React.FC = () => {
               onAlertNavigate={(alert) => {
                 if (alert.id === 'unpaid') {
                   setRequestsInitialTab('history');
+                  setRequestsSubTab('history');
                   setActiveTab('requests');
                 } else if (alert.type === 'warning') {
                   setActiveTab('finance');
@@ -1977,7 +2018,7 @@ export const DashboardPro: React.FC = () => {
             <RequestsDashboard
               studioId={studioId}
               studioSlug={studioSlug}
-              initialTab={requestsSubTab}
+              initialTab={requestsInitialTab ?? requestsSubTab}
               appointments={appointments}
               clients={clients}
               onUpdateAppointment={updateAppointment}
@@ -1987,6 +2028,16 @@ export const DashboardPro: React.FC = () => {
               bookings={bookings}
               onUpdateBookingStatus={updateBookingStatus}
               bookingsLoading={bookingsLoading}
+              onOpenProjectDiscussion={(threadId) => {
+                setOpenMessageThreadId(threadId);
+                setActiveTab('messaging');
+                setSidebarOpen(false);
+              }}
+              openRequestSheetProjectId={openRequestSheetProjectId}
+              onOpenRequestSheetProjectIdConsumed={clearOpenRequestSheetProjectId}
+              openRequestSheetBookingId={openRequestSheetBookingId}
+              onOpenRequestSheetBookingIdConsumed={clearOpenRequestSheetBookingId}
+              projectRequestsLoading={projectRequestsLoading}
             />
             </Suspense>
             </div>
@@ -2048,11 +2099,14 @@ export const DashboardPro: React.FC = () => {
               view={clientsView}
               projectRequests={projectRequests}
               projectRequestsLoading={projectRequestsLoading}
-              onOpenRequestsProjects={() => {
-                setActiveTab('requests');
+              onOpenRequestsProjects={() => handleSidebarNav(() => {
+                setOpenMessageThreadId(null);
+                setExpandedMenus((prev) => ({ ...prev, requests: true }));
+                setRequestsInitialTab('projects');
                 setRequestsSubTab('projects');
+                setActiveTab('requests');
                 setSidebarOpen(false);
-              }}
+              })}
             />
             </Suspense>
             )}
@@ -2064,11 +2118,30 @@ export const DashboardPro: React.FC = () => {
             <Suspense fallback={<DashboardLoadingSkeleton />}>
             <MessagingTab
               studioId={studioId || ''}
+              studioSlug={studioSlug}
               messageThreads={messageThreads}
               initialThreadId={openMessageThreadId}
               onInitialThreadOpened={() => setOpenMessageThreadId(null)}
               artistName={user?.name}
               studioName={user?.studioName}
+              onOpenLinkedProjectRequest={(projectId) =>
+                handleSidebarNav(() => {
+                  setOpenRequestSheetProjectId(projectId);
+                  setRequestsInitialTab('projects');
+                  setRequestsSubTab('projects');
+                  setActiveTab('requests');
+                  setSidebarOpen(false);
+                })
+              }
+              onOpenLinkedBookingRequest={(bookingId) =>
+                handleSidebarNav(() => {
+                  setOpenRequestSheetBookingId(bookingId);
+                  setRequestsInitialTab('bookings');
+                  setRequestsSubTab('bookings');
+                  setActiveTab('requests');
+                  setSidebarOpen(false);
+                })
+              }
             />
             </Suspense>
             </div>
@@ -2081,6 +2154,10 @@ export const DashboardPro: React.FC = () => {
               notifications={notifications}
               markNotificationAsRead={markNotificationAsRead}
               onNavigate={(notif) => {
+                if (notif.type === 'message' || notif.actionUrl?.includes('messaging')) {
+                  setActiveTab('messaging');
+                  return;
+                }
                 if (notif.type === 'booking') setActiveTab('requests');
                 else if (notif.type === 'payment') setActiveTab('finance');
                 else setActiveTab('overview');

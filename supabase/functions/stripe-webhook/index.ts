@@ -246,6 +246,24 @@ Deno.serve(async (req: Request) => {
 
     console.log("[stripe-webhook] Événement reçu:", event.type, "id:", event.id);
 
+    const { error: evInsErr } = await supabase.from("inkflow_stripe_processed_events").insert({
+      id: event.id as string,
+      event_type: event.type as string,
+    });
+    if (evInsErr) {
+      const dup =
+        evInsErr.code === "23505" ||
+        (typeof evInsErr.message === "string" && evInsErr.message.includes("duplicate"));
+      if (dup) {
+        console.log("[stripe-webhook] Événement déjà traité, ignoré:", event.id);
+        return new Response(JSON.stringify({ received: true, duplicate: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+      console.error("[stripe-webhook] Enregistrement événement:", evInsErr.message);
+    }
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
@@ -386,6 +404,50 @@ Deno.serve(async (req: Request) => {
           }
         }
 
+        const projectRequestId =
+          typeof session.metadata?.project_request_id === "string"
+            ? session.metadata.project_request_id.trim()
+            : "";
+        const threadIdFromMeta =
+          typeof session.metadata?.thread_id === "string"
+            ? session.metadata.thread_id.trim()
+            : "";
+
+        if (
+          type === "deposit" &&
+          studioId &&
+          projectRequestId &&
+          session.payment_status === "paid"
+        ) {
+          await supabase
+            .from("inkflow_project_requests")
+            .update({ status: "confirmed" })
+            .eq("id", projectRequestId)
+            .eq("studio_id", studioId);
+
+          const threadForReceipt = threadIdFromMeta || `pr_${projectRequestId}`;
+          const receiptUrlForChat = await fetchStripeReceiptUrl(session.id);
+          const receiptPayload = JSON.stringify({
+            kind: "payment_receipt",
+            amount: amountPaid,
+            currency: "EUR",
+            receiptUrl: receiptUrlForChat || undefined,
+            stripeSessionId: session.id,
+          });
+          const { error: msgErr } = await supabase.from("inkflow_messages").insert({
+            id: `msg_sys_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+            studio_id: studioId,
+            thread_id: threadForReceipt,
+            sender_type: "system",
+            sender_name: "InkFlow",
+            content: receiptPayload,
+            read: false,
+          });
+          if (msgErr) {
+            console.error("[stripe-webhook] inkflow_messages receipt:", msgErr.message);
+          }
+        }
+
         if (studioId) {
           const { data: studio } = await supabase
             .from("inkflow_studios")
@@ -468,6 +530,7 @@ Deno.serve(async (req: Request) => {
               studioCity: studioForEmail?.city ?? undefined,
               studioSiret: studioForEmail?.siret ?? undefined,
               studioSlug: studioForEmail?.slug ?? undefined,
+              fromProjectRequest: Boolean(projectRequestId),
             };
             const emailRes = await fetch(fnUrl, {
               method: "POST",
@@ -644,6 +707,13 @@ Deno.serve(async (req: Request) => {
             .update({ status: "past_due", updated_at: new Date().toISOString() })
             .eq("stripe_subscription_id", subId);
         }
+        break;
+      }
+
+      case "payment_intent.succeeded": {
+        console.log(
+          "[stripe-webhook] payment_intent.succeeded — flux Checkout déjà couvert par checkout.session.completed (pas d’action)",
+        );
         break;
       }
     }

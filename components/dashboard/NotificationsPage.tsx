@@ -18,6 +18,7 @@ const NOTIFICATION_ICONS: Record<Notification['type'], React.ReactNode> = {
   reminder: <Clock className="w-5 h-5 text-amber-500" />,
   cancellation: <AlertCircle className="w-5 h-5 text-red-500" />,
   review: <Star className="w-5 h-5 text-violet-500" />,
+  message: <MessageSquare className="w-5 h-5 text-sky-500" />,
 };
 
 const NOTIFICATION_COLORS: Record<Notification['type'], string> = {
@@ -26,6 +27,7 @@ const NOTIFICATION_COLORS: Record<Notification['type'], string> = {
   reminder: 'bg-amber-100 dark:bg-amber-500/20',
   cancellation: 'bg-red-100 dark:bg-red-500/20',
   review: 'bg-violet-100 dark:bg-violet-500/20',
+  message: 'bg-sky-100 dark:bg-sky-500/20',
 };
 
 const FILTER_LABELS: Record<FilterTab, string> = {

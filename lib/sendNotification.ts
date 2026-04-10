@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { invokeWithJwtRetry } from './edgeFunctionInvoke';
+import { getInvokeErrorMessage, invokeWithJwtRetry } from './edgeFunctionInvoke';
 import type { Notification } from '../types';
 
 const MAX_TEXT_LENGTH = 2000;
@@ -74,8 +74,7 @@ export async function testEmailConnection(): Promise<{
       logEdgeInvokeError('send-email-test', error, data);
       const msg =
         details ||
-        error.message ||
-        "Échec send-email-test — déployez la fonction : supabase functions deploy send-email-test";
+        getInvokeErrorMessage(error, "Échec send-email-test — déployez la fonction : supabase functions deploy send-email-test");
       return { ok: false, message: msg, details };
     }
     const d = data as { success?: boolean; error?: string; userMessage?: string; details?: string } | null;
@@ -230,20 +229,28 @@ export async function sendConversationLinkToClient(params: SendConversationLinkT
     };
     if (error) {
       const retryStatus = (error as { context?: { status?: number } })?.context?.status;
+      const em = getInvokeErrorMessage(error, '');
       const unauthorized = retryStatus === 401 || retryStatus === 461
-        || error?.message?.includes('401')
-        || error?.message?.includes('461')
-        || error?.message?.toLowerCase().includes('unauthorized');
-      const msg = unauthorized
-        ? 'Session expirée ou non autorisée (401). Reconnectez-vous puis réessayez.'
-        : error.message;
+        || em.includes('401')
+        || em.includes('461')
+        || em.toLowerCase().includes('unauthorized');
       logEdgeInvokeError('send-client-conversation-link', error, data);
       const errorDetails = await getErrorDetails();
       return { sent: false, unauthorized: unauthorized || undefined, errorDetails };
     }
-    if (data?.error) {
-      const errorDetails = (data as { userMessage?: string }).userMessage || data.error;
-      logEdgeInvokeError('send-client-conversation-link', data.error, data);
+    if (
+      data != null &&
+      typeof data === 'object' &&
+      'error' in data &&
+      (data as { error?: unknown }).error != null &&
+      (data as { error?: unknown }).error !== ''
+    ) {
+      const d = data as { userMessage?: string; error?: unknown };
+      const errField = d.error;
+      const errorDetails =
+        d.userMessage ??
+        (typeof errField === 'string' ? errField : String(errField));
+      logEdgeInvokeError('send-client-conversation-link', errField, data);
       return { sent: false, errorDetails };
     }
     return { sent: true };

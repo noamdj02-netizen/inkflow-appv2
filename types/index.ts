@@ -28,6 +28,8 @@ export interface Appointment {
   notes?: string;
   tattooType: 'custom' | 'flash';
   flashId?: string;
+  /** Lien optionnel vers inkflow_project_requests (demande vitrine / chat). */
+  projectRequestId?: string | null;
   location: 'arm' | 'leg' | 'back' | 'chest' | 'other';
   size: 'small' | 'medium' | 'large' | 'extra_large';
   images?: string[];
@@ -113,7 +115,7 @@ export interface Revenue {
 
 export interface Notification {
   id: string;
-  type: 'booking' | 'payment' | 'reminder' | 'cancellation' | 'review';
+  type: 'booking' | 'payment' | 'reminder' | 'cancellation' | 'review' | 'message';
   title: string;
   message: string;
   read: boolean;
@@ -137,7 +139,7 @@ export interface BookingFormData {
   agreedToDeposit: boolean;
 }
 
-export type ProjectRequestStatus = 'pending' | 'accepted' | 'rejected';
+export type ProjectRequestStatus = 'pending' | 'accepted' | 'confirmed' | 'rejected';
 
 export interface ProjectRequest {
   id: string;
@@ -183,7 +185,10 @@ export interface Booking {
   requestedTime: string | null;
   status: BookingStatus;
   referenceImages?: string[];
-  /** Photo profil client (URL) si connecté via l’espace client / OAuth au moment de la demande */
+  /**
+   * Photo profil client (URL) si connecté via l’espace client / OAuth au moment de la demande.
+   * Le fil messagerie partagé avec le pro utilise `id` (ex. `bk_…`) comme `thread_id`.
+   */
   clientAvatarUrl?: string;
   /** Zone du corps (optionnel, depuis formulaire vitrine) */
   placement?: string;
@@ -288,7 +293,7 @@ export interface Message {
   id: string;
   studioId: string;
   threadId: string;
-  senderType: 'artist' | 'client';
+  senderType: 'artist' | 'client' | 'system';
   senderName: string;
   content: string;
   read: boolean;

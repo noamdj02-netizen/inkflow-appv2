@@ -7,6 +7,7 @@
     "dev": "vite",
     "prebuild": "node scripts/generate-sitemap.mjs && node scripts/optimize-hero-image.mjs",
     "build": "vite build",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "generate-pwa-assets": "pwa-assets-generator",
     "generate-pwa-icons": "node scripts/generate-pwa-icons.mjs",

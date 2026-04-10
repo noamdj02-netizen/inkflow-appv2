@@ -15,7 +15,11 @@ const corsHeaders = {
 };
 
 function buildReminderHtml(apt: Record<string, unknown>, studioName: string, reminderType: string): string {
-  const timeLabel = reminderType === "2h" ? "dans 2 heures" : reminderType === "48h" ? "dans 2 jours" : "demain";
+  const timeLabel = reminderType === "2h"
+    ? "dans 2 heures"
+    : reminderType === "48h"
+    ? "dans 2 jours"
+    : "demain (J-1)";
   const safeStudio = escapeHtml(String(studioName));
   const safeName = escapeHtml(String(apt.client_name ?? ""));
   const infoContent = `<p style="margin:0 0 8px;color:#171717;font-size:14px;"><strong>Service :</strong> ${escapeHtml(String(apt.service ?? ""))}</p>
@@ -31,7 +35,7 @@ function buildReminderHtml(apt: Record<string, unknown>, studioName: string, rem
 function getReminderSubject(reminderType: string, studioName: string): string {
   if (reminderType === "2h") return `Rappel RDV dans 2h - ${studioName}`;
   if (reminderType === "48h") return `Rappel RDV J-2 - ${studioName}`;
-  return `Rappel RDV demain - ${studioName}`;
+  return `Rappel RDV J-1 - ${studioName}`;
 }
 
 Deno.serve(async (_req: Request) => {

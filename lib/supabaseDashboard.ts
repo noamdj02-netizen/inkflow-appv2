@@ -643,6 +643,7 @@ export function mapAppointmentFromDb(row: Record<string, unknown>): Appointment 
     location: (row.location as Appointment['location']) || 'arm',
     size: (row.size as Appointment['size']) || 'medium',
     consentFormSigned: Boolean(row.consent_form_signed),
+    projectRequestId: (row.project_request_id as string) || null,
     createdAt: (row.created_at as string) || new Date().toISOString(),
     updatedAt: (row.updated_at as string) || new Date().toISOString()
   };
@@ -675,7 +676,8 @@ export async function saveAppointmentToSupabase(studioId: string, apt: Appointme
     location: apt.location || null,
     size: apt.size || null,
     consent_form_signed: apt.consentFormSigned,
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
+    project_request_id: apt.projectRequestId ?? null,
   };
   const { error } = await supabase.from('inkflow_appointments').upsert(row, { onConflict: 'id' });
   if (error) {
@@ -684,6 +686,51 @@ export async function saveAppointmentToSupabase(studioId: string, apt: Appointme
     }
     throw error;
   }
+}
+
+/**
+ * RDV placeholder lié à une demande projet (messagerie / carte paiement) — réutilise la ligne existante si déjà créée.
+ */
+export async function ensurePlaceholderAppointmentForProject(
+  studioId: string,
+  pr: { id: string; clientName: string; clientEmail: string; description: string }
+): Promise<string> {
+  const { data: existing } = await supabase
+    .from('inkflow_appointments')
+    .select('id')
+    .eq('studio_id', studioId)
+    .eq('project_request_id', pr.id)
+    .maybeSingle();
+  if (existing?.id) return existing.id as string;
+
+  const now = new Date().toISOString();
+  const today = new Date().toISOString().split('T')[0];
+  const aptId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const serviceName = pr.description.length > 50 ? `${pr.description.slice(0, 47)}...` : pr.description;
+  const apt: Appointment = {
+    id: aptId,
+    clientId: '',
+    clientName: pr.clientName,
+    clientEmail: pr.clientEmail,
+    clientPhone: '',
+    date: today,
+    time: '10:00',
+    service: `Projet - ${serviceName}`,
+    duration: 60,
+    price: 0,
+    deposit: 0,
+    depositPaid: false,
+    status: 'pending',
+    tattooType: 'custom',
+    location: 'arm',
+    size: 'medium',
+    consentFormSigned: false,
+    createdAt: now,
+    updatedAt: now,
+    projectRequestId: pr.id,
+  };
+  await saveAppointmentToSupabase(studioId, apt);
+  return aptId;
 }
 
 export async function deleteAppointmentFromSupabase(aptId: string): Promise<void> {
@@ -852,8 +899,16 @@ export async function getProjectRequestsFromSupabase(studioId: string): Promise<
   return (data || []).map(mapProjectRequestFromDb);
 }
 
-export async function updateProjectRequestStatus(id: string, status: ProjectRequestStatus): Promise<void> {
-  const { error } = await supabase.from('inkflow_project_requests').update({ status }).eq('id', id);
+export async function updateProjectRequestStatus(
+  id: string,
+  status: ProjectRequestStatus,
+  studioId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('inkflow_project_requests')
+    .update({ status })
+    .eq('id', id)
+    .eq('studio_id', studioId);
   if (error) throw error;
 }
 

@@ -34,6 +34,8 @@ interface Payload {
   studioCity?: string;
   studioSiret?: string;
   studioSlug?: string;
+  /** Acompte lié à une demande de projet (messagerie) */
+  fromProjectRequest?: boolean;
 }
 
 const corsHeaders = {
@@ -164,12 +166,17 @@ function buildPaymentConfirmationHtml(payload: Payload): string {
           </p>`
       : "";
 
+  const projectNote = payload.fromProjectRequest
+    ? `<p style="margin:0 0 16px;font-size:14px;color:#52525b;line-height:1.55;">Votre projet est <strong>confirmé</strong> côté studio — la suite se passe dans la messagerie Inkflow.</p>`
+    : "";
+
   const bodyHtml = `
           <p style="${EMAIL_STYLES.text}">
             Bonjour ${safeClientName}, nous vous confirmons la bonne réception de votre paiement${
     hasRdv ? " et la réservation de votre créneau." : "."
   }
           </p>
+          ${projectNote}
           ${studioMetaHtml}
           ${rdvBlock}
           <p style="margin:0 0 12px;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:0.06em;">Détail du paiement</p>

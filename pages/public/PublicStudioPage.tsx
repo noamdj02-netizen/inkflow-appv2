@@ -67,12 +67,12 @@ export const PublicStudioPage: React.FC<PublicStudioPageProps> = ({ studioSlug }
       </header>
 
       <div className="relative h-64 md:h-96 overflow-hidden">
-        <img src={studio.coverImage} alt={studio.name} className="w-full h-full object-cover" />
+        <img src={studio.coverImage} alt={studio.name} decoding="async" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-8">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-end gap-4 sm:gap-6">
-              <img src={studio.avatar} alt={studio.name} className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-xl sm:rounded-2xl border-2 sm:border-4 border-white shadow-xl object-cover flex-shrink-0" />
+              <img src={studio.avatar} alt={studio.name} decoding="async" className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-xl sm:rounded-2xl border-2 sm:border-4 border-white shadow-xl object-cover flex-shrink-0" />
               <div className="flex-1 text-white pb-2 min-w-0">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 truncate">{studio.name}</h1>
                 <div className="flex items-center gap-4 text-sm">
@@ -105,7 +105,7 @@ export const PublicStudioPage: React.FC<PublicStudioPageProps> = ({ studioSlug }
               <div className="grid sm:grid-cols-2 gap-6">
                 {studio.artists.map((artist, idx) => (
                   <div key={idx} className="flex items-start gap-4 p-4 rounded-xl bg-neutral-50">
-                    <img src={artist.avatar} alt={artist.name} className="w-16 h-16 rounded-full bg-neutral-200" />
+                    <img src={artist.avatar} alt={artist.name} loading="lazy" decoding="async" className="w-16 h-16 rounded-full bg-neutral-200" />
                     <div>
                       <h3 className="font-bold text-lg">{artist.name}</h3>
                       <div className="flex flex-wrap gap-2 mt-2">
@@ -129,7 +129,7 @@ export const PublicStudioPage: React.FC<PublicStudioPageProps> = ({ studioSlug }
               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {studio.flashDesigns.map((flash) => (
                   <div key={flash.id} className="group relative aspect-square rounded-xl overflow-hidden cursor-pointer" onClick={() => setSelectedFlash(flash as FlashDesign)}>
-                    <img src={flash.imageUrl} alt={flash.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                    <img src={flash.imageUrl} alt={flash.title} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
                         <h3 className="font-bold">{flash.title}</h3>
@@ -149,7 +149,7 @@ export const PublicStudioPage: React.FC<PublicStudioPageProps> = ({ studioSlug }
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {studio.portfolio.map((img, idx) => (
                   <div key={idx} className="aspect-square rounded-xl overflow-hidden">
-                    <img src={img} alt={`Portfolio ${idx + 1}`} className="w-full h-full object-cover hover:scale-110 transition-transform duration-300" />
+                    <img src={img} alt={`Portfolio ${idx + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover hover:scale-110 transition-transform duration-300" />
                   </div>
                 ))}
               </div>

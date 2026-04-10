@@ -6,6 +6,7 @@ import { CX } from '../../components/client/clientExperienceTypes';
 import { useToast } from '../../contexts/ToastContext';
 import { SEO } from '../../components/SEO';
 import { APP_URL } from '../../lib/urls';
+import { isClientPortalFullyReady } from '../../lib/clientOnboardingGate';
 
 interface FlashData {
   id: string;
@@ -43,6 +44,25 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
   const [optimisticFav, setOptimisticFav] = useOptimistic(isFavorited);
   const [isPending, startTransition] = useTransition();
   const [imageBroken, setImageBroken] = useState(false);
+  const [portalGate, setPortalGate] = useState<'unknown' | 'ok' | 'need_onboarding'>('unknown');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user) {
+        if (!cancelled) setPortalGate('ok');
+        return;
+      }
+      const ready = await isClientPortalFullyReady(session.user);
+      if (!cancelled) setPortalGate(ready ? 'ok' : 'need_onboarding');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setImageBroken(false);
@@ -111,6 +131,11 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
   const toggleFavorite = async () => {
     if (!sessionEmail || !flash) {
       toast.error('Connecte-toi pour ajouter aux favoris');
+      return;
+    }
+    if (portalGate === 'need_onboarding') {
+      toast.info('Complète ton profil et le questionnaire santé pour utiliser les favoris.');
+      window.location.href = '/onboarding/finaliser-profil';
       return;
     }
 
@@ -353,6 +378,13 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
           </motion.button>
           <a
             href={flash.studio_slug ? `/book/${flash.studio_slug}?flash=${flash.id}` : '#'}
+            onClick={(e) => {
+              if (portalGate === 'need_onboarding') {
+                e.preventDefault();
+                toast.info('Complète ton profil et le questionnaire santé pour réserver.');
+                window.location.href = '/onboarding/finaliser-profil';
+              }
+            }}
             className="flex-1 flex items-center justify-center gap-2 h-14 rounded-2xl text-base font-bold transition-all active:scale-[0.98]"
             style={{ background: flash.available ? CX.accent : CX.muted, color: '#000' }}
           >

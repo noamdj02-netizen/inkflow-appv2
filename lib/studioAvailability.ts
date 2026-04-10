@@ -44,21 +44,31 @@ export interface StudioAvailabilityResponse {
 }
 
 /**
- * Récupère les créneaux occupés et les paramètres de disponibilité pour un studio.
- * Utilise l'Edge Function get-studio-availability.
+ * Repli si l’Edge Function `get-studio-availability` est indisponible (non déployée, 5xx, réseau).
+ * Créneaux type vitrine sans créneaux occupés — le tatoueur peut quand même proposer une date.
  */
-export async function fetchStudioAvailability(studioId: string): Promise<StudioAvailabilityResponse> {
-  const { data, error } = await supabase.functions.invoke<StudioAvailabilityResponse>('get-studio-availability', {
-    body: { studioId },
-  });
-  if (error) throw error;
-  if (!data) throw new Error('Aucune donnée retournée');
+export function createFallbackAvailabilityResponse(): StudioAvailabilityResponse {
+  return {
+    busySlots: {},
+    customSlots: [],
+    bookingWindowDays: 60,
+    offDays: null,
+    slotDuration: 60,
+    bufferTime: 0,
+    overrunMargin: 0,
+    maxDailyBookings: 8,
+    advanceBookingDays: 0,
+    weeklySchedule: null,
+    dynamicSlotsByDay: null,
+  };
+}
+
+function normalizeAvailabilityPayload(data: StudioAvailabilityResponse): StudioAvailabilityResponse {
   return {
     busySlots: data.busySlots || {},
     customSlots: data.customSlots || [],
     bookingWindowDays: data.bookingWindowDays ?? 60,
     offDays: Array.isArray(data.offDays) ? data.offDays : null,
-    // Nouveaux paramètres avec valeurs par défaut
     slotDuration: data.slotDuration ?? 60,
     bufferTime: data.bufferTime ?? 0,
     overrunMargin: data.overrunMargin ?? 0,
@@ -67,6 +77,51 @@ export async function fetchStudioAvailability(studioId: string): Promise<StudioA
     weeklySchedule: data.weeklySchedule ?? null,
     dynamicSlotsByDay: data.dynamicSlotsByDay ?? null,
   };
+}
+
+export type FetchStudioAvailabilityMeta = {
+  availability: StudioAvailabilityResponse;
+  /** True si l’Edge Function a échoué et que les dispos par défaut ont été utilisées */
+  usedFallback: boolean;
+};
+
+/**
+ * Comme {@link fetchStudioAvailability} mais indique si le repli local a été utilisé (affichage UI).
+ */
+export async function fetchStudioAvailabilityMeta(studioId: string): Promise<FetchStudioAvailabilityMeta> {
+  try {
+    const { data, error } = await supabase.functions.invoke<StudioAvailabilityResponse | { error?: string }>(
+      'get-studio-availability',
+      {
+        body: { studioId },
+      }
+    );
+    if (error) throw error;
+    if (!data || typeof data !== 'object') throw new Error('Aucune donnée retournée');
+    if ('error' in data && !('busySlots' in data)) {
+      throw new Error(typeof (data as { error?: string }).error === 'string' ? (data as { error: string }).error : 'Erreur serveur');
+    }
+    return {
+      availability: normalizeAvailabilityPayload(data as StudioAvailabilityResponse),
+      usedFallback: false,
+    };
+  } catch (e) {
+    console.warn('[InkFlow] get-studio-availability indisponible, repli sur dispos par défaut.', studioId, e);
+    return {
+      availability: createFallbackAvailabilityResponse(),
+      usedFallback: true,
+    };
+  }
+}
+
+/**
+ * Récupère les créneaux occupés et les paramètres de disponibilité pour un studio.
+ * Utilise l'Edge Function get-studio-availability.
+ * Ne rejette jamais : en cas d’échec, retourne {@link createFallbackAvailabilityResponse} (log console).
+ */
+export async function fetchStudioAvailability(studioId: string): Promise<StudioAvailabilityResponse> {
+  const { availability } = await fetchStudioAvailabilityMeta(studioId);
+  return availability;
 }
 
 /** Créneaux horaires par défaut du studio (10h-18h, toutes les 2h) */

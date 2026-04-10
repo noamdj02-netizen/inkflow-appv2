@@ -384,6 +384,8 @@ export type Database = {
           loyalty_j30_sent_at: string | null
           loyalty_j7_sent_at: string | null
           price: number | null
+          project_request_id: string | null
+          feedback_email_sent_at: string | null
           reminder_sent_at: string | null
           service: string
           size: string | null
@@ -414,6 +416,8 @@ export type Database = {
           loyalty_j30_sent_at?: string | null
           loyalty_j7_sent_at?: string | null
           price?: number | null
+          project_request_id?: string | null
+          feedback_email_sent_at?: string | null
           reminder_sent_at?: string | null
           service: string
           size?: string | null
@@ -444,6 +448,8 @@ export type Database = {
           loyalty_j30_sent_at?: string | null
           loyalty_j7_sent_at?: string | null
           price?: number | null
+          project_request_id?: string | null
+          feedback_email_sent_at?: string | null
           reminder_sent_at?: string | null
           service?: string
           size?: string | null
@@ -1492,6 +1498,27 @@ export type Database = {
           },
         ]
       }
+      inkflow_native_device_tokens: {
+        Row: {
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          platform?: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       inkflow_notifications: {
         Row: {
           action_url: string | null
@@ -1582,6 +1609,7 @@ export type Database = {
           created_at: string | null
           currency: string | null
           id: string
+          project_request_id: string | null
           status: string
           stripe_payment_intent: string | null
           stripe_session_id: string | null
@@ -1597,6 +1625,7 @@ export type Database = {
           created_at?: string | null
           currency?: string | null
           id: string
+          project_request_id?: string | null
           status?: string
           stripe_payment_intent?: string | null
           stripe_session_id?: string | null
@@ -1612,6 +1641,7 @@ export type Database = {
           created_at?: string | null
           currency?: string | null
           id?: string
+          project_request_id?: string | null
           status?: string
           stripe_payment_intent?: string | null
           stripe_session_id?: string | null
@@ -1893,6 +1923,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      inkflow_stripe_processed_events: {
+        Row: {
+          event_type: string | null
+          id: string
+          processed_at: string
+        }
+        Insert: {
+          event_type?: string | null
+          id: string
+          processed_at?: string
+        }
+        Update: {
+          event_type?: string | null
+          id?: string
+          processed_at?: string
+        }
+        Relationships: []
       }
       inkflow_studios: {
         Row: {
@@ -2736,6 +2784,17 @@ export type Database = {
           id: string
           latitude: number
           longitude: number
+          slug: string
+          studio_name: string
+        }[]
+      }
+      get_public_message_studio_header: {
+        Args: { p_thread_id: string }
+        Returns: {
+          avatar_url: string | null
+          id: string
+          name: string
+          portfolio_cover_url: string | null
           slug: string
           studio_name: string
         }[]

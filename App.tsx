@@ -41,6 +41,9 @@ const ClientVitrineEmbedPage = lazy(() => import('./pages/client/ClientStudioEmb
 const ClientFlashToolsEmbedPage = lazy(() => import('./pages/client/ClientStudioEmbedPage').then(m => ({ default: m.ClientFlashToolsEmbedPage })));
 const ClientDashboard = lazy(() => import('./pages/public/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
 const ClientHealthOnboardingPage = lazy(() => import('./pages/client/ClientHealthOnboardingPage').then(m => ({ default: m.ClientHealthOnboardingPage })));
+const ClientOnboardingFinalizePage = lazy(() =>
+  import('./pages/client/ClientOnboardingFinalizePage').then((m) => ({ default: m.ClientOnboardingFinalizePage }))
+);
 const ArtistPage = lazy(() => import('./pages/vitrine/ArtistPage').then(m => ({ default: m.ArtistPage })));
 const FlashPage = lazy(() => import('./pages/vitrine/FlashPage').then(m => ({ default: m.FlashPage })));
 const DiscoverHomePage = lazy(() => import('./pages/discover/DiscoverHomePage').then(m => ({ default: m.DiscoverHomePage })));
@@ -193,6 +196,7 @@ const Router: React.FC = () => {
     { path: '/referral', component: ReferralPage, requiresAuth: true },
     { path: '/admin/debug-experience', component: DebugExperiencePage, requiresAuth: true },
     // ── Portail client "My Inkflow" ─────────────────────────────────────────
+    { path: /^\/onboarding\/finaliser-profil\/?$/, component: ClientOnboardingFinalizePage },
     { path: '/client', component: ClientPortalLoginPage },
     { path: /^\/client\/vitrine\/?$/, component: ClientVitrineEmbedPage },
     { path: /^\/client\/studio\/flash\/?$/, component: ClientFlashToolsEmbedPage },

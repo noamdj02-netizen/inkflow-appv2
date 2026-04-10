@@ -83,7 +83,7 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
     setGeocoding(true);
     setError(null);
     const result = await geocodeAddressDetailed(addr);
-    if (!result.ok) {
+    if (result.ok === false) {
       setError(result.message);
     } else {
       setLat(result.data.lat);

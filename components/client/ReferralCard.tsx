@@ -69,7 +69,7 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({ referralCount, share
           type="button"
           onClick={copy}
           className="w-11 h-11 rounded-2xl flex items-center justify-center border transition-all active:scale-[0.96]"
-          style={{ borderColor: CX.border, background: CX.glass }}
+          style={{ borderColor: CX.border, background: CX.surfaceGlass }}
         >
           {copied ? <CheckCircle className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" style={{ color: CX.accent }} />}
         </button>
@@ -77,7 +77,7 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({ referralCount, share
           type="button"
           onClick={share}
           className="w-11 h-11 rounded-2xl flex items-center justify-center border transition-all active:scale-[0.96]"
-          style={{ borderColor: CX.border, background: CX.glass }}
+          style={{ borderColor: CX.border, background: CX.surfaceGlass }}
         >
           <Share2 className="w-5 h-5" style={{ color: CX.accent }} />
         </button>

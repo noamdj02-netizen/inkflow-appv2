@@ -173,3 +173,22 @@ Le tatoueur active les notifications push dans **Paramètres → Notifications**
 Une **notification de bienvenue au moment du clic sur le lien de confirmation d’email** n’est en pratique **pas réaliste** sur le web : l’utilisateur n’a en général **pas encore** souscrit au Web Push dans le navigateur à cette étape. Les événements Auth (`auth.users`) ne déclenchent pas non plus le même pipeline que les webhooks métier (`notification-webhook`).
 
 **Recommandation MVP web** : considérer un « welcome push » comme **hors scope** ; faire activer les notifications depuis **Paramètres → Notifications** après la première connexion. Une phase ultérieure (app native, FCM/Expo) pourrait reprendre ce besoin hors navigateur.
+
+---
+
+## 9. Push natif (préparation — hors Web Push VAPID)
+
+Pour une **app native** (React Native / Expo / build natif), les jetons FCM/APNs ne passent pas par `inkflow_push_subscriptions` (Web Push). Ils sont stockés dans **`inkflow_native_device_tokens`** (`user_id`, `token`, `platform`, `updated_at`), avec RLS : l’utilisateur ne lit/écrit que ses lignes.
+
+### Edge Function `register-native-device`
+
+- **POST** `/functions/v1/register-native-device`
+- **Headers** : `Authorization: Bearer <JWT utilisateur>` (session Supabase Auth)
+- **Body JSON** : `{ "token": "<device token>", "platform": "ios" | "android" | "unknown" }`
+- **Réponse** : `{ "ok": true }`
+
+L’envoi effectif vers FCM/APNs n’est **pas** implémenté tant que les clés serveur (Firebase, certificats Apple, etc.) ne sont pas configurées — cette étape enregistre seulement le jeton côté base.
+
+```bash
+npx supabase functions deploy register-native-device
+```

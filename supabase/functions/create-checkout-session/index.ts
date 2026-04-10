@@ -23,6 +23,8 @@ interface CheckoutPayload {
   placement?: string;
   clientNotes?: string;
   clientInstagram?: string;
+  projectRequestId?: string;
+  threadId?: string;
 }
 
 const META_MAX = 450;
@@ -83,6 +85,8 @@ Deno.serve(async (req: Request) => {
     const placementMeta = trimMeta(payload.placement, META_MAX);
     const notesMeta = trimMeta(payload.clientNotes, META_MAX);
     const instagramMeta = trimMeta(payload.clientInstagram, META_MAX);
+    const projectRequestMeta = trimMeta(payload.projectRequestId, 120);
+    const threadMeta = trimMeta(payload.threadId, 200);
     const detailLine = [
       placementMeta && `Emplacement : ${placementMeta}`,
       notesMeta && `Précisions : ${notesMeta}`,
@@ -119,6 +123,8 @@ Deno.serve(async (req: Request) => {
       "metadata[client_email]": payload.clientEmail,
       "metadata[service_name]": payload.serviceName,
       ...(payload.flashId ? { "metadata[flash_id]": payload.flashId } : {}),
+      ...(projectRequestMeta ? { "metadata[project_request_id]": projectRequestMeta } : {}),
+      ...(threadMeta ? { "metadata[thread_id]": threadMeta } : {}),
       ...(placementMeta ? { "metadata[placement]": placementMeta } : {}),
       ...(notesMeta ? { "metadata[client_notes]": notesMeta } : {}),
       ...(instagramMeta ? { "metadata[client_instagram]": instagramMeta } : {}),
@@ -161,6 +167,7 @@ Deno.serve(async (req: Request) => {
       id: `pay_${Date.now()}`,
       studio_id: payload.studioId,
       appointment_id: payload.appointmentId || null,
+      project_request_id: projectRequestMeta || null,
       stripe_session_id: session.id,
       amount: payload.amount,
       currency: "eur",

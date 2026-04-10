@@ -1,3 +1,4 @@
+import { compressImageFileToWebP } from './imageResize';
 import { supabase } from './supabase';
 import { safeExternalHttpUrl } from './urls';
 import type { Booking, BookingStatus, VitrineBookingFormData } from '../types';
@@ -114,12 +115,15 @@ export async function uploadBookingReferenceImages(
   const urls: string[] = [];
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const safeExt = ['jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'jpg';
-    const path = `${FOLDER_BOOKING_REFS}/${prefix}_${i}.${safeExt}`;
+    const blob = await compressImageFileToWebP(file);
+    const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+    const path = `${FOLDER_BOOKING_REFS}/${prefix}_${i}.${ext}`;
     const { data, error } = await supabase.storage
       .from(BUCKET_BOOKING_REFS)
-      .upload(path, file, { upsert: false });
+      .upload(path, blob, {
+        upsert: false,
+        contentType: blob.type || 'image/jpeg',
+      });
     if (error) throw error;
     const { data: urlData } = supabase.storage.from(BUCKET_BOOKING_REFS).getPublicUrl(data.path);
     urls.push(urlData.publicUrl);

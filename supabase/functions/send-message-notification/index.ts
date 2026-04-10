@@ -13,6 +13,61 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "
 /** URL absolue de l'app. En prod : https://app.ink-flow.me. Définir APP_URL dans Supabase Secrets. */
 const APP_URL = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
 
+function truncateText(s: string, max: number): string {
+  const t = (s || "").trim();
+  return t.length <= max ? t : t.slice(0, max) + "…";
+}
+
+/** Notification in-app + Web Push (abonnements studio), après email côté pro */
+async function notifyStudioInAppAndPush(
+  supabase: ReturnType<typeof createClient>,
+  studioId: string,
+  senderName: string,
+  messagePreview: string,
+  threadId: string
+): Promise<void> {
+  const msgShort = truncateText(messagePreview, 500);
+  const title = `Message de ${truncateText(senderName, 120)}`;
+  const id = crypto.randomUUID();
+  const { error: insErr } = await supabase.from("inkflow_notifications").insert({
+    id,
+    studio_id: studioId,
+    type: "message",
+    title,
+    message: msgShort,
+    read: false,
+    action_url: "/messaging",
+    created_at: new Date().toISOString(),
+  });
+  if (insErr) {
+    console.error("inkflow_notifications insert (message):", insErr);
+  }
+
+  const pushUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-push-notification`;
+  try {
+    const res = await fetch(pushUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({
+        studioId,
+        title: "Nouveau message",
+        body: `${truncateText(senderName, 40)} : ${truncateText(msgShort, 100)}`,
+        url: `${APP_URL}/dashboard`,
+        tag: `inkflow-chat-${threadId}`,
+      }),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      console.error("send-push-notification:", res.status, t);
+    }
+  } catch (e) {
+    console.error("send-push-notification fetch:", e);
+  }
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -135,6 +190,15 @@ Deno.serve(async (req: Request) => {
         subject: `Nouveau message de ${payload.senderName} — InkFlow`,
         html,
       });
+      if (sent) {
+        await notifyStudioInAppAndPush(
+          supabase,
+          payload.studioId,
+          payload.senderName,
+          payload.messagePreview,
+          payload.threadId
+        );
+      }
       return new Response(
         JSON.stringify(sent ? { success: true } : { success: false, error: "Email send failed" }),
         { headers: { "Content-Type": "application/json", ...corsHeaders } }

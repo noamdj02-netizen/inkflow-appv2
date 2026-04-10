@@ -3,7 +3,7 @@
  * Même structure que le dashboard studio (app-shell : sidebar, header, carte centrale, colonne droite).
  * Couleurs : `lib/clientDashboardTheme.ts` → `CLIENT_DASHBOARD_THEME`.
  */
-import React, { useEffect, useRef, useState, useCallback, useMemo, useReducer } from 'react';
+import React, { Fragment, useEffect, useRef, useState, useCallback, useMemo, useReducer } from 'react';
 import L from 'leaflet';
 import {
   Home,
@@ -27,6 +27,7 @@ import {
   Maximize2,
   X,
   ClipboardList,
+  MessageCircle,
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { supabase } from '../../lib/supabase';
@@ -35,6 +36,7 @@ import { clientNavigate } from '../../lib/clientAppNavigate';
 import { getFavoriteFlashIds, isFavoriteFlashId, toggleFavoriteFlashId } from '../../lib/clientFavoritesLocal';
 import { CLIENT_DASHBOARD_THEME, buildClientDesignTokens } from '../../lib/clientDashboardTheme';
 import { useToast } from '../../contexts/ToastContext';
+import { isClientPortalFullyReady } from '../../lib/clientOnboardingGate';
 import {
   loadClientDiscoveryStudios,
   type NearbyStudio,
@@ -255,12 +257,17 @@ function MapHero({
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = studiosWithCoords.map((s, i) => {
       const pal = PALETTES[i % PALETTES.length];
-      const label = initials(s.studio_name).slice(0, 2);
+      const label = initials(s.studio_name).slice(0, 2) || '?';
+      const thumb = getStudioThumbnailUrl(s);
+      const shadow = `0 0 16px ${pal.dot}44,0 2px 8px rgba(0,0,0,0.12)`;
+      const html = thumb
+        ? `<div style="width:38px;height:38px;border-radius:50%;border:2px solid ${pal.dot};overflow:hidden;box-shadow:${shadow};background:${D.contentCardBg}"><img src=${JSON.stringify(thumb)} alt="" width="38" height="38" style="display:block;width:100%;height:100%;object-fit:cover" loading="lazy" decoding="async" /></div>`
+        : `<div style="width:38px;height:38px;border-radius:50%;border:2px solid ${pal.dot};background:${D.contentCardBg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${D.text};box-shadow:${shadow};font-family:-apple-system,BlinkMacSystemFont,sans-serif;">${label}</div>`;
       const icon = L.divIcon({
         className: '',
         iconSize: [38, 38],
         iconAnchor: [19, 19],
-        html: `<div style="width:38px;height:38px;border-radius:50%;border:2px solid ${pal.dot};background:${D.contentCardBg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${D.text};box-shadow:0 0 16px ${pal.dot}44,0 2px 8px rgba(0,0,0,0.12);font-family:-apple-system,BlinkMacSystemFont,sans-serif;">${label}</div>`,
+        html,
       });
       const marker = L.marker([s.latitude!, s.longitude!], { icon }).addTo(mapRef.current!);
       marker.on('click', () => onDotClick(s));
@@ -402,13 +409,15 @@ function ArtistPill({ studio, index, onClick }: { studio: NearbyStudio; index: n
 
 // ─── Flash card vertical ──────────────────────────────────────────────────────
 function FlashCard({
-  flash, studioIdx, studioCity, onClick, onFavoritesDirty,
+  flash, studioIdx, studioCity, onClick, onFavoritesDirty, bookingActionsEnabled = true,
 }: {
   flash: FlashPreview;
   studioIdx: number;
   studioCity: string | null;
   onClick: () => void;
   onFavoritesDirty?: () => void;
+  /** Faux tant que profil + santé incomplets (utilisateur connecté). */
+  bookingActionsEnabled?: boolean;
 }) {
   const toast = useToast();
   const pal = PALETTES[studioIdx % PALETTES.length];
@@ -423,6 +432,11 @@ function FlashCard({
   const onHeart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!bookingActionsEnabled) {
+      toast.info('Complète ton profil et le questionnaire santé pour utiliser les favoris.');
+      window.location.href = '/onboarding/finaliser-profil';
+      return;
+    }
     const now = toggleFavoriteFlashId(flash.id);
     onFavoritesDirty?.();
     toast.success(now ? 'Ajouté aux favoris' : 'Retiré des favoris');
@@ -584,7 +598,7 @@ function FlashCard({
 
 // ─── Flash detail sheet ───────────────────────────────────────────────────────
 function FlashSheet({
-  flash, studioIdx, studio, onClose, onFavoritesDirty, viewerStudioSlug,
+  flash, studioIdx, studio, onClose, onFavoritesDirty, viewerStudioSlug, bookingActionsEnabled = true,
 }: {
   flash: FlashPreview;
   studioIdx: number;
@@ -593,6 +607,7 @@ function FlashSheet({
   onFavoritesDirty?: () => void;
   /** Slug du studio connecté (tatoueur) — si égal au flash, affiche les liens d’édition */
   viewerStudioSlug?: string | null;
+  bookingActionsEnabled?: boolean;
 }) {
   const toast = useToast();
   const pal = PALETTES[studioIdx % PALETTES.length];
@@ -650,6 +665,11 @@ function FlashSheet({
   };
 
   const goBook = () => {
+    if (!bookingActionsEnabled) {
+      toast.info('Complète ton profil et le questionnaire santé pour réserver.');
+      window.location.href = '/onboarding/finaliser-profil';
+      return;
+    }
     if (!studioSlug) {
       toast.error('Impossible de réserver : studio introuvable.');
       return;
@@ -659,6 +679,11 @@ function FlashSheet({
   };
 
   const onSheetHeart = () => {
+    if (!bookingActionsEnabled) {
+      toast.info('Complète ton profil et le questionnaire santé pour utiliser les favoris.');
+      window.location.href = '/onboarding/finaliser-profil';
+      return;
+    }
     const now = toggleFavoriteFlashId(flash.id);
     onFavoritesDirty?.();
     toast.success(now ? 'Ajouté aux favoris' : 'Retiré des favoris');
@@ -1094,13 +1119,14 @@ function ClientMobileTabBar({ active, onChange }: { active: Tab; onChange: (t: T
 // TAB — EXPLORER
 // ══════════════════════════════════════════════════════════════════════════════
 function TabExplore({
-  studios, allFlashes, onFlashClick, exploreSearchFocusNonce, onFavoritesDirty,
+  studios, allFlashes, onFlashClick, exploreSearchFocusNonce, onFavoritesDirty, bookingActionsEnabled = true,
 }: {
   studios: NearbyStudio[];
   allFlashes: { flash: FlashPreview; studioIdx: number; studio: NearbyStudio | null }[];
   onFlashClick: (f: FlashPreview, si: number, s: NearbyStudio | null) => void;
   exploreSearchFocusNonce: number;
   onFavoritesDirty?: () => void;
+  bookingActionsEnabled?: boolean;
 }) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
@@ -1190,14 +1216,16 @@ function TabExplore({
       {filtered.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(152px,1fr))] [grid-auto-rows:minmax(0,1fr)] gap-3 sm:gap-4 mb-8 items-stretch">
           {filtered.map(({ flash, studioIdx, studio: s }) => (
-            <FlashCard
-              key={flash.id}
-              flash={flash}
-              studioIdx={studioIdx}
-              studioCity={discoveryLocationLine(s)}
-              onFavoritesDirty={onFavoritesDirty}
-              onClick={() => onFlashClick(flash, studioIdx, s)}
-            />
+            <Fragment key={flash.id}>
+              <FlashCard
+                flash={flash}
+                studioIdx={studioIdx}
+                studioCity={discoveryLocationLine(s)}
+                onFavoritesDirty={onFavoritesDirty}
+                bookingActionsEnabled={bookingActionsEnabled}
+                onClick={() => onFlashClick(flash, studioIdx, s)}
+              />
+            </Fragment>
           ))}
         </div>
       ) : (
@@ -1255,10 +1283,12 @@ function TabFavorites({
   allFlashes,
   onFlashClick,
   onFavoritesDirty,
+  bookingActionsEnabled = true,
 }: {
   allFlashes: { flash: FlashPreview; studioIdx: number; studio: NearbyStudio | null }[];
   onFlashClick: (f: FlashPreview, si: number, s: NearbyStudio | null) => void;
   onFavoritesDirty?: () => void;
+  bookingActionsEnabled?: boolean;
 }) {
   const ids = getFavoriteFlashIds();
   const list = allFlashes.filter(({ flash }) => ids.has(flash.id));
@@ -1284,14 +1314,16 @@ function TabFavorites({
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(152px,1fr))] [grid-auto-rows:minmax(0,1fr)] gap-3 sm:gap-4 items-stretch">
           {list.map(({ flash, studioIdx, studio: s }) => (
-            <FlashCard
-              key={flash.id}
-              flash={flash}
-              studioIdx={studioIdx}
-              studioCity={discoveryLocationLine(s)}
-              onFavoritesDirty={onFavoritesDirty}
-              onClick={() => onFlashClick(flash, studioIdx, s)}
-            />
+            <Fragment key={flash.id}>
+              <FlashCard
+                flash={flash}
+                studioIdx={studioIdx}
+                studioCity={discoveryLocationLine(s)}
+                onFavoritesDirty={onFavoritesDirty}
+                bookingActionsEnabled={bookingActionsEnabled}
+                onClick={() => onFlashClick(flash, studioIdx, s)}
+              />
+            </Fragment>
           ))}
         </div>
       )}
@@ -1459,12 +1491,36 @@ interface ClientBooking {
   description?: string;
 }
 
+/** Demande projet vitrine — fil messagerie `pr_<id>` (aligné dashboard pro). */
+interface ClientProjectRequest {
+  id: string;
+  studio_name?: string;
+  description: string;
+  status: string;
+  created_at: string;
+}
+
+const PROJECT_STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
+  pending: { label: 'En attente', color: '#EA580C', bg: 'rgba(234,88,12,0.12)' },
+  accepted: { label: 'Acceptée', color: '#22C55E', bg: 'rgba(34,197,94,0.12)' },
+  confirmed: { label: 'Confirmé', color: '#22C55E', bg: 'rgba(34,197,94,0.12)' },
+  deposit_paid: { label: 'Acompte', color: '#22C55E', bg: 'rgba(34,197,94,0.12)' },
+  rejected: { label: 'Refusé', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
+  completed: { label: 'Terminé', color: '#6366F1', bg: 'rgba(99,102,241,0.12)' },
+};
+
 function toBookingDateKey(iso: string): string {
   if (!iso) return '';
   return iso.slice(0, 10);
 }
 
-function ClientDashboardRightRail({ bookings }: { bookings: ClientBooking[] }) {
+function ClientDashboardRightRail({
+  bookings,
+  projectRequests = [],
+}: {
+  bookings: ClientBooking[];
+  projectRequests?: ClientProjectRequest[];
+}) {
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const todayStr = useMemo(() => {
@@ -1483,15 +1539,27 @@ function ClientDashboardRightRail({ bookings }: { bookings: ClientBooking[] }) {
         if (k) set.add(k);
       }
     });
+    projectRequests.forEach((p) => {
+      if (p.status !== 'rejected' && p.created_at) {
+        const k = toBookingDateKey(p.created_at);
+        if (k) set.add(k);
+      }
+    });
     return set;
-  }, [bookings]);
+  }, [bookings, projectRequests]);
 
   const stats = useMemo(() => {
-    const active = bookings.filter((b) => !['cancelled', 'rejected'].includes(b.status));
-    const confirmed = active.filter((b) => ['accepted', 'confirmed', 'completed'].includes(b.status)).length;
-    const pending = active.filter((b) => b.status === 'pending').length;
-    return { total: active.length, confirmed, pending };
-  }, [bookings]);
+    const activeB = bookings.filter((b) => !['cancelled', 'rejected'].includes(b.status));
+    const activeP = projectRequests.filter((p) => p.status !== 'rejected');
+    const active = activeB.length + activeP.length;
+    const confirmedB = activeB.filter((b) => ['accepted', 'confirmed', 'completed'].includes(b.status)).length;
+    const confirmedP = activeP.filter((p) =>
+      ['accepted', 'confirmed', 'deposit_paid', 'completed'].includes(p.status)
+    ).length;
+    const pendingB = activeB.filter((b) => b.status === 'pending').length;
+    const pendingP = activeP.filter((p) => p.status === 'pending').length;
+    return { total: active, confirmed: confirmedB + confirmedP, pending: pendingB + pendingP };
+  }, [bookings, projectRequests]);
 
   const { weeks, monthLabel } = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -1692,11 +1760,13 @@ function ClientDashboardRightRail({ bookings }: { bookings: ClientBooking[] }) {
 
 function TabRDV({
   bookings,
+  projectRequests,
   rdvLoading,
   userEmail,
   onNavigateTab,
 }: {
   bookings: ClientBooking[];
+  projectRequests: ClientProjectRequest[];
   rdvLoading: boolean;
   userEmail: string;
   onNavigateTab?: (t: Tab) => void;
@@ -1706,6 +1776,10 @@ function TabRDV({
     try {
       return new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
     } catch { return d; }
+  };
+
+  const openProjectThread = (projectId: string) => {
+    clientNavigate(`/messages/pr_${projectId}`);
   };
 
   if (!userEmail.trim()) {
@@ -1771,7 +1845,7 @@ function TabRDV({
             </div>
           ))}
         </div>
-      ) : bookings.length === 0 ? (
+      ) : bookings.length === 0 && projectRequests.length === 0 ? (
         <div
           className="rounded-2xl border px-6 py-14 text-center"
           style={{ background: D.contentCardBg, borderColor: D.border }}
@@ -1795,41 +1869,113 @@ function TabRDV({
           )}
         </div>
       ) : (
-        <div className="mb-8 flex flex-col gap-3">
-          {bookings.map((b) => {
-            const st = STATUS_LABEL[b.status] ?? { label: b.status, color: D.muted, bg: D.card };
-            return (
-              <div
-                key={b.id}
-                className="flex min-h-[108px] flex-col rounded-2xl border p-4 shadow-sm"
-                style={{ background: D.contentCardBg, borderColor: D.border }}
+        <div className="mb-8 flex flex-col gap-6">
+          {projectRequests.length > 0 && (
+            <section aria-labelledby="client-project-messages-heading">
+              <h2
+                id="client-project-messages-heading"
+                className="mb-1 text-[13px] font-semibold uppercase tracking-wider"
+                style={{ color: D.muted }}
               >
-                <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-                  <div
-                    className="min-w-0 max-w-full flex-1 text-[15px] font-bold leading-snug tracking-tight"
-                    style={{ color: D.text }}
-                  >
-                    {b.studio_name ?? 'Studio'}
-                  </div>
-                  <span
-                    className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
-                    style={{ color: st.color, background: st.bg }}
-                  >
-                    {st.label}
-                  </span>
-                </div>
-                <div className="text-[13px] tabular-nums" style={{ color: D.muted }}>
-                  {formatDate(b.requested_date)}
-                  {b.requested_time ? ` · ${b.requested_time}` : ''}
-                </div>
-                {b.description ? (
-                  <div className="mt-2 line-clamp-2 text-[13px] leading-snug" style={{ color: D.textSub }}>
-                    {b.description}
-                  </div>
-                ) : null}
+                Messagerie — tes demandes projet
+              </h2>
+              <p className="mb-3 text-[12px] leading-relaxed" style={{ color: D.textSub }}>
+                Discute avec le studio : messages, liens d&apos;acompte et confirmations apparaissent ici (même fil que sur l&apos;espace pro).
+              </p>
+              <div className="flex flex-col gap-3">
+                {projectRequests.map((p) => {
+                  const st = PROJECT_STATUS_LABEL[p.status] ?? { label: p.status, color: D.muted, bg: D.card };
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex min-h-[108px] flex-col rounded-2xl border p-4 shadow-sm"
+                      style={{ background: D.contentCardBg, borderColor: D.border }}
+                    >
+                      <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                        <div
+                          className="min-w-0 max-w-full flex-1 text-[15px] font-bold leading-snug tracking-tight"
+                          style={{ color: D.text }}
+                        >
+                          {p.studio_name ?? 'Studio'}
+                        </div>
+                        <span
+                          className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+                          style={{ color: st.color, background: st.bg }}
+                        >
+                          {st.label}
+                        </span>
+                      </div>
+                      <div className="text-[13px] tabular-nums" style={{ color: D.muted }}>
+                        {p.created_at ? formatDate(p.created_at) : ''}
+                      </div>
+                      {p.description ? (
+                        <div className="mt-2 line-clamp-2 text-[13px] leading-snug" style={{ color: D.textSub }}>
+                          {p.description}
+                        </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => openProjectThread(p.id)}
+                        className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-transform active:scale-[0.98] touch-manipulation"
+                        style={{ background: D.gold, color: D.onAccent }}
+                      >
+                        <MessageCircle className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                        Ouvrir la messagerie
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </section>
+          )}
+
+          {bookings.length > 0 && (
+            <section aria-labelledby="client-slot-bookings-heading">
+              <h2
+                id="client-slot-bookings-heading"
+                className="mb-3 text-[13px] font-semibold uppercase tracking-wider"
+                style={{ color: D.muted }}
+              >
+                Créneaux & réservations
+              </h2>
+              <div className="flex flex-col gap-3">
+                {bookings.map((b) => {
+                  const st = STATUS_LABEL[b.status] ?? { label: b.status, color: D.muted, bg: D.card };
+                  return (
+                    <div
+                      key={b.id}
+                      className="flex min-h-[108px] flex-col rounded-2xl border p-4 shadow-sm"
+                      style={{ background: D.contentCardBg, borderColor: D.border }}
+                    >
+                      <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                        <div
+                          className="min-w-0 max-w-full flex-1 text-[15px] font-bold leading-snug tracking-tight"
+                          style={{ color: D.text }}
+                        >
+                          {b.studio_name ?? 'Studio'}
+                        </div>
+                        <span
+                          className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+                          style={{ color: st.color, background: st.bg }}
+                        >
+                          {st.label}
+                        </span>
+                      </div>
+                      <div className="text-[13px] tabular-nums" style={{ color: D.muted }}>
+                        {formatDate(b.requested_date)}
+                        {b.requested_time ? ` · ${b.requested_time}` : ''}
+                      </div>
+                      {b.description ? (
+                        <div className="mt-2 line-clamp-2 text-[13px] leading-snug" style={{ color: D.textSub }}>
+                          {b.description}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </div>
       )}
     </div>
@@ -2139,7 +2285,7 @@ function TabProfile({
           <ChevronRight className="w-4 h-4 shrink-0" style={{ color: D.muted }} aria-hidden />
         </button>
         <a
-          href="/client/compte-sante"
+          href="/onboarding/finaliser-profil"
           className="touch-manipulation active:scale-[0.99] transition-transform"
           style={{
             display: 'flex', alignItems: 'center', gap: 14,
@@ -2292,10 +2438,12 @@ export function ClientDashboard() {
   const [activeFilter, setFilter] = useState<string>('Tous');
   const [selectedFlash, setFlash] = useState<{ flash: FlashPreview; studioIdx: number; studio: NearbyStudio | null } | null>(null);
   const [bookings, setBookings] = useState<ClientBooking[]>([]);
+  const [projectRequests, setProjectRequests] = useState<ClientProjectRequest[]>([]);
   const [rdvLoading, setRdvLoading] = useState(true);
   const [, bumpFavs] = useReducer((n: number) => n + 1, 0);
   const [exploreSearchFocusNonce, setExploreSearchFocusNonce] = useState(0);
   const [authHydrated, setAuthHydrated] = useState(false);
+  const [portalReady, setPortalReady] = useState<boolean | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastAppliedUserIdRef = useRef<string | null | undefined>(undefined);
 
@@ -2384,6 +2532,53 @@ export function ClientDashboard() {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!userId) {
+      setPortalReady(true);
+      return;
+    }
+    let cancelled = false;
+    const sync = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      setPortalReady(await isClientPortalFullyReady(user));
+    };
+    void sync();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      void sync();
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (portalReady !== false || !userId) return;
+    if (tab === 'explore' || tab === 'map' || tab === 'favorites') {
+      window.location.replace('/onboarding/finaliser-profil');
+    }
+  }, [portalReady, userId, tab]);
+
+  const goTab = useCallback(
+    (t: Tab) => {
+      const discovery: Tab[] = ['explore', 'map', 'favorites'];
+      if (userId && portalReady === false && discovery.includes(t)) {
+        toast.info('Complète ton profil et le questionnaire santé pour accéder à la recherche et aux favoris.');
+        window.location.href = '/onboarding/finaliser-profil';
+        return;
+      }
+      setTab(t);
+    },
+    [userId, portalReady, toast]
+  );
+
+  const bookingActionsEnabled = !userId || portalReady === true;
 
   const handleClientAvatarFile = useCallback(
     async (file: File) => {
@@ -2502,10 +2697,11 @@ export function ClientDashboard() {
     return () => { cancelled = true; };
   }, []);
 
-  // Réservations client (liste + colonne droite)
+  // Réservations + demandes projet (messagerie `pr_<id>`)
   useEffect(() => {
     if (!userEmail) {
       setBookings([]);
+      setProjectRequests([]);
       setRdvLoading(false);
       return;
     }
@@ -2531,6 +2727,14 @@ export function ClientDashboard() {
       studio_id: string;
     };
 
+    type ProjectRow = {
+      id: string;
+      description: string;
+      status: string;
+      created_at: string | null;
+      inkflow_studios?: { studio_name: string } | null;
+    };
+
     const mapToClientBookings = (rows: RowWithStudio[] | RowFlat[], withStudio: boolean): ClientBooking[] =>
       rows.map((r) => ({
         id: r.id,
@@ -2543,11 +2747,21 @@ export function ClientDashboard() {
         description: r.description,
       }));
 
+    const mapProjectRows = (rows: ProjectRow[]): ClientProjectRequest[] =>
+      rows.map((r) => ({
+        id: r.id,
+        studio_name: r.inkflow_studios?.studio_name?.trim() || undefined,
+        description: r.description || '',
+        status: r.status,
+        created_at: r.created_at || '',
+      }));
+
     void (async () => {
-      const q1 = await supabase
-        .from('inkflow_bookings')
-        .select(
-          `
+      const [q1, qp] = await Promise.all([
+        supabase
+          .from('inkflow_bookings')
+          .select(
+            `
           id,
           client_name,
           requested_date,
@@ -2557,12 +2771,28 @@ export function ClientDashboard() {
           studio_id,
           inkflow_studios ( studio_name )
         `
-        )
-        .eq('client_email', userEmail)
-        .order('requested_date', { ascending: false })
-        .limit(50);
+          )
+          .eq('client_email', userEmail)
+          .order('requested_date', { ascending: false })
+          .limit(50),
+        supabase
+          .from('inkflow_project_requests')
+          .select('id, description, status, created_at, inkflow_studios ( studio_name )')
+          .eq('client_email', userEmail)
+          .order('created_at', { ascending: false })
+          .limit(50),
+      ]);
 
       if (cancelled) return;
+
+      if (!qp.error && qp.data) {
+        setProjectRequests(mapProjectRows(qp.data as ProjectRow[]));
+      } else {
+        if (import.meta.env.DEV && qp.error) {
+          console.warn('[ClientDashboard] project_requests', qp.error.message);
+        }
+        setProjectRequests([]);
+      }
 
       if (!q1.error && q1.data) {
         setBookings(mapToClientBookings(q1.data as RowWithStudio[], true));
@@ -2670,7 +2900,7 @@ export function ClientDashboard() {
                   <button
                     key={id}
                     type="button"
-                    onClick={() => setTab(id)}
+                    onClick={() => goTab(id)}
                     className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-sm font-medium transition-all active:scale-[0.98]"
                     style={{
                       background: tab === id ? D.card : 'transparent',
@@ -2768,7 +2998,7 @@ export function ClientDashboard() {
             <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
               <button
                 type="button"
-                onClick={() => setTab('explore')}
+                onClick={() => goTab('explore')}
                 className="sm:hidden flex items-center justify-center rounded-xl border min-w-[44px] min-h-[44px] transition-all active:scale-[0.98] touch-manipulation"
                 style={{ borderColor: D.border, background: D.card, color: D.muted }}
                 aria-label="Rechercher"
@@ -2777,7 +3007,7 @@ export function ClientDashboard() {
               </button>
               <button
                 type="button"
-                onClick={() => setTab('explore')}
+                onClick={() => goTab('explore')}
                 className="hidden sm:flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition-all active:scale-[0.98] min-h-[44px] max-w-[min(100%,280px)] touch-manipulation"
                 style={{ borderColor: D.border, background: D.card, color: D.muted }}
               >
@@ -2802,7 +3032,7 @@ export function ClientDashboard() {
               ) : userId ? (
                 <button
                   type="button"
-                  onClick={() => setTab('profile')}
+                  onClick={() => goTab('profile')}
                   className="flex min-w-[44px] min-h-[44px] w-11 h-11 items-center justify-center rounded-full text-sm font-bold transition-all active:scale-[0.98] touch-manipulation overflow-hidden shrink-0"
                   style={{ background: D.gold, color: D.onAccent }}
                   aria-label="Profil"
@@ -2852,6 +3082,7 @@ export function ClientDashboard() {
             onFlashClick={openFlash}
             exploreSearchFocusNonce={exploreSearchFocusNonce}
             onFavoritesDirty={bumpFavs}
+            bookingActionsEnabled={bookingActionsEnabled}
           />
         )}
         {tab === 'favorites' && (
@@ -2859,13 +3090,20 @@ export function ClientDashboard() {
             allFlashes={allFlashes}
             onFlashClick={openFlash}
             onFavoritesDirty={bumpFavs}
+            bookingActionsEnabled={bookingActionsEnabled}
           />
         )}
         {tab === 'map' && (
           <TabMap studios={studios} loading={loading} userPos={userPos} onDotClick={(s) => { const f = s.flash?.[0]; if (f) openFlash(f, studios.indexOf(s), s); }} />
         )}
         {tab === 'rdv' && (
-          <TabRDV bookings={bookings} rdvLoading={rdvLoading} userEmail={userEmail} onNavigateTab={setTab} />
+          <TabRDV
+            bookings={bookings}
+            projectRequests={projectRequests}
+            rdvLoading={rdvLoading}
+            userEmail={userEmail}
+            onNavigateTab={goTab}
+          />
         )}
         {tab === 'profile' && (
           <TabProfile
@@ -2873,7 +3111,7 @@ export function ClientDashboard() {
             userName={userName}
             userInit={userInit}
             userEmail={userEmail}
-            onNavigateTab={setTab}
+            onNavigateTab={goTab}
             ownedStudioSlug={ownedStudioSlug}
             avatarUrl={userAvatarUrl}
             avatarBroken={avatarBroken}
@@ -2898,7 +3136,7 @@ export function ClientDashboard() {
               <button
                 type="button"
                 onClick={() => {
-                  setTab('explore');
+                  goTab('explore');
                   setExploreSearchFocusNonce((n) => n + 1);
                 }}
                 className="text-xs sm:text-sm font-semibold touch-manipulation active:scale-[0.98] transition-transform"
@@ -2994,7 +3232,7 @@ export function ClientDashboard() {
               <button
                 type="button"
                 onClick={() => {
-                  setTab('explore');
+                  goTab('explore');
                   setExploreSearchFocusNonce((n) => n + 1);
                 }}
                 className="text-xs sm:text-sm font-semibold touch-manipulation active:scale-[0.98] transition-transform"
@@ -3011,14 +3249,16 @@ export function ClientDashboard() {
             ) : filtered.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(152px,1fr))] [grid-auto-rows:minmax(0,1fr)] gap-3 sm:gap-4 items-stretch">
                 {filtered.slice(0, 12).map(({ flash, studioIdx, studio: s }) => (
-                  <FlashCard
-                    key={flash.id}
-                    flash={flash}
-                    studioIdx={studioIdx}
-                    studioCity={discoveryLocationLine(s)}
-                    onFavoritesDirty={bumpFavs}
-                    onClick={() => openFlash(flash, studioIdx, s)}
-                  />
+                  <Fragment key={flash.id}>
+                    <FlashCard
+                      flash={flash}
+                      studioIdx={studioIdx}
+                      studioCity={discoveryLocationLine(s)}
+                      onFavoritesDirty={bumpFavs}
+                      bookingActionsEnabled={bookingActionsEnabled}
+                      onClick={() => openFlash(flash, studioIdx, s)}
+                    />
+                  </Fragment>
                 ))}
               </div>
             ) : (
@@ -3080,10 +3320,10 @@ export function ClientDashboard() {
           </div>
         </div>
 
-        <ClientDashboardRightRail bookings={bookings} />
+        <ClientDashboardRightRail bookings={bookings} projectRequests={projectRequests} />
       </div>
 
-      {!selectedFlash && <ClientMobileTabBar active={tab} onChange={setTab} />}
+      {!selectedFlash && <ClientMobileTabBar active={tab} onChange={goTab} />}
 
       {selectedFlash && (
         <FlashSheet
@@ -3093,6 +3333,7 @@ export function ClientDashboard() {
           onClose={() => setFlash(null)}
           onFavoritesDirty={bumpFavs}
           viewerStudioSlug={ownedStudioSlug}
+          bookingActionsEnabled={bookingActionsEnabled}
         />
       )}
     </div>

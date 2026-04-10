@@ -222,6 +222,7 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
               <img
                 src={artist.avatar_url}
                 alt=""
+                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover"
                 onError={() => setAvatarBroken(true)}
               />
@@ -397,6 +398,8 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
                     <img
                       src={f.image_url}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       className="absolute inset-0 w-full h-full object-cover"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';

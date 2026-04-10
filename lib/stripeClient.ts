@@ -19,9 +19,13 @@ interface CreateCheckoutParams {
   clientNotes?: string;
   /** Instagram du client (optionnel). */
   clientInstagram?: string;
+  /** Demande projet vitrine (métadonnées Stripe + webhook). */
+  projectRequestId?: string;
+  /** Fil messagerie (ex. pr_xxx). */
+  threadId?: string;
 }
 
-export type CreateCheckoutResult = { url: string } | { error: string };
+export type CreateCheckoutResult = { url: string; sessionId?: string } | { error: string };
 
 export type CreateThemeCheckoutResult = { url: string } | { error: string };
 
@@ -47,9 +51,17 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
       },
       body: JSON.stringify(params),
     });
-    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string; message?: string };
+    const data = (await res.json().catch(() => ({}))) as {
+      url?: string;
+      sessionId?: string;
+      error?: string;
+      details?: string;
+      message?: string;
+    };
     if (res.ok) {
-      if (data?.url) return { url: data.url };
+      if (data?.url) {
+        return { url: data.url, ...(data.sessionId ? { sessionId: data.sessionId } : {}) };
+      }
       return { error: data?.error || data?.details || 'La fonction n\'a pas renvoyé de lien.' };
     }
     const msg = data?.error || data?.details || data?.message || `Erreur ${res.status}`;

@@ -1,6 +1,16 @@
 import { supabase } from './supabase';
 
 /** Détecte les échecs d’invocation typiques (JWT expiré / passerelle Supabase). */
+/** Message lisible depuis l’erreur renvoyée par `supabase.functions.invoke` (typée `unknown`). */
+export function getInvokeErrorMessage(err: unknown, fallback = 'Erreur'): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === 'object' && 'message' in err) {
+    const m = (err as { message?: unknown }).message;
+    if (typeof m === 'string' && m.trim()) return m;
+  }
+  return fallback;
+}
+
 export function isInvokeUnauthorized(err: unknown): boolean {
   if (!err) return false;
   const e = err as { message?: string; context?: { status?: number } };

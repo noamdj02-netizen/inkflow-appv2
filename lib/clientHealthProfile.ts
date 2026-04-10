@@ -1,6 +1,7 @@
 /**
  * Questionnaire santé stocké sur inkflow_client_portal_profiles (une ligne par user_id).
  */
+import type { Json } from '../types/database';
 import { supabase } from './supabase';
 import type { HealthFormData } from '../components/booking/HealthQuestionnaireForm';
 
@@ -95,7 +96,7 @@ export async function upsertClientHealthProfile(userId: string, form: HealthForm
   const { error } = await supabase.from('inkflow_client_portal_profiles').upsert(
     {
       user_id: userId,
-      health_profile: payload as unknown as Record<string, unknown>,
+      health_profile: payload as unknown as Json,
       health_profile_updated_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },

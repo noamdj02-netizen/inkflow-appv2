@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, MapPin, Ruler, Euro, Calendar, Mail, Sparkles, FileText, CheckCircle, XCircle, Clock, AtSign } from 'lucide-react';
+import { X, MapPin, Ruler, Euro, Calendar, Mail, Sparkles, FileText, CheckCircle, XCircle, Clock, AtSign, MessageCircle } from 'lucide-react';
 import type { ProjectRequest, Booking } from '../../types';
 import { instagramMessageUrl } from '../../lib/instagramUtils';
 import { buildMailtoHref, handleMailtoClick } from '../../lib/mailto';
@@ -25,6 +25,8 @@ interface RequestQuickViewSheetProps {
   onAcceptAndDeposit?: (item: RequestItem) => void;
   onReject?: (item: RequestItem) => void;
   onProposeDate?: (item: RequestItem) => void;
+  /** Demande vitrine : ouvre l’onglet Messagerie sur le fil `pr_<id>`. */
+  onOpenProjectDiscussion?: (threadId: string) => void;
 }
 
 const PLACEMENT_LABELS: Record<string, string> = {
@@ -62,6 +64,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
   onAcceptAndDeposit,
   onReject,
   onProposeDate,
+  onOpenProjectDiscussion,
 }) => {
   const toast = useToast();
   if (!item) return null;
@@ -88,17 +91,20 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
 
   return (
     <>
-      {/* Fond : plein écran sur mobile / tablette ; à partir de lg, laisse la sidebar visible */}
+      {/* Fond assombri : mobile / tablette uniquement. Sur PC (lg+) pas de voile — le panneau suffit. */}
       <div
         onClick={onClose}
-        className={`fixed z-[55] inset-0 transition-opacity duration-300 lg:left-[178px] ${
+        className={`fixed z-[55] inset-0 lg:hidden transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
-        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        style={{ backgroundColor: 'rgba(15,23,42,0.45)' }}
         aria-hidden="true"
       />
       <div
-        className={`fixed z-[60] flex min-h-0 flex-col shadow-2xl border-[var(--border)] w-full sm:max-w-md max-w-[100vw] overflow-hidden transition-transform duration-300 ease-out bg-[var(--bg-primary)]
+        className={`fixed z-[60] flex min-h-0 flex-col border-[var(--border)] w-full sm:max-w-md max-w-[100vw] overflow-hidden transition-transform duration-300 ease-out bg-[var(--bg-primary)]
+          shadow-2xl
+          lg:shadow-[-20px_0_60px_-15px_rgba(15,23,42,0.18)] dark:lg:shadow-[-20px_0_60px_-15px_rgba(0,0,0,0.55)]
+          lg:ring-1 lg:ring-slate-200/90 dark:lg:ring-zinc-600/40
           pb-[max(12px,env(safe-area-inset-bottom,0px))] lg:pb-0
           max-lg:bottom-0 max-lg:left-0 max-lg:right-0 max-lg:top-auto max-lg:max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-bottom)))] max-lg:rounded-t-2xl max-lg:border max-lg:border-b-0
           lg:right-0 lg:top-0 lg:bottom-0 lg:h-[100dvh] lg:max-h-[100dvh] lg:rounded-none lg:border-l lg:border-t-0
@@ -126,6 +132,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
               <img
                 src={mainImage}
                 alt="Référence"
+                decoding="async"
                 className="absolute inset-0 h-full w-full object-cover"
               />
             ) : (
@@ -247,7 +254,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
                 <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-2">Autres références</h4>
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {refImages.slice(1, 5).map((url, i) => (
-                    <img key={i} src={url} alt={`Ref ${i + 2}`} className="w-16 h-16 rounded-lg object-cover shrink-0" />
+                    <img key={i} src={url} alt={`Ref ${i + 2}`} loading="lazy" decoding="async" className="w-16 h-16 rounded-lg object-cover shrink-0" />
                   ))}
                 </div>
               </div>
@@ -257,6 +264,19 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
             <div className="pt-4 border-t border-[var(--border)] space-y-2">
               <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase mb-3">Actions</p>
               <div className="flex flex-col gap-2">
+                {isProject && pr && onOpenProjectDiscussion && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenProjectDiscussion(`pr_${pr.id}`);
+                      onClose();
+                    }}
+                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
+                  >
+                    <MessageCircle className="w-5 h-5 shrink-0" />
+                    Ouvrir la discussion
+                  </button>
+                )}
                 {studioId && onAcceptAndDeposit && (
                   <button
                     onClick={() => onAcceptAndDeposit(item)}

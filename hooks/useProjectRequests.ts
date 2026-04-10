@@ -56,12 +56,13 @@ export function useProjectRequests(studioId: string | null) {
   }, [studioId, supabaseEnabled, load]);
 
   const updateStatus = useCallback(async (id: string, status: ProjectRequestStatus) => {
+    if (!studioId) return;
     mutation.update(
       id,
       (req) => ({ ...req, status }),
       async () => {
-        await updateStatusInSupabase(id, status);
-        if (studioId) load();
+        await updateStatusInSupabase(id, status, studioId);
+        load();
       }
     );
   }, [mutation, studioId, load]);

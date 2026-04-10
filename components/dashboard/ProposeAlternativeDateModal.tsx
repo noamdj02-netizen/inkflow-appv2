@@ -3,7 +3,7 @@ import { Mail, AtSign, Loader2, Copy } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import type { ProjectRequest, Booking } from '../../types';
 import {
-  fetchStudioAvailability,
+  fetchStudioAvailabilityMeta,
   getAvailableDates,
   getAvailableSlotsForDate,
   type StudioAvailabilityResponse,
@@ -57,7 +57,8 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [availability, setAvailability] = useState<StudioAvailabilityResponse | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  /** Message si l’Edge Function planning a échoué mais qu’on propose quand même des créneaux indicatifs */
+  const [planningHint, setPlanningHint] = useState<string | null>(null);
   const [selectedYmd, setSelectedYmd] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<string>('');
 
@@ -72,20 +73,24 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
   useEffect(() => {
     if (!isOpen || !studioId) {
       setAvailability(null);
-      setLoadError(null);
+      setPlanningHint(null);
       setSelectedYmd('');
       setSelectedSlot('');
       return;
     }
     let cancelled = false;
     setLoading(true);
-    setLoadError(null);
-    fetchStudioAvailability(studioId)
-      .then((data) => {
-        if (!cancelled) setAvailability(data);
-      })
-      .catch(() => {
-        if (!cancelled) setLoadError('Impossible de charger ton planning. Réessaie ou envoie l’e-mail sans créneau auto.');
+    setPlanningHint(null);
+    fetchStudioAvailabilityMeta(studioId)
+      .then(({ availability: data, usedFallback }) => {
+        if (!cancelled) {
+          setAvailability(data);
+          setPlanningHint(
+            usedFallback
+              ? 'Synchronisation du planning impossible pour l’instant : les dates et créneaux ci-dessous sont indicatifs (sans occupation réelle). Tu peux quand même envoyer la proposition ou copier pour Instagram.'
+              : null
+          );
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -197,7 +202,7 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
             <Loader2 className="w-4 h-4 animate-spin" /> Chargement de ton planning…
           </div>
         )}
-        {loadError && <p className="text-sm text-amber-700 dark:text-amber-300">{loadError}</p>}
+        {planningHint && <p className="text-sm text-amber-700 dark:text-amber-300">{planningHint}</p>}
 
         {!loading && availability && dateOptions.length === 0 && (
           <p className="text-sm text-[var(--text-secondary)]">

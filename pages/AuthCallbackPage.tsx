@@ -5,7 +5,8 @@ import { REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { sendTattooerWelcomeEmailIfNeeded } from '../lib/sendNotification';
 import { ensureStudio } from '../lib/supabaseDashboard';
-import { sanitizePostAuthRedirect } from '../lib/urls';
+import { resolvePostLoginPath } from '../lib/postLoginRedirect';
+import { CLIENT_ONBOARDING_FINALIZE_PATH } from '../lib/clientOnboardingGate';
 
 export const AuthCallbackPage: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -38,10 +39,8 @@ export const AuthCallbackPage: React.FC = () => {
     const redirectToParam = params.get('redirect_to');
     const fromStorage =
       typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY) : null;
-    const defaultPath = isClientCallback ? '/client' : '/dashboard';
-    const redirectUrl = sanitizePostAuthRedirect(redirectToParam || fromStorage || defaultPath, {
-      defaultPath,
-    });
+    const defaultPath = isClientCallback ? CLIENT_ONBOARDING_FINALIZE_PATH : '/dashboard';
+    const rawRedirect = redirectToParam || fromStorage || defaultPath;
     try {
       sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
     } catch {
@@ -62,6 +61,7 @@ export const AuthCallbackPage: React.FC = () => {
 
     const run = async () => {
       const session = await resolveSession();
+      const redirectUrl = await resolvePostLoginPath(rawRedirect, { defaultPath });
       if (cancelled) return;
       if (!session?.user) {
         timeoutId = setTimeout(() => {

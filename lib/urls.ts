@@ -4,6 +4,8 @@
  * App : https://app.ink-flow.me ou inkdlow.vercel.app
  */
 
+import { CLIENT_ONBOARDING_FINALIZE_PATH } from './clientOnboardingGate';
+
 export const LANDING_URL = 'https://ink-flow.me';
 export const APP_URL = 'https://app.ink-flow.me';
 
@@ -23,9 +25,17 @@ export function getCanonicalAppOrigin(): string {
   return origin;
 }
 
-/** redirectTo pour le magic link espace client (`/client`). */
+/** redirectTo pour le magic link et la confirmation e-mail client → callback puis tunnel onboarding. */
 export function getClientMagicLinkRedirectTo(): string {
-  return `${getCanonicalAppOrigin()}/client`;
+  const q = new URLSearchParams({
+    redirect_to: CLIENT_ONBOARDING_FINALIZE_PATH,
+  });
+  return `${getCanonicalAppOrigin()}/auth/callback/client?${q.toString()}`;
+}
+
+/** Même cible que le magic link (inscription e-mail avec confirmation). */
+export function getClientEmailConfirmRedirectTo(): string {
+  return getClientMagicLinkRedirectTo();
 }
 
 /** redirectTo pour OAuth tatoueur (`/auth/callback`). */

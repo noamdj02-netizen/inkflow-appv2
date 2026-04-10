@@ -1,37 +1,27 @@
 /**
  * Entrée espace client — /client
- * Connexion par e-mail (lien), création de compte, définition du mot de passe.
+ * Connexion e-mail + mot de passe, inscription, définition du mot de passe (première connexion lien / legacy).
  * UI alignée sur CLIENT_DASHBOARD_THEME (même famille que /client/dashboard).
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Mail, ArrowRight, CheckCircle, Loader2, Lock, User as UserIcon } from 'lucide-react';
 import { SEO } from '../../components/SEO';
 import { Logo } from '../../components/Logo';
-import { getClientMagicLinkRedirectTo } from '../../lib/urls';
+import { getClientEmailConfirmRedirectTo } from '../../lib/urls';
 import { supabase } from '../../lib/supabase';
-import { clientNeedsPassword, clientOnboardingComplete } from '../../lib/clientAuth';
+import { clientNeedsPassword } from '../../lib/clientAuth';
+import { isClientPortalFullyReady } from '../../lib/clientOnboardingGate';
 import { consumeSupabaseAuthUrlError } from '../../lib/supabaseAuthUrl';
-import { fetchClientHealthProfile, isHealthFormComplete } from '../../lib/clientHealthProfile';
 import { CLIENT_DASHBOARD_THEME } from '../../lib/clientDashboardTheme';
 import type { User } from '@supabase/supabase-js';
 
-type Phase = 'boot' | 'email' | 'sent' | 'password' | 'register' | 'sent_register';
+type Phase = 'boot' | 'login' | 'password' | 'register' | 'sent_register';
 
 const D = CLIENT_DASHBOARD_THEME;
 
 async function getClientDestinationAfterAuth(user: User): Promise<string> {
-  const meta = user.user_metadata ?? {};
-  if (meta.client_pending_health === true) {
-    const hp = await fetchClientHealthProfile(user.id);
-    if (hp && isHealthFormComplete(hp)) {
-      await supabase.auth.updateUser({ data: { client_pending_health: false } });
-    } else {
-      return '/client/compte-sante';
-    }
-  }
-  return clientOnboardingComplete(meta as Record<string, unknown>)
-    ? '/client/dashboard'
-    : '/client/welcome';
+  if (await isClientPortalFullyReady(user)) return '/client/dashboard';
+  return '/onboarding/finaliser-profil';
 }
 
 const inputClass =
@@ -42,6 +32,7 @@ const inputClassNoIcon =
 
 export const ClientPortalLoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [phase, setPhase] = useState<Phase>('boot');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,7 +53,7 @@ export const ClientPortalLoginPage: React.FC = () => {
     const authUrlError = consumeSupabaseAuthUrlError();
     if (authUrlError) {
       setError(authUrlError);
-      setPhase('email');
+      setPhase('login');
       return () => {
         cancelled = true;
       };
@@ -109,7 +100,7 @@ export const ClientPortalLoginPage: React.FC = () => {
       cleanAuthUrl();
       const sp = new URLSearchParams(window.location.search);
       const openRegister = sp.get('register') === '1' || sp.get('mode') === 'register';
-      setPhase(openRegister ? 'register' : 'email');
+      setPhase(openRegister ? 'register' : 'login');
     };
     void resolve();
     const {
@@ -124,36 +115,27 @@ export const ClientPortalLoginPage: React.FC = () => {
     };
   }, []);
 
-  const handleSend = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    const em = email.trim().toLowerCase();
+    const p = loginPassword.trim();
+    if (!em || !p) return;
     setLoading(true);
     setError('');
     try {
-      const redirectTo = getClientMagicLinkRedirectTo();
-      const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-      const base = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
-      if (!base || !anon) throw new Error('Configuration Supabase manquante.');
-      const res = await fetch(`${base}/functions/v1/send-client-magic-link`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: `Bearer ${anon}` },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), redirectTo }),
-      });
-      const raw = await res.text();
-      if (!res.ok) {
-        let msg = "Erreur lors de l'envoi.";
-        try {
-          const data = JSON.parse(raw) as { error?: string; details?: string };
-          msg = data.error || data.details || msg;
-          if (data.details && data.error && import.meta.env.DEV) msg = `${data.error} — ${data.details}`;
-        } catch {
-          msg = raw ? raw.slice(0, 280) : `Erreur ${res.status}`;
-        }
-        throw new Error(msg);
+      const { data, error: signErr } = await supabase.auth.signInWithPassword({ email: em, password: p });
+      if (signErr) throw signErr;
+      if (!data.user) return;
+      const meta = data.user.user_metadata ?? {};
+      if (clientNeedsPassword(meta as Record<string, unknown>)) {
+        setPhase('password');
+        setLoading(false);
+        return;
       }
-      setPhase('sent');
+      const dest = await getClientDestinationAfterAuth(data.user);
+      window.location.replace(dest);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de l'envoi. Réessaie.");
+      setError(err instanceof Error ? err.message : 'Connexion impossible.');
     } finally {
       setLoading(false);
     }
@@ -194,7 +176,8 @@ export const ClientPortalLoginPage: React.FC = () => {
     setPassword('');
     setPassword2('');
     setPwError('');
-    setPhase('email');
+    setLoginPassword('');
+    setPhase('login');
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -225,18 +208,19 @@ export const ClientPortalLoginPage: React.FC = () => {
         email: em,
         password: p,
         options: {
+          emailRedirectTo: getClientEmailConfirmRedirectTo(),
           data: {
             name,
             client_account: true,
             client_password_set: true,
             client_pending_health: true,
-            client_onboarding_complete: true,
+            client_onboarding_complete: false,
           },
         },
       });
       if (error) throw error;
       if (data.session) {
-        window.location.href = '/client/compte-sante';
+        window.location.href = '/onboarding/finaliser-profil';
         return;
       }
       setPhase('sent_register');
@@ -247,7 +231,6 @@ export const ClientPortalLoginPage: React.FC = () => {
     }
   };
 
-  const sent = phase === 'sent';
   const sentRegister = phase === 'sent_register';
 
   return (
@@ -262,7 +245,7 @@ export const ClientPortalLoginPage: React.FC = () => {
         title="Espace client — Inkflow"
         description="Connecte-toi à ton espace client : rendez-vous, suivi et fidélité."
         canonical="/client"
-        keywords="espace client tatouage, lien magique, suivi RDV Inkflow"
+        keywords="espace client tatouage, connexion, suivi RDV Inkflow"
         ogImageAlt="Espace client Inkflow"
         noindex
       />
@@ -295,24 +278,12 @@ export const ClientPortalLoginPage: React.FC = () => {
             {phase !== 'boot' && (
               <>
                 <div className="mb-6 space-y-2">
-                  {phase === 'email' && (
+                  {phase === 'login' && (
                     <>
                       <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
                         Espace client
                       </h1>
-                      <p className="text-sm text-zinc-500">
-                        Saisis l’e-mail utilisé pour ta réservation — nous t’envoyons un lien de connexion.
-                      </p>
-                    </>
-                  )}
-                  {sent && (
-                    <>
-                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
-                        Vérifie ta boîte mail
-                      </h1>
-                      <p className="text-sm text-zinc-500">
-                        Lien envoyé à <strong className="text-zinc-800">{email}</strong>.
-                      </p>
+                      <p className="text-sm text-zinc-500">Connecte-toi avec ton e-mail et ton mot de passe.</p>
                     </>
                   )}
                   {phase === 'password' && (
@@ -329,7 +300,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                         Créer un compte
                       </h1>
                       <p className="text-sm text-zinc-500">
-                        E-mail et mot de passe, puis le questionnaire santé (une fois).
+                        E-mail et mot de passe, puis finalisation du profil et questionnaire santé.
                       </p>
                     </>
                   )}
@@ -345,31 +316,12 @@ export const ClientPortalLoginPage: React.FC = () => {
                   )}
                 </div>
 
-                {sent && (
-                  <div className="space-y-4 mb-2">
-                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-200/80">
-                      <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                      <p className="text-sm text-emerald-900">Ouvre l’e-mail et clique sur le lien pour accéder à ton espace.</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPhase('email');
-                        setEmail('');
-                      }}
-                      className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
-                    >
-                      ← Modifier l’adresse
-                    </button>
-                  </div>
-                )}
-
                 {sentRegister && (
                   <div className="space-y-4 mb-2">
                     <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-200/80">
                       <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                       <p className="text-sm text-emerald-900">
-                        Clique sur le lien dans l’e-mail. Tu seras redirigé vers le questionnaire santé.
+                        Clique sur le lien dans l’e-mail. Tu seras redirigé vers l’app pour finaliser ton profil.
                       </p>
                     </div>
                     <button
@@ -435,8 +387,8 @@ export const ClientPortalLoginPage: React.FC = () => {
                   </form>
                 )}
 
-                {phase === 'email' && (
-                  <form onSubmit={handleSend} className="space-y-3">
+                {phase === 'login' && (
+                  <form onSubmit={handleLogin} className="space-y-3">
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
                       <input
@@ -451,39 +403,62 @@ export const ClientPortalLoginPage: React.FC = () => {
                         className={inputClass}
                       />
                     </div>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                      <input
+                        id="client-login-password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="Mot de passe"
+                        required
+                        className={inputClass}
+                      />
+                    </div>
                     {error && (
                       <p className="text-xs px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">{error}</p>
                     )}
                     <button
                       type="submit"
-                      disabled={loading || !email.trim()}
+                      disabled={loading || !email.trim() || !loginPassword.trim()}
                       className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-40 active:scale-[0.98] transition-all"
                     >
                       {loading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <>
-                          Recevoir mon lien <ArrowRight className="w-4 h-4" />
+                          Se connecter <ArrowRight className="w-4 h-4" />
                         </>
                       )}
                     </button>
-                    <p className="text-center text-xs text-zinc-500 pt-1">
-                      Pas encore de réservation ?{' '}
-                      <a href="/" className="font-medium text-zinc-700 underline underline-offset-2 hover:text-zinc-900">
-                        Découvrir Inkflow
+                    <div className="flex flex-col gap-2 pt-1">
+                      <a
+                        href="/reset-password"
+                        className="text-center text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+                      >
+                        Mot de passe oublié ?
                       </a>
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPhase('register');
-                        setError('');
-                        setRegEmail(email);
-                      }}
-                      className="w-full text-center text-sm py-2 text-zinc-500 hover:text-zinc-900"
-                    >
-                      Pas de compte ? <span className="font-semibold text-blue-600">Créer un compte</span>
-                    </button>
+                      <p className="text-center text-xs text-zinc-500">
+                        Pas encore de compte ?{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPhase('register');
+                            setError('');
+                            setRegEmail(email.trim());
+                          }}
+                          className="font-semibold text-blue-600 hover:text-blue-700"
+                        >
+                          Créer un compte
+                        </button>
+                      </p>
+                      <p className="text-center text-xs text-zinc-500">
+                        <a href="/" className="font-medium text-zinc-700 underline underline-offset-2 hover:text-zinc-900">
+                          Découvrir Inkflow
+                        </a>
+                      </p>
+                    </div>
                   </form>
                 )}
 
@@ -555,12 +530,12 @@ export const ClientPortalLoginPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        setPhase('email');
+                        setPhase('login');
                         setRegError('');
                       }}
-                      className="w-full text-center text-sm py-2 text-zinc-500 hover:text-zinc-900"
+                      className="w-full text-center text-sm py-2 text-zinc-500 hover:text-zinc-900 active:scale-[0.98] transition-all"
                     >
-                      ← Connexion par e-mail (lien)
+                      ← Déjà un compte ? Se connecter
                     </button>
                   </form>
                 )}
