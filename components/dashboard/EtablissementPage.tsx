@@ -293,8 +293,8 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
       {/* ══ Section 1 — Identité Professionnelle ══ */}
       <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
-          <div className="w-8 h-8 rounded-xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center">
-            <Building2 className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+          <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
+            <Building2 className="w-4 h-4 text-zinc-300" />
           </div>
           <div>
             <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">Identité professionnelle</h2>
@@ -420,8 +420,8 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
       {/* ══ Avis Google (vitrine) — parcours simplifié ══ */}
       <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
-          <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
-            <Star className="w-4 h-4 text-amber-500" />
+          <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
+            <Star className="w-4 h-4 text-zinc-300" />
           </div>
           <div>
             <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">Avis Google sur votre vitrine</h2>
@@ -585,8 +585,8 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
       <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-zinc-300" />
             </div>
             <div>
               <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">Collaborateurs</h2>
@@ -746,8 +746,8 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
       {/* ══ Section 3 — Facturation & Documents ══ */}
       <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
-          <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
-            <CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
+            <CreditCard className="w-4 h-4 text-zinc-300" />
           </div>
           <div>
             <h2 className="font-semibold text-sm text-zinc-900 dark:text-white">Facturation & Abonnement</h2>

@@ -291,8 +291,8 @@ export const ClientList: React.FC<ClientListProps> = ({
         {useSupabase && onOpenGoogleReviewsSettings && !googlePlaceConfigured && (
           <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/40 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex gap-3 min-w-0">
-              <div className="p-2.5 rounded-xl bg-amber-100/90 dark:bg-amber-500/15 shrink-0">
-                <MapPin className="w-5 h-5 text-amber-800 dark:text-amber-300" aria-hidden />
+              <div className="p-2.5 rounded-xl bg-zinc-800 border border-zinc-700/60 shrink-0">
+                <MapPin className="w-5 h-5 text-zinc-300" aria-hidden />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-zinc-900 dark:text-white">Avis Google sur la vitrine</p>

@@ -30,8 +30,8 @@ export const ClientStampCard: React.FC<ClientStampCardProps> = ({
   return (
     <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/50 p-4 sm:p-5">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
-          <Gift className="w-5 h-5 text-amber-700 dark:text-amber-400" strokeWidth={1.5} />
+        <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center">
+          <Gift className="w-5 h-5 text-zinc-300" strokeWidth={1.5} />
         </div>
         <div>
           <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">Carte fidélité</h4>

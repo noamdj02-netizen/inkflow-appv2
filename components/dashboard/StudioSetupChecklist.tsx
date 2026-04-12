@@ -81,7 +81,7 @@ export const StudioSetupChecklist: React.FC<StudioSetupChecklistProps> = ({
     <div className="rounded-2xl border border-emerald-200/80 dark:border-emerald-500/25 bg-gradient-to-br from-emerald-50/90 to-white dark:from-emerald-950/30 dark:to-zinc-900/80 p-4 sm:p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-800 border border-zinc-700/60 text-zinc-300">
             <Sparkles className="w-4 h-4" aria-hidden />
           </div>
           <div className="min-w-0">

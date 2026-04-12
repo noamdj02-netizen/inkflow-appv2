@@ -1013,8 +1013,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               className="w-full rounded-2xl border border-amber-400/30 dark:border-amber-500/25 bg-amber-50/80 dark:bg-amber-500/10 p-3 flex items-center gap-3 text-left active:scale-[0.99] transition-transform touch-manipulation min-h-[52px]"
               aria-label={`Voir les ${pendingDemandesCount} demande${pendingDemandesCount > 1 ? 's' : ''} en attente`}
             >
-              <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center shrink-0">
-                <Inbox className="w-5 h-5 text-amber-600 dark:text-amber-400" strokeWidth={2} />
+              <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center shrink-0">
+                <Inbox className="w-5 h-5 text-zinc-300" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 leading-tight">
@@ -1675,7 +1675,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         <div className="space-y-2">
                           {recentDeposits.slice(0, 5).map((apt) => (
                                     <button key={apt.id} onClick={() => setSelectedAppointment(apt)} className="w-full flex items-center gap-3 p-3 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors text-left">
-                                      <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center flex-shrink-0"><CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /></div>
+                                      <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center flex-shrink-0"><CreditCard className="w-4 h-4 text-zinc-300" /></div>
                               <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate flex-1">{apt.clientName || 'Client'}</span>
                               <span className="text-sm font-bold text-zinc-900 dark:text-white tabular-nums">
                                 {privacyMode ? '+••••' : `+${apt.deposit}€`}

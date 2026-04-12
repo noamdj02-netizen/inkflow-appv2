@@ -72,8 +72,8 @@ export const ReferralWidget: React.FC<ReferralWidgetProps> = ({
   return (
     <div className="prodify-card p-5">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
-          <Gift className="w-5 h-5 text-emerald-600 dark:text-emerald-400" strokeWidth={1.5} />
+        <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center flex-shrink-0">
+          <Gift className="w-5 h-5 text-zinc-300" strokeWidth={1.5} />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">

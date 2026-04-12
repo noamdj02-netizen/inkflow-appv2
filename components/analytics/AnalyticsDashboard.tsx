@@ -17,7 +17,7 @@ import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivac
 interface AnalyticsDashboardProps {
   appointments: Appointment[];
   clients: Client[];
-  /** Affiché sur l’export PDF / impression */
+  /** Affiché sur l'export PDF / impression */
   studioName?: string;
 }
 
@@ -143,32 +143,32 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         value: formatEuroPrivacy(totalRevenue, privacyMode),
         hint: 'Somme des tarifs des RDV sur la période sélectionnée.',
         icon: DollarSign,
-        accent: 'text-blue-600 dark:text-blue-400',
-        iconBg: 'bg-blue-100 dark:bg-blue-500/15',
+        accent: 'text-zinc-300',
+        iconBg: 'bg-zinc-800 border border-zinc-700/60',
       },
       {
         label: 'Acomptes reçus',
         value: formatEuroPrivacy(totalDeposits, privacyMode),
         hint: 'Montants encaissés pour les RDV marqués avec acompte payé.',
         icon: Target,
-        accent: 'text-emerald-600 dark:text-emerald-400',
-        iconBg: 'bg-emerald-100 dark:bg-emerald-500/15',
+        accent: 'text-zinc-300',
+        iconBg: 'bg-zinc-800 border border-zinc-700/60',
       },
       {
         label: 'Rendez-vous',
         value: String(filteredAppointments.length),
-        hint: 'Nombre de créneaux dans l’agenda pour cette période.',
+        hint: "Nombre de créneaux dans l'agenda pour cette période.",
         icon: Calendar,
-        accent: 'text-violet-600 dark:text-violet-400',
-        iconBg: 'bg-violet-100 dark:bg-violet-500/15',
+        accent: 'text-zinc-300',
+        iconBg: 'bg-zinc-800 border border-zinc-700/60',
       },
       {
         label: 'Taux de complétion',
         value: `${completionRate.toFixed(1)} %`,
         hint: 'Part des RDV au statut « terminé » sur la période.',
         icon: Award,
-        accent: 'text-amber-600 dark:text-amber-400',
-        iconBg: 'bg-amber-100 dark:bg-amber-500/15',
+        accent: 'text-zinc-300',
+        iconBg: 'bg-zinc-800 border border-zinc-700/60',
       },
     ],
     [totalRevenue, totalDeposits, filteredAppointments.length, completionRate, privacyMode]
@@ -181,7 +181,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
   return (
     <div className="analytics-dashboard-shell min-h-0 bg-zinc-50 dark:bg-black p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8 animate-fade-in print:p-4">
-      {/* Bandeau impression (PDF) — visible seulement à l’impression */}
+      {/* Bandeau impression (PDF) — visible seulement à l'impression */}
       <div className="hidden print:block border-b border-zinc-200 pb-4 mb-6">
         <p className="text-xs uppercase tracking-widest text-zinc-500">Rapport statistiques</p>
         <h1 className="font-display text-2xl font-bold text-zinc-900 print:text-zinc-900">{studioName}</h1>
@@ -240,8 +240,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       </div>
 
       <p className="text-xs text-zinc-500 dark:text-zinc-500 -mt-2 analytics-hide-print max-w-2xl leading-relaxed">
-        <strong className="font-medium text-zinc-600 dark:text-zinc-400">Export :</strong> ouvrez l’aperçu
-        d’impression puis choisissez <strong>Enregistrer au format PDF</strong> (Chrome / Edge) ou{' '}
+        <strong className="font-medium text-zinc-600 dark:text-zinc-400">Export :</strong> ouvrez l'aperçu
+        d'impression puis choisissez <strong>Enregistrer au format PDF</strong> (Chrome / Edge) ou{' '}
         <strong>PDF</strong> comme destination. Idéal pour un bilan mensuel ou votre comptable.
       </p>
 
@@ -282,7 +282,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 <Info className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" aria-hidden />
                 <span>
                   <strong className="text-zinc-800 dark:text-zinc-200">Acomptes reçus</strong> — uniquement les RDV où
-                  l’acompte est indiqué comme payé. Utile pour la trésorerie court terme.
+                  l'acompte est indiqué comme payé. Utile pour la trésorerie court terme.
                 </span>
               </li>
               <li className="flex gap-2">
@@ -296,7 +296,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 <Info className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" aria-hidden />
                 <span>
                   <strong className="text-zinc-800 dark:text-zinc-200">Évolution du revenu</strong> — cumul par mois sur
-                  l’année en cours (indépendant du filtre semaine / mois / année des cartes du haut).
+                  l'année en cours (indépendant du filtre semaine / mois / année des cartes du haut).
                 </span>
               </li>
             </ul>
@@ -305,7 +305,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         {/* Version impression : résumé court du guide */}
         <div className="hidden print:block px-5 py-3 text-xs text-zinc-600 space-y-1 border-t border-zinc-200">
           <p className="font-semibold text-zinc-800">Légende (export)</p>
-          <p>Revenu total = somme des tarifs RDV. Acomptes = paiements d’acompte enregistrés. Complétion = RDV terminés / total.</p>
+          <p>Revenu total = somme des tarifs RDV. Acomptes = paiements d'acompte enregistrés. Complétion = RDV terminés / total.</p>
         </div>
       </div>
 
@@ -505,8 +505,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                   Meilleur client (CA)
                 </span>
                 <div className="flex items-center gap-3 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/40">
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" aria-hidden />
+                  <div className="w-10 h-10 bg-zinc-800 border border-zinc-700/60 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Users className="w-5 h-5 text-zinc-300" aria-hidden />
                   </div>
                   <div className="min-w-0">
                     <div className="font-semibold text-sm text-zinc-900 dark:text-white truncate print:text-zinc-900">

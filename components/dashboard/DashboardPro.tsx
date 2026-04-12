@@ -2396,11 +2396,11 @@ export const DashboardPro: React.FC = () => {
                   { label: 'Vitrine & Communication', color: 'amber', items: ['vitrine', 'public_app', 'messagerie'] },
                 ];
                 const colorMap: Record<string, { dot: string; label: string; card: string; icon: string }> = {
-                  zinc:    { dot: 'bg-zinc-400',    label: 'text-zinc-500 dark:text-zinc-400',    card: 'hover:border-zinc-300 dark:hover:border-zinc-600',    icon: 'text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800' },
-                  blue:    { dot: 'bg-blue-400',    label: 'text-blue-600 dark:text-blue-400',    card: 'hover:border-blue-200 dark:hover:border-blue-800',    icon: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10' },
-                  violet:  { dot: 'bg-violet-400',  label: 'text-violet-600 dark:text-violet-400', card: 'hover:border-violet-200 dark:hover:border-violet-800', icon: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10' },
-                  emerald: { dot: 'bg-emerald-400', label: 'text-emerald-600 dark:text-emerald-400', card: 'hover:border-emerald-200 dark:hover:border-emerald-800', icon: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' },
-                  amber:   { dot: 'bg-amber-400',   label: 'text-amber-600 dark:text-amber-400',   card: 'hover:border-amber-200 dark:hover:border-amber-800',   icon: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10' },
+                  zinc:    { dot: 'bg-zinc-500',    label: 'text-zinc-500 dark:text-zinc-400',    card: 'hover:border-zinc-600',    icon: 'text-zinc-300 bg-zinc-800 border border-zinc-700/60' },
+                  blue:    { dot: 'bg-zinc-500',    label: 'text-zinc-500 dark:text-zinc-400',    card: 'hover:border-zinc-600',    icon: 'text-zinc-300 bg-zinc-800 border border-zinc-700/60' },
+                  violet:  { dot: 'bg-zinc-500',    label: 'text-zinc-500 dark:text-zinc-400',    card: 'hover:border-zinc-600',    icon: 'text-zinc-300 bg-zinc-800 border border-zinc-700/60' },
+                  emerald: { dot: 'bg-zinc-500',    label: 'text-zinc-500 dark:text-zinc-400',    card: 'hover:border-zinc-600',    icon: 'text-zinc-300 bg-zinc-800 border border-zinc-700/60' },
+                  amber:   { dot: 'bg-zinc-500',    label: 'text-zinc-500 dark:text-zinc-400',    card: 'hover:border-zinc-600',    icon: 'text-zinc-300 bg-zinc-800 border border-zinc-700/60' },
                 };
                 return (
                   <div className="space-y-8">
