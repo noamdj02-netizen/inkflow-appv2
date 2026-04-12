@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTheme } from 'next-themes';
-import { Calendar, Plus, ChevronRight, Search, ExternalLink, Download, Clock, Users, CalendarDays, X, SlidersHorizontal, Check, CheckCheck } from 'lucide-react';
+import { Calendar, Plus, ChevronRight, Search, ExternalLink, Download, Clock, Users, CalendarDays, X, SlidersHorizontal, Check, CheckCheck, CircleDollarSign } from 'lucide-react';
 import { Appointment, Client } from '../../types';
 import { MiniCalendar } from './MiniCalendar';
 import { AppointmentCalendar } from './AppointmentCalendar';
@@ -56,6 +56,22 @@ const STATUS_STYLES: Record<string, string> = {
   in_progress: 'bg-blue-50 text-blue-700 border border-blue-200/60 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
   no_show: 'bg-red-50 text-red-600 border border-red-200/60 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
 };
+
+/** Bordure gauche carte mobile — repère visuel rapide (statut). */
+const CARD_LEFT_ACCENT: Record<string, string> = {
+  pending: 'border-l-amber-400',
+  confirmed: 'border-l-emerald-500',
+  completed: 'border-l-zinc-300 dark:border-l-zinc-600',
+  cancelled: 'border-l-red-400',
+  in_progress: 'border-l-sky-500',
+  no_show: 'border-l-red-500',
+};
+
+function needsDepositAttention(apt: Appointment): boolean {
+  if (apt.deposit <= 0) return false;
+  if (apt.depositPaid) return false;
+  return apt.status !== 'completed' && apt.status !== 'cancelled';
+}
 
 export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   appointments,
@@ -138,136 +154,173 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
   const activeLabel = dateRangeChip === 'today' ? "Aujourd'hui" : dateRangeChip === 'week' ? 'Cette semaine' : selectedDate ? formatDateLabel(selectedDate) : null;
 
-  return (
-    <div className="space-y-6 animate-fade-in">
+  const kpiGridClass =
+    stats.pendingCount > 0
+      ? 'grid grid-cols-3 gap-2 w-full sm:flex sm:flex-wrap sm:w-auto'
+      : 'grid grid-cols-2 gap-2 w-full sm:flex sm:flex-wrap sm:w-auto';
 
-      {/* ── HEADER ─────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">
+  return (
+    <div className="space-y-3 sm:space-y-5 md:space-y-6 animate-fade-in font-sans">
+
+      {/* ── HEADER — mobile: titre + CTA sur une ligne ; KPI en grille pleine largeur (évite le « blanc » à droite) ── */}
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight min-w-0">
             Rendez-vous
           </h1>
-          {/* Stats chips — inline, compactes */}
-          <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <button
-              onClick={() => { setDateRangeChip('today'); setSelectedDate(null); setMiniCalendarMonth(new Date()); }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                dateRangeChip === 'today'
-                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-              }`}
-            >
-              <CalendarDays className="w-3 h-3" />
-              {stats.todayCount} aujourd'hui
-            </button>
-            <button
-              onClick={() => { setDateRangeChip('week'); setSelectedDate(null); }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                dateRangeChip === 'week'
-                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-              }`}
-            >
-              <Clock className="w-3 h-3" />
-              {stats.weekCount} cette semaine
-            </button>
-            {stats.pendingCount > 0 && (
-              <button
-                onClick={() => { setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending'); setDateRangeChip(null); setSelectedDate(null); }}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                  statusFilter === 'pending'
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-500/20'
-                }`}
-              >
-                <Users className="w-3 h-3" />
-                {stats.pendingCount} en attente
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={onNewAppointment}
+            className="flex-shrink-0 inline-flex items-center justify-center gap-2 min-h-[44px] sm:min-h-[40px] px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white dark:bg-blue-500 dark:hover:bg-blue-400 text-sm font-semibold rounded-xl shadow-sm shadow-blue-600/25 dark:shadow-blue-500/20 transition-all active:scale-[0.97]"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Nouveau RDV</span>
+            <span className="sm:hidden">+ RDV</span>
+          </button>
         </div>
 
-        <button
-          onClick={onNewAppointment}
-          className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold rounded-xl shadow-sm transition-all active:scale-[0.97]"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Nouveau RDV</span>
-          <span className="sm:hidden">RDV</span>
-        </button>
+        {/* Stats — grille = même largeur de colonnes, plus de vide à droite sur téléphone */}
+        <div className={kpiGridClass}>
+          <button
+            type="button"
+            onClick={() => { setDateRangeChip('today'); setSelectedDate(null); setMiniCalendarMonth(new Date()); }}
+            className={`flex min-w-0 w-full items-center justify-center gap-1.5 sm:gap-2 px-1.5 sm:pl-1 sm:pr-3 min-h-[44px] sm:min-h-[40px] rounded-2xl text-[11px] sm:text-xs font-semibold transition-all active:scale-[0.98] border border-transparent ${
+              dateRangeChip === 'today'
+                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm'
+                : 'bg-zinc-100/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/90 dark:hover:bg-zinc-700 border-zinc-200/60 dark:border-zinc-700/80'
+            }`}
+          >
+            <span className="hidden sm:block w-1 self-stretch min-h-[2rem] rounded-full bg-sky-500 shrink-0" aria-hidden />
+            <CalendarDays className="w-3.5 h-3.5 shrink-0 opacity-90" />
+            <span className="tabular-nums text-center leading-tight">
+              <span className="block sm:inline">{stats.todayCount} </span>
+              <span className="block text-[10px] font-semibold opacity-90 sm:inline sm:text-xs sm:font-semibold sm:opacity-100">
+                <span className="sm:hidden">auj.</span>
+                <span className="hidden sm:inline">aujourd&apos;hui</span>
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setDateRangeChip('week'); setSelectedDate(null); }}
+            className={`flex min-w-0 w-full items-center justify-center gap-1.5 sm:gap-2 px-1.5 sm:pl-1 sm:pr-3 min-h-[44px] sm:min-h-[40px] rounded-2xl text-[11px] sm:text-xs font-semibold transition-all active:scale-[0.98] border border-transparent ${
+              dateRangeChip === 'week'
+                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm'
+                : 'bg-zinc-100/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/90 dark:hover:bg-zinc-700 border-zinc-200/60 dark:border-zinc-700/80'
+            }`}
+          >
+            <span className="hidden sm:block w-1 self-stretch min-h-[2rem] rounded-full bg-zinc-500 dark:bg-zinc-400 shrink-0" aria-hidden />
+            <Clock className="w-3.5 h-3.5 shrink-0 opacity-90" />
+            <span className="tabular-nums text-center leading-tight">
+              <span className="block sm:inline">{stats.weekCount} </span>
+              <span className="block text-[10px] font-semibold opacity-90 sm:inline sm:text-xs sm:font-semibold sm:opacity-100">
+                <span className="sm:hidden">sem.</span>
+                <span className="hidden sm:inline">cette semaine</span>
+              </span>
+            </span>
+          </button>
+          {stats.pendingCount > 0 && (
+            <button
+              type="button"
+              onClick={() => { setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending'); setDateRangeChip(null); setSelectedDate(null); }}
+              className={`flex min-w-0 w-full items-center justify-center gap-1.5 sm:gap-2 px-1.5 sm:pl-1 sm:pr-3 min-h-[44px] sm:min-h-[40px] rounded-2xl text-[11px] sm:text-xs font-semibold transition-all active:scale-[0.98] border ${
+                statusFilter === 'pending'
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                  : 'bg-amber-50/95 dark:bg-amber-500/12 text-amber-800 dark:text-amber-300 border-amber-200/70 dark:border-amber-500/25'
+              }`}
+            >
+              <span className="hidden sm:block w-1 self-stretch min-h-[2rem] rounded-full bg-amber-500 shrink-0" aria-hidden />
+              <Users className="w-3.5 h-3.5 shrink-0 opacity-90" />
+              <span className="tabular-nums text-center leading-tight">
+                <span className="block sm:inline">{stats.pendingCount} </span>
+                <span className="block text-[10px] font-semibold opacity-90 sm:inline sm:text-xs sm:font-semibold sm:opacity-100">
+                  <span className="sm:hidden">att.</span>
+                  <span className="hidden sm:inline">en attente</span>
+                </span>
+              </span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* ── TOOLBAR ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2">
-        {/* Vue */}
-        <div className="inline-flex p-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
-          {(['list', 'calendar'] as ViewMode[]).map((m) => (
+      {/* ── TOOLBAR — petit mobile : 2 lignes (filtre pleine largeur) ; sm+ : une ligne ── */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto sm:flex-1">
+          {/* Vue */}
+          <div className="inline-flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-2xl border border-zinc-200/60 dark:border-zinc-700/60 shrink-0">
+            {(['list', 'calendar'] as ViewMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setViewMode(m)}
+                className={`min-h-[44px] sm:min-h-9 px-4 sm:px-3 rounded-[10px] text-xs font-semibold transition-all active:scale-[0.98] ${
+                  viewMode === m
+                    ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-600'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                }`}
+              >
+                {m === 'list' ? 'Liste' : 'Mois'}
+              </button>
+            ))}
+          </div>
+
+          {/* Calendrier toggle mobile */}
+          <button
+            type="button"
+            onClick={() => setShowCalendarMobile((v) => !v)}
+            className={`lg:hidden inline-flex items-center justify-center gap-1.5 min-h-11 min-w-11 px-2 rounded-xl text-xs font-semibold border transition-all active:scale-[0.98] shrink-0 ${
+              showCalendarMobile
+                ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400'
+                : 'bg-white dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 shadow-sm'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span className="hidden min-[400px]:inline">Calendrier</span>
+          </button>
+
+          <div className="flex-1 min-w-2" />
+
+          {/* Recherche */}
+          {showSearch ? (
+            <div className="flex items-center gap-2 flex-1 min-w-0 max-w-[min(100%,14rem)]">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
+                <input
+                  ref={searchRef}
+                  type="search"
+                  placeholder="Client, service…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full min-h-11 pl-9 pr-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowSearch(false); setSearchQuery(''); }}
+                className="min-h-11 min-w-11 shrink-0 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors active:scale-[0.98]"
+                aria-label="Fermer la recherche"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
             <button
-              key={m}
-              onClick={() => setViewMode(m)}
-              className={`px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all ${
-                viewMode === m
-                  ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
-                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
-              }`}
+              type="button"
+              onClick={() => setShowSearch(true)}
+              className="min-h-11 min-w-11 flex items-center justify-center rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shadow-sm active:scale-[0.98] shrink-0"
+              aria-label="Rechercher"
             >
-              {m === 'list' ? 'Liste' : 'Mois'}
+              <Search className="w-4 h-4" />
             </button>
-          ))}
+          )}
         </div>
 
-        {/* Calendrier toggle mobile */}
-        <button
-          onClick={() => setShowCalendarMobile((v) => !v)}
-          className={`lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-            showCalendarMobile
-              ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400'
-              : 'bg-white dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
-          }`}
-        >
-          <Calendar className="w-3.5 h-3.5" />
-          <span className="hidden min-[400px]:inline">Calendrier</span>
-        </button>
-
-        <div className="flex-1" />
-
-        {/* Recherche */}
-        {showSearch ? (
-          <div className="flex items-center gap-2 flex-1 max-w-52">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
-              <input
-                ref={searchRef}
-                type="search"
-                placeholder="Client, service…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-              />
-            </div>
-            <button
-              onClick={() => { setShowSearch(false); setSearchQuery(''); }}
-              className="w-8 h-8 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowSearch(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shadow-sm"
-            aria-label="Rechercher"
-          >
-            <Search className="w-3.5 h-3.5" />
-          </button>
-        )}
-
         {/* Filtre statut */}
-        <div className="relative">
+        <div className="relative w-full min-w-0 sm:w-auto sm:min-w-[11rem] sm:max-w-[min(100%,20rem)] sm:flex-1">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className="appearance-none pl-3 pr-7 py-1.5 text-xs font-semibold rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer transition-all shadow-sm"
+            className="appearance-none w-full min-h-11 pl-3 pr-9 py-2 text-xs font-semibold rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer transition-all shadow-sm"
           >
             <option value="all">Tous les statuts</option>
             <option value="pending">En attente</option>
@@ -275,26 +328,28 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             <option value="completed">Terminé</option>
             <option value="cancelled">Annulé</option>
           </select>
-          <SlidersHorizontal className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
+          <SlidersHorizontal className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
         </div>
       </div>
 
       {/* Label filtre actif */}
       {activeLabel && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-500 dark:text-zinc-500">{filteredAppointments.length} RDV ·</span>
-          <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{activeLabel}</span>
+        <div className="flex items-center gap-2 flex-wrap rounded-xl border border-zinc-200/70 dark:border-zinc-700/80 bg-zinc-50/80 dark:bg-zinc-900/40 px-3 py-1.5 sm:py-2">
+          <span className="text-xs text-zinc-500 dark:text-zinc-500 tabular-nums">{filteredAppointments.length} RDV ·</span>
+          <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">{activeLabel}</span>
           <button
+            type="button"
             onClick={() => { setSelectedDate(null); setDateRangeChip(null); setStatusFilter('all'); }}
-            className="text-zinc-400 dark:text-zinc-600 hover:text-slate-700 dark:hover:text-zinc-300 transition-colors"
+            className="ml-auto min-h-11 min-w-11 -mr-1 inline-flex items-center justify-center rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 transition-colors active:scale-[0.98]"
+            aria-label="Réinitialiser les filtres"
           >
-            <X className="w-3 h-3" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {/* ── LAYOUT ─────────────────────────────────────────────── */}
-      <div className="flex flex-col lg:flex-row gap-5">
+      <div className="flex flex-col lg:flex-row gap-3 sm:gap-5 min-w-0">
 
         {/* Sidebar calendrier */}
         <aside className={`lg:w-64 xl:w-72 flex-shrink-0 ${showCalendarMobile ? 'block' : 'hidden lg:block'}`}>
@@ -313,7 +368,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         </aside>
 
         {/* Zone principale */}
-        <div className="flex-1 min-w-0 space-y-3">
+        <div className="flex-1 min-w-0 space-y-2 sm:space-y-3">
           {viewMode === 'calendar' ? (
             <AppointmentCalendar
               appointments={filteredAppointments}
@@ -330,24 +385,27 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">
                 {dateRangeChip === 'today' ? "Aucun RDV aujourd'hui" : dateRangeChip === 'week' ? 'Aucun RDV cette semaine' : selectedDate ? `Aucun RDV le ${selectedDate}` : 'Vos RDV apparaîtront ici'}
               </p>
-              <button onClick={onNewAppointment} className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-semibold transition-all active:scale-[0.97]">
+              <button onClick={onNewAppointment} className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white dark:bg-blue-500 dark:hover:bg-blue-400 text-sm font-semibold transition-all active:scale-[0.97] shadow-sm shadow-blue-600/25">
                 <Plus className="w-4 h-4" /> Nouveau RDV
               </button>
             </div>
           ) : (
             <>
               {/* Mobile cards */}
-              <div className="space-y-2 md:hidden">
-                {filteredAppointments.map((apt) => (
+              <div className="space-y-3 md:hidden">
+                {filteredAppointments.map((apt) => {
+                  const leftAccent = CARD_LEFT_ACCENT[apt.status] || 'border-l-zinc-300 dark:border-l-zinc-600';
+                  const depositDue = needsDepositAttention(apt);
+                  return (
                   <button
                     key={apt.id}
                     type="button"
                     onClick={() => onSelectAppointment(apt)}
-                    className="w-full text-left bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-[0_1px_6px_-2px_rgba(0,0,0,0.08)] hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 active:scale-[0.99] transition-all duration-150 overflow-hidden touch-manipulation"
+                    className={`w-full text-left bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 border-l-4 ${leftAccent} rounded-2xl shadow-[0_1px_6px_-2px_rgba(0,0,0,0.08)] hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 active:scale-[0.99] transition-all duration-150 overflow-hidden touch-manipulation`}
                   >
                     <div className="flex items-center gap-3 p-4">
                       {/* Avatar */}
-                      <div className="relative w-11 h-11 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
+                      <div className="relative w-12 h-12 rounded-2xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm ring-1 ring-zinc-200/60 dark:ring-zinc-600/60">
                         {getAvatar(apt) ? (
                           <img src={getAvatar(apt)} alt="" className="absolute inset-0 w-full h-full object-cover" />
                         ) : (
@@ -356,43 +414,50 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                       </div>
                       {/* Infos */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{apt.clientName}</span>
-                          <span className="font-bold text-blue-600 dark:text-blue-400 text-sm tabular-nums shrink-0">{apt.price}€</span>
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <span className="text-sm font-semibold text-zinc-900 dark:text-white truncate leading-snug">{apt.clientName}</span>
+                          <span className="font-bold text-sky-600 dark:text-sky-400 text-sm tabular-nums shrink-0">{apt.price}€</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                           <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums shrink-0">{apt.date}{apt.time ? ` · ${apt.time}` : ''}</span>
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${STATUS_STYLES[apt.status] || STATUS_STYLES.completed}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[apt.status] || 'bg-zinc-400'}`} />
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold ${STATUS_STYLES[apt.status] || STATUS_STYLES.completed}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[apt.status] || 'bg-zinc-400'}`} />
                             {STATUS_LABELS[apt.status] ?? apt.status}
                           </span>
+                          {depositDue && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/70 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/25">
+                              <CircleDollarSign className="w-3 h-3 shrink-0" aria-hidden />
+                              Acompte
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600 shrink-0" />
+                      <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 shrink-0 self-center" aria-hidden />
                     </div>
-                    {/* Bottom row — export actions */}
-                    <div className="flex items-center justify-end gap-1 px-3 pb-2.5 -mt-1">
+                    {/* Export — cibles tactiles ≥ 44px */}
+                    <div className="flex items-stretch justify-end gap-1 px-2 pb-2 border-t border-zinc-100/90 dark:border-zinc-800/90">
                       <a
                         href={getGoogleCalendarAddUrl(apt)}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-[10px] font-medium transition-colors"
-                        title="Google Agenda"
+                        className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-500/10 text-xs font-medium transition-colors active:scale-[0.98]"
+                        title="Ouvrir dans Google Agenda"
                       >
-                        <ExternalLink className="w-3 h-3" /> Agenda
+                        <ExternalLink className="w-4 h-4 shrink-0" /> Agenda
                       </a>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); downloadICS(apt); }}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-[10px] font-medium transition-colors"
-                        title=".ics"
+                        className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-500/10 text-xs font-medium transition-colors active:scale-[0.98]"
+                        title="Télécharger le fichier .ics"
                       >
-                        <Download className="w-3 h-3" /> .ics
+                        <Download className="w-4 h-4 shrink-0" /> .ics
                       </button>
                     </div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Desktop table */}
@@ -444,10 +509,18 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                           <span className="font-bold text-blue-600 dark:text-blue-400 tabular-nums">{apt.price}€</span>
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLES[apt.status] || STATUS_STYLES.completed}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[apt.status] || 'bg-zinc-400'}`} />
-                            {STATUS_LABELS[apt.status] ?? apt.status}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLES[apt.status] || STATUS_STYLES.completed}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[apt.status] || 'bg-zinc-400'}`} />
+                              {STATUS_LABELS[apt.status] ?? apt.status}
+                            </span>
+                            {needsDepositAttention(apt) && (
+                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/70 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/25">
+                                <CircleDollarSign className="w-3 h-3" aria-hidden />
+                                Acompte
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">

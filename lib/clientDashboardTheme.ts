@@ -53,14 +53,15 @@ export interface ClientDashboardTheme {
 
 /** Palette type dashboard SaaS clair (bleu primaire) — ajustez ici pour une autre charte. */
 export const CLIENT_DASHBOARD_THEME: ClientDashboardTheme = {
+  /** Fond groupe (proche systemGroupedBackground iOS, léger zinc) */
   pageBg: '#F4F4F5',
   sidebarBg: '#FFFFFF',
-  sidebarBorder: 'rgba(24, 24, 27, 0.08)',
+  sidebarBorder: 'rgba(24, 24, 27, 0.06)',
   contentCardBg: '#FFFFFF',
   elevatedSurface: '#F4F4F5',
   modalSurface: '#FFFFFF',
-  border: 'rgba(24, 24, 27, 0.08)',
-  borderMid: 'rgba(24, 24, 27, 0.14)',
+  border: 'rgba(24, 24, 27, 0.07)',
+  borderMid: 'rgba(24, 24, 27, 0.12)',
   text: '#18181B',
   textSub: '#52525B',
   muted: '#71717A',
@@ -72,7 +73,7 @@ export const CLIENT_DASHBOARD_THEME: ClientDashboardTheme = {
   success: '#16A34A',
   danger: '#DC2626',
   warning: '#CA8A04',
-  headerBg: 'rgba(255, 255, 255, 0.92)',
+  headerBg: 'rgba(255, 255, 255, 0.94)',
   mapBadgeBg: 'rgba(255, 255, 255, 0.96)',
   mapBadgeFg: '#2563EB',
   mapTileUrl: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',

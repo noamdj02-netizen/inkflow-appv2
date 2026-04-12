@@ -106,6 +106,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [runVitrineTour, setRunVitrineTour] = useState(false);
   const [vitrineStepIndex, setVitrineStepIndex] = useState(0);
   const [googleReviewsPayload, setGoogleReviewsPayload] = useState<GoogleReviewsPayload | null>(null);
+  /** Favori navigateur (localStorage) — même slug = même préférence sur l’appareil */
+  const [studioFavorite, setStudioFavorite] = useState(false);
   const activeTheme = getVitrineTheme(studio?.theme ?? 'light') ?? getVitrineTheme('light')!;
   const primaryColor = activeTheme?.accentColor ?? '#171717';
 
@@ -124,6 +126,14 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   useEffect(() => {
     loadVitrine();
   }, [loadVitrine]);
+
+  useEffect(() => {
+    try {
+      setStudioFavorite(localStorage.getItem(`inkflow-vitrine-fav-${studioSlug}`) === '1');
+    } catch {
+      setStudioFavorite(false);
+    }
+  }, [studioSlug]);
 
   useEffect(() => {
     let cancelled = false;
@@ -408,6 +418,17 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     }
   };
 
+  const toggleStudioFavorite = () => {
+    const next = !studioFavorite;
+    setStudioFavorite(next);
+    try {
+      const key = `inkflow-vitrine-fav-${studioSlug}`;
+      if (next) localStorage.setItem(key, '1');
+      else localStorage.removeItem(key);
+    } catch { /* quota / private mode */ }
+    toast.success(next ? 'Studio enregistré dans vos favoris sur cet appareil' : 'Retiré de vos favoris');
+  };
+
   const getCurrentDay = () => {
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     return days[new Date().getDay()];
@@ -577,11 +598,31 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 </div>
               </div>
               <div className="flex gap-2 sm:gap-3 md:pb-2 flex-shrink-0">
-                <button onClick={shareStudio} className="p-3 sm:p-4 bg-white/20 backdrop-blur-md rounded-xl hover:bg-white/30 transition-all border border-white/30 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={shareStudio}
+                  aria-label="Partager la vitrine"
+                  className="p-3 sm:p-4 bg-white/20 backdrop-blur-md rounded-xl hover:bg-white/30 transition-all border border-white/30 min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-[0.98]"
+                >
                   <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </button>
-                <button className="p-3 sm:p-4 bg-white/20 backdrop-blur-md rounded-xl hover:bg-white/30 transition-all border border-white/30 min-w-[44px] min-h-[44px] flex items-center justify-center">
-                  <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                <button
+                  type="button"
+                  onClick={toggleStudioFavorite}
+                  aria-pressed={studioFavorite}
+                  aria-label={studioFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                  title={studioFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                  className={`p-3 sm:p-4 backdrop-blur-md rounded-xl transition-all border min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-[0.98] ${
+                    studioFavorite
+                      ? 'bg-rose-500/35 border-rose-300/60 hover:bg-rose-500/45'
+                      : 'bg-white/20 hover:bg-white/30 border-white/30'
+                  }`}
+                >
+                  <Heart
+                    className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                      studioFavorite ? 'fill-rose-300 text-rose-50' : 'text-white fill-transparent'
+                    }`}
+                  />
                 </button>
               </div>
             </div>

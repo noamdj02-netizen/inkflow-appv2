@@ -1,5 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Store, ChevronRight, ExternalLink, Plus, Trash2, Save, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Store,
+  ChevronRight,
+  ChevronLeft,
+  ExternalLink,
+  Plus,
+  Trash2,
+  Save,
+  Check,
+  Phone,
+  BarChart3,
+  Briefcase,
+  Users,
+  Images,
+  Zap,
+  MessageSquare,
+  HelpCircle,
+  Sparkles,
+  Clock,
+} from 'lucide-react';
 import { VitrineLinkButton } from '../dashboard/VitrineLinkButton';
 import { ThemeSelector } from './ThemeSelector';
 import { ImageUploadField } from '../ui/ImageUploadField';
@@ -101,19 +121,31 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
     }
   };
 
-  const sections = [
-    { id: 'identity', label: 'Identité & Présentation', icon: Store },
-    { id: 'contact', label: 'Contact & Réseaux' },
-    { id: 'stats', label: 'Statistiques' },
-    { id: 'services', label: 'Services' },
-    { id: 'artists', label: 'Artistes' },
-    { id: 'portfolio', label: 'Portfolio' },
-    { id: 'flash', label: 'Flash' },
-    { id: 'testimonials', label: 'Avis clients' },
-    { id: 'faq', label: 'FAQ' },
-    { id: 'why', label: 'Pourquoi nous' },
-    { id: 'hours', label: 'Horaires' }
-  ];
+  const sections = useMemo(
+    (): { id: string; label: string; icon: LucideIcon }[] => [
+      { id: 'identity', label: 'Identité & Présentation', icon: Store },
+      { id: 'contact', label: 'Contact & Réseaux', icon: Phone },
+      { id: 'stats', label: 'Statistiques', icon: BarChart3 },
+      { id: 'services', label: 'Services', icon: Briefcase },
+      { id: 'artists', label: 'Artistes', icon: Users },
+      { id: 'portfolio', label: 'Portfolio', icon: Images },
+      { id: 'flash', label: 'Flash', icon: Zap },
+      { id: 'testimonials', label: 'Avis clients', icon: MessageSquare },
+      { id: 'faq', label: 'FAQ', icon: HelpCircle },
+      { id: 'why', label: 'Pourquoi nous', icon: Sparkles },
+      { id: 'hours', label: 'Horaires', icon: Clock },
+    ],
+    []
+  );
+
+  const sectionIndex = sections.findIndex((s) => s.id === activeSection);
+  const safeSectionIndex = sectionIndex >= 0 ? sectionIndex : 0;
+  const tabBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    const el = tabBtnRefs.current[activeSection];
+    el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [activeSection]);
 
   const publicUrl = typeof window !== 'undefined' && slug
     ? `${window.location.origin}/studio/${slug}`
@@ -132,24 +164,83 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
       {studioId && (
         <ThemeSelector studioId={studioId} userEmail={userEmail} publicVitrineUrl={publicUrl || undefined} />
       )}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-lg sm:text-xl font-bold">Personnaliser votre page vitrine</h2>
-        <button onClick={handleManualSave} disabled={saving || manualSaving} className="flex items-center justify-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed">
-          {manualSaving || saving ? 'Enregistrement...' : saved ? <><Check className="w-5 h-5" /> Enregistré</> : <><Save className="w-5 h-5" /> Enregistrer</>}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0 space-y-1">
+          <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+            Personnaliser votre page vitrine
+          </h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xl leading-snug">
+            {sections.length} sections au total — la sauvegarde est automatique. Utilisez le bouton pour forcer une synchro immédiate.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleManualSave}
+          disabled={saving || manualSaving}
+          className="flex items-center justify-center gap-2 min-h-[44px] px-5 sm:px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 w-full sm:w-auto shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-colors active:scale-[0.98] motion-reduce:active:scale-100"
+        >
+          {manualSaving || saving ? (
+            'Enregistrement...'
+          ) : saved ? (
+            <>
+              <Check className="w-5 h-5 shrink-0" aria-hidden />
+              Enregistré
+            </>
+          ) : (
+            <>
+              <Save className="w-5 h-5 shrink-0" aria-hidden />
+              Enregistrer
+            </>
+          )}
         </button>
       </div>
 
-      <div className="flex gap-2 border-b border-[var(--border)] pb-4 overflow-x-auto flex-nowrap sm:flex-wrap -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
-        {sections.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setActiveSection(id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap ${activeSection === id ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 hover:bg-neutral-50'}`}>
-            {Icon && <Icon className="w-4 h-4" />}
-            {label}
-          </button>
-        ))}
+      <div className="relative border-b border-zinc-200/80 dark:border-zinc-800 pb-3 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2 sm:hidden">
+          Sections ({sections.length})
+        </p>
+        <div
+          className="flex gap-2 overflow-x-auto flex-nowrap scrollbar-hide snap-x snap-mandatory scroll-px-4 sm:scroll-px-0 pb-1 -mb-1 touch-pan-x"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+          role="tablist"
+          aria-label="Blocs de la vitrine"
+        >
+          {sections.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              ref={(el) => {
+                tabBtnRefs.current[id] = el;
+              }}
+              type="button"
+              role="tab"
+              id={`vitrine-tab-${id}`}
+              aria-selected={activeSection === id}
+              aria-controls={`vitrine-panel-${id}`}
+              onClick={() => setActiveSection(id)}
+              className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 min-h-[44px] rounded-xl text-sm font-medium whitespace-nowrap shrink-0 snap-start transition-colors border active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-primary)] ${
+                activeSection === id
+                  ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm dark:bg-white dark:text-zinc-900 dark:border-white'
+                  : 'bg-white dark:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/80'
+              }`}
+            >
+              <Icon className="w-4 h-4 shrink-0 opacity-90" strokeWidth={activeSection === id ? 2.25 : 1.75} aria-hidden />
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 hidden sm:block">
+          Section {safeSectionIndex + 1} sur {sections.length}
+          <span className="text-zinc-400 dark:text-zinc-500"> · </span>
+          <span className="font-medium text-zinc-600 dark:text-zinc-300">{sections[safeSectionIndex]?.label}</span>
+        </p>
       </div>
 
-      <div className="bg-[var(--bg-card)] rounded-2xl p-6 md:p-8 border border-[var(--border)]">
+      <div
+        className="bg-[var(--bg-card)] rounded-2xl p-6 md:p-8 border border-[var(--border)]"
+        role="tabpanel"
+        id={`vitrine-panel-${activeSection}`}
+        aria-labelledby={`vitrine-tab-${activeSection}`}
+      >
         {activeSection === 'identity' && (
           <div className="space-y-6">
             <h3 className="font-bold text-lg">Identité du studio</h3>
@@ -633,6 +724,36 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({ studioName, us
             })}
           </div>
         )}
+
+        <div className="mt-8 pt-6 border-t border-[var(--border)] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-[var(--text-tertiary)] order-2 sm:order-1 text-center sm:text-left">
+            <span className="font-medium text-[var(--text-primary)]">
+              {safeSectionIndex + 1} / {sections.length}
+            </span>
+            {' · '}
+            {sections[safeSectionIndex]?.label}
+          </p>
+          <div className="flex gap-2 order-1 sm:order-2 w-full sm:w-auto">
+            <button
+              type="button"
+              disabled={safeSectionIndex <= 0}
+              onClick={() => setActiveSection(sections[safeSectionIndex - 1].id)}
+              className="inline-flex flex-1 sm:flex-initial items-center justify-center gap-1.5 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-medium border border-[var(--border)] bg-[var(--bg-primary)] text-[var(--text-primary)] hover:bg-zinc-50 dark:hover:bg-zinc-800/60 disabled:opacity-35 disabled:cursor-not-allowed transition-colors active:scale-[0.98] motion-reduce:active:scale-100"
+            >
+              <ChevronLeft className="w-4 h-4 shrink-0" aria-hidden />
+              Précédent
+            </button>
+            <button
+              type="button"
+              disabled={safeSectionIndex >= sections.length - 1}
+              onClick={() => setActiveSection(sections[safeSectionIndex + 1].id)}
+              className="inline-flex flex-1 sm:flex-initial items-center justify-center gap-1.5 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:opacity-35 disabled:cursor-not-allowed transition-colors active:scale-[0.98] motion-reduce:active:scale-100"
+            >
+              Suivant
+              <ChevronRight className="w-4 h-4 shrink-0" aria-hidden />
+            </button>
+          </div>
+        </div>
       </div>
 
       <a href={`/studio/${slug}`} target="_blank" rel="noopener noreferrer"
