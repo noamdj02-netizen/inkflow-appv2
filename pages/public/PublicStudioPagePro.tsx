@@ -823,24 +823,41 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                     <div key={flash.id} className={`group relative aspect-square rounded-lg overflow-hidden ring-1 ring-neutral-200/80 hover:ring-neutral-300 transition-all ${!flash.available ? 'opacity-70' : ''}`}>
                       <div className="absolute inset-0 cursor-pointer" onClick={() => setSelectedFlash(flash)}>
                         <img src={flash.imageUrl} alt={flash.title} loading="lazy" className="w-full h-full object-cover object-center group-hover:opacity-95 transition-opacity duration-300" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-8 text-white">
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">{flash.style}</span>
-                              <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">{flash.size}</span>
+
+                        {/* Mobile overlay — compact: title + price only */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent md:hidden">
+                          <div className="absolute bottom-0 left-0 right-0 p-2.5 text-white">
+                            <h3 className="text-xs font-bold leading-tight line-clamp-1 mb-1">{flash.title}</h3>
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-sm font-black">{flash.price}€</span>
+                              {flash.available ? (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-white/20 backdrop-blur-sm rounded-full">Réserver</span>
+                              ) : (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 bg-red-500/80 rounded-full">Réservé</span>
+                              )}
                             </div>
-                            <h3 className="text-lg sm:text-2xl font-bold mb-2">{flash.title}</h3>
-                            <p className="text-sm opacity-90 mb-4">{flash.description}</p>
+                          </div>
+                        </div>
+
+                        {/* Desktop overlay — full info on hover */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent hidden md:block opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+                            <div className="flex items-center gap-2 mb-3">
+                              {flash.style && <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">{flash.style}</span>}
+                              {flash.size && <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold">{flash.size}</span>}
+                            </div>
+                            <h3 className="text-2xl font-bold mb-2">{flash.title}</h3>
+                            {flash.description && <p className="text-sm opacity-90 mb-4 line-clamp-2">{flash.description}</p>}
                             <div className="flex items-center justify-between">
                               <div>
-                                <div className="text-2xl sm:text-3xl font-bold">{flash.price}€</div>
-                                <div className="text-sm opacity-80">~{flash.duration}min</div>
+                                <div className="text-3xl font-bold">{flash.price}€</div>
+                                {flash.duration && <div className="text-sm opacity-80">~{flash.duration}min</div>}
                               </div>
                               {flash.available ? (
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); setSelectedFlash(flash); }}
-                                  className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white text-neutral-900 rounded-lg font-medium hover:bg-neutral-100 transition-colors text-sm sm:text-base"
+                                  className="px-6 py-3 bg-white text-neutral-900 rounded-lg font-medium hover:bg-neutral-100 transition-colors"
                                 >
                                   Réserver
                                 </button>
@@ -850,9 +867,6 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                             </div>
                           </div>
                         </div>
-                        {!flash.available && (
-                          <div className="absolute top-6 right-6 bg-red-500 text-white px-4 py-2 rounded-full font-bold shadow-xl">Réservé</div>
-                        )}
                       </div>
                     </div>
                   ))}
