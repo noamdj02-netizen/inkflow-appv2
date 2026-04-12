@@ -102,6 +102,7 @@ const tabs: { id: TabId | 'referral'; label: string; icon: React.ReactNode; badg
 ];
 
 type SettingsTabId =
+  | 'home'
   | 'general'
   | 'modules'
   | 'payments'
@@ -120,6 +121,11 @@ const SETTINGS_TAB_META: Record<
   SettingsTabId,
   { label: string; Icon: LucideIcon; description: string }
 > = {
+  home: {
+    label: 'Paramètres',
+    Icon: Settings,
+    description: "Vue d'ensemble de tous les paramètres.",
+  },
   general: {
     label: 'Général',
     Icon: Settings,
@@ -240,7 +246,7 @@ export const DashboardPro: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
-  const [settingsTab, setSettingsTab] = useState<SettingsTabId>('general');
+  const [settingsTab, setSettingsTab] = useState<SettingsTabId>('home');
   const [dashboardPreferences, setDashboardPreferences] = useState<StudioDashboardPreferences>(() => ({
     ...DEFAULT_STUDIO_DASHBOARD_PREFERENCES,
   }));
@@ -1539,6 +1545,10 @@ export const DashboardPro: React.FC = () => {
                   </button>
                   {expandedMenus.settings && (
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
+                      <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('home'); setSidebarOpen(false); }, true)} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'home' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'home' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        Tous les paramètres
+                      </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('account'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'account' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'account' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Mon compte
@@ -2246,8 +2256,8 @@ export const DashboardPro: React.FC = () => {
           {!loading && activeTab === 'settings' && (
             <div className="min-w-0">
             <div className="settings-page-landing">
-              {/* Onglets : en premier — desktop = défilement horizontal ; mobile = grille haut + grille bas (fin de page) */}
-              <div className="md:hidden -mx-4 px-4 mb-4">
+              {/* Onglets : masqués sur la page d'accueil Paramètres, visibles dans chaque sous-section */}
+              <div className={`md:hidden -mx-4 px-4 mb-4 ${settingsTab === 'home' ? 'hidden' : ''}`}>
                 <div
                   className="flex gap-1 overflow-x-auto overflow-y-hidden pb-1 -mx-1 px-1 scrollbar-hide snap-x snap-mandatory scroll-pl-1"
                   role="tablist"
@@ -2278,7 +2288,7 @@ export const DashboardPro: React.FC = () => {
                 </div>
               </div>
 
-              <div className="hidden md:flex items-center gap-2 mb-4">
+              <div className={`items-center gap-2 mb-4 ${settingsTab === 'home' ? 'hidden' : 'hidden md:flex'}`}>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -2332,52 +2342,111 @@ export const DashboardPro: React.FC = () => {
                 </button>
               </div>
 
-              {/* En-tête personnalisé + accès rapide vitrine */}
-              <div className="relative overflow-hidden rounded-2xl border border-zinc-200/90 dark:border-zinc-800 bg-gradient-to-br from-zinc-50 via-white to-zinc-50/80 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 p-6 sm:p-8 mb-6 sm:mb-8">
-                <div className="absolute top-0 right-0 w-40 h-40 sm:w-56 sm:h-56 rounded-full bg-emerald-500/10 dark:bg-emerald-400/5 blur-3xl pointer-events-none" aria-hidden />
-                <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">
-                      Centre de configuration
-                    </p>
-                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white font-display">
-                      Paramètres
-                    </h1>
-                    <p className="text-zinc-600 dark:text-zinc-400 mt-2 text-sm sm:text-base max-w-2xl leading-relaxed">
-                      {user?.studioName?.trim() ? (
-                        <>
-                          Paramètres de <span className="font-semibold text-zinc-800 dark:text-zinc-200">{user.studioName.trim()}</span> par thématique. L&apos;équipe et les avis Google se gèrent dans <span className="font-medium">Établissement</span> et <span className="font-medium">App client</span>.
-                        </>
-                      ) : (
-                        <>
-                          Identité, liens publics, carte, données et notifications — le reste (vitrine détaillée, équipe) est dans les autres onglets.
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  {studioSlug ? (
-                    <div className="flex flex-col sm:flex-row gap-2 shrink-0">
-                      <a
-                        href={`/studio/${studioSlug}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] shadow-sm"
-                      >
-                        <ExternalLink className="w-4 h-4 shrink-0" />
-                        Voir la page vitrine
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => setSettingsTab('vitrine')}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]"
-                      >
-                        <Globe className="w-4 h-4 shrink-0 text-blue-500" />
-                        Personnaliser la vitrine
-                      </button>
+              {/* En-tête : home = titre + sous-titre, sous-page = retour + titre de l'onglet */}
+              {settingsTab === 'home' ? (
+                <div className="relative overflow-hidden rounded-2xl border border-zinc-200/90 dark:border-zinc-800 bg-gradient-to-br from-zinc-50 via-white to-zinc-50/80 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 p-6 sm:p-8 mb-6 sm:mb-8">
+                  <div className="absolute top-0 right-0 w-40 h-40 sm:w-56 sm:h-56 rounded-full bg-emerald-500/10 dark:bg-emerald-400/5 blur-3xl pointer-events-none" aria-hidden />
+                  <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">Centre de configuration</p>
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white font-display">Paramètres</h1>
+                      <p className="text-zinc-500 dark:text-zinc-400 mt-2 text-sm max-w-2xl leading-relaxed">
+                        {user?.studioName?.trim()
+                          ? <>Paramètres de <span className="font-semibold text-zinc-800 dark:text-zinc-200">{user.studioName.trim()}</span> organisés par thématique.</>
+                          : "Configurez votre studio par thématique."}
+                      </p>
                     </div>
-                  ) : null}
+                    {studioSlug ? (
+                      <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                        <a href={`/studio/${studioSlug}`} target="_blank" rel="noreferrer"
+                          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] shadow-sm">
+                          <ExternalLink className="w-4 h-4 shrink-0" />
+                          Voir la vitrine
+                        </a>
+                        <button type="button" onClick={() => setSettingsTab('vitrine')}
+                          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all active:scale-[0.98]">
+                          <Globe className="w-4 h-4 shrink-0 text-blue-500" />
+                          Personnaliser
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center gap-3 mb-6">
+                  <button type="button" onClick={() => setSettingsTab('home')}
+                    className="inline-flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors min-h-[36px] px-1">
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Paramètres</span>
+                  </button>
+                  <span className="text-zinc-300 dark:text-zinc-600">/</span>
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-white">
+                    {settingsTab !== 'home' ? SETTINGS_TAB_META[settingsTab]?.label ?? '' : ''}
+                  </span>
+                </div>
+              )}
+
+              {/* Page d'accueil Paramètres — grille de cartes groupées */}
+              {settingsTab === 'home' && (() => {
+                const groups: { label: string; color: string; items: SettingsTabId[] }[] = [
+                  { label: 'Mon studio', color: 'zinc', items: ['general', 'modules'] },
+                  { label: 'Réservations', color: 'blue', items: ['availability', 'calendar', 'waitlist'] },
+                  { label: 'Clients', color: 'violet', items: ['care', 'consent', 'loyalty'] },
+                  { label: 'Finance', color: 'emerald', items: ['payments', 'billing'] },
+                  { label: 'Vitrine & Communication', color: 'amber', items: ['vitrine', 'public_app', 'messagerie'] },
+                ];
+                const colorMap: Record<string, { dot: string; label: string; card: string; icon: string }> = {
+                  zinc:    { dot: 'bg-zinc-400',    label: 'text-zinc-500 dark:text-zinc-400',    card: 'hover:border-zinc-300 dark:hover:border-zinc-600',    icon: 'text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800' },
+                  blue:    { dot: 'bg-blue-400',    label: 'text-blue-600 dark:text-blue-400',    card: 'hover:border-blue-200 dark:hover:border-blue-800',    icon: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10' },
+                  violet:  { dot: 'bg-violet-400',  label: 'text-violet-600 dark:text-violet-400', card: 'hover:border-violet-200 dark:hover:border-violet-800', icon: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10' },
+                  emerald: { dot: 'bg-emerald-400', label: 'text-emerald-600 dark:text-emerald-400', card: 'hover:border-emerald-200 dark:hover:border-emerald-800', icon: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' },
+                  amber:   { dot: 'bg-amber-400',   label: 'text-amber-600 dark:text-amber-400',   card: 'hover:border-amber-200 dark:hover:border-amber-800',   icon: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10' },
+                };
+                return (
+                  <div className="space-y-8">
+                    {groups.map((group) => {
+                      const c = colorMap[group.color];
+                      const visibleItems = group.items.filter((id) =>
+                        visibleSettingsTabs.some((t) => t.id === id)
+                      );
+                      if (visibleItems.length === 0) return null;
+                      return (
+                        <div key={group.label}>
+                          <div className="flex items-center gap-2 mb-3 px-0.5">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />
+                            <h2 className={`text-xs font-bold uppercase tracking-wider ${c.label}`}>{group.label}</h2>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {visibleItems.map((tabId) => {
+                              const meta = SETTINGS_TAB_META[tabId];
+                              const Icon = meta.Icon;
+                              return (
+                                <button
+                                  key={tabId}
+                                  type="button"
+                                  onClick={() => setSettingsTab(tabId)}
+                                  className={`group text-left p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-all duration-150 active:scale-[0.98] ${c.card}`}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className={`p-2 rounded-xl shrink-0 ${c.icon}`}>
+                                      <Icon className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-tight">{meta.label}</p>
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug line-clamp-2">{meta.description}</p>
+                                    </div>
+                                    <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-500 dark:group-hover:text-zinc-400 shrink-0 mt-0.5 transition-colors" />
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               {settingsTab === 'general' && (
                 <div className="space-y-10 max-w-2xl w-full overflow-hidden">
