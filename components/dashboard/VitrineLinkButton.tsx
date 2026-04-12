@@ -178,7 +178,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     ctx.fillStyle = '#ffffff';
     ctx.font = '900 120px Inter, system-ui, -apple-system, sans-serif';
     ctx.letterSpacing = '-4px';
-    ctx.fillText('inkflow', W / 2, qrY + qrBox + 380);
+    ctx.fillText('INKFLOW', W / 2, qrY + qrBox + 380);
 
     // Slogan
     ctx.letterSpacing = '0px';
@@ -313,7 +313,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
             {/* Branding Inkflow */}
             <div className="flex flex-col items-center gap-0.5 mt-1 pt-3 border-t w-full" style={{ borderColor: '#2a2a2a' }}>
               <p className="text-base font-black tracking-tight" style={{ color: '#ffffff', fontFamily: 'Inter, system-ui, sans-serif', letterSpacing: '-0.02em' }}>
-                inkflow
+                INKFLOW
               </p>
               <p className="text-[10px] font-medium" style={{ color: '#6b6b6b' }}>
                 Votre tatouage, simplement réservé.
