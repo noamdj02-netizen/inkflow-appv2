@@ -28,6 +28,11 @@
   --font-playfair: 'Playfair Display', Georgia, serif;
   --font-syne: 'Syne', sans-serif;
   --transition-snappy: 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* iOS-grade easing : identique à UIKit spring amorti */
+  --ease-ios: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-ios-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
+  --duration-press: 100ms;
+  --duration-release: 200ms;
 }
 
 /* Tailwind dark: variant — active when data-theme="dark" on root */
@@ -412,22 +417,35 @@ img, video {
   border-color: var(--border-light);
 }
 
-/* Boutons dashboard — Figma Clean (rounded-xl, pas pill) */
+/* Boutons dashboard — iOS-native (rounded-xl, touch targets 44px) */
 .pill-primary {
   background: #2563eb;
   color: white;
   border: none;
   padding: 8px 20px;
+  min-height: 44px;
   border-radius: 0.75rem;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: background 0.15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: transform var(--duration-release) var(--ease-ios),
+              opacity var(--duration-release) var(--ease-ios),
+              background 0.15s var(--ease-ios);
 }
 .pill-primary:hover { background: #1d4ed8; }
+.pill-primary:active {
+  transform: scale(0.95);
+  opacity: 0.82;
+  transition: transform var(--duration-press) var(--ease-ios),
+              opacity var(--duration-press) var(--ease-ios);
+}
 :root[data-theme="dark"] .pill-primary {
   background: #ffffff;
   color: #000000;
@@ -442,16 +460,30 @@ img, video {
   border: 1px solid #e4e4e7;
   color: #18181b;
   padding: 8px 16px;
+  min-height: 44px;
   border-radius: 0.75rem;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: transform var(--duration-release) var(--ease-ios),
+              opacity var(--duration-release) var(--ease-ios),
+              background 0.15s var(--ease-ios),
+              border-color 0.15s var(--ease-ios);
 }
 .pill-action:hover { border-color: #d4d4d8; background: #fafafa; color: #2563eb; }
+.pill-action:active {
+  transform: scale(0.95);
+  opacity: 0.80;
+  transition: transform var(--duration-press) var(--ease-ios),
+              opacity var(--duration-press) var(--ease-ios);
+}
 :root[data-theme="dark"] .pill-action {
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.05);
@@ -550,28 +582,38 @@ img, video {
   border-left-color: #7c3aed;
 }
 
-/* ===== Design System Dashboard — premium minimaliste ===== */
+/* ===== Design System Dashboard — iOS-native buttons ===== */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   padding: 0.625rem 1.25rem;
+  min-height: 44px;                       /* Apple HIG touch target */
   border-radius: 9999px;
-  font-weight: 500;
+  font-weight: 600;                       /* Semibold — iOS standard */
   font-size: 0.875rem;
+  letter-spacing: -0.01em;
   color: white;
   background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-  transition: all 0.2s ease;
   border: none;
   cursor: pointer;
+  touch-action: manipulation;             /* no 300ms tap delay */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: transform var(--duration-release) var(--ease-ios),
+              opacity var(--duration-release) var(--ease-ios),
+              background var(--duration-release) var(--ease-ios);
 }
 .btn-primary:hover {
+  /* Hover subtil — pas de translateY (anti-pattern mobile) */
   background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-  transform: translateY(-1px);
 }
 .btn-primary:active {
-  transform: translateY(0) scale(0.98);
+  transform: scale(0.95);
+  opacity: 0.82;
+  transition: transform var(--duration-press) var(--ease-ios),
+              opacity var(--duration-press) var(--ease-ios);
 }
 :root[data-theme="dark"] .btn-primary {
   background: #ffffff;
@@ -587,18 +629,32 @@ img, video {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
+  min-height: 44px;                       /* Apple HIG touch target */
   border-radius: 9999px;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.875rem;
+  letter-spacing: -0.01em;
   border: 1px solid var(--border);
   color: var(--text-primary);
   background: transparent;
-  transition: all 0.2s ease;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: transform var(--duration-release) var(--ease-ios),
+              opacity var(--duration-release) var(--ease-ios),
+              border-color 0.15s var(--ease-ios),
+              background 0.15s var(--ease-ios);
 }
 .btn-outline:hover {
   border-color: #a5b4fc;
-  background: rgba(99, 102, 241, 0.08);
+  background: rgba(99, 102, 241, 0.06);
+}
+.btn-outline:active {
+  transform: scale(0.95);
+  opacity: 0.78;
+  transition: transform var(--duration-press) var(--ease-ios),
+              opacity var(--duration-press) var(--ease-ios);
 }
 :root[data-theme="dark"] .btn-outline {
   border: 1px solid #3f3f46;
@@ -607,9 +663,6 @@ img, video {
 :root[data-theme="dark"] .btn-outline:hover {
   border-color: #52525b;
   background: rgba(255,255,255,0.06);
-}
-.btn-outline:active {
-  transform: scale(0.98);
 }
 .card-dash {
   background: var(--bg-card);
@@ -621,28 +674,40 @@ img, video {
   border-color: var(--border-light);
 }
 .row-clickable {
-  transition: all 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s var(--ease-ios),
+              transform var(--duration-release) var(--ease-ios),
+              opacity var(--duration-release) var(--ease-ios);
 }
 .row-clickable:hover {
   background: var(--bg-hover);
 }
 .row-clickable:active {
-  transform: scale(0.995);
+  background: var(--bg-hover-strong);
+  transform: scale(0.985);
+  opacity: 0.88;
+  transition: background var(--duration-press) var(--ease-ios),
+              transform var(--duration-press) var(--ease-ios),
+              opacity var(--duration-press) var(--ease-ios);
 }
 .input-dash {
   width: 100%;
   padding: 0.75rem 1rem;
   border-radius: 0.75rem;
   border: 1px solid var(--border);
-  font-size: 0.875rem;
+  font-size: 0.875rem;         /* toujours 16px via la règle globale input */
   background: var(--bg-card);
   color: var(--text-primary);
-  transition: all 0.2s ease;
+  transition: border-color 0.12s var(--ease-ios),
+              box-shadow 0.12s var(--ease-ios);
 }
 .input-dash:focus {
   outline: none;
   border-color: #818cf8;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  /* anneau iOS — plus fin et net que 3px blur */
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.28),
+              0 0 0 1px rgba(99, 102, 241, 0.5) inset;
 }
 :root[data-theme="dark"] .input-dash {
   background: #18181b;
@@ -650,22 +715,37 @@ img, video {
   color: #ffffff;
 }
 :root[data-theme="dark"] .input-dash:focus {
-  border-color: #ffffff;
-  box-shadow: none;
+  border-color: rgba(255,255,255,0.5);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.08),
+              0 0 0 1px rgba(255,255,255,0.3) inset;
 }
+/* Focus visible — anneau iOS propre (clavier/accessibilité, pas tactile) */
+:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.7);
+  outline-offset: 2px;
+}
+:root[data-theme="dark"] :focus-visible {
+  outline-color: rgba(255,255,255,0.5);
+}
+/* Supprimer l'outline natif — on utilise :focus-visible ci-dessus */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in {
-  animation: fade-in 0.12s ease-out forwards;
+  animation: fade-in 0.18s var(--ease-ios) forwards;
 }
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-slide-up {
-  animation: slide-up 0.3s ease-out forwards;
+  /* Spring iOS : entre 0.3s avec rebond léger */
+  animation: slide-up 0.32s var(--ease-ios-spring) forwards;
 }
 
 /* Fond doux pour toutes les pages dashboard (pas seulement overview) */
@@ -1016,13 +1096,18 @@ input, select, textarea {
   border-radius: 16px;
   border: 1px solid var(--border);
   padding: 16px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
   user-select: none;
+  transition: transform var(--duration-release) var(--ease-ios),
+              opacity var(--duration-release) var(--ease-ios);
 }
 .mobile-card:active {
-  transform: scale(0.98);
-  box-shadow: 0 1px 3px var(--shadow-md);
+  transform: scale(0.965);
+  opacity: 0.84;
+  transition: transform var(--duration-press) var(--ease-ios),
+              opacity var(--duration-press) var(--ease-ios);
 }
 
 /* 8. SKELETON LOADING */
@@ -1037,12 +1122,37 @@ input, select, textarea {
   border-radius: 8px;
 }
 
-/* 9. HAPTIC PRESS — Feedback tactile visuel */
+/* 9. TOUCH GLOBAL — Supprime le tap delay 300ms + highlight iOS */
+button, a, [role="button"], [role="tab"], [role="menuitem"], summary {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* HAPTIC PRESS — Feedback tactile iOS (tous les éléments interactifs sans leur propre :active) */
 @media (hover: none) and (pointer: coarse) {
-  button:active, a:active, [role="button"]:active {
-    transform: scale(0.97);
-    transition: transform 0.1s ease;
+  button:not(.btn-primary):not(.btn-outline):not(.pill-primary):not(.pill-action):active,
+  a:active,
+  [role="button"]:active {
+    transform: scale(0.96);
+    opacity: 0.82;
+    transition: transform var(--duration-press) var(--ease-ios),
+                opacity var(--duration-press) var(--ease-ios);
   }
+}
+
+/* Classe utilitaire explicite pour tout élément pressable iOS */
+.ios-press {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: transform var(--duration-release) var(--ease-ios),
+              opacity var(--duration-release) var(--ease-ios);
+}
+.ios-press:active {
+  transform: scale(0.95);
+  opacity: 0.80;
+  transition: transform var(--duration-press) var(--ease-ios),
+              opacity var(--duration-press) var(--ease-ios);
 }
 
 /* 10. Hide scrollbars on mobile for native feel */

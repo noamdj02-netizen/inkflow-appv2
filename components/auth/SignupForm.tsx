@@ -11,6 +11,7 @@ import { signupSchema } from '../../lib/authValidation';
 import { getAuthErrorMessage } from './LoginForm';
 import { LANDING_TERMS_URL, LANDING_PRIVACY_URL, getPostSignupDashboardPath } from '../../lib/urls';
 import { REDIRECT_AFTER_LOGIN_KEY } from '../../contexts/AuthContext';
+import { markJustSignedUp } from '../../lib/welcomeStorage';
 
 const inputBase =
   'w-full pl-12 pr-4 py-3.5 min-h-[48px] text-base border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all';
@@ -90,6 +91,7 @@ export const SignupForm: React.FC = () => {
         formData.referralCode?.trim().toUpperCase() || undefined
       );
       setSuccess(true);
+      markJustSignedUp();
       if (needsEmailConfirmation) {
         window.location.href = '/login?message=check-email';
         return;
@@ -332,6 +334,7 @@ export const SignupForm: React.FC = () => {
                 } catch {
                   /* ignore */
                 }
+                markJustSignedUp();
                 await loginWithGoogle();
               } catch (err) {
                 setError(getAuthErrorMessage(err));

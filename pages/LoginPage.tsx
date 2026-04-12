@@ -312,9 +312,20 @@ export const LoginPage: React.FC = () => {
           >
             {/* Logo + Title */}
             <div className="mb-8">
-              <div className="inline-flex items-center gap-2 mb-6">
-                <Logo className="dark:invert" />
-                <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
+              {/* Logo centré — style iOS native app icon */}
+              <div className="flex flex-col items-start mb-7">
+                <div className="mb-3.5 relative">
+                  <Logo
+                    size="xl"
+                    className="shadow-[0_4px_20px_rgba(0,0,0,0.18)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.6)]"
+                  />
+                </div>
+                <span
+                  className="text-[22px] font-black text-zinc-900 dark:text-white"
+                  style={{ letterSpacing: '-0.04em', lineHeight: 1 }}
+                >
+                  InkFlow
+                </span>
               </div>
               <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
                 Bon retour !

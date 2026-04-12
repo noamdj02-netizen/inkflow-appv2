@@ -53,3 +53,32 @@ export function setFounderNoteDone(userScopedId: string): void {
     // ignore
   }
 }
+
+/**
+ * Marqué lors de la création du compte (sessionStorage — persiste entre redirects,
+ * disparaît à la fermeture de l'onglet).
+ */
+export function markJustSignedUp(): void {
+  try {
+    sessionStorage.setItem('inkflow_just_signed_up', '1');
+  } catch {
+    // ignore
+  }
+}
+
+export function isJustSignedUp(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return sessionStorage.getItem('inkflow_just_signed_up') === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function clearJustSignedUp(): void {
+  try {
+    sessionStorage.removeItem('inkflow_just_signed_up');
+  } catch {
+    // ignore
+  }
+}

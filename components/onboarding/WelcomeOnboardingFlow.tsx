@@ -11,6 +11,8 @@ import {
   setWelcomeDone,
   setFounderNoteDone,
   isFounderNoteDone,
+  isJustSignedUp,
+  clearJustSignedUp,
 } from '../../lib/welcomeStorage';
 import { supabase } from '../../lib/supabase';
 import { getVitrineDataFromSupabase, saveVitrineDataToSupabase } from '../../lib/supabaseDashboard';
@@ -77,6 +79,7 @@ export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
       }
 
       setWelcomeDone(userScopedId);
+      clearJustSignedUp();
       onComplete(studioName);
     },
     [userScopedId, studioId, studioSlug, onComplete, pendingStudioName, pendingStyles, initialStudioName]
@@ -105,6 +108,7 @@ export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
   return <OnboardingAvailabilityStep onComplete={handleAvailabilityComplete} />;
 };
 
+/** Affiche le flux uniquement après la création d'un compte (pas après une simple connexion). */
 export function shouldShowWelcomeFlow(userScopedId: string | null | undefined): boolean {
-  return !isWelcomeDone(userScopedId);
+  return !isWelcomeDone(userScopedId) && isJustSignedUp();
 }

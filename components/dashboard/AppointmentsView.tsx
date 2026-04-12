@@ -42,7 +42,7 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_DOT: Record<string, string> = {
   pending: 'bg-amber-400',
   confirmed: 'bg-emerald-400',
-  completed: 'bg-slate-400 dark:bg-zinc-500',
+  completed: 'bg-zinc-400 dark:bg-zinc-500',
   cancelled: 'bg-red-500',
   in_progress: 'bg-blue-400',
   no_show: 'bg-red-500',
@@ -51,7 +51,7 @@ const STATUS_DOT: Record<string, string> = {
 const STATUS_STYLES: Record<string, string> = {
   pending: 'bg-amber-50 text-amber-700 border border-amber-200/60 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
   confirmed: 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20',
-  completed: 'bg-slate-50 text-slate-600 border border-slate-200/60 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20',
+  completed: 'bg-zinc-50 text-zinc-600 border border-zinc-200/60 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20',
   cancelled: 'bg-red-50 text-red-600 border border-red-200/60 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
   in_progress: 'bg-blue-50 text-blue-700 border border-blue-200/60 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
   no_show: 'bg-red-50 text-red-600 border border-red-200/60 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
@@ -144,7 +144,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       {/* ── HEADER ─────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">
             Rendez-vous
           </h1>
           {/* Stats chips — inline, compactes */}
@@ -153,8 +153,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               onClick={() => { setDateRangeChip('today'); setSelectedDate(null); setMiniCalendarMonth(new Date()); }}
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
                 dateRangeChip === 'today'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700'
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
               }`}
             >
               <CalendarDays className="w-3 h-3" />
@@ -164,8 +164,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               onClick={() => { setDateRangeChip('week'); setSelectedDate(null); }}
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
                 dateRangeChip === 'week'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-700'
+                  ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
               }`}
             >
               <Clock className="w-3 h-3" />
@@ -189,7 +189,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
         <button
           onClick={onNewAppointment}
-          className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all active:scale-[0.97]"
+          className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold rounded-xl shadow-sm transition-all active:scale-[0.97]"
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">Nouveau RDV</span>
@@ -200,15 +200,15 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       {/* ── TOOLBAR ─────────────────────────────────────────────── */}
       <div className="flex items-center gap-2">
         {/* Vue */}
-        <div className="inline-flex p-0.5 bg-slate-100 dark:bg-zinc-800 rounded-xl">
+        <div className="inline-flex p-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
           {(['list', 'calendar'] as ViewMode[]).map((m) => (
             <button
               key={m}
               onClick={() => setViewMode(m)}
               className={`px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all ${
                 viewMode === m
-                  ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
               }`}
             >
               {m === 'list' ? 'Liste' : 'Mois'}
@@ -222,7 +222,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           className={`lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
             showCalendarMobile
               ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400'
-              : 'bg-white dark:bg-zinc-900 border-slate-200/80 dark:border-zinc-800 text-slate-600 dark:text-zinc-400'
+              : 'bg-white dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400'
           }`}
         >
           <Calendar className="w-3.5 h-3.5" />
@@ -235,19 +235,19 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         {showSearch ? (
           <div className="flex items-center gap-2 flex-1 max-w-52">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
               <input
                 ref={searchRef}
                 type="search"
                 placeholder="Client, service…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-sm bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                className="w-full pl-9 pr-3 py-1.5 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
               />
             </div>
             <button
               onClick={() => { setShowSearch(false); setSearchQuery(''); }}
-              className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -255,7 +255,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         ) : (
           <button
             onClick={() => setShowSearch(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shadow-sm"
+            className="w-8 h-8 flex items-center justify-center rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shadow-sm"
             aria-label="Rechercher"
           >
             <Search className="w-3.5 h-3.5" />
@@ -267,7 +267,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className="appearance-none pl-3 pr-7 py-1.5 text-xs font-semibold rounded-xl border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer transition-all shadow-sm"
+            className="appearance-none pl-3 pr-7 py-1.5 text-xs font-semibold rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer transition-all shadow-sm"
           >
             <option value="all">Tous les statuts</option>
             <option value="pending">En attente</option>
@@ -275,18 +275,18 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             <option value="completed">Terminé</option>
             <option value="cancelled">Annulé</option>
           </select>
-          <SlidersHorizontal className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 dark:text-zinc-500 pointer-events-none" />
+          <SlidersHorizontal className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
         </div>
       </div>
 
       {/* Label filtre actif */}
       {activeLabel && (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 dark:text-zinc-500">{filteredAppointments.length} RDV ·</span>
+          <span className="text-xs text-zinc-500 dark:text-zinc-500">{filteredAppointments.length} RDV ·</span>
           <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">{activeLabel}</span>
           <button
             onClick={() => { setSelectedDate(null); setDateRangeChip(null); setStatusFilter('all'); }}
-            className="text-slate-400 dark:text-zinc-600 hover:text-slate-700 dark:hover:text-zinc-300 transition-colors"
+            className="text-zinc-400 dark:text-zinc-600 hover:text-slate-700 dark:hover:text-zinc-300 transition-colors"
           >
             <X className="w-3 h-3" />
           </button>
@@ -298,7 +298,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
         {/* Sidebar calendrier */}
         <aside className={`lg:w-64 xl:w-72 flex-shrink-0 ${showCalendarMobile ? 'block' : 'hidden lg:block'}`}>
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden">
             <MiniCalendar
               selectedDate={selectedDate}
               onSelectDate={(d) => { setSelectedDate(d); setDateRangeChip(null); setShowCalendarMobile(false); }}
@@ -322,15 +322,15 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               onUpdateAppointment={onUpdateAppointment}
             />
           ) : filteredAppointments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] text-center">
-              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
-                <Calendar className="w-7 h-7 text-slate-400 dark:text-zinc-500" />
+            <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] text-center">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                <Calendar className="w-7 h-7 text-zinc-400 dark:text-zinc-500" />
               </div>
-              <p className="font-semibold text-slate-700 dark:text-zinc-300">Aucun rendez-vous</p>
-              <p className="text-sm text-slate-500 dark:text-zinc-500 mt-1">
+              <p className="font-semibold text-zinc-700 dark:text-zinc-300">Aucun rendez-vous</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">
                 {dateRangeChip === 'today' ? "Aucun RDV aujourd'hui" : dateRangeChip === 'week' ? 'Aucun RDV cette semaine' : selectedDate ? `Aucun RDV le ${selectedDate}` : 'Vos RDV apparaîtront ici'}
               </p>
-              <button onClick={onNewAppointment} className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-all active:scale-[0.97]">
+              <button onClick={onNewAppointment} className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-semibold transition-all active:scale-[0.97]">
                 <Plus className="w-4 h-4" /> Nouveau RDV
               </button>
             </div>
@@ -343,32 +343,32 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                     key={apt.id}
                     type="button"
                     onClick={() => onSelectAppointment(apt)}
-                    className="w-full text-left bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-2xl shadow-[0_1px_6px_-2px_rgba(0,0,0,0.08)] hover:shadow-md hover:border-blue-200 dark:hover:border-blue-500/30 active:scale-[0.99] transition-all duration-150 overflow-hidden touch-manipulation"
+                    className="w-full text-left bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-[0_1px_6px_-2px_rgba(0,0,0,0.08)] hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 active:scale-[0.99] transition-all duration-150 overflow-hidden touch-manipulation"
                   >
                     <div className="flex items-center gap-3 p-4">
                       {/* Avatar */}
-                      <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
+                      <div className="relative w-11 h-11 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
                         {getAvatar(apt) ? (
                           <img src={getAvatar(apt)} alt="" className="absolute inset-0 w-full h-full object-cover" />
                         ) : (
-                          <span className="text-white font-bold text-base">{apt.clientName.charAt(0).toUpperCase()}</span>
+                          <span className="text-zinc-700 dark:text-zinc-200 font-bold text-base">{apt.clientName.charAt(0).toUpperCase()}</span>
                         )}
                       </div>
                       {/* Infos */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">{apt.clientName}</span>
+                          <span className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{apt.clientName}</span>
                           <span className="font-bold text-blue-600 dark:text-blue-400 text-sm tabular-nums shrink-0">{apt.price}€</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-500 dark:text-zinc-400 tabular-nums shrink-0">{apt.date}{apt.time ? ` · ${apt.time}` : ''}</span>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums shrink-0">{apt.date}{apt.time ? ` · ${apt.time}` : ''}</span>
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${STATUS_STYLES[apt.status] || STATUS_STYLES.completed}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[apt.status] || 'bg-slate-400'}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[apt.status] || 'bg-zinc-400'}`} />
                             {STATUS_LABELS[apt.status] ?? apt.status}
                           </span>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-zinc-600 shrink-0" />
+                      <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600 shrink-0" />
                     </div>
                     {/* Bottom row — export actions */}
                     <div className="flex items-center justify-end gap-1 px-3 pb-2.5 -mt-1">
@@ -377,7 +377,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-[10px] font-medium transition-colors"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-[10px] font-medium transition-colors"
                         title="Google Agenda"
                       >
                         <ExternalLink className="w-3 h-3" /> Agenda
@@ -385,7 +385,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); downloadICS(apt); }}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-[10px] font-medium transition-colors"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-[10px] font-medium transition-colors"
                         title=".ics"
                       >
                         <Download className="w-3 h-3" /> .ics
@@ -396,18 +396,18 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               </div>
 
               {/* Desktop table */}
-              <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden">
-                <div className="px-5 py-3 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-zinc-500 uppercase tracking-wider">{filteredAppointments.length} rendez-vous</span>
+              <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden">
+                <div className="px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">{filteredAppointments.length} rendez-vous</span>
                 </div>
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-slate-100 dark:border-zinc-800">
-                      <th className="px-5 py-3 text-left text-[10px] font-semibold text-slate-500 dark:text-zinc-500 uppercase tracking-wider">Client</th>
-                      <th className="px-5 py-3 text-left text-[10px] font-semibold text-slate-500 dark:text-zinc-500 uppercase tracking-wider">Date / Heure</th>
-                      <th className="px-5 py-3 text-left text-[10px] font-semibold text-slate-500 dark:text-zinc-500 uppercase tracking-wider">Service</th>
-                      <th className="px-5 py-3 text-left text-[10px] font-semibold text-slate-500 dark:text-zinc-500 uppercase tracking-wider">Prix</th>
-                      <th className="px-5 py-3 text-left text-[10px] font-semibold text-slate-500 dark:text-zinc-500 uppercase tracking-wider">Statut</th>
+                    <tr className="border-b border-zinc-100 dark:border-zinc-800">
+                      <th className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">Client</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">Date / Heure</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">Service</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">Prix</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">Statut</th>
                       <th className="px-4 py-3 w-24" />
                     </tr>
                   </thead>
@@ -416,36 +416,36 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                       <tr
                         key={apt.id}
                         onClick={() => onSelectAppointment(apt)}
-                        className={`group cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors ${i !== filteredAppointments.length - 1 ? 'border-b border-slate-100 dark:border-zinc-800' : ''}`}
+                        className={`group cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${i !== filteredAppointments.length - 1 ? 'border-b border-zinc-100 dark:border-zinc-800' : ''}`}
                       >
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
+                            <div className="relative w-9 h-9 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
                               {getAvatar(apt) ? (
                                 <img src={getAvatar(apt)} alt="" className="absolute inset-0 w-full h-full object-cover" />
                               ) : (
-                                <span className="text-white font-semibold text-sm">{apt.clientName.charAt(0).toUpperCase()}</span>
+                                <span className="text-zinc-700 dark:text-zinc-200 font-semibold text-sm">{apt.clientName.charAt(0).toUpperCase()}</span>
                               )}
                             </div>
                             <div>
-                              <div className="text-sm font-semibold text-slate-900 dark:text-white">{apt.clientName}</div>
-                              {apt.clientEmail && <div className="text-xs text-slate-500 dark:text-zinc-500">{apt.clientEmail}</div>}
+                              <div className="text-sm font-semibold text-zinc-900 dark:text-white">{apt.clientName}</div>
+                              {apt.clientEmail && <div className="text-xs text-zinc-500 dark:text-zinc-500">{apt.clientEmail}</div>}
                             </div>
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-zinc-400 tabular-nums">
-                            <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 shrink-0" />
+                          <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 tabular-nums">
+                            <Clock className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
                             {apt.date}{apt.time ? ` · ${apt.time}` : ''}
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 text-sm text-slate-700 dark:text-zinc-300 font-medium">{apt.service}</td>
+                        <td className="px-5 py-3.5 text-sm text-zinc-700 dark:text-zinc-300 font-medium">{apt.service}</td>
                         <td className="px-5 py-3.5">
                           <span className="font-bold text-blue-600 dark:text-blue-400 tabular-nums">{apt.price}€</span>
                         </td>
                         <td className="px-5 py-3.5">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${STATUS_STYLES[apt.status] || STATUS_STYLES.completed}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[apt.status] || 'bg-slate-400'}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[apt.status] || 'bg-zinc-400'}`} />
                             {STATUS_LABELS[apt.status] ?? apt.status}
                           </span>
                         </td>
@@ -464,7 +464,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                             {apt.status === 'confirmed' && onUpdateAppointment && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); onUpdateAppointment(apt, { status: 'completed' }); }}
-                                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-600 transition-colors"
+                                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-zinc-600 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
                                 title="Terminer"
                               >
                                 <CheckCheck className="w-3 h-3" /> Terminer
@@ -487,7 +487,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                             >
                               <Download className="w-3.5 h-3.5" />
                             </button>
-                            <ChevronRight className="w-4 h-4 text-slate-300 dark:text-zinc-600" />
+                            <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600" />
                           </div>
                         </td>
                       </tr>

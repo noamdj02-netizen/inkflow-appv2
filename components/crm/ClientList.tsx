@@ -2,81 +2,32 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Search,
   User,
-  Phone,
-  Mail,
   Eye,
-  Tag,
   UserPlus,
   ChevronDown,
   ChevronUp,
-  StickyNote,
   ArrowUpDown,
   ArrowDownAZ,
   FileSpreadsheet,
   MapPin,
-  PenLine,
-  Loader2,
-  ChevronRight,
+  Phone,
+  Mail,
+  Tag,
 } from 'lucide-react';
-import type { Client, ProjectRequest, ProjectRequestStatus } from '../../types';
+import type { Client, ProjectRequest } from '../../types';
 import { Modal } from '../ui/Modal';
 import { useToast } from '../../contexts/ToastContext';
 import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 import { useAutoSave } from '../../hooks/useAutoSave';
 import { ClientCsvImport, type ClientCsvImportRow } from './ClientCsvImport';
-import { ClientStampCard } from './ClientStampCard';
 import { fetchStampLoyaltySettings, fetchStampStateForClient, type StampLoyaltySettings, DEFAULT_STAMP_LOYALTY } from '../../lib/stampLoyalty';
 
+import { getClientStatusColor } from './clientListUtils';
+import { ClientProjectsView } from './ClientProjectsView';
+import { ClientDetailModal } from './ClientDetailModal';
+import { ClientAddModal } from './ClientAddModal';
+
 const NOTES_KEY = (clientId: string) => `inkflow-notes-${clientId}`;
-
-function projectStatusMeta(status: ProjectRequestStatus): { label: string; className: string } {
-  switch (status) {
-    case 'pending':
-      return {
-        label: 'En attente',
-        className: 'bg-zinc-200/90 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200',
-      };
-    case 'accepted':
-      return {
-        label: 'Acceptée',
-        className: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
-      };
-    case 'rejected':
-      return {
-        label: 'Refusée',
-        className: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800/80 dark:text-zinc-500',
-      };
-    default:
-      return { label: status, className: 'bg-zinc-100 text-zinc-600' };
-  }
-}
-
-function groupProjectRequestsByClient(requests: ProjectRequest[]): Array<{
-  clientEmail: string;
-  clientName: string;
-  requests: ProjectRequest[];
-}> {
-  const map = new Map<string, ProjectRequest[]>();
-  for (const r of requests) {
-    const key = r.clientEmail.trim().toLowerCase();
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(r);
-  }
-  for (const arr of map.values()) {
-    arr.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-  const groups = Array.from(map.entries()).map(([emailKey, reqs]) => ({
-    clientEmail: reqs[0]?.clientEmail ?? emailKey,
-    clientName: reqs[0]?.clientName ?? '—',
-    requests: reqs,
-  }));
-  groups.sort((a, b) => {
-    const ta = Math.max(0, ...a.requests.map((x) => new Date(x.createdAt).getTime()));
-    const tb = Math.max(0, ...b.requests.map((x) => new Date(x.createdAt).getTime()));
-    return tb - ta;
-  });
-  return groups;
-}
 
 interface ClientListProps {
   clients: Client[];
@@ -189,20 +140,6 @@ export const ClientList: React.FC<ClientListProps> = ({
     });
   }, [filteredClients, sortBy]);
 
-  const groupedProjectRequests = useMemo(
-    () => groupProjectRequestsByClient(projectRequests),
-    [projectRequests]
-  );
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'vip': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30';
-      case 'active': return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30';
-      case 'inactive': return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700';
-      default: return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700';
-    }
-  };
-
   const getStatusIcon = (status: string) => {
     if (status === 'vip') return <span className="text-blue-600 dark:text-blue-400">★</span>;
     return null;
@@ -304,154 +241,14 @@ export const ClientList: React.FC<ClientListProps> = ({
   };
 
   if (view === 'projects') {
-    const pendingTotal = projectRequests.filter((r) => r.status === 'pending').length;
-
     return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">
-              Projets par client
-            </h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-1 text-sm sm:text-base max-w-2xl">
-              Demandes de projet personnalisé regroupées par e-mail client. Pour accepter, refuser ou contacter le client (e-mail / Instagram),
-              passez par <span className="font-medium text-zinc-700 dark:text-zinc-300">Demandes → Projets</span>.
-            </p>
-          </div>
-          {onOpenRequestsProjects && (
-            <button
-              type="button"
-              onClick={onOpenRequestsProjects}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-lg text-sm font-semibold border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-[0.98] shrink-0"
-            >
-              Ouvrir Demandes
-              <ChevronRight className="w-4 h-4" aria-hidden />
-            </button>
-          )}
-        </div>
-
-        {projectRequestsLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30">
-            <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" aria-hidden />
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Chargement des demandes…</p>
-          </div>
-        ) : !useSupabase ? (
-          <div className="rounded-md border border-dashed border-zinc-300 dark:border-zinc-700 p-8 text-center bg-zinc-50/30 dark:bg-zinc-950/40">
-            <PenLine className="w-10 h-10 text-zinc-400 mx-auto mb-3" strokeWidth={1.5} aria-hidden />
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 max-w-md mx-auto">
-              Connectez Supabase pour synchroniser les demandes de projet depuis la vitrine.
-            </p>
-          </div>
-        ) : groupedProjectRequests.length === 0 ? (
-          <div className="rounded-md border border-zinc-200 dark:border-zinc-800 p-10 text-center bg-white dark:bg-zinc-900/40">
-            <div className="w-12 h-12 rounded-md border border-zinc-200 dark:border-zinc-700 flex items-center justify-center mx-auto mb-4">
-              <PenLine className="w-6 h-6 text-zinc-500" strokeWidth={1.5} aria-hidden />
-            </div>
-            <h3 className="text-base font-semibold text-zinc-900 dark:text-white mb-1">Aucune demande pour l’instant</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-              Les demandes de tatouage personnalisé reçues depuis votre page de réservation apparaîtront ici, classées par client.
-            </p>
-            {onOpenRequestsProjects && (
-              <button
-                type="button"
-                onClick={onOpenRequestsProjects}
-                className="mt-5 text-sm font-medium text-zinc-700 dark:text-zinc-300 underline underline-offset-2 hover:text-zinc-900 dark:hover:text-white"
-              >
-                Voir l’onglet Demandes
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {pendingTotal > 0 && (
-              <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                {pendingTotal} demande{pendingTotal > 1 ? 's' : ''} en attente de réponse
-              </p>
-            )}
-            <ul className="space-y-3">
-              {groupedProjectRequests.map((group) => {
-                const emailLower = group.clientEmail.toLowerCase();
-                const crmMatch = clients.find((c) => c.email?.toLowerCase().trim() === emailLower);
-                const initial = (group.clientName || group.clientEmail || '?').trim().charAt(0).toUpperCase();
-
-                return (
-                  <li
-                    key={emailLower}
-                    className="rounded-md border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-[0_1px_0_0_rgba(0,0,0,0.04)] dark:shadow-none overflow-hidden"
-                  >
-                    <div className="flex items-start gap-3 px-4 py-3 border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/80 dark:bg-zinc-950/40">
-                      <div
-                        className="w-10 h-10 rounded-md border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200 shrink-0 bg-white dark:bg-zinc-900"
-                        aria-hidden
-                      >
-                        {crmMatch?.avatar ? (
-                          <img src={crmMatch.avatar} alt="" className="w-full h-full object-cover rounded-md" />
-                        ) : (
-                          initial
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-zinc-900 dark:text-white truncate">{group.clientName}</p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{group.clientEmail}</p>
-                        {crmMatch && (
-                          <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5">Fiche CRM · {crmMatch.name}</p>
-                        )}
-                      </div>
-                      <span className="text-xs font-medium tabular-nums text-zinc-500 dark:text-zinc-400 shrink-0">
-                        {group.requests.length} demande{group.requests.length > 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                      {group.requests.map((req) => {
-                        const st = projectStatusMeta(req.status);
-                        const dateStr = new Date(req.createdAt).toLocaleDateString('fr-FR', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        });
-                        const preview =
-                          req.description.length > 160 ? `${req.description.slice(0, 160)}…` : req.description;
-
-                        return (
-                          <li key={req.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <span className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-sm ${st.className}`}>
-                                  {st.label}
-                                </span>
-                                <span className="text-xs text-zinc-400 dark:text-zinc-500">{dateStr}</span>
-                              </div>
-                              <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-snug whitespace-pre-wrap">
-                                {preview || '—'}
-                              </p>
-                              {(req.placement || req.budget) && (
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5">
-                                  {[req.placement && `Emplacement : ${req.placement}`, req.budget && `Budget : ${req.budget}`]
-                                    .filter(Boolean)
-                                    .join(' · ')}
-                                </p>
-                              )}
-                            </div>
-                            {onOpenRequestsProjects && req.status === 'pending' && (
-                              <button
-                                type="button"
-                                onClick={onOpenRequestsProjects}
-                                className="shrink-0 self-start sm:self-center text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-600 rounded-md px-2.5 py-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors active:scale-[0.98]"
-                              >
-                                Répondre
-                              </button>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-      </div>
+      <ClientProjectsView
+        clients={clients}
+        projectRequests={projectRequests}
+        projectRequestsLoading={projectRequestsLoading}
+        useSupabase={useSupabase}
+        onOpenRequestsProjects={onOpenRequestsProjects}
+      />
     );
   }
 
@@ -621,7 +418,7 @@ export const ClientList: React.FC<ClientListProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold truncate text-[var(--text-primary)]">{client.name}</span>
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0 ${getStatusColor(client.status)}`}>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0 ${getClientStatusColor(client.status)}`}>
                     {getStatusIcon(client.status)}
                     {client.status === 'vip' ? 'VIP' : client.status.charAt(0).toUpperCase() + client.status.slice(1)}
                   </span>
@@ -694,7 +491,7 @@ export const ClientList: React.FC<ClientListProps> = ({
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(client.status)}`}>
+                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getClientStatusColor(client.status)}`}>
                           {getStatusIcon(client.status)}
                           {client.status === 'vip' ? 'VIP' : client.status.charAt(0).toUpperCase() + client.status.slice(1)}
                         </span>
@@ -771,157 +568,28 @@ export const ClientList: React.FC<ClientListProps> = ({
       )}
 
       {selectedClient && (
-        <Modal isOpen={!!selectedClient} onClose={closeModalAndSave} title={selectedClient.name} size="lg">
-          <div className="space-y-6 min-w-0">
-            {/* Vue générale : avatar + contact + tags */}
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-              <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                {selectedClient.avatar ? (
-                  <img src={selectedClient.avatar} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">{selectedClient.name.charAt(0).toUpperCase()}</span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap gap-2 items-center">
-                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(selectedClient.status)}`}>
-                    {getStatusIcon(selectedClient.status)}
-                    {selectedClient.status === 'vip' ? 'VIP' : selectedClient.status === 'active' ? 'Actif' : selectedClient.status === 'inactive' ? 'Inactif' : selectedClient.status}
-                  </span>
-                  {selectedClient.tags.map(tag => (
-                    <span key={tag} className="px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="client-card-body grid grid-cols-1 sm:grid-cols-2 gap-6 min-w-0">
-              <div className="min-w-0">
-                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3">Informations de contact</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 min-w-0"><Mail className="w-4 h-4 text-neutral-400 dark:text-neutral-500 flex-shrink-0" /><span className="text-sm text-neutral-900 dark:text-neutral-100 break-words">{selectedClient.email}</span></div>
-                  <div className="flex items-center gap-3 min-w-0"><Phone className="w-4 h-4 text-neutral-400 dark:text-neutral-500 flex-shrink-0" /><span className="text-sm text-neutral-900 dark:text-neutral-100 break-words">{selectedClient.phone}</span></div>
-                  {selectedClient.address && <div className="flex items-center gap-3 min-w-0"><Tag className="w-4 h-4 text-neutral-400 dark:text-neutral-500 flex-shrink-0" /><span className="text-sm text-neutral-900 dark:text-neutral-100 break-words">{selectedClient.address}</span></div>}
-                </div>
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-sm font-semibold text-neutral-600 mb-3">Statistiques</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 dark:text-neutral-400 shrink-0">Total dépensé</span><span className="text-sm font-bold text-blue-600 dark:text-blue-400">{formatEuroPrivacy(selectedClient.totalSpent, privacyMode)}</span></div>
-                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 dark:text-neutral-400 shrink-0">Rendez-vous</span><span className="text-sm font-bold text-neutral-900 dark:text-neutral-100">{selectedClient.appointmentsCount}</span></div>
-                  <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 dark:text-neutral-400 shrink-0">Première visite</span><span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{new Date(selectedClient.firstVisit).toLocaleDateString('fr-FR')}</span></div>
-                  {selectedClient.lastVisit && <div className="flex justify-between gap-2"><span className="text-sm text-neutral-600 dark:text-neutral-400 shrink-0">Dernière visite</span><span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{new Date(selectedClient.lastVisit).toLocaleDateString('fr-FR')}</span></div>}
-                </div>
-              </div>
-            </div>
-            {useSupabase && stampStudioId && (
-              <ClientStampCard
-                enabled={stampSettings.enabled}
-                tattoosRequired={stampSettings.tattoosRequired}
-                stampsInCycle={stampStateModal?.stampsInCycle ?? 0}
-                totalCompleted={stampStateModal?.totalCompletedTattoos}
-              />
-            )}
-            <div>
-              <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3 flex items-center gap-2"><StickyNote className="w-4 h-4" /> Notes & Cicatrisation</h3>
-              <textarea rows={4} value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={saveNow}
-                placeholder="Notes de session, conseils cicatrisation, préférences…"
-                className="w-full px-4 py-3 min-h-[120px] border border-neutral-200 dark:border-zinc-700 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-900" />
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{useSupabase ? 'Sauvegardées automatiquement.' : 'Sauvegardées localement dans votre navigateur.'}</p>
-            </div>
-            {selectedClient.notes && (
-              <div>
-                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3">Notes (fiche client)</h3>
-                <p className="text-sm text-neutral-700 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-800 p-4 rounded-lg">{selectedClient.notes}</p>
-              </div>
-            )}
-            {selectedClient.tattoos.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3">Historique des RDV</h3>
-                <div className="space-y-4">
-                  {selectedClient.tattoos.map(tattoo => (
-                    <div key={tattoo.id} className="bg-neutral-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-neutral-200 dark:border-zinc-700">
-                      <div className="flex justify-between items-start mb-2">
-                        <div><h4 className="font-semibold text-neutral-900 dark:text-neutral-100">{tattoo.description}</h4><p className="text-sm text-neutral-600 dark:text-neutral-400">{tattoo.location} • {tattoo.size}</p></div>
-                        <span className="text-sm font-bold text-blue-600 dark:text-blue-400 tabular-nums">{formatEuroPrivacy(tattoo.price, privacyMode)}</span>
-                      </div>
-                      <div className="text-xs text-neutral-500 dark:text-neutral-400">{new Date(tattoo.date).toLocaleDateString('fr-FR')} • {tattoo.duration}min</div>
-                      {(tattoo.images?.length ?? 0) > 0 && (
-                        <div className="flex gap-2 mt-3 flex-wrap">
-                          {tattoo.images?.slice(0, 4).map((img, i) => (
-                            <a key={i} href={img} target="_blank" rel="noopener noreferrer" className="block w-16 h-16 rounded-lg overflow-hidden border border-neutral-200 dark:border-zinc-600 hover:opacity-90 transition-opacity">
-                              <img src={img} alt="" className="w-full h-full object-cover" />
-                            </a>
-                          ))}
-                          {tattoo.images && tattoo.images.length > 4 && (
-                            <span className="px-2 py-1 text-xs font-medium text-neutral-500">+{tattoo.images.length - 4}</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="pt-4 border-t border-neutral-200 dark:border-zinc-700">
-              <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3">Galerie privée</h3>
-            {(() => {
-              const allImages = selectedClient.tattoos?.flatMap(t => t.images ?? []) ?? [];
-              if (allImages.length === 0) {
-                return <p className="text-sm text-neutral-500 dark:text-neutral-400 py-4">Aucune photo de tatouage pour le moment.</p>;
-              }
-              return (
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                  {allImages.slice(0, 12).map((img, i) => (
-                    <a key={i} href={img} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-xl overflow-hidden border border-neutral-200 dark:border-zinc-600 hover:opacity-90 transition-opacity">
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                    </a>
-                  ))}
-                  {allImages.length > 12 && <span className="px-2 py-1 text-xs font-medium text-neutral-500">+{allImages.length - 12} photos</span>}
-                </div>
-              );
-            })()}
-            </div>
-          </div>
-        </Modal>
+        <ClientDetailModal
+          client={selectedClient}
+          onClose={closeModalAndSave}
+          notes={notes}
+          setNotes={setNotes}
+          onBlurNotes={saveNow}
+          useSupabase={useSupabase}
+          stampStudioId={stampStudioId}
+          stampSettings={stampSettings}
+          stampState={stampStateModal}
+          privacyMode={privacyMode}
+        />
       )}
 
       {showAddModal && onAddClient && (
-        <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); onAddModalClose?.(); }} title="Ajouter un client" size="md">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold mb-2">Nom</label>
-              <input type="text" value={addForm.name} onChange={(e) => setAddForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Jean Dupont" className="w-full px-4 py-3 min-h-[48px] border border-neutral-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900" />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2">Email *</label>
-              <input type="email" value={addForm.email} onChange={(e) => setAddForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="client@exemple.com" className="w-full px-4 py-3 min-h-[48px] border border-neutral-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900" />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2">Téléphone</label>
-              <input type="tel" value={addForm.phone} onChange={(e) => setAddForm(f => ({ ...f, phone: e.target.value }))}
-                placeholder="+33 6 12 34 56 78" className="w-full px-4 py-3 min-h-[48px] border border-neutral-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900" />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2">Notes</label>
-              <textarea rows={3} value={addForm.notes} onChange={(e) => setAddForm(f => ({ ...f, notes: e.target.value }))}
-                placeholder="Notes sur ce client…" className="w-full px-4 py-3 border border-neutral-200 rounded-xl resize-none" />
-            </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <button onClick={() => { setShowAddModal(false); onAddModalClose?.(); }} className="min-h-[44px] px-6 py-3 border-2 border-neutral-200 dark:border-zinc-700 rounded-xl font-semibold hover:border-neutral-900 dark:hover:border-zinc-500">
-                Annuler
-              </button>
-              <button onClick={handleAddClient} disabled={!addForm.email.trim() || clientLimitReached}
-                className="min-h-[44px] px-6 py-3 bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 dark:hover:bg-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                Ajouter
-              </button>
-              {clientLimitReached && (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">Limite de votre plan atteinte. Passez au plan Studio pour ajouter plus de clients.</p>
-              )}
-            </div>
-          </div>
-        </Modal>
+        <ClientAddModal
+          addForm={addForm}
+          setAddForm={setAddForm}
+          onClose={() => { setShowAddModal(false); onAddModalClose?.(); }}
+          onSubmit={handleAddClient}
+          clientLimitReached={clientLimitReached}
+        />
       )}
 
       {showCsvImportModal && onImportCsv && (

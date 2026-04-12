@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, MapPin, Ruler, Euro, Calendar, Mail, Sparkles, FileText, CheckCircle, XCircle, Clock, AtSign, MessageCircle } from 'lucide-react';
 import type { ProjectRequest, Booking } from '../../types';
 import { instagramMessageUrl } from '../../lib/instagramUtils';
@@ -89,19 +90,21 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
 
   const mailtoHref = buildMailtoHref(clientEmail, `Votre demande — ${clientName}`.trim());
 
-  return (
+  // Portail : rendu au niveau de document.body pour éviter tout stacking-context parent
+  // (ex: animate-fade-in applique transform, ce qui rend position:fixed relatif au parent)
+  return createPortal(
     <>
       {/* Fond assombri : mobile / tablette uniquement. Sur PC (lg+) pas de voile — le panneau suffit. */}
       <div
         onClick={onClose}
-        className={`fixed z-[55] inset-0 lg:hidden transition-opacity duration-300 ${
+        className={`fixed z-[85] inset-0 lg:hidden transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
-        style={{ backgroundColor: 'rgba(15,23,42,0.45)' }}
+        style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}
         aria-hidden="true"
       />
       <div
-        className={`fixed z-[60] flex min-h-0 flex-col border-[var(--border)] w-full sm:max-w-md max-w-[100vw] overflow-hidden transition-transform duration-300 ease-out bg-[var(--bg-primary)]
+        className={`fixed z-[90] flex min-h-0 flex-col border-zinc-200 dark:border-zinc-800 w-full sm:max-w-md max-w-[100vw] overflow-hidden transition-transform duration-300 ease-out bg-white dark:bg-zinc-900
           shadow-2xl
           lg:shadow-[-20px_0_60px_-15px_rgba(15,23,42,0.18)] dark:lg:shadow-[-20px_0_60px_-15px_rgba(0,0,0,0.55)]
           lg:ring-1 lg:ring-slate-200/90 dark:lg:ring-zinc-600/40
@@ -111,12 +114,12 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
           ${isOpen ? 'max-lg:translate-y-0 lg:translate-x-0' : 'max-lg:translate-y-full lg:translate-x-full'}`}
       >
         <div
-          className="flex items-center justify-between px-4 sm:px-5 pt-[max(12px,env(safe-area-inset-top,0px))] pb-3 sm:pb-4 border-b border-[var(--border)] shrink-0 bg-[var(--bg-secondary)]"
+          className="flex items-center justify-between px-4 sm:px-5 pt-[max(12px,env(safe-area-inset-top,0px))] pb-3 sm:pb-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-zinc-50 dark:bg-zinc-900/80"
         >
-          <h2 className="font-bold text-base sm:text-lg text-[var(--text-primary)] pr-2">Aperçu rapide</h2>
+          <h2 className="font-bold text-base sm:text-lg text-zinc-900 dark:text-white pr-2">Aperçu rapide</h2>
           <button
             onClick={onClose}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-[var(--bg-hover)] transition-colors text-[var(--text-secondary)]"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 dark:text-zinc-400"
             aria-label="Fermer"
           >
             <X className="w-5 h-5" />
@@ -143,8 +146,8 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
           </div>
           <div className="p-4 sm:p-5 space-y-4 sm:space-y-5">
             <div className="min-w-0">
-              <h3 className="font-semibold text-lg sm:text-xl text-[var(--text-primary)] break-words">{clientName}</h3>
-              <div className="flex items-start gap-2 mt-1 text-sm text-[var(--text-secondary)] min-w-0">
+              <h3 className="font-semibold text-lg sm:text-xl text-zinc-900 dark:text-white break-words">{clientName}</h3>
+              <div className="flex items-start gap-2 mt-1 text-sm text-zinc-500 dark:text-zinc-400 min-w-0">
                 <Mail className="w-4 h-4 shrink-0 mt-0.5" />
                 <span className="break-all sm:break-words min-w-0">{clientEmail}</span>
               </div>
@@ -164,7 +167,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
               )}
               <a
                 href={mailtoHref ?? '#'}
-                className="inline-flex items-center justify-center gap-2 px-3 py-2.5 min-h-[44px] rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all w-full sm:w-auto touch-manipulation"
+                className="inline-flex items-center justify-center gap-2 px-3 py-2.5 min-h-[44px] rounded-xl text-sm font-semibold border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all w-full sm:w-auto touch-manipulation"
                 aria-disabled={!mailtoHref}
                 onClick={(e) => {
                   if (!mailtoHref) {
@@ -207,9 +210,9 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
             </div>
 
             {/* Synthèse rapide */}
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4 space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Synthèse</h4>
-              <ul className="text-sm text-[var(--text-primary)] space-y-1.5 list-disc list-inside">
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/60 p-4 space-y-2">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Synthèse</h4>
+              <ul className="text-sm text-zinc-900 dark:text-white space-y-1.5 list-disc list-inside">
                 <li>Type : {requestType === 'flash' ? 'Flash / prédessiné' : 'Projet sur mesure'}</li>
                 {displayPlacement && <li>Emplacement : {displayPlacement}</li>}
                 {displaySize && <li>Taille indiquée : {displaySize}</li>}
@@ -221,15 +224,15 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
 
             {/* Description */}
             <div>
-              <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-2">Description complète</h4>
-              <p className="text-sm text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">{description}</p>
+              <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">Description complète</h4>
+              <p className="text-sm text-zinc-900 dark:text-white leading-relaxed whitespace-pre-wrap">{description}</p>
             </div>
 
             {/* Disponibilités client */}
             {(requestedDate || requestedTime) && (
               <div>
-                <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-2">Disponibilités</h4>
-                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2 text-sm text-[var(--text-primary)]">
+                <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">Disponibilités</h4>
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2 text-sm text-zinc-900 dark:text-white">
                   <span className="flex items-start gap-2 min-w-0">
                     <Calendar className="w-4 h-4 shrink-0 mt-0.5" />
                     {requestedDate && (
@@ -251,7 +254,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
             {/* Galerie refs (si plusieurs) */}
             {refImages.length > 1 && (
               <div>
-                <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-2">Autres références</h4>
+                <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">Autres références</h4>
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {refImages.slice(1, 5).map((url, i) => (
                     <img key={i} src={url} alt={`Ref ${i + 2}`} loading="lazy" decoding="async" className="w-16 h-16 rounded-lg object-cover shrink-0" />
@@ -261,8 +264,8 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
             )}
 
             {/* Actions */}
-            <div className="pt-4 border-t border-[var(--border)] space-y-2">
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase mb-3">Actions</p>
+            <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+              <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase mb-3">Actions</p>
               <div className="flex flex-col gap-2">
                 {isProject && pr && onOpenProjectDiscussion && (
                   <button
@@ -289,7 +292,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
                 {onProposeDate && (
                   <button
                     onClick={() => onProposeDate(item)}
-                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-[var(--border)] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all"
+                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
                   >
                     <Calendar className="w-5 h-5" />
                     Proposer une autre date
@@ -309,6 +312,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 };
