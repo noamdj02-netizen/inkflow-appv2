@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Copy, Check, ExternalLink, Store, QrCode, X } from 'lucide-react';
+import { Copy, Check, ExternalLink, Store, QrCode, X, Download } from 'lucide-react';
 import QRCodeLib from 'qrcode';
 import { getStudioId } from '../../lib/supabase';
 import { getStudioSlug } from '../../lib/supabaseDashboard';
@@ -109,6 +109,90 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     }
   }, [showQr, vitrineUrl]);
 
+  /** Génère une carte PNG brandée Inkflow et déclenche le téléchargement */
+  const handleDownloadQr = useCallback(async () => {
+    const W = 1200;
+    const H = 1600;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Fond noir
+    ctx.fillStyle = '#0d0d0d';
+    ctx.fillRect(0, 0, W, H);
+
+    // Étiquette supérieure
+    ctx.fillStyle = '#6b6b6b';
+    ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.letterSpacing = '8px';
+    ctx.fillText('SCANNEZ POUR RÉSERVER', W / 2, 140);
+
+    // Génère QR haute résolution dans un canvas temporaire
+    const qrSize = 600;
+    const qrCanvas = document.createElement('canvas');
+    try {
+      await QRCodeLib.toCanvas(qrCanvas, vitrineUrl, {
+        width: qrSize,
+        margin: 2,
+        color: { dark: '#171717', light: '#FAFAFA' },
+      });
+    } catch { return; }
+
+    // Fond blanc arrondi pour le QR (700×700 centré)
+    const qrBox = 700;
+    const qrX = (W - qrBox) / 2;
+    const qrY = 200;
+    const radius = 48;
+    ctx.fillStyle = '#FAFAFA';
+    ctx.beginPath();
+    ctx.roundRect(qrX, qrY, qrBox, qrBox, radius);
+    ctx.fill();
+
+    // QR centré dans la boîte blanche
+    const qrOffset = (qrBox - qrSize) / 2;
+    ctx.drawImage(qrCanvas, qrX + qrOffset, qrY + qrOffset, qrSize, qrSize);
+
+    // Nom du studio
+    ctx.letterSpacing = '0px';
+    ctx.fillStyle = '#e8e3dc';
+    ctx.font = 'bold 64px system-ui, -apple-system, sans-serif';
+    ctx.fillText(studioName.slice(0, 30), W / 2, qrY + qrBox + 100);
+
+    // URL vitrine
+    ctx.fillStyle = '#6b6b6b';
+    ctx.font = '32px system-ui, -apple-system, sans-serif';
+    ctx.fillText(vitrineUrl, W / 2, qrY + qrBox + 160);
+
+    // Séparateur
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(80, qrY + qrBox + 220);
+    ctx.lineTo(W - 80, qrY + qrBox + 220);
+    ctx.stroke();
+
+    // Logo inkflow
+    ctx.fillStyle = '#c9a96e';
+    ctx.font = 'bold 120px system-ui, -apple-system, sans-serif';
+    ctx.letterSpacing = '-4px';
+    ctx.fillText('inkflow', W / 2, qrY + qrBox + 380);
+
+    // Slogan
+    ctx.letterSpacing = '0px';
+    ctx.fillStyle = '#6b6b6b';
+    ctx.font = '40px system-ui, -apple-system, sans-serif';
+    ctx.fillText('Votre tatouage, simplement réservé.', W / 2, qrY + qrBox + 460);
+
+    // Téléchargement
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = `qr-vitrine-${studioSlugFromDb ?? 'studio'}.png`;
+    link.click();
+  }, [vitrineUrl, studioName, studioSlugFromDb]);
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(vitrineUrl);
@@ -202,17 +286,54 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
         </button>
       </div>
 
-      {/* QR Code popover */}
+      {/* QR Code branded card */}
       {showQr && (
-        <div className="mt-3 flex flex-col items-center gap-3 p-4 bg-white border border-neutral-200 rounded-2xl">
+        <div className="mt-3 flex flex-col items-center gap-4 p-5 bg-white border border-neutral-200 rounded-2xl">
           <div className="flex items-center justify-between w-full">
             <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">QR Code vitrine</p>
-            <button onClick={() => setShowQr(false)} className="p-1 rounded-lg hover:bg-neutral-100 text-neutral-400 transition-colors">
+            <button onClick={() => setShowQr(false)} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 transition-colors" aria-label="Fermer">
               <X className="w-4 h-4" />
             </button>
           </div>
-          <canvas ref={qrCanvasRef} className="rounded-xl" />
+
+          {/* Carte de prévisualisation brandée */}
+          <div className="flex flex-col items-center gap-3 w-full max-w-[280px] rounded-2xl overflow-hidden"
+            style={{ background: '#0d0d0d', padding: '28px 24px 24px' }}>
+            <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: '#6b6b6b' }}>
+              Scannez pour réserver
+            </p>
+            {/* QR sur fond blanc */}
+            <div className="rounded-xl overflow-hidden p-2" style={{ background: '#FAFAFA' }}>
+              <canvas ref={qrCanvasRef} className="block" />
+            </div>
+            {/* Nom du studio */}
+            <p className="text-sm font-semibold text-center truncate w-full" style={{ color: '#e8e3dc' }}>
+              {studioName}
+            </p>
+            {/* Branding Inkflow */}
+            <div className="flex flex-col items-center gap-0.5 mt-1 pt-3 border-t w-full" style={{ borderColor: '#2a2a2a' }}>
+              <p className="text-base font-black tracking-tight" style={{ color: '#c9a96e', fontFamily: 'system-ui, sans-serif', letterSpacing: '-0.02em' }}>
+                inkflow
+              </p>
+              <p className="text-[10px] font-medium" style={{ color: '#6b6b6b' }}>
+                Votre tatouage, simplement réservé.
+              </p>
+            </div>
+          </div>
+
+          {/* URL */}
           <p className="text-xs text-neutral-400 text-center break-all">{vitrineUrl}</p>
+
+          {/* Bouton téléchargement */}
+          <button
+            type="button"
+            onClick={handleDownloadQr}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neutral-900 text-white font-semibold text-sm hover:bg-neutral-800 transition-colors active:scale-[0.98] w-full justify-center"
+          >
+            <Download className="w-4 h-4" />
+            Télécharger pour impression
+          </button>
+          <p className="text-[11px] text-neutral-400 text-center">PNG 1200×1600 — prêt à imprimer en A5</p>
         </div>
       )}
     </div>
