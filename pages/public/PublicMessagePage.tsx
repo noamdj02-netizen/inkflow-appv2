@@ -115,6 +115,8 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [studioHeader, setStudioHeader] = useState<PublicMessageStudioHeader | null>(null);
   const [studioHeaderLoading, setStudioHeaderLoading] = useState(true);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
+  const [messagesLoading, setMessagesLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,8 +204,15 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
   }, [messages]);
 
   const loadMessages = async () => {
+    setMessagesError(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data } = await (supabase as any).rpc('get_public_thread_messages', { p_thread_id: threadId });
+    const { data, error } = await (supabase as any).rpc('get_public_thread_messages', { p_thread_id: threadId });
+    setMessagesLoading(false);
+    if (error) {
+      console.error('[PublicMessagePage] get_public_thread_messages error:', error);
+      setMessagesError("Impossible de charger les messages. Réessaie dans un instant.");
+      return;
+    }
     if (data && Array.isArray(data)) {
       setMessages(data.map((row: Record<string, unknown>) => ({
         id: row.id as string,
@@ -236,7 +245,7 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
       return;
     }
 
-    await supabase.from('inkflow_messages').insert({
+    const { error: insertError } = await supabase.from('inkflow_messages').insert({
       id: `msg_${Date.now()}`,
       studio_id: studioId,
       thread_id: threadId,
@@ -245,6 +254,13 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
       content: newMessage.trim(),
       read: false,
     });
+
+    if (insertError) {
+      console.error('[PublicMessagePage] message insert error:', insertError);
+      toast.error("Impossible d'envoyer le message. Réessaie.");
+      setSending(false);
+      return;
+    }
 
     if (studioId) {
       sendMessageNotificationToStudio({
@@ -306,6 +322,34 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
       <PublicMessageHeaderBar loading={studioHeaderLoading} studio={studioHeader} />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3 max-w-2xl mx-auto w-full">
+        {/* Error state */}
+        {messagesError && (
+          <div className="flex flex-col items-center gap-3 py-12 text-center">
+            <p className="text-sm text-red-500">{messagesError}</p>
+            <button
+              onClick={() => { setMessagesLoading(true); loadMessages(); }}
+              className="text-sm font-medium text-neutral-900 underline"
+            >
+              Réessayer
+            </button>
+          </div>
+        )}
+        {/* Loading state */}
+        {messagesLoading && !messagesError && (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+          </div>
+        )}
+        {/* Empty state */}
+        {!messagesLoading && !messagesError && messages.length === 0 && (
+          <div className="flex flex-col items-center gap-2 py-16 text-center select-none">
+            <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mb-2">
+              <Send className="w-5 h-5 text-neutral-400" />
+            </div>
+            <p className="text-sm font-medium text-neutral-700">Aucun message pour l'instant</p>
+            <p className="text-xs text-neutral-400">Envoyez un message au studio pour démarrer la conversation.</p>
+          </div>
+        )}
         {messages.map((msg) => {
           const structured = tryParseStructuredMessage(msg.content);
           const isClient = msg.senderType === 'client';
