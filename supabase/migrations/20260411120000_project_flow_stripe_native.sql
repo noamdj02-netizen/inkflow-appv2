@@ -38,6 +38,7 @@ CREATE INDEX IF NOT EXISTS idx_native_device_tokens_user ON inkflow_native_devic
 
 ALTER TABLE inkflow_native_device_tokens ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "native_tokens_own" ON inkflow_native_device_tokens;
 CREATE POLICY "native_tokens_own" ON inkflow_native_device_tokens
   FOR ALL USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);

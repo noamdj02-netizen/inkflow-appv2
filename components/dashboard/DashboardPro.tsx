@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, ClipboardList, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen, Smartphone, Heart, Globe, FileCheck, Crown, ListOrdered, Eye, EyeOff, PanelsTopLeft, HelpCircle, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, ClipboardList, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen, Smartphone, Heart, Globe, FileCheck, Crown, ListOrdered, Eye, EyeOff, PanelsTopLeft, HelpCircle, MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
@@ -225,9 +225,9 @@ export const DashboardPro: React.FC = () => {
   /** Thème effectif — fallback DOM pour mobile/PWA (resolvedTheme peut être undefined avant hydration) */
   const effectiveTheme = resolvedTheme ?? (typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null : null) ?? 'light';
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
-  const { studioId, studioSlug, studioCsvImportSlots, refreshStudioSlug, refreshStudioSubscription, subscriptionStatus, trialEndsAt, useSupabase, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, importClientsFromCsvRows, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, lastSyncedAt, retry } = useSupabaseSync();
-  const { projectRequests, loading: projectRequestsLoading, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId);
-  const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false);
+  const { studioId, studioSlug, studioCsvImportSlots, refreshStudioSlug, refreshStudioSubscription, subscriptionStatus, trialEndsAt, useSupabase, demoAccountMode, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, importClientsFromCsvRows, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, lastSyncedAt, retry } = useSupabaseSync();
+  const { projectRequests, loading: projectRequestsLoading, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId, { demoMode: demoAccountMode });
+  const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false, demoAccountMode);
   const demandes = usePendingDemandesCounts(appointments, bookings, projectRequests);
   const { canAccessFeature, hasReachedLimit, getLimit } = useSubscriptionPermissions(studioId);
   const [paymentSuccessModalOpen, setPaymentSuccessModalOpen] = useState(false);
@@ -270,6 +270,8 @@ export const DashboardPro: React.FC = () => {
   });
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [helpDrawerOpen, setHelpDrawerOpen] = useState(false);
+  /** Menu compact header (aide + thème), mobile uniquement (max-sm) */
+  const [headerMoreMenuOpen, setHeaderMoreMenuOpen] = useState(false);
   const { privacyMode, togglePrivacyMode } = useStudioPrivacy();
 
   const helpContext: InkflowHelpContext = useMemo(() => {
@@ -686,9 +688,14 @@ export const DashboardPro: React.FC = () => {
     }
   }, [toast]);
 
-  /** Liens depuis l’espace client : ?vitrine=1 → Paramètres > Vitrine ; ?tab=… → onglet studio */
+  /** Liens depuis l’espace client : ?vitrine=1 → Paramètres > Vitrine ; ?tab=… → onglet studio ; ?open=messaging → messagerie (emails « nouveau message client ») */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (params.get('open') === 'messaging') {
+      window.history.replaceState({}, '', '/dashboard');
+      setActiveTab('messaging');
+      return;
+    }
     if (params.get('vitrine') === '1') {
       window.history.replaceState({}, '', '/dashboard');
       setActiveTab('settings');
@@ -1159,6 +1166,10 @@ export const DashboardPro: React.FC = () => {
   }, [activeTab]);
 
   useEffect(() => {
+    setHeaderMoreMenuOpen(false);
+  }, [activeTab]);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
@@ -1170,7 +1181,7 @@ export const DashboardPro: React.FC = () => {
   }, []);
 
   return (
-    <div className="app-shell bg-zinc-50 dark:bg-black">
+    <div className="app-shell dashboard-pro-shell bg-zinc-50 dark:bg-black">
       {showWelcome && (
         <WelcomeOnboardingFlow
           userScopedId={welcomeUserKey}
@@ -1207,7 +1218,12 @@ export const DashboardPro: React.FC = () => {
                 <span className="block text-[11px] text-zinc-400 dark:text-zinc-500 truncate">{user?.studioName || 'Mon studio'}</span>
               </div>
             </a>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors touch-manipulation"
+              aria-label="Fermer le menu"
+            >
               <X className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
             </button>
           </div>
@@ -1646,16 +1662,20 @@ export const DashboardPro: React.FC = () => {
           )}
           {/* Header — slim bar (non-overview) or transparent (overview, greeting is inline) */}
           <header
-            className={`app-shell-header safe-top px-4 sm:px-5 md:px-6 flex items-center justify-between gap-4 transition-all duration-300 shrink-0 overflow-visible ${
+            className={`app-shell-header safe-top px-4 sm:px-5 md:px-6 flex items-center justify-between gap-2 sm:gap-4 transition-all duration-300 shrink-0 overflow-visible ${
               activeTab === 'overview'
-                ? 'h-12 sm:h-14 bg-transparent border-b-0'
+                ? 'min-h-[52px] sm:min-h-0 h-12 sm:h-14 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md md:bg-transparent md:dark:bg-transparent md:backdrop-blur-none border-b border-zinc-200/80 dark:border-zinc-800 md:border-b-0'
                 : `h-14 sm:h-16 border-b ${headerScrolled ? 'bg-white dark:bg-zinc-950 border-[var(--border)]' : 'bg-white dark:bg-zinc-950 border-[var(--border)]'}`
             }`}
           >
-            <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               {/* Hamburger — toujours visible sur mobile/tablette */}
-              <button 
-                onClick={() => setSidebarOpen(true)} 
+              <button
+                type="button"
+                onClick={() => {
+                  setSidebarOpen(true);
+                  setHeaderMoreMenuOpen(false);
+                }}
                 className="lg:hidden p-2.5 -ml-1 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
                 aria-label="Ouvrir le menu"
               >
@@ -1678,7 +1698,7 @@ export const DashboardPro: React.FC = () => {
                   <div className="hidden lg:block flex-1 min-w-0" aria-hidden />
                 </>
               ) : (
-                <h2 className="text-lg sm:text-xl font-semibold truncate text-[var(--text-primary)] min-w-0">
+                <h2 className="text-base sm:text-xl font-semibold truncate text-zinc-900 dark:text-white min-w-0 pr-1">
                   {activeTab === 'account'
                     ? 'Mon compte'
                     : activeTab === 'clients' && clientsView === 'loyalty'
@@ -1689,7 +1709,7 @@ export const DashboardPro: React.FC = () => {
                 </h2>
               )}
             </div>
-            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            <div className="flex items-center gap-1 sm:gap-3 md:gap-4 flex-shrink-0">
             {/* Barre de recherche globale (style Command Palette) — desktop only */}
             <button
               type="button"
@@ -1704,7 +1724,11 @@ export const DashboardPro: React.FC = () => {
             </button>
             {/* Planning — visible sur mobile/tablette, ouvre le sheet planning */}
             <button
-              onClick={() => setShowPlanningSheet(true)}
+              type="button"
+              onClick={() => {
+                setShowPlanningSheet(true);
+                setHeaderMoreMenuOpen(false);
+              }}
               className="xl:hidden p-2.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
               aria-label="Ouvrir le planning"
             >
@@ -1720,21 +1744,79 @@ export const DashboardPro: React.FC = () => {
             >
               {privacyMode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
-            <button
-              type="button"
-              onClick={() => setHelpDrawerOpen(true)}
-              className="flex p-2.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] items-center justify-center transition-colors duration-100 text-[var(--text-secondary)]"
-              title="Aide — raccourcis et fiabilité"
-              aria-label="Ouvrir l’aide"
-            >
-              <HelpCircle className="w-5 h-5" />
-            </button>
-            <div className="flex items-center justify-center" title="Mode clair ou sombre">
-              <ThemeToggle />
+            <div className="hidden sm:flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setHelpDrawerOpen(true)}
+                className="flex p-2.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] items-center justify-center transition-colors duration-100 text-[var(--text-secondary)]"
+                title="Aide — raccourcis et fiabilité"
+                aria-label="Ouvrir l’aide"
+              >
+                <HelpCircle className="w-5 h-5" />
+              </button>
+              <div className="flex items-center justify-center" title="Mode clair ou sombre">
+                <ThemeToggle />
+              </div>
+            </div>
+
+            {/* max-sm : aide + thème regroupés (menu Plus) */}
+            <div className="relative sm:hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setHeaderMoreMenuOpen((o) => !o);
+                  setShowNotifications(false);
+                  setShowProfileDropdown(false);
+                }}
+                className={`flex p-2.5 rounded-xl hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] items-center justify-center transition-colors touch-manipulation ${
+                  headerMoreMenuOpen ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white' : 'text-[var(--text-secondary)]'
+                }`}
+                aria-expanded={headerMoreMenuOpen}
+                aria-haspopup="menu"
+                aria-label="Plus d’options"
+              >
+                <MoreHorizontal className="w-6 h-6" strokeWidth={1.75} />
+              </button>
+              {headerMoreMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-[45] bg-black/25 dark:bg-black/50 sm:hidden"
+                    onClick={() => setHeaderMoreMenuOpen(false)}
+                    aria-hidden
+                  />
+                  <div
+                    className="fixed right-3 z-[55] w-[min(calc(100vw-1.5rem),17rem)] rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-xl py-2 sm:hidden"
+                    style={{ top: 'max(calc(env(safe-area-inset-top, 0px) + 3.5rem), 3.75rem)' }}
+                    role="menu"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setHelpDrawerOpen(true);
+                        setHeaderMoreMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/80 active:scale-[0.99] transition-colors"
+                    >
+                      <HelpCircle className="w-5 h-5 shrink-0 text-zinc-500" />
+                      Aide et raccourcis
+                    </button>
+                    <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-zinc-100 dark:border-zinc-800">
+                      <span className="text-sm text-zinc-600 dark:text-zinc-400">Apparence</span>
+                      <ThemeToggle />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             <div className="relative">
               <button
-                onClick={() => { setShowNotifications(!showNotifications); setShowProfileDropdown(false); }}
+                type="button"
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  setShowProfileDropdown(false);
+                  setHeaderMoreMenuOpen(false);
+                }}
                 className="relative p-2.5 rounded-full hover:bg-white/60 dark:hover:bg-white/10 transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 <Bell className="w-5 h-5 text-[#6B7280] dark:text-[var(--text-secondary)]" />
@@ -1885,7 +1967,12 @@ export const DashboardPro: React.FC = () => {
             {/* Avatar/Profil — masqué sur mobile SEULEMENT pour overview car doublon avec Bottom Tab Bar > Réglages */}
             <div className={`relative flex items-center min-w-0 ${activeTab === 'overview' ? 'hidden md:flex' : ''}`}>
               <button
-                onClick={() => { setShowProfileDropdown(!showProfileDropdown); setShowNotifications(false); }}
+                type="button"
+                onClick={() => {
+                  setShowProfileDropdown(!showProfileDropdown);
+                  setShowNotifications(false);
+                  setHeaderMoreMenuOpen(false);
+                }}
                 className="flex items-center gap-2.5 p-1.5 pr-2 sm:pr-3 rounded-full hover:bg-white/60 dark:hover:bg-white/10 transition-colors duration-150 min-h-[44px]"
               >
                 {user?.avatar ? (
@@ -1944,7 +2031,7 @@ export const DashboardPro: React.FC = () => {
           {/* ====== SCROLLABLE CONTENT ZONE ====== */}
           <div
             onScroll={(e) => setHeaderScrolled((e.target as HTMLDivElement).scrollTop > 8)}
-            className={`app-shell-content p-4 sm:p-6 md:p-8 ${activeTab === 'overview' ? 'dashboard-overview-bg' : 'dashboard-pages-bg'}`}
+            className={`app-shell-content px-3 py-4 sm:p-6 md:p-8 ${activeTab === 'overview' ? 'dashboard-overview-bg' : 'dashboard-pages-bg'}`}
           >
           {isRestricted && !(activeTab === 'settings' && settingsTab === 'billing') ? (
             <PaywallView
@@ -3222,53 +3309,74 @@ export const DashboardPro: React.FC = () => {
 
       {/* ====== MOBILE BOTTOM NAVIGATION BAR (style iOS: 5 onglets plats, sans FAB) ====== */}
       <nav className="bottom-nav md:hidden" role="navigation" aria-label="Navigation principale mobile">
-        <div className="flex items-center justify-around px-1 sm:px-2 pt-2 pb-1">
-          {/* Accueil */}
+        <div className="flex items-stretch justify-between gap-0.5 px-1 pb-1 max-w-lg mx-auto w-full">
+          {/* Accueil — onglet type iOS : pastille active + accent navigation */}
           <button
+            type="button"
             onClick={() => handleSidebarNav(() => { setActiveTab('overview'); setShowFabMenu(false); })}
-            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'overview' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400 dark:text-zinc-500'}`}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 min-w-0 min-h-[56px] rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+              activeTab === 'overview'
+                ? 'bg-zinc-200/95 dark:bg-white/[0.08] text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.08]'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
           >
-            <LayoutDashboard className="w-6 h-6" />
-            <span className="text-[10px] font-medium">Accueil</span>
+            <LayoutDashboard className="w-[23px] h-[23px] shrink-0" strokeWidth={activeTab === 'overview' ? 2.35 : 1.65} aria-hidden />
+            <span className="text-[11px] font-semibold leading-none tracking-tight truncate max-w-full">Accueil</span>
           </button>
 
-          {/* Agenda */}
           <button
+            type="button"
             onClick={() => handleSidebarNav(() => { setActiveTab('appointments'); setShowFabMenu(false); })}
-            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'appointments' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400 dark:text-zinc-500'}`}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 min-w-0 min-h-[56px] rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+              activeTab === 'appointments'
+                ? 'bg-zinc-200/95 dark:bg-white/[0.08] text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.08]'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
           >
-            <Calendar className="w-6 h-6" />
-            <span className="text-[10px] font-medium">Agenda</span>
+            <Calendar className="w-[23px] h-[23px] shrink-0" strokeWidth={activeTab === 'appointments' ? 2.35 : 1.65} aria-hidden />
+            <span className="text-[11px] font-semibold leading-none tracking-tight truncate max-w-full">Agenda</span>
           </button>
 
-          {/* Demandes */}
           <button
+            type="button"
             onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setShowFabMenu(false); })}
-            className={`relative flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'requests' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400 dark:text-zinc-500'}`}
+            className={`relative flex flex-col items-center justify-center gap-1 flex-1 min-w-0 min-h-[56px] rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+              activeTab === 'requests'
+                ? 'bg-zinc-200/95 dark:bg-white/[0.08] text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.08]'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
           >
-            <span className="relative flex flex-col items-center">
-              <Inbox className="w-6 h-6" />
+            <span className="relative inline-flex items-center justify-center">
+              <Inbox className="w-[23px] h-[23px] shrink-0" strokeWidth={activeTab === 'requests' ? 2.35 : 1.65} aria-hidden />
               <BadgeNotification count={demandes.total} showCount className="-top-1 -right-2" />
             </span>
-            <span className="text-[10px] font-medium">Demandes</span>
+            <span className="text-[11px] font-semibold leading-none tracking-tight truncate max-w-full">Demandes</span>
           </button>
 
-          {/* Clients */}
           <button
+            type="button"
             onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setShowFabMenu(false); })}
-            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'clients' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400 dark:text-zinc-500'}`}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 min-w-0 min-h-[56px] rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+              activeTab === 'clients'
+                ? 'bg-zinc-200/95 dark:bg-white/[0.08] text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.08]'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
           >
-            <Users className="w-6 h-6" />
-            <span className="text-[10px] font-medium">Clients</span>
+            <Users className="w-[23px] h-[23px] shrink-0" strokeWidth={activeTab === 'clients' ? 2.35 : 1.65} aria-hidden />
+            <span className="text-[11px] font-semibold leading-none tracking-tight truncate max-w-full">Clients</span>
           </button>
 
-          {/* Réglages */}
           <button
+            type="button"
             onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab(isRestricted ? 'billing' : settingsTab); setShowFabMenu(false); }, true)}
-            className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors min-w-[44px] min-h-[44px] justify-center active:scale-95 ${activeTab === 'settings' ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-400 dark:text-zinc-500'}`}
+            className={`flex flex-col items-center justify-center gap-1 flex-1 min-w-0 min-h-[56px] rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+              activeTab === 'settings'
+                ? 'bg-zinc-200/95 dark:bg-white/[0.08] text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.08]'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
           >
-            <Settings className="w-6 h-6" />
-            <span className="text-[10px] font-medium">Réglages</span>
+            <Settings className="w-[23px] h-[23px] shrink-0" strokeWidth={activeTab === 'settings' ? 2.35 : 1.65} aria-hidden />
+            <span className="text-[11px] font-semibold leading-none tracking-tight truncate max-w-full">Réglages</span>
           </button>
         </div>
       </nav>

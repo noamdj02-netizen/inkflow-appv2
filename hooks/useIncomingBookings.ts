@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { getBookingsFromSupabase, mapBookingFromDb } from '../lib/supabaseBookings';
+import { getInkflowDemoProBookings } from '../lib/inkflowDemoAccountData';
 import { useToast } from '../contexts/ToastContext';
 import type { Booking, BookingStatus } from '../types';
 import { updateBookingStatus as updateBookingStatusInSupabase } from '../lib/supabaseBookings';
@@ -19,7 +20,7 @@ function playNotificationSound() {
   }
 }
 
-export function useIncomingBookings(studioId: string | null, enabled: boolean) {
+export function useIncomingBookings(studioId: string | null, enabled: boolean, demoMode = false) {
   const toast = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,12 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
   const load = useCallback(async () => {
     if (!studioId) {
       setBookings([]);
+      setLoading(false);
+      initialLoadDone.current = true;
+      return;
+    }
+    if (demoMode) {
+      setBookings(getInkflowDemoProBookings(studioId));
       setLoading(false);
       initialLoadDone.current = true;
       return;
@@ -44,7 +51,7 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
       setLoading(false);
       initialLoadDone.current = true;
     }
-  }, [studioId]);
+  }, [studioId, demoMode]);
 
   useEffect(() => {
     load();
@@ -53,15 +60,15 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
   // Si Realtime est désactivé côté projet Supabase, recharger au retour sur l’onglet
   useEffect(() => {
     const onVis = () => {
-      if (document.visibilityState === 'visible' && studioId && enabled) load();
+      if (document.visibilityState === 'visible' && studioId && enabled && !demoMode) load();
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
-  }, [studioId, enabled, load]);
+  }, [studioId, enabled, load, demoMode]);
 
   // Realtime : INSERT ajoute au state et déclenche toast + son
   useEffect(() => {
-    if (!enabled || !studioId) return;
+    if (!enabled || !studioId || demoMode) return;
 
     const channelName = `rt-inkflow_bookings-${studioId}`;
     const filter = `studio_id=eq.${studioId}`;
@@ -118,9 +125,13 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [enabled, studioId, toast]);
+  }, [enabled, studioId, toast, demoMode]);
 
   const updateStatus = useCallback(async (id: string, status: BookingStatus) => {
+    if (demoMode) {
+      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
+      return;
+    }
     try {
       await updateBookingStatusInSupabase(id, status);
       setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
@@ -129,7 +140,7 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean) {
     } catch (e) {
       throw e;
     }
-  }, [studioId, load]);
+  }, [studioId, load, demoMode]);
 
   return { bookings, loading, updateStatus, refetch: load };
 }

@@ -4,10 +4,10 @@
  * À configurer dans Supabase Dashboard > Database > Webhooks.
  */
 
+import { getCorsHeaders } from "../_shared/cors.ts";
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-
-const jsonHeaders = { "Content-Type": "application/json" };
 
 interface WebhookPayload {
   type: "INSERT" | "UPDATE" | "DELETE";
@@ -101,8 +101,10 @@ function buildPushPayload(payload: WebhookPayload): { studioId: string; title: s
 }
 
 Deno.serve(async (req: Request) => {
+  const cors = getCorsHeaders(req.headers.get("origin"));
+  const jsonHeaders = { "Content-Type": "application/json", ...cors };
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*" } });
+    return new Response(null, { status: 204, headers: cors });
   }
 
   try {

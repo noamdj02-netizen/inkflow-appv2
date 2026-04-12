@@ -43,6 +43,11 @@ import {
   type FlashPreview,
 } from '../../lib/supabaseGeo';
 import { getStudioByEmail } from '../../lib/supabaseDashboard';
+import { isInkflowDemoAccount } from '../../lib/demoAccount';
+import {
+  getInkflowDemoClientPortalBookings,
+  getInkflowDemoClientPortalProjectRequests,
+} from '../../lib/inkflowDemoAccountData';
 import {
   fetchPortalAvatarUrl,
   formatClientAvatarError,
@@ -100,7 +105,7 @@ function ClientGuestAuthCard({ layout }: { layout: 'home' | 'profile' }) {
     >
       <h2
         id="client-guest-auth-title"
-        className="font-display"
+        className="font-sans font-semibold tracking-tight"
         style={{ fontSize: layout === 'home' ? 17 : 18, color: D.text, marginBottom: 8 }}
       >
         Créer mon compte ou me connecter
@@ -262,7 +267,7 @@ function MapHero({
       const shadow = `0 0 16px ${pal.dot}44,0 2px 8px rgba(0,0,0,0.12)`;
       const html = thumb
         ? `<div style="width:38px;height:38px;border-radius:50%;border:2px solid ${pal.dot};overflow:hidden;box-shadow:${shadow};background:${D.contentCardBg}"><img src=${JSON.stringify(thumb)} alt="" width="38" height="38" style="display:block;width:100%;height:100%;object-fit:cover" loading="lazy" decoding="async" /></div>`
-        : `<div style="width:38px;height:38px;border-radius:50%;border:2px solid ${pal.dot};background:${D.contentCardBg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${D.text};box-shadow:${shadow};font-family:-apple-system,BlinkMacSystemFont,sans-serif;">${label}</div>`;
+        : `<div style="width:38px;height:38px;border-radius:50%;border:2px solid ${pal.dot};background:${D.contentCardBg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${D.text};box-shadow:${shadow};font-family:Inter,system-ui,sans-serif;">${label}</div>`;
       const icon = L.divIcon({
         className: '',
         iconSize: [38, 38],
@@ -1077,20 +1082,21 @@ const SIDEBAR_NAV: { id: Tab; label: string; tabBarLabel: string; Icon: typeof H
   { id: 'profile', label: 'Profil', tabBarLabel: 'Profil', Icon: UserIcon },
 ];
 
-/** Tab bar fixe mobile — zones ≥ 44px, safe area, masquée sur desktop (sidebar). */
+/** Tab bar fixe mobile — 44pt+ cibles, état sélectionné façon barre iOS (tint + pastille légère), safe area */
 function ClientMobileTabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-[50] flex touch-manipulation"
+      className="client-mobile-tab-bar lg:hidden fixed bottom-0 left-0 right-0 z-[50] flex touch-manipulation"
       role="navigation"
       aria-label="Navigation principale"
       style={{
         background: D.sidebarBg,
         borderTop: `1px solid ${D.sidebarBorder}`,
+        paddingTop: 6,
         paddingBottom: 'max(10px, env(safe-area-inset-bottom, 0px))',
-        paddingLeft: 'max(4px, env(safe-area-inset-left, 0px))',
-        paddingRight: 'max(4px, env(safe-area-inset-right, 0px))',
-        boxShadow: '0 -4px 24px rgba(0,0,0,0.06)',
+        paddingLeft: 'max(6px, env(safe-area-inset-left, 0px))',
+        paddingRight: 'max(6px, env(safe-area-inset-right, 0px))',
+        boxShadow: '0 -4px 22px rgba(15, 23, 42, 0.05)',
       }}
     >
       {SIDEBAR_NAV.map(({ id, tabBarLabel, Icon }) => {
@@ -1100,12 +1106,15 @@ function ClientMobileTabBar({ active, onChange }: { active: Tab; onChange: (t: T
             key={id}
             type="button"
             onClick={() => onChange(id)}
-            className="flex flex-1 flex-col items-center justify-center gap-0.5 min-h-[52px] min-w-0 py-1.5 rounded-t-xl transition-transform active:scale-[0.96]"
-            style={{ color: isOn ? D.gold : D.muted }}
+            className="flex flex-1 flex-col items-center justify-center gap-1 min-h-[56px] min-w-0 mx-0.5 py-1.5 rounded-xl transition-colors active:scale-[0.97] motion-reduce:active:scale-100"
+            style={{
+              color: isOn ? D.gold : D.muted,
+              background: isOn ? D.goldDim : 'transparent',
+            }}
             aria-current={isOn ? 'page' : undefined}
           >
-            <Icon className="w-[22px] h-[22px] shrink-0 pointer-events-none" strokeWidth={isOn ? 2.25 : 1.5} />
-            <span className="text-[10px] font-semibold leading-tight text-center px-0.5 truncate w-full">
+            <Icon className="w-[23px] h-[23px] shrink-0 pointer-events-none" strokeWidth={isOn ? 2.25 : 1.5} aria-hidden />
+            <span className="text-[11px] font-semibold leading-none text-center px-0.5 truncate w-full max-w-[4.5rem]">
               {tabBarLabel}
             </span>
           </button>
@@ -2707,6 +2716,15 @@ export function ClientDashboard() {
     }
     setRdvLoading(true);
     let cancelled = false;
+
+    if (isInkflowDemoAccount(userEmail)) {
+      setBookings(getInkflowDemoClientPortalBookings());
+      setProjectRequests(getInkflowDemoClientPortalProjectRequests());
+      setRdvLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
 
     type RowWithStudio = {
       id: string;

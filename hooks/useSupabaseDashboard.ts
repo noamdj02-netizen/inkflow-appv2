@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { processStampLoyaltyAfterCompletedAppointment } from '../lib/stampLoyalty';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -32,6 +32,13 @@ import { useRealtimeSync } from './useRealtimeSync';
 import type { ClientCsvImportRow } from '../components/crm/ClientCsvImport';
 import { clientsFromCsvImportRows } from '../lib/clientImportMapping';
 import type { Appointment, Client, FlashDesign, Notification } from '../types';
+import { isInkflowDemoAccount } from '../lib/demoAccount';
+import {
+  getInkflowDemoFlashDesigns,
+  getInkflowDemoNotifications,
+  getInkflowDemoStudioAppointments,
+  getInkflowDemoStudioClients,
+} from '../lib/inkflowDemoAccountData';
 
 const EMPTY_ARRAYS = {
   clients: [] as Client[],
@@ -59,6 +66,11 @@ export const useSupabaseDashboard = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const useSupabase = useSupabaseEnabled();
+  const isDemoAccountUser = useMemo(
+    () => isInkflowDemoAccount(user?.email ?? null),
+    [user?.email]
+  );
+  const allowSupabaseWrites = Boolean(studioId && useSupabase && !isDemoAccountUser);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [connectionError, setConnectionError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -84,10 +96,11 @@ export const useSupabaseDashboard = () => {
   const flashMutation = useOptimisticMutation(setFlashDesigns, toast);
 
   // Delta-based realtime subscriptions (replace full-refetch pattern)
-  useRealtimeSync('inkflow_appointments', { column: 'studio_id', value: studioId }, setAppointments, mapAppointmentFromDb, useSupabase);
-  useRealtimeSync('inkflow_clients', { column: 'studio_id', value: studioId }, setClients, mapClientFromDb, useSupabase);
-  useRealtimeSync('inkflow_flash_designs', { column: 'studio_id', value: studioId }, setFlashDesigns, mapFlashFromDb, useSupabase);
-  useRealtimeSync('inkflow_notifications', { column: 'studio_id', value: studioId }, setNotifications, mapNotificationFromDb, useSupabase);
+  const realtimeEnabled = useSupabase && !isDemoAccountUser;
+  useRealtimeSync('inkflow_appointments', { column: 'studio_id', value: studioId }, setAppointments, mapAppointmentFromDb, realtimeEnabled);
+  useRealtimeSync('inkflow_clients', { column: 'studio_id', value: studioId }, setClients, mapClientFromDb, realtimeEnabled);
+  useRealtimeSync('inkflow_flash_designs', { column: 'studio_id', value: studioId }, setFlashDesigns, mapFlashFromDb, realtimeEnabled);
+  useRealtimeSync('inkflow_notifications', { column: 'studio_id', value: studioId }, setNotifications, mapNotificationFromDb, realtimeEnabled);
 
   // Pastille PWA sur l'icône (iOS/Android) : nombre de notifications non lues
   useEffect(() => {
@@ -159,6 +172,13 @@ export const useSupabaseDashboard = () => {
           setStudioId(sid);
           setStudioSlug(slug);
           await loadAllData(sid);
+          if (user.email && isInkflowDemoAccount(user.email)) {
+            setAppointments(getInkflowDemoStudioAppointments());
+            setClients(getInkflowDemoStudioClients());
+            setFlashDesigns(getInkflowDemoFlashDesigns());
+            setNotifications(getInkflowDemoNotifications());
+            setLastSyncedAt(new Date().toISOString());
+          }
           initializedRef.current = true;
         } else {
           setStudioId(null);
@@ -204,7 +224,7 @@ export const useSupabaseDashboard = () => {
   // --- CRUD operations with optimistic updates + rollback ---
 
   const addAppointment = useCallback((appointment: Appointment) => {
-    if (studioId && useSupabase) {
+    if (allowSupabaseWrites) {
       aptMutation.add(appointment, (apt) =>
         saveAppointmentToSupabase(studioId, apt).then(() => {
           pushAppointmentToGoogle(studioId, apt.id).catch(() => {});
@@ -213,10 +233,10 @@ export const useSupabaseDashboard = () => {
     } else {
       setAppointments(prev => [...prev, appointment]);
     }
-  }, [studioId, useSupabase, aptMutation]);
+  }, [allowSupabaseWrites, studioId, aptMutation]);
 
   const updateAppointment = useCallback((id: string, updates: Partial<Appointment>) => {
-    if (studioId && useSupabase) {
+    if (allowSupabaseWrites) {
       aptMutation.update(
         id,
         (apt) => ({ ...apt, ...updates, updatedAt: new Date().toISOString() }),
@@ -238,10 +258,10 @@ export const useSupabaseDashboard = () => {
     } else {
       setAppointments(prev => prev.map(a => a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a));
     }
-  }, [studioId, useSupabase, aptMutation]);
+  }, [allowSupabaseWrites, studioId, aptMutation]);
 
   const deleteAppointment = useCallback((id: string) => {
-    if (studioId && useSupabase) {
+    if (allowSupabaseWrites) {
       aptMutation.remove(id, (aptId) =>
         deleteAppointmentFromSupabase(aptId).then(() => {
           deleteGoogleEvent(studioId, aptId).catch(() => {});
@@ -250,7 +270,7 @@ export const useSupabaseDashboard = () => {
     } else {
       setAppointments(prev => prev.filter(a => a.id !== id));
     }
-  }, [studioId, useSupabase, aptMutation]);
+  }, [allowSupabaseWrites, studioId, aptMutation]);
 
   const addFlash = useCallback((flash: Omit<FlashDesign, 'id' | 'createdAt'>) => {
     const newFlash: FlashDesign = {
@@ -262,47 +282,48 @@ export const useSupabaseDashboard = () => {
       artistId: flash.artistId ?? null,
       slug: flash.slug ?? null,
     };
-    if (studioId && useSupabase) {
-      flashMutation.add(newFlash, (f) => saveFlashDesignToSupabase(studioId, f));
+    if (allowSupabaseWrites) {
+      flashMutation.add(newFlash, (f) => saveFlashDesignToSupabase(studioId!, f));
     } else {
       setFlashDesigns(prev => [...prev, newFlash]);
     }
     return newFlash.id;
-  }, [studioId, useSupabase, flashMutation]);
+  }, [allowSupabaseWrites, studioId, flashMutation]);
 
   const updateFlash = useCallback((id: string, updates: Partial<FlashDesign>) => {
-    if (studioId && useSupabase) {
+    if (allowSupabaseWrites) {
       flashMutation.update(
         id,
         (f) => ({ ...f, ...updates }),
-        (updated) => saveFlashDesignToSupabase(studioId, updated)
+        (updated) => saveFlashDesignToSupabase(studioId!, updated)
       );
     } else {
       setFlashDesigns(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
     }
-  }, [studioId, useSupabase, flashMutation]);
+  }, [allowSupabaseWrites, studioId, flashMutation]);
 
   const deleteFlash = useCallback((id: string) => {
-    if (studioId && useSupabase) {
+    if (allowSupabaseWrites) {
       flashMutation.remove(id, (flashId) => deleteFlashDesignFromSupabase(flashId));
     } else {
       setFlashDesigns(prev => prev.filter(f => f.id !== id));
     }
-  }, [studioId, useSupabase, flashMutation]);
+  }, [allowSupabaseWrites, flashMutation]);
 
   const addClient = useCallback((client: Omit<Client, 'id'>) => {
     const newClient: Client = { ...client, id: `c${Date.now()}` };
-    if (studioId && useSupabase) {
-      clientMutation.add(newClient, (c) => saveClientToSupabase(studioId, c));
+    if (allowSupabaseWrites) {
+      clientMutation.add(newClient, (c) => saveClientToSupabase(studioId!, c));
     } else {
       setClients(prev => [...prev, newClient]);
     }
     return newClient.id;
-  }, [studioId, useSupabase, clientMutation]);
+  }, [allowSupabaseWrites, studioId, clientMutation]);
 
   const importClientsFromCsvRows = useCallback(
     async (rows: ClientCsvImportRow[]) => {
       if (!studioId) throw new Error('Studio introuvable');
+      if (isDemoAccountUser) throw new Error('Import CSV désactivé en mode démonstration.');
       if (!useSupabase) throw new Error('Configure Supabase (VITE_*) pour importer des clients');
       const mapped = clientsFromCsvImportRows(rows);
       if (mapped.length === 0) throw new Error('Aucune ligne à importer (emails en doublon dans le fichier ?).');
@@ -310,42 +331,42 @@ export const useSupabaseDashboard = () => {
       const refreshed = await getClientsFromSupabase(studioId);
       setClients(refreshed);
     },
-    [studioId, useSupabase]
+    [studioId, useSupabase, isDemoAccountUser]
   );
 
   const updateClient = useCallback((id: string, updates: Partial<Client>) => {
-    if (studioId && useSupabase) {
+    if (allowSupabaseWrites) {
       clientMutation.update(
         id,
         (c) => ({ ...c, ...updates }),
-        (updated) => saveClientToSupabase(studioId, updated)
+        (updated) => saveClientToSupabase(studioId!, updated)
       );
     } else {
       setClients(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
     }
-  }, [studioId, useSupabase, clientMutation]);
+  }, [allowSupabaseWrites, studioId, clientMutation]);
 
   const markNotificationAsRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    if (useSupabase) markNotificationReadInSupabase(id).catch(() => {});
-  }, [useSupabase]);
+    if (useSupabase && !isDemoAccountUser) markNotificationReadInSupabase(id).catch(() => {});
+  }, [useSupabase, isDemoAccountUser]);
 
   const loadClientNotes = useCallback(async (clientId: string): Promise<string> => {
-    if (!useSupabase) return '';
+    if (!useSupabase || isDemoAccountUser) return '';
     try {
       return await getClientNotesFromSupabase(clientId);
     } catch (e) {
       return '';
     }
-  }, [useSupabase]);
+  }, [useSupabase, isDemoAccountUser]);
 
   const saveClientNotes = useCallback(async (clientId: string, notes: string): Promise<void> => {
-    if (!useSupabase) return;
+    if (!useSupabase || isDemoAccountUser) return;
     try {
       await saveClientNotesToSupabase(clientId, notes);
     } catch (e) {
     }
-  }, [useSupabase]);
+  }, [useSupabase, isDemoAccountUser]);
 
   const refreshStudioSlug = useCallback((newSlug: string) => {
     setStudioSlug(newSlug);
@@ -379,6 +400,7 @@ export const useSupabaseDashboard = () => {
     notifications,
     loading,
     useSupabase,
+    demoAccountMode: isDemoAccountUser,
     isOnline,
     connectionError,
     lastSyncedAt,

@@ -171,16 +171,22 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
             maxDailyBookings: (settings.maxDailyBookings as number) ?? prev.maxDailyBookings,
             depositPercentage: (settings.depositPercentage as number) ?? prev.depositPercentage,
             bookingWindowDays: (settings.bookingWindowDays as number) ?? prev.bookingWindowDays,
+            requireDeposit: typeof settings.requireDeposit === 'boolean' ? settings.requireDeposit : prev.requireDeposit,
           }));
-          
+
           // Restaurer les créneaux personnalisés
           if (Array.isArray(settings.customSlots)) {
             setCustomSlots(settings.customSlots as string[]);
           }
-          
+
           // Restaurer les périodes bloquées
           if (Array.isArray(settings.blockedRanges)) {
             setBlockedRanges(settings.blockedRanges as BlockedRange[]);
+          }
+
+          // Restaurer les dates fermées
+          if (Array.isArray(settings.closedDates)) {
+            setClosedDates(settings.closedDates as string[]);
           }
         }
       } catch (err) {
@@ -204,24 +210,26 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
         // Créneaux et périodes
         customSlots,
         blockedRanges,
-        
+        closedDates,
+
         // Paramètres de base
         bookingWindowDays: bookingSettings.bookingWindowDays,
         depositPercentage: bookingSettings.depositPercentage,
-        
+        requireDeposit: bookingSettings.requireDeposit,
+
         // Jours fermés (calculés depuis schedule)
         offDays: Object.entries(schedule)
           .filter(([, v]) => !(v as { enabled?: boolean }).enabled)
           .map(([k]) => ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'].indexOf(k))
           .filter((i) => i >= 0),
-        
-        // NOUVEAUX: Paramètres avancés de temps
+
+        // Paramètres avancés de temps
         slotDuration: bookingSettings.slotDuration,
         bufferTime: bookingSettings.bufferTime,
         overrunMargin: bookingSettings.overrunMargin,
         maxDailyBookings: bookingSettings.maxDailyBookings,
         advanceBookingDays: bookingSettings.advanceBooking,
-        
+
         // Planning hebdomadaire complet avec pauses
         weeklySchedule: schedule,
       };

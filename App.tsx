@@ -52,7 +52,8 @@ const DiscoverCityStylePage = lazy(() => import('./pages/discover/DiscoverCitySt
 
 interface Route {
   path: string | RegExp;
-  component: React.ComponentType<any>;
+  /** Props dynamiques (slug, studioSlug, etc.) — toujours des chaînes pour le routeur. */
+  component: React.ComponentType<Record<string, string>>;
   requiresAuth?: boolean;
   needsSupabaseSync?: boolean;
   getProps?: (match: RegExpMatchArray) => Record<string, string>;

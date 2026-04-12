@@ -5,6 +5,7 @@
 
 import { sendEmail } from "../_shared/resend.ts";
 import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
 
@@ -16,11 +17,6 @@ interface Payload {
   amountPaid: number;
   serviceName: string;
 }
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 function buildHtml(payload: Payload): string {
   const safeClientName = escapeHtml(payload.clientName);
@@ -52,6 +48,7 @@ function buildHtml(payload: Payload): string {
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }

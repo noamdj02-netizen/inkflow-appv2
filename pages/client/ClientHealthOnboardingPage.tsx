@@ -87,14 +87,14 @@ export const ClientHealthOnboardingPage: React.FC = () => {
       <header className="px-5 pt-safe-top pt-6 flex items-center gap-4">
         <a
           href="/client/dashboard"
-          className="inline-flex items-center gap-2 text-sm transition-colors"
+          className="inline-flex items-center gap-2 text-sm transition-colors min-h-[44px] rounded-xl px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
           style={{ color: T.muted }}
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4 shrink-0" aria-hidden />
           Plus tard
         </a>
       </header>
-      <div className="flex-1 px-4 sm:px-6 py-6 max-w-lg mx-auto w-full">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y px-4 sm:px-6 py-6 max-w-lg mx-auto w-full">
         <h1 className="text-xl font-semibold mb-1" style={{ color: T.text }}>
           Questionnaire de santé
         </h1>

@@ -7,12 +7,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Mail, ArrowRight, CheckCircle, Loader2, Lock, User as UserIcon } from 'lucide-react';
 import { SEO } from '../../components/SEO';
 import { Logo } from '../../components/Logo';
-import { getClientEmailConfirmRedirectTo } from '../../lib/urls';
+import { GoogleSignInButton } from '../../components/GoogleSignInButton';
+import { getAuthErrorMessage } from '../../components/auth/LoginForm';
+import { getClientEmailConfirmRedirectTo, getClientPortalOAuthRedirectTo } from '../../lib/urls';
 import { supabase } from '../../lib/supabase';
 import { clientNeedsPassword } from '../../lib/clientAuth';
 import { isClientPortalFullyReady } from '../../lib/clientOnboardingGate';
 import { consumeSupabaseAuthUrlError } from '../../lib/supabaseAuthUrl';
 import { CLIENT_DASHBOARD_THEME } from '../../lib/clientDashboardTheme';
+import { useSupabaseEnabled } from '../../hooks/useSupabaseEnabled';
 import type { User } from '@supabase/supabase-js';
 
 type Phase = 'boot' | 'login' | 'password' | 'register' | 'sent_register';
@@ -31,10 +34,12 @@ const inputClassNoIcon =
   'w-full px-4 py-3.5 rounded-2xl text-sm border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 outline-none transition-all focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500';
 
 export const ClientPortalLoginPage: React.FC = () => {
+  const isSupabaseEnabled = useSupabaseEnabled();
   const [email, setEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [phase, setPhase] = useState<Phase>('boot');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
@@ -135,9 +140,25 @@ export const ClientPortalLoginPage: React.FC = () => {
       const dest = await getClientDestinationAfterAuth(data.user);
       window.location.replace(dest);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Connexion impossible.');
+      setError(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (!isSupabaseEnabled) return;
+    setGoogleLoading(true);
+    setError('');
+    try {
+      const { error: oauthErr } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: getClientPortalOAuthRedirectTo() },
+      });
+      if (oauthErr) throw oauthErr;
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+      setGoogleLoading(false);
     }
   };
 
@@ -235,7 +256,7 @@ export const ClientPortalLoginPage: React.FC = () => {
 
   return (
     <div
-      className="min-h-[100dvh] flex flex-col"
+      className="min-h-[100dvh] flex flex-col client-dashboard-shell"
       style={{
         background: D.pageBg,
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -262,16 +283,33 @@ export const ClientPortalLoginPage: React.FC = () => {
 
       <div className="flex-1 flex flex-col items-center px-4 sm:px-6 pb-10 pt-4 min-h-0 overflow-y-auto">
         <div className="w-full max-w-md">
-          <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-sm p-6 sm:p-8">
-            <div className="flex items-center gap-2 mb-6">
-              <Logo className="rounded-xl" size="md" />
-              <span className="text-lg font-bold tracking-tight text-zinc-900 font-display">Inkflow</span>
+          <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-sm p-6 sm:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+            <div className="flex items-center gap-3 mb-6">
+              <Logo className="rounded-xl shadow-sm" size="md" />
+              <div>
+                <span className="text-lg font-bold tracking-tight text-zinc-900 font-display block leading-tight">
+                  Inkflow
+                </span>
+                <span className="text-xs font-medium text-zinc-400">Espace client</span>
+              </div>
             </div>
 
             {phase === 'boot' && (
-              <div className="flex items-center gap-3 py-10 justify-center">
-                <Loader2 className="w-6 h-6 text-blue-600 animate-spin" aria-hidden />
-                <span className="text-sm text-zinc-500">Vérification de la session…</span>
+              <div className="space-y-5" aria-busy="true" aria-live="polite">
+                <div className="space-y-2">
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                    Bienvenue
+                  </h1>
+                  <p className="text-sm text-zinc-500">Vérification de ta session en cours…</p>
+                </div>
+                <div className="flex flex-col items-center gap-4 py-6">
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" aria-hidden />
+                  <div className="w-full space-y-2.5">
+                    <div className="h-3 rounded-lg bg-zinc-100 animate-pulse" />
+                    <div className="h-3 rounded-lg bg-zinc-100/80 animate-pulse w-4/5 mx-auto" />
+                    <div className="h-12 rounded-2xl bg-zinc-50 border border-zinc-100 mt-4" />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -281,9 +319,11 @@ export const ClientPortalLoginPage: React.FC = () => {
                   {phase === 'login' && (
                     <>
                       <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
-                        Espace client
+                        Connexion
                       </h1>
-                      <p className="text-sm text-zinc-500">Connecte-toi avec ton e-mail et ton mot de passe.</p>
+                      <p className="text-sm text-zinc-500 max-w-md">
+                        Accède à tes rendez-vous, messages et avantages fidélité.
+                      </p>
                     </>
                   )}
                   {phase === 'password' && (
@@ -389,6 +429,26 @@ export const ClientPortalLoginPage: React.FC = () => {
 
                 {phase === 'login' && (
                   <form onSubmit={handleLogin} className="space-y-3">
+                    {isSupabaseEnabled && (
+                      <>
+                        <GoogleSignInButton
+                          className="min-h-[50px] text-[15px] active:scale-[0.98] transition-all"
+                          onClick={() => void handleGoogleLogin()}
+                          disabled={loading || googleLoading}
+                          label={googleLoading ? 'Redirection vers Google…' : 'Se connecter avec Google'}
+                        />
+                        <div className="relative my-1">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-zinc-200" />
+                          </div>
+                          <div className="relative flex justify-center">
+                            <span className="px-3 bg-white text-[11px] font-medium text-zinc-400 uppercase tracking-widest">
+                              ou avec l’e-mail
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    )}
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
                       <input
@@ -400,6 +460,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="toi@exemple.com"
                         required
+                        disabled={googleLoading}
                         className={inputClass}
                       />
                     </div>
@@ -413,6 +474,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                         onChange={(e) => setLoginPassword(e.target.value)}
                         placeholder="Mot de passe"
                         required
+                        disabled={googleLoading}
                         className={inputClass}
                       />
                     </div>
@@ -421,7 +483,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                     )}
                     <button
                       type="submit"
-                      disabled={loading || !email.trim() || !loginPassword.trim()}
+                      disabled={loading || googleLoading || !email.trim() || !loginPassword.trim()}
                       className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-40 active:scale-[0.98] transition-all"
                     >
                       {loading ? (

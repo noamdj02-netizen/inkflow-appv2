@@ -186,7 +186,7 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
 
   return (
     <div
-      className="min-h-[100dvh] flex flex-col"
+      className="min-h-[100dvh] flex flex-col client-dashboard-shell"
       style={{
         background: D.pageBg,
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -199,7 +199,7 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
         noindex
       />
 
-      <header className="px-4 sm:px-6 pt-[max(12px,env(safe-area-inset-top))] pb-2 flex-shrink-0">
+      <header className="px-4 sm:px-6 pt-[max(12px,env(safe-area-inset-top))] pb-2 flex-shrink-0 z-10">
         <a
           href="/client/dashboard"
           className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors min-h-[44px]"
@@ -209,8 +209,11 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
         </a>
       </header>
 
-      <div className="flex-1 flex flex-col items-center px-4 sm:px-6 pb-10 pt-4 min-h-0 overflow-y-auto">
-        <div className="w-full max-w-md">
+      {/* Une seule colonne scrollable : évite que l’étape santé (sous un flex-1 vide) parte sous l’écran sans scroll (mobile). */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y">
+        <div className="w-full max-w-lg mx-auto px-4 sm:px-6 pb-10 pt-2 flex flex-col items-stretch">
+          {step !== 'health' && (
+          <div className="w-full max-w-md mx-auto">
           <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-sm p-6 sm:p-8">
             <div className="flex items-center gap-2 mb-6">
               <Logo className="rounded-xl" size="md" />
@@ -322,29 +325,31 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
             )}
 
           </div>
+          </div>
+          )}
+
+          {step === 'health' && user && (
+            <>
+              <div className="mb-4 flex items-start gap-2 rounded-2xl bg-emerald-50 border border-emerald-200/80 p-3 shrink-0">
+                <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" aria-hidden />
+                <p className="text-sm text-emerald-900 text-left">
+                  Dernière étape : questionnaire obligatoire avant de réserver chez un tatoueur.
+                </p>
+              </div>
+              <HealthQuestionnaireForm
+                clientName={
+                  (user.user_metadata?.full_name as string | undefined) ||
+                  (user.user_metadata?.name as string | undefined) ||
+                  `${firstName} ${lastName}`.trim()
+                }
+                clientEmail={user.email ?? ''}
+                initialData={healthInitial}
+                onComplete={handleHealthComplete}
+              />
+            </>
+          )}
         </div>
       </div>
-
-      {step === 'health' && user && (
-        <div className="w-full max-w-lg mx-auto px-4 sm:px-6 pb-10">
-          <div className="mb-4 flex items-start gap-2 rounded-2xl bg-emerald-50 border border-emerald-200/80 p-3">
-            <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-            <p className="text-sm text-emerald-900">
-              Dernière étape : questionnaire obligatoire avant de réserver chez un tatoueur.
-            </p>
-          </div>
-          <HealthQuestionnaireForm
-            clientName={
-              (user.user_metadata?.full_name as string | undefined) ||
-              (user.user_metadata?.name as string | undefined) ||
-              `${firstName} ${lastName}`.trim()
-            }
-            clientEmail={user.email ?? ''}
-            initialData={healthInitial}
-            onComplete={handleHealthComplete}
-          />
-        </div>
-      )}
     </div>
   );
 };

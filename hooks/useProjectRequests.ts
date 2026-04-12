@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import { getProjectRequestsFromSupabase, updateProjectRequestStatus as updateStatusInSupabase, mapProjectRequestFromDb } from '../lib/supabaseDashboard';
+import { getInkflowDemoProProjectRequests } from '../lib/inkflowDemoAccountData';
 import { useOptimisticMutation } from './useOptimisticMutation';
 import { useRealtimeSync } from './useRealtimeSync';
 import type { ProjectRequest, ProjectRequestStatus } from '../types';
 
-export function useProjectRequests(studioId: string | null) {
+export function useProjectRequests(studioId: string | null, options?: { demoMode?: boolean }) {
+  const demoMode = options?.demoMode ?? false;
   const toast = useToast();
   const [projectRequests, setProjectRequests] = useState<ProjectRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +20,7 @@ export function useProjectRequests(studioId: string | null) {
     { column: 'studio_id', value: studioId },
     setProjectRequests,
     mapProjectRequestFromDb,
-    supabaseEnabled
+    supabaseEnabled && !demoMode
   );
 
   // Optimistic mutations with rollback
@@ -27,6 +29,11 @@ export function useProjectRequests(studioId: string | null) {
   const load = useCallback(async () => {
     if (!studioId) {
       setProjectRequests([]);
+      setLoading(false);
+      return;
+    }
+    if (demoMode) {
+      setProjectRequests(getInkflowDemoProProjectRequests(studioId));
       setLoading(false);
       return;
     }
@@ -41,7 +48,7 @@ export function useProjectRequests(studioId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [studioId]);
+  }, [studioId, demoMode]);
 
   useEffect(() => {
     load();
@@ -49,11 +56,11 @@ export function useProjectRequests(studioId: string | null) {
 
   useEffect(() => {
     const onVis = () => {
-      if (document.visibilityState === 'visible' && studioId && supabaseEnabled) load();
+      if (document.visibilityState === 'visible' && studioId && supabaseEnabled && !demoMode) load();
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
-  }, [studioId, supabaseEnabled, load]);
+  }, [studioId, supabaseEnabled, load, demoMode]);
 
   const updateStatus = useCallback(async (id: string, status: ProjectRequestStatus) => {
     if (!studioId) return;
@@ -61,11 +68,12 @@ export function useProjectRequests(studioId: string | null) {
       id,
       (req) => ({ ...req, status }),
       async () => {
+        if (demoMode) return;
         await updateStatusInSupabase(id, status, studioId);
         load();
       }
     );
-  }, [mutation, studioId, load]);
+  }, [mutation, studioId, load, demoMode]);
 
   return { projectRequests, loading, updateStatus, refetch: load };
 }

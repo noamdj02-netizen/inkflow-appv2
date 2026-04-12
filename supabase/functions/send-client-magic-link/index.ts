@@ -6,6 +6,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 import { wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const RESEND_API_KEY       = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM          = "My Inkflow <contact@ink-flow.me>";
@@ -31,12 +32,8 @@ function sanitizeRedirectTo(input: string, appBase: string): string {
   return input;
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

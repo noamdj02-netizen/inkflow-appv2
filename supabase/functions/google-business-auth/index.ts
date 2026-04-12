@@ -16,6 +16,7 @@
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const GOOGLE_CLIENT_ID          = Deno.env.get("GOOGLE_CLIENT_ID") || "";
 const GOOGLE_CLIENT_SECRET      = Deno.env.get("GOOGLE_CLIENT_SECRET") || "";
@@ -29,18 +30,6 @@ const SCOPE = "https://www.googleapis.com/auth/business.manage";
 const ACCOUNTS_API   = "https://mybusinessaccountmanagement.googleapis.com/v1/accounts";
 const LOCATIONS_API  = "https://mybusinessbusinessinformation.googleapis.com/v1";
 const REVIEWS_BASE   = "https://mybusiness.googleapis.com/v4";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 /** Rafraîchit l'access token si expiré ; retourne le token valide. */
 async function getValidAccessToken(
@@ -102,6 +91,12 @@ async function fetchLocations(accountName: string, accessToken: string) {
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }

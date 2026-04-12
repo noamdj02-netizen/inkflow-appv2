@@ -3,17 +3,15 @@
  * La clé API est stockée en secret (GEMINI_API_KEY) et n'est jamais exposée au client.
  */
 
+import { getCorsHeaders } from "../_shared/cors.ts";
+
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || "";
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-const jsonHeaders = { "Content-Type": "application/json", ...corsHeaders };
-
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+  const jsonHeaders = { "Content-Type": "application/json", ...corsHeaders };
+
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }

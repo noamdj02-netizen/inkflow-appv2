@@ -7,6 +7,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.95.3";
 import { sendEmail } from "../_shared/resend.ts";
 import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -55,7 +56,7 @@ async function notifyStudioInAppAndPush(
         studioId,
         title: "Nouveau message",
         body: `${truncateText(senderName, 40)} : ${truncateText(msgShort, 100)}`,
-        url: `${APP_URL}/dashboard`,
+        url: `${APP_URL}/dashboard?open=messaging`,
         tag: `inkflow-chat-${threadId}`,
       }),
     });
@@ -67,11 +68,6 @@ async function notifyStudioInAppAndPush(
     console.error("send-push-notification fetch:", e);
   }
 }
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 function buildToClientHtml(recipientName: string, studioName: string, senderName: string, messagePreview: string, conversationUrl: string): string {
   const safeName = escapeHtml(recipientName);
@@ -121,6 +117,7 @@ interface ToStudioPayload {
 type Payload = ToClientPayload | ToStudioPayload;
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }

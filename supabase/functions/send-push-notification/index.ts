@@ -6,6 +6,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC_KEY") ?? "";
 const VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY") ?? "";
@@ -14,11 +15,6 @@ const CONTACT = "mailto:contact@ink-flow.me";
 if (VAPID_PUBLIC && VAPID_PRIVATE) {
   webpush.setVapidDetails(CONTACT, VAPID_PUBLIC, VAPID_PRIVATE);
 }
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 interface SendPushPayload {
   studioId: string;
@@ -29,6 +25,7 @@ interface SendPushPayload {
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }

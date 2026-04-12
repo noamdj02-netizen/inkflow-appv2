@@ -38,6 +38,11 @@ export function getClientEmailConfirmRedirectTo(): string {
   return getClientMagicLinkRedirectTo();
 }
 
+/** `redirectTo` OAuth (Google) depuis `/client` — même callback que le magic link. */
+export function getClientPortalOAuthRedirectTo(): string {
+  return getClientMagicLinkRedirectTo();
+}
+
 /** redirectTo pour OAuth tatoueur (`/auth/callback`). */
 export function getAuthCallbackRedirectTo(): string {
   return `${getCanonicalAppOrigin()}/auth/callback`;

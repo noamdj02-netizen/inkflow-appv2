@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "market-pulse": {
+      "source": "eronred/aso-skills",
+      "sourceType": "github",
+      "computedHash": "42c5ed44e30c2c5b4a095d9c75f90c462aa939fca8a932c4ef1e084abf49e199"
+    }
+  }
+}

@@ -221,6 +221,17 @@ export async function processStampLoyaltyAfterCompletedAppointment(
           promoCode,
         },
       });
+
+      // Notifier le tatoueur via push (fire-and-forget)
+      supabase.functions.invoke('send-push-notification', {
+        body: {
+          studioId,
+          title: 'Récompense fidélité débloquée 🎉',
+          body: `${appointment.clientName} a atteint ${settings.tattoosRequired} séances — ${settings.rewardEuros}€ offerts !`,
+          url: '/dashboard?tab=loyalty',
+          tag: 'stamp-reward',
+        },
+      }).catch(() => {});
     }
   }
 

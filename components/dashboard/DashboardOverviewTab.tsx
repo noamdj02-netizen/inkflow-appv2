@@ -32,6 +32,55 @@ import { StudioSetupChecklist } from './StudioSetupChecklist';
 /** Image d’en-tête mobile si aucune image vitrine (fichier dans /public) */
 const MOBILE_OVERVIEW_HEADER_BG_FALLBACK = '/images/hero-tattoo-artist.png';
 
+/** Couleurs discrètes pour les lignes « Aujourd’hui » (bordure + bloc heure) */
+function getTodayRowTint(status: Appointment['status']) {
+  switch (status) {
+    case 'confirmed':
+      return {
+        border: 'border-l-4 border-l-emerald-500 dark:border-l-emerald-400',
+        timeBg: 'bg-emerald-500/[0.12] dark:bg-emerald-400/[0.12]',
+        hour: 'text-emerald-900 dark:text-emerald-200',
+        minute: 'text-emerald-700/85 dark:text-emerald-400/90',
+      };
+    case 'in_progress':
+      return {
+        border: 'border-l-4 border-l-sky-500 dark:border-l-sky-400',
+        timeBg: 'bg-sky-500/[0.12] dark:bg-sky-400/[0.12]',
+        hour: 'text-sky-900 dark:text-sky-200',
+        minute: 'text-sky-700/85 dark:text-sky-400/90',
+      };
+    case 'pending':
+      return {
+        border: 'border-l-4 border-l-amber-500 dark:border-l-amber-400',
+        timeBg: 'bg-amber-500/[0.12] dark:bg-amber-400/[0.12]',
+        hour: 'text-amber-950 dark:text-amber-200',
+        minute: 'text-amber-800/85 dark:text-amber-400/90',
+      };
+    case 'completed':
+      return {
+        border: 'border-l-4 border-l-zinc-400 dark:border-l-zinc-500',
+        timeBg: 'bg-zinc-500/[0.1] dark:bg-zinc-400/[0.08]',
+        hour: 'text-zinc-800 dark:text-zinc-200',
+        minute: 'text-zinc-600 dark:text-zinc-400',
+      };
+    case 'cancelled':
+    case 'no_show':
+      return {
+        border: 'border-l-4 border-l-rose-400 dark:border-l-rose-500',
+        timeBg: 'bg-rose-500/[0.1] dark:bg-rose-400/[0.1]',
+        hour: 'text-rose-900 dark:text-rose-200',
+        minute: 'text-rose-800/85 dark:text-rose-400/90',
+      };
+    default:
+      return {
+        border: 'border-l-4 border-l-zinc-300 dark:border-l-zinc-600',
+        timeBg: 'bg-zinc-500/[0.08] dark:bg-zinc-500/[0.1]',
+        hour: 'text-zinc-900 dark:text-white',
+        minute: 'text-zinc-500 dark:text-zinc-400',
+      };
+  }
+}
+
 /** Composants sortables au niveau module : évite de recréer un type de composant à chaque rendu
  * (React #310 / hooks + @dnd-kit + Framer Motion en prod). */
 interface OverviewSortableWidgetProps {
@@ -123,7 +172,7 @@ function OverviewSortableKpi({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group h-full min-w-0 ${isMdUp ? 'min-h-[130px]' : 'min-h-[120px]'}`}
+      className={`relative group h-full min-w-0 ${isMdUp ? 'min-h-[130px]' : 'min-h-[132px]'}`}
     >
       {isEditMode && (
         <div className="absolute -top-2 -right-2 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -422,18 +471,38 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     'text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0';
   const desktopKpiIconBtn =
     'w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0';
-  const iosKpiShell =
-    'h-full min-w-0 flex flex-col justify-between rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-[#1C1C1E] p-4 shadow-sm';
-  const iosKpiCaption = 'text-[13px] font-normal text-zinc-500 dark:text-zinc-400 leading-snug pr-1';
-  /** Chiffres KPI mobile — rendu type Apple : SF hérité, medium, tabulaires, crénage serré */
+  /** Cartes KPI mobile : fond « secondary grouped » + bandeau sémantique (équivalent tint iOS) */
+  const mobileKpiOuter =
+    'h-full min-w-0 min-h-[128px] flex flex-row rounded-[1.25rem] border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-[#1C1C1E] shadow-[0_1px_3px_rgba(15,23,42,0.06)] dark:shadow-none overflow-hidden';
+  const mobileKpiInner =
+    'flex flex-1 min-h-0 min-w-0 flex-col justify-between gap-0.5 p-3.5 min-[400px]:p-4';
+  const mobileKpiStrip = {
+    revenue: 'bg-emerald-500 dark:bg-emerald-400',
+    deposits: 'bg-violet-500 dark:bg-violet-400',
+    clients: 'bg-amber-500 dark:bg-amber-400',
+    appointments: 'bg-teal-500 dark:bg-teal-400',
+  } as const;
+  const iosKpiCaption =
+    'text-[12px] font-medium text-zinc-500 dark:text-zinc-400 leading-snug pr-1 tracking-tight';
+  /** Chiffres KPI mobile — grands chiffres tabulaires, lisibles (Dynamic Type–friendly) */
   const iosKpiMetricWrap =
     'mt-0.5 inline-flex items-baseline gap-0.5 flex-wrap min-w-0';
   const iosKpiMetricValue =
-    'text-[32px] font-medium tabular-nums tracking-[-0.03em] text-zinc-900 dark:text-white leading-none';
+    'text-[28px] min-[400px]:text-[32px] font-semibold tabular-nums tracking-[-0.03em] text-zinc-900 dark:text-white leading-none';
   const iosKpiMetricSuffix =
-    'text-[15px] font-medium text-zinc-400 dark:text-zinc-500 leading-none tabular-nums select-none';
+    'text-[14px] min-[400px]:text-[15px] font-medium text-zinc-400 dark:text-zinc-500 leading-none tabular-nums select-none';
+  /** 44×44 pt zone tactile (HIG) */
   const iosKpiIconBtn =
-    'shrink-0 w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center active:opacity-60 transition-opacity';
+    'shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl bg-zinc-100/95 dark:bg-zinc-800/95 active:scale-[0.97] active:opacity-80 transition-all motion-reduce:active:scale-100';
+  /** Métadonnées sous le chiffre — pastille type footnote iOS */
+  const iosKpiMetaPill =
+    'inline-flex items-center rounded-full bg-zinc-100/95 dark:bg-zinc-800/90 px-2 py-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-300';
+  const iosKpiMetaPillSky =
+    'inline-flex items-center rounded-full bg-sky-500/10 dark:bg-sky-400/15 px-2 py-1 text-[11px] font-medium text-sky-700 dark:text-sky-300';
+  const iosKpiMetaPillViolet =
+    'inline-flex items-center rounded-full bg-violet-500/10 dark:bg-violet-400/15 px-2 py-1 text-[11px] font-medium text-violet-800 dark:text-violet-300';
+  const iosKpiMetaPillAmber =
+    'inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 dark:bg-amber-400/12 px-2 py-1 text-[11px] font-medium text-amber-950 dark:text-amber-200';
 
   const renderKpiWidget = (widgetId: string) => {
     switch (widgetId) {
@@ -442,7 +511,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       case 'kpi-revenue':
         return (
           <OverviewSortableKpi key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget} isMdUp={isMdUp}>
-            <div className={isMdUp ? desktopKpiShell : iosKpiShell}>
+            <div className={isMdUp ? desktopKpiShell : mobileKpiOuter}>
+              {!isMdUp && <div className={`w-[3px] shrink-0 self-stretch ${mobileKpiStrip.revenue}`} aria-hidden />}
+              <div className={isMdUp ? 'contents' : mobileKpiInner}>
               <div className="flex items-start justify-between gap-2">
                 <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>Revenu du mois</span>
                 <button
@@ -482,7 +553,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         {privacyMode ? '••••' : `+${monthlyForecast.toLocaleString('fr-FR')}€`} en attente
                       </span>
                     ) : (
-                      <p className="text-[12px] text-sky-600 dark:text-sky-400">
+                      <p className={iosKpiMetaPillSky}>
                         {privacyMode ? '•••• prévisionnel' : `+${monthlyForecast.toLocaleString('fr-FR')}€ prévisionnel`}
                       </p>
                     )
@@ -501,10 +572,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         </span>
                       ) : (
                         <p
-                          className={`text-[13px] font-normal ${
+                          className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium ${
                             trendRevenue >= 0
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : 'text-rose-600 dark:text-rose-400'
+                              ? 'bg-emerald-500/10 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300'
+                              : 'bg-rose-500/10 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300'
                           }`}
                         >
                           {trendRevenue >= 0 ? '↑' : '↓'} {Math.abs(trendRevenue)}% vs mois dernier
@@ -515,10 +586,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         Ce mois
                       </span>
                     ) : (
-                      <p className="text-[13px] text-zinc-500 dark:text-zinc-400">Ce mois</p>
+                      <p className={iosKpiMetaPill}>Ce mois</p>
                     )}
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </OverviewSortableKpi>
@@ -528,7 +600,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       case 'kpi-deposits':
         return (
           <OverviewSortableKpi key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget} isMdUp={isMdUp}>
-            <div className={isMdUp ? desktopKpiShell : iosKpiShell}>
+            <div className={isMdUp ? desktopKpiShell : mobileKpiOuter}>
+              {!isMdUp && <div className={`w-[3px] shrink-0 self-stretch ${mobileKpiStrip.deposits}`} aria-hidden />}
+              <div className={isMdUp ? 'contents' : mobileKpiInner}>
               <div className="flex items-start justify-between gap-2">
                 <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>Acomptes</span>
                 <button
@@ -570,8 +644,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     </span>
                   </div>
                 ) : (
-                  <p className="text-[13px] text-violet-600 dark:text-violet-400 mt-1">En attente</p>
+                  <p className={`mt-1 ${iosKpiMetaPillViolet}`}>En attente</p>
                 )}
+              </div>
               </div>
             </div>
           </OverviewSortableKpi>
@@ -581,7 +656,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       case 'kpi-clients':
         return (
           <OverviewSortableKpi key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget} isMdUp={isMdUp}>
-            <div className={isMdUp ? desktopKpiShell : iosKpiShell}>
+            <div className={isMdUp ? desktopKpiShell : mobileKpiOuter}>
+              {!isMdUp && <div className={`w-[3px] shrink-0 self-stretch ${mobileKpiStrip.clients}`} aria-hidden />}
+              <div className={isMdUp ? 'contents' : mobileKpiInner}>
               <div className="flex items-start justify-between gap-2">
                 <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>Clients</span>
                 <button
@@ -621,8 +698,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       </span>
                     </div>
                   ) : (
-                    <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1 inline-flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                    <p className={`mt-1 ${iosKpiMetaPillAmber}`}>
+                      <Star className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden />
                       {vipClients} VIP
                     </p>
                   )
@@ -633,8 +710,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     </span>
                   </div>
                 ) : (
-                  <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1">Total</p>
-                )}
+                    <p className={`mt-1 ${iosKpiMetaPill}`}>Total</p>
+                  )}
+              </div>
               </div>
             </div>
           </OverviewSortableKpi>
@@ -644,7 +722,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       case 'kpi-appointments':
         return (
           <OverviewSortableKpi key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget} isMdUp={isMdUp}>
-            <div className={isMdUp ? desktopKpiShell : iosKpiShell}>
+            <div className={isMdUp ? desktopKpiShell : mobileKpiOuter}>
+              {!isMdUp && <div className={`w-[3px] shrink-0 self-stretch ${mobileKpiStrip.appointments}`} aria-hidden />}
+              <div className={isMdUp ? 'contents' : mobileKpiInner}>
               <div className="flex items-start justify-between gap-2">
                 <span className={isMdUp ? desktopKpiCaption : iosKpiCaption}>RDV ce mois</span>
                 <button
@@ -690,10 +770,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       </span>
                     ) : (
                       <p
-                        className={`text-[13px] font-normal ${
+                        className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium ${
                           trendAppointments >= 0
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-rose-600 dark:text-rose-400'
+                            ? 'bg-emerald-500/10 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300'
+                            : 'bg-rose-500/10 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300'
                         }`}
                       >
                         {trendAppointments >= 0 ? '↑' : '↓'} {Math.abs(trendAppointments)}% vs mois dernier
@@ -704,9 +784,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       Ce mois
                     </span>
                   ) : (
-                    <p className="text-[13px] text-zinc-500 dark:text-zinc-400">Ce mois</p>
+                    <p className={iosKpiMetaPill}>Ce mois</p>
                   )}
                 </div>
+              </div>
               </div>
             </div>
           </OverviewSortableKpi>
@@ -725,7 +806,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           (un seul arbre sortable actif dans le DndContext).
           ===================================================== */}
       {!isMdUp && (
-      <div className="min-h-screen max-w-full overflow-x-hidden bg-[#F2F2F7] dark:bg-black pb-[calc(7rem+env(safe-area-inset-bottom,0px))] antialiased [-webkit-font-smoothing:antialiased] [font-family:system-ui,-apple-system,'SF_Pro_Text','Segoe_UI',sans-serif]">
+      <div className="min-h-screen max-w-full overflow-x-hidden bg-[#F2F2F7] dark:bg-black pb-[calc(7rem+env(safe-area-inset-bottom,0px))] antialiased font-sans [-webkit-font-smoothing:antialiased]">
         
         {/* iOS Large Title Header */}
         <div className="px-3 min-[400px]:px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-2.5 sm:pt-6 sm:pb-3 safe-top">
@@ -835,51 +916,51 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
         {/* Actions rapides — grille type design system (bordure + ombre légères) */}
         <div className="px-3 min-[400px]:px-4 pt-2 pb-1 sm:pt-3">
-          <div className="grid grid-cols-4 gap-1.5 min-[400px]:gap-2 min-w-0">
+          <div className="grid grid-cols-4 gap-2 min-[400px]:gap-2.5 min-w-0">
             <button
               type="button"
             onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-              className="flex min-w-0 flex-col items-center gap-0.5 min-[400px]:gap-1 py-2 min-[400px]:py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] active:opacity-95 transition-all touch-manipulation"
+              className="flex min-w-0 min-h-[52px] flex-col items-center justify-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] motion-reduce:active:scale-100 active:opacity-95 transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
           >
-              <Plus className="w-[1.125rem] h-[1.125rem] min-[400px]:w-5 min-[400px]:h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} />
-              <span className="text-[9px] min-[400px]:text-[10px] font-medium text-zinc-600 dark:text-zinc-400 text-center leading-tight px-0.5">Nouveau RDV</span>
+              <Plus className="w-5 h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} aria-hidden />
+              <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400 text-center leading-tight px-0.5">Nouveau RDV</span>
           </button>
           <button
               type="button"
             onClick={() => setActiveTab('flash')}
-              className="flex min-w-0 flex-col items-center gap-0.5 min-[400px]:gap-1 py-2 min-[400px]:py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] active:opacity-95 transition-all touch-manipulation"
+              className="flex min-w-0 min-h-[52px] flex-col items-center justify-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] motion-reduce:active:scale-100 active:opacity-95 transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
           >
-              <Zap className="w-[1.125rem] h-[1.125rem] min-[400px]:w-5 min-[400px]:h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} />
-              <span className="text-[9px] min-[400px]:text-[10px] font-medium text-zinc-600 dark:text-zinc-400 text-center leading-tight">Flash</span>
+              <Zap className="w-5 h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} aria-hidden />
+              <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400 text-center leading-tight">Flash</span>
           </button>
             {vitrineSlug ? (
             <a
               href={`/studio/${vitrineSlug}`}
               target="_blank"
               rel="noopener noreferrer"
-                className="flex min-w-0 flex-col items-center gap-0.5 min-[400px]:gap-1 py-2 min-[400px]:py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] active:opacity-95 transition-all touch-manipulation"
+                className="flex min-w-0 min-h-[52px] flex-col items-center justify-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] motion-reduce:active:scale-100 active:opacity-95 transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
             >
-                <ExternalLink className="w-[1.125rem] h-[1.125rem] min-[400px]:w-5 min-[400px]:h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} />
-                <span className="text-[9px] min-[400px]:text-[10px] font-medium text-zinc-600 dark:text-zinc-400 text-center leading-tight">Vitrine</span>
+                <ExternalLink className="w-5 h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} aria-hidden />
+                <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400 text-center leading-tight">Vitrine</span>
             </a>
             ) : (
-              <div className="flex min-w-0 flex-col items-center gap-0.5 min-[400px]:gap-1 py-2 min-[400px]:py-2.5 px-0.5 rounded-2xl bg-zinc-50/80 dark:bg-zinc-900/40 border border-dashed border-zinc-200 dark:border-zinc-700 opacity-60 pointer-events-none">
-                <ExternalLink className="w-[1.125rem] h-[1.125rem] min-[400px]:w-5 min-[400px]:h-5 text-zinc-400 shrink-0" strokeWidth={2} />
-                <span className="text-[9px] min-[400px]:text-[10px] font-medium text-zinc-400 text-center leading-tight">Vitrine</span>
+              <div className="flex min-w-0 min-h-[52px] flex-col items-center justify-center gap-1 py-2.5 px-0.5 rounded-2xl bg-zinc-50/80 dark:bg-zinc-900/40 border border-dashed border-zinc-200 dark:border-zinc-700 opacity-60 pointer-events-none">
+                <ExternalLink className="w-5 h-5 text-zinc-400 shrink-0" strokeWidth={2} aria-hidden />
+                <span className="text-[10px] font-medium text-zinc-400 text-center leading-tight">Vitrine</span>
               </div>
           )}
           <button
               type="button"
             onClick={() => setActiveTab('requests')}
-              className="relative flex min-w-0 flex-col items-center gap-0.5 min-[400px]:gap-1 py-2 min-[400px]:py-2.5 px-0.5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] active:opacity-95 transition-all touch-manipulation"
+              className="relative flex min-w-0 min-h-[52px] flex-col items-center justify-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] motion-reduce:active:scale-100 active:opacity-95 transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
           >
             {pendingDemandesCount > 0 && (
-                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 text-[9px] font-bold flex items-center justify-center tabular-nums leading-none">
+                <span className="absolute top-1.5 right-1 min-w-[18px] h-[18px] px-0.5 rounded-full bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 text-[10px] font-bold flex items-center justify-center tabular-nums leading-none">
                   {pendingDemandesCount > 9 ? '9+' : pendingDemandesCount}
                 </span>
             )}
-              <Inbox className="w-[1.125rem] h-[1.125rem] min-[400px]:w-5 min-[400px]:h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} />
-              <span className="text-[9px] min-[400px]:text-[10px] font-medium text-zinc-600 dark:text-zinc-400 text-center leading-tight">Demandes</span>
+              <Inbox className="w-5 h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} aria-hidden />
+              <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400 text-center leading-tight">Demandes</span>
           </button>
           </div>
         </div>
@@ -1010,21 +1091,21 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('requests')}
-              className="w-full rounded-2xl border border-amber-400/30 dark:border-amber-500/25 bg-amber-50/80 dark:bg-amber-500/10 p-3 flex items-center gap-3 text-left active:scale-[0.99] transition-transform touch-manipulation min-h-[52px]"
+              className="w-full rounded-2xl border border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-[#1C1C1E] shadow-sm border-l-[3px] border-l-amber-500/65 dark:border-l-amber-500/45 pl-3.5 p-3 flex items-center gap-3 text-left active:scale-[0.99] transition-transform touch-manipulation min-h-[52px]"
               aria-label={`Voir les ${pendingDemandesCount} demande${pendingDemandesCount > 1 ? 's' : ''} en attente`}
             >
-              <div className="w-9 h-9 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center shrink-0">
-                <Inbox className="w-5 h-5 text-zinc-300" strokeWidth={2} />
+              <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200/80 dark:border-zinc-700/80 flex items-center justify-center shrink-0">
+                <Inbox className="w-5 h-5 text-zinc-600 dark:text-zinc-400" strokeWidth={2} aria-hidden />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 leading-tight">
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">
                   {pendingDemandesCount} demande{pendingDemandesCount > 1 ? 's' : ''} en attente
                 </p>
-                <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                   Action requise · Répondre maintenant
                 </p>
               </div>
-              <ChevronRight className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" strokeWidth={2} aria-hidden />
+              <ChevronRight className="w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0" strokeWidth={2} aria-hidden />
             </button>
           )}
 
@@ -1059,7 +1140,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               </div>
             {!isMdUp ? (
               <SortableContext items={layout.kpiOrder} strategy={rectSortingStrategy}>
-                <div className="grid grid-cols-2 gap-2 min-[400px]:gap-3 items-stretch min-w-0 [contain:layout] [grid-auto-rows:minmax(0,1fr)]">
+                <div className="grid grid-cols-2 gap-3 min-[400px]:gap-3.5 items-stretch min-w-0 [contain:layout] [grid-auto-rows:minmax(0,1fr)]">
                   {layout.kpiOrder.map((widgetId) => renderKpiWidget(widgetId))}
                   </div>
               </SortableContext>
@@ -1074,24 +1155,28 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             </div>
             {todayAppointments.length > 0 ? (
               <div className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
-                {todayAppointments.slice(0, 4).map((apt) => (
+                {todayAppointments.slice(0, 4).map((apt) => {
+                  const tint = getTodayRowTint(apt.status);
+                  const needsDeposit = !apt.depositPaid && apt.deposit > 0;
+                  return (
                   <button
                     key={apt.id}
                     type="button"
                     onClick={() => setSelectedAppointment(apt)}
-                    className="w-full flex items-center gap-3 px-4 py-3 min-h-[52px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left"
+                    className={`w-full flex items-center gap-3 pl-3 pr-4 py-3 min-h-[52px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left ${tint.border} ${needsDeposit ? 'ring-1 ring-inset ring-amber-400/35 dark:ring-amber-500/30' : ''}`}
                   >
-                    <div className="w-11 text-center flex-shrink-0">
-                      <p className="text-[17px] font-semibold text-zinc-900 dark:text-white tabular-nums leading-none">{apt.time?.split(':')[0]}</p>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">:{apt.time?.split(':')[1] || '00'}</p>
+                    <div className={`w-[3.25rem] flex flex-col items-center justify-center flex-shrink-0 rounded-xl py-1.5 ${tint.timeBg}`}>
+                      <p className={`text-[17px] font-semibold tabular-nums leading-none ${tint.hour}`}>{apt.time?.split(':')[0]}</p>
+                      <p className={`text-[11px] mt-0.5 tabular-nums ${tint.minute}`}>:{apt.time?.split(':')[1] || '00'}</p>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[17px] font-normal text-zinc-900 dark:text-white truncate">{apt.clientName}</p>
+                      <p className="text-[17px] font-medium text-zinc-900 dark:text-white truncate">{apt.clientName}</p>
                       <p className="text-[15px] text-zinc-500 dark:text-zinc-400 truncate">{apt.service || 'Tatouage'}</p>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 flex-shrink-0" />
+                    <ChevronRight className={`w-5 h-5 flex-shrink-0 ${needsDeposit ? 'text-amber-500 dark:text-amber-400' : 'text-zinc-300 dark:text-zinc-600'}`} aria-hidden />
                   </button>
-                ))}
+                );
+                })}
               </div>
             ) : (
               <div className="px-4 pb-4">
@@ -1122,7 +1207,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     key={apt.id}
                     type="button"
                     onClick={() => setSelectedAppointment(apt)}
-                    className="w-full flex items-center gap-3 px-4 py-3 min-h-[48px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 min-h-[52px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left"
                   >
                     <span className="text-[15px] text-zinc-500 dark:text-zinc-400 min-w-[3.25rem] tabular-nums">
                       {new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
