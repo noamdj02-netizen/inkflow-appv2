@@ -43,7 +43,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   signup: (email: string, password: string, name: string, studioName: string, referralCode?: string) => Promise<{ needsEmailConfirmation: boolean }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
   isAuthenticated: boolean;
   isGoogleAuthEnabled: boolean;
@@ -75,7 +75,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     setUser(getStoredUser());
     setAuthLoading(true);
-    const AUTH_SESSION_TIMEOUT_MS = 3500;
+    const AUTH_SESSION_TIMEOUT_MS = 8000;
     const timeoutId = setTimeout(() => {
       setAuthLoading(false);
     }, AUTH_SESSION_TIMEOUT_MS);
@@ -99,7 +99,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         clearTimeout(timeoutId);
         setAuthLoading(false);
       });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') {
+        // Résolution principale de l'état auth au démarrage — toujours appelé, avec ou sans session
+        if (session?.user) {
+          const appUser = appUserFromSupabase(session.user);
+          setUser(appUser);
+          localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+        } else {
+          setUser(null);
+          localStorage.removeItem('inkflow_user');
+        }
+        clearTimeout(timeoutId);
+        setAuthLoading(false);
+        return;
+      }
       if (session?.user) {
         const appUser = appUserFromSupabase(session.user);
         setUser(appUser);
@@ -250,10 +264,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return { needsEmailConfirmation: false };
   }, [isSupabaseAuthEnabled]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    /** Toujours attendre signOut : sinon la redirection coupe l’écriture des jetons → il faut souvent « se déconnecter deux fois ». */
+    if (isSupabaseAuthEnabled) {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    }
     setUser(null);
     clearAllInkflowStorage();
-    if (isSupabaseAuthEnabled) supabase.auth.signOut();
     if (typeof window !== 'undefined') window.location.href = LANDING_URL;
   }, [isSupabaseAuthEnabled]);
 

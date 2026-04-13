@@ -1971,7 +1971,11 @@ export type Database = {
           referred_by: string | null
           siret: string | null
           slug: string
+          stripe_connect_account_id: string | null
+          stripe_connect_charges_enabled: boolean | null
+          stripe_connect_details_submitted: boolean | null
           stamp_loyalty_settings: Json | null
+          points_loyalty_settings: Json | null
           studio_name: string
           subscription_status: string | null
           trial_ends_at: string | null
@@ -2007,7 +2011,11 @@ export type Database = {
           referred_by?: string | null
           siret?: string | null
           slug: string
+          stripe_connect_account_id?: string | null
+          stripe_connect_charges_enabled?: boolean | null
+          stripe_connect_details_submitted?: boolean | null
           stamp_loyalty_settings?: Json | null
+          points_loyalty_settings?: Json | null
           studio_name: string
           subscription_status?: string | null
           trial_ends_at?: string | null
@@ -2043,7 +2051,11 @@ export type Database = {
           referred_by?: string | null
           siret?: string | null
           slug?: string
+          stripe_connect_account_id?: string | null
+          stripe_connect_charges_enabled?: boolean | null
+          stripe_connect_details_submitted?: boolean | null
           stamp_loyalty_settings?: Json | null
+          points_loyalty_settings?: Json | null
           studio_name?: string
           subscription_status?: string | null
           trial_ends_at?: string | null

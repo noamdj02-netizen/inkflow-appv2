@@ -10,6 +10,20 @@ if (dsn && typeof dsn === 'string' && dsn.startsWith('https://')) {
     dsn,
     sendDefaultPii: true,
     enableLogs: true,
+    /** Évite le bruit Sentry quand Vite HMR casse temporairement l’arbre des providers (dev uniquement). */
+    beforeSend(event, hint) {
+      if (import.meta.env.DEV) {
+        const ex = hint.originalException;
+        const msg = ex instanceof Error ? ex.message : typeof ex === 'string' ? ex : '';
+        if (
+          msg.includes('must be used within an AuthProvider') ||
+          msg.includes('must be used within SupabaseSyncProvider')
+        ) {
+          return null;
+        }
+      }
+      return event;
+    },
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),

@@ -6,6 +6,11 @@ const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+/** Commission plateforme en basis points (100 = 1 %). 0 = tout pour le studio. */
+const CONNECT_FEE_BPS = Math.max(
+  0,
+  Math.min(10000, parseInt(Deno.env.get("INKFLOW_CONNECT_APPLICATION_FEE_BPS") || "0", 10) || 0),
+);
 
 const MIN_AMOUNT_EUR = 1;
 const MAX_AMOUNT_EUR = 10000;
@@ -69,16 +74,29 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: studioExists } = await supabase
+    const { data: studioRow, error: studioLoadErr } = await supabase
       .from("inkflow_studios")
-      .select("id")
+      .select("id, stripe_connect_account_id, stripe_connect_charges_enabled")
       .eq("id", payload.studioId)
       .single();
 
-    if (!studioExists) {
+    if (studioLoadErr || !studioRow) {
       return new Response(
         JSON.stringify({ error: "Studio introuvable" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const connectAccountId = studioRow.stripe_connect_account_id as string | null;
+    const connectReady = studioRow.stripe_connect_charges_enabled === true && Boolean(connectAccountId);
+    if (!connectReady) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Paiements en ligne indisponibles : le studio doit terminer la connexion Stripe (Paramètres → Paiements → Recevoir les acomptes).",
+          code: "stripe_connect_required",
+        }),
+        { status: 409, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
@@ -106,6 +124,9 @@ Deno.serve(async (req: Request) => {
     const successUrl = `${SITE_URL}/reservation-succes?session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${SITE_URL}/${basePath}/${urlSegment}?payment=cancelled`;
 
+    const applicationFeeCents =
+      CONNECT_FEE_BPS > 0 ? Math.min(amountCents, Math.floor((amountCents * CONNECT_FEE_BPS) / 10000)) : 0;
+
     const stripeBody = new URLSearchParams({
       "mode": "payment",
       "success_url": successUrl,
@@ -122,6 +143,10 @@ Deno.serve(async (req: Request) => {
       "metadata[client_name]": payload.clientName,
       "metadata[client_email]": payload.clientEmail,
       "metadata[service_name]": payload.serviceName,
+      "payment_intent_data[transfer_data][destination]": connectAccountId!,
+      ...(applicationFeeCents > 0
+        ? { "payment_intent_data[application_fee_amount]": String(applicationFeeCents) }
+        : {}),
       ...(payload.flashId ? { "metadata[flash_id]": payload.flashId } : {}),
       ...(projectRequestMeta ? { "metadata[project_request_id]": projectRequestMeta } : {}),
       ...(threadMeta ? { "metadata[thread_id]": threadMeta } : {}),

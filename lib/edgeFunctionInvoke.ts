@@ -1,5 +1,9 @@
 import { supabase } from './supabase';
 
+function getAnonKeyForHeaders(): string {
+  return (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
+}
+
 /** Détecte les échecs d’invocation typiques (JWT expiré / passerelle Supabase). */
 /** Message lisible depuis l’erreur renvoyée par `supabase.functions.invoke` (typée `unknown`). */
 export function getInvokeErrorMessage(err: unknown, fallback = 'Erreur'): string {
@@ -9,6 +13,35 @@ export function getInvokeErrorMessage(err: unknown, fallback = 'Erreur'): string
     if (typeof m === 'string' && m.trim()) return m;
   }
   return fallback;
+}
+
+/**
+ * Extrait `error` / `details` du corps renvoyé par la passerelle (ex. `FunctionsHttpError.context.body`)
+ * pour éviter d’afficher uniquement « Edge Function returned a non-2xx status code ».
+ */
+export function parseFunctionsInvokeErrorBody(err: unknown): string | null {
+  if (!err || typeof err !== 'object') return null;
+  const ctx = (err as { context?: { body?: unknown } }).context;
+  const body = ctx?.body;
+  if (body == null) return null;
+  if (typeof body === 'string') {
+    const t = body.trim();
+    if (!t) return null;
+    try {
+      const j = JSON.parse(t) as { error?: string; details?: string; message?: string };
+      return j.error || j.details || j.message || null;
+    } catch {
+      return t.length > 400 ? `${t.slice(0, 400)}…` : t;
+    }
+  }
+  if (typeof body === 'object') {
+    const o = body as { error?: unknown; details?: unknown; message?: unknown };
+    const e = typeof o.error === 'string' ? o.error : null;
+    const d = typeof o.details === 'string' ? o.details : null;
+    const m = typeof o.message === 'string' ? o.message : null;
+    return e || d || m || null;
+  }
+  return null;
 }
 
 export function isInvokeUnauthorized(err: unknown): boolean {
@@ -34,7 +67,23 @@ export async function invokeWithJwtRetry<TBody extends Record<string, unknown>>(
   functionName: string,
   body: TBody
 ): Promise<{ data: unknown; error: unknown }> {
-  const run = () => supabase.functions.invoke(functionName, { body });
+  const run = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    const apikey = getAnonKeyForHeaders();
+    if (!token) {
+      return supabase.functions.invoke(functionName, { body });
+    }
+    return supabase.functions.invoke(functionName, {
+      body,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(apikey ? { apikey } : {}),
+      },
+    });
+  };
   let { data, error } = await run();
   if (error && isInvokeUnauthorized(error)) {
     await supabase.auth.refreshSession().catch(() => {});

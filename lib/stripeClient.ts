@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { isAccessTokenForCurrentSupabaseProject, supabase } from './supabase';
 
 interface CreateCheckoutParams {
   studioId: string;
@@ -30,8 +30,8 @@ export type CreateCheckoutResult = { url: string; sessionId?: string } | { error
 export type CreateThemeCheckoutResult = { url: string } | { error: string };
 
 const getSupabaseConfig = () => {
-  const url = import.meta.env.VITE_SUPABASE_URL || '';
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  const url = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const key = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
   return { url, key };
 };
 
@@ -63,6 +63,13 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
         return { url: data.url, ...(data.sessionId ? { sessionId: data.sessionId } : {}) };
       }
       return { error: data?.error || data?.details || 'La fonction n\'a pas renvoyé de lien.' };
+    }
+    if (res.status === 409 && (data as { code?: string })?.code === 'stripe_connect_required') {
+      return {
+        error:
+          (data as { error?: string }).error ||
+          'Le studio doit terminer la connexion Stripe (Paramètres → Paiements) pour recevoir les paiements.',
+      };
     }
     const msg = data?.error || data?.details || data?.message || `Erreur ${res.status}`;
     if (res.status === 502 && typeof data?.details === 'string') {
@@ -149,6 +156,191 @@ export async function createSubscription(params: CreateSubscriptionParams): Prom
 }
 
 export type CreatePortalSessionResult = { url: string } | { error: string };
+
+export type StripeConnectOnboardingResult = { url: string } | { error: string };
+
+/** Message utilisateur pour erreurs type JWT / passerelle (évite d’imposer une double déconnexion à tort). */
+const STRIPE_CONNECT_SESSION_COPY =
+  'Problème d’authentification avec le serveur. Rechargez la page (F5), puis réessayez « Connecter mon compte Stripe ».';
+
+/**
+ * Remplace les erreurs brutes GoTrue / passerelle (souvent en anglais) par un libellé lisible en français.
+ */
+function humanizeStripeConnectError(raw: string): string {
+  const s = raw.trim();
+  if (!s) return raw;
+  const lower = s.replace(/\s+/g, ' ').toLowerCase();
+
+  const jwtNoise =
+    lower === 'invalid jwt' ||
+    /\binvalid\s+jwt\b/.test(lower) ||
+    /\bjwt\s+(has\s+)?expired\b/.test(lower) ||
+    /\bjwt\s+malformed\b/.test(lower) ||
+    (/\bjwt\b/.test(lower) && /\b(invalid|expired|malformed|revoked)\b/.test(lower)) ||
+    /\baccess[_\s]?token\b/.test(lower) && /\b(invalid|expired)\b/.test(lower) ||
+    /\btoken\s+(has\s+)?expired\b/.test(lower) ||
+    lower.includes('invalid_grant') ||
+    (lower.includes('refresh') && lower.includes('token') && lower.includes('invalid'));
+
+  if (jwtNoise) {
+    return STRIPE_CONNECT_SESSION_COPY;
+  }
+
+  if (lower === 'unauthorized' || lower === 'not authorized' || lower === 'permission denied') {
+    return 'Authentification refusée. Reconnectez-vous puis réessayez.';
+  }
+
+  return s;
+}
+
+/** Préfère toujours le jeton renvoyé par `refreshSession()` (évite 401 si le stockage local est légèrement désynchronisé). */
+async function getFreshAccessTokenForEdgeFn(): Promise<string | null> {
+  const { data: ref, error: refErr } = await supabase.auth.refreshSession();
+  if (!refErr && ref.session?.access_token) {
+    return ref.session.access_token;
+  }
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
+
+/** Token utilisable pour les Edge Functions (rafraîchit si proche de l’expiration). */
+async function resolveAccessTokenForEdgeFn(): Promise<string | null> {
+  let {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const soon =
+    session?.expires_at != null && session.expires_at * 1000 < Date.now() + 120_000;
+  if (!session?.access_token || soon) {
+    return getFreshAccessTokenForEdgeFn();
+  }
+  return session?.access_token ?? null;
+}
+
+/** Ne pas traiter tout 403 comme JWT (ex. « Accès refusé à ce studio »). */
+function isJwtFailureStatus(status: number, rawMessage: string | null): boolean {
+  if (status === 401) return true;
+  if (!rawMessage) return false;
+  const l = rawMessage.toLowerCase();
+  return l.includes('invalid jwt') || l.includes('jwt expired');
+}
+
+/**
+ * Appel direct à l’Edge Function (fetch + JWT + apikey) — même en-têtes que les autres flux Edge ; message d’erreur JSON lisible.
+ */
+async function stripeConnectOnboardingViaFetch(
+  studioId: string,
+  baseUrl: string,
+  key: string,
+  fail: (msg: string) => StripeConnectOnboardingResult,
+  /** Jeton déjà obtenu dans `startStripeConnectOnboarding` (évite double refresh + incohérences). */
+  seedAccessToken?: string | null,
+): Promise<StripeConnectOnboardingResult> {
+  let accessToken = seedAccessToken ?? (await resolveAccessTokenForEdgeFn());
+  if (!accessToken) {
+    return fail('Session expirée ou absente. Reconnectez-vous puis réessayez « Connecter mon compte Stripe ».');
+  }
+
+  const fnUrl = `${baseUrl.replace(/\/$/, '')}/functions/v1/stripe-connect-onboarding`;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(fnUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+          apikey: key,
+        },
+        body: JSON.stringify({ studioId }),
+      });
+    } catch {
+      return fail('Réseau indisponible. Vérifiez votre connexion et réessayez.');
+    }
+
+    let text = '';
+    try {
+      text = await res.text();
+    } catch {
+      return fail(`Réponse serveur illisible (${res.status}). Réessayez plus tard.`);
+    }
+
+    let parsed: { url?: string; error?: string; details?: string } = {};
+    try {
+      if (text) parsed = JSON.parse(text) as typeof parsed;
+    } catch {
+      /* corps non JSON */
+    }
+
+    if (res.ok && typeof parsed.url === 'string' && parsed.url) {
+      return { url: parsed.url };
+    }
+
+    const bizMsg = (parsed.error || parsed.details || '').trim();
+    if (attempt === 0 && isJwtFailureStatus(res.status, bizMsg || null)) {
+      await supabase.auth.refreshSession().catch(() => {});
+      const next = await resolveAccessTokenForEdgeFn();
+      if (!next) {
+        return fail(STRIPE_CONNECT_SESSION_COPY);
+      }
+      accessToken = next;
+      continue;
+    }
+
+    if (bizMsg) {
+      return fail(bizMsg.length > 500 ? `${bizMsg.slice(0, 500)}…` : bizMsg);
+    }
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        return fail(
+          'Connexion refusée (401). Déconnecte-toi puis reconnecte-toi. Si ça continue : redéploie l’Edge Function « stripe-connect-onboarding » avec verify_jwt désactivé (npm run deploy:function:stripe-connect-onboarding ou supabase/config.toml), puis réessaie.',
+        );
+      }
+      return fail(
+        `Connexion Stripe impossible (erreur ${res.status}). Vérifiez que l’Edge Function stripe-connect-onboarding est déployée, puis rechargez la page.`,
+      );
+    }
+
+    return fail(
+      'Aucun lien Stripe reçu. Vérifiez que l’Edge Function stripe-connect-onboarding est déployée sur votre projet Supabase.',
+    );
+  }
+
+  return fail(STRIPE_CONNECT_SESSION_COPY);
+}
+
+/**
+ * Ouvre l’onboarding Stripe Connect (Express).
+ * Un seul chemin `fetch` (JWT + apikey explicites) pour éviter les doubles appels et les 401 bruyants ;
+ * vérifie que le JWT correspond au projet `VITE_SUPABASE_URL` (sinon déconnexion / .env incohérent).
+ */
+export async function startStripeConnectOnboarding(studioId: string): Promise<StripeConnectOnboardingResult> {
+  const { url: baseUrl, key } = getSupabaseConfig();
+  if (!baseUrl || !key) return { error: 'Supabase non configuré.' };
+
+  const fail = (msg: string): StripeConnectOnboardingResult => ({ error: humanizeStripeConnectError(msg) });
+
+  const { error: userErr } = await supabase.auth.getUser();
+  if (userErr) {
+    return fail('Session expirée ou absente. Reconnectez-vous puis réessayez « Connecter mon compte Stripe ».');
+  }
+
+  const accessToken = await getFreshAccessTokenForEdgeFn();
+  if (!accessToken) {
+    return fail('Session expirée ou absente. Reconnectez-vous puis réessayez « Connecter mon compte Stripe ».');
+  }
+
+  if (!isAccessTokenForCurrentSupabaseProject(accessToken)) {
+    return fail(
+      'Ta session correspond à un autre projet Supabase que celui configuré dans cette app (fichier .env). Déconnecte-toi, vérifie VITE_SUPABASE_URL, puis reconnecte-toi.',
+    );
+  }
+
+  return stripeConnectOnboardingViaFetch(studioId, baseUrl, key, fail, accessToken);
+}
 
 /** Crée une session du Customer Portal Stripe pour gérer l'abonnement (facture, paiement, annulation). */
 export async function createPortalSession(params: {

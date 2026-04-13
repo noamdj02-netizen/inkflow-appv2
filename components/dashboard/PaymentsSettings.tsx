@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { CreditCard, Percent, Shield, ExternalLink, ChevronDown, ChevronUp, CheckCircle2, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { CreditCard, Percent, Shield, ExternalLink, ChevronDown, ChevronUp, CheckCircle2, HelpCircle, Loader2 } from 'lucide-react';
 import { getStudioId } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { getPaymentSettingsFromSupabase, savePaymentSettingsToSupabase } from '../../lib/supabaseDashboard';
+import { startStripeConnectOnboarding } from '../../lib/stripeClient';
 import { useToast } from '../../contexts/ToastContext';
 import { useAutoSave } from '../../hooks/useAutoSave';
 
@@ -18,9 +20,18 @@ const defaultSettings: PaymentSettings = { depositPercentage: 30, stripeConnecte
 interface PaymentsSettingsProps {
   userEmail?: string;
   studioName?: string;
+  /**
+   * Id réel `inkflow_studios.id` (depuis le dashboard / `getStudioByEmail`).
+   * À utiliser en priorité : recalculer avec `getStudioId(email, studioName)` échoue si le nom du studio a changé (slug ≠ id en base).
+   */
+  studioId?: string | null;
 }
 
-export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({ userEmail, studioName }) => {
+export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
+  userEmail,
+  studioName,
+  studioId: studioIdProp,
+}) => {
   const toast = useToast();
   const [settings, setSettings] = useState<PaymentSettings>(() => {
     try {
@@ -29,8 +40,18 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({ userEmail, s
     } catch {}
     return defaultSettings;
   });
-  const useSupabase = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && userEmail && studioName);
-  const studioId = userEmail && studioName ? getStudioId(userEmail, studioName) : null;
+  const studioId =
+    studioIdProp !== undefined
+      ? studioIdProp
+      : userEmail && studioName
+        ? getStudioId(userEmail, studioName)
+        : null;
+  const useSupabase = !!(
+    import.meta.env.VITE_SUPABASE_URL &&
+    import.meta.env.VITE_SUPABASE_ANON_KEY &&
+    userEmail &&
+    studioId
+  );
 
   // Load from Supabase on mount
   useEffect(() => {
@@ -58,6 +79,58 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({ userEmail, s
   };
 
   const [showStripeGuide, setShowStripeGuide] = useState(false);
+  const [connectLoading, setConnectLoading] = useState(true);
+  const [connectBusy, setConnectBusy] = useState(false);
+  const [connectAccountId, setConnectAccountId] = useState<string | null>(null);
+  const [chargesEnabled, setChargesEnabled] = useState(false);
+
+  const loadConnectStatus = useCallback(async () => {
+    if (!studioId || !useSupabase) {
+      setConnectLoading(false);
+      return;
+    }
+    setConnectLoading(true);
+    const { data, error } = await supabase
+      .from('inkflow_studios')
+      .select('*')
+      .eq('id', studioId)
+      .maybeSingle();
+    if (!error && data) {
+      setConnectAccountId((data.stripe_connect_account_id as string) || null);
+      setChargesEnabled(data.stripe_connect_charges_enabled === true);
+      setSettings((s) => ({
+        ...s,
+        stripeConnected: data.stripe_connect_charges_enabled === true || s.stripeConnected,
+      }));
+    }
+    setConnectLoading(false);
+  }, [studioId, useSupabase]);
+
+  useEffect(() => {
+    void loadConnectStatus();
+  }, [loadConnectStatus]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('stripe_connect') === 'return') {
+      toast.success('Retour depuis Stripe — mise à jour du statut…');
+      void loadConnectStatus();
+    }
+  }, [toast, loadConnectStatus]);
+
+  const handleStripeConnect = async () => {
+    if (!studioId || connectBusy) return;
+    setConnectBusy(true);
+    const result = await startStripeConnectOnboarding(studioId);
+    setConnectBusy(false);
+    if ('error' in result) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success('Redirection vers Stripe pour enregistrer ton compte et recevoir les encaissements…');
+    window.location.href = result.url;
+  };
 
   return (
     <div className="space-y-6">
@@ -69,38 +142,68 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({ userEmail, s
       <div className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border)] space-y-6">
         {/* Stripe — statut + guide */}
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border)]">
-            <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-500/20">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 rounded-xl bg-[var(--bg-card-secondary)] border border-[var(--border)]">
+            <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-500/20 shrink-0">
               <CreditCard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-[var(--text-primary)]">Stripe</div>
-              <div className="text-sm text-[var(--text-secondary)]">
-                {settings.stripeConnected ? 'Compte connecté — vous pouvez encaisser les acomptes en ligne' : 'Non connecté — mode démo uniquement'}
-              </div>
-              {!settings.stripeConnected && (
-                <a
-                  href="https://dashboard.stripe.com/register"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline underline-offset-2"
-                >
-                  Créer un compte Stripe (gratuit)
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="font-semibold text-[var(--text-primary)]">Recevoir les acomptes sur ton Stripe</div>
+              {connectLoading ? (
+                <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Chargement du statut…
+                </div>
+              ) : chargesEnabled ? (
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Compte Stripe Connect actif : les paiements clients sont versés sur ton compte Stripe (moins la commission
+                  éventuelle InkFlow). Le tableau de bord InkFlow se met à jour comme avant.
+                </p>
+              ) : connectAccountId ? (
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Onboarding en cours ou en vérification chez Stripe. Termine les étapes ou attends la validation (souvent
+                  quelques minutes).
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Connecte un compte Stripe Express pour encaisser les acomptes directement sur ton IBAN. Sans cette étape,
+                    les boutons de paiement côté client restent désactivés côté encaissement.
+                  </p>
+                  <a
+                    href="https://dashboard.stripe.com/register"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline underline-offset-2"
+                  >
+                    Créer un compte Stripe (gratuit)
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </>
               )}
             </div>
-            <button
-              onClick={() => {
-                if (!settings.stripeConnected) {
-                  window.open('https://dashboard.stripe.com/connect/accounts/overview', '_blank');
-                }
-                setSettings(s => ({ ...s, stripeConnected: !s.stripeConnected }));
-              }}
-              className={`shrink-0 px-4 py-2 rounded-xl font-medium text-sm transition-colors active:scale-[0.98] ${settings.stripeConnected ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-blue-600 text-white hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600'}`}
-            >
-              {settings.stripeConnected ? 'Connecté ✓' : 'Connecter'}
-            </button>
+            <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
+              {!connectLoading && chargesEnabled && connectAccountId && (
+                <a
+                  href={`https://dashboard.stripe.com/connect/accounts/${connectAccountId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all"
+                >
+                  Ouvrir Stripe Connect
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              )}
+              {!connectLoading && !chargesEnabled && (
+                <button
+                  type="button"
+                  onClick={() => void handleStripeConnect()}
+                  disabled={connectBusy || !studioId || !useSupabase}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] transition-all min-h-[44px]"
+                >
+                  {connectBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {connectAccountId ? "Continuer l'activation Stripe" : 'Connecter mon compte Stripe'}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Guide : comment créer un compte Stripe */}

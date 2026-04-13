@@ -1,11 +1,42 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+/** SDK Sentry Deno — aligné sur https://supabase.com/docs/guides/functions/examples/sentry-monitoring */
+import * as Sentry from "https://deno.land/x/sentry/index.mjs";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 
 const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET") || "";
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+/** DSN Sentry (Edge Function uniquement — pas de préfixe VITE_). */
+const SENTRY_DSN = Deno.env.get("SENTRY_DSN") || "";
+
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    defaultIntegrations: false,
+    tracesSampleRate: 0.1,
+    environment: Deno.env.get("SENTRY_ENVIRONMENT") || "production",
+  });
+}
+
+/** Erreur Postgrest / DB remontée dans Sentry (paiement côté Stripe OK, persistance KO). */
+function captureWebhookDbError(
+  context: string,
+  err: { message: string; code?: string; details?: string; hint?: string },
+  extra?: Record<string, unknown>,
+) {
+  if (!SENTRY_DSN) return;
+  Sentry.captureException(new Error(`${context}: ${err.message}`), {
+    tags: { edge_function: "stripe-webhook" },
+    extra: {
+      ...extra,
+      pgCode: err.code,
+      pgDetails: err.details,
+      pgHint: err.hint,
+    },
+  });
+}
 
 /** Lien reçu PDF officiel Stripe (carte), si la clé secrète est configurée. */
 async function fetchStripeReceiptUrl(sessionId: string): Promise<string | null> {
@@ -262,6 +293,10 @@ Deno.serve(async (req: Request) => {
         });
       }
       console.error("[stripe-webhook] Enregistrement événement:", evInsErr.message);
+      captureWebhookDbError("inkflow_stripe_processed_events insert (non-duplicate)", evInsErr, {
+        eventId: event.id,
+        eventType: event.type,
+      });
     }
 
     switch (event.type) {
@@ -285,6 +320,11 @@ Deno.serve(async (req: Request) => {
 
           if (studioErr) {
             console.error("[stripe-webhook] Erreur déblocage studio (checkout subscription):", studioErr.message);
+            captureWebhookDbError("inkflow_studios update après paiement abonnement (checkout.session.completed)", studioErr, {
+              studioId,
+              sessionId: session.id,
+              plan: planFromSession,
+            });
           } else if (studio) {
             console.log("[stripe-webhook] Studio actif (checkout.session.completed subscription):", studio.id, studio.studio_name, "plan=", planFromSession);
           }
@@ -313,6 +353,11 @@ Deno.serve(async (req: Request) => {
             );
             if (upsertErr) {
               console.error("[stripe-webhook] upsert inkflow_subscriptions (checkout):", upsertErr.message);
+              captureWebhookDbError("inkflow_subscriptions upsert après checkout subscription", upsertErr, {
+                studioId,
+                stripeSubscriptionId: stripeSubId,
+                sessionId: session.id,
+              });
             } else {
               console.log("[stripe-webhook] inkflow_subscriptions upsert OK subscription_id=", stripeSubId);
             }
@@ -710,9 +755,54 @@ Deno.serve(async (req: Request) => {
         break;
       }
 
+      case "account.updated": {
+        const account = event.data.object as {
+          id: string;
+          metadata?: { studio_id?: string };
+          charges_enabled?: boolean;
+          details_submitted?: boolean;
+        };
+        const studioIdMeta = account.metadata?.studio_id;
+        if (studioIdMeta) {
+          const { error: acctUpdErr } = await supabase
+            .from("inkflow_studios")
+            .update({
+              stripe_connect_charges_enabled: account.charges_enabled === true,
+              stripe_connect_details_submitted: account.details_submitted === true,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", studioIdMeta)
+            .eq("stripe_connect_account_id", account.id);
+          if (acctUpdErr) {
+            console.error("[stripe-webhook] account.updated:", acctUpdErr.message);
+            captureWebhookDbError("inkflow_studios sync Stripe Connect (account.updated)", acctUpdErr, {
+              studioId: studioIdMeta,
+              accountId: account.id,
+            });
+          } else {
+            console.log(
+              "[stripe-webhook] Connect sync:",
+              account.id,
+              "charges_enabled=",
+              account.charges_enabled,
+            );
+          }
+        } else {
+          console.log("[stripe-webhook] account.updated sans metadata.studio_id:", account.id);
+        }
+        break;
+      }
+
       case "payment_intent.succeeded": {
         console.log(
           "[stripe-webhook] payment_intent.succeeded — flux Checkout déjà couvert par checkout.session.completed (pas d’action)",
+        );
+        break;
+      }
+
+      default: {
+        console.log(
+          `[stripe-webhook] Événement non géré (ack 200 pour Stripe, pas d’action métier): ${event.type} id=${event.id}`,
         );
         break;
       }
@@ -723,6 +813,12 @@ Deno.serve(async (req: Request) => {
     });
   } catch (err) {
     console.error("[stripe-webhook] Webhook error:", err);
+    if (SENTRY_DSN) {
+      Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+        tags: { edge_function: "stripe-webhook", fatal: "true" },
+      });
+      await Sentry.flush(2000);
+    }
     return new Response(JSON.stringify({ error: "Webhook processing failed" }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },

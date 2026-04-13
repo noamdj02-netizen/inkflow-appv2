@@ -9,20 +9,25 @@ import { ToastProvider, useToast } from './contexts/ToastContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
 import { Logo } from './components/Logo';
-import { LandingEnhanceAI } from './components/landing/LandingEnhanceAI';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { SentryTestButton } from './components/SentryTestButton';
 import { CookieConsent } from './components/CookieConsent';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { AppSplashGate } from './components/auth/AppSplashGate';
-import { LoginPage } from './pages/LoginPage';
-import { SignupPage } from './pages/SignupPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { InviteRedirectPage } from './pages/InviteRedirectPage';
 import { ReferralPage } from './pages/ReferralPage';
-import { ClientPortalLoginPage } from './pages/client/ClientPortalLoginPage';
 
+const LandingEnhanceAI = lazy(() =>
+  import('./components/landing/LandingEnhanceAI').then((m) => ({ default: m.LandingEnhanceAI })),
+);
+const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
+const SignupPage = lazy(() => import('./pages/SignupPage').then((m) => ({ default: m.SignupPage })));
+const ClientPortalLoginPage = lazy(() =>
+  import('./pages/client/ClientPortalLoginPage').then((m) => ({ default: m.ClientPortalLoginPage })),
+);
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const PublicStudioPagePro = lazy(() => import('./pages/public/PublicStudioPagePro').then(m => ({ default: m.PublicStudioPagePro })));
 const PublicBookingPage = lazy(() => import('./pages/public/PublicBookingPage').then(m => ({ default: m.PublicBookingPage })));
@@ -329,7 +334,17 @@ const NotFoundPage: React.FC = () => (
   </div>
 );
 
-const LandingPage: React.FC = () => <LandingEnhanceAI />;
+const LandingPage: React.FC = () => (
+  <Suspense
+    fallback={
+      <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center">
+        <Logo size="lg" className="rounded-2xl opacity-90 animate-pulse" />
+      </div>
+    }
+  >
+    <LandingEnhanceAI />
+  </Suspense>
+);
 
 /** Log et affiche un toast sur les promesses rejetées non gérées (détection de bugs en prod). */
 const UnhandledRejectionHandler: React.FC = () => {
@@ -365,6 +380,7 @@ const App: React.FC = () => {
                 <LanguageProvider>
                   <UnhandledRejectionHandler />
                   <Router />
+                  <SentryTestButton />
                   <CookieConsent />
                   <PWAUpdatePrompt />
                 </LanguageProvider>

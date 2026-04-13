@@ -4,7 +4,8 @@ import { buildFlashSlug } from './flashSlug';
 const db: any = supabase;
 import { sendReferralNotification } from './sendNotification';
 import type { VitrineData } from '../types/vitrine';
-import type { Appointment, Client, FlashDesign, Notification, ProjectRequest, ProjectRequestStatus, WaitlistEntry } from '../types';
+import type { Appointment, Client, FlashDesign, LoyaltyEntry, LoyaltyTier, Notification, ProjectRequest, ProjectRequestStatus, WaitlistEntry } from '../types';
+import type { LoyaltySettings } from '../components/dashboard/LoyaltyManager';
 import type { DashboardWidget } from '../components/dashboard/DashboardWidgets';
 import type { StudioDashboardPreferences } from '../types/studioPreferences';
 import { DEFAULT_STUDIO_DASHBOARD_PREFERENCES, STUDIO_PREFERENCES_SCHEMA_VERSION } from '../types/studioPreferences';
@@ -938,6 +939,126 @@ export async function saveDashboardPreferencesToSupabase(studioId: string, prefs
     })
     .eq('id', studioId);
   if (error) throw error;
+}
+
+/** Config programme points (LoyaltyManager) — aligné sur les défauts du composant */
+export const DEFAULT_POINTS_LOYALTY_SETTINGS: LoyaltySettings = {
+  enabled: true,
+  pointsPerEuro: 1,
+  referralBonus: 50,
+  tierThresholds: { silver: 200, gold: 500, platinum: 1000 },
+  rewards: [
+    { name: '10% sur prochain tattoo', cost: 100 },
+    { name: 'Retouche gratuite', cost: 200 },
+    { name: 'Flash offert', cost: 500 },
+  ],
+};
+
+const LOYALTY_TIERS: LoyaltyTier[] = ['bronze', 'silver', 'gold', 'platinum'];
+
+function normalizeLoyaltyTier(value: string | null | undefined): LoyaltyTier {
+  if (value && LOYALTY_TIERS.includes(value as LoyaltyTier)) return value as LoyaltyTier;
+  return 'bronze';
+}
+
+function mapLoyaltyRowToEntry(row: {
+  id: string;
+  studio_id: string;
+  client_id: string;
+  points: number | null;
+  tier: string | null;
+  referral_code: string | null;
+  total_earned: number | null;
+  total_redeemed: number | null;
+  created_at: string | null;
+}): LoyaltyEntry {
+  return {
+    id: row.id,
+    studioId: row.studio_id,
+    clientId: row.client_id,
+    points: row.points ?? 0,
+    tier: normalizeLoyaltyTier(row.tier),
+    referralCode: row.referral_code ?? undefined,
+    totalEarned: row.total_earned ?? 0,
+    totalRedeemed: row.total_redeemed ?? 0,
+    createdAt: row.created_at || new Date().toISOString(),
+  };
+}
+
+export async function fetchLoyaltyEntriesFromSupabase(studioId: string): Promise<LoyaltyEntry[]> {
+  const { data, error } = await supabase
+    .from('inkflow_loyalty')
+    .select('*')
+    .eq('studio_id', studioId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data || []).map((row) => mapLoyaltyRowToEntry(row as Parameters<typeof mapLoyaltyRowToEntry>[0]));
+}
+
+export async function fetchPointsLoyaltySettingsFromSupabase(studioId: string): Promise<LoyaltySettings> {
+  const { data, error } = await supabase
+    .from('inkflow_studios')
+    .select('*')
+    .eq('id', studioId)
+    .maybeSingle();
+  if (error) throw error;
+  const raw = data?.points_loyalty_settings;
+  if (!raw || typeof raw !== 'object') {
+    return { ...DEFAULT_POINTS_LOYALTY_SETTINGS };
+  }
+  const o = raw as Record<string, unknown>;
+  const th = o.tierThresholds;
+  const tierThresholds =
+    th && typeof th === 'object'
+      ? {
+          ...DEFAULT_POINTS_LOYALTY_SETTINGS.tierThresholds,
+          ...(th as LoyaltySettings['tierThresholds']),
+        }
+      : DEFAULT_POINTS_LOYALTY_SETTINGS.tierThresholds;
+  return {
+    ...DEFAULT_POINTS_LOYALTY_SETTINGS,
+    enabled: typeof o.enabled === 'boolean' ? o.enabled : DEFAULT_POINTS_LOYALTY_SETTINGS.enabled,
+    pointsPerEuro: typeof o.pointsPerEuro === 'number' ? o.pointsPerEuro : DEFAULT_POINTS_LOYALTY_SETTINGS.pointsPerEuro,
+    referralBonus: typeof o.referralBonus === 'number' ? o.referralBonus : DEFAULT_POINTS_LOYALTY_SETTINGS.referralBonus,
+    tierThresholds,
+    rewards: Array.isArray(o.rewards) ? (o.rewards as LoyaltySettings['rewards']) : DEFAULT_POINTS_LOYALTY_SETTINGS.rewards,
+  };
+}
+
+export async function savePointsLoyaltySettingsToSupabase(studioId: string, settings: LoyaltySettings): Promise<void> {
+  const { error } = await supabase
+    .from('inkflow_studios')
+    .update({
+      points_loyalty_settings: settings as unknown as import('../types/database').Json,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', studioId);
+  if (error) throw error;
+}
+
+/**
+ * Remplace toutes les lignes `inkflow_loyalty` du studio (MVP : peu de lignes).
+ * Respecte la contrainte FK sur `client_id` : les entrées orphelines échoueront côté insert.
+ */
+export async function syncLoyaltyEntriesToSupabase(studioId: string, entries: LoyaltyEntry[]): Promise<void> {
+  const now = new Date().toISOString();
+  const rows = entries.map((e) => ({
+    id: e.id,
+    studio_id: studioId,
+    client_id: e.clientId,
+    points: e.points,
+    tier: e.tier,
+    referral_code: e.referralCode ?? null,
+    total_earned: e.totalEarned,
+    total_redeemed: e.totalRedeemed,
+    created_at: e.createdAt || now,
+    updated_at: now,
+  }));
+  const { error: delErr } = await supabase.from('inkflow_loyalty').delete().eq('studio_id', studioId);
+  if (delErr) throw delErr;
+  if (rows.length === 0) return;
+  const { error: insErr } = await supabase.from('inkflow_loyalty').insert(rows);
+  if (insErr) throw insErr;
 }
 
 export { getStudioId };

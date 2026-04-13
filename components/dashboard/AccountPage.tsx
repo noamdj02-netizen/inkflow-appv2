@@ -34,7 +34,7 @@ interface AccountPageProps {
   // Navigation
   onGoToBilling: () => void;
   onGoToNotifications: () => void;
-  onLogout: () => void;
+  onLogout: () => void | Promise<void>;
   // Subscription
   subscriptionStatus?: string;
   trialEndsAt?: string | null;
@@ -281,7 +281,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           <Row
             icon={<LogOut className="w-4 h-4" />}
             label="Déconnexion"
-            onClick={onLogout}
+            onClick={() => void onLogout()}
             danger
           />
         </Section>

@@ -1,10 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LayoutGrid, StickyNote, Link2, BarChart2, Trash2, Plus, MessageSquare, Calendar, Users, Wallet, Image, Settings, ExternalLink } from 'lucide-react';
-import { getWidgetsFromSupabase, saveWidgetsToSupabase } from '../../lib/supabaseDashboard';
-
-const STORAGE_KEY = 'inkflow-dashboard-widgets';
-
 export type WidgetType = 'note' | 'link' | 'stat' | 'shortcut';
 
 export interface DashboardWidget {
@@ -356,41 +352,3 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
 
   return typeof document !== 'undefined' ? createPortal(modal, document.body) : null;
 };
-
-export function useDashboardWidgets(studioId: string | null, useSupabase: boolean, options?: { onError?: (err: Error) => void }) {
-  const [widgets, setWidgets] = useState<DashboardWidget[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) return JSON.parse(stored);
-    } catch {}
-    return [];
-  });
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    if (!studioId || !useSupabase) {
-      setLoaded(true);
-      return;
-    }
-    getWidgetsFromSupabase(studioId).then((fromDb) => {
-      if (fromDb.length > 0) {
-        setWidgets(fromDb);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(fromDb));
-      }
-      setLoaded(true);
-    }).catch(() => setLoaded(true));
-  }, [studioId, useSupabase]);
-
-  const setWidgetsAndSave = useCallback((next: DashboardWidget[] | ((prev: DashboardWidget[]) => DashboardWidget[])) => {
-    setWidgets(prev => {
-      const nextVal = typeof next === 'function' ? next(prev) : next;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextVal));
-      if (studioId && useSupabase) saveWidgetsToSupabase(studioId, nextVal).catch((err) => {
-        options?.onError?.(err);
-      });
-      return nextVal;
-    });
-  }, [studioId, useSupabase, options?.onError]);
-
-  return [widgets, setWidgetsAndSave] as const;
-}

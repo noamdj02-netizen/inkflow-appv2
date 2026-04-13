@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from
 import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, ClipboardList, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen, Smartphone, Heart, Globe, FileCheck, Crown, ListOrdered, Eye, EyeOff, PanelsTopLeft, HelpCircle, MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
-import { useSupabaseSync } from '../../contexts/SupabaseSyncContext';
+import { useSupabaseSync } from '../../hooks/useSupabaseSync';
 import { useProjectRequests } from '../../hooks/useProjectRequests';
 import { useIncomingBookings } from '../../hooks/useIncomingBookings';
 import { usePendingDemandesCounts } from '../../hooks/usePendingDemandesCounts';
@@ -47,7 +47,8 @@ const RequestsDashboard = lazy(() => import('./RequestsDashboard').then(m => ({ 
 const MessagingTab = lazy(() => import('../messaging/MessagingTab').then(m => ({ default: m.MessagingTab })));
 const PortfolioManager = lazy(() => import('./PortfolioManager').then(m => ({ default: m.PortfolioManager })));
 const AppointmentsView = lazy(() => import('./AppointmentsView').then(m => ({ default: m.AppointmentsView })));
-import { DashboardWidgets, AddWidgetModal, useDashboardWidgets, WidgetCard } from './DashboardWidgets';
+import { DashboardWidgets, AddWidgetModal, WidgetCard } from './DashboardWidgets';
+import { useDashboardWidgets } from '../../hooks/useDashboardWidgets';
 import { DashboardOverviewTab } from './DashboardOverviewTab';
 import { PlanningSidebar } from './PlanningSidebar';
 import { WaitlistManager } from './WaitlistManager';
@@ -63,9 +64,21 @@ import type { Client } from '../../types';
 import { ClientPreviewPanel, type ClientPreviewData } from './ClientPreviewPanel';
 import { ClientPreviewDrawer } from './ClientPreviewDrawer';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
-import { WelcomeOnboardingFlow, shouldShowWelcomeFlow } from '../onboarding/WelcomeOnboardingFlow';
+import { WelcomeOnboardingFlow } from '../onboarding/WelcomeOnboardingFlow';
+import { shouldShowWelcomeFlow } from '../../lib/shouldShowWelcomeFlow';
 import { supabase } from '../../lib/supabase';
-import { getWaitlistFromSupabase, addWaitlistEntryToSupabase, updateWaitlistStatusInSupabase, deleteWaitlistEntryFromSupabase, ensureStudio, getDashboardPreferencesFromSupabase } from '../../lib/supabaseDashboard';
+import {
+  getWaitlistFromSupabase,
+  addWaitlistEntryToSupabase,
+  updateWaitlistStatusInSupabase,
+  deleteWaitlistEntryFromSupabase,
+  ensureStudio,
+  getDashboardPreferencesFromSupabase,
+  fetchLoyaltyEntriesFromSupabase,
+  fetchPointsLoyaltySettingsFromSupabase,
+  syncLoyaltyEntriesToSupabase,
+  savePointsLoyaltySettingsToSupabase,
+} from '../../lib/supabaseDashboard';
 import { syncArtistAccountsToSupabase } from '../../lib/inkflowArtistsSync';
 import { sendCollaboratorInviteEmail } from '../../lib/collaboratorInvite';
 import { syncStudioGoogleReviewsCache } from '../../lib/googlePlaces';
@@ -320,11 +333,14 @@ export const DashboardPro: React.FC = () => {
       return;
     }
     const [studioRes, payRes] = await Promise.all([
-      supabase.from('inkflow_studios').select('availability_settings').eq('id', studioId).maybeSingle(),
+      /** `select('*')` évite un 400 PostgREST si une colonne listée n’est pas encore en prod (migrations en retard). */
+      supabase.from('inkflow_studios').select('*').eq('id', studioId).maybeSingle(),
       supabase.from('inkflow_payment_settings').select('settings').eq('studio_id', studioId).maybeSingle(),
     ]);
     setAvailabilitySetupComplete(isStudioAvailabilityConfigured(studioRes.data?.availability_settings));
-    setPaymentsSetupComplete(isStudioStripeConnected(payRes.data?.settings));
+    setPaymentsSetupComplete(
+      isStudioStripeConnected(payRes.data?.settings, studioRes.data?.stripe_connect_charges_enabled),
+    );
   }, [studioId, useSupabase]);
 
   useEffect(() => {
@@ -347,6 +363,8 @@ export const DashboardPro: React.FC = () => {
     tierThresholds: { silver: 200, gold: 500, platinum: 1000 },
     rewards: [{ name: '10% sur prochain tattoo', cost: 100 }, { name: 'Retouche gratuite', cost: 200 }, { name: 'Flash offert', cost: 500 }],
   });
+  const loyaltyCloudSnapshotRef = React.useRef<string | null>(null);
+  const loyaltySupabaseReady = React.useRef(false);
   const [consentTemplates, setConsentTemplates] = useState<{ id: string; title: string; content: string }[]>([]);
   const [generalStudioName, setGeneralStudioName] = useState(user?.studioName || '');
   const [generalEmail, setGeneralEmail] = useState(user?.email || '');
@@ -560,7 +578,7 @@ export const DashboardPro: React.FC = () => {
     if ((settingsTab === 'vitrine' || settingsTab === 'public_app') && !moduleFlags.vitrine) setSettingsTab('general');
   }, [activeTab, settingsTab, moduleFlags.vitrine]);
 
-  // Persist consent/waitlist/artists/loyalty in localStorage so they survive refresh (until Supabase load/save is wired)
+  // Persist consent/waitlist/artists in localStorage ; fidélité : localStorage hors cloud, Supabase quand useSupabase
   const storageKey = (prefix: string) => `${prefix}_${studioId || user?.email || 'default'}`;
   useEffect(() => {
     if (!user) return;
@@ -572,11 +590,13 @@ export const DashboardPro: React.FC = () => {
     }
     const a = safeJsonParse<ArtistAccount[]>(localStorage.getItem(storageKey('inkflow_artists')), []);
     if (a.length > 0) setArtistAccounts(a);
-    const defaultLoyalty: LoyaltySettingsType = { enabled: true, pointsPerEuro: 1, referralBonus: 50, tierThresholds: { silver: 200, gold: 500, platinum: 1000 }, rewards: [{ name: '10% sur prochain tattoo', cost: 100 }, { name: 'Retouche gratuite', cost: 200 }, { name: 'Flash offert', cost: 500 }] };
-    const ly = safeJsonParse<LoyaltySettingsType>(localStorage.getItem(storageKey('inkflow_loyalty_settings')), defaultLoyalty);
-    if (ly && Object.keys(ly).length > 0) setLoyaltySettings(ly);
-    const le = safeJsonParse<LoyaltyEntry[]>(localStorage.getItem(storageKey('inkflow_loyalty_entries')), []);
-    if (le.length > 0) setLoyaltyEntries(le);
+    if (!useSupabase) {
+      const defaultLoyalty: LoyaltySettingsType = { enabled: true, pointsPerEuro: 1, referralBonus: 50, tierThresholds: { silver: 200, gold: 500, platinum: 1000 }, rewards: [{ name: '10% sur prochain tattoo', cost: 100 }, { name: 'Retouche gratuite', cost: 200 }, { name: 'Flash offert', cost: 500 }] };
+      const ly = safeJsonParse<LoyaltySettingsType>(localStorage.getItem(storageKey('inkflow_loyalty_settings')), defaultLoyalty);
+      if (ly && Object.keys(ly).length > 0) setLoyaltySettings(ly);
+      const le = safeJsonParse<LoyaltyEntry[]>(localStorage.getItem(storageKey('inkflow_loyalty_entries')), []);
+      if (le.length > 0) setLoyaltyEntries(le);
+    }
   }, [user?.email, studioId, useSupabase]);
 
   // Load waitlist from Supabase when useSupabase
@@ -586,6 +606,54 @@ export const DashboardPro: React.FC = () => {
       .then(setWaitlistEntries)
       .catch(() => setWaitlistEntries([]));
   }, [studioId, useSupabase]);
+
+  useEffect(() => {
+    if (!studioId || !useSupabase) {
+      loyaltySupabaseReady.current = false;
+      loyaltyCloudSnapshotRef.current = null;
+      return;
+    }
+    let cancelled = false;
+    loyaltySupabaseReady.current = false;
+    loyaltyCloudSnapshotRef.current = null;
+    void (async () => {
+      try {
+        const [entries, settings] = await Promise.all([
+          fetchLoyaltyEntriesFromSupabase(studioId),
+          fetchPointsLoyaltySettingsFromSupabase(studioId),
+        ]);
+        if (cancelled) return;
+        setLoyaltyEntries(entries);
+        setLoyaltySettings(settings);
+        loyaltyCloudSnapshotRef.current = JSON.stringify({ e: entries, s: settings });
+        loyaltySupabaseReady.current = true;
+      } catch {
+        if (!cancelled) loyaltySupabaseReady.current = false;
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [studioId, useSupabase]);
+
+  useEffect(() => {
+    if (!studioId || !useSupabase || !loyaltySupabaseReady.current) return;
+    const snap = JSON.stringify({ e: loyaltyEntries, s: loyaltySettings });
+    if (snap === loyaltyCloudSnapshotRef.current) return;
+    const t = window.setTimeout(() => {
+      void (async () => {
+        try {
+          await syncLoyaltyEntriesToSupabase(studioId, loyaltyEntries);
+          await savePointsLoyaltySettingsToSupabase(studioId, loyaltySettings);
+          loyaltyCloudSnapshotRef.current = JSON.stringify({ e: loyaltyEntries, s: loyaltySettings });
+        } catch (e) {
+          console.warn('[loyalty] sync', e);
+          toast.error('Synchronisation fidélité impossible. Réessayez.');
+        }
+      })();
+    }, 700);
+    return () => window.clearTimeout(t);
+  }, [loyaltyEntries, loyaltySettings, studioId, useSupabase, toast]);
 
   useEffect(() => {
     if (!user) return;
@@ -606,17 +674,17 @@ export const DashboardPro: React.FC = () => {
     } catch (_) { /* ignore */ }
   }, [artistAccounts, user?.email, studioId]);
   useEffect(() => {
-    if (!user) return;
+    if (!user || useSupabase) return;
     try {
       localStorage.setItem(storageKey('inkflow_loyalty_settings'), JSON.stringify(loyaltySettings));
     } catch (_) { /* ignore */ }
-  }, [loyaltySettings, user?.email, studioId]);
+  }, [loyaltySettings, user?.email, studioId, useSupabase]);
   useEffect(() => {
-    if (!user) return;
+    if (!user || useSupabase) return;
     try {
       localStorage.setItem(storageKey('inkflow_loyalty_entries'), JSON.stringify(loyaltyEntries));
     } catch (_) { /* ignore */ }
-  }, [loyaltyEntries, user?.email, studioId]);
+  }, [loyaltyEntries, user?.email, studioId, useSupabase]);
 
   useEffect(() => {
     if (!studioId || !useSupabase || artistAccounts.length === 0) return;
@@ -700,6 +768,17 @@ export const DashboardPro: React.FC = () => {
       window.history.replaceState({}, '', '/dashboard');
       setActiveTab('settings');
       setSettingsTab('vitrine');
+      return;
+    }
+    /** Retour onboarding Stripe Connect : ?settings=payments&stripe_connect=return */
+    if (params.get('settings') === 'payments') {
+      const next = new URLSearchParams(window.location.search);
+      next.delete('settings');
+      next.delete('stripe_connect');
+      const q = next.toString();
+      window.history.replaceState({}, '', q ? `/dashboard?${q}` : '/dashboard');
+      setActiveTab('settings');
+      setSettingsTab('payments');
       return;
     }
     const tabParam = params.get('tab');
@@ -1613,7 +1692,7 @@ export const DashboardPro: React.FC = () => {
             </a>
             */}
             <button
-              onClick={logout}
+              onClick={() => void logout()}
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all"
             >
               <LogOut className="w-4 h-4 flex-shrink-0" />
@@ -2014,7 +2093,10 @@ export const DashboardPro: React.FC = () => {
                         Mon compte
                       </button>
                       <button
-                        onClick={() => { logout(); setShowProfileDropdown(false); }}
+                        onClick={() => {
+                        void logout();
+                        setShowProfileDropdown(false);
+                      }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium transition-colors duration-150 text-left"
                       >
                         <LogOut className="w-5 h-5" />
@@ -2815,7 +2897,9 @@ export const DashboardPro: React.FC = () => {
                   <p className="text-sm text-zinc-600 dark:text-zinc-300">Connectez un studio pour configurer les modules.</p>
                 </div>
               )}
-              {settingsTab === 'payments' && <PaymentsSettings userEmail={user?.email} studioName={user?.studioName} />}
+              {settingsTab === 'payments' && (
+                <PaymentsSettings studioId={studioId} userEmail={user?.email} studioName={user?.studioName} />
+              )}
               {settingsTab === 'billing' && (
                 <BillingSettings
                   studioId={studioId}

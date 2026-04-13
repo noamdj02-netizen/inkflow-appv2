@@ -11,7 +11,6 @@ import {
   setWelcomeDone,
   setFounderNoteDone,
   isFounderNoteDone,
-  isJustSignedUp,
   clearJustSignedUp,
 } from '../../lib/welcomeStorage';
 import { supabase } from '../../lib/supabase';
@@ -107,8 +106,3 @@ export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
 
   return <OnboardingAvailabilityStep onComplete={handleAvailabilityComplete} />;
 };
-
-/** Affiche le flux uniquement après la création d'un compte (pas après une simple connexion). */
-export function shouldShowWelcomeFlow(userScopedId: string | null | undefined): boolean {
-  return !isWelcomeDone(userScopedId) && isJustSignedUp();
-}

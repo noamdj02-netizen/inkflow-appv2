@@ -30,6 +30,8 @@ Sans ces variables, les boutons Wallet utilisent partage ou copie du code + lien
 - `STRIPE_WEBHOOK_SECRET`
 - Toute clé d’API secrète (Resend, etc.)
 
+**Contrôles locaux :** `npm run qa:audit-vite` (détection de motifs secrets dans les valeurs `VITE_*` de `.env.local`). Sur Vercel, refaire la revue manuelle des variables. Pour les **source maps Sentry** au build : `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` (sans `VITE_`), puis `npm run qa:sentry-build` et vérification dans Sentry → **Releases** / **Source Maps**.
+
 ---
 
 ## Variables secrètes (Edge Functions Supabase uniquement)
@@ -39,8 +41,13 @@ Sans ces variables, les boutons Wallet utilisent partage ou copie du code + lien
 | Variable | Utilisée par | Description |
 |----------|--------------|-------------|
 | `VITE_STRIPE_PUBLISHABLE_KEY` | Frontend (Vercel) | Clé publique Stripe `pk_live_xxx` (optionnel) |
-| `STRIPE_SECRET_KEY` | create-checkout-session, create-subscription | Clé secrète Stripe (mode Live en prod) |
+| `STRIPE_SECRET_KEY` | create-checkout-session, create-subscription, stripe-connect-onboarding | Clé secrète **plateforme** Stripe (`sk_live_…`) — Connect activé sur le compte plateforme |
+| `SUPABASE_ANON_KEY` | stripe-connect-onboarding | Même clé que `VITE_SUPABASE_ANON_KEY` — vérification JWT utilisateur (injectée par Supabase si non définie) |
+| `INKFLOW_CONNECT_APPLICATION_FEE_BPS` | create-checkout-session (optionnel) | Commission plateforme en **basis points** (100 = 1 %). `0` = tout pour le studio connecté |
+| `STRIPE_CONNECT_COUNTRY` | stripe-connect-onboarding (optionnel) | Pays du compte Express (`FR` par défaut) |
 | `STRIPE_WEBHOOK_SECRET` | stripe-webhook | Secret de signature du webhook Stripe (obligatoire en prod) |
+| `SENTRY_DSN` | stripe-webhook (optionnel) | Même projet Sentry que le front ou projet dédié « Edge » — erreurs DB / exceptions webhook |
+| `SENTRY_ENVIRONMENT` | stripe-webhook (optionnel) | Surcharge du tag `environment` (défaut : `production`) |
 | `SUPABASE_URL` | Toutes les Edge Functions | Injectée automatiquement par Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | stripe-webhook, create-checkout-session, etc. | Injectée automatiquement par Supabase |
 | `SITE_URL` | create-checkout-session, create-subscription | URL de production (ex. `https://inkflow.app`) pour success_url / cancel_url |
@@ -64,6 +71,22 @@ En **production** :
 ```bash
 npx supabase functions deploy stripe-webhook --no-verify-jwt
 ```
+
+Pour le monitoring des erreurs côté webhook (recommandé) : `supabase secrets set SENTRY_DSN=…` (même DSN que `VITE_SENTRY_DSN` ou DSN projet serveur), puis redéployer la fonction.
+
+### Stripe Connect (acomptes vers le compte de chaque studio)
+
+1. Dans le [Dashboard Stripe](https://dashboard.stripe.com) (compte **plateforme**), activer **Connect** et choisir le modèle (Express recommandé pour ce flux).
+2. Webhook : ajouter l’événement **`account.updated`** sur l’endpoint qui pointe vers `stripe-webhook` (mise à jour `stripe_connect_charges_enabled` en base).
+3. Déployer les fonctions :
+
+```bash
+npx supabase functions deploy create-checkout-session
+npx supabase functions deploy stripe-connect-onboarding
+npx supabase functions deploy stripe-webhook --no-verify-jwt
+```
+
+`stripe-connect-onboarding` **garde la vérification JWT** (utilisateur connecté uniquement). Les tatoueurs ouvrent **Paramètres → Paiements → Connecter mon compte Stripe** pour l’onboarding Express.
 
 ### Edge Function `google-places` (avis publics sans JWT)
 

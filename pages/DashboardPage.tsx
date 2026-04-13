@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
 import { StudioPrivacyProvider } from '../contexts/StudioPrivacyContext';
-import { DashboardPro } from '../components/dashboard/DashboardPro';
 import { SEO } from '../components/SEO';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Logo } from '../components/Logo';
+
+const DashboardPro = lazy(() =>
+  import('../components/dashboard/DashboardPro').then((m) => ({ default: m.DashboardPro })),
+);
 
 export const DashboardPage: React.FC = () => {
   const { user, isAuthenticated, authLoading } = useAuth();
@@ -40,7 +43,15 @@ export const DashboardPage: React.FC = () => {
     <ErrorBoundary errorContext="dashboard">
       <SEO title="Tableau de bord" noindex />
       <StudioPrivacyProvider>
-        <DashboardPro />
+        <Suspense
+          fallback={
+            <div className="min-h-screen bg-neutral-50 dark:bg-[var(--bg-primary)] flex items-center justify-center">
+              <Logo size="lg" className="rounded-2xl opacity-90 animate-pulse" />
+            </div>
+          }
+        >
+          <DashboardPro />
+        </Suspense>
       </StudioPrivacyProvider>
     </ErrorBoundary>
   );

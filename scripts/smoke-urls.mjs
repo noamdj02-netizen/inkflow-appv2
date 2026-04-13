@@ -10,6 +10,7 @@
  *   SMOKE_STUDIO_SLUG  — optionnel ; ajoute GET /studio/:slug et /book/:slug
  *
  * Limites : pas d’auth, pas de validation des formulaires ; voir docs/MVP-STATUS-AND-AUDIT.md §5.
+ * Parcours métier (P0/P1) : npm run readiness:manual
  */
 
 const BASE = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:5173';

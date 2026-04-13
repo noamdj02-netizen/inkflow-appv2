@@ -80,17 +80,25 @@ export default defineConfig(({ mode }) => {
       build: {
         sourcemap: !!sentryAuthToken,
         target: 'es2020',
-        chunkSizeWarningLimit: 650,
+        // Lazy routes + manualChunks : index (~730k) et DashboardPro (~740k) restent volumineux mais attendus.
+        chunkSizeWarningLimit: 800,
         commonjsOptions: {
           transformMixedEsModules: true,
         },
         rollupOptions: {
           output: {
-            manualChunks: {
-              'vendor-charts': ['recharts'],
-              'vendor-supabase': ['@supabase/supabase-js'],
-              'vendor-pdf': ['jspdf'],
-              'vendor-framer-motion': ['framer-motion'],
+            manualChunks(id) {
+              if (!id.includes('node_modules')) return undefined;
+              if (id.includes('xlsx')) return 'vendor-xlsx';
+              if (id.includes('recharts')) return 'vendor-charts';
+              if (id.includes('@supabase')) return 'vendor-supabase';
+              if (id.includes('jspdf')) return 'vendor-pdf';
+              if (id.includes('html2canvas')) return 'vendor-html2canvas';
+              if (id.includes('framer-motion') || id.includes('motion-dom')) return 'vendor-framer-motion';
+              if (id.includes('leaflet') || id.includes('react-leaflet')) return 'vendor-leaflet';
+              if (id.includes('react-joyride')) return 'vendor-joyride';
+              if (id.includes('lucide-react')) return 'vendor-lucide';
+              return undefined;
             },
           },
         },
