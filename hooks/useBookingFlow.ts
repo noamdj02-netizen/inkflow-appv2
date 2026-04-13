@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import type { FlashDesign } from '../types';
-import { getStudioIdBySlug, getFlashDesignsFromSupabase } from '../lib/supabaseDashboard';
+import { getStudioIdBySlug, getFlashDesignsFromSupabase, saveAppointmentToSupabase } from '../lib/supabaseDashboard';
 import { getVitrineDataBySlugAsync } from '../lib/vitrineStorage';
 import { toLocalDateString } from '../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS, type StudioAvailabilityResponse } from '../lib/studioAvailability';
@@ -549,6 +549,33 @@ export function useBookingFlow(studioSlug: string) {
     try {
       const appointmentId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
       const clientName = `${form.firstName} ${form.lastName}`;
+      const now = new Date().toISOString();
+
+      // Persiste le RDV avant Stripe — le webhook met à jour status→confirmed et deposit_paid→true
+      if (supabaseEnabled) {
+        await saveAppointmentToSupabase(studioId, {
+          id: appointmentId,
+          clientId: '',
+          clientName,
+          clientEmail: form.email,
+          clientPhone: form.phone,
+          date: form.selectedDate,
+          time: form.selectedTime,
+          service: selectedFlash.title || 'Flash',
+          duration: 60,
+          price: selectedFlash.price ?? 0,
+          deposit: depositAmount,
+          depositPaid: false,
+          status: 'pending',
+          tattooType: 'flash',
+          flashId: selectedFlashId,
+          location: 'other',
+          size: 'medium',
+          consentFormSigned: false,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
 
       const result = await createCheckoutSession({
         studioId,

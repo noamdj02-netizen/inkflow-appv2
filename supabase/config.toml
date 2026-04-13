@@ -1,0 +1,11 @@
+# Configuration Edge Functions — voir https://supabase.com/docs/guides/functions/function-configuration
+#
+# stripe-webhook : Stripe envoie uniquement Stripe-Signature (pas de Bearer Supabase).
+# Sans verify_jwt = false, la passerelle répond 401 et les webhooks échouent (abonnement, Connect, etc.).
+[functions.stripe-webhook]
+verify_jwt = false
+
+# stripe-connect-onboarding : la passerelle peut renvoyer 401 avant le code Deno même avec un JWT valide
+# (cas fréquents : refresh / headers). La fonction valide déjà le Bearer via auth.getUser(jwt).
+[functions.stripe-connect-onboarding]
+verify_jwt = false
