@@ -94,25 +94,78 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { studioId } = (await req.json()) as { studioId?: string };
-    if (!studioId || typeof studioId !== "string") {
-      return new Response(JSON.stringify({ error: "studioId requis" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    const body = (await req.json().catch(() => ({}))) as { studioId?: string };
+    const studioIdFromClient =
+      typeof body.studioId === "string" && body.studioId.trim() ? body.studioId.trim() : undefined;
+
+    const studioSelect =
+      "id, email, studio_name, stripe_connect_account_id, stripe_connect_charges_enabled";
+
+    /** Même résolution que le dashboard : RPC `get_studio_by_email_with_data` (lower(trim) sur l’e-mail). */
+    let studio: {
+      id: string;
+      email: string;
+      studio_name: string | null;
+      stripe_connect_account_id: string | null;
+      stripe_connect_charges_enabled: boolean | null;
+    } | null = null;
+
+    const { data: rpcData, error: rpcErr } = await supabase.rpc("get_studio_by_email_with_data", {
+      p_email: emailNorm,
+    });
+
+    if (!rpcErr && rpcData != null) {
+      const rpcRow = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+      const rid = (rpcRow as { id?: string } | null)?.id;
+      if (rid) {
+        const { data: full, error: fullErr } = await supabase
+          .from("inkflow_studios")
+          .select(studioSelect)
+          .eq("id", rid)
+          .maybeSingle();
+        if (!fullErr && full) {
+          studio = full as typeof studio;
+        } else if (fullErr) {
+          console.error("[stripe-connect-onboarding] load studio by id:", fullErr.message);
+        }
+      }
+    } else if (rpcErr) {
+      console.warn("[stripe-connect-onboarding] RPC get_studio_by_email_with_data:", rpcErr.message);
     }
 
-    const { data: studio, error: studioErr } = await supabase
-      .from("inkflow_studios")
-      .select("id, email, studio_name, stripe_connect_account_id, stripe_connect_charges_enabled")
-      .eq("id", studioId)
-      .maybeSingle();
+    /** Secours si RPC absente / vide : égalité stricte sur e-mail déjà normalisé côté app. */
+    if (!studio) {
+      const { data: studioRows, error: studioErr } = await supabase
+        .from("inkflow_studios")
+        .select(studioSelect)
+        .eq("email", emailNorm)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      if (studioErr) {
+        console.error("[stripe-connect-onboarding] studio fallback eq email:", studioErr.message);
+      }
+      studio = (studioRows?.[0] as typeof studio) ?? null;
+    }
 
-    if (studioErr || !studio) {
-      return new Response(JSON.stringify({ error: "Studio introuvable" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    if (!studio) {
+      console.error("[stripe-connect-onboarding] aucun studio pour e-mail JWT:", emailNorm);
+      return new Response(
+        JSON.stringify({
+          error:
+            "Aucun studio enregistré pour cet e-mail. Recharge le dashboard (accueil) pour créer ton espace, puis réessaie.",
+        }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    const resolvedId = studio.id as string;
+
+    if (studioIdFromClient && studioIdFromClient !== resolvedId) {
+      console.warn(
+        "[stripe-connect-onboarding] studioId client ≠ BDD, utilisation de l’id BDD",
+        studioIdFromClient,
+        resolvedId,
+      );
     }
 
     if ((studio.email as string).trim().toLowerCase() !== emailNorm) {
@@ -132,7 +185,7 @@ Deno.serve(async (req: Request) => {
         type: "express",
         country: STRIPE_CONNECT_COUNTRY,
         email: studio.email as string,
-        "metadata[studio_id]": studioId,
+        "metadata[studio_id]": resolvedId,
         "capabilities[card_payments][requested]": "true",
         "capabilities[transfers][requested]": "true",
         "business_profile[name]": String(studio.studio_name || "Studio").slice(0, 100),
@@ -159,7 +212,7 @@ Deno.serve(async (req: Request) => {
           stripe_connect_account_id: accountId,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", studioId);
+        .eq("id", resolvedId);
       if (updErr) {
         console.error("[stripe-connect-onboarding] save account id:", updErr.message);
         return new Response(JSON.stringify({ error: "Erreur enregistrement compte" }), {

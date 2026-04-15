@@ -8,7 +8,7 @@ import type { Appointment, User, Client, FlashDesign, Notification, ProjectReque
 export const DEMO_ACCOUNT_EMAIL = 'demo@inkflow.com';
 
 /** Emails qui reçoivent les données démo (faux clients, RDV, chiffres) — pour démos persistantes. */
-export const DEMO_ACCOUNT_EMAILS: string[] = [DEMO_ACCOUNT_EMAIL, 'noamdj02@gmail.com'];
+export const DEMO_ACCOUNT_EMAILS: string[] = [DEMO_ACCOUNT_EMAIL];
 
 function thisWeekStart(): Date {
   const d = new Date();

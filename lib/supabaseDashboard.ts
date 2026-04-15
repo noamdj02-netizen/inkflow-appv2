@@ -151,7 +151,11 @@ export async function getStudioByEmail(email: string): Promise<{
   plan_type?: string;
   csv_import_slots_remaining?: number | null;
 } | null> {
-  const { data, error } = await supabase.rpc('get_studio_by_email_with_data', { p_email: email });
+  /** Toujours comparer en minuscules : Auth peut renvoyer une casse différente de `inkflow_studios.email`. */
+  const emailNorm = (email || '').trim().toLowerCase();
+  if (!emailNorm) return null;
+
+  const { data, error } = await supabase.rpc('get_studio_by_email_with_data', { p_email: emailNorm });
   const row = Array.isArray(data) ? data[0] : data;
   if (!error && row?.id) {
     return {
@@ -168,7 +172,7 @@ export async function getStudioByEmail(email: string): Promise<{
   const { data: fallback, error: fallbackError } = await supabase
     .from('inkflow_studios')
     .select('id, slug, subscription_status, trial_ends_at, siret, plan_type, csv_import_slots_remaining')
-    .eq('email', email)
+    .ilike('email', emailNorm)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();

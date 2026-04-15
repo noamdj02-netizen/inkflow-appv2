@@ -66,6 +66,7 @@ import { ClientPreviewDrawer } from './ClientPreviewDrawer';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
 import { WelcomeOnboardingFlow } from '../onboarding/WelcomeOnboardingFlow';
 import { shouldShowWelcomeFlow } from '../../lib/shouldShowWelcomeFlow';
+import { isJustSignedUp, clearJustSignedUp } from '../../lib/welcomeStorage';
 import { supabase } from '../../lib/supabase';
 import {
   getWaitlistFromSupabase,
@@ -515,6 +516,20 @@ export const DashboardPro: React.FC = () => {
         setGeneralGooglePlaceId(typeof gid === 'string' && gid.trim() ? gid.trim() : null);
       });
   }, [studioId, useSupabase]);
+
+  /**
+   * Après inscription email : `ensureStudio` a déjà écrit nom / e-mail / studio en base.
+   * Sans ce passage, le bouton « Enregistrer » reste gris comme si rien n’était sauvegardé.
+   */
+  useEffect(() => {
+    if (!studioId || !useSupabase || loading) return;
+    if (!isJustSignedUp()) return;
+    clearJustSignedUp();
+    setGeneralSaved(true);
+    void refreshStudioSubscription();
+    const t = window.setTimeout(() => setGeneralSaved(false), 8000);
+    return () => window.clearTimeout(t);
+  }, [studioId, useSupabase, loading, refreshStudioSubscription]);
 
   // Handle Google Calendar OAuth callback: ?code=...&state=studioId
   useEffect(() => {

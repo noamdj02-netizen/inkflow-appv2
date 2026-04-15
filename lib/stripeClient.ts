@@ -1,4 +1,5 @@
 import { isAccessTokenForCurrentSupabaseProject, supabase } from './supabase';
+import { ensureStudio, getStudioByEmail } from './supabaseDashboard';
 
 interface CreateCheckoutParams {
   studioId: string;
@@ -316,6 +317,9 @@ async function stripeConnectOnboardingViaFetch(
  * Ouvre l’onboarding Stripe Connect (Express).
  * Un seul chemin `fetch` (JWT + apikey explicites) pour éviter les doubles appels et les 401 bruyants ;
  * vérifie que le JWT correspond au projet `VITE_SUPABASE_URL` (sinon déconnexion / .env incohérent).
+ *
+ * L’id studio envoyé par l’UI peut diverger de la BDD (nouveau compte, renommage) : on résout toujours
+ * l’id réel via `getStudioByEmail` pour éviter « Studio introuvable » côté Edge Function.
  */
 export async function startStripeConnectOnboarding(studioId: string): Promise<StripeConnectOnboardingResult> {
   const { url: baseUrl, key } = getSupabaseConfig();
@@ -323,8 +327,8 @@ export async function startStripeConnectOnboarding(studioId: string): Promise<St
 
   const fail = (msg: string): StripeConnectOnboardingResult => ({ error: humanizeStripeConnectError(msg) });
 
-  const { error: userErr } = await supabase.auth.getUser();
-  if (userErr) {
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !userData?.user?.email?.trim()) {
     return fail('Session expirée ou absente. Reconnectez-vous puis réessayez « Connecter mon compte Stripe ».');
   }
 
@@ -339,7 +343,43 @@ export async function startStripeConnectOnboarding(studioId: string): Promise<St
     );
   }
 
-  return stripeConnectOnboardingViaFetch(studioId, baseUrl, key, fail, accessToken);
+  const email = userData.user.email.trim();
+  let studioRow = await getStudioByEmail(email);
+  if (!studioRow?.id) {
+    const meta = userData.user.user_metadata ?? {};
+    const name =
+      (typeof meta.name === 'string' && meta.name.trim()
+        ? meta.name
+        : typeof meta.full_name === 'string' && meta.full_name.trim()
+          ? meta.full_name
+          : email.split('@')[0] || 'Utilisateur') as string;
+    const studioName =
+      (typeof meta.studio_name === 'string' && meta.studio_name.trim() ? meta.studio_name : 'Mon studio') as string;
+    try {
+      await ensureStudio(email, name, studioName);
+    } catch {
+      return fail(
+        'Espace studio introuvable : recharge la page (F5), attends quelques secondes, puis réessaie « Connecter mon compte Stripe ».',
+      );
+    }
+    studioRow = await getStudioByEmail(email);
+  }
+  if (!studioRow?.id) {
+    return fail(
+      'Studio introuvable : ouvre le tableau de bord une première fois pour enregistrer ton espace, recharge la page, puis réessaie « Connecter mon compte Stripe ».',
+    );
+  }
+
+  if (studioId && studioId !== studioRow.id) {
+    if (import.meta.env.DEV) {
+      console.warn('[startStripeConnectOnboarding] studioId UI ≠ BDD, utilisation de l’id BDD', {
+        fromUi: studioId,
+        resolved: studioRow.id,
+      });
+    }
+  }
+
+  return stripeConnectOnboardingViaFetch(studioRow.id, baseUrl, key, fail, accessToken);
 }
 
 /** Crée une session du Customer Portal Stripe pour gérer l'abonnement (facture, paiement, annulation). */

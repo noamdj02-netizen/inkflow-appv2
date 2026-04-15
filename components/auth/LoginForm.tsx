@@ -7,6 +7,7 @@ import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../../contexts/AuthContext';
 import { GoogleSignInButton } from '../GoogleSignInButton';
 import { loginSchema } from '../../lib/authValidation';
 import { resolvePostLoginPath } from '../../lib/postLoginRedirect';
+import { getPostSignupDashboardPath } from '../../lib/urls';
 
 /** Mappe les erreurs Supabase Auth vers messages utilisateur */
 function getAuthErrorMessage(err: unknown): string {
@@ -227,6 +228,14 @@ export const LoginForm: React.FC = () => {
               setError('');
               setGoogleLoading(true);
               try {
+                try {
+                  sessionStorage.setItem(
+                    REDIRECT_AFTER_LOGIN_KEY,
+                    getPostSignupDashboardPath(window.location.search)
+                  );
+                } catch {
+                  /* ignore */
+                }
                 await loginWithGoogle();
               } catch (err) {
                 setError(getAuthErrorMessage(err));
