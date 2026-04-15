@@ -10,7 +10,6 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
 import { Logo } from './components/Logo';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { SentryTestButton } from './components/SentryTestButton';
 import { CookieConsent } from './components/CookieConsent';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { AppSplashGate } from './components/auth/AppSplashGate';
@@ -115,8 +114,29 @@ const FullScreenSpinner: React.FC = () => (
   </div>
 );
 
+/** Retour Stripe Connect : si SITE_URL pointe vers / au lieu de /dashboard, on corrige au chargement. */
+function initialRouterPath(): string {
+  if (typeof window === 'undefined') return '/';
+  try {
+    const u = new URL(window.location.href);
+    const sc = u.searchParams.get('stripe_connect');
+    if (
+      (u.pathname === '/' || u.pathname === '') &&
+      u.searchParams.get('settings') === 'payments' &&
+      (sc === 'return' || sc === 'refresh')
+    ) {
+      const target = `/dashboard${u.search}`;
+      window.history.replaceState({}, '', target);
+      return target;
+    }
+  } catch {
+    /* ignore */
+  }
+  return window.location.pathname + window.location.search;
+}
+
 const Router: React.FC = () => {
-  const [currentPath, setCurrentPath] = useState(window.location.pathname + window.location.search);
+  const [currentPath, setCurrentPath] = useState(initialRouterPath);
   const { isAuthenticated, authLoading } = useAuth();
   useClientManifest(currentPath.startsWith('/client'));
 
@@ -380,7 +400,6 @@ const App: React.FC = () => {
                 <LanguageProvider>
                   <UnhandledRejectionHandler />
                   <Router />
-                  <SentryTestButton />
                   <CookieConsent />
                   <PWAUpdatePrompt />
                 </LanguageProvider>

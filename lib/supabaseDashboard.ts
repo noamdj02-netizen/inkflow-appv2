@@ -326,6 +326,8 @@ export async function getStudioPublicBySlug(slug: string): Promise<{
   siret?: string | null;
   avatarUrl: string | null;
   portfolioCoverUrl: string | null;
+  /** Stripe Connect prêt — paiements Checkout possibles (même règle que create-checkout-session). */
+  paymentsOnline: boolean;
 } | null> {
   const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: normalizePublicStudioSlug(slug) });
   const row = Array.isArray(data) ? data[0] : data;
@@ -336,6 +338,7 @@ export async function getStudioPublicBySlug(slug: string): Promise<{
     siret: (row.siret as string | null) ?? null,
     avatarUrl: (row.avatar_url as string | null) ?? null,
     portfolioCoverUrl: (row.portfolio_cover_url as string | null) ?? null,
+    paymentsOnline: row.payments_online === true,
   };
 }
 

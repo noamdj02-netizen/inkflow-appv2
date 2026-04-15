@@ -74,32 +74,42 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const tokens = await tokenResponse.json();
+      const tokens = await tokenResponse.json() as {
+        access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
+      };
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-      const expiryMs = tokens.expiry_date || (Date.now() + (tokens.expires_in || 3600) * 1000);
-      const parts = String(studioId).split("::");
-      const email = parts[0] || studioId;
-      const slug = parts[1] || "studio";
-      const studioName = slug.replace(/-/g, " ");
-      const displayName = email.split("@")[0] || "Artiste";
+      /** Expiration OAuth Google : `expires_in` en secondes (pas `expiry_date`). */
+      const expiryMs = Date.now() + (tokens.expires_in || 3600) * 1000;
 
-      const { error: dbError } = await supabase
+      const { data: studioRow, error: studioFetchErr } = await supabase
         .from("inkflow_studios")
-        .upsert(
-          {
-            id: studioId,
-            email,
-            name: displayName,
-            studio_name: studioName,
-            slug,
-            google_access_token: tokens.access_token,
-            google_refresh_token: tokens.refresh_token,
-            google_token_expiry: expiryMs,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "id" }
+        .select("id")
+        .eq("id", studioId)
+        .maybeSingle();
+
+      if (studioFetchErr || !studioRow) {
+        return new Response(
+          JSON.stringify({
+            error: "Studio introuvable. Reconnecte-toi au dashboard puis réessaie la liaison Google.",
+            details: studioFetchErr?.message,
+          }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      const patch: Record<string, unknown> = {
+        google_access_token: tokens.access_token,
+        google_token_expiry: expiryMs,
+        updated_at: new Date().toISOString(),
+      };
+      if (tokens.refresh_token) {
+        patch.google_refresh_token = tokens.refresh_token;
+      }
+
+      const { error: dbError } = await supabase.from("inkflow_studios").update(patch).eq("id", studioId);
 
       if (dbError) {
         return new Response(

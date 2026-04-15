@@ -2829,6 +2829,7 @@ export type Database = {
           avatar_url: string | null
           id: string
           name: string
+          payments_online: boolean
           portfolio_cover_url: string | null
           siret: string
           slug: string

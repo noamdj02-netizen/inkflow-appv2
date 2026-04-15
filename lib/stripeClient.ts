@@ -70,7 +70,7 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
       return {
         error:
           (data as { error?: string }).error ||
-          'Le studio doit terminer la connexion Stripe (Paramètres → Paiements) pour recevoir les paiements.',
+          'Stripe Connect n’est pas prêt : ouvre Paramètres → Paiements, termine l’activation, puis réessaie (les encaissements vont sur ton compte Stripe).',
       };
     }
     const msg = data?.error || data?.details || data?.message || `Erreur ${res.status}`;
@@ -436,4 +436,71 @@ export async function createPortalSession(params: {
         : message,
     };
   }
+}
+
+export type StripeConnectActionsResult =
+  | { ok: true; stripe_connect_charges_enabled?: boolean; stripe_connect_details_submitted?: boolean }
+  | { error: string };
+
+export type StripeExpressLoginResult = { url: string } | { error: string };
+
+export type StripeConnectDisconnectResult = { ok: true } | { error: string };
+
+async function callStripeConnectActions(
+  body: Record<string, unknown>,
+): Promise<{ ok: boolean; data: Record<string, unknown> }> {
+  const { url: baseUrl, key } = getSupabaseConfig();
+  if (!baseUrl || !key) {
+    return { ok: false, data: { error: 'Supabase non configuré.' } };
+  }
+  const accessToken = await getFreshAccessTokenForEdgeFn();
+  if (!accessToken) {
+    return { ok: false, data: { error: STRIPE_CONNECT_SESSION_COPY } };
+  }
+  const fnUrl = `${baseUrl.replace(/\/$/, '')}/functions/v1/stripe-connect-actions`;
+  const res = await fetch(fnUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+      apikey: key,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  return { ok: res.ok, data };
+}
+
+/** Met à jour charges_enabled / details_submitted depuis l’API Stripe (webhook parfois en retard). */
+export async function syncStripeConnectStatus(studioId: string): Promise<StripeConnectActionsResult> {
+  const { ok, data } = await callStripeConnectActions({ action: 'sync', studioId });
+  if (ok && data.ok === true) {
+    return {
+      ok: true,
+      stripe_connect_charges_enabled: data.stripe_connect_charges_enabled as boolean | undefined,
+      stripe_connect_details_submitted: data.stripe_connect_details_submitted as boolean | undefined,
+    };
+  }
+  const err = typeof data.error === 'string' ? data.error : 'Synchronisation impossible';
+  return { error: humanizeStripeConnectError(err) };
+}
+
+/** Lien à usage unique vers le tableau de bord Express (compte connecté). */
+export async function createStripeExpressLoginLink(studioId: string): Promise<StripeExpressLoginResult> {
+  const { ok, data } = await callStripeConnectActions({ action: 'express_login', studioId });
+  if (ok && typeof data.url === 'string' && data.url.startsWith('http')) {
+    return { url: data.url };
+  }
+  const err = typeof data.error === 'string' ? data.error : 'Lien Stripe indisponible';
+  return { error: humanizeStripeConnectError(err) };
+}
+
+/** Retire la liaison InkFlow ↔ compte Connect (les paiements en ligne s’arrêtent jusqu’à une nouvelle connexion). */
+export async function disconnectStripeConnect(studioId: string): Promise<StripeConnectDisconnectResult> {
+  const { ok, data } = await callStripeConnectActions({ action: 'disconnect', studioId });
+  if (ok && data.disconnected === true) {
+    return { ok: true };
+  }
+  const err = typeof data.error === 'string' ? data.error : 'Déliaison impossible';
+  return { error: humanizeStripeConnectError(err) };
 }

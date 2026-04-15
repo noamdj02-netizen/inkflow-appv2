@@ -4,7 +4,11 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import type { FlashDesign } from '../types';
-import { getStudioIdBySlug, getFlashDesignsFromSupabase, saveAppointmentToSupabase } from '../lib/supabaseDashboard';
+import {
+  getStudioPublicBySlug,
+  getFlashDesignsFromSupabase,
+  saveAppointmentToSupabase,
+} from '../lib/supabaseDashboard';
 import { getVitrineDataBySlugAsync } from '../lib/vitrineStorage';
 import { toLocalDateString } from '../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS, type StudioAvailabilityResponse } from '../lib/studioAvailability';
@@ -119,6 +123,8 @@ export function useBookingFlow(studioSlug: string) {
   const [studioId, setStudioId] = useState<string | null | 'loading'>('loading');
   const [studioInfo, setStudioInfo] = useState<{ name: string; avatar: string } | null>(null);
   const [vitrineData, setVitrineData] = useState<{ globalDepositPercentage?: number } | null>(null);
+  /** Stripe Connect prêt — aligné sur la RPC publique (null = chargement). */
+  const [paymentsOnline, setPaymentsOnline] = useState<boolean | null>(null);
 
   // ── Disponibilités ───────────────────────────────────────────────────────────
   const [busySlots, setBusySlots] = useState<Record<string, string[]>>({});
@@ -204,13 +210,29 @@ export function useBookingFlow(studioSlug: string) {
     };
   }, [studioSlug]);
 
-  // Résoudre studioId depuis le slug
+  // Résoudre studioId + paiements en ligne (même RPC que la vitrine, sans email)
   useEffect(() => {
-    if (supabaseEnabled) {
-      getStudioIdBySlug(studioSlug).then((id) => setStudioId(id ?? null));
-    } else {
+    if (!supabaseEnabled) {
       setStudioId(studioSlug || 'demo');
+      setPaymentsOnline(true);
+      return;
     }
+    setStudioId('loading');
+    setPaymentsOnline(null);
+    getStudioPublicBySlug(studioSlug)
+      .then((row) => {
+        if (!row) {
+          setStudioId(null);
+          setPaymentsOnline(false);
+          return;
+        }
+        setStudioId(row.id);
+        setPaymentsOnline(row.paymentsOnline);
+      })
+      .catch(() => {
+        setStudioId(null);
+        setPaymentsOnline(false);
+      });
   }, [studioSlug]);
 
   // Charger les données vitrine (nom, avatar, flashs JSON)
@@ -410,6 +432,7 @@ export function useBookingFlow(studioSlug: string) {
   })();
 
   const canPay =
+    paymentsOnline === true &&
     Boolean(selectedFlashId && selectedFlash && depositAmount != null) &&
     resolvedPlacement.length > 0 &&
     Boolean(form.firstName) &&
@@ -529,6 +552,9 @@ export function useBookingFlow(studioSlug: string) {
     }
   };
 
+  const PAYMENTS_OFFLINE_MSG =
+    'Les paiements en ligne ne sont pas encore activés pour ce studio. Contactez le studio ou réessayez plus tard.';
+
   const proceedToPayment = async () => {
     if (
       !form.firstName ||
@@ -542,6 +568,10 @@ export function useBookingFlow(studioSlug: string) {
     if (!selectedFlashId || !selectedFlash || depositAmount == null) return;
     if (!resolvedPlacement) return;
     if (!studioId || studioId === 'loading') return;
+    if (paymentsOnline === false) {
+      setPaymentError(PAYMENTS_OFFLINE_MSG);
+      return;
+    }
 
     setIsSubmitting(true);
     setPaymentError(null);
@@ -683,6 +713,7 @@ export function useBookingFlow(studioSlug: string) {
     // Payment
     paymentError,
     paymentVerified,
+    paymentsOnline,
     canPay,
     handlePay,
   };

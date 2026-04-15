@@ -75,6 +75,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     handleHealthFormComplete,
     paymentError,
     paymentVerified,
+    paymentsOnline,
     canPay,
     handlePay,
   } = useBookingFlow(studioSlug);
@@ -137,6 +138,8 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
   );
 
+  const showPaymentsOfflineBanner = supabaseEnabled && paymentsOnline === false;
+
   if (supabaseEnabled && studioId === null) {
     return (
       <div className="landing-scroll min-h-screen bg-white flex items-center justify-center p-4">
@@ -171,6 +174,24 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         </div>
       </header>
 
+      {showPaymentsOfflineBanner && (
+        <div
+          role="status"
+          className="bg-amber-50 border-b border-amber-100/80 px-4 py-3 text-sm text-amber-950"
+        >
+          <div className="max-w-md mx-auto flex gap-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-600 mt-0.5" strokeWidth={2} />
+            <div>
+              <p className="font-medium text-amber-950">Paiement en ligne indisponible</p>
+              <p className="text-amber-900/90 mt-1 text-[13px] leading-snug">
+                Ce studio n’a pas encore finalisé Stripe Connect. Vous pouvez envoyer une demande (projet sur mesure)
+                ou contacter le studio depuis sa vitrine pour régler l’acompte autrement.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-md mx-auto px-4 pb-32">
         {/* En-tête Tatoueur */}
         <section className="pt-8 pb-6 text-center">
@@ -191,9 +212,15 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               ? 'Demande de projet sur mesure'
               : 'Réservation & Acompte'}
           </p>
-          <span className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full bg-zinc-100 text-zinc-600 text-xs font-medium">
+          <span
+            className={`inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full text-xs font-medium ${
+              showPaymentsOfflineBanner
+                ? 'bg-zinc-100 text-zinc-500'
+                : 'bg-zinc-100 text-zinc-600'
+            }`}
+          >
             <Lock className="w-3.5 h-3.5" strokeWidth={1.5} />
-            Paiement sécurisé
+            {showPaymentsOfflineBanner ? 'Encaissement à activer côté studio' : 'Paiement sécurisé'}
           </span>
         </section>
 
@@ -214,7 +241,9 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               <div>
                 <div className="font-semibold text-zinc-900 text-base">Flash</div>
                 <div className="text-zinc-500 text-sm mt-0.5">
-                  Dessin déjà prêt — réservez un créneau et payez l&apos;acompte maintenant.
+                  {showPaymentsOfflineBanner
+                    ? 'Créneau et acompte : le studio doit activer Stripe pour payer en ligne.'
+                    : 'Dessin déjà prêt — réservez un créneau et payez l&apos;acompte maintenant.'}
                 </div>
               </div>
               <ChevronRight
@@ -897,7 +926,9 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             </button>
             <p className="mt-2 text-center text-[10px] text-zinc-400 flex items-center justify-center gap-1">
               <Lock className="w-3 h-3" strokeWidth={1.5} />
-              Paiement sécurisé Stripe • Apple Pay • Google Pay
+              {paymentsOnline === false
+                ? 'Stripe Connect requis côté studio pour payer ici.'
+                : 'Paiement sécurisé Stripe • Apple Pay • Google Pay'}
             </p>
           </div>
         </footer>

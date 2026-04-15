@@ -9,3 +9,7 @@ verify_jwt = false
 # (cas fréquents : refresh / headers). La fonction valide déjà le Bearer via auth.getUser(jwt).
 [functions.stripe-connect-onboarding]
 verify_jwt = false
+
+# sync / login_links / disconnect — valide le JWT dans le handler (comme onboarding).
+[functions.stripe-connect-actions]
+verify_jwt = false

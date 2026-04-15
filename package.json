@@ -29,7 +29,10 @@
     "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > types/database.ts",
     "vapid:generate": "npx web-push generate-vapid-keys",
     "deploy:function:stripe-webhook": "supabase functions deploy stripe-webhook --no-verify-jwt",
-    "deploy:function:stripe-connect-onboarding": "supabase functions deploy stripe-connect-onboarding --no-verify-jwt"
+    "deploy:function:stripe-connect-onboarding": "supabase functions deploy stripe-connect-onboarding --no-verify-jwt",
+    "deploy:function:stripe-connect-actions": "supabase functions deploy stripe-connect-actions --no-verify-jwt",
+    "video:demo": "npm run start --prefix video/inkflow-demo",
+    "video:demo:render": "npm run render --prefix video/inkflow-demo"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

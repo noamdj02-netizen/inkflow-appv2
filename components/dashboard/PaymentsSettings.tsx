@@ -1,12 +1,31 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CreditCard, Percent, Shield, ExternalLink, ChevronDown, ChevronUp, CheckCircle2, HelpCircle, Loader2 } from 'lucide-react';
+import {
+  CreditCard,
+  Percent,
+  Shield,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  HelpCircle,
+  Loader2,
+  RefreshCw,
+  LayoutDashboard,
+  Unplug,
+} from 'lucide-react';
 import { getStudioId } from '../../lib/supabase';
 import { supabase } from '../../lib/supabase';
 import { getPaymentSettingsFromSupabase, savePaymentSettingsToSupabase } from '../../lib/supabaseDashboard';
-import { startStripeConnectOnboarding } from '../../lib/stripeClient';
+import {
+  startStripeConnectOnboarding,
+  syncStripeConnectStatus,
+  createStripeExpressLoginLink,
+  disconnectStripeConnect,
+} from '../../lib/stripeClient';
 import { maybeStartStripeConnectResumePoll, registerStripeConnectResumePoll } from '../../lib/stripeConnectResume';
 import { useToast } from '../../contexts/ToastContext';
 import { useAutoSave } from '../../hooks/useAutoSave';
+import { Modal } from '../ui/Modal';
 
 const STORAGE_KEY = 'inkflow-payment-settings';
 
@@ -84,6 +103,10 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
   const [connectBusy, setConnectBusy] = useState(false);
   const [connectAccountId, setConnectAccountId] = useState<string | null>(null);
   const [chargesEnabled, setChargesEnabled] = useState(false);
+  const [expressOpening, setExpressOpening] = useState(false);
+  const [refreshBusy, setRefreshBusy] = useState(false);
+  const [disconnectOpen, setDisconnectOpen] = useState(false);
+  const [disconnectBusy, setDisconnectBusy] = useState(false);
 
   const loadConnectStatus = useCallback(async () => {
     if (!studioId || !useSupabase) {
@@ -91,20 +114,31 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
       return;
     }
     setConnectLoading(true);
-    const { data, error } = await supabase
-      .from('inkflow_studios')
-      .select('*')
-      .eq('id', studioId)
-      .maybeSingle();
-    if (!error && data) {
-      setConnectAccountId((data.stripe_connect_account_id as string) || null);
-      setChargesEnabled(data.stripe_connect_charges_enabled === true);
-      setSettings((s) => ({
-        ...s,
-        stripeConnected: data.stripe_connect_charges_enabled === true || s.stripeConnected,
-      }));
+    try {
+      const { data: peek, error: peekErr } = await supabase
+        .from('inkflow_studios')
+        .select('stripe_connect_account_id')
+        .eq('id', studioId)
+        .maybeSingle();
+      if (!peekErr && peek?.stripe_connect_account_id) {
+        await syncStripeConnectStatus(studioId).catch(() => undefined);
+      }
+      const { data, error } = await supabase
+        .from('inkflow_studios')
+        .select('*')
+        .eq('id', studioId)
+        .maybeSingle();
+      if (!error && data) {
+        setConnectAccountId((data.stripe_connect_account_id as string) || null);
+        setChargesEnabled(data.stripe_connect_charges_enabled === true);
+        setSettings((s) => ({
+          ...s,
+          stripeConnected: data.stripe_connect_charges_enabled === true || s.stripeConnected,
+        }));
+      }
+    } finally {
+      setConnectLoading(false);
     }
-    setConnectLoading(false);
   }, [studioId, useSupabase]);
 
   useEffect(() => {
@@ -129,6 +163,48 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
     }
     toast.success('Redirection vers Stripe pour enregistrer ton compte et recevoir les encaissements…');
     window.location.href = result.url;
+  };
+
+  const handleOpenExpressDashboard = async () => {
+    if (!studioId || expressOpening) return;
+    setExpressOpening(true);
+    const result = await createStripeExpressLoginLink(studioId);
+    setExpressOpening(false);
+    if ('error' in result) {
+      toast.error(result.error);
+      return;
+    }
+    window.open(result.url, '_blank', 'noopener,noreferrer');
+    toast.success('Ouvre l’onglet Stripe — connecte-toi si demandé.');
+  };
+
+  const handleRefreshConnectStatus = async () => {
+    if (!studioId || refreshBusy) return;
+    setRefreshBusy(true);
+    const r = await syncStripeConnectStatus(studioId);
+    await loadConnectStatus();
+    setRefreshBusy(false);
+    if ('error' in r) {
+      toast.error(r.error);
+      return;
+    }
+    toast.success('Statut Stripe mis à jour.');
+  };
+
+  const handleConfirmDisconnect = async () => {
+    if (!studioId || disconnectBusy) return;
+    setDisconnectBusy(true);
+    const r = await disconnectStripeConnect(studioId);
+    setDisconnectBusy(false);
+    if ('error' in r) {
+      toast.error(r.error);
+      return;
+    }
+    setDisconnectOpen(false);
+    setConnectAccountId(null);
+    setChargesEnabled(false);
+    setSettings((s) => ({ ...s, stripeConnected: false }));
+    toast.success('Liaison Stripe retirée. Tu pourras reconnecter un compte quand tu veux.');
   };
 
   return (
@@ -164,8 +240,9 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
               ) : (
                 <>
                   <p className="text-sm text-[var(--text-secondary)]">
-                    Connecte un compte Stripe Express pour encaisser les acomptes directement sur ton IBAN. Sans cette étape,
-                    les boutons de paiement côté client restent désactivés côté encaissement.
+                    Connecte un compte Stripe Express pour encaisser les acomptes directement sur ton IBAN. Tant que Stripe
+                    n’est pas actif, la page publique <span className="font-medium text-[var(--text-primary)]">/book</span> de
+                    ton studio affiche un bandeau et le bouton « payer l’acompte » reste désactivé.
                   </p>
                   <a
                     href="https://dashboard.stripe.com/register"
@@ -185,9 +262,9 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
                   href={`https://dashboard.stripe.com/connect/accounts/${connectAccountId}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all min-h-[44px]"
                 >
-                  Ouvrir Stripe Connect
+                  Vue plateforme (InkFlow)
                   <ExternalLink className="w-4 h-4" />
                 </a>
               )}
@@ -204,6 +281,53 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
               )}
             </div>
           </div>
+
+          {/* Tableau de bord vendeur Stripe Express + actions */}
+          {!connectLoading && connectAccountId && (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/10 shrink-0">
+                  <LayoutDashboard className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="font-semibold text-[var(--text-primary)]">Ton espace Stripe (compte connecté)</div>
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Stripe n’autorise pas d’intégrer leur interface en pleine page dans InkFlow. Ce bouton ouvre ton{' '}
+                    <strong className="text-[var(--text-primary)]">tableau de bord Express</strong> (paiements, virements,
+                    infos légales) dans un nouvel onglet — c’est l’expérience officielle Stripe.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => void handleOpenExpressDashboard()}
+                  disabled={expressOpening || !studioId}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:opacity-90 disabled:opacity-60 active:scale-[0.98] transition-all min-h-[44px]"
+                >
+                  {expressOpening ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+                  Ouvrir mon tableau de bord Stripe
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleRefreshConnectStatus()}
+                  disabled={refreshBusy || !studioId}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-60 active:scale-[0.98] transition-all min-h-[44px]"
+                >
+                  {refreshBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  Actualiser le statut
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDisconnectOpen(true)}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/30 active:scale-[0.98] transition-all min-h-[44px]"
+                >
+                  <Unplug className="w-4 h-4" />
+                  Délier Stripe
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Guide : comment créer un compte Stripe */}
           <div className="rounded-xl border border-[var(--border)] overflow-hidden">
@@ -309,6 +433,43 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
           {saving ? 'Enregistrement…' : saved ? 'Enregistré !' : 'Enregistrer'}
         </button>
       </div>
+
+      <Modal
+        isOpen={disconnectOpen}
+        onClose={() => !disconnectBusy && setDisconnectOpen(false)}
+        title="Délier Stripe de ton studio ?"
+        size="sm"
+      >
+        <div className="space-y-4 text-[var(--text-secondary)] text-sm">
+          <p>
+            InkFlow arrêtera d’utiliser ce compte Connect : les paiements en ligne depuis{' '}
+            <span className="font-medium text-[var(--text-primary)]">/book</span> seront désactivés jusqu’à une nouvelle
+            connexion.
+          </p>
+          <p className="text-xs text-[var(--text-tertiary)]">
+            Ton compte peut toujours exister chez Stripe ; tu pourras le reconnecter ou en lier un autre via « Connecter mon
+            compte Stripe ».
+          </p>
+          <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end pt-2">
+            <button
+              type="button"
+              disabled={disconnectBusy}
+              onClick={() => setDisconnectOpen(false)}
+              className="px-4 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all min-h-[44px]"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              disabled={disconnectBusy}
+              onClick={() => void handleConfirmDisconnect()}
+              className="px-4 py-2.5 rounded-xl bg-red-600 text-white font-medium hover:bg-red-500 disabled:opacity-60 active:scale-[0.98] transition-all min-h-[44px]"
+            >
+              {disconnectBusy ? <Loader2 className="w-4 h-4 animate-spin inline" /> : null} Délier
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

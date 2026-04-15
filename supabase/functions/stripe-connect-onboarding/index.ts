@@ -6,7 +6,8 @@ const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+/** URL de l’app (SPA), pas la landing marketing — sinon retour Stripe = page d’accueil au lieu du dashboard. */
+const SITE_URL = (Deno.env.get("SITE_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
 /** Pays du compte Express (ISO 2 lettres). */
 const STRIPE_CONNECT_COUNTRY = (Deno.env.get("STRIPE_CONNECT_COUNTRY") || "FR").trim().toUpperCase();
 

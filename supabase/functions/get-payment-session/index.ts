@@ -7,6 +7,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
+import { applyPaidCheckoutDbState } from "../_shared/applyPaidCheckoutDbState.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -45,18 +46,62 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (payment.status !== "completed") {
-      return new Response(
-        JSON.stringify({ error: "Paiement non finalisé", status: payment.status }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    /** Si le webhook Stripe est en retard ou a échoué, la ligne reste "pending" alors que Stripe est "paid". */
+    let paymentRow = payment;
+    if (paymentRow.status !== "completed") {
+      if (!STRIPE_SECRET_KEY) {
+        return new Response(
+          JSON.stringify({ error: "Paiement non finalisé", status: paymentRow.status }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      const stripeRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
+        headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
+      });
+      if (!stripeRes.ok) {
+        const txt = await stripeRes.text();
+        console.error("[get-payment-session] Stripe retrieve failed:", stripeRes.status, txt.slice(0, 200));
+        return new Response(
+          JSON.stringify({ error: "Paiement non finalisé", status: paymentRow.status }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      const stripeSession = await stripeRes.json() as {
+        id: string;
+        mode?: string;
+        payment_status: string;
+        payment_intent?: string | { id?: string } | null;
+        amount_total?: number | null;
+        metadata?: Record<string, string | undefined> | null;
+      };
+      if (stripeSession.payment_status !== "paid") {
+        return new Response(
+          JSON.stringify({ error: "Paiement non finalisé", status: paymentRow.status }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      await applyPaidCheckoutDbState(supabase, stripeSession, {});
+      const { data: refreshed, error: refErr } = await supabase
+        .from("inkflow_payments")
+        .select("id, studio_id, appointment_id, amount, type, client_name, client_email, status")
+        .eq("stripe_session_id", sessionId)
+        .single();
+      if (refErr || !refreshed || refreshed.status !== "completed") {
+        console.error("[get-payment-session] reconcile failed after Stripe paid", refErr?.message);
+        return new Response(
+          JSON.stringify({ error: "Synchronisation du paiement en cours. Réessayez dans quelques secondes." }),
+          { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      paymentRow = refreshed;
+      console.log("[get-payment-session] reconciled pending row from Stripe API", sessionId);
     }
 
     const result: Record<string, unknown> = {
-      clientName: payment.client_name,
-      clientEmail: payment.client_email,
-      amount: Number(payment.amount),
-      type: payment.type,
+      clientName: paymentRow.client_name,
+      clientEmail: paymentRow.client_email,
+      amount: Number(paymentRow.amount),
+      type: paymentRow.type,
       serviceName: null as string | null,
       studioName: null as string | null,
       appointment: null as {
@@ -71,15 +116,15 @@ Deno.serve(async (req: Request) => {
     const { data: studio } = await supabase
       .from("inkflow_studios")
       .select("studio_name, name")
-      .eq("id", payment.studio_id)
+      .eq("id", paymentRow.studio_id)
       .single();
     result.studioName = (studio?.studio_name || studio?.name || "Le studio") as string;
 
-    if (payment.appointment_id) {
+    if (paymentRow.appointment_id) {
       const { data: apt } = await supabase
         .from("inkflow_appointments")
         .select("date, time, service, location, duration")
-        .eq("id", payment.appointment_id)
+        .eq("id", paymentRow.appointment_id)
         .single();
       if (apt) {
         result.appointment = {

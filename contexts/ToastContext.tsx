@@ -82,14 +82,14 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       <div
         className="fixed z-[9999] pointer-events-none inset-x-0 top-4 flex justify-center px-4"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
-        aria-live="polite"
-        aria-atomic="true"
-        role="status"
       >
         {currentToast && (
           <div
             key={currentToast.id}
-            className={`pointer-events-auto flex items-center gap-2.5 px-4 py-2.5 rounded-full border shadow-xl backdrop-blur-xl animate-slide-down w-auto max-w-[min(400px,calc(100vw-2rem))] ${BG[currentToast.type]}`}
+            role={currentToast.type === 'error' ? 'alert' : 'status'}
+            aria-live={currentToast.type === 'error' ? 'assertive' : 'polite'}
+            aria-atomic="true"
+            className={`pointer-events-auto flex items-center gap-2.5 px-4 py-2.5 rounded-full border shadow-xl backdrop-blur-xl animate-slide-down w-auto max-w-[min(400px,calc(100vw-2rem))] ${BG[currentToast.type]} ${currentToast.type === 'error' ? 'border-l-4 border-l-red-500/80 dark:border-l-red-400/70' : ''}`}
             style={{ boxShadow: '0 8px 32px -4px rgba(0,0,0,0.12), 0 2px 8px -2px rgba(0,0,0,0.08)' }}
           >
             <span className="shrink-0">{ICONS[currentToast.type]}</span>

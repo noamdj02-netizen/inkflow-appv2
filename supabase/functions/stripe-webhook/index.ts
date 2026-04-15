@@ -3,6 +3,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 /** SDK Sentry Deno — aligné sur https://supabase.com/docs/guides/functions/examples/sentry-monitoring */
 import * as Sentry from "https://deno.land/x/sentry/index.mjs";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
+import { applyPaidCheckoutDbState } from "../_shared/applyPaidCheckoutDbState.ts";
 
 const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET") || "";
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
@@ -401,16 +402,9 @@ Deno.serve(async (req: Request) => {
         const clientEmail = session.customer_email || session.metadata?.client_email || "";
         const clientName = session.metadata?.client_name || "Client";
         const serviceName = session.metadata?.service_name || "Service";
-        const flashId = session.metadata?.flash_id;
 
-        await supabase
-          .from("inkflow_payments")
-          .update({
-            status: "completed",
-            stripe_payment_intent: session.payment_intent,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("stripe_session_id", session.id);
+        const receiptUrlForChat = await fetchStripeReceiptUrl(session.id);
+        await applyPaidCheckoutDbState(supabase, session, { receiptUrlForProjectChat: receiptUrlForChat });
 
         let amountRemaining = 0;
         let studioName = "Le studio";
@@ -426,17 +420,6 @@ Deno.serve(async (req: Request) => {
         let studioForEmail: { city: string | null; siret: string | null; slug: string } | null = null;
 
         if (appointmentId) {
-          if (type === "deposit") {
-            await supabase
-              .from("inkflow_appointments")
-              .update({ deposit_paid: true, status: "confirmed", updated_at: new Date().toISOString() })
-              .eq("id", appointmentId);
-          } else {
-            await supabase
-              .from("inkflow_appointments")
-              .update({ deposit_paid: true, updated_at: new Date().toISOString() })
-              .eq("id", appointmentId);
-          }
           const { data: apt } = await supabase
             .from("inkflow_appointments")
             .select("price, deposit, date, time, duration, service")
@@ -453,45 +436,6 @@ Deno.serve(async (req: Request) => {
           typeof session.metadata?.project_request_id === "string"
             ? session.metadata.project_request_id.trim()
             : "";
-        const threadIdFromMeta =
-          typeof session.metadata?.thread_id === "string"
-            ? session.metadata.thread_id.trim()
-            : "";
-
-        if (
-          type === "deposit" &&
-          studioId &&
-          projectRequestId &&
-          session.payment_status === "paid"
-        ) {
-          await supabase
-            .from("inkflow_project_requests")
-            .update({ status: "confirmed" })
-            .eq("id", projectRequestId)
-            .eq("studio_id", studioId);
-
-          const threadForReceipt = threadIdFromMeta || `pr_${projectRequestId}`;
-          const receiptUrlForChat = await fetchStripeReceiptUrl(session.id);
-          const receiptPayload = JSON.stringify({
-            kind: "payment_receipt",
-            amount: amountPaid,
-            currency: "EUR",
-            receiptUrl: receiptUrlForChat || undefined,
-            stripeSessionId: session.id,
-          });
-          const { error: msgErr } = await supabase.from("inkflow_messages").insert({
-            id: `msg_sys_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-            studio_id: studioId,
-            thread_id: threadForReceipt,
-            sender_type: "system",
-            sender_name: "InkFlow",
-            content: receiptPayload,
-            read: false,
-          });
-          if (msgErr) {
-            console.error("[stripe-webhook] inkflow_messages receipt:", msgErr.message);
-          }
-        }
 
         if (studioId) {
           const { data: studio } = await supabase
@@ -537,17 +481,6 @@ Deno.serve(async (req: Request) => {
           } catch (pushErr) {
             console.error("[stripe-webhook] send-push-notification error:", pushErr);
           }
-        }
-
-        if (flashId) {
-          await supabase
-            .from("inkflow_flash_designs")
-            .update({
-              available: false,
-              reserved: true,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", flashId);
         }
 
         if (clientEmail) {

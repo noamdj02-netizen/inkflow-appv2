@@ -49,10 +49,8 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({
       setLoading(true);
       const status = await getCalendarStatus(studioId);
       setGoogleStatus(status);
-    } catch (err) {
+    } catch {
       setGoogleStatus({ connected: false, integration: null });
-      const msg = err instanceof Error ? err.message : 'Impossible de vérifier la connexion.';
-      onToastRef.current?.(msg, 'error');
     } finally {
       setLoading(false);
     }

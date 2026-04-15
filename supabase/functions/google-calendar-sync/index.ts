@@ -119,20 +119,31 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Update existing or create new
+      // Mise à jour d’un événement existant, ou création si absent / supprimé côté Google (404)
       if (apt.google_event_id) {
-        const res = await fetch(`${gcalApi}/${apt.google_event_id}`, {
+        const putRes = await fetch(`${gcalApi}/${apt.google_event_id}`, {
           method: "PUT",
           headers: authHeader,
           body: JSON.stringify(appointmentToGoogleEvent(apt)),
         });
-        if (!res.ok && res.status === 404) {
+        if (putRes.ok) {
+          const updated = await putRes.json();
+          await supabase
+            .from("inkflow_appointments")
+            .update({ calendar_synced_at: new Date().toISOString() })
+            .eq("id", appointmentId);
+          return new Response(
+            JSON.stringify({ success: true, googleEventId: updated.id as string }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (putRes.status === 404) {
           apt.google_event_id = null;
         } else {
-          const updated = await res.json();
+          const errText = await putRes.text();
           return new Response(
-            JSON.stringify({ success: true, googleEventId: updated.id }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({ error: "Erreur mise à jour Google Calendar", details: errText }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
       }
