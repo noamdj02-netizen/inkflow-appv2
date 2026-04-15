@@ -1,30 +1,59 @@
 /**
- * Flux d'accueil : Note du fondateur → Configuration studio
- * Affiché une seule fois aux nouveaux utilisateurs
+ * Flux d'accueil : fondateur → studio → téléphone → photo → SIRET → dispos → Google → notifs → paiements
  */
 import React, { useState, useCallback } from 'react';
 import { OnboardingFounderStep } from './OnboardingFounderStep';
 import { OnboardingStudioStep } from './OnboardingStudioStep';
+import { OnboardingPhoneStep } from './OnboardingPhoneStep';
+import { OnboardingAvatarStep } from './OnboardingAvatarStep';
+import { OnboardingSiretStep } from './OnboardingSiretStep';
 import { OnboardingAvailabilityStep } from './OnboardingAvailabilityStep';
+import { OnboardingEstablishmentStep } from './OnboardingEstablishmentStep';
+import { OnboardingNotificationsStep } from './OnboardingNotificationsStep';
+import { OnboardingPaymentsStep } from './OnboardingPaymentsStep';
 import {
-  isWelcomeDone,
   setWelcomeDone,
   setFounderNoteDone,
   isFounderNoteDone,
   clearJustSignedUp,
+  getWelcomeFlowCheckpoint,
+  setWelcomeFlowCheckpoint,
+  clearWelcomeFlowCheckpoint,
+  clearWelcomeRequired,
 } from '../../lib/welcomeStorage';
 import { supabase } from '../../lib/supabase';
 import { getVitrineDataFromSupabase, saveVitrineDataToSupabase } from '../../lib/supabaseDashboard';
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
+import { useToast } from '../../contexts/ToastContext';
 
 export interface WelcomeOnboardingFlowProps {
-  /** Identifiant stable du compte (id Supabase ou email) — clés localStorage */
   userScopedId: string;
   studioId: string;
   studioSlug: string;
   userEmail: string;
   initialStudioName: string;
   onComplete: (newStudioName?: string) => void;
+  /** Après upload avatar onboarding — sync UI header / sidebar. */
+  onAvatarUrlUpdated?: (publicUrl: string) => void;
+  /** Après enregistrement du nom studio en base (sidebar / header). */
+  onStudioNameUpdated?: (studioName: string) => void;
+}
+
+type WelcomeStep =
+  | 'founder'
+  | 'studio'
+  | 'phone'
+  | 'avatar'
+  | 'siret'
+  | 'availability'
+  | 'establishment'
+  | 'notifications'
+  | 'payments';
+
+function initialWelcomeStep(userScopedId: string): WelcomeStep {
+  const cp = getWelcomeFlowCheckpoint(userScopedId);
+  if (cp) return cp;
+  return isFounderNoteDone(userScopedId) ? 'studio' : 'founder';
 }
 
 export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
@@ -34,61 +63,123 @@ export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
   userEmail,
   initialStudioName,
   onComplete,
+  onAvatarUrlUpdated,
+  onStudioNameUpdated,
 }) => {
-  const [step, setStep] = useState<'founder' | 'studio' | 'availability'>(() =>
-    isFounderNoteDone(userScopedId) ? 'studio' : 'founder',
-  );
+  const toast = useToast();
+  const [step, setStep] = useState<WelcomeStep>(() => initialWelcomeStep(userScopedId));
   const [pendingStudioName, setPendingStudioName] = useState<string | undefined>();
   const [pendingStyles, setPendingStyles] = useState<string[]>([]);
 
   const handleStudioComplete = useCallback(
     async (studioName: string, styles: string[]) => {
-      // Stocker temporairement, on sauvegarde tout à la fin
-      setPendingStudioName(studioName);
-      setPendingStyles(styles);
-      setStep('availability');
+      try {
+        const now = new Date().toISOString();
+        const { error: stErr } = await supabase
+          .from('inkflow_studios')
+          .update({ studio_name: studioName, updated_at: now })
+          .eq('id', studioId);
+        if (stErr) throw new Error(stErr.message);
+
+        const def = defaultVitrineData(studioSlug);
+        const existing = await getVitrineDataFromSupabase(studioId, def);
+        const merged = {
+          ...existing,
+          name: studioName,
+          slug: studioSlug,
+          ...(styles.length > 0 ? { tattoo_styles: styles } : {}),
+        } as typeof existing & { tattoo_styles?: string[] };
+        await saveVitrineDataToSupabase(studioId, merged);
+
+        setPendingStudioName(studioName);
+        setPendingStyles(styles);
+        onStudioNameUpdated?.(studioName);
+        setWelcomeFlowCheckpoint(userScopedId, 'phone');
+        setStep('phone');
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Enregistrement impossible';
+        toast.error(msg);
+        throw e;
+      }
     },
-    []
+    [studioId, studioSlug, userScopedId, onStudioNameUpdated, toast]
   );
+
+  const handlePhoneComplete = useCallback(() => {
+    setWelcomeFlowCheckpoint(userScopedId, 'avatar');
+    setStep('avatar');
+  }, [userScopedId]);
+
+  const handleAvatarComplete = useCallback(() => {
+    setWelcomeFlowCheckpoint(userScopedId, 'siret');
+    setStep('siret');
+  }, [userScopedId]);
+
+  const handleSiretComplete = useCallback(() => {
+    setWelcomeFlowCheckpoint(userScopedId, 'availability');
+    setStep('availability');
+  }, [userScopedId]);
 
   const handleAvailabilityComplete = useCallback(
     async (offDays: number[], bookingWindowDays: number) => {
-      const now = new Date().toISOString();
-      const studioName = pendingStudioName ?? initialStudioName;
+      try {
+        const now = new Date().toISOString();
+        const studioName = pendingStudioName ?? initialStudioName;
 
-      // Mettre à jour le nom du studio + availability_settings
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from('inkflow_studios') as any)
-        .update({
-          studio_name: studioName,
-          availability_settings: { offDays, bookingWindowDays },
-          updated_at: now,
-        })
-        .eq('id', studioId);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: upErr } = await (supabase.from('inkflow_studios') as any)
+          .update({
+            studio_name: studioName,
+            availability_settings: { offDays, bookingWindowDays },
+            updated_at: now,
+          })
+          .eq('id', studioId);
+        if (upErr) throw new Error(upErr.message);
 
-      // Sauvegarder les styles dans la vitrine (JSONB)
-      if (pendingStyles.length > 0) {
         const defaultData = defaultVitrineData(studioSlug);
         const existing = await getVitrineDataFromSupabase(studioId, defaultData);
-        const merged = {
+        const mergedAvail = {
           ...existing,
+          name: studioName,
+          slug: studioSlug,
           tattoo_styles: pendingStyles,
         } as typeof existing & { tattoo_styles?: string[] };
-        await saveVitrineDataToSupabase(studioId, merged);
-      }
+        await saveVitrineDataToSupabase(studioId, mergedAvail);
 
-      setWelcomeDone(userScopedId);
-      clearJustSignedUp();
-      onComplete(studioName);
+        setWelcomeFlowCheckpoint(userScopedId, 'establishment');
+        setStep('establishment');
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Enregistrement impossible');
+      }
     },
-    [userScopedId, studioId, studioSlug, onComplete, pendingStudioName, pendingStyles, initialStudioName]
+    [userScopedId, studioId, studioSlug, pendingStudioName, pendingStyles, initialStudioName, toast]
   );
+
+  const handleEstablishmentComplete = useCallback(() => {
+    setWelcomeFlowCheckpoint(userScopedId, 'notifications');
+    setStep('notifications');
+  }, [userScopedId]);
+
+  const handleNotificationsComplete = useCallback(() => {
+    setWelcomeFlowCheckpoint(userScopedId, 'payments');
+    setStep('payments');
+  }, [userScopedId]);
+
+  const finishWelcome = useCallback(() => {
+    const studioName = pendingStudioName ?? initialStudioName;
+    setWelcomeDone(userScopedId);
+    clearWelcomeFlowCheckpoint(userScopedId);
+    clearWelcomeRequired(userScopedId);
+    clearJustSignedUp();
+    onComplete(studioName);
+  }, [userScopedId, pendingStudioName, initialStudioName, onComplete]);
 
   if (step === 'founder') {
     return (
       <OnboardingFounderStep
         onNext={() => {
           setFounderNoteDone(userScopedId);
+          setWelcomeFlowCheckpoint(userScopedId, 'studio');
           setStep('studio');
         }}
       />
@@ -104,5 +195,55 @@ export const WelcomeOnboardingFlow: React.FC<WelcomeOnboardingFlowProps> = ({
     );
   }
 
-  return <OnboardingAvailabilityStep onComplete={handleAvailabilityComplete} />;
+  if (step === 'phone') {
+    return (
+      <OnboardingPhoneStep
+        studioId={studioId}
+        studioSlug={studioSlug}
+        userEmail={userEmail}
+        onComplete={handlePhoneComplete}
+      />
+    );
+  }
+
+  if (step === 'avatar') {
+    return (
+      <OnboardingAvatarStep
+        studioId={studioId}
+        onAvatarSaved={onAvatarUrlUpdated}
+        onComplete={handleAvatarComplete}
+      />
+    );
+  }
+
+  if (step === 'siret') {
+    return <OnboardingSiretStep studioId={studioId} onComplete={handleSiretComplete} />;
+  }
+
+  if (step === 'availability') {
+    return <OnboardingAvailabilityStep onComplete={handleAvailabilityComplete} />;
+  }
+
+  if (step === 'establishment') {
+    return (
+      <OnboardingEstablishmentStep
+        studioId={studioId}
+        studioNameHint={pendingStudioName ?? initialStudioName}
+        onComplete={handleEstablishmentComplete}
+      />
+    );
+  }
+
+  if (step === 'notifications') {
+    return <OnboardingNotificationsStep studioId={studioId} onComplete={handleNotificationsComplete} />;
+  }
+
+  return (
+    <OnboardingPaymentsStep
+      userScopedId={userScopedId}
+      studioId={studioId}
+      studioSlug={studioSlug}
+      onComplete={finishWelcome}
+    />
+  );
 };

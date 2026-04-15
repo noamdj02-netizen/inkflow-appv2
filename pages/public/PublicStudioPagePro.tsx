@@ -324,7 +324,15 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         setFlashDepositLoading(false);
         return;
       }
-      const amount = (selectedFlash as { depositAmount?: number }).depositAmount ?? (Math.round((selectedFlash.price ?? 0) * 0.3) || 30);
+      /** Aligné sur create-checkout-session (flash sans RDV) : deposit_amount en base, sinon 30 % (min 10 € si prix > 0, sinon 30 €). */
+      const da = (selectedFlash as { depositAmount?: number }).depositAmount;
+      const price = selectedFlash.price ?? 0;
+      const amount =
+        da != null && da > 0
+          ? da
+          : price > 0
+            ? Math.max(Math.round((price * 30) / 100), 10)
+            : 30;
       const result = await createCheckoutSession({
         studioId,
         studioSlug,

@@ -4,6 +4,7 @@
  * Couleurs : `lib/clientDashboardTheme.ts` → `CLIENT_DASHBOARD_THEME`.
  */
 import React, { Fragment, useEffect, useRef, useState, useCallback, useMemo, useReducer } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import L from 'leaflet';
 import {
   Home,
@@ -2868,6 +2869,7 @@ export function ClientDashboard() {
   const firstName = userName.split(' ')[0];
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bonsoir' : 'Bonsoir';
+  const prefersReducedMotion = useReducedMotion();
 
   return (
     <div
@@ -3093,6 +3095,15 @@ export function ClientDashboard() {
             className="app-shell-content pt-2 sm:pt-4 md:pt-5 dashboard-pages-bg min-w-0"
           >
             <div className="min-h-0 w-full max-w-full flex-1 overflow-x-hidden lg:min-h-[min(70dvh,720px)]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={tab}
+                className="min-w-0"
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+              >
         {tab === 'explore' && (
           <TabExplore
             studios={studios}
@@ -3334,6 +3345,8 @@ export function ClientDashboard() {
           </div>
 
         </div>}
+              </motion.div>
+            </AnimatePresence>
             </div>
           </div>
         </div>

@@ -2,9 +2,9 @@
  * Onboarding Étape 1 — Note du fondateur
  * Style épuré aligné sur la page login
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Loader2 } from 'lucide-react';
 import { Logo } from '../Logo';
 
 const FOUNDER_NOTE = `Bienvenue dans InkFlow.
@@ -13,11 +13,25 @@ J'ai créé cette app parce que, comme toi, j'ai passé des heures à gérer mes
 
 InkFlow, c'est l'outil que j'aurais voulu avoir dès mon premier jour en tant que tatoueur.`;
 
+/** Délai minimum avant de pouvoir continuer (lecture). */
+const FOUNDER_CONTINUE_DELAY_SEC = 6;
+
 export interface OnboardingFounderStepProps {
   onNext: () => void;
 }
 
 export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ onNext }) => {
+  const [secondsLeft, setSecondsLeft] = useState(FOUNDER_CONTINUE_DELAY_SEC);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setSecondsLeft((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const canContinue = secondsLeft <= 0;
+
   return (
     <motion.div
       className="fixed inset-0 z-[100] flex min-h-screen bg-white dark:bg-black"
@@ -67,10 +81,20 @@ export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ on
             <button
               type="button"
               onClick={onNext}
-              className="w-full min-h-[48px] py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center justify-center gap-2 transition-colors active:scale-[0.98] touch-manipulation"
+              disabled={!canContinue}
+              className="w-full min-h-[48px] py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 dark:disabled:text-zinc-400 disabled:cursor-not-allowed text-white font-semibold flex items-center justify-center gap-2 transition-colors active:scale-[0.98] touch-manipulation"
             >
-              C&apos;est parti
-              <ChevronRight className="w-5 h-5" />
+              {!canContinue ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin opacity-80" />
+                  Lecture… {secondsLeft}s
+                </>
+              ) : (
+                <>
+                  C&apos;est parti
+                  <ChevronRight className="w-5 h-5" />
+                </>
+              )}
             </button>
           </motion.div>
         </div>

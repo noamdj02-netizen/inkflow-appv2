@@ -5,7 +5,8 @@ interface CreateCheckoutParams {
   studioId: string;
   /** Slug public du studio pour les URLs de redirection Stripe (évite "Studio introuvable" après paiement). */
   studioSlug?: string;
-  appointmentId: string;
+  /** Vide pour paiement flash vitrine sans RDV préalable. */
+  appointmentId?: string;
   /** ID du flash (vitrine) — utilisé pour mettre available=false à l'acompte payé. */
   flashId?: string;
   /** Montant en euros (ex: 50 pour 50€). Le backend convertit en centimes pour Stripe. */
@@ -144,14 +145,26 @@ interface CreateSubscriptionParams {
 
 export async function createSubscription(params: CreateSubscriptionParams): Promise<string | null> {
   try {
-    const { data, error } = await supabase.functions.invoke('create-subscription', {
-      body: params,
+    const { url: baseUrl, key } = getSupabaseConfig();
+    if (!baseUrl || !key) return null;
+    const token = await resolveAccessTokenForEdgeFn();
+    if (!token) return null;
+    const fnUrl = `${baseUrl.replace(/\/$/, '')}/functions/v1/create-subscription`;
+    const res = await fetch(fnUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        apikey: key,
+      },
+      body: JSON.stringify(params),
     });
-    if (error) {
+    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+    if (!res.ok || !data?.url) {
       return null;
     }
-    return data?.url || null;
-  } catch (err) {
+    return data.url;
+  } catch {
     return null;
   }
 }
@@ -391,13 +404,20 @@ export async function createPortalSession(params: {
   if (!baseUrl || !key) return { error: 'Supabase non configuré.' };
 
   try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return { error: 'Session expirée : reconnecte-toi pour gérer la facturation.' };
+    }
+
     const fnUrl = `${baseUrl.replace(/\/$/, '')}/functions/v1/create-portal-session`;
 
     const res = await fetch(fnUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${key}`,
+        Authorization: `Bearer ${accessToken}`,
+        apikey: key,
       },
       body: JSON.stringify(params),
     });
@@ -412,7 +432,7 @@ export async function createPortalSession(params: {
     const message = err instanceof Error ? err.message : String(err);
     return {
       error: message === 'Failed to fetch'
-        ? 'Impossible de contacter le serveur. Vérifiez votre connexion et que l\'Edge Function create-portal-session est déployée (npx supabase functions deploy create-portal-session --no-verify-jwt).'
+        ? 'Impossible de contacter le serveur. Vérifiez votre connexion et que l\'Edge Function create-portal-session est déployée.'
         : message,
     };
   }

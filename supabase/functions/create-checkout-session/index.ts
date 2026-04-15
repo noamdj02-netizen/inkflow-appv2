@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
+import { allowRateLimit, clientIpFromRequest } from "../_shared/rateLimit.ts";
+import { amountsMatchClientAndServer, resolveExpectedCheckoutAmountEur } from "../_shared/checkoutExpectedAmount.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -18,7 +20,8 @@ const MAX_AMOUNT_EUR = 10000;
 interface CheckoutPayload {
   studioId: string;
   studioSlug?: string;
-  appointmentId: string;
+  /** Vide pour paiement flash vitrine sans RDV préalable */
+  appointmentId?: string;
   flashId?: string;
   amount: number;
   clientName: string;
@@ -40,6 +43,9 @@ function trimMeta(s: string | undefined, max: number): string {
   return t.length <= max ? t : t.slice(0, max) + "…";
 }
 
+const CHECKOUT_RATE_MAX = 45;
+const CHECKOUT_RATE_WINDOW_MS = 60_000;
+
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
@@ -48,7 +54,22 @@ Deno.serve(async (req: Request) => {
     return corsResponse(origin);
   }
 
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+
   try {
+    const ip = clientIpFromRequest(req);
+    if (!allowRateLimit(`checkout:${ip}`, CHECKOUT_RATE_MAX, CHECKOUT_RATE_WINDOW_MS)) {
+      return new Response(JSON.stringify({ error: "Trop de requêtes. Réessayez dans une minute." }), {
+        status: 429,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     if (!STRIPE_SECRET_KEY) {
       console.error("STRIPE_SECRET_KEY non configurée");
       return new Response(
@@ -59,9 +80,9 @@ Deno.serve(async (req: Request) => {
 
     const payload: CheckoutPayload = await req.json();
 
-    if (!payload.studioId || !payload.amount || !payload.clientEmail) {
+    if (!payload.studioId || !payload.clientEmail) {
       return new Response(
-        JSON.stringify({ error: "studioId, amount et clientEmail sont requis." }),
+        JSON.stringify({ error: "studioId et clientEmail sont requis." }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -74,6 +95,32 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const expected = await resolveExpectedCheckoutAmountEur(supabase, {
+      studioId: payload.studioId,
+      appointmentId: payload.appointmentId,
+      flashId: payload.flashId,
+      type: payload.type === "full_payment" ? "full_payment" : "deposit",
+    });
+
+    if (!expected.ok) {
+      return new Response(JSON.stringify({ error: expected.error }), {
+        status: expected.status,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (!amountsMatchClientAndServer(payload.amount, expected.amountEur)) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Montant incohérent avec le rendez-vous ou le flash. Rechargez la page et réessayez (ou contactez le studio).",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    const validatedAmountEur = expected.amountEur;
     const { data: studioRow, error: studioLoadErr } = await supabase
       .from("inkflow_studios")
       .select("id, stripe_connect_account_id, stripe_connect_charges_enabled")
@@ -116,7 +163,7 @@ Deno.serve(async (req: Request) => {
       ? `InkFlow - ${payload.clientName} — ${detailLine}`
       : `InkFlow - ${payload.clientName}`;
 
-    const amountCents = Math.round(payload.amount * 100);
+    const amountCents = Math.round(validatedAmountEur * 100);
     const urlSegment = (payload.studioSlug && /^[a-z0-9-]+$/.test(payload.studioSlug))
       ? payload.studioSlug
       : encodeURIComponent(payload.studioId);
@@ -191,10 +238,10 @@ Deno.serve(async (req: Request) => {
     await supabase.from("inkflow_payments").insert({
       id: `pay_${Date.now()}`,
       studio_id: payload.studioId,
-      appointment_id: payload.appointmentId || null,
+      appointment_id: payload.appointmentId?.trim() || null,
       project_request_id: projectRequestMeta || null,
       stripe_session_id: session.id,
-      amount: payload.amount,
+      amount: validatedAmountEur,
       currency: "eur",
       status: "pending",
       type: payload.type,

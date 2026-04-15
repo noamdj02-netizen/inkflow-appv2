@@ -695,10 +695,18 @@ export async function saveAppointmentToSupabase(studioId: string, apt: Appointme
 
 /**
  * RDV placeholder lié à une demande projet (messagerie / carte paiement) — réutilise la ligne existante si déjà créée.
+ * `depositEuros` : enregistré en base pour que l’Edge Function checkout valide le montant côté serveur.
  */
 export async function ensurePlaceholderAppointmentForProject(
   studioId: string,
-  pr: { id: string; clientName: string; clientEmail: string; description: string }
+  pr: {
+    id: string;
+    clientName: string;
+    clientEmail: string;
+    description: string;
+    /** Acompte (€) — synchronisé sur la ligne avant paiement Stripe */
+    depositEuros?: number;
+  }
 ): Promise<string> {
   const { data: existing } = await supabase
     .from('inkflow_appointments')
@@ -706,7 +714,17 @@ export async function ensurePlaceholderAppointmentForProject(
     .eq('studio_id', studioId)
     .eq('project_request_id', pr.id)
     .maybeSingle();
-  if (existing?.id) return existing.id as string;
+  if (existing?.id) {
+    if (pr.depositEuros != null && pr.depositEuros > 0) {
+      const now = new Date().toISOString();
+      await supabase
+        .from('inkflow_appointments')
+        .update({ deposit: pr.depositEuros, updated_at: now })
+        .eq('id', existing.id)
+        .eq('studio_id', studioId);
+    }
+    return existing.id as string;
+  }
 
   const now = new Date().toISOString();
   const today = new Date().toISOString().split('T')[0];
@@ -723,7 +741,7 @@ export async function ensurePlaceholderAppointmentForProject(
     service: `Projet - ${serviceName}`,
     duration: 60,
     price: 0,
-    deposit: 0,
+    deposit: pr.depositEuros ?? 0,
     depositPaid: false,
     status: 'pending',
     tattooType: 'custom',

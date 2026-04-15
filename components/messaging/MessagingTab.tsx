@@ -411,6 +411,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
         clientName: pr.client_name,
         clientEmail: pr.client_email,
         description: pr.description,
+        depositEuros: amt,
       });
       const serviceName =
         pr.description.length > 50 ? `${pr.description.slice(0, 47)}...` : pr.description;

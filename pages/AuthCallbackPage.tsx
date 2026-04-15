@@ -7,7 +7,7 @@ import { sendTattooerWelcomeEmailIfNeeded } from '../lib/sendNotification';
 import { ensureStudio } from '../lib/supabaseDashboard';
 import { resolvePostLoginPath } from '../lib/postLoginRedirect';
 import { CLIENT_ONBOARDING_FINALIZE_PATH } from '../lib/clientOnboardingGate';
-import { markJustSignedUp } from '../lib/welcomeStorage';
+import { markJustSignedUp, markWelcomeRequired } from '../lib/welcomeStorage';
 
 export const AuthCallbackPage: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -83,6 +83,8 @@ export const AuthCallbackPage: React.FC = () => {
           createdMs > 0 && Date.now() - createdMs < 5 * 60 * 1000;
         if (linkType === 'signup' || isVeryNewAccount) {
           markJustSignedUp();
+          const scope = u.email?.trim().toLowerCase() || u.id;
+          if (scope) markWelcomeRequired(scope);
         }
       }
       if (!isClientFlow) {

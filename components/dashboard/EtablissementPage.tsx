@@ -8,6 +8,7 @@ import {
 import { useToast } from '../../contexts/ToastContext';
 import type { ArtistAccount } from '../../types';
 import { looksLikeShortMapsShareLink, normalizeMapsPasteInput, parsePlaceIdFromPaste } from '../../lib/parseGooglePlaceId';
+import { validateSiret, formatSiret } from '../../lib/siret';
 import { resolveMapsPasteViaEdge, searchGooglePlaces, formatGooglePlacesInvokeError } from '../../lib/googlePlaces';
 import { GooglePlaceMapPreview } from './GooglePlaceMapPreview';
 import { ArtistManager } from './ArtistManager';
@@ -64,24 +65,6 @@ interface EtablissementPageProps {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function validateSiret(s: string): boolean {
-  const clean = s.replace(/\s/g, '');
-  if (clean.length !== 14 || !/^\d{14}$/.test(clean)) return false;
-  // Luhn-like check (Somme des chiffres * alternance)
-  let sum = 0;
-  for (let i = 0; i < 14; i++) {
-    let n = parseInt(clean[i], 10);
-    if (i % 2 === 0) { n *= 2; if (n > 9) n -= 9; }
-    sum += n;
-  }
-  return sum % 10 === 0;
-}
-
-function formatSiret(v: string): string {
-  const digits = v.replace(/\D/g, '').slice(0, 14);
-  return digits.replace(/(\d{3})(?=\d)/g, '$1 ').trim();
-}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 

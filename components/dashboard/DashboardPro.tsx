@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, ClipboardList, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen, Smartphone, Heart, Globe, FileCheck, Crown, ListOrdered, Eye, EyeOff, PanelsTopLeft, HelpCircle, MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
@@ -37,6 +38,7 @@ import { DEFAULT_STUDIO_DASHBOARD_PREFERENCES } from '../../types/studioPreferen
 import { isModuleEnabled } from '../../lib/dashboardModuleVisibility';
 import { isStudioAvailabilityConfigured } from '../../lib/studioAvailabilityConfigured';
 import { isStudioStripeConnected } from '../../lib/studioPaymentConfigured';
+import { setStripeConnectResume } from '../../lib/stripeConnectResume';
 
 const FinanceDashboard = lazy(() => import('./FinanceDashboard').then(m => ({ default: m.FinanceDashboard })));
 const DepositsPage = lazy(() => import('./DepositsPage').then(m => ({ default: m.DepositsPage })));
@@ -66,7 +68,7 @@ import { ClientPreviewDrawer } from './ClientPreviewDrawer';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
 import { WelcomeOnboardingFlow } from '../onboarding/WelcomeOnboardingFlow';
 import { shouldShowWelcomeFlow } from '../../lib/shouldShowWelcomeFlow';
-import { isJustSignedUp, clearJustSignedUp } from '../../lib/welcomeStorage';
+import { isJustSignedUp } from '../../lib/welcomeStorage';
 import { supabase } from '../../lib/supabase';
 import {
   getWaitlistFromSupabase,
@@ -114,6 +116,14 @@ const tabs: { id: TabId | 'referral'; label: string; icon: React.ReactNode; badg
   // { id: 'referral', label: '🎁 Mois offerts', icon: <Gift {...iconProps} />, href: '/referral' }, // V2
   { id: 'settings', label: 'Paramètres', icon: <Settings {...iconProps} /> },
 ];
+
+/** Lignes de nav principale (sidebar) — bordure gauche emerald à l’état actif */
+const SIDEBAR_NAV_ROW =
+  'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all active:scale-[0.98] motion-reduce:active:scale-100 border-l-4';
+const SIDEBAR_NAV_ACTIVE =
+  'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border-l-emerald-500';
+const SIDEBAR_NAV_IDLE =
+  'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 border-l-transparent';
 
 type SettingsTabId =
   | 'home'
@@ -303,6 +313,16 @@ export const DashboardPro: React.FC = () => {
     if (activeTab === 'settings') return 'settings';
     return map[activeTab] ?? 'general';
   }, [activeTab]);
+
+  const prefersReducedMotion = useReducedMotion();
+  const dashboardPanelKey = useMemo(() => {
+    if (activeTab === 'settings') return `settings-${settingsTab}`;
+    if (activeTab === 'clients') return `clients-${clientsView}`;
+    if (activeTab === 'finance') return `finance-${financeView}`;
+    if (activeTab === 'appointments') return `appointments-${planningView}`;
+    if (activeTab === 'requests') return `requests-${requestsSubTab}`;
+    return activeTab;
+  }, [activeTab, settingsTab, clientsView, financeView, planningView, requestsSubTab]);
 
   const handleSetupNavigate = useCallback(
     (target: 'settings-vitrine' | 'settings-availability' | 'settings-payments' | 'flash' | 'appointments') => {
@@ -524,7 +544,7 @@ export const DashboardPro: React.FC = () => {
   useEffect(() => {
     if (!studioId || !useSupabase || loading) return;
     if (!isJustSignedUp()) return;
-    clearJustSignedUp();
+    /** Ne pas appeler clearJustSignedUp ici : ça fermait l’overlay d’onboarding avant la fin du flux. */
     setGeneralSaved(true);
     void refreshStudioSubscription();
     const t = window.setTimeout(() => setGeneralSaved(false), 8000);
@@ -787,6 +807,10 @@ export const DashboardPro: React.FC = () => {
     }
     /** Retour onboarding Stripe Connect : ?settings=payments&stripe_connect=return */
     if (params.get('settings') === 'payments') {
+      const sc = params.get('stripe_connect');
+      if (sc === 'return' || sc === 'refresh') {
+        setStripeConnectResume(sc);
+      }
       const next = new URLSearchParams(window.location.search);
       next.delete('settings');
       next.delete('stripe_connect');
@@ -1210,11 +1234,12 @@ export const DashboardPro: React.FC = () => {
       .slice(0, 3);
   }, [appointments]);
 
-  const welcomeUserKey = user?.id ?? user?.email ?? '';
+  /** Clé stable pour l’onboarding : e-mail normalisé (aligné inscription), sinon id Supabase. */
+  const welcomeUserKey = (user?.email?.trim().toLowerCase() || user?.id || '') as string;
   const showWelcome =
     useSupabase &&
     welcomeUserKey &&
-    shouldShowWelcomeFlow(welcomeUserKey) &&
+    shouldShowWelcomeFlow(user?.email, user?.id) &&
     !welcomeComplete &&
     studioId &&
     studioSlug &&
@@ -1283,6 +1308,8 @@ export const DashboardPro: React.FC = () => {
           studioSlug={studioSlug}
           userEmail={user.email}
           initialStudioName={user.studioName || generalStudioName || 'Mon studio'}
+          onAvatarUrlUpdated={(url) => updateUser({ avatar: url })}
+          onStudioNameUpdated={(name) => updateUser({ studioName: name })}
           onComplete={(newStudioName) => {
             setWelcomeComplete(true);
             if (newStudioName) updateUser({ studioName: newStudioName });
@@ -1291,13 +1318,17 @@ export const DashboardPro: React.FC = () => {
       )}
       {/* Mobile overlay — backdrop semi-transparent (zone cliquable pour fermer) */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setSidebarOpen(false)} aria-hidden="true" />
+        <div
+          className="fixed inset-0 z-40 lg:hidden bg-black/50 backdrop-blur-[2px] motion-reduce:backdrop-blur-none transition-opacity duration-200"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
       )}
 
       <div className="app-shell-row">
         {/* ====== SIDEBAR — Style ByeWind avec Favoris/Récents et sous-menus ====== */}
         <aside
-          className={`fixed lg:static inset-y-0 left-0 z-[60] w-[240px] max-w-[85vw] border-r border-zinc-200 dark:border-zinc-800 flex flex-col min-h-0 transform transition-transform duration-200 ease-out lg:translate-x-0 app-shell-sidebar ${
+          className={`fixed lg:static inset-y-0 left-0 z-[60] w-[260px] max-w-[88vw] sm:max-w-[85vw] border-r border-zinc-200 dark:border-zinc-800 flex flex-col min-h-0 transform transition-transform duration-200 ease-out motion-reduce:transition-none rounded-r-2xl lg:rounded-none shadow-2xl shadow-zinc-900/10 dark:shadow-black/50 lg:shadow-none app-shell-sidebar ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           }`}
         >
@@ -1322,25 +1353,35 @@ export const DashboardPro: React.FC = () => {
             </button>
           </div>
 
-          {/* Favoris & Récents */}
+          {/* Favoris & Récents — pill container (aligné charte Paramètres / SaaS) */}
           <div className="relative z-10 px-4 pt-4 pb-2">
-            <div className="flex items-center gap-3 mb-2">
-              <button 
+            <div
+              className="flex rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800 p-1 gap-0.5 mb-2"
+              role="tablist"
+              aria-label="Raccourcis sidebar"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sidebarFavTab === 'favorites'}
                 onClick={() => setSidebarFavTab('favorites')}
-                className={`text-xs font-semibold pb-0.5 transition-colors ${
-                  sidebarFavTab === 'favorites' 
-                    ? 'text-zinc-700 dark:text-zinc-200 border-b border-zinc-500 dark:border-zinc-400' 
-                    : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-400'
+                className={`flex-1 min-h-[40px] rounded-xl text-xs font-semibold transition-all active:scale-[0.98] motion-reduce:active:scale-100 ${
+                  sidebarFavTab === 'favorites'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
                 }`}
               >
                 Favoris
               </button>
-              <button 
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sidebarFavTab === 'recent'}
                 onClick={() => setSidebarFavTab('recent')}
-                className={`text-xs font-medium transition-colors ${
-                  sidebarFavTab === 'recent' 
-                    ? 'text-zinc-700 dark:text-zinc-200 border-b border-zinc-500 dark:border-zinc-400' 
-                    : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-400'
+                className={`flex-1 min-h-[40px] rounded-xl text-xs font-semibold transition-all active:scale-[0.98] motion-reduce:active:scale-100 ${
+                  sidebarFavTab === 'recent'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
                 }`}
               >
                 Récents
@@ -1353,14 +1394,14 @@ export const DashboardPro: React.FC = () => {
                     onClick={() => handleSidebarNav(() => { setActiveTab('overview'); setSidebarOpen(false); })}
                     className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all w-full"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500/50 flex-shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 flex-shrink-0" />
                     Vue d'ensemble
                   </button>
                   <button
                     onClick={() => handleSidebarNav(() => { setActiveTab('appointments'); setSidebarOpen(false); })}
                     className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all w-full"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500/50 flex-shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 flex-shrink-0" />
                     Rendez-vous
                   </button>
                 </>
@@ -1397,10 +1438,8 @@ export const DashboardPro: React.FC = () => {
                 {/* Vue d'ensemble */}
                 <button
                   onClick={() => handleSidebarNav(() => { setActiveTab('overview'); setSidebarOpen(false); })}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                    activeTab === 'overview'
-                      ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                  className={`${SIDEBAR_NAV_ROW} ${
+                    activeTab === 'overview' ? SIDEBAR_NAV_ACTIVE : SIDEBAR_NAV_IDLE
                   }`}
                 >
                   <LayoutGrid className="w-4 h-4 flex-shrink-0" />
@@ -1412,10 +1451,8 @@ export const DashboardPro: React.FC = () => {
                 <div>
                   <button
                     onClick={() => setExpandedMenus(prev => ({ ...prev, finance: !prev.finance }))}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                      activeTab === 'finance'
-                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                    className={`${SIDEBAR_NAV_ROW} ${
+                      activeTab === 'finance' ? SIDEBAR_NAV_ACTIVE : SIDEBAR_NAV_IDLE
                     }`}
                   >
                     <BarChart3 className="w-4 h-4 flex-shrink-0" />
@@ -1425,11 +1462,11 @@ export const DashboardPro: React.FC = () => {
                   {expandedMenus.finance && (
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('finance'); setFinanceView('revenus'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'finance' && financeView === 'revenus' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'finance' && financeView === 'revenus' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'finance' && financeView === 'revenus' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Revenus
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('finance'); setFinanceView('acomptes'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'finance' && financeView === 'acomptes' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'finance' && financeView === 'acomptes' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'finance' && financeView === 'acomptes' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Acomptes
                       </button>
                       {/* V2: Analytics/Statistiques avancées masquées pour le MVP */}
@@ -1443,10 +1480,8 @@ export const DashboardPro: React.FC = () => {
                 <div>
                   <button
                     onClick={() => setExpandedMenus(prev => ({ ...prev, planning: !prev.planning }))}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                      activeTab === 'appointments'
-                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                    className={`${SIDEBAR_NAV_ROW} ${
+                      activeTab === 'appointments' ? SIDEBAR_NAV_ACTIVE : SIDEBAR_NAV_IDLE
                     }`}
                   >
                     <Calendar className="w-4 h-4 flex-shrink-0" />
@@ -1456,11 +1491,11 @@ export const DashboardPro: React.FC = () => {
                   {expandedMenus.planning && (
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('appointments'); setPlanningView('week'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'appointments' && planningView === 'week' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'appointments' && planningView === 'week' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'appointments' && planningView === 'week' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Vue semaine
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('appointments'); setPlanningView('month'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'appointments' && planningView === 'month' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'appointments' && planningView === 'month' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'appointments' && planningView === 'month' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Vue mois
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('availability'); setSidebarOpen(false); })} className="w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all">
@@ -1482,10 +1517,8 @@ export const DashboardPro: React.FC = () => {
                 <div>
                   <button
                     onClick={() => setExpandedMenus(prev => ({ ...prev, requests: !prev.requests }))}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                      activeTab === 'requests'
-                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                    className={`${SIDEBAR_NAV_ROW} ${
+                      activeTab === 'requests' ? SIDEBAR_NAV_ACTIVE : SIDEBAR_NAV_IDLE
                     }`}
                   >
                     <ClipboardList className="w-4 h-4 flex-shrink-0" />
@@ -1500,28 +1533,28 @@ export const DashboardPro: React.FC = () => {
                   {expandedMenus.requests && (
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setRequestsSubTab('rdv'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         <span className="flex-1 text-left">En attente</span>
                         {demandes.pendingRdv > 0 && (
                           <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">{demandes.pendingRdv > 9 ? '9+' : demandes.pendingRdv}</span>
                         )}
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setRequestsSubTab('bookings'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         <span className="flex-1 text-left">Vitrine</span>
                         {demandes.pendingVitrine > 0 && (
                           <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">{demandes.pendingVitrine > 9 ? '9+' : demandes.pendingVitrine}</span>
                         )}
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setRequestsSubTab('projects'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         <span className="flex-1 text-left">Projets</span>
                         {demandes.pendingProjects > 0 && (
                           <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">{demandes.pendingProjects > 9 ? '9+' : demandes.pendingProjects}</span>
                         )}
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setRequestsSubTab('history'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'history' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'history' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'history' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Historique
                       </button>
                     </div>
@@ -1537,10 +1570,8 @@ export const DashboardPro: React.FC = () => {
                       setSidebarOpen(false);
                     })
                   }
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                    activeTab === 'messaging'
-                      ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                  className={`${SIDEBAR_NAV_ROW} ${
+                    activeTab === 'messaging' ? SIDEBAR_NAV_ACTIVE : SIDEBAR_NAV_IDLE
                   }`}
                 >
                   <MessageSquare className="w-4 h-4 flex-shrink-0" />
@@ -1556,10 +1587,8 @@ export const DashboardPro: React.FC = () => {
                 <div>
                   <button
                     onClick={() => setExpandedMenus(prev => ({ ...prev, clients: !prev.clients }))}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                      activeTab === 'clients'
-                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                    className={`${SIDEBAR_NAV_ROW} ${
+                      activeTab === 'clients' ? SIDEBAR_NAV_ACTIVE : SIDEBAR_NAV_IDLE
                     }`}
                   >
                     <Users className="w-4 h-4 flex-shrink-0" />
@@ -1569,16 +1598,16 @@ export const DashboardPro: React.FC = () => {
                   {expandedMenus.clients && (
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setClientsView('overview'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'overview' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'overview' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'overview' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Vue d'ensemble
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setClientsView('projects'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'projects' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'projects' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'projects' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Projets
                       </button>
                       {moduleFlags.loyalty && (
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setClientsView('loyalty'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'clients' && clientsView === 'loyalty' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'loyalty' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'clients' && clientsView === 'loyalty' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Fidélité
                       </button>
                       )}
@@ -1591,10 +1620,10 @@ export const DashboardPro: React.FC = () => {
                 <div>
                   <button
                     onClick={() => setExpandedMenus(prev => ({ ...prev, vitrine: !prev.vitrine }))}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                    className={`${SIDEBAR_NAV_ROW} ${
                       activeTab === 'flash' || activeTab === 'portfolio' || (activeTab === 'settings' && settingsTab === 'vitrine')
-                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                        ? SIDEBAR_NAV_ACTIVE
+                        : SIDEBAR_NAV_IDLE
                     }`}
                   >
                     <FolderOpen className="w-4 h-4 flex-shrink-0" />
@@ -1605,19 +1634,19 @@ export const DashboardPro: React.FC = () => {
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
                       {moduleFlags.flashShop && (
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('flash'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'flash' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'flash' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'flash' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Galerie Flash
                       </button>
                       )}
                       {moduleFlags.flashShop && (
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('portfolio'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'portfolio' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'portfolio' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'portfolio' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Portfolio
                       </button>
                       )}
                       {moduleFlags.vitrine && (
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('vitrine'); setSidebarOpen(false); }, true)} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Personnaliser
                       </button>
                       )}
@@ -1643,10 +1672,8 @@ export const DashboardPro: React.FC = () => {
                 <div>
                   <button
                     onClick={() => setExpandedMenus(prev => ({ ...prev, settings: !prev.settings }))}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                      activeTab === 'settings'
-                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
-                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                    className={`${SIDEBAR_NAV_ROW} ${
+                      activeTab === 'settings' ? SIDEBAR_NAV_ACTIVE : SIDEBAR_NAV_IDLE
                     }`}
                   >
                     <Settings className="w-4 h-4 flex-shrink-0" />
@@ -1656,11 +1683,11 @@ export const DashboardPro: React.FC = () => {
                   {expandedMenus.settings && (
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('home'); setSidebarOpen(false); }, true)} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'home' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'home' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'home' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Tous les paramètres
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('account'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'account' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'account' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'account' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Mon compte
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('etablissement'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'etablissement' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
@@ -1668,12 +1695,12 @@ export const DashboardPro: React.FC = () => {
                         Établissement
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('billing'); setSidebarOpen(false); }, true)} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'billing' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'billing' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'billing' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Abonnement
                       </button>
                       {moduleFlags.vitrine && (
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('vitrine'); setSidebarOpen(false); }, true)} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'vitrine' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Vitrine
                       </button>
                       )}
@@ -1691,7 +1718,7 @@ export const DashboardPro: React.FC = () => {
               href="/client/dashboard"
               target="_blank"
               rel="noreferrer"
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all active:scale-[0.98] motion-reduce:active:scale-100 border-l-4 border-l-transparent"
             >
               <User className="w-4 h-4 flex-shrink-0" />
               <span>Espace Client</span>
@@ -1708,7 +1735,7 @@ export const DashboardPro: React.FC = () => {
             */}
             <button
               onClick={() => void logout()}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all active:scale-[0.98] motion-reduce:active:scale-100 border-l-4 border-l-transparent"
             >
               <LogOut className="w-4 h-4 flex-shrink-0" />
               <span>Déconnexion</span>
@@ -2128,7 +2155,7 @@ export const DashboardPro: React.FC = () => {
           {/* ====== SCROLLABLE CONTENT ZONE ====== */}
           <div
             onScroll={(e) => setHeaderScrolled((e.target as HTMLDivElement).scrollTop > 8)}
-            className={`app-shell-content px-3 py-4 sm:p-6 md:p-8 ${activeTab === 'overview' ? 'dashboard-overview-bg' : 'dashboard-pages-bg'}`}
+            className={`app-shell-content px-3 py-4 sm:p-6 md:p-8 xl:px-10 2xl:px-12 ${activeTab === 'overview' ? 'dashboard-overview-bg' : 'dashboard-pages-bg'}`}
           >
           {isRestricted && !(activeTab === 'settings' && settingsTab === 'billing') ? (
             <PaywallView
@@ -2138,7 +2165,17 @@ export const DashboardPro: React.FC = () => {
           ) : (
           <>
           {loading && <DashboardLoadingSkeleton />}
-          {!loading && activeTab === 'overview' && (
+          {!loading && (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={dashboardPanelKey}
+                className="min-w-0"
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+              >
+          {activeTab === 'overview' && (
             <div className="min-w-0">
             <DashboardOverviewTab
               now={now}
@@ -2194,7 +2231,7 @@ export const DashboardPro: React.FC = () => {
             </div>
           )}
 
-          {!loading && activeTab === 'analytics' && (
+          {activeTab === 'analytics' && (
             <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
               <AnalyticsDashboard
@@ -2206,7 +2243,7 @@ export const DashboardPro: React.FC = () => {
             </div>
           )}
 
-          {!loading && activeTab === 'requests' && (
+          {activeTab === 'requests' && (
             <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
             <RequestsDashboard
@@ -2237,7 +2274,7 @@ export const DashboardPro: React.FC = () => {
             </div>
           )}
 
-          {!loading && activeTab === 'appointments' && (
+          {activeTab === 'appointments' && (
             <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
             <AppointmentsView
@@ -2252,7 +2289,7 @@ export const DashboardPro: React.FC = () => {
             </div>
           )}
 
-          {!loading && activeTab === 'flash' && (
+          {activeTab === 'flash' && (
             <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
             <FlashGallery designs={flashDesigns} onBook={handleBookFlash} onAddFlash={addFlash} onUpdateFlash={updateFlash} onDeleteFlash={deleteFlash} studioSlug={studioSlug} artists={artistAccounts} />
@@ -2260,7 +2297,7 @@ export const DashboardPro: React.FC = () => {
             </div>
           )}
 
-          {!loading && activeTab === 'clients' && (
+          {activeTab === 'clients' && (
             <div className="min-w-0">
             {clientsView === 'loyalty' ? (
               <LoyaltyManager
@@ -2307,7 +2344,7 @@ export const DashboardPro: React.FC = () => {
             </div>
           )}
 
-          {!loading && activeTab === 'messaging' && (
+          {activeTab === 'messaging' && (
             <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
             <MessagingTab
@@ -2341,7 +2378,7 @@ export const DashboardPro: React.FC = () => {
             </div>
           )}
 
-          {!loading && activeTab === 'notifications' && (
+          {activeTab === 'notifications' && (
             <div className="min-w-0">
             <NotificationsPage
               studioId={studioId}
@@ -2360,7 +2397,7 @@ export const DashboardPro: React.FC = () => {
             </div>
           )}
 
-          {!loading && activeTab === 'portfolio' && (
+          {activeTab === 'portfolio' && (
             <div className="min-w-0">
             {vitrineLoading ? (
               <DashboardLoadingSkeleton />
@@ -2421,7 +2458,7 @@ export const DashboardPro: React.FC = () => {
             </div>
           )}
 
-          {!loading && activeTab === 'finance' && (
+          {activeTab === 'finance' && (
             <div className="min-w-0">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
               {financeView === 'acomptes' ? (
@@ -2437,7 +2474,7 @@ export const DashboardPro: React.FC = () => {
             </div>
           )}
 
-          {!loading && activeTab === 'settings' && (
+          {activeTab === 'settings' && (
             <div className="min-w-0">
             <div className="settings-page-landing">
               {/* Onglets : masqués sur la page d'accueil Paramètres, visibles dans chaque sous-section */}
@@ -3059,7 +3096,7 @@ export const DashboardPro: React.FC = () => {
             </div>
           )}
 
-          {!loading && activeTab === 'etablissement' && (
+          {activeTab === 'etablissement' && (
             <div className="min-w-0">
             <div className="animate-fade-in">
               <EtablissementPage
@@ -3113,7 +3150,7 @@ export const DashboardPro: React.FC = () => {
             </div>
           )}
 
-          {!loading && activeTab === 'account' && (
+          {activeTab === 'account' && (
             <div className="min-w-0">
             <div className="animate-fade-in px-0">
               <AccountPage
@@ -3175,6 +3212,9 @@ export const DashboardPro: React.FC = () => {
               />
             </div>
             </div>
+          )}
+              </motion.div>
+            </AnimatePresence>
           )}
           </>
           )}

@@ -157,7 +157,7 @@ export const OnboardingAvailabilityStep: React.FC<OnboardingAvailabilityStepProp
                     Enregistrement…
                   </>
                 ) : (
-                  'Terminer la configuration'
+                  'Continuer'
                 )}
               </button>
             </form>

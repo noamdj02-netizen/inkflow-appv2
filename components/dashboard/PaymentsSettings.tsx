@@ -4,6 +4,7 @@ import { getStudioId } from '../../lib/supabase';
 import { supabase } from '../../lib/supabase';
 import { getPaymentSettingsFromSupabase, savePaymentSettingsToSupabase } from '../../lib/supabaseDashboard';
 import { startStripeConnectOnboarding } from '../../lib/stripeClient';
+import { maybeStartStripeConnectResumePoll, registerStripeConnectResumePoll } from '../../lib/stripeConnectResume';
 import { useToast } from '../../contexts/ToastContext';
 import { useAutoSave } from '../../hooks/useAutoSave';
 
@@ -110,14 +111,12 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
     void loadConnectStatus();
   }, [loadConnectStatus]);
 
+  /** Retour Stripe : l’URL est nettoyée par le dashboard avant ce montage — rechargement via sessionStorage + polling partagé */
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('stripe_connect') === 'return') {
-      toast.success('Retour depuis Stripe — mise à jour du statut…');
-      void loadConnectStatus();
-    }
-  }, [toast, loadConnectStatus]);
+    const unreg = registerStripeConnectResumePoll(() => loadConnectStatus());
+    maybeStartStripeConnectResumePoll(toast);
+    return unreg;
+  }, [loadConnectStatus, toast]);
 
   const handleStripeConnect = async () => {
     if (!studioId || connectBusy) return;
