@@ -6,6 +6,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 export default defineConfig(({ mode }) => {
+  /** En dev, pas de Service Worker — évite splash / app bloqués par un cache PWA obsolète. */
+  const pwaDisabled = mode === 'development' || process.env.DISABLE_PWA === '1';
     // En worktree, le .env.local est dans le repo principal (inkdlow)
     const envDir = process.cwd().includes('mystifying-burnell')
       ? 'C:/Users/lanie/OneDrive/.limpc/Bureau/inkdlow'
@@ -35,7 +37,7 @@ export default defineConfig(({ mode }) => {
             ]
           : []),
         VitePWA({
-          disable: process.env.DISABLE_PWA === '1',
+          disable: pwaDisabled,
           strategies: 'injectManifest',
           srcDir: 'public',
           filename: 'sw.js',

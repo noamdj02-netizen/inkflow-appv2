@@ -25,6 +25,16 @@ export const AppSplashGate: React.FC<{ children: React.ReactNode }> = ({ childre
   const { authLoading } = useAuth();
   const hiddenRef = useRef(false);
 
+  /** Filet de sécurité : masque le splash HTML même si l’auth ou une route reste bloquée */
+  useEffect(() => {
+    const failSafe = window.setTimeout(() => {
+      if (hiddenRef.current) return;
+      hiddenRef.current = true;
+      hideSplash();
+    }, 8000);
+    return () => window.clearTimeout(failSafe);
+  }, []);
+
   useEffect(() => {
     if (hiddenRef.current) return;
 

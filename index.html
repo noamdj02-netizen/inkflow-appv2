@@ -10,9 +10,10 @@
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <script>
-      /* Auto-clear stale SW on localhost — évite le splash bloqué en dev */
+      /* Auto-clear stale SW en dev (localhost, 127.0.0.1, ou port Vite 3000) */
       (function(){
-        if('serviceWorker' in navigator && (location.hostname==='localhost'||location.hostname==='127.0.0.1')) {
+        var isDevHost = location.hostname==='localhost'||location.hostname==='127.0.0.1'||location.port==='3000';
+        if('serviceWorker' in navigator && isDevHost) {
           navigator.serviceWorker.getRegistrations().then(function(regs){
             if(regs.length===0) return;
             var cleared = sessionStorage.getItem('_sw_clear');
@@ -284,5 +285,17 @@
       </div>
     </noscript>
   <script type="module" src="/index.tsx"></script>
+  <script>
+    /* Si le bundle JS ne charge pas, masque quand même le splash (sinon écran noir infini) */
+    (function(){
+      window.setTimeout(function(){
+        var s = document.getElementById('splash');
+        if (s && !s.classList.contains('hidden')) {
+          s.classList.add('hidden');
+          setTimeout(function(){ try { s.remove(); } catch (e) {} }, 400);
+        }
+      }, 10000);
+    })();
+  </script>
 </body>
 </html>

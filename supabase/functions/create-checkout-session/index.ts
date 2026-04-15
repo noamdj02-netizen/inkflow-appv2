@@ -3,11 +3,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { allowRateLimit, clientIpFromRequest } from "../_shared/rateLimit.ts";
 import { amountsMatchClientAndServer, resolveExpectedCheckoutAmountEur } from "../_shared/checkoutExpectedAmount.ts";
+import { resolveAbsoluteSiteBase } from "../_shared/siteUrl.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+const SITE_URL = resolveAbsoluteSiteBase(
+  Deno.env.get("SITE_URL") || Deno.env.get("APP_URL"),
+  "https://ink-flow.me",
+);
 /** Commission plateforme en basis points (100 = 1 %). 0 = tout pour le studio. */
 const CONNECT_FEE_BPS = Math.max(
   0,
@@ -140,7 +144,7 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error:
-            "Paiements en ligne indisponibles : le studio doit terminer la connexion Stripe (Paramètres → Paiements → Recevoir les acomptes).",
+            "Paiements en ligne indisponibles pour ce studio (Stripe Connect non finalisé).",
           code: "stripe_connect_required",
         }),
         { status: 409, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -168,7 +172,11 @@ Deno.serve(async (req: Request) => {
       ? payload.studioSlug
       : encodeURIComponent(payload.studioId);
     const basePath = payload.flashId ? "studio" : "book";
-    const successUrl = `${SITE_URL}/reservation-succes?session_id={CHECKOUT_SESSION_ID}`;
+    const studioForSuccess =
+      payload.studioSlug && /^[a-z0-9-]+$/.test(payload.studioSlug)
+        ? `&studio=${encodeURIComponent(payload.studioSlug)}`
+        : "";
+    const successUrl = `${SITE_URL}/reservation-succes?session_id={CHECKOUT_SESSION_ID}${studioForSuccess}`;
     const cancelUrl = `${SITE_URL}/${basePath}/${urlSegment}?payment=cancelled`;
 
     const applicationFeeCents =
@@ -220,7 +228,8 @@ Deno.serve(async (req: Request) => {
         const code = parsed?.error?.code;
         const stripeMsg = parsed?.error?.message || "";
         if (code === "secret_key_required" || stripeMsg.toLowerCase().includes("publishable")) {
-          userMsg = "Clé secrète Stripe requise : configure STRIPE_SECRET_KEY (sk_...) dans Supabase Secrets puis redéploie la fonction.";
+          userMsg =
+            "Configuration de paiement côté plateforme incorrecte. Réessayez plus tard ou contactez le support InkFlow.";
         } else if (stripeMsg) {
           userMsg = stripeMsg;
         }
@@ -235,7 +244,7 @@ Deno.serve(async (req: Request) => {
 
     const session = await stripeRes.json();
 
-    await supabase.from("inkflow_payments").insert({
+    const { error: insertPayErr } = await supabase.from("inkflow_payments").insert({
       id: `pay_${Date.now()}`,
       studio_id: payload.studioId,
       appointment_id: payload.appointmentId?.trim() || null,
@@ -248,6 +257,16 @@ Deno.serve(async (req: Request) => {
       client_name: payload.clientName,
       client_email: payload.clientEmail,
     });
+    if (insertPayErr) {
+      console.error("inkflow_payments insert failed:", insertPayErr.message);
+      return new Response(
+        JSON.stringify({
+          error:
+            "Enregistrement du paiement impossible avant redirection. Réessaie : si le problème continue, contacte le support.",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     return new Response(
       JSON.stringify({ url: session.url, sessionId: session.id }),

@@ -13,6 +13,7 @@ import {
   sendNewRequestNotification,
   sendDepositReceivedNotification,
 } from './notifications';
+import { shouldNotifyAppointmentInsert } from '../../lib/appointmentNotifications';
 
 function mapBookingFromRow(row: Record<string, unknown>): { clientName: string; description: string } {
   return {
@@ -85,7 +86,9 @@ export function useNotificationSync(studioId: string | null, enabled: boolean): 
         { event: 'INSERT', schema: 'public', table: 'inkflow_appointments', filter },
         async (payload) => {
           try {
-            const apt = mapAppointmentFromRow(payload.new as Record<string, unknown>);
+            const row = payload.new as Record<string, unknown>;
+            if (!shouldNotifyAppointmentInsert(row)) return;
+            const apt = mapAppointmentFromRow(row);
             if (initialLoadDone.current) {
               await sendTestNotification({
                 title: 'Nouveau rendez-vous',

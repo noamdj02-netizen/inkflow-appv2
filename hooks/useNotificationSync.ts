@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { mapBookingFromDb } from '../lib/supabaseBookings';
 import { mapAppointmentFromDb, mapProjectRequestFromDb } from '../lib/supabaseDashboard';
 import { notifyDepositReceived, createInAppNotification } from '../lib/sendNotification';
+import { shouldNotifyAppointmentInsert } from '../lib/appointmentNotifications';
 
 const NOTIFICATION_TITLE_PREFIX = 'InkFlow';
 
@@ -94,7 +95,9 @@ export function useNotificationSync(studioId: string | null, enabled: boolean): 
         { event: 'INSERT', schema: 'public', table: 'inkflow_appointments', filter },
         (payload) => {
           try {
-            const apt = mapAppointmentFromDb(payload.new as Record<string, unknown>);
+            const row = payload.new as Record<string, unknown>;
+            if (!shouldNotifyAppointmentInsert(row)) return;
+            const apt = mapAppointmentFromDb(row);
             if (initialLoadDone.current) {
               showWebNotification(
                 'Nouveau rendez-vous',

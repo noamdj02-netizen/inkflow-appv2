@@ -31,6 +31,57 @@ export type CreateCheckoutResult = { url: string; sessionId?: string } | { error
 
 export type CreateThemeCheckoutResult = { url: string } | { error: string };
 
+/** Message affiché au client final (réservation publique) — jamais de secrets ni de commandes CLI. */
+const MSG_CHECKOUT_GENERIC =
+  "Impossible d'ouvrir la page de paiement pour le moment. Réessayez dans quelques minutes ou contactez le studio.";
+
+function looksLikeTechnicalError(message: string): boolean {
+  const t = message.toLowerCase();
+  return /sk_live|sk_test|stripe_secret|supabase|npx\s|edge function|deploy|secret_key|vercel|invalid api key|configuration stripe/i.test(
+    t,
+  );
+}
+
+/**
+ * Libellé lisible pour les erreurs create-checkout-session (clients + dashboard).
+ * Les détails techniques sont uniquement dans la console.
+ */
+function userMessageForCheckoutFailure(
+  status: number,
+  data: {
+    error?: string;
+    details?: string;
+    message?: string;
+    code?: string;
+  },
+): string {
+  const raw = (data.error || data.details || data.message || '').trim();
+  const code = data.code;
+
+  if (status === 409 && code === 'stripe_connect_required') {
+    return "Les paiements en ligne ne sont pas encore activés pour ce studio. Contactez-le pour régler votre acompte.";
+  }
+  if (status === 429) {
+    return raw.includes('minute') || raw.includes('requêtes') ? raw : 'Trop de tentatives. Réessayez dans une minute.';
+  }
+  if (status === 400) {
+    return raw || MSG_CHECKOUT_GENERIC;
+  }
+  if (status === 404) {
+    return 'Ce studio est introuvable ou le lien n’est plus valide.';
+  }
+  if (status === 503) {
+    return raw || 'Le paiement en ligne est momentanément indisponible. Réessayez plus tard.';
+  }
+  if (status >= 500 || status === 502) {
+    return MSG_CHECKOUT_GENERIC;
+  }
+  if (raw && !looksLikeTechnicalError(raw)) {
+    return raw.length > 280 ? `${raw.slice(0, 277)}…` : raw;
+  }
+  return MSG_CHECKOUT_GENERIC;
+}
+
 const getSupabaseConfig = () => {
   const url = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
   const key = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
@@ -66,38 +117,23 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
       }
       return { error: data?.error || data?.details || 'La fonction n\'a pas renvoyé de lien.' };
     }
-    if (res.status === 409 && (data as { code?: string })?.code === 'stripe_connect_required') {
-      return {
-        error:
-          (data as { error?: string }).error ||
-          'Stripe Connect n’est pas prêt : ouvre Paramètres → Paiements, termine l’activation, puis réessaie (les encaissements vont sur ton compte Stripe).',
-      };
-    }
-    const msg = data?.error || data?.details || data?.message || `Erreur ${res.status}`;
-    if (res.status === 502 && typeof data?.details === 'string') {
-      const details = data.details;
-      if (details.includes('secret_key_required') || details.includes('publishable')) {
-        return {
-          error: 'Clé Stripe incorrecte : utilise la clé secrète (sk_live_ ou sk_test_) dans Supabase → Edge Functions → Secrets → STRIPE_SECRET_KEY, puis redéploie la fonction.',
-        };
-      }
-      if (details.includes('Invalid API Key') || details.includes('invalid_request_error')) {
-        return {
-          error: 'Clé Stripe invalide. Vérifie STRIPE_SECRET_KEY dans Supabase Secrets (sk_...) et redéploie : npx supabase functions deploy create-checkout-session',
-        };
-      }
-    }
-    if (res.status === 404 || res.status === 502) {
-      return {
-        error: `${msg} — Projet Supabase peut être en pause ou la fonction non déployée : restaure le projet puis exécute « npx supabase functions deploy create-checkout-session ».`,
-      };
-    }
-    return { error: msg };
+
+    console.error('[createCheckoutSession] échec', {
+      status: res.status,
+      body: data,
+    });
+
+    const friendly = userMessageForCheckoutFailure(res.status, data as { error?: string; details?: string; message?: string; code?: string });
+    return { error: friendly };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return {
-      error: `${message} — Vérifie la connexion et que l'Edge Function est déployée (npx supabase functions deploy create-checkout-session).`,
-    };
+    console.error('[createCheckoutSession] exception', err);
+    if (message === 'Failed to fetch') {
+      return {
+        error: 'Connexion instable. Vérifiez le réseau et réessayez.',
+      };
+    }
+    return { error: MSG_CHECKOUT_GENERIC };
   }
 }
 

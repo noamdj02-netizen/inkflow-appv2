@@ -68,6 +68,14 @@ function buildPushPayload(payload: WebhookPayload): { studioId: string; title: s
   }
 
   if (table === "inkflow_appointments" && type === "INSERT" && record) {
+    const status = String(record.status ?? "").toLowerCase().trim();
+    const depositPaid = Boolean(record.deposit_paid);
+    const depositNum = record.deposit != null && record.deposit !== "" ? Number(record.deposit) : 0;
+    const awaitingDeposit =
+      !depositPaid && status === "pending" && !Number.isNaN(depositNum) && depositNum > 0;
+    if (awaitingDeposit) {
+      return null;
+    }
     const clientName = String(record.client_name ?? "").trim() || "Un client";
     const service = String(record.service ?? "").trim() || "RDV";
     const date = formatDate(record.date);

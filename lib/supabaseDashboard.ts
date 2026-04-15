@@ -696,6 +696,17 @@ export async function saveAppointmentToSupabase(studioId: string, apt: Appointme
   }
 }
 
+/** Si la session Stripe n’a pas pu être créée, supprime le RDV pending (même e-mail que le formulaire). */
+export async function abandonPublicCheckoutAppointment(appointmentId: string, clientEmail: string): Promise<void> {
+  const { error } = await supabase.rpc('abandon_public_checkout_appointment', {
+    p_id: appointmentId,
+    p_client_email: clientEmail,
+  });
+  if (error && import.meta.env.DEV) {
+    console.warn('[abandonPublicCheckoutAppointment]', error.message);
+  }
+}
+
 /**
  * RDV placeholder lié à une demande projet (messagerie / carte paiement) — réutilise la ligne existante si déjà créée.
  * `depositEuros` : enregistré en base pour que l’Edge Function checkout valide le montant côté serveur.
