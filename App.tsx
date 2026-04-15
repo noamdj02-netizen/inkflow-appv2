@@ -18,6 +18,7 @@ import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { InviteRedirectPage } from './pages/InviteRedirectPage';
 import { ReferralPage } from './pages/ReferralPage';
+import { ReservationSuccessPage } from './pages/public/ReservationSuccessPage';
 
 const LandingEnhanceAI = lazy(() =>
   import('./components/landing/LandingEnhanceAI').then((m) => ({ default: m.LandingEnhanceAI })),
@@ -32,7 +33,6 @@ const PublicStudioPagePro = lazy(() => import('./pages/public/PublicStudioPagePr
 const PublicBookingPage = lazy(() => import('./pages/public/PublicBookingPage').then(m => ({ default: m.PublicBookingPage })));
 const ConsentPage = lazy(() => import('./pages/public/ConsentPage').then(m => ({ default: m.ConsentPage })));
 const PublicMessagePage = lazy(() => import('./pages/public/PublicMessagePage').then(m => ({ default: m.PublicMessagePage })));
-const ReservationSuccessPage = lazy(() => import('./pages/public/ReservationSuccessPage').then(m => ({ default: m.ReservationSuccessPage })));
 const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
 const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
 const AidePage = lazy(() => import('./pages/AidePage').then(m => ({ default: m.AidePage })));

@@ -1,5 +1,3 @@
-import { supabase } from './supabase';
-
 export interface DaySchedule {
   enabled: boolean;
   open: string;
@@ -87,16 +85,37 @@ export type FetchStudioAvailabilityMeta = {
 
 /**
  * Comme {@link fetchStudioAvailability} mais indique si le repli local a été utilisé (affichage UI).
+ *
+ * Appel via `fetch` et clé **anon** (comme `createCheckoutSession`) : évite d’envoyer le JWT de session,
+ * souvent cause de `FunctionsHttpError` sur les pages publiques (JWT expiré ou autre projet).
  */
 export async function fetchStudioAvailabilityMeta(studioId: string): Promise<FetchStudioAvailabilityMeta> {
+  const baseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
+  if (!baseUrl || !anonKey) {
+    console.warn('[InkFlow] get-studio-availability: VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY manquants.');
+    return {
+      availability: createFallbackAvailabilityResponse(),
+      usedFallback: true,
+    };
+  }
   try {
-    const { data, error } = await supabase.functions.invoke<StudioAvailabilityResponse | { error?: string }>(
-      'get-studio-availability',
-      {
-        body: { studioId },
-      }
-    );
-    if (error) throw error;
+    const res = await fetch(`${baseUrl}/functions/v1/get-studio-availability`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${anonKey}`,
+      },
+      body: JSON.stringify({ studioId }),
+    });
+    const data = (await res.json().catch(() => ({}))) as StudioAvailabilityResponse | { error?: string };
+    if (!res.ok) {
+      const msg =
+        typeof data === 'object' && data && 'error' in data && typeof (data as { error?: string }).error === 'string'
+          ? (data as { error: string }).error
+          : `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
     if (!data || typeof data !== 'object') throw new Error('Aucune donnée retournée');
     if ('error' in data && !('busySlots' in data)) {
       throw new Error(typeof (data as { error?: string }).error === 'string' ? (data as { error: string }).error : 'Erreur serveur');

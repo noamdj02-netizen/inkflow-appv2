@@ -2,12 +2,16 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { allowRateLimit, clientIpFromRequest } from "../_shared/rateLimit.ts";
+import { resolveAbsoluteSiteBase } from "../_shared/siteUrl.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+const SITE_URL = resolveAbsoluteSiteBase(
+  Deno.env.get("SITE_URL") || Deno.env.get("APP_URL"),
+  "https://ink-flow.me",
+);
 
 const SUB_RATE_MAX = 25;
 const SUB_RATE_WINDOW_MS = 60_000;

@@ -8,6 +8,7 @@ import {
   getStudioPublicBySlug,
   getFlashDesignsFromSupabase,
   saveAppointmentToSupabase,
+  abandonPublicCheckoutAppointment,
 } from '../lib/supabaseDashboard';
 import { getVitrineDataBySlugAsync } from '../lib/vitrineStorage';
 import { toLocalDateString } from '../lib/utils';
@@ -350,7 +351,7 @@ export function useBookingFlow(studioSlug: string) {
 
         const res = await fetch(
           `${baseUrl}/functions/v1/get-payment-session?session_id=${sessionId}`,
-          { headers: { Authorization: `Bearer ${key}` } }
+          { headers: { Authorization: `Bearer ${key}`, apikey: key } }
         );
         const data = await res.json();
 
@@ -584,8 +585,10 @@ export function useBookingFlow(studioSlug: string) {
     setIsSubmitting(true);
     setPaymentError(null);
 
+    const appointmentId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const clientEmail = form.email.trim();
+
     try {
-      const appointmentId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
       const clientName = `${form.firstName} ${form.lastName}`;
       const now = new Date().toISOString();
 
@@ -595,7 +598,7 @@ export function useBookingFlow(studioSlug: string) {
           id: appointmentId,
           clientId: '',
           clientName,
-          clientEmail: form.email,
+          clientEmail,
           clientPhone: form.phone,
           date: form.selectedDate,
           time: form.selectedTime,
@@ -622,7 +625,7 @@ export function useBookingFlow(studioSlug: string) {
         amount: depositAmount,
         flashId: selectedFlashId || undefined,
         clientName,
-        clientEmail: form.email,
+        clientEmail,
         serviceName: selectedFlash?.title || 'Réservation tatouage — Flash',
         type: 'deposit',
         placement: resolvedPlacement,
@@ -631,6 +634,9 @@ export function useBookingFlow(studioSlug: string) {
       });
 
       if ('error' in result) {
+        if (supabaseEnabled) {
+          await abandonPublicCheckoutAppointment(appointmentId, clientEmail).catch(() => {});
+        }
         setPaymentError(result.error);
         setIsSubmitting(false);
         return;
@@ -638,6 +644,9 @@ export function useBookingFlow(studioSlug: string) {
 
       window.location.href = result.url;
     } catch (err: unknown) {
+      if (supabaseEnabled) {
+        await abandonPublicCheckoutAppointment(appointmentId, clientEmail).catch(() => {});
+      }
       console.error('proceedToPayment:', err);
       const raw =
         err instanceof Error
