@@ -148,7 +148,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     );
   }
 
-  const studio = studioInfo ?? { name: studioSlug, avatar: '' };
+  const studio = studioInfo ?? { name: studioSlug, avatar: '', coverImage: '' };
 
   return (
     <div className="landing-scroll min-h-screen bg-zinc-50">
@@ -156,10 +156,24 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         title={`Réserver chez ${studio.name}`}
         description={`Prenez rendez-vous en ligne chez ${studio.name}. Choisissez la date, décrivez votre projet et réglez l'acompte en toute sécurité.`}
         canonical={`/book/${studioSlug}`}
-        ogImage={studio.avatar || undefined}
+        ogImage={(studio.coverImage || studio.avatar) || undefined}
         ogImageAlt={`Réservation tatouage — ${studio.name}`}
         keywords={`réservation tatouage, ${studio.name}, RDV tattoo, acompte tatouage`}
       />
+
+      {studio.coverImage ? (
+        <div className="relative w-full h-36 sm:h-44 overflow-hidden bg-zinc-200">
+          <img
+            src={studio.coverImage}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div
+            className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-zinc-50"
+            aria-hidden
+          />
+        </div>
+      ) : null}
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-zinc-100 safe-top">

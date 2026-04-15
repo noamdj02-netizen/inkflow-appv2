@@ -121,7 +121,11 @@ export function useBookingFlow(studioSlug: string) {
 
   // ── Studio / vitrine ─────────────────────────────────────────────────────────
   const [studioId, setStudioId] = useState<string | null | 'loading'>('loading');
-  const [studioInfo, setStudioInfo] = useState<{ name: string; avatar: string } | null>(null);
+  const [studioInfo, setStudioInfo] = useState<{
+    name: string;
+    avatar: string;
+    coverImage?: string;
+  } | null>(null);
   const [vitrineData, setVitrineData] = useState<{ globalDepositPercentage?: number } | null>(null);
   /** Stripe Connect prêt — aligné sur la RPC publique (null = chargement). */
   const [paymentsOnline, setPaymentsOnline] = useState<boolean | null>(null);
@@ -240,11 +244,15 @@ export function useBookingFlow(studioSlug: string) {
     setFlashListLoading(true);
     getVitrineDataBySlugAsync(studioSlug)
       .then((data) => {
-        setStudioInfo({ name: data.name, avatar: data.avatar || '' });
+        setStudioInfo({
+          name: data.name,
+          avatar: data.avatar || '',
+          coverImage: (data.coverImage || '').trim() || undefined,
+        });
         setFlashList((data.flashDesigns ?? []).map(mapVitrineFlashToPublic));
       })
       .catch(() => {
-        setStudioInfo({ name: studioSlug, avatar: '' });
+        setStudioInfo({ name: studioSlug, avatar: '', coverImage: undefined });
         setFlashList([]);
       })
       .finally(() => setFlashListLoading(false));
@@ -629,8 +637,20 @@ export function useBookingFlow(studioSlug: string) {
       }
 
       window.location.href = result.url;
-    } catch {
-      setPaymentError('Erreur lors de la création du paiement. Veuillez réessayer.');
+    } catch (err: unknown) {
+      console.error('proceedToPayment:', err);
+      const raw =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err !== null && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : '';
+      const msg = raw.trim();
+      setPaymentError(
+        msg && msg.length < 280
+          ? msg
+          : 'Erreur lors de la création du paiement. Veuillez réessayer.'
+      );
       setIsSubmitting(false);
     }
   };
