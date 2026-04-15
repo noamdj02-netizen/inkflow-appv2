@@ -1,10 +1,40 @@
 {
   "version": 1,
   "skills": {
+    "framer-motion-gestures": {
+      "source": "C-Jeril/framer-motion-skills",
+      "sourceType": "github",
+      "computedHash": "5729e0fd140ec8fb26dbea2592aac830cad61f6458b4891b5920220690dd6ff0"
+    },
+    "framer-motion-layout": {
+      "source": "C-Jeril/framer-motion-skills",
+      "sourceType": "github",
+      "computedHash": "731a80c91da6e4975f452245e72eb398698ba18ca5040b1b424d5ac8418c0fb3"
+    },
+    "framer-motion-react": {
+      "source": "C-Jeril/framer-motion-skills",
+      "sourceType": "github",
+      "computedHash": "05afba82bf872e148b95c300ed1ca41432878c63aca79d9c1280a029a41af3bd"
+    },
+    "framer-motion-scroll": {
+      "source": "C-Jeril/framer-motion-skills",
+      "sourceType": "github",
+      "computedHash": "238eabe19ce3cf6396f7bf555036a008184e869a073cea6f874e5aa266b976b1"
+    },
+    "framer-motion-variants": {
+      "source": "C-Jeril/framer-motion-skills",
+      "sourceType": "github",
+      "computedHash": "a186d6cad8c75ff61efa8d70cf3ba2246bfbf62bba157b433d13c516557f81ac"
+    },
     "market-pulse": {
       "source": "eronred/aso-skills",
       "sourceType": "github",
       "computedHash": "42c5ed44e30c2c5b4a095d9c75f90c462aa939fca8a932c4ef1e084abf49e199"
+    },
+    "vibe-security": {
+      "source": "raroque/vibe-security-skill",
+      "sourceType": "github",
+      "computedHash": "cc047d5ac9ba92065ce7464f4ea6ce48ec52fb907caacd564019915b2a847fa4"
     }
   }
 }
