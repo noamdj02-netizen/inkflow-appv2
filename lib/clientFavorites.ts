@@ -45,6 +45,46 @@ export async function toggleFlashFavorite(flashId: string, add: boolean): Promis
   return true;
 }
 
+/** Favori studio / tatoueur (carte « Artistes proches ») — même Edge Function, corps `studio_id`. */
+export async function toggleStudioFavorite(studioId: string, add: boolean): Promise<boolean> {
+  const { url, anonKey } = getSupabaseEdgeConfig();
+  if (!url || !anonKey) {
+    throw new Error('Application non configurée (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
+  }
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('Connectez-vous pour enregistrer vos favoris.');
+  }
+
+  const method = add ? 'POST' : 'DELETE';
+  let res: Response;
+  try {
+    res = await fetch(`${url}/functions/v1/client-favorite`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: anonKey,
+      },
+      body: JSON.stringify({ studio_id: studioId }),
+    });
+  } catch {
+    throw new Error('Connexion instable. Vérifiez le réseau et réessayez.');
+  }
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(
+      typeof data.error === 'string' && data.error.trim()
+        ? data.error
+        : 'Impossible de mettre à jour le favori studio pour le moment.',
+    );
+  }
+
+  return true;
+}
+
 export async function getClientFavorites(clientEmail: string): Promise<Set<string>> {
   const { data, error } = await supabase
     .from('inkflow_client_favorites')

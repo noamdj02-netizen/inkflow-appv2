@@ -5,6 +5,8 @@ import { ensureStudio, getStudioAvatarUrlByEmail } from '../lib/supabaseDashboar
 import { linkCollaboratorArtistAccountToUser } from '../lib/collaboratorStudio';
 import { clearAllInkflowStorage } from '../lib/clearAuthStorage';
 import { getAuthCallbackRedirectTo, LANDING_URL } from '../lib/urls';
+import { mapSignupError } from '../lib/supabaseAuthMessages';
+import { requestStudioActivationLink } from '../lib/studioActivationEmail';
 import { useSupabaseEnabled } from '../hooks/useSupabaseEnabled';
 import { DEMO_ACCOUNT_EMAIL } from '../data/demoData';
 
@@ -251,32 +253,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           emailRedirectTo: getAuthCallbackRedirectTo(),
         },
       });
-      if (!error && data?.user) {
-        const needsEmailConfirmation = !data.session;
-        if (needsEmailConfirmation) {
-          // Confirmation email requise : la session du parrain (ou autre) peut encore être active.
-          // On se déconnecte pour éviter d'afficher le dashboard du mauvais utilisateur.
-          await supabase.auth.signOut();
-          setUser(null);
-          localStorage.removeItem('inkflow_user');
-          // Le studio sera créé à la première connexion (AuthCallbackPage) avec le referral_code dans user_metadata
-        } else {
-          const appUser = appUserFromSupabase(data.user);
-          setUser(appUser);
-          localStorage.setItem('inkflow_user', JSON.stringify(appUser));
-          const isTeamInvite = Boolean(options?.teamInviteStudioLabel?.trim());
-          try {
-            if (isTeamInvite) {
-              await linkCollaboratorArtistAccountToUser(data.user.id, email);
-            } else {
-              await ensureStudio(email, appUser.name, studioName || appUser.studioName, referralCode);
-            }
-          } catch {
-            // Ne pas bloquer l'inscription si le studio échoue (ex. table pas encore migrée)
-          }
-        }
-        return { needsEmailConfirmation };
+      if (error) {
+        throw new Error(mapSignupError(error));
       }
+      if (!data?.user) {
+        throw new Error(
+          'Réponse serveur incomplète après inscription. Vérifiez la configuration Supabase (Auth) ou réessayez.',
+        );
+      }
+      const needsEmailConfirmation = !data.session;
+      if (needsEmailConfirmation) {
+        // Confirmation email requise : la session du parrain (ou autre) peut encore être active.
+        // On se déconnecte pour éviter d'afficher le dashboard du mauvais utilisateur.
+        await supabase.auth.signOut();
+        setUser(null);
+        localStorage.removeItem('inkflow_user');
+        // Le studio sera créé à la première connexion (AuthCallbackPage) avec le referral_code dans user_metadata
+      } else {
+        const appUser = appUserFromSupabase(data.user);
+        setUser(appUser);
+        localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+        const isTeamInvite = Boolean(options?.teamInviteStudioLabel?.trim());
+        try {
+          if (isTeamInvite) {
+            await linkCollaboratorArtistAccountToUser(data.user.id, email);
+          } else {
+            await ensureStudio(email, appUser.name, studioName || appUser.studioName, referralCode);
+          }
+        } catch {
+          // Ne pas bloquer l'inscription si le studio échoue (ex. table pas encore migrée)
+        }
+      }
+      return { needsEmailConfirmation };
     }
     await new Promise(resolve => setTimeout(resolve, 500));
     const newUser: User = {
@@ -297,14 +305,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     const trimmed = email.trim();
     if (!trimmed) throw new Error('Adresse e-mail requise.');
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: trimmed,
-      options: {
-        emailRedirectTo: getAuthCallbackRedirectTo(),
-      },
-    });
-    if (error) throw new Error(error.message);
+    /** Lien d’activation envoyé via Resend (API), pas le SMTP Auth — fiabilise la délivrabilité. */
+    await requestStudioActivationLink(trimmed);
   }, [isSupabaseAuthEnabled]);
 
   const logout = useCallback(async () => {

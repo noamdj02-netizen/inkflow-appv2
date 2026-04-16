@@ -34,57 +34,105 @@ serve(async (req) => {
     }
 
     const clientEmail = user.email;
-    const body = await req.json();
-    const { flash_id } = body;
+    const body = await req.json() as { flash_id?: unknown; studio_id?: unknown };
+    const flash_id = typeof body.flash_id === "string" ? body.flash_id.trim() : "";
+    const studio_id = typeof body.studio_id === "string" ? body.studio_id.trim() : "";
 
-    if (!flash_id || typeof flash_id !== "string") {
+    if ((flash_id && studio_id) || (!flash_id && !studio_id)) {
       return new Response(
-        JSON.stringify({ error: "flash_id requis" }),
+        JSON.stringify({ error: "Indiquez soit flash_id soit studio_id (un seul à la fois)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (req.method === "POST") {
-      const { error: insertErr } = await supabase
-        .from("inkflow_client_favorites")
-        .upsert(
-          { client_email: clientEmail, flash_id },
-          { onConflict: "client_email,flash_id" }
-        );
+    if (flash_id) {
+      if (req.method === "POST") {
+        const { error: insertErr } = await supabase
+          .from("inkflow_client_favorites")
+          .upsert(
+            { client_email: clientEmail, flash_id },
+            { onConflict: "client_email,flash_id" }
+          );
 
-      if (insertErr) {
-        console.error("Insert error:", insertErr);
+        if (insertErr) {
+          console.error("Insert error:", insertErr);
+          return new Response(
+            JSON.stringify({ error: "Erreur lors de l'ajout aux favoris" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         return new Response(
-          JSON.stringify({ error: "Erreur lors de l'ajout aux favoris" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ success: true, action: "added", kind: "flash" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      return new Response(
-        JSON.stringify({ success: true, action: "added" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (req.method === "DELETE") {
+        const { error: deleteErr } = await supabase
+          .from("inkflow_client_favorites")
+          .delete()
+          .eq("client_email", clientEmail)
+          .eq("flash_id", flash_id);
+
+        if (deleteErr) {
+          console.error("Delete error:", deleteErr);
+          return new Response(
+            JSON.stringify({ error: "Erreur lors de la suppression" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, action: "removed", kind: "flash" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
-    if (req.method === "DELETE") {
-      const { error: deleteErr } = await supabase
-        .from("inkflow_client_favorites")
-        .delete()
-        .eq("client_email", clientEmail)
-        .eq("flash_id", flash_id);
+    if (studio_id) {
+      if (req.method === "POST") {
+        const { error: insertErr } = await supabase
+          .from("inkflow_client_studio_favorites")
+          .upsert(
+            { client_email: clientEmail, studio_id },
+            { onConflict: "client_email,studio_id" }
+          );
 
-      if (deleteErr) {
-        console.error("Delete error:", deleteErr);
+        if (insertErr) {
+          console.error("Insert studio fav error:", insertErr);
+          return new Response(
+            JSON.stringify({ error: "Erreur lors de l'ajout du studio aux favoris" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         return new Response(
-          JSON.stringify({ error: "Erreur lors de la suppression" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ success: true, action: "added", kind: "studio" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      return new Response(
-        JSON.stringify({ success: true, action: "removed" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (req.method === "DELETE") {
+        const { error: deleteErr } = await supabase
+          .from("inkflow_client_studio_favorites")
+          .delete()
+          .eq("client_email", clientEmail)
+          .eq("studio_id", studio_id);
+
+        if (deleteErr) {
+          console.error("Delete studio fav error:", deleteErr);
+          return new Response(
+            JSON.stringify({ error: "Erreur lors de la suppression du favori studio" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, action: "removed", kind: "studio" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     return new Response(

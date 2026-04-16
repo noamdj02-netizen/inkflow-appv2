@@ -369,7 +369,7 @@ export const LoginPage: React.FC = () => {
                 <Mail className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
-                    Compte créé ! Vérifiez votre boîte mail.
+                    Compte créé ! Ouvrez l’e-mail InkFlow et cliquez sur le lien pour activer votre compte.
                   </p>
                   <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
                     {inviteTeamEmailPending ? (
@@ -402,7 +402,7 @@ export const LoginPage: React.FC = () => {
                   setResendLoading(true);
                   try {
                     await resendSignupConfirmation(loginEmailForResend.trim());
-                    toast.success('E-mail de confirmation renvoyé. Vérifiez votre boîte.');
+                    toast.success('Lien d’activation envoyé. Vérifiez votre boîte (et les spams).');
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : 'Impossible de renvoyer l’e-mail.');
                   } finally {

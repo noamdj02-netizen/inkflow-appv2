@@ -16,7 +16,8 @@ function getAuthErrorMessage(err: unknown): string {
   if (msg.includes('Email not confirmed')) return 'Vérifiez votre boîte mail pour confirmer votre compte';
   if (msg.includes('réseau') || msg.includes('network') || msg.includes('fetch')) return 'Erreur réseau. Vérifiez votre connexion.';
   if (msg.includes('expirée') || msg.includes('timeout')) return msg;
-  if (msg.length > 0 && msg.length < 120) return msg;
+  if (msg.includes('Redirect URLs') || msg.includes('URL de retour')) return msg;
+  if (msg.length > 0 && msg.length < 600) return msg;
   return 'Une erreur est survenue. Réessayez.';
 }
 

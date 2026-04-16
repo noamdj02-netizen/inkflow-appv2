@@ -13,6 +13,7 @@ import { LANDING_TERMS_URL, LANDING_PRIVACY_URL, getPostSignupDashboardPath } fr
 import { supabase } from '../../lib/supabase';
 import { REDIRECT_AFTER_LOGIN_KEY } from '../../contexts/AuthContext';
 import { markJustSignedUp, markWelcomeRequired } from '../../lib/welcomeStorage';
+import { requestStudioActivationLink } from '../../lib/studioActivationEmail';
 
 const inputBase =
   'w-full pl-12 pr-4 py-3.5 min-h-[48px] text-base border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all';
@@ -96,6 +97,11 @@ export const SignupForm: React.FC = () => {
       markJustSignedUp();
       markWelcomeRequired(parsed.data.email.trim().toLowerCase());
       if (needsEmailConfirmation) {
+        try {
+          await requestStudioActivationLink(parsed.data.email.trim());
+        } catch {
+          /* L’utilisateur pourra utiliser « Renvoyer l’e-mail » sur /login ; le SMTP Auth peut aussi avoir envoyé. */
+        }
         const q = new URLSearchParams();
         q.set('message', 'check-email');
         q.set('email', parsed.data.email.trim());

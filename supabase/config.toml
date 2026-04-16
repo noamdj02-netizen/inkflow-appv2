@@ -18,6 +18,10 @@ verify_jwt = false
 [functions.send-collaborator-invite]
 verify_jwt = false
 
+# Lien d’activation studio (magic link) — appel public avec anon + apikey (comme send-client-magic-link).
+[functions.send-studio-auth-link]
+verify_jwt = false
+
 # google-business-auth : callback OAuth = GET depuis Google (pas de Bearer Supabase). POST dashboard = JWT ES256 peut être rejeté par la passerelle.
 [functions.google-business-auth]
 verify_jwt = false

@@ -35,8 +35,18 @@ import { NotificationPopover, type Notification as ClientBellNotification } from
 import { supabase } from '../../lib/supabase';
 import { LANDING_URL } from '../../lib/urls';
 import { clientNavigate } from '../../lib/clientAppNavigate';
-import { getFavoriteFlashIds, isFavoriteFlashId, toggleFavoriteFlashId } from '../../lib/clientFavoritesLocal';
-import { hydrateClientFavoritesFromSupabase, toggleFavoriteWithSupabaseSync } from '../../lib/clientFavoritesSync';
+import {
+  getFavoriteFlashIds,
+  isFavoriteFlashId,
+  isFavoriteStudioId,
+  toggleFavoriteFlashId,
+  toggleFavoriteStudioId,
+} from '../../lib/clientFavoritesLocal';
+import {
+  hydrateClientFavoritesFromSupabase,
+  toggleFavoriteWithSupabaseSync,
+  toggleStudioFavoriteWithSupabaseSync,
+} from '../../lib/clientFavoritesSync';
 import { CLIENT_DASHBOARD_THEME, buildClientDesignTokens } from '../../lib/clientDashboardTheme';
 import { useToast } from '../../contexts/ToastContext';
 import { isClientPortalFullyReady } from '../../lib/clientOnboardingGate';
@@ -414,21 +424,65 @@ function MapHero({
 }
 
 // ─── Artist horizontal card ───────────────────────────────────────────────────
-function ArtistPill({ studio, index, onClick }: { studio: NearbyStudio; index: number; onClick: () => void; key?: React.Key }) {
+function ArtistPill({
+  studio,
+  index,
+  onClick,
+  clientEmailForSync,
+  onFavoritesDirty,
+}: {
+  studio: NearbyStudio;
+  index: number;
+  onClick: () => void;
+  clientEmailForSync?: string | null;
+  onFavoritesDirty?: () => void;
+}) {
+  const toast = useToast();
   const pal = PALETTES[index % PALETTES.length];
   const [broken, setBroken] = useState(false);
+  const [heartBusy, setHeartBusy] = useState(false);
   const dist = distLabel(studio.distance_km);
   const locLine = [discoveryLocationLine(studio), dist].filter(Boolean).join(' · ');
   const ariaLabel = locLine
     ? `Voir un flash de ${studio.studio_name}, ${locLine}`
     : `Voir un flash de ${studio.studio_name}`;
+  const studioFav = isFavoriteStudioId(studio.id);
+
+  const onHeart = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (heartBusy) return;
+    if (!clientEmailForSync?.trim()) {
+      const now = toggleFavoriteStudioId(studio.id);
+      onFavoritesDirty?.();
+      toast.success(now ? 'Artiste ajouté aux favoris' : 'Retiré des favoris');
+      return;
+    }
+    setHeartBusy(true);
+    try {
+      const now = await toggleStudioFavoriteWithSupabaseSync(studio.id, clientEmailForSync);
+      onFavoritesDirty?.();
+      toast.success(now ? 'Artiste ajouté aux favoris' : 'Retiré des favoris');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Synchronisation impossible. Réessaie.');
+    } finally {
+      setHeartBusy(false);
+    }
+  };
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       aria-label={ariaLabel}
-      className="group flex w-[158px] shrink-0 flex-col touch-manipulation overflow-hidden rounded-[14px] border text-left transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98] motion-reduce:active:scale-100 sm:w-[168px] sm:hover:-translate-y-px sm:motion-reduce:hover:translate-y-0 sm:hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
+      className="group flex w-[158px] shrink-0 cursor-pointer flex-col touch-manipulation overflow-hidden rounded-[14px] border text-left transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98] motion-reduce:active:scale-100 sm:w-[168px] sm:hover:-translate-y-px sm:motion-reduce:hover:translate-y-0 sm:hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
       style={{
         background: D.contentCardBg,
         borderColor: D.borderMid,
@@ -436,7 +490,7 @@ function ArtistPill({ studio, index, onClick }: { studio: NearbyStudio; index: n
         boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
       }}
     >
-      {/* Avatar — pleine largeur carte, empilé au-dessus du texte (flex-col sur le bouton) */}
+      {/* Avatar — cœur en overlay (pas de <button> imbriqué) */}
       <div
         className="relative flex w-full shrink-0 items-center justify-center overflow-hidden"
         style={{
@@ -473,6 +527,15 @@ function ArtistPill({ studio, index, onClick }: { studio: NearbyStudio; index: n
             {initials(studio.studio_name)}
           </div>
         )}
+        <button
+          type="button"
+          onClick={onHeart}
+          disabled={heartBusy}
+          className="absolute right-1.5 top-1.5 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-black/35 text-white shadow-sm backdrop-blur-sm transition-all active:scale-95 disabled:opacity-50"
+          aria-label={studioFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+        >
+          <Heart className="h-[18px] w-[18px]" fill={studioFav ? 'currentColor' : 'none'} strokeWidth={2} />
+        </button>
         <div
           className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/[0.06] to-transparent"
           aria-hidden
@@ -502,7 +565,7 @@ function ArtistPill({ studio, index, onClick }: { studio: NearbyStudio; index: n
           </span>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -535,11 +598,6 @@ function FlashCard({
   const onHeart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!bookingActionsEnabled) {
-      toast.info('Complète ton profil et le questionnaire santé pour utiliser les favoris.');
-      window.location.href = '/onboarding/finaliser-profil';
-      return;
-    }
     if (heartBusy) return;
     if (!clientEmailForSync?.trim()) {
       const now = toggleFavoriteFlashId(flash.id);
@@ -800,11 +858,6 @@ function FlashSheet({
   };
 
   const onSheetHeart = async () => {
-    if (!bookingActionsEnabled) {
-      toast.info('Complète ton profil et le questionnaire santé pour utiliser les favoris.');
-      window.location.href = '/onboarding/finaliser-profil';
-      return;
-    }
     if (heartBusy) return;
     if (!clientEmailForSync?.trim()) {
       const now = toggleFavoriteFlashId(flash.id);
@@ -3557,8 +3610,8 @@ export function ClientDashboard() {
     return arr.slice(0, 4);
   }, [styleFiltered]);
 
-  const clientFavoritesSyncEmail =
-    userId && bookingActionsEnabled && userEmail?.trim() ? userEmail : null;
+  /** Favoris flash/studio : sync dès que le client est connecté (sans attendre profil + santé). */
+  const clientFavoritesSyncEmail = userId && userEmail?.trim() ? userEmail : null;
 
   const openFlash = useCallback((flash: FlashPreview, studioIdx: number, studio: NearbyStudio | null) => {
     setFlash({ flash, studioIdx, studio });
@@ -3967,6 +4020,8 @@ export function ClientDashboard() {
                             const f = s.flash?.[0];
                             if (f) openFlash(f, studioIdx, s);
                           }}
+                          clientEmailForSync={clientFavoritesSyncEmail}
+                          onFavoritesDirty={bumpFavs}
                         />
                       </div>
                       );

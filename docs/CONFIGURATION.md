@@ -49,9 +49,16 @@ Dans **Vercel Dashboard → Votre projet → Settings → Environment Variables*
 ### 2.3 Auth
 
 1. **Authentication → Providers** : activez **Email** et **Google**
-2. **Authentication → URL Configuration** :
-   - Site URL : `https://ink-flow.me`
-   - Redirect URLs : `https://ink-flow.me/**`, `http://localhost:5173/**`
+2. **Authentication → Sign In / Providers → Email** : si **Confirm email** est activé (recommandé en prod), Supabase envoie un lien de confirmation. Sinon l’utilisateur reçoit une session immédiatement **sans** e-mail de confirmation.
+3. **Authentication → URL Configuration** (indispensable pour que le mail parte et que le lien fonctionne) :
+   - **Site URL** : origine principale de l’app SPA, en pratique `https://app.ink-flow.me` (pas seulement la landing Framer).
+   - **Redirect URLs** : listez toutes les origines où l’utilisateur peut atterrir après clic dans l’e-mail, par exemple :
+     - `https://app.ink-flow.me/**`
+     - `https://app.ink-flow.me/auth/callback`
+     - `http://localhost:5173/**` et `http://127.0.0.1:5173/**`
+     - `https://*.vercel.app/**` (previews Vercel)
+   Si l’URL utilisée par l’app (`emailRedirectTo`, ex. `/auth/callback`) n’est pas autorisée ici, l’inscription peut échouer ou aucun e-mail n’est envoyé.
+4. **Authentication → SMTP** (optionnel mais fortement conseillé en prod) : sans **Custom SMTP** (ex. Resend), l’envoi reprend le service intégré Supabase (quotas, délivrabilité variables). Configurez un expéditeur vérifié pour des confirmations fiables.
 
 ### 2.4 Storage (avatars, portfolio)
 
