@@ -1,8 +1,9 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Check, RotateCcw, Send } from 'lucide-react';
 import {
-  parseConsentUnderscoreFields,
+  parseConsentInteractive,
   countConsentFields,
+  countConsentCheckboxes,
   buildFilledConsentText,
 } from '../../lib/consentUnderscoreFields';
 
@@ -35,6 +36,7 @@ export const ConsentFormSign: React.FC<ConsentFormSignProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [fieldValues, setFieldValues] = useState<string[]>([]);
+  const [checkValues, setCheckValues] = useState<boolean[]>([]);
 
   const preparedTemplate = useMemo(
     () =>
@@ -44,16 +46,27 @@ export const ConsentFormSign: React.FC<ConsentFormSignProps> = ({
     [template, clientName]
   );
 
-  const segments = useMemo(() => parseConsentUnderscoreFields(preparedTemplate), [preparedTemplate]);
+  const segments = useMemo(() => parseConsentInteractive(preparedTemplate), [preparedTemplate]);
   const fieldCount = useMemo(() => countConsentFields(segments), [segments]);
+  const checkCount = useMemo(() => countConsentCheckboxes(segments), [segments]);
+
+  const initialCheckboxState = useMemo(() => {
+    const n = countConsentCheckboxes(segments);
+    const arr = Array<boolean>(n).fill(false);
+    for (const s of segments) {
+      if (s.type === 'checkbox') arr[s.checkIndex] = s.initialChecked;
+    }
+    return arr;
+  }, [segments]);
 
   useEffect(() => {
     setFieldValues(Array(fieldCount).fill(''));
-  }, [fieldCount, preparedTemplate]);
+    setCheckValues(initialCheckboxState.length ? [...initialCheckboxState] : []);
+  }, [fieldCount, checkCount, preparedTemplate, initialCheckboxState]);
 
   const filledTemplateText = useMemo(
-    () => buildFilledConsentText(segments, fieldValues),
-    [segments, fieldValues]
+    () => buildFilledConsentText(segments, fieldValues, checkValues),
+    [segments, fieldValues, checkValues]
   );
 
   const allFillFieldsOk = fieldCount === 0 || fieldValues.every(v => v.trim().length > 0);
@@ -62,6 +75,14 @@ export const ConsentFormSign: React.FC<ConsentFormSignProps> = ({
     setFieldValues(prev => {
       const next = [...prev];
       next[index] = value;
+      return next;
+    });
+  };
+
+  const setCheck = (index: number, checked: boolean) => {
+    setCheckValues(prev => {
+      const next = [...prev];
+      next[index] = checked;
       return next;
     });
   };
@@ -188,11 +209,17 @@ export const ConsentFormSign: React.FC<ConsentFormSignProps> = ({
       ) : null}
 
       <div className={`bg-white rounded-2xl border border-neutral-200 ${embedded ? 'p-3' : 'p-6'}`}>
-        {fieldCount > 0 ? (
+        {fieldCount > 0 || checkCount > 0 ? (
           <p
             className={`text-neutral-600 mb-3 ${embedded ? 'text-[11px] sm:text-xs' : 'text-sm'}`}
           >
-            Complétez les champs soulignés ci-dessous (toutes les zones sont obligatoires), puis signez.
+            {fieldCount > 0
+              ? 'Complétez les champs soulignés (toutes les zones sont obligatoires)'
+              : 'Parcourez le texte'}
+            {checkCount > 0
+              ? `${fieldCount > 0 ? ', cochez' : 'Cochez'} les cases le cas échéant`
+              : ''}
+            , puis signez.
           </p>
         ) : null}
         <div
@@ -204,19 +231,35 @@ export const ConsentFormSign: React.FC<ConsentFormSignProps> = ({
             if (seg.type === 'text') {
               return <React.Fragment key={`t-${i}`}>{seg.value}</React.Fragment>;
             }
+            if (seg.type === 'checkbox') {
+              return (
+                <span
+                  key={`c-${seg.checkIndex}-${i}`}
+                  className="inline-flex shrink-0 align-middle h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center cursor-pointer accent-neutral-900"
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(checkValues[seg.checkIndex])}
+                    onChange={e => setCheck(seg.checkIndex, e.target.checked)}
+                    className="h-5 w-5 rounded border-neutral-400 text-neutral-900"
+                    aria-label={`Case ${seg.checkIndex + 1}`}
+                  />
+                </span>
+              );
+            }
             const inputClass = embedded
               ? 'mx-0.5 inline-block align-baseline border-b border-neutral-400 bg-neutral-50 px-1 py-0.5 text-[11px] sm:text-xs text-neutral-900 rounded-sm focus:outline-none focus:ring-2 focus:ring-neutral-400/80 focus:border-transparent min-h-[28px]'
               : 'mx-0.5 inline-block align-baseline border-b-2 border-neutral-300 bg-neutral-50/90 px-1.5 py-1 text-sm text-neutral-900 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:border-transparent min-h-[36px]';
             return (
               <input
-                key={`f-${seg.index}`}
+                key={`f-${seg.fieldIndex}-${i}`}
                 type="text"
-                value={fieldValues[seg.index] ?? ''}
-                onChange={e => setField(seg.index, e.target.value)}
+                value={fieldValues[seg.fieldIndex] ?? ''}
+                onChange={e => setField(seg.fieldIndex, e.target.value)}
                 className={inputClass}
                 style={{ width: `${seg.widthCh}ch`, maxWidth: 'min(100%, 95vw)' }}
                 autoComplete="section-consent"
-                aria-label={`Réponse ${seg.index + 1}`}
+                aria-label={`Réponse ${seg.fieldIndex + 1}`}
               />
             );
           })}
@@ -258,7 +301,8 @@ export const ConsentFormSign: React.FC<ConsentFormSignProps> = ({
         <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}
           className="mt-1 w-4 h-4 rounded border-neutral-300" />
         <span className={`text-neutral-700 ${embedded ? 'text-xs leading-snug' : 'text-sm'}`}>
-          J'ai lu et compris le formulaire de consentement ci-dessus, complété les champs demandés et signé. Je confirme
+          J'ai lu et compris le formulaire de consentement ci-dessus, complété les champs et cases demandés et signé. Je
+          confirme
           que les informations fournies sont exactes et je donne mon accord pour la realisation du tatouage.
         </span>
       </label>
