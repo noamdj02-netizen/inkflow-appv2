@@ -39,6 +39,105 @@ function captureWebhookDbError(
   });
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type CrmHealthFields = {
+  portal_user_id: string | null;
+  health_profile_snapshot: Record<string, unknown> | null;
+};
+
+/** Questionnaire santé → fiche CRM : profil portail (priorité) ou dernière ligne inkflow_health_forms. */
+async function resolveCrmHealthFieldsForPaidCheckout(
+  supabase: SupabaseClient,
+  studioId: string,
+  clientEmail: string,
+  rawPortalUserId: string | undefined,
+): Promise<CrmHealthFields> {
+  const trimmedEmail = (clientEmail || "").trim();
+  const portalFromMeta =
+    typeof rawPortalUserId === "string" && rawPortalUserId.trim().length > 0
+      ? rawPortalUserId.trim()
+      : "";
+  const portal_user_id = portalFromMeta && UUID_RE.test(portalFromMeta) ? portalFromMeta : null;
+  const syncedAt = new Date().toISOString();
+
+  if (portal_user_id) {
+    const { data: prof, error: profErr } = await supabase
+      .from("inkflow_client_portal_profiles")
+      .select("health_profile")
+      .eq("user_id", portal_user_id)
+      .maybeSingle();
+    if (profErr) {
+      console.error("[stripe-webhook] portal health load:", profErr.message);
+    }
+    const hp = prof?.health_profile;
+    if (hp && typeof hp === "object" && hp !== null && Object.keys(hp as object).length > 0) {
+      return {
+        portal_user_id,
+        health_profile_snapshot: {
+          source: "portal",
+          synced_at: syncedAt,
+          data: hp as Record<string, unknown>,
+        },
+      };
+    }
+  }
+
+  if (!trimmedEmail) {
+    return { portal_user_id, health_profile_snapshot: null };
+  }
+
+  const { data: hfRows, error: hfErr } = await supabase
+    .from("inkflow_health_forms")
+    .select(
+      "health_data, client_name, client_birthdate, client_instagram, signature_text, certified_accurate, certified_at, created_at",
+    )
+    .eq("studio_id", studioId)
+    .ilike("client_email", trimmedEmail)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (hfErr) {
+    console.error("[stripe-webhook] health_forms load:", hfErr.message);
+    return { portal_user_id, health_profile_snapshot: null };
+  }
+
+  const hf = hfRows?.[0];
+  if (!hf) {
+    return { portal_user_id, health_profile_snapshot: null };
+  }
+
+  const hd = hf.health_data;
+  const data =
+    hd && typeof hd === "object" && hd !== null
+      ? {
+          clientName: hf.client_name,
+          clientBirthdate: hf.client_birthdate,
+          clientInstagram: hf.client_instagram,
+          ...(hd as Record<string, unknown>),
+          signatureText: hf.signature_text,
+          certifiedAccurate: hf.certified_accurate,
+        }
+      : {
+          clientName: hf.client_name,
+          clientBirthdate: hf.client_birthdate,
+          clientInstagram: hf.client_instagram,
+          signatureText: hf.signature_text,
+          certifiedAccurate: hf.certified_accurate,
+        };
+
+  return {
+    portal_user_id,
+    health_profile_snapshot: {
+      source: "health_form",
+      health_form_created_at: hf.created_at,
+      synced_at: syncedAt,
+      data,
+    },
+  };
+}
+
 /** Lien reçu PDF officiel Stripe (carte), si la clé secrète est configurée. */
 async function fetchStripeReceiptUrl(sessionId: string): Promise<string | null> {
   if (!STRIPE_SECRET_KEY) return null;
@@ -419,16 +518,102 @@ Deno.serve(async (req: Request) => {
         let aptForEmail: AptEmailRow | null = null;
         let studioForEmail: { city: string | null; siret: string | null; slug: string } | null = null;
 
+        let clientPhone: string | null = null;
         if (appointmentId) {
           const { data: apt } = await supabase
             .from("inkflow_appointments")
-            .select("price, deposit, date, time, duration, service")
+            .select("price, deposit, date, time, duration, service, client_phone")
             .eq("id", appointmentId)
             .single();
           if (apt) {
             aptForEmail = apt as AptEmailRow;
             const total = Number(apt.price) || 0;
             amountRemaining = Math.max(0, total - amountPaid);
+            clientPhone = (apt as { client_phone?: string | null }).client_phone ?? null;
+          }
+        }
+
+        // ── Upsert fiche client (+ questionnaire santé si dispo) ─────────────
+        if (studioId && clientEmail) {
+          try {
+            const rdvDate = aptForEmail?.date ?? new Date().toISOString().slice(0, 10);
+            const now = new Date().toISOString();
+            const rawPortal = session.metadata?.client_portal_user_id;
+            const crmHealth = await resolveCrmHealthFieldsForPaidCheckout(
+              supabase,
+              studioId,
+              clientEmail,
+              typeof rawPortal === "string" ? rawPortal : undefined,
+            );
+            const crmHealthPatch = {
+              ...(crmHealth.portal_user_id ? { portal_user_id: crmHealth.portal_user_id } : {}),
+              ...(crmHealth.health_profile_snapshot
+                ? { health_profile_snapshot: crmHealth.health_profile_snapshot }
+                : {}),
+            };
+
+            // Cherche un client existant pour ce studio+email
+            const { data: existingClient } = await supabase
+              .from("inkflow_clients")
+              .select("id, appointments_count, total_spent, first_visit")
+              .eq("studio_id", studioId)
+              .eq("email", clientEmail)
+              .maybeSingle();
+
+            if (existingClient) {
+              // Mise à jour : last_visit, total_spent, appointments_count
+              await supabase
+                .from("inkflow_clients")
+                .update({
+                  name: clientName,
+                  ...(clientPhone ? { phone: clientPhone } : {}),
+                  last_visit: rdvDate,
+                  appointments_count: (existingClient.appointments_count ?? 0) + 1,
+                  total_spent: (Number(existingClient.total_spent) || 0) + amountPaid,
+                  status: "active",
+                  updated_at: now,
+                  ...crmHealthPatch,
+                })
+                .eq("id", existingClient.id);
+
+              // Lier le RDV au client si pas déjà lié
+              if (appointmentId) {
+                await supabase
+                  .from("inkflow_appointments")
+                  .update({ client_id: existingClient.id })
+                  .eq("id", appointmentId)
+                  .is("client_id", null);
+              }
+            } else {
+              // Création nouvelle fiche client
+              const newClientId = `client_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+              await supabase.from("inkflow_clients").insert({
+                id: newClientId,
+                studio_id: studioId,
+                email: clientEmail,
+                name: clientName,
+                phone: clientPhone ?? null,
+                status: "active",
+                first_visit: rdvDate,
+                last_visit: rdvDate,
+                appointments_count: 1,
+                total_spent: amountPaid,
+                created_at: now,
+                updated_at: now,
+                ...crmHealthPatch,
+              });
+
+              // Lier le RDV au nouveau client
+              if (appointmentId) {
+                await supabase
+                  .from("inkflow_appointments")
+                  .update({ client_id: newClientId })
+                  .eq("id", appointmentId);
+              }
+            }
+          } catch (clientSyncErr) {
+            console.error("[stripe-webhook] upsert client error:", clientSyncErr);
+            // Non-bloquant : le paiement est déjà confirmé
           }
         }
 

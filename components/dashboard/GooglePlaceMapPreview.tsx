@@ -10,7 +10,6 @@ interface PlaceReview {
   rating: number;
   text: string;
   authorName: string;
-  authorUri: string;
   relativeTime: string;
 }
 
@@ -57,7 +56,6 @@ export const GooglePlaceMapPreview: React.FC<GooglePlaceMapPreviewProps> = ({ pl
           rating: r.rating ?? 0,
           text: r.text ?? '',
           authorName: r.authorName ?? 'Anonyme',
-          authorUri: '',
           relativeTime: r.relativeTimeDescription ?? '',
         }));
         setReviews(mapped);

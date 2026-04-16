@@ -99,24 +99,28 @@ function patchHtmlMeta(
 }
 
 async function fetchStudioRow(slug: string): Promise<StudioPublicRow | null> {
-  const base = process.env.VITE_SUPABASE_URL?.replace(/\/$/, '');
-  const key = process.env.VITE_SUPABASE_ANON_KEY;
+  const base = (process.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const key = (process.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
   if (!base || !key) return null;
 
-  const res = await fetch(`${base}/rest/v1/rpc/get_studio_public_by_slug`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({ p_slug: normalizeSlug(slug) }),
-  });
-  if (!res.ok) return null;
-  const data: unknown = await res.json();
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row || typeof row !== 'object' || !('id' in row)) return null;
-  return row as StudioPublicRow;
+  try {
+    const res = await fetch(`${base}/rest/v1/rpc/get_studio_public_by_slug`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({ p_slug: normalizeSlug(slug) }),
+    });
+    if (!res.ok) return null;
+    const data: unknown = await res.json();
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || typeof row !== 'object' || !('id' in row)) return null;
+    return row as StudioPublicRow;
+  } catch {
+    return null;
+  }
 }
 
 export default async function middleware(request: Request): Promise<Response> {
@@ -154,14 +158,26 @@ export default async function middleware(request: Request): Promise<Response> {
   const ogImageAlt = isBook ? `Réservation tatouage — ${displayName}` : displayName;
 
   const indexUrl = new URL('/index.html', origin);
-  const indexRes = await fetch(indexUrl.toString(), {
-    headers: { 'User-Agent': ua },
-  });
+  let indexRes: Response;
+  try {
+    indexRes = await fetch(indexUrl.toString(), {
+      headers: { 'User-Agent': ua },
+    });
+  } catch {
+    return next();
+  }
   if (!indexRes.ok) {
     return next();
   }
 
-  const html = patchHtmlMeta(await indexRes.text(), {
+  let htmlBody: string;
+  try {
+    htmlBody = await indexRes.text();
+  } catch {
+    return next();
+  }
+
+  const html = patchHtmlMeta(htmlBody, {
     title,
     description,
     canonical,

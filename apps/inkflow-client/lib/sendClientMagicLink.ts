@@ -6,21 +6,31 @@ import * as Linking from 'expo-linking';
  * En dev Expo : URL du type `exp://.../--/client` ; en prod : `inkflow://client`.
  */
 export async function sendClientMagicLink(email: string): Promise<void> {
-  const base = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').replace(/\/+$/, '');
-  const anon = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+  const base = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').trim().replace(/\/+$/, '');
+  const anon = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '').trim().replace(/^['"]|['"]$/g, '');
   if (!base || !anon) throw new Error('Configuration Supabase manquante (EXPO_PUBLIC_*).');
 
   const redirectTo = Linking.createURL('client');
-  const res = await fetch(`${base}/functions/v1/send-client-magic-link`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: anon,
-      Authorization: `Bearer ${anon}`,
-    },
-    body: JSON.stringify({ email: email.trim().toLowerCase(), redirectTo }),
-  });
-  const raw = await res.text();
+  let res: Response;
+  try {
+    res = await fetch(`${base}/functions/v1/send-client-magic-link`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: anon,
+        Authorization: `Bearer ${anon}`,
+      },
+      body: JSON.stringify({ email: email.trim().toLowerCase(), redirectTo }),
+    });
+  } catch {
+    throw new Error('Connexion instable. Vérifiez le réseau et réessayez.');
+  }
+  let raw: string;
+  try {
+    raw = await res.text();
+  } catch {
+    throw new Error('Réponse serveur illisible. Réessayez dans un instant.');
+  }
   if (!res.ok) {
     let msg = "Erreur lors de l'envoi.";
     try {

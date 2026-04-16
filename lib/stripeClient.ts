@@ -25,6 +25,8 @@ interface CreateCheckoutParams {
   projectRequestId?: string;
   /** Fil messagerie (ex. pr_xxx). */
   threadId?: string;
+  /** Compte espace client (Supabase Auth) — le webhook rattache le questionnaire à la fiche CRM. */
+  clientPortalUserId?: string;
 }
 
 export type CreateCheckoutResult = { url: string; sessionId?: string } | { error: string };
@@ -101,6 +103,7 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${key}`,
+        apikey: key,
       },
       body: JSON.stringify(params),
     });
@@ -154,6 +157,7 @@ export async function createThemeCheckoutSession(params: {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${key}`,
+        apikey: key,
       },
       body: JSON.stringify(params),
     });
@@ -166,9 +170,10 @@ export async function createThemeCheckoutSession(params: {
     return { error: msg };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return {
-      error: `${message} — Vérifie la connexion et que l'Edge Function create-theme-checkout-session est déployée.`,
-    };
+    if (message === 'Failed to fetch') {
+      return { error: 'Connexion instable. Vérifiez le réseau et réessayez.' };
+    }
+    return { error: 'Impossible d’ouvrir la page de paiement pour le moment. Réessayez dans quelques minutes.' };
   }
 }
 
@@ -494,17 +499,27 @@ async function callStripeConnectActions(
     return { ok: false, data: { error: STRIPE_CONNECT_SESSION_COPY } };
   }
   const fnUrl = `${baseUrl.replace(/\/$/, '')}/functions/v1/stripe-connect-actions`;
-  const res = await fetch(fnUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-      apikey: key,
-    },
-    body: JSON.stringify(body),
-  });
-  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  return { ok: res.ok, data };
+  try {
+    const res = await fetch(fnUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        apikey: key,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    return { ok: res.ok, data };
+  } catch {
+    return {
+      ok: false,
+      data: {
+        error:
+          'Connexion instable. Vérifiez le réseau, rechargez la page si besoin, puis réessayez.',
+      },
+    };
+  }
 }
 
 /** Met à jour charges_enabled / details_submitted depuis l’API Stripe (webhook parfois en retard). */

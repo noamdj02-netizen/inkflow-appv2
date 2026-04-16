@@ -31,3 +31,19 @@ export function toggleFavoriteFlashId(id: string): boolean {
   localStorage.setItem(STORAGE_KEY, JSON.stringify([...s]));
   return !was;
 }
+
+/** Fusionne les IDs distants dans le stockage local (union). Retourne true si le set a changé. */
+export function mergeFavoriteFlashIdsFromRemote(remoteIds: Iterable<string>): boolean {
+  const s = getFavoriteFlashIds();
+  let changed = false;
+  for (const id of remoteIds) {
+    if (id && !s.has(id)) {
+      s.add(id);
+      changed = true;
+    }
+  }
+  if (changed) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...s]));
+  }
+  return changed;
+}

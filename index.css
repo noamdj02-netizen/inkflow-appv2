@@ -1156,6 +1156,13 @@ input, select, textarea {
   }
 }
 
+/* Tab bar mobile client — réduction de mouvement (WCAG) */
+@media (prefers-reduced-motion: reduce) {
+  .client-mobile-tab-bar button {
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* App client — typo : Inter + Syne (hiérarchie de graisses) + Playfair (un mot d’accroche) */
 .client-dashboard-shell {
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

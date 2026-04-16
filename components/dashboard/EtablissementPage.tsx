@@ -60,6 +60,7 @@ interface EtablissementPageProps {
   onConnectGoogleBusiness?: () => Promise<void>;
   onDisconnectGoogleBusiness?: () => Promise<void>;
   onSelectGoogleBusinessLocation?: (locationName: string) => Promise<void>;
+  onLoadGoogleBusinessLocations?: () => Promise<void>;
   googleBusinessLocations?: { name: string; title: string; accountName: string }[];
   loadingGoogleBusinessLocations?: boolean;
 }
@@ -93,6 +94,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
   onConnectGoogleBusiness,
   onDisconnectGoogleBusiness,
   onSelectGoogleBusinessLocation,
+  onLoadGoogleBusinessLocations,
   googleBusinessLocations = [],
   loadingGoogleBusinessLocations = false,
 }) => {
@@ -476,30 +478,36 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
                   </p>
 
                   {useSupabase && studioId && (onConnectGoogleBusiness || googleBusinessConnected) && (
-                    <details className="group rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/40 pt-1">
-                      <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-zinc-600 dark:text-zinc-400 flex items-center justify-between gap-2 select-none [&::-webkit-details-marker]:hidden">
-                        <span>Plus tard : compte Google Business (optionnel)</span>
-                        <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0 transition-transform group-open:rotate-90" />
-                      </summary>
-                      <div className="px-4 pb-4 pt-0 space-y-3 border-t border-zinc-100 dark:border-zinc-800">
-                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 pt-3">
-                          Pour afficher encore plus d’avis, vous pouvez connecter votre compte Google Business.
-                        </p>
+                    <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/40 p-4 space-y-3">
+                      <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Avis Google — connexion compte</p>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                        Connectez votre Google Business pour afficher vos vrais avis sur votre page vitrine.
+                      </p>
                         {googleBusinessConnected ? (
                           <div className="space-y-3">
-                            <div className="flex items-start sm:items-center justify-between gap-3 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3">
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                                  <Link2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                </div>
+                            {/* Stripe-style connected row */}
+                            <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                </svg>
                                 <div className="min-w-0">
-                                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Connecté</p>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-[var(--text-primary)]">Google Business</span>
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                                      Connecté
+                                    </span>
+                                  </div>
                                   {googleBusinessLocationName ? (
-                                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate font-mono" title={googleBusinessLocationName}>
+                                    <p className="text-[11px] text-zinc-400 truncate mt-0.5" title={googleBusinessLocationName}>
                                       {googleBusinessLocationName.split('/').slice(-1)[0] || googleBusinessLocationName}
                                     </p>
                                   ) : (
-                                    <p className="text-[11px] text-amber-600 dark:text-amber-400">Choisissez une fiche ci-dessous</p>
+                                    <p className="text-[11px] text-amber-400 mt-0.5">Choisissez une fiche ci-dessous</p>
                                   )}
                                 </div>
                               </div>
@@ -507,7 +515,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
                                 type="button"
                                 onClick={handleDisconnectBusiness}
                                 disabled={disconnectingBusiness}
-                                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 transition-all"
+                                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-red-400 border border-red-900/40 hover:bg-red-950/30 disabled:opacity-50 transition-all min-h-[36px]"
                               >
                                 {disconnectingBusiness
                                   ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -554,8 +562,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
                               : <><Link2 className="w-4 h-4" />Connecter Google Business</>}
                           </button>
                         )}
-                      </div>
-                    </details>
+                    </div>
                   )}
                 </div>
               )}

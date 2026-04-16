@@ -10,18 +10,28 @@ interface PageHeaderProps {
 
 export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, actions, breadcrumbs }) => {
   return (
-    <div className="mb-8">
+    <div className="mb-6 sm:mb-8">
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav className="flex items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400 mb-3">
+        <nav className="mb-3 flex items-center gap-2 text-sm text-[var(--text-tertiary)]">
           {breadcrumbs.map((crumb, i) => (
             <React.Fragment key={i}>
-              {i > 0 && <ChevronRight className="w-3.5 h-3.5" />}
+              {i > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />}
               {crumb.onClick ? (
-                <button onClick={crumb.onClick} className="hover:text-zinc-900 dark:hover:text-white transition-colors">
+                <button
+                  type="button"
+                  onClick={crumb.onClick}
+                  className="rounded-md transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+                >
                   {crumb.label}
                 </button>
               ) : (
-                <span className={i === breadcrumbs.length - 1 ? 'text-zinc-900 dark:text-white font-medium' : ''}>
+                <span
+                  className={
+                    i === breadcrumbs.length - 1
+                      ? 'font-medium text-[var(--text-primary)]'
+                      : undefined
+                  }
+                >
                   {crumb.label}
                 </span>
               )}
@@ -29,14 +39,18 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, acti
           ))}
         </nav>
       )}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">{title}</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--text-primary)] sm:text-3xl">
+            {title}
+          </h1>
           {description && (
-            <p className="mt-1.5 text-sm sm:text-base text-zinc-500 dark:text-zinc-400">{description}</p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)] sm:text-base">
+              {description}
+            </p>
           )}
         </div>
-        {actions && <div className="flex items-center gap-3 flex-shrink-0">{actions}</div>}
+        {actions && <div className="flex shrink-0 flex-wrap items-center gap-3">{actions}</div>}
       </div>
     </div>
   );
@@ -62,24 +76,32 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   noPadding = false 
 }) => {
   return (
-    <div className={`bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden ${className}`}>
+    <div
+      className={`overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] ${className}`}
+    >
       {(title || actions) && (
-        <div className="px-5 sm:px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-4 border-b border-[var(--border)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-start gap-3">
             {icon && (
-              <div className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 flex-shrink-0 mt-0.5">
+              <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--bg-card-secondary)] text-[var(--text-secondary)]">
                 {icon}
               </div>
             )}
             <div className="min-w-0">
-              {title && <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-white">{title}</h3>}
-              {description && <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{description}</p>}
+              {title && (
+                <h3 className="font-sans text-base font-semibold leading-snug text-[var(--text-primary)] sm:text-lg">
+                  {title}
+                </h3>
+              )}
+              {description && (
+                <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)]">{description}</p>
+              )}
             </div>
           </div>
-          {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
+          {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
         </div>
       )}
-      <div className={noPadding ? '' : 'p-5 sm:p-6'}>{children}</div>
+      <div className={noPadding ? '' : 'p-4 sm:p-6'}>{children}</div>
     </div>
   );
 };
@@ -110,11 +132,13 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   className = '' 
 }) => {
   return (
-    <div className={`bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 sm:p-6 ${className}`}>
+    <div
+      className={`rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-4 sm:p-6 ${className}`}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">{label}</p>
-          <p className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tabular-nums">
+          <p className="mb-1 text-sm font-medium text-[var(--text-secondary)]">{label}</p>
+          <p className="font-sans text-2xl font-bold tabular-nums text-[var(--text-primary)] sm:text-3xl">
             {typeof value === 'number' ? value.toLocaleString('fr-FR') : value}
           </p>
           {trend && (

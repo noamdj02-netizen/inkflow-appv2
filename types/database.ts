@@ -486,6 +486,7 @@ export type Database = {
       inkflow_artist_accounts: {
         Row: {
           active: boolean | null
+          auth_user_id: string | null
           avatar: string | null
           created_at: string | null
           email: string
@@ -499,6 +500,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          auth_user_id?: string | null
           avatar?: string | null
           created_at?: string | null
           email: string
@@ -512,6 +514,7 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          auth_user_id?: string | null
           avatar?: string | null
           created_at?: string | null
           email?: string
@@ -1037,11 +1040,13 @@ export type Database = {
           created_at: string | null
           email: string
           first_visit: string
+          health_profile_snapshot: Json | null
           id: string
           last_visit: string | null
           name: string
           notes: string | null
           phone: string | null
+          portal_user_id: string | null
           status: string | null
           studio_id: string
           tags: Json | null
@@ -1055,11 +1060,13 @@ export type Database = {
           created_at?: string | null
           email: string
           first_visit: string
+          health_profile_snapshot?: Json | null
           id: string
           last_visit?: string | null
           name: string
           notes?: string | null
           phone?: string | null
+          portal_user_id?: string | null
           status?: string | null
           studio_id: string
           tags?: Json | null
@@ -1073,11 +1080,13 @@ export type Database = {
           created_at?: string | null
           email?: string
           first_visit?: string
+          health_profile_snapshot?: Json | null
           id?: string
           last_visit?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
+          portal_user_id?: string | null
           status?: string | null
           studio_id?: string
           tags?: Json | null
@@ -1109,6 +1118,7 @@ export type Database = {
           client_ip: string | null
           client_name: string
           created_at: string | null
+          filled_template_text: string | null
           id: string
           signature_data: string | null
           signed_at: string | null
@@ -1121,6 +1131,7 @@ export type Database = {
           client_ip?: string | null
           client_name: string
           created_at?: string | null
+          filled_template_text?: string | null
           id: string
           signature_data?: string | null
           signed_at?: string | null
@@ -1133,6 +1144,7 @@ export type Database = {
           client_ip?: string | null
           client_name?: string
           created_at?: string | null
+          filled_template_text?: string | null
           id?: string
           signature_data?: string | null
           signed_at?: string | null
@@ -2810,6 +2822,23 @@ export type Database = {
           slug: string
           studio_name: string
         }[]
+      }
+      get_public_thread_messages: {
+        Args: { p_thread_id: string }
+        Returns: {
+          content: string
+          created_at: string | null
+          id: string
+          read: boolean | null
+          sender_name: string
+          sender_type: string
+          studio_id: string
+          thread_id: string
+        }[]
+      }
+      get_client_unread_message_count: {
+        Args: { p_client_email: string }
+        Returns: number
       }
       get_studio_by_email_with_data: {
         Args: { p_email: string }

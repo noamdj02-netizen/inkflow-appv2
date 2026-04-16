@@ -28,10 +28,10 @@ async function getClientDestinationAfterAuth(user: User): Promise<string> {
 }
 
 const inputClass =
-  'w-full pl-11 pr-4 py-3.5 rounded-2xl text-sm border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 outline-none transition-all focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500';
+  'w-full pl-11 pr-4 py-3.5 rounded-2xl text-base sm:text-sm border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 outline-none transition-all focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 focus-visible:ring-offset-0 min-h-[48px]';
 
 const inputClassNoIcon =
-  'w-full px-4 py-3.5 rounded-2xl text-sm border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 outline-none transition-all focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500';
+  'w-full px-4 py-3.5 rounded-2xl text-base sm:text-sm border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 outline-none transition-all focus:ring-2 focus:ring-blue-500/25 focus:border-blue-500 min-h-[48px]';
 
 export const ClientPortalLoginPage: React.FC = () => {
   const isSupabaseEnabled = useSupabaseEnabled();
@@ -274,16 +274,16 @@ export const ClientPortalLoginPage: React.FC = () => {
       <header className="px-4 sm:px-6 pt-[max(12px,env(safe-area-inset-top))] pb-2 flex-shrink-0">
         <a
           href="/login"
-          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors min-h-[44px]"
+          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors min-h-[44px] rounded-xl px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-100 active:scale-[0.98]"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4 shrink-0" aria-hidden />
           Espace Pro
         </a>
       </header>
 
-      <div className="flex-1 flex flex-col items-center px-4 sm:px-6 pb-10 pt-4 min-h-0 overflow-y-auto">
+      <div className="flex-1 flex flex-col items-center px-4 sm:px-6 pb-10 pt-4 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y">
         <div className="w-full max-w-md">
-          <div className="rounded-2xl border border-zinc-200/80 bg-white shadow-sm p-6 sm:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+          <div className="rounded-2xl border border-zinc-200/90 bg-white p-6 sm:p-8 shadow-sm ring-1 ring-zinc-200/40">
             <div className="flex items-center gap-3 mb-6">
               <Logo className="rounded-xl shadow-sm" size="md" />
               <div>

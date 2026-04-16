@@ -1,17 +1,22 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 
 function getSupabaseConfig() {
-  const url = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  const url = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const key = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
   return { url, key };
 }
 
-/** Appel direct via fetch pour lire le message d'erreur réel en cas de non-2xx. */
+/** Appel direct via fetch pour lire le message d'erreur réel en cas de non-2xx. Exige une session utilisateur (JWT). */
 async function callGemini(prompt: string, options?: { imageBase64?: string; imageMimeType?: string; responseMimeType?: string }): Promise<string> {
   if (!isSupabaseConfigured()) throw new Error('Gemini nécessite Supabase (clé API côté serveur).');
 
   const { url: baseUrl, key } = getSupabaseConfig();
   if (!baseUrl || !key) throw new Error('Supabase non configuré.');
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('Connectez-vous pour utiliser l’assistant IA.');
+  }
 
   const body: Record<string, unknown> = { prompt };
   if (options?.imageBase64) body.imageBase64 = options.imageBase64;
@@ -19,21 +24,36 @@ async function callGemini(prompt: string, options?: { imageBase64?: string; imag
   if (options?.responseMimeType) body.responseMimeType = options.responseMimeType;
 
   const fnUrl = `${baseUrl}/functions/v1/call-gemini`;
-  const res = await fetch(fnUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(fnUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: key,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    const isNetwork =
+      err instanceof TypeError || (err instanceof Error && err.message === 'Failed to fetch');
+    throw new Error(
+      isNetwork
+        ? 'Connexion instable ou serveur injoignable. Vérifiez le réseau et réessayez.'
+        : 'Impossible de contacter l’assistant pour le moment. Réessayez dans quelques instants.',
+    );
+  }
 
   const data = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
   if (res.ok) return data?.text ?? '';
 
   const msg = data?.error || `Erreur ${res.status}`;
   if (res.status === 401) {
-    throw new Error('Session expirée. Reconnectez-vous puis réessayez.');
+    throw new Error(typeof msg === 'string' && msg.length > 0 ? msg : 'Session expirée. Reconnectez-vous puis réessayez.');
+  }
+  if (res.status === 429) {
+    throw new Error(typeof msg === 'string' && msg.length > 0 ? msg : 'Trop de requêtes. Réessayez dans une minute.');
   }
   if (res.status === 500 && msg.toLowerCase().includes('not configured')) {
     throw new Error('Gemini non configuré. Ajoutez GEMINI_API_KEY dans les secrets Supabase (Edge Function call-gemini).');

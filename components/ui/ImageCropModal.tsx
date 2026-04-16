@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Cropper from 'react-easy-crop';
+import CropperBase from 'react-easy-crop';
 import type { Area, MediaSize } from 'react-easy-crop';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Cropper = CropperBase as any;
 import 'react-easy-crop/react-easy-crop.css';
 import { Loader2 } from 'lucide-react';
 import { Modal } from './Modal';

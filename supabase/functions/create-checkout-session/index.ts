@@ -37,9 +37,14 @@ interface CheckoutPayload {
   clientInstagram?: string;
   projectRequestId?: string;
   threadId?: string;
+  /** auth.users.id — synchronise le questionnaire portail sur la fiche CRM au paiement */
+  clientPortalUserId?: string;
 }
 
 const META_MAX = 450;
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function trimMeta(s: string | undefined, max: number): string {
   if (!s || typeof s !== "string") return "";
@@ -156,6 +161,9 @@ Deno.serve(async (req: Request) => {
     const instagramMeta = trimMeta(payload.clientInstagram, META_MAX);
     const projectRequestMeta = trimMeta(payload.projectRequestId, 120);
     const threadMeta = trimMeta(payload.threadId, 200);
+    const portalUserRaw =
+      typeof payload.clientPortalUserId === "string" ? payload.clientPortalUserId.trim() : "";
+    const portalUserMeta = portalUserRaw && UUID_RE.test(portalUserRaw) ? portalUserRaw : "";
     const detailLine = [
       placementMeta && `Emplacement : ${placementMeta}`,
       notesMeta && `Précisions : ${notesMeta}`,
@@ -208,6 +216,7 @@ Deno.serve(async (req: Request) => {
       ...(placementMeta ? { "metadata[placement]": placementMeta } : {}),
       ...(notesMeta ? { "metadata[client_notes]": notesMeta } : {}),
       ...(instagramMeta ? { "metadata[client_instagram]": instagramMeta } : {}),
+      ...(portalUserMeta ? { "metadata[client_portal_user_id]": portalUserMeta } : {}),
     });
 
     const stripeRes = await fetch("https://api.stripe.com/v1/checkout/sessions", {

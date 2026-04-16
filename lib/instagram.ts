@@ -3,23 +3,38 @@
  * Appelle les Edge Functions Supabase via fetch pour pouvoir lire le corps d'erreur (non-2xx).
  */
 
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/+$/, '');
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+function getSupabaseConfig() {
+  const url = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const key = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
+  return { url, key };
+}
 
 async function invokeInstagram<T>(body: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/instagram`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-    body: JSON.stringify(body),
-  });
+  const { url, key } = getSupabaseConfig();
+  if (!url || !key) {
+    throw new Error('Application non configurée (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${url}/functions/v1/instagram`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${key}`,
+        apikey: key,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error('Connexion instable. Vérifiez le réseau et réessayez.');
+  }
+
   const data = (await res.json().catch(() => ({}))) as T & { error?: string; details?: string };
   if (!res.ok) {
     const msg = data?.error
       ? (data.details ? `${data.error}: ${data.details}` : data.error)
-      : res.statusText || 'Edge Function a échoué';
+      : res.statusText || 'Service Instagram temporairement indisponible.';
     throw new Error(msg);
   }
   return data as T;

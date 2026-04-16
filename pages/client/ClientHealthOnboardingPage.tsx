@@ -23,6 +23,8 @@ export const ClientHealthOnboardingPage: React.FC = () => {
   const [initial, setInitial] = useState<Partial<HealthFormData> | undefined>(undefined);
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
+  /** Permet d’afficher un libellé « mise à jour » au lieu d’exclure l’accès une fois le formulaire complété */
+  const [alreadyComplete, setAlreadyComplete] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,12 +43,11 @@ export const ClientHealthOnboardingPage: React.FC = () => {
         setClientEmail(email);
       }
       const existing = await fetchClientHealthProfile(u.id);
-      if (existing && isHealthFormComplete(existing)) {
-        window.location.replace('/client/dashboard');
-        return;
-      }
       if (existing) {
-        setInitial(existing);
+        if (!cancelled) {
+          setInitial(existing);
+          setAlreadyComplete(isHealthFormComplete(existing));
+        }
       } else if (name) {
         setInitial({ clientName: name });
       }
@@ -84,22 +85,27 @@ export const ClientHealthOnboardingPage: React.FC = () => {
       style={{ background: T.bg, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <SEO title="Questionnaire santé — My Inkflow" canonical="/client/compte-sante" noindex />
-      <header className="px-5 pt-safe-top pt-6 flex items-center gap-4">
+      <header
+        className="px-5 flex items-center gap-4 border-b border-zinc-800/80"
+        style={{ paddingTop: 'max(12px, env(safe-area-inset-top))', paddingBottom: 12 }}
+      >
         <a
           href="/client/dashboard"
-          className="inline-flex items-center gap-2 text-sm transition-colors min-h-[44px] rounded-xl px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+          className="inline-flex items-center gap-2 text-sm transition-colors min-h-[44px] rounded-xl px-2 -ml-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:opacity-90"
           style={{ color: T.muted }}
         >
           <ArrowLeft className="w-4 h-4 shrink-0" aria-hidden />
           Plus tard
         </a>
       </header>
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y px-4 sm:px-6 py-6 max-w-lg mx-auto w-full">
-        <h1 className="text-xl font-semibold mb-1" style={{ color: T.text }}>
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y px-4 sm:px-6 py-6 max-w-lg mx-auto w-full pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight mb-1" style={{ color: T.text }}>
           Questionnaire de santé
         </h1>
-        <p className="text-sm mb-6" style={{ color: T.muted }}>
-          Une seule fois : ces infos seront réutilisées quand tu réserves un tatouage connectée à ton compte.
+        <p className="text-sm sm:text-base mb-6 leading-relaxed" style={{ color: T.muted }}>
+          {alreadyComplete
+            ? 'Tes réponses sont enregistrées. Tu peux les mettre à jour ci-dessous à tout moment.'
+            : 'Une seule fois : ces infos seront réutilisées quand tu réserves un tatouage connectée à ton compte.'}
         </p>
         {loading ? (
           <div className="flex items-center gap-2 py-12 justify-center" style={{ color: T.muted }}>

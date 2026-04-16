@@ -58,7 +58,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({
     slug: '',
   });
 
-  const categories = ['all', ...Array.from(new Set(designs.map(d => d.category)))];
+  const categories = ['all', ...Array.from(new Set<string>(designs.map(d => d.category)))];
 
   const filteredDesigns = designs.filter(design => {
     const matchesSearch = design.title.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -3,13 +3,55 @@
  * Affiche le contact, les stats, la carte à tampons, les notes et l'historique RDV.
  */
 import React from 'react';
-import { Mail, Phone, Tag, StickyNote } from 'lucide-react';
+import { Mail, Phone, Tag, StickyNote, HeartPulse } from 'lucide-react';
 import type { Client } from '../../types';
 import { Modal } from '../ui/Modal';
 import { formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 import { ClientStampCard } from './ClientStampCard';
 import { getClientStatusColor } from './clientListUtils';
 import type { StampLoyaltySettings } from '../../lib/stampLoyalty';
+
+const HEALTH_FIELD_LABELS: Record<string, string> = {
+  clientName: 'Nom',
+  clientBirthdate: 'Date de naissance',
+  clientInstagram: 'Instagram',
+  allergiesDetails: 'Détail allergies',
+  signatureText: 'Attestation (signature)',
+  allergies: 'Allergies',
+  grossesse: 'Grossesse',
+  allaitement: 'Allaitement',
+  maladiesInfectieuses: 'Maladies infectieuses',
+  infectionsVirales: 'Infections virales',
+  troubleCicatriciel: 'Trouble cicatriciel',
+  diabete: 'Diabète',
+  antibiotiques: 'Antibiotiques récents',
+  antiInflammatoires: 'Anti-inflammatoires',
+  steroides: 'Corticoïdes / stéroïdes',
+  certifiedAccurate: 'Certification exactitude',
+};
+
+function formatHealthBool(v: unknown): string {
+  if (v === true) return 'Oui';
+  if (v === false) return 'Non';
+  return '—';
+}
+
+function unwrapHealthSnapshot(snapshot: unknown): {
+  source?: string;
+  syncedAt?: string;
+  data: Record<string, unknown>;
+} | null {
+  if (!snapshot || typeof snapshot !== 'object') return null;
+  const o = snapshot as Record<string, unknown>;
+  if (o.data && typeof o.data === 'object' && o.data !== null) {
+    return {
+      source: typeof o.source === 'string' ? o.source : undefined,
+      syncedAt: typeof o.synced_at === 'string' ? o.synced_at : undefined,
+      data: o.data as Record<string, unknown>,
+    };
+  }
+  return { data: o as Record<string, unknown> };
+}
 
 interface ClientDetailModalProps {
   client: Client;
@@ -160,6 +202,54 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
             totalCompleted={stampState?.totalCompletedTattoos}
           />
         )}
+
+        {(() => {
+          const unwrapped = unwrapHealthSnapshot(client.healthProfileSnapshot);
+          if (!unwrapped) return null;
+          const { source, syncedAt, data } = unwrapped;
+          const entries = Object.entries(data).filter(
+            ([k, v]) =>
+              k !== 'certifiedAccurate' &&
+              v !== null &&
+              v !== undefined &&
+              v !== '',
+          );
+          if (entries.length === 0) return null;
+          return (
+            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-900/40 p-4 sm:p-5">
+              <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 mb-3 flex items-center gap-2">
+                <HeartPulse className="w-4 h-4 shrink-0" aria-hidden />
+                Questionnaire santé
+              </h3>
+              {(source || syncedAt) && (
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
+                  {[
+                    source === 'portal'
+                      ? 'Synchronisé depuis l’espace client'
+                      : source === 'health_form'
+                        ? 'Synchronisé depuis le formulaire de réservation'
+                        : null,
+                    syncedAt ? new Date(syncedAt).toLocaleString('fr-FR') : null,
+                  ]
+                    .filter((x): x is string => Boolean(x))
+                    .join(' · ')}
+                </p>
+              )}
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5 text-sm min-w-0">
+                {entries.map(([key, val]) => (
+                  <React.Fragment key={key}>
+                    <dt className="text-neutral-500 dark:text-neutral-400">
+                      {HEALTH_FIELD_LABELS[key] ?? key}
+                    </dt>
+                    <dd className="text-neutral-900 dark:text-neutral-100 font-medium break-words min-w-0">
+                      {typeof val === 'boolean' ? formatHealthBool(val) : String(val)}
+                    </dd>
+                  </React.Fragment>
+                ))}
+              </dl>
+            </div>
+          );
+        })()}
 
         {/* Notes */}
         <div>

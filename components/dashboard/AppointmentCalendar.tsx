@@ -1,26 +1,48 @@
 /**
- * Calendrier style calendar.me — vue semaine/jour/mois, cartes événements colorées.
- * Responsive mobile et PC.
+ * Calendrier agenda studio — vue semaine / jour.
+ * Structure inspirée des dashboards type « Constructor » (Figma community) : barre de période,
+ * grille horaire, ligne « maintenant », cartes avec plage horaire et avatar.
  */
 import React, { useState, useMemo, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Clock, User, Pencil, XCircle, CheckCircle } from 'lucide-react';
-import { Appointment } from '../../types';
+import { Appointment, Client } from '../../types';
 import { Modal } from '../ui/Modal';
 
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8h à 20h
+const SLOT_PX = 72;
 const WEEKDAYS_SHORT = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
 
 type CalendarViewMode = 'week' | 'day';
 
 interface AppointmentCalendarProps {
   appointments: Appointment[];
+  /** Pour avatars sur les cartes créneau */
+  clients?: Client[];
   onSlotClick: () => void;
   onAppointmentClick?: (apt: Appointment) => void;
   onUpdateAppointment?: (apt: Appointment, updates: Partial<Appointment>) => void;
 }
 
-function toDateStr(d: Date): string {
-  return d.toISOString().split('T')[0];
+/** Date locale YYYY-MM-DD (évite le décalage UTC de toISOString). */
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function parseTimeToMinutes(t: string): number {
+  const parts = t.split(':');
+  const hh = parseInt(parts[0] ?? '0', 10);
+  const mm = parseInt(parts[1] ?? '0', 10);
+  if (Number.isNaN(hh)) return 0;
+  return hh * 60 + (Number.isNaN(mm) ? 0 : mm);
+}
+
+function formatHm(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60) % 24;
+  const m = totalMinutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 function getEventColor(status: Appointment['status']): string {
@@ -43,10 +65,22 @@ function getEventColor(status: Appointment['status']): string {
 
 export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   appointments,
+  clients = [],
   onSlotClick,
   onAppointmentClick,
   onUpdateAppointment,
 }) => {
+  const clientByEmail = useMemo(() => {
+    const m = new Map<string, Client>();
+    clients.forEach((c) => {
+      if (c.email) m.set(c.email.toLowerCase(), c);
+    });
+    return m;
+  }, [clients]);
+
+  const getAvatar = (apt: Appointment) =>
+    (apt.clientId && clients.find((c) => c.id === apt.clientId)?.avatar) ||
+    clientByEmail.get(apt.clientEmail?.toLowerCase() || '')?.avatar;
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
   const [weekStart, setWeekStart] = useState(() => {
     const d = new Date();
@@ -68,7 +102,41 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
     return days;
   }, [weekStart, viewMode]);
 
-  const isToday = (d: Date) => toDateStr(d) === toDateStr(new Date());
+  const isToday = (d: Date) => toLocalDateStr(d) === toLocalDateStr(new Date());
+
+  /** Ligne « maintenant » — recalcul à chaque rendu pour suivre l’heure. */
+  const nowLineOffsetPx = (() => {
+    const now = new Date();
+    const h = now.getHours();
+    const mi = now.getMinutes();
+    if (h < 8 || h > 20) return null;
+    const minutesFrom8 = (h - 8) * 60 + mi;
+    const totalSpan = 13 * 60;
+    return (minutesFrom8 / totalSpan) * (HOURS.length * SLOT_PX);
+  })();
+
+  const weekRangeLabel = useMemo(() => {
+    if (weekDays.length === 0) return '';
+    if (weekDays.length === 1) {
+      return weekDays[0].toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    }
+    const a = weekDays[0];
+    const b = weekDays[weekDays.length - 1];
+    const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+    if (a.getMonth() !== b.getMonth() || a.getFullYear() !== b.getFullYear()) {
+      return `${a.toLocaleDateString('fr-FR', opts)} – ${b.toLocaleDateString('fr-FR', { ...opts, year: 'numeric' })}`;
+    }
+    return `${a.getDate()} – ${b.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  }, [weekDays]);
+
+  const showNowLine =
+    nowLineOffsetPx != null &&
+    weekDays.some((d) => toLocalDateStr(d) === toLocalDateStr(new Date()));
 
   const goPrev = () => {
     const d = new Date(weekStart);
@@ -85,12 +153,16 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   };
 
   const goToday = () => {
+    if (viewMode === 'day') {
+      const t = new Date();
+      t.setHours(0, 0, 0, 0);
+      setWeekStart(t);
+      return;
+    }
     const d = new Date();
     d.setDate(d.getDate() - (d.getDay() || 7) + 1);
     setWeekStart(d);
   };
-
-  const monthLabel = weekStart.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 
   const handleAppointmentClick = (apt: Appointment, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -98,131 +170,202 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
     onAppointmentClick?.(apt);
   };
 
+  const gridCols = `56px repeat(${weekDays.length}, minmax(112px, 1fr))`;
+
   return (
-    <div className="card-bento dashboard-widget-card rounded-2xl overflow-hidden">
-      {/* Header: Mois, Today, flèches, toggle vue */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-6 border-b border-[var(--border)]">
-        <div className="flex items-center gap-2 flex-wrap">
+    <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-[0_4px_28px_-12px_rgba(15,23,42,0.12)] dark:shadow-[0_4px_28px_-12px_rgba(0,0,0,0.45)] overflow-hidden">
+      {/* Barre type Figma community calendar : Aujourd’hui | plage | Semaine / Jour */}
+      <div className="flex flex-col gap-4 border-b border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-950/50 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <button
-            onClick={goPrev}
-            className="min-w-[44px] min-h-[44px] p-2.5 rounded-xl hover:bg-[var(--bg-hover)] active:scale-95 transition-all"
-            aria-label="Précédent"
-          >
-            <ChevronLeft className="w-5 h-5 text-[var(--text-secondary)]" />
-          </button>
-          <h2 className="text-lg font-bold min-w-[180px] text-center text-[var(--text-primary)] capitalize">
-            {monthLabel}
-          </h2>
-          <button
-            onClick={goNext}
-            className="min-w-[44px] min-h-[44px] p-2.5 rounded-xl hover:bg-[var(--bg-hover)] active:scale-95 transition-all"
-            aria-label="Suivant"
-          >
-            <ChevronRight className="w-5 h-5 text-[var(--text-secondary)]" />
-          </button>
-          <button
+            type="button"
             onClick={goToday}
-            className="px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 transition-colors"
+            className="inline-flex w-full min-h-[44px] items-center justify-center rounded-xl border border-zinc-200/90 bg-white px-4 text-sm font-semibold text-zinc-900 shadow-sm transition-all hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 sm:w-auto sm:justify-center"
           >
             Aujourd&apos;hui
           </button>
-        </div>
-        <div className="inline-flex rounded-xl border border-[var(--border)] p-1 bg-[var(--bg-hover)]">
-          {(['week', 'day'] as const).map((mode, idx) => (
+
+          <div className="flex flex-1 items-center justify-center gap-1 sm:gap-2 min-w-0">
             <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`px-4 py-2 text-sm font-medium transition-all ${
-                idx === 0 ? 'rounded-l-lg' : 'rounded-r-lg'
-              } ${
-                viewMode === mode
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/50 dark:hover:bg-zinc-700/50'
-              }`}
+              type="button"
+              onClick={goPrev}
+              className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl border border-transparent text-zinc-500 transition-all hover:bg-zinc-200/80 dark:hover:bg-zinc-800 active:scale-95"
+              aria-label="Période précédente"
             >
-              {mode === 'week' ? 'Semaine' : 'Jour'}
+              <ChevronLeft className="h-5 w-5" />
             </button>
-          ))}
+            <p className="min-w-0 flex-1 text-center text-sm font-semibold capitalize leading-snug text-zinc-900 dark:text-white sm:text-base px-1">
+              {weekRangeLabel}
+            </p>
+            <button
+              type="button"
+              onClick={goNext}
+              className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl border border-transparent text-zinc-500 transition-all hover:bg-zinc-200/80 dark:hover:bg-zinc-800 active:scale-95"
+              aria-label="Période suivante"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="inline-flex w-full justify-center rounded-2xl border border-zinc-200/80 bg-zinc-100/90 p-1 dark:border-zinc-700/80 dark:bg-zinc-900/80 lg:w-auto">
+            {(['week', 'day'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setViewMode(mode)}
+                className={`min-h-[40px] flex-1 rounded-[10px] px-4 text-xs font-semibold transition-all active:scale-[0.98] sm:min-h-[36px] sm:flex-none sm:px-5 sm:text-sm ${
+                  viewMode === mode
+                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white'
+                    : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white'
+                }`}
+              >
+                {mode === 'week' ? 'Semaine' : 'Jour'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Grille: en-têtes jours + créneaux horaires */}
+      {/* Grille horaire + ligne maintenant */}
       <div
         className="overflow-x-auto"
-        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+        onTouchStart={(e) => {
+          touchStartX.current = e.touches[0].clientX;
+        }}
         onTouchEnd={(e) => {
           if (touchStartX.current === null) return;
           const dx = e.changedTouches[0].clientX - touchStartX.current;
-          if (Math.abs(dx) > 50) { dx < 0 ? goNext() : goPrev(); }
+          if (Math.abs(dx) > 50) {
+            dx < 0 ? goNext() : goPrev();
+          }
           touchStartX.current = null;
         }}
       >
-        <div
-          className="min-w-[600px] grid gap-px"
-          style={{
-            gridTemplateColumns: `56px repeat(${weekDays.length}, minmax(120px, 1fr))`,
-          }}
-        >
-          {/* En-tête vide + jours */}
-          <div className="flex items-center justify-end pr-2 py-3 text-xs text-[var(--text-tertiary)] uppercase">
-            Heure
-          </div>
-          {weekDays.map((day) => (
-            <div
-              key={day.toISOString()}
-              className={`text-center py-3 px-2 rounded-t-lg ${
-                isToday(day)
-                  ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 font-bold'
-                  : 'bg-[var(--bg-hover)] text-[var(--text-secondary)]'
-              }`}
-            >
-              <div className="text-[11px] uppercase font-semibold">
-                {WEEKDAYS_SHORT[day.getDay()]}
-              </div>
-              <div className="text-base font-bold">{day.getDate()}</div>
+        <div className="min-w-[min(100%,680px)]">
+          <div
+            className="grid gap-px border-b border-zinc-200/60 bg-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-800/80"
+            style={{ gridTemplateColumns: gridCols }}
+          >
+            <div className="flex items-center justify-end bg-zinc-50 py-3 pr-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+              Heure
             </div>
-          ))}
-
-          {/* Lignes horaires */}
-          {HOURS.map((hour) => (
-            <React.Fragment key={hour}>
-              <div className="flex items-start justify-end pr-2 py-2 text-xs text-[var(--text-tertiary)]">
-                {hour}h00
+            {weekDays.map((day) => (
+              <div
+                key={toLocalDateStr(day)}
+                className={`px-2 py-3 text-center ${
+                  isToday(day)
+                    ? 'bg-emerald-50 dark:bg-emerald-500/15'
+                    : 'bg-zinc-50 dark:bg-zinc-950/80'
+                }`}
+              >
+                <div
+                  className={`text-[11px] font-semibold uppercase tracking-wide ${
+                    isToday(day) ? 'text-emerald-700 dark:text-emerald-300' : 'text-zinc-500 dark:text-zinc-400'
+                  }`}
+                >
+                  {WEEKDAYS_SHORT[day.getDay()]}
+                </div>
+                <div
+                  className={`text-lg font-bold tabular-nums ${
+                    isToday(day) ? 'text-emerald-800 dark:text-emerald-200' : 'text-zinc-900 dark:text-white'
+                  }`}
+                >
+                  {day.getDate()}
+                </div>
               </div>
-              {weekDays.map((day) => {
-                const dateStr = toDateStr(day);
-                const slotApts = appointments.filter((a) => {
-                  if (a.date !== dateStr) return false;
-                  const aptHour = parseInt(a.time.split(':')[0], 10);
-                  return aptHour === hour;
-                });
-                return (
-                  <div
-                    key={`${dateStr}-${hour}`}
-                    onClick={onSlotClick}
-                    className="min-h-[72px] p-1.5 rounded-lg border border-transparent hover:border-[var(--border)] hover:bg-[var(--bg-hover)]/50 cursor-pointer transition-colors"
-                  >
-                    {slotApts.map((apt) => (
-                      <button
-                        key={apt.id}
-                        type="button"
-                        onClick={(e) => handleAppointmentClick(apt, e)}
-                        className={`w-full min-h-[56px] text-left p-3 rounded-xl border shadow-sm hover:shadow-md active:scale-[0.99] transition-all cursor-pointer ${getEventColor(
-                          apt.status
-                        )}`}
-                      >
-                        <div className="font-semibold text-sm truncate">{apt.clientName}</div>
-                        <div className="text-xs opacity-90 truncate mt-0.5">{apt.service}</div>
-                        <div className="text-[11px] opacity-80 mt-1">
-                          {apt.time} • {apt.duration} min
-                        </div>
-                      </button>
-                    ))}
+            ))}
+          </div>
+
+          <div className="relative">
+            {showNowLine && nowLineOffsetPx != null && (
+              <div
+                className="pointer-events-none absolute left-14 right-0 z-20 flex items-center"
+                style={{ top: nowLineOffsetPx }}
+                aria-hidden
+              >
+                <div className="h-0 w-full border-t-2 border-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.35)]" />
+                <span className="absolute -left-0 -top-3 rounded-md bg-orange-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
+                  Maintenant
+                </span>
+              </div>
+            )}
+
+            <div
+              className="grid gap-px bg-zinc-200/50 dark:bg-zinc-800/80"
+              style={{ gridTemplateColumns: gridCols }}
+            >
+              {HOURS.map((hour) => (
+                <React.Fragment key={hour}>
+                  <div className="flex items-start justify-end bg-zinc-50/90 py-2 pr-2 text-xs tabular-nums text-zinc-400 dark:bg-zinc-950/90 dark:text-zinc-500">
+                    {hour}h
                   </div>
-                );
-              })}
-            </React.Fragment>
-          ))}
+                  {weekDays.map((day) => {
+                    const dateStr = toLocalDateStr(day);
+                    const slotApts = appointments.filter((a) => {
+                      if (a.date !== dateStr) return false;
+                      const aptHour = parseInt(a.time.split(':')[0], 10);
+                      return aptHour === hour;
+                    });
+                    return (
+                      <div
+                        key={`${dateStr}-${hour}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={onSlotClick}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onSlotClick();
+                          }
+                        }}
+                        className={`border-l border-zinc-100/90 bg-white p-1.5 transition-colors hover:bg-zinc-50/80 dark:border-zinc-800/90 dark:bg-zinc-900 dark:hover:bg-zinc-800/50 ${
+                          isToday(day) ? 'ring-inset ring-1 ring-emerald-500/15 dark:ring-emerald-500/20' : ''
+                        }`}
+                        style={{ minHeight: SLOT_PX }}
+                      >
+                        {slotApts.map((apt) => {
+                          const startM = parseTimeToMinutes(apt.time);
+                          const endM = startM + (apt.duration || 60);
+                          const avatar = getAvatar(apt);
+                          return (
+                            <button
+                              key={apt.id}
+                              type="button"
+                              onClick={(e) => handleAppointmentClick(apt, e)}
+                              className={`mb-1 w-full min-h-[56px] rounded-xl border p-2.5 text-left shadow-sm transition-all hover:shadow-md active:scale-[0.99] ${getEventColor(apt.status)}`}
+                            >
+                              <div className="mb-1.5 flex flex-wrap gap-1">
+                                <span className="inline-flex rounded-md border border-current/25 bg-white/70 px-1.5 py-0.5 text-[10px] font-bold tabular-nums dark:bg-black/25">
+                                  {(apt.time || '09:00').slice(0, 5)}
+                                </span>
+                                <span className="inline-flex rounded-md border border-current/25 bg-white/50 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums opacity-90 dark:bg-black/20">
+                                  {formatHm(endM)}
+                                </span>
+                              </div>
+                              <div className="truncate text-sm font-semibold leading-tight">{apt.clientName}</div>
+                              <div className="mt-0.5 truncate text-[11px] opacity-90">{apt.service}</div>
+                              <div className="mt-2 flex items-center justify-between gap-2">
+                                <span className="text-[10px] font-medium opacity-75">{apt.duration} min</span>
+                                <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full border border-black/10 bg-white/80 dark:bg-zinc-800 dark:border-white/10">
+                                  {avatar ? (
+                                    <img src={avatar} alt="" className="h-full w-full object-cover" />
+                                  ) : (
+                                    <span className="flex h-full w-full items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-300">
+                                      {apt.clientName.charAt(0).toUpperCase()}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

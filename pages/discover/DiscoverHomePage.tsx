@@ -6,6 +6,7 @@ import { SearchBar } from '../../components/discover/SearchBar';
 import { ArtistCard } from '../../components/discover/ArtistCard';
 import { CityLinks } from '../../components/discover/CityLinks';
 import { StyleBadge } from '../../components/discover/StyleBadge';
+import { SEO, websiteSchema } from '../../components/SEO';
 import { getTrendingStudios, getActiveCities, type DiscoverStudio, type CityPage } from '../../lib/discover';
 import { STYLES_LIST, STYLE_SLUGS } from '../../lib/constants/styles';
 import { DISCOVER_UI as U } from '../../lib/discoverUiTheme';
@@ -60,6 +61,13 @@ export function DiscoverHomePage() {
       fontFamily: 'Inter, system-ui, sans-serif',
       WebkitFontSmoothing: 'antialiased',
     }}>
+      <SEO
+        title="Trouver un tatoueur — directory studios & portfolios"
+        description="Parcours des portfolios de tatoueurs et studios en France. Filtre par style et ville, puis réserve ton créneau avec Inkflow."
+        canonical="/discover"
+        keywords="tatoueur, studio tatouage, tattoo France, directory tatouage, réserver tatouage, portfolio tatoueur"
+        schema={websiteSchema}
+      />
       <nav style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '16px 24px',

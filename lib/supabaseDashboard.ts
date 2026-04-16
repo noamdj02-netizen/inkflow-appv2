@@ -483,7 +483,9 @@ export function mapClientFromDb(row: Record<string, unknown>): Client {
     status: (row.status as Client['status']) || 'active',
     tags: (row.tags as string[]) || [],
     tattoos: (row.tattoos as Client['tattoos']) || [],
-    notes: row.notes as string | undefined
+    notes: row.notes as string | undefined,
+    portalUserId: (row.portal_user_id as string) || null,
+    healthProfileSnapshot: (row.health_profile_snapshot as Client['healthProfileSnapshot']) ?? null,
   };
 }
 
@@ -512,6 +514,9 @@ export async function saveClientToSupabase(studioId: string, client: Client): Pr
     tags: client.tags,
     tattoos: client.tattoos as unknown as import('../types/database').Json,
     notes: client.notes || null,
+    portal_user_id: client.portalUserId ?? null,
+    health_profile_snapshot: (client.healthProfileSnapshot ??
+      null) as import('../types/database').Json | null,
     updated_at: new Date().toISOString()
   };
   const { error } = await supabase.from('inkflow_clients').upsert(row, { onConflict: 'id' });
@@ -547,6 +552,8 @@ export async function bulkInsertClientsToSupabase(studioId: string, clients: Cli
       tags: c.tags,
       tattoos: c.tattoos as unknown as import('../types/database').Json,
       notes: c.notes ?? null,
+      portal_user_id: c.portalUserId ?? null,
+      health_profile_snapshot: (c.healthProfileSnapshot ?? null) as import('../types/database').Json | null,
       updated_at: now,
     }));
     const { error } = await supabase.from('inkflow_clients').insert(rows);
@@ -698,7 +705,8 @@ export async function saveAppointmentToSupabase(studioId: string, apt: Appointme
 
 /** Si la session Stripe n’a pas pu être créée, supprime le RDV pending (même e-mail que le formulaire). */
 export async function abandonPublicCheckoutAppointment(appointmentId: string, clientEmail: string): Promise<void> {
-  const { error } = await supabase.rpc('abandon_public_checkout_appointment', {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.rpc as any)('abandon_public_checkout_appointment', {
     p_id: appointmentId,
     p_client_email: clientEmail,
   });

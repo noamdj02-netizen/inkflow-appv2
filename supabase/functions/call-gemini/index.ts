@@ -1,12 +1,48 @@
 /**
  * Edge Function pour appeler l'API Gemini côté serveur.
  * La clé API est stockée en secret (GEMINI_API_KEY) et n'est jamais exposée au client.
+ *
+ * Sécurité : session utilisateur obligatoire (pas de JWT anon) + rate limit par utilisateur et par IP.
  */
 
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { allowRateLimit, clientIpFromRequest } from "../_shared/rateLimit.ts";
+import { getGoTrueUser } from "../_shared/supabaseAuth.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || "";
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
+
+/** Requêtes / minute / utilisateur authentifié (coût API). */
+const RATE_USER_MAX = 25;
+const RATE_USER_WINDOW_MS = 60_000;
+/** Plafond IP (anti-abus multi-comptes depuis la même machine). */
+const RATE_IP_MAX = 120;
+const RATE_IP_WINDOW_MS = 60_000;
+
+function bearerToken(authHeader: string | null): string | null {
+  const h = authHeader?.trim();
+  if (!h?.toLowerCase().startsWith("bearer ")) return null;
+  const t = h.slice(7).trim();
+  return t.length > 0 ? t : null;
+}
+
+/** Rejette le JWT « anon » (clé publique) — ne doit pas suffire à appeler Gemini. */
+function isAnonJwt(token: string): boolean {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return false;
+    const pad = parts[1].length % 4 === 0 ? "" : "=".repeat(4 - (parts[1].length % 4));
+    const json = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/") + pad),
+    ) as { role?: string };
+    return json?.role === "anon";
+  } catch {
+    return false;
+  }
+}
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
@@ -20,13 +56,52 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: jsonHeaders });
   }
 
-  try {
-    // Vérification de l'authentification (Sécurité cruciale pour un SaaS)
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No authorization header" }), { status: 401, headers: jsonHeaders });
-    }
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error("[call-gemini] SUPABASE_URL / SUPABASE_ANON_KEY manquants");
+    return new Response(JSON.stringify({ error: "Configuration serveur incomplète" }), {
+      status: 503,
+      headers: jsonHeaders,
+    });
+  }
 
+  const token = bearerToken(req.headers.get("Authorization"));
+  if (!token) {
+    return new Response(JSON.stringify({ error: "Connexion requise pour l’assistant IA." }), {
+      status: 401,
+      headers: jsonHeaders,
+    });
+  }
+
+  if (isAnonJwt(token)) {
+    return new Response(
+      JSON.stringify({ error: "Connectez-vous avec votre compte tatoueur pour utiliser l’assistant IA." }),
+      { status: 401, headers: jsonHeaders },
+    );
+  }
+
+  const user = await getGoTrueUser(SUPABASE_URL, SUPABASE_ANON_KEY, token);
+  if (!user?.id) {
+    return new Response(JSON.stringify({ error: "Session invalide ou expirée. Reconnectez-vous." }), {
+      status: 401,
+      headers: jsonHeaders,
+    });
+  }
+
+  const ip = clientIpFromRequest(req);
+  if (!allowRateLimit(`gemini:ip:${ip}`, RATE_IP_MAX, RATE_IP_WINDOW_MS)) {
+    return new Response(JSON.stringify({ error: "Trop de requêtes depuis cette adresse. Réessayez dans une minute." }), {
+      status: 429,
+      headers: jsonHeaders,
+    });
+  }
+  if (!allowRateLimit(`gemini:user:${user.id}`, RATE_USER_MAX, RATE_USER_WINDOW_MS)) {
+    return new Response(
+      JSON.stringify({ error: "Limite d’utilisation de l’IA atteinte. Réessayez dans une minute." }),
+      { status: 429, headers: jsonHeaders },
+    );
+  }
+
+  try {
     const body = await req.json();
     const { prompt, imageBase64, imageMimeType } = body;
 
@@ -80,12 +155,11 @@ Deno.serve(async (req: Request) => {
 
     const data = await res.json();
 
-    // Gestion des filtres de sécurité Google
     const candidate = data.candidates?.[0];
     if (candidate?.finishReason === "SAFETY") {
       return new Response(
         JSON.stringify({ text: "Désolé, cette demande a été bloquée par les filtres de sécurité." }),
-        { headers: jsonHeaders }
+        { headers: jsonHeaders },
       );
     }
 

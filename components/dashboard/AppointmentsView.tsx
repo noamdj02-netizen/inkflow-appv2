@@ -154,112 +154,170 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
   const activeLabel = dateRangeChip === 'today' ? "Aujourd'hui" : dateRangeChip === 'week' ? 'Cette semaine' : selectedDate ? formatDateLabel(selectedDate) : null;
 
-  const kpiGridClass =
-    stats.pendingCount > 0
-      ? 'grid grid-cols-3 gap-2 w-full sm:flex sm:flex-wrap sm:w-auto'
-      : 'grid grid-cols-2 gap-2 w-full sm:flex sm:flex-wrap sm:w-auto';
+  /** Mobile : 1 colonne (lignes pleine largeur) · sm+ : 3 tuiles côte à côte */
+  const kpiGridClass = 'grid w-full grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3';
 
   return (
-    <div className="space-y-3 sm:space-y-5 md:space-y-6 animate-fade-in font-sans">
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in font-sans motion-reduce:animate-none">
 
-      {/* ── HEADER — mobile: titre + CTA sur une ligne ; KPI en grille pleine largeur (évite le « blanc » à droite) ── */}
-      <div className="flex flex-col gap-3 sm:gap-4">
-        <div className="flex items-start justify-between gap-3">
-          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight min-w-0">
-            Rendez-vous
-          </h1>
+      {/* ── En-tête page (hiérarchie type dashboard dense, repères ui-ux-pro-max) ── */}
+      <div className="flex flex-col gap-4 sm:gap-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <h1 className="font-display text-[1.35rem] font-bold leading-tight tracking-tight text-zinc-900 dark:text-white min-[380px]:text-2xl sm:text-3xl">
+              Rendez-vous
+            </h1>
+            <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-zinc-500 dark:text-zinc-400 sm:text-sm sm:leading-normal md:text-base">
+              <span className="sm:hidden">Filtre la période ci-dessous, puis Liste ou Planning.</span>
+              <span className="hidden sm:inline">
+                Filtre par période et statut, puis passe en liste ou en planning pour voir la journée semaine par semaine.
+              </span>
+            </p>
+          </div>
           <button
             type="button"
             onClick={onNewAppointment}
-            className="flex-shrink-0 inline-flex items-center justify-center gap-2 min-h-[44px] sm:min-h-[40px] px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white dark:bg-blue-500 dark:hover:bg-blue-400 text-sm font-semibold rounded-xl shadow-sm shadow-blue-600/25 dark:shadow-blue-500/20 transition-all active:scale-[0.97]"
+            className="inline-flex w-full min-h-[48px] shrink-0 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 active:scale-[0.98] dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 dark:focus-visible:ring-offset-black sm:w-auto sm:min-h-[40px] sm:py-2.5"
           >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Nouveau RDV</span>
-            <span className="sm:hidden">+ RDV</span>
+            <Plus className="h-4 w-4" aria-hidden />
+            <span>Nouveau RDV</span>
           </button>
         </div>
 
-        {/* Stats — grille = même largeur de colonnes, plus de vide à droite sur téléphone */}
-        <div className={kpiGridClass}>
+        {/* KPI — chiffre dominant + libellé (scan rapide), 3 tuiles fixes, filtres au clic */}
+        <div
+          className="rounded-2xl border border-zinc-200/80 bg-gradient-to-b from-white/90 to-zinc-50/90 p-2.5 shadow-sm dark:border-zinc-800 dark:from-zinc-900/60 dark:to-zinc-950/80 dark:shadow-none sm:p-4"
+          role="region"
+          aria-label="Indicateurs sur la période"
+        >
+          <div className="mb-2 sm:mb-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 sm:text-[11px]">
+              Aperçu
+            </p>
+            <p className="mt-0.5 text-[10px] leading-snug text-zinc-400 dark:text-zinc-500 sm:mt-1 sm:text-[11px]" id="kpi-hint">
+              <span className="sm:hidden">Tape une ligne pour filtrer la liste.</span>
+              <span className="hidden sm:inline">Touche un indicateur pour filtrer la liste ci-dessous.</span>
+            </p>
+          </div>
+          <div className={kpiGridClass} aria-describedby="kpi-hint">
           <button
             type="button"
+            aria-pressed={dateRangeChip === 'today'}
             onClick={() => { setDateRangeChip('today'); setSelectedDate(null); setMiniCalendarMonth(new Date()); }}
-            className={`flex min-w-0 w-full items-center justify-center gap-1.5 sm:gap-2 px-1.5 sm:pl-1 sm:pr-3 min-h-[44px] sm:min-h-[40px] rounded-2xl text-[11px] sm:text-xs font-semibold transition-all active:scale-[0.98] border border-transparent ${
+            className={`flex min-h-[52px] min-w-0 rounded-xl border px-3 py-2.5 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:min-h-[76px] sm:flex-col sm:items-center sm:justify-center sm:px-3 sm:py-2.5 sm:text-center ${
               dateRangeChip === 'today'
-                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm'
-                : 'bg-zinc-100/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/90 dark:hover:bg-zinc-700 border-zinc-200/60 dark:border-zinc-700/80'
+                ? 'border-sky-500/50 bg-sky-50 shadow-inner dark:border-sky-500/40 dark:bg-sky-500/10'
+                : 'border-zinc-200/80 bg-white/95 hover:border-zinc-300 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/90 dark:hover:border-zinc-600'
             }`}
           >
-            <span className="hidden sm:block w-1 self-stretch min-h-[2rem] rounded-full bg-sky-500 shrink-0" aria-hidden />
-            <CalendarDays className="w-3.5 h-3.5 shrink-0 opacity-90" />
-            <span className="tabular-nums text-center leading-tight">
-              <span className="block sm:inline">{stats.todayCount} </span>
-              <span className="block text-[10px] font-semibold opacity-90 sm:inline sm:text-xs sm:font-semibold sm:opacity-100">
-                <span className="sm:hidden">auj.</span>
-                <span className="hidden sm:inline">aujourd&apos;hui</span>
-              </span>
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => { setDateRangeChip('week'); setSelectedDate(null); }}
-            className={`flex min-w-0 w-full items-center justify-center gap-1.5 sm:gap-2 px-1.5 sm:pl-1 sm:pr-3 min-h-[44px] sm:min-h-[40px] rounded-2xl text-[11px] sm:text-xs font-semibold transition-all active:scale-[0.98] border border-transparent ${
-              dateRangeChip === 'week'
-                ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100 shadow-sm'
-                : 'bg-zinc-100/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200/90 dark:hover:bg-zinc-700 border-zinc-200/60 dark:border-zinc-700/80'
-            }`}
-          >
-            <span className="hidden sm:block w-1 self-stretch min-h-[2rem] rounded-full bg-zinc-500 dark:bg-zinc-400 shrink-0" aria-hidden />
-            <Clock className="w-3.5 h-3.5 shrink-0 opacity-90" />
-            <span className="tabular-nums text-center leading-tight">
-              <span className="block sm:inline">{stats.weekCount} </span>
-              <span className="block text-[10px] font-semibold opacity-90 sm:inline sm:text-xs sm:font-semibold sm:opacity-100">
-                <span className="sm:hidden">sem.</span>
-                <span className="hidden sm:inline">cette semaine</span>
-              </span>
-            </span>
-          </button>
-          {stats.pendingCount > 0 && (
-            <button
-              type="button"
-              onClick={() => { setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending'); setDateRangeChip(null); setSelectedDate(null); }}
-              className={`flex min-w-0 w-full items-center justify-center gap-1.5 sm:gap-2 px-1.5 sm:pl-1 sm:pr-3 min-h-[44px] sm:min-h-[40px] rounded-2xl text-[11px] sm:text-xs font-semibold transition-all active:scale-[0.98] border ${
-                statusFilter === 'pending'
-                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
-                  : 'bg-amber-50/95 dark:bg-amber-500/12 text-amber-800 dark:text-amber-300 border-amber-200/70 dark:border-amber-500/25'
-              }`}
-            >
-              <span className="hidden sm:block w-1 self-stretch min-h-[2rem] rounded-full bg-amber-500 shrink-0" aria-hidden />
-              <Users className="w-3.5 h-3.5 shrink-0 opacity-90" />
-              <span className="tabular-nums text-center leading-tight">
-                <span className="block sm:inline">{stats.pendingCount} </span>
-                <span className="block text-[10px] font-semibold opacity-90 sm:inline sm:text-xs sm:font-semibold sm:opacity-100">
-                  <span className="sm:hidden">att.</span>
-                  <span className="hidden sm:inline">en attente</span>
+            <span className="flex w-full flex-row items-center justify-between gap-3 sm:hidden">
+              <span className="flex min-w-0 items-center gap-2.5">
+                <CalendarDays className={`h-5 w-5 shrink-0 ${dateRangeChip === 'today' ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-400 dark:text-zinc-500'}`} aria-hidden />
+                <span className={`truncate text-xs font-semibold ${dateRangeChip === 'today' ? 'text-sky-800 dark:text-sky-200' : 'text-zinc-600 dark:text-zinc-300'}`}>
+                  Aujourd&apos;hui
                 </span>
               </span>
-            </button>
-          )}
+              <span className={`shrink-0 font-display text-2xl font-bold tabular-nums leading-none ${dateRangeChip === 'today' ? 'text-sky-700 dark:text-sky-300' : 'text-zinc-900 dark:text-white'}`}>
+                {stats.todayCount}
+              </span>
+            </span>
+            <span className="hidden w-full flex-col items-center justify-center gap-1 sm:flex">
+              <CalendarDays className={`h-4 w-4 shrink-0 ${dateRangeChip === 'today' ? 'text-sky-600 dark:text-sky-400' : 'text-zinc-400 dark:text-zinc-500'}`} aria-hidden />
+              <span className={`font-display text-xl font-bold tabular-nums leading-none sm:text-2xl ${dateRangeChip === 'today' ? 'text-sky-700 dark:text-sky-300' : 'text-zinc-900 dark:text-white'}`}>
+                {stats.todayCount}
+              </span>
+              <span className={`text-[10px] font-semibold leading-tight sm:text-[11px] ${dateRangeChip === 'today' ? 'text-sky-800 dark:text-sky-200' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                Aujourd&apos;hui
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={dateRangeChip === 'week'}
+            onClick={() => { setDateRangeChip('week'); setSelectedDate(null); }}
+            className={`flex min-h-[52px] min-w-0 rounded-xl border px-3 py-2.5 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:min-h-[76px] sm:flex-col sm:items-center sm:justify-center sm:px-3 sm:py-2.5 sm:text-center ${
+              dateRangeChip === 'week'
+                ? 'border-zinc-900 bg-zinc-900 text-white shadow-sm dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900'
+                : 'border-zinc-200/80 bg-white/95 hover:border-zinc-300 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/90 dark:hover:border-zinc-600'
+            }`}
+          >
+            <span className="flex w-full flex-row items-center justify-between gap-3 sm:hidden">
+              <span className="flex min-w-0 items-center gap-2.5">
+                <Clock className={`h-5 w-5 shrink-0 ${dateRangeChip === 'week' ? 'text-white dark:text-zinc-900' : 'text-zinc-400 dark:text-zinc-500'}`} aria-hidden />
+                <span className={`truncate text-xs font-semibold ${dateRangeChip === 'week' ? 'text-zinc-200 dark:text-zinc-700' : 'text-zinc-600 dark:text-zinc-300'}`}>
+                  Cette semaine
+                </span>
+              </span>
+              <span className={`shrink-0 font-display text-2xl font-bold tabular-nums leading-none ${dateRangeChip === 'week' ? 'text-white dark:text-zinc-900' : 'text-zinc-900 dark:text-white'}`}>
+                {stats.weekCount}
+              </span>
+            </span>
+            <span className="hidden w-full flex-col items-center justify-center gap-1 sm:flex">
+              <Clock className={`h-4 w-4 shrink-0 ${dateRangeChip === 'week' ? 'text-white opacity-90 dark:text-zinc-900' : 'text-zinc-400 dark:text-zinc-500'}`} aria-hidden />
+              <span className={`font-display text-xl font-bold tabular-nums leading-none sm:text-2xl ${dateRangeChip === 'week' ? 'text-white dark:text-zinc-900' : 'text-zinc-900 dark:text-white'}`}>
+                {stats.weekCount}
+              </span>
+              <span className={`text-[10px] font-semibold leading-tight sm:text-[11px] ${dateRangeChip === 'week' ? 'text-zinc-200 dark:text-zinc-600' : 'text-zinc-500 dark:text-zinc-400'}`}>
+                Cette semaine
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={statusFilter === 'pending'}
+            onClick={() => { setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending'); setDateRangeChip(null); setSelectedDate(null); }}
+            className={`flex min-h-[52px] min-w-0 rounded-xl border px-3 py-2.5 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:min-h-[76px] sm:flex-col sm:items-center sm:justify-center sm:px-3 sm:py-2.5 sm:text-center ${
+              statusFilter === 'pending'
+                ? 'border-amber-500 bg-amber-500 text-white shadow-sm dark:bg-amber-500'
+                : 'border-amber-200/80 bg-amber-50/90 text-amber-900 hover:bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/15'
+            }`}
+          >
+            <span className="flex w-full flex-row items-center justify-between gap-3 sm:hidden">
+              <span className="flex min-w-0 items-center gap-2.5">
+                <Users className={`h-5 w-5 shrink-0 ${statusFilter === 'pending' ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} aria-hidden />
+                <span className={`truncate text-xs font-semibold ${statusFilter === 'pending' ? 'text-amber-50' : 'text-amber-900 dark:text-amber-200'}`}>
+                  En attente
+                </span>
+              </span>
+              <span className={`shrink-0 font-display text-2xl font-bold tabular-nums leading-none ${statusFilter === 'pending' ? 'text-white' : 'text-amber-900 dark:text-amber-100'}`}>
+                {stats.pendingCount}
+              </span>
+            </span>
+            <span className="hidden w-full flex-col items-center justify-center gap-1 sm:flex">
+              <Users className={`h-4 w-4 shrink-0 ${statusFilter === 'pending' ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} aria-hidden />
+              <span className={`font-display text-xl font-bold tabular-nums leading-none sm:text-2xl ${statusFilter === 'pending' ? 'text-white' : 'text-amber-900 dark:text-amber-100'}`}>
+                {stats.pendingCount}
+              </span>
+              <span className={`text-[10px] font-semibold leading-tight sm:text-[11px] ${statusFilter === 'pending' ? 'text-amber-50' : 'text-amber-800 dark:text-amber-300'}`}>
+                En attente
+              </span>
+            </span>
+          </button>
+        </div>
         </div>
       </div>
 
-      {/* ── TOOLBAR — petit mobile : 2 lignes (filtre pleine largeur) ; sm+ : une ligne ── */}
-      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 min-w-0">
-        <div className="flex items-center gap-2 min-w-0 w-full sm:w-auto sm:flex-1">
+      {/* ── Barre d’outils groupée (vue + recherche + filtre) ── */}
+      <div className="flex flex-col gap-2 rounded-2xl border border-zinc-200/70 bg-white/70 p-2 dark:border-zinc-800 dark:bg-zinc-900/50 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:p-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {/* Vue */}
-          <div className="inline-flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-2xl border border-zinc-200/60 dark:border-zinc-700/60 shrink-0">
+          <div
+            className="inline-flex shrink-0 rounded-2xl border border-zinc-200/60 bg-zinc-100/90 p-1 dark:border-zinc-700/60 dark:bg-zinc-800/90"
+            role="group"
+            aria-label="Changer de vue"
+          >
             {(['list', 'calendar'] as ViewMode[]).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => setViewMode(m)}
-                className={`min-h-[44px] sm:min-h-9 px-4 sm:px-3 rounded-[10px] text-xs font-semibold transition-all active:scale-[0.98] ${
+                className={`min-h-[44px] rounded-[10px] px-4 text-xs font-semibold transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:min-h-9 sm:px-3 ${
                   viewMode === m
-                    ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-600'
-                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                    ? 'border border-zinc-200/80 bg-white text-zinc-900 shadow-sm dark:border-zinc-600 dark:bg-zinc-700 dark:text-white'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'
                 }`}
               >
-                {m === 'list' ? 'Liste' : 'Mois'}
+                {m === 'list' ? 'Liste' : 'Planning'}
               </button>
             ))}
           </div>
@@ -268,17 +326,17 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           <button
             type="button"
             onClick={() => setShowCalendarMobile((v) => !v)}
-            className={`lg:hidden inline-flex items-center justify-center gap-1.5 min-h-11 min-w-11 px-2 rounded-xl text-xs font-semibold border transition-all active:scale-[0.98] shrink-0 ${
+            className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 min-h-11 min-w-11 lg:hidden ${
               showCalendarMobile
-                ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400'
-                : 'bg-white dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 shadow-sm'
+                ? 'border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400'
+                : 'border-zinc-200/80 bg-white text-zinc-600 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400'
             }`}
           >
-            <Calendar className="w-4 h-4" />
-            <span className="hidden min-[400px]:inline">Calendrier</span>
+            <Calendar className="h-4 w-4" aria-hidden />
+            <span className="hidden min-[400px]:inline">Mini cal.</span>
           </button>
 
-          <div className="flex-1 min-w-2" />
+          <div className="hidden min-w-2 flex-1 sm:block" />
 
           {/* Recherche */}
           {showSearch ? (
@@ -291,7 +349,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                   placeholder="Client, service…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full min-h-11 pl-9 pr-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                  className="w-full min-h-11 rounded-xl border border-zinc-200 bg-zinc-50 py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-500"
                 />
               </div>
               <button
@@ -307,20 +365,21 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             <button
               type="button"
               onClick={() => setShowSearch(true)}
-              className="min-h-11 min-w-11 flex items-center justify-center rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shadow-sm active:scale-[0.98] shrink-0"
-              aria-label="Rechercher"
+              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200/80 bg-white text-zinc-500 shadow-sm transition-colors hover:text-blue-600 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:text-blue-400"
+              aria-label="Rechercher un rendez-vous"
             >
-              <Search className="w-4 h-4" />
+              <Search className="h-4 w-4" />
             </button>
           )}
         </div>
 
         {/* Filtre statut */}
-        <div className="relative w-full min-w-0 sm:w-auto sm:min-w-[11rem] sm:max-w-[min(100%,20rem)] sm:flex-1">
+        <div className="relative w-full min-w-0 sm:w-auto sm:min-w-[12rem] sm:max-w-[min(100%,20rem)]">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className="appearance-none w-full min-h-11 pl-3 pr-9 py-2 text-xs font-semibold rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer transition-all shadow-sm"
+            aria-label="Filtrer par statut"
+            className="w-full min-h-11 cursor-pointer appearance-none rounded-xl border border-zinc-200/80 bg-white py-2 pl-3 pr-9 text-xs font-semibold text-zinc-700 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
           >
             <option value="all">Tous les statuts</option>
             <option value="pending">En attente</option>
@@ -332,18 +391,21 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         </div>
       </div>
 
-      {/* Label filtre actif */}
+      {/* Résumé filtre actif */}
       {activeLabel && (
-        <div className="flex items-center gap-2 flex-wrap rounded-xl border border-zinc-200/70 dark:border-zinc-700/80 bg-zinc-50/80 dark:bg-zinc-900/40 px-3 py-1.5 sm:py-2">
-          <span className="text-xs text-zinc-500 dark:text-zinc-500 tabular-nums">{filteredAppointments.length} RDV ·</span>
-          <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">{activeLabel}</span>
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-200/70 bg-zinc-50/90 px-3 py-2 dark:border-zinc-700/80 dark:bg-zinc-900/50 sm:px-4">
+          <Calendar className="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" aria-hidden />
+          <span className="text-xs tabular-nums text-zinc-500 dark:text-zinc-500">
+            {filteredAppointments.length} RDV ·{' '}
+            <span className="font-semibold text-emerald-700 dark:text-emerald-400">{activeLabel}</span>
+          </span>
           <button
             type="button"
             onClick={() => { setSelectedDate(null); setDateRangeChip(null); setStatusFilter('all'); }}
-            className="ml-auto min-h-11 min-w-11 -mr-1 inline-flex items-center justify-center rounded-lg text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 transition-colors active:scale-[0.98]"
+            className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-200/70 hover:text-zinc-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
             aria-label="Réinitialiser les filtres"
           >
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -353,8 +415,15 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
         {/* Sidebar calendrier */}
         <aside className={`lg:w-64 xl:w-72 flex-shrink-0 ${showCalendarMobile ? 'block' : 'hidden lg:block'}`}>
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden">
+          <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
+            <div className="border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Calendrier</p>
+              <p className="mt-0.5 text-[11px] leading-snug text-zinc-400 dark:text-zinc-500">
+                Touche un jour pour filtrer la liste
+              </p>
+            </div>
             <MiniCalendar
+              className="!rounded-none !border-0 !shadow-none bg-transparent dark:!bg-transparent"
               selectedDate={selectedDate}
               onSelectDate={(d) => { setSelectedDate(d); setDateRangeChip(null); setShowCalendarMobile(false); }}
               datesWithAppointments={datesWithAppointments}
@@ -372,6 +441,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           {viewMode === 'calendar' ? (
             <AppointmentCalendar
               appointments={filteredAppointments}
+              clients={clients}
               onSlotClick={onNewAppointment}
               onAppointmentClick={onSelectAppointment}
               onUpdateAppointment={onUpdateAppointment}
@@ -385,8 +455,12 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">
                 {dateRangeChip === 'today' ? "Aucun RDV aujourd'hui" : dateRangeChip === 'week' ? 'Aucun RDV cette semaine' : selectedDate ? `Aucun RDV le ${selectedDate}` : 'Vos RDV apparaîtront ici'}
               </p>
-              <button onClick={onNewAppointment} className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white dark:bg-blue-500 dark:hover:bg-blue-400 text-sm font-semibold transition-all active:scale-[0.97] shadow-sm shadow-blue-600/25">
-                <Plus className="w-4 h-4" /> Nouveau RDV
+              <button
+                type="button"
+                onClick={onNewAppointment}
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-zinc-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+              >
+                <Plus className="h-4 w-4" aria-hidden /> Nouveau RDV
               </button>
             </div>
           ) : (

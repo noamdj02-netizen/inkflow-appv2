@@ -13,6 +13,7 @@ import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
 import { SEO, createTattooStudioSchema } from '../../components/SEO';
 import { createProjectRequest } from '../../lib/supabaseProjectRequests';
 import { createCheckoutSession } from '../../lib/stripeClient';
+import { supabase } from '../../lib/supabase';
 import { useRealtimeVitrine } from '../../hooks/useRealtimeSync';
 import { useToast } from '../../contexts/ToastContext';
 import type { VitrineData, VitrineFlashDesign } from '../../types/vitrine';
@@ -22,7 +23,7 @@ import { LANDING_URL, LANDING_TERMS_URL, LANDING_PRIVACY_URL, safeExternalHttpUr
 import { getVitrineTheme } from '../../lib/themes';
 import { StudioThemeRouter } from '../../components/studio-themes/StudioThemeRouter';
 import { GoogleReviews } from '../../components/vitrine/GoogleReviews';
-import { fetchPublicGoogleReviews } from '../../lib/googlePlaces';
+import { fetchPublicGoogleReviews, fetchBusinessPublicReviews } from '../../lib/googlePlaces';
 import type { GoogleReviewsPayload } from '../../types/googlePlaces';
 
 const STRUCTURAL_THEMES = ['classic', 'split', 'vintage'] as const;
@@ -149,19 +150,47 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     let cancelled = false;
     const slug = (studio?.slug ?? studioSlug).trim().toLowerCase();
     if (!slug) return;
-    fetchPublicGoogleReviews(slug).then((res) => {
-      if (cancelled || !res || !res.configured) {
-        if (!cancelled) setGoogleReviewsPayload(null);
+
+    // Priorité 1 : avis Google Business Profile (compte OAuth connecté — illimité)
+    // Priorité 2 : avis Places API (5 max, via google_place_id)
+    fetchBusinessPublicReviews(slug).then((biz) => {
+      if (cancelled) return;
+      if (biz?.configured && biz.reviews.length > 0) {
+        setGoogleReviewsPayload({
+          rating: biz.averageRating,
+          userRatingsTotal: biz.totalReviewCount,
+          reviews: biz.reviews.map((r) => ({
+            authorName: r.authorName,
+            rating: r.rating,
+            text: r.text,
+            relativeTimeDescription: r.relativeTimeDescription,
+          })),
+        });
         return;
       }
-      if (!cancelled) {
-        setGoogleReviewsPayload({
-          rating: res.rating,
-          userRatingsTotal: res.userRatingsTotal,
-          reviews: res.reviews,
-        });
-      }
+      // Fallback Places API
+      fetchPublicGoogleReviews(slug).then((res) => {
+        if (cancelled || !res || !res.configured) {
+          if (!cancelled) setGoogleReviewsPayload(null);
+          return;
+        }
+        if (!cancelled) {
+          setGoogleReviewsPayload({
+            rating: res.rating,
+            userRatingsTotal: res.userRatingsTotal,
+            reviews: res.reviews,
+          });
+        }
+      });
+    }).catch(() => {
+      // Fallback Places API si Business Profile échoue
+      if (cancelled) return;
+      fetchPublicGoogleReviews(slug).then((res) => {
+        if (cancelled || !res || !res.configured) { if (!cancelled) setGoogleReviewsPayload(null); return; }
+        if (!cancelled) setGoogleReviewsPayload({ rating: res.rating, userRatingsTotal: res.userRatingsTotal, reviews: res.reviews });
+      });
     });
+
     return () => {
       cancelled = true;
     };
@@ -333,6 +362,15 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
           : price > 0
             ? Math.max(Math.round((price * 30) / 100), 10)
             : 30;
+      let clientPortalUserId: string | undefined;
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.user?.id) clientPortalUserId = session.user.id;
+      } catch {
+        /* non connecté */
+      }
       const result = await createCheckoutSession({
         studioId,
         studioSlug,
@@ -343,6 +381,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         clientEmail: email,
         serviceName: selectedFlash.title,
         type: 'deposit',
+        ...(clientPortalUserId ? { clientPortalUserId } : {}),
       });
       if ('url' in result && result.url) {
         setFlashDepositUrl(result.url);

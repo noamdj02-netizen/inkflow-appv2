@@ -17,3 +17,7 @@ verify_jwt = false
 # Invitation collaborateur : évite 401 côté passerelle avec certains JWT (ex. ES256). Session vérifiée dans le handler (GET /auth/v1/user).
 [functions.send-collaborator-invite]
 verify_jwt = false
+
+# google-business-auth : callback OAuth = GET depuis Google (pas de Bearer Supabase). POST dashboard = JWT ES256 peut être rejeté par la passerelle.
+[functions.google-business-auth]
+verify_jwt = false

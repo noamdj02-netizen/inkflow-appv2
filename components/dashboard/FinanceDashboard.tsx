@@ -1,5 +1,18 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { DollarSign, TrendingUp, CreditCard, Receipt, Banknote, Plus, Trash2, FileText, Download, Clock, Loader2 } from 'lucide-react';
+import {
+  DollarSign,
+  TrendingUp,
+  CreditCard,
+  Receipt,
+  Banknote,
+  Plus,
+  Trash2,
+  FileText,
+  Download,
+  Clock,
+  Loader2,
+  ExternalLink,
+} from 'lucide-react';
 import { Appointment } from '../../types';
 import { InvoiceButton } from './InvoiceButton';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,6 +21,7 @@ import { Modal } from '../ui/Modal';
 import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 import { useToast } from '../../contexts/ToastContext';
 import { buildFinanceLedgerCsv, downloadTextFile } from '../../lib/studioDataExport';
+import { createStripeExpressLoginLink } from '../../lib/stripeClient';
 
 type BilanPeriod = 'today' | 'week' | 'month';
 
@@ -360,6 +374,9 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
 
 interface FinanceDashboardProps {
   appointments: Appointment[];
+  /** Pour ouvrir le tableau de bord Express Stripe (lien à usage unique) */
+  studioId?: string | null;
+  useSupabase?: boolean;
 }
 
 export interface CashEntry {
@@ -391,7 +408,11 @@ function saveCashEntries(userId: string, entries: CashEntry[]): void {
   }
 }
 
-export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments }) => {
+export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
+  appointments,
+  studioId = null,
+  useSupabase = false,
+}) => {
   const { user } = useAuth();
   const toast = useToast();
   const { privacyMode } = useStudioPrivacy();
@@ -400,6 +421,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
   const [showAddCash, setShowAddCash] = useState(false);
   const [showBilan, setShowBilan] = useState(false);
   const [newCash, setNewCash] = useState({ date: new Date().toISOString().split('T')[0], amount: '', label: '' });
+  const [stripeDashboardBusy, setStripeDashboardBusy] = useState(false);
 
   const saveCash = useCallback(
     (entries: CashEntry[]) => {
@@ -535,6 +557,22 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
     toast.success('Export CSV téléchargé');
   }, [appointments, cashEntries, user?.id, user?.email, toast]);
 
+  const handleOpenStripeDashboard = useCallback(async () => {
+    if (!studioId || !useSupabase) return;
+    setStripeDashboardBusy(true);
+    try {
+      const result = await createStripeExpressLoginLink(studioId);
+      if ('error' in result) {
+        toast.error(result.error);
+        return;
+      }
+      window.open(result.url, '_blank', 'noopener,noreferrer');
+      toast.success('Ouvre l’onglet Stripe — connecte-toi si demandé.');
+    } finally {
+      setStripeDashboardBusy(false);
+    }
+  }, [studioId, useSupabase, toast]);
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -558,6 +596,24 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ appointments
           >
             <FileText className="w-4 h-4" />
             Bilan & Rapports
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleOpenStripeDashboard()}
+            disabled={!studioId || !useSupabase || stripeDashboardBusy}
+            title={
+              !useSupabase || !studioId
+                ? 'Disponible avec un studio synchronisé (Supabase)'
+                : 'Encaissements, virements et litiges (Stripe Express)'
+            }
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-zinc-100 px-4 py-2.5 font-medium text-[rgba(55,98,227,1)] transition-all hover:bg-zinc-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-800 dark:text-[rgba(55,98,227,1)] dark:hover:bg-zinc-700"
+          >
+            {stripeDashboardBusy ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+            ) : (
+              <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+            )}
+            Tableau de bord Stripe
           </button>
           <button
             onClick={() => setShowAddCash(true)}

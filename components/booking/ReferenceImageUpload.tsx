@@ -2,9 +2,10 @@
  * Zone d'upload d'images de référence — réutilisable (vitrine, réservation, demandes).
  * UX optimisée : prévisualisation immédiate, touch targets 44px, drag & drop, recadrage.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Image, X, Upload } from 'lucide-react';
-import { ImageCropModal } from '../ui/ImageCropModal';
+import { LazyImageCropModal } from '../ui/lazyImageCropModal';
+import { ImageCropModalSuspenseFallback } from '../ui/skeleton';
 import { dataUrlToFile } from '../../lib/cropImage';
 
 const MAX_IMAGES = 10;
@@ -162,15 +163,19 @@ export const ReferenceImageUpload: React.FC<ReferenceImageUploadProps> = ({
 
   return (
     <div className={className}>
-      <ImageCropModal
-        isOpen={Boolean(cropSrc)}
-        imageSrc={cropSrc ?? ''}
-        aspect={1}
-        cropShape="rect"
-        title="Ajuster le cadrage"
-        onClose={handleCropClose}
-        onConfirm={handleCropConfirm}
-      />
+      {cropSrc ? (
+        <Suspense fallback={<ImageCropModalSuspenseFallback />}>
+          <LazyImageCropModal
+            isOpen
+            imageSrc={cropSrc}
+            aspect={1}
+            cropShape="rect"
+            title="Ajuster le cadrage"
+            onClose={handleCropClose}
+            onConfirm={handleCropConfirm}
+          />
+        </Suspense>
+      ) : null}
 
       <div
         role="button"
@@ -204,7 +209,7 @@ export const ReferenceImageUpload: React.FC<ReferenceImageUploadProps> = ({
         <div className="mt-3 flex flex-wrap gap-2">
           {value.map((file, i) => (
             <div
-              key={`${file.name}-${i}`}
+              key={`${file.name}-${file.size}-${file.lastModified}-${i}`}
               className="relative group rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 aspect-square w-16 h-16 flex-shrink-0"
             >
               {previews[i] ? (

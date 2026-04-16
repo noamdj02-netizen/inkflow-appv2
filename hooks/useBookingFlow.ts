@@ -277,7 +277,7 @@ export function useBookingFlow(studioSlug: string) {
   // Charger le depositPercentage global depuis availability_settings
   useEffect(() => {
     if (!studioId || studioId === 'loading' || !supabaseEnabled) return;
-    supabase
+    void supabase
       .from('inkflow_studios')
       .select('availability_settings')
       .eq('id', studioId)
@@ -340,8 +340,8 @@ export function useBookingFlow(studioSlug: string) {
 
     const verifyPayment = async () => {
       try {
-        const baseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '') || '';
-        const key = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+        const baseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+        const key = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
 
         if (!baseUrl || !key) {
           setPaymentVerified(false);
@@ -350,10 +350,17 @@ export function useBookingFlow(studioSlug: string) {
         }
 
         const res = await fetch(
-          `${baseUrl}/functions/v1/get-payment-session?session_id=${sessionId}`,
+          `${baseUrl}/functions/v1/get-payment-session?session_id=${encodeURIComponent(sessionId)}`,
           { headers: { Authorization: `Bearer ${key}`, apikey: key } }
         );
-        const data = await res.json();
+        let data: { error?: string } & Record<string, unknown>;
+        try {
+          data = (await res.json()) as typeof data;
+        } catch {
+          setPaymentVerified(false);
+          setPaymentError('Réponse du serveur illisible. Réessayez ou vérifiez votre compte bancaire.');
+          return;
+        }
 
         if (!res.ok || data.error) {
           setPaymentVerified(false);
@@ -362,9 +369,15 @@ export function useBookingFlow(studioSlug: string) {
         }
 
         setPaymentVerified(true);
-      } catch {
+      } catch (err) {
         setPaymentVerified(false);
-        setPaymentError('Erreur de vérification du paiement.');
+        const isNetwork =
+          err instanceof TypeError || (err instanceof Error && err.message === 'Failed to fetch');
+        setPaymentError(
+          isNetwork
+            ? 'Connexion instable. Vérifiez le réseau puis rafraîchissez la page pour confirmer le paiement.'
+            : 'Impossible de confirmer le paiement pour le moment. Si le débit a bien eu lieu, gardez votre reçu.',
+        );
       }
     };
 
@@ -373,7 +386,7 @@ export function useBookingFlow(studioSlug: string) {
 
   // ── Valeurs calculées ────────────────────────────────────────────────────────
 
-  const getAvailableSlotsForDate = (dateStr: string): string[] => {
+  const getAvailableSlotsForDate = useMemo(() => (dateStr: string): string[] => {
     const taken = busySlots[dateStr] || [];
     if (taken.includes('__blocked__') || taken.includes('__full__')) return [];
 
@@ -389,9 +402,9 @@ export function useBookingFlow(studioSlug: string) {
     }
 
     return slots.filter((t) => !taken.includes(t));
-  };
+  }, [busySlots, dynamicSlotsByDay, studioSlots]);
 
-  const getAvailableDates = (): string[] => {
+  const availableDates = useMemo((): string[] => {
     const dates: string[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -410,10 +423,12 @@ export function useBookingFlow(studioSlug: string) {
       if (getAvailableSlotsForDate(dateStr).length > 0) dates.push(dateStr);
     }
     return dates;
-  };
+  }, [busySlots, advanceBookingDays, bookingWindowDays, studioOffDays, getAvailableSlotsForDate]);
 
-  const availableDates = getAvailableDates();
-  const availableSlots = form.selectedDate ? getAvailableSlotsForDate(form.selectedDate) : [];
+  const availableSlots = useMemo(
+    () => form.selectedDate ? getAvailableSlotsForDate(form.selectedDate) : [],
+    [form.selectedDate, getAvailableSlotsForDate],
+  );
 
   const availableFlashes = flashList.filter((f) => f.available);
   const selectedFlash = selectedFlashId
@@ -618,6 +633,16 @@ export function useBookingFlow(studioSlug: string) {
         });
       }
 
+      let clientPortalUserId: string | undefined;
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.user?.id) clientPortalUserId = session.user.id;
+      } catch {
+        /* non connecté */
+      }
+
       const result = await createCheckoutSession({
         studioId,
         studioSlug,
@@ -631,6 +656,7 @@ export function useBookingFlow(studioSlug: string) {
         placement: resolvedPlacement,
         clientNotes: form.flashNotes.trim() || undefined,
         clientInstagram: form.instagram.trim() || undefined,
+        ...(clientPortalUserId ? { clientPortalUserId } : {}),
       });
 
       if ('error' in result) {

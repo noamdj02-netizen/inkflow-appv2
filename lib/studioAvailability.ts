@@ -105,6 +105,7 @@ export async function fetchStudioAvailabilityMeta(studioId: string): Promise<Fet
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${anonKey}`,
+        apikey: anonKey,
       },
       body: JSON.stringify({ studioId }),
     });

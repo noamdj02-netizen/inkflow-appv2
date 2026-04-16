@@ -52,7 +52,8 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
       }
       const u = session.user;
       if (await isClientPortalFullyReady(u)) {
-        window.location.replace('/client/dashboard');
+        /** Profil déjà complet : même URL qu’avant on renvoyait au dashboard — ici on ouvre le questionnaire (consultation / mise à jour). */
+        window.location.replace('/client/compte-sante');
         return;
       }
       const hp = await fetchClientHealthProfile(u.id);
@@ -199,12 +200,12 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
         noindex
       />
 
-      <header className="px-4 sm:px-6 pt-[max(12px,env(safe-area-inset-top))] pb-2 flex-shrink-0 z-10">
+      <header className="px-4 sm:px-6 pt-[max(12px,env(safe-area-inset-top))] pb-2 flex-shrink-0 z-10 border-b border-zinc-200/80">
         <a
           href="/client/dashboard"
-          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors min-h-[44px]"
+          className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors min-h-[44px] rounded-xl px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-100 active:scale-[0.98]"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4 shrink-0" aria-hidden />
           Plus tard
         </a>
       </header>

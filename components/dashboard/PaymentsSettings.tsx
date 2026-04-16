@@ -13,8 +13,7 @@ import {
   LayoutDashboard,
   Unplug,
 } from 'lucide-react';
-import { getStudioId } from '../../lib/supabase';
-import { supabase } from '../../lib/supabase';
+import { getStudioId, supabase } from '../../lib/supabase';
 import { getPaymentSettingsFromSupabase, savePaymentSettingsToSupabase } from '../../lib/supabaseDashboard';
 import {
   startStripeConnectOnboarding,
@@ -73,7 +72,6 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
     studioId
   );
 
-  // Load from Supabase on mount
   useEffect(() => {
     if (!studioId || !useSupabase) return;
     getPaymentSettingsFromSupabase(studioId).then((fromDb) => {
@@ -85,7 +83,6 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
     }).catch(() => { toast.error('Une erreur est survenue'); });
   }, [studioId, useSupabase]);
 
-  // Auto-save with debounce (replaces manual useEffect + setTimeout pattern)
   const { saving, saved, saveNow } = useAutoSave(settings, async (s) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
     if (studioId && useSupabase) {

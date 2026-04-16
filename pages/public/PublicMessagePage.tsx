@@ -1,13 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, CreditCard, ExternalLink, CheckCheck, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Send, CreditCard, ExternalLink, CheckCheck, Loader2, WifiOff, RefreshCw, ArrowLeft } from 'lucide-react';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
-import { resolvePublicMessageAutoProfile } from '../../lib/postLoginRedirect';
+import {
+  getPublicMessageSenderDisplayName,
+  resolvePublicMessageAutoProfile,
+} from '../../lib/postLoginRedirect';
 import { Logo } from '../../components/Logo';
 import { sendMessageNotificationToStudio } from '../../lib/sendNotification';
 import { tryParseStructuredMessage } from '../../lib/messageContent';
+import { ConsentFormMessageCard } from '../../components/messaging/ConsentFormMessageCard';
 import { getCanonicalAppOrigin } from '../../lib/urls';
 import { useToast } from '../../contexts/ToastContext';
 import type { Message } from '../../types';
+import { normalizePublicMessageThreadId } from '../../lib/threadIds';
 
 interface PublicMessageStudioHeader {
   id: string;
@@ -23,6 +29,44 @@ interface PublicMessagePageProps {
 }
 
 const ROBOTS_NOINDEX = 'noindex, nofollow';
+
+const LOAD_RETRY_MAX = 3;
+const LOAD_RETRY_BASE_MS = 400;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Erreurs souvent liées au réseau / timing — on retente avant d’afficher une erreur à l’écran. */
+function isTransientLoadError(error: PostgrestError): boolean {
+  const msg = (error.message || '').toLowerCase();
+  const code = error.code || '';
+  if (code === 'PGRST301') return true;
+  if (
+    msg.includes('fetch') ||
+    msg.includes('network') ||
+    msg.includes('timeout') ||
+    msg.includes('failed to fetch') ||
+    msg.includes('load failed')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function mapRpcRowsToMessages(data: unknown): Message[] {
+  if (!data || !Array.isArray(data)) return [];
+  return data.map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    studioId: row.studio_id as string,
+    threadId: row.thread_id as string,
+    senderType: row.sender_type as Message['senderType'],
+    senderName: row.sender_name as string,
+    content: row.content as string,
+    read: Boolean(row.read),
+    createdAt: (row.created_at as string) ?? '',
+  }));
+}
 
 function PublicMessageHeaderBar(props: {
   loading: boolean;
@@ -42,8 +86,29 @@ function PublicMessageHeaderBar(props: {
     : null;
   const initialLetter = (studio?.name?.trim() || studio?.studio_name?.trim() || '?').slice(0, 1).toUpperCase();
 
+  const handleBack = () => {
+    if (typeof window === 'undefined') return;
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    if (vitrineHref) {
+      window.location.assign(vitrineHref);
+      return;
+    }
+    window.location.assign(getCanonicalAppOrigin() + '/');
+  };
+
   return (
-    <header className="bg-white border-b border-neutral-200 px-4 py-3 flex items-center gap-3 min-h-[65px]">
+    <header className="bg-white border-b border-neutral-200 px-3 py-3 sm:px-4 flex items-center gap-2 sm:gap-3 min-h-[65px]">
+      <button
+        type="button"
+        onClick={handleBack}
+        className="shrink-0 inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-xl border border-transparent text-neutral-700 hover:bg-neutral-100 hover:border-neutral-200 active:scale-[0.98] transition-all"
+        aria-label="Retour"
+      >
+        <ArrowLeft className="w-5 h-5" aria-hidden />
+      </button>
       {loading ? (
         <div className="h-11 w-11 rounded-xl bg-neutral-200 animate-pulse shrink-0" aria-hidden />
       ) : studio?.avatar_url ? (
@@ -105,12 +170,15 @@ function PublicMessageHeaderBar(props: {
 
 export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }) => {
   const toast = useToast();
+  const canonicalThreadId = useMemo(() => normalizePublicMessageThreadId(threadId), [threadId]);
+  const threadIdRef = useRef(canonicalThreadId);
+  threadIdRef.current = canonicalThreadId;
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [clientName, setClientName] = useState('');
-  const [nameSet, setNameSet] = useState(false);
-  /** Tant que la session n’est pas résolue, on n’affiche pas le formulaire « nom » (évite un flash pour les clients connectés). */
+  /** Tant que la session n’est pas résolue, on n’affiche pas le fil (évite un flash avant d’avoir le nom d’expéditeur). */
   const [authGateReady, setAuthGateReady] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [studioHeader, setStudioHeader] = useState<PublicMessageStudioHeader | null>(null);
@@ -123,7 +191,7 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
     const loadHeader = async () => {
       setStudioHeaderLoading(true);
       const { data, error } = await supabase.rpc('get_public_message_studio_header', {
-        p_thread_id: threadId,
+        p_thread_id: canonicalThreadId,
       });
       if (cancelled) return;
       if (!error && data?.[0]) {
@@ -145,19 +213,20 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
     return () => {
       cancelled = true;
     };
-  }, [threadId]);
+  }, [canonicalThreadId]);
 
   useEffect(() => {
     let cancelled = false;
     const applySession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user ?? null;
-      const profile = await resolvePublicMessageAutoProfile(threadId, user);
+      const profile = await resolvePublicMessageAutoProfile(canonicalThreadId, user);
       if (cancelled) return;
-      if (profile.skipNameGate && profile.displayName.trim()) {
-        setClientName(profile.displayName.trim());
-        setNameSet(true);
-      }
+      const fromThread =
+        profile.skipNameGate && profile.displayName.trim()
+          ? profile.displayName.trim()
+          : '';
+      setClientName(fromThread || getPublicMessageSenderDisplayName(user));
       setAuthGateReady(true);
     };
     void applySession();
@@ -168,7 +237,7 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, [threadId]);
+  }, [canonicalThreadId]);
 
   useEffect(() => {
     let meta: HTMLMetaElement | null = document.querySelector('meta[name="robots"][data-inkflow-message]');
@@ -184,48 +253,97 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
     };
   }, []);
 
+  const loadMessages = useCallback(
+    async (opts?: { background?: boolean }) => {
+      const background = opts?.background ?? false;
+      const targetThreadId = canonicalThreadId;
+
+      if (!background) {
+        setMessagesError(null);
+      }
+
+      const applyRows = (data: unknown) => {
+        if (targetThreadId !== threadIdRef.current) return;
+        setMessages(mapRpcRowsToMessages(data));
+        if (!background) setMessagesLoading(false);
+      };
+
+      const failVisible = (err: PostgrestError) => {
+        if (targetThreadId !== threadIdRef.current) return;
+        console.error('[PublicMessagePage] get_public_thread_messages error:', err);
+        setMessagesError('Connexion instable. Réessaie dans un instant.');
+        if (!background) setMessagesLoading(false);
+      };
+
+      for (let attempt = 0; attempt < LOAD_RETRY_MAX; attempt++) {
+        const { data, error } = await supabase.rpc('get_public_thread_messages', {
+          p_thread_id: targetThreadId,
+        });
+
+        if (targetThreadId !== threadIdRef.current) return;
+
+        if (!error) {
+          applyRows(data);
+          return;
+        }
+
+        const canRetry =
+          isTransientLoadError(error) && attempt < LOAD_RETRY_MAX - 1;
+        if (canRetry) {
+          await sleep(LOAD_RETRY_BASE_MS * (attempt + 1));
+          continue;
+        }
+
+        if (background) {
+          await sleep(500);
+          const second = await supabase.rpc('get_public_thread_messages', {
+            p_thread_id: targetThreadId,
+          });
+          if (targetThreadId !== threadIdRef.current) return;
+          if (!second.error) {
+            applyRows(second.data);
+            return;
+          }
+          return;
+        }
+
+        failVisible(error);
+        return;
+      }
+    },
+    [canonicalThreadId]
+  );
+
   useEffect(() => {
-    loadMessages();
+    setMessages([]);
+    setMessagesError(null);
+    setMessagesLoading(true);
+    void loadMessages({ background: false });
+
     const channel = supabase
-      .channel(`public_messages_${threadId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'inkflow_messages',
-        filter: `thread_id=eq.${threadId}`,
-      }, () => loadMessages())
+      .channel(`public_messages_${canonicalThreadId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'inkflow_messages',
+          filter: `thread_id=eq.${canonicalThreadId}`,
+        },
+        () => {
+          void loadMessages({ background: true });
+        }
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [threadId]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [canonicalThreadId, loadMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  const loadMessages = async () => {
-    setMessagesError(null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any).rpc('get_public_thread_messages', { p_thread_id: threadId });
-    setMessagesLoading(false);
-    if (error) {
-      console.error('[PublicMessagePage] get_public_thread_messages error:', error);
-      setMessagesError("Impossible de charger les messages. Réessaie dans un instant.");
-      return;
-    }
-    if (data && Array.isArray(data)) {
-      setMessages(data.map((row: Record<string, unknown>) => ({
-        id: row.id as string,
-        studioId: row.studio_id as string,
-        threadId: row.thread_id as string,
-        senderType: row.sender_type as string,
-        senderName: row.sender_name as string,
-        content: row.content as string,
-        read: row.read as boolean,
-        createdAt: row.created_at as string,
-      })));
-    }
-  };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || sending || !clientName.trim()) return;
@@ -235,7 +353,7 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
     let studioId = firstMsg?.studioId || studioHeader?.id || '';
     if (!studioId) {
       const { data: headerRows } = await supabase.rpc('get_public_message_studio_header', {
-        p_thread_id: threadId,
+        p_thread_id: canonicalThreadId,
       });
       studioId = headerRows?.[0]?.id ?? '';
     }
@@ -248,7 +366,7 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
     const { error: insertError } = await supabase.from('inkflow_messages').insert({
       id: `msg_${Date.now()}`,
       studio_id: studioId,
-      thread_id: threadId,
+      thread_id: canonicalThreadId,
       sender_type: 'client',
       sender_name: clientName.trim(),
       content: newMessage.trim(),
@@ -267,13 +385,13 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
         studioId,
         senderName: clientName.trim(),
         messagePreview: newMessage.trim(),
-        threadId,
+        threadId: canonicalThreadId,
       });
     }
 
     setNewMessage('');
     setSending(false);
-    loadMessages();
+    void loadMessages({ background: true });
   };
 
   if (!authGateReady) {
@@ -287,51 +405,37 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
     );
   }
 
-  if (!nameSet) {
-    return (
-      <div className="landing-scroll bg-neutral-50 flex flex-col min-h-screen">
-        <PublicMessageHeaderBar loading={studioHeaderLoading} studio={studioHeader} />
-        <div className="flex-1 flex items-center justify-center px-4 py-6">
-        <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-lg border border-neutral-200 text-center">
-          <Logo />
-          <h2 className="text-xl font-bold mt-4 mb-2">Messagerie</h2>
-          <p className="text-neutral-600 text-sm mb-6">Entrez votre nom pour commencer la conversation.</p>
-          <input
-            type="text"
-            value={clientName}
-            onChange={e => setClientName(e.target.value)}
-            placeholder="Votre nom"
-            className="w-full px-4 py-3 border border-neutral-200 rounded-xl mb-4"
-            onKeyDown={e => e.key === 'Enter' && clientName.trim() && setNameSet(true)}
-          />
-          <button
-            onClick={() => clientName.trim() && setNameSet(true)}
-            disabled={!clientName.trim()}
-            className="w-full py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-50"
-          >
-            Continuer
-          </button>
-        </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="landing-scroll bg-neutral-50 flex flex-col">
       <PublicMessageHeaderBar loading={studioHeaderLoading} studio={studioHeader} />
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 max-w-2xl mx-auto w-full">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-3 max-w-2xl mx-auto w-full select-text">
         {/* Error state */}
         {messagesError && (
-          <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <p className="text-sm text-red-500">{messagesError}</p>
-            <button
-              onClick={() => { setMessagesLoading(true); loadMessages(); }}
-              className="text-sm font-medium text-neutral-900 underline"
-            >
-              Réessayer
-            </button>
+          <div className="flex flex-col items-center px-1 py-8 sm:py-10" role="alert" aria-live="polite">
+            <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 text-center shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)] sm:p-8">
+              <div
+                className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-800"
+                aria-hidden
+              >
+                <WifiOff className="h-6 w-6 shrink-0" strokeWidth={2} />
+              </div>
+              <p className="text-sm font-semibold leading-snug text-neutral-900">{messagesError}</p>
+              <p className="mt-2 text-xs leading-relaxed text-neutral-500">
+                Vérifie ta connexion mobile ou Wi‑Fi, puis réessaie.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setMessagesLoading(true);
+                  void loadMessages({ background: false });
+                }}
+                className="mt-6 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 px-5 text-sm font-semibold text-white transition-all active:scale-[0.98] hover:bg-neutral-800 sm:w-auto"
+              >
+                <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
+                Réessayer
+              </button>
+            </div>
           </div>
         )}
         {/* Loading state */}
@@ -354,13 +458,13 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
           const structured = tryParseStructuredMessage(msg.content);
           const isClient = msg.senderType === 'client';
           return (
-            <div key={msg.id} className={`flex ${isClient ? 'justify-end' : 'justify-start'}`}>
-              <div className="max-w-[85%] sm:max-w-[75%]">
+            <div key={msg.id} className={`flex min-w-0 w-full ${isClient ? 'justify-end' : 'justify-start'}`}>
+              <div className="min-w-0 max-w-[85%] sm:max-w-[75%]">
                 <div className={`text-xs font-medium mb-1 ${isClient ? 'text-neutral-400 text-right' : 'text-neutral-500'}`}>
                   {msg.senderName}
                 </div>
                 {structured?.kind === 'payment_card' ? (
-                  <div className="rounded-2xl border border-neutral-200 border-l-4 border-l-amber-500 bg-white p-4 space-y-3 shadow-sm">
+                  <div className="rounded-2xl border border-neutral-200 border-l-4 border-l-amber-500 bg-white p-4 space-y-3 shadow-sm select-text">
                     <div className="flex items-center gap-2 text-neutral-900">
                       <CreditCard className="w-5 h-5 text-amber-600 shrink-0" />
                       <span className="text-sm font-semibold">
@@ -378,7 +482,7 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
                     </a>
                   </div>
                 ) : structured?.kind === 'payment_receipt' ? (
-                  <div className="rounded-2xl border border-neutral-200 border-l-4 border-l-emerald-600 bg-white p-4 space-y-2 shadow-sm">
+                  <div className="rounded-2xl border border-neutral-200 border-l-4 border-l-emerald-600 bg-white p-4 space-y-2 shadow-sm select-text">
                     <div className="flex items-center gap-2 text-neutral-900">
                       <CheckCheck className="w-5 h-5 text-emerald-600 shrink-0" />
                       <span className="text-sm font-semibold">
@@ -399,13 +503,21 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
                       <p className="text-xs text-neutral-500">Ton acompte a bien été enregistré.</p>
                     )}
                   </div>
+                ) : structured?.kind === 'consent_form_request' ? (
+                  <ConsentFormMessageCard
+                    consentFormId={structured.consentFormId}
+                    title={structured.title}
+                    mode="client_sign"
+                  />
                 ) : (
                   <div
-                    className={`px-4 py-3 rounded-2xl ${
+                    className={`min-w-0 max-w-full overflow-hidden px-4 py-3 rounded-2xl select-text ${
                       isClient ? 'bg-neutral-900 text-white' : 'bg-white border border-neutral-200 text-neutral-900'
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    <p className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere] max-w-full">
+                      {msg.content}
+                    </p>
                   </div>
                 )}
                 <span

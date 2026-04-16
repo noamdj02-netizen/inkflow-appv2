@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, ClipboardList, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, MailOpen, Smartphone, Heart, Globe, FileCheck, Crown, ListOrdered, Eye, EyeOff, PanelsTopLeft, HelpCircle, MoreHorizontal, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Calendar, Image, Users, Settings, Plus, Bell, LogOut, ChevronRight, ChevronLeft, ChevronDown, X, AlertTriangle, Trophy, MessageSquare, ClipboardList, Wallet, BarChart3, Menu, LayoutGrid, UserPlus, Inbox, User, Camera, Trash2, DollarSign, Target, Clock, Sparkles, MapPin, FolderOpen, Share2, ExternalLink, Search, Gift, CreditCard, Star, Check, Smartphone, Heart, Globe, FileCheck, Crown, ListOrdered, Eye, EyeOff, PanelsTopLeft, HelpCircle, MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../hooks/useSupabaseSync';
@@ -9,9 +9,11 @@ import { useIncomingBookings } from '../../hooks/useIncomingBookings';
 import { usePendingDemandesCounts } from '../../hooks/usePendingDemandesCounts';
 import { useNotificationSync } from '../../hooks/useNotificationSync';
 import { BadgeNotification } from '../ui/BadgeNotification';
+import { NotificationPopover, type Notification as NotificationPopoverItem } from '../ui/notification-popover';
 import { useSubscriptionPermissions } from '../../hooks/useSubscriptionPermissions';
 import { Modal } from '../ui/Modal';
-import { ImageCropModal } from '../ui/ImageCropModal';
+import { LazyImageCropModal } from '../ui/lazyImageCropModal';
+import { ImageCropModalSuspenseFallback } from '../ui/skeleton';
 import { BookingForm } from '../booking/BookingForm';
 import { AppointmentCalendar } from './AppointmentCalendar';
 import { MiniCalendar } from './MiniCalendar';
@@ -83,8 +85,15 @@ import {
   savePointsLoyaltySettingsToSupabase,
 } from '../../lib/supabaseDashboard';
 import { syncArtistAccountsToSupabase } from '../../lib/inkflowArtistsSync';
+import { fetchArtistAccountsForStudio, upsertArtistAccountsToSupabase } from '../../lib/inkflowArtistAccountsDb';
 import { sendCollaboratorInviteEmail } from '../../lib/collaboratorInvite';
-import { syncStudioGoogleReviewsCache } from '../../lib/googlePlaces';
+import {
+  syncStudioGoogleReviewsCache,
+  initiateGoogleBusinessAuth,
+  disconnectGoogleBusiness,
+  listGoogleBusinessLocations,
+  saveGoogleBusinessLocation,
+} from '../../lib/googlePlaces';
 import { createSubscription } from '../../lib/stripeClient';
 import { getSubscription } from '../../lib/subscriptionGuard';
 import { getPlanLimit } from '../../lib/subscriptionPlans';
@@ -249,7 +258,7 @@ export const DashboardPro: React.FC = () => {
   /** Thème effectif — fallback DOM pour mobile/PWA (resolvedTheme peut être undefined avant hydration) */
   const effectiveTheme = resolvedTheme ?? (typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null : null) ?? 'light';
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
-  const { studioId, studioSlug, studioCsvImportSlots, refreshStudioSlug, refreshStudioSubscription, subscriptionStatus, trialEndsAt, useSupabase, demoAccountMode, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, importClientsFromCsvRows, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, lastSyncedAt, retry } = useSupabaseSync();
+  const { studioId, studioOwnerEmail, studioSlug, studioCsvImportSlots, refreshStudioSlug, refreshStudioSubscription, subscriptionStatus, trialEndsAt, useSupabase, demoAccountMode, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, importClientsFromCsvRows, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, lastSyncedAt, retry } = useSupabaseSync();
   const { projectRequests, loading: projectRequestsLoading, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId, { demoMode: demoAccountMode });
   const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false, demoAccountMode);
   const demandes = usePendingDemandesCounts(appointments, bookings, projectRequests);
@@ -315,6 +324,10 @@ export const DashboardPro: React.FC = () => {
   }, [activeTab]);
 
   const prefersReducedMotion = useReducedMotion();
+  /** Pastille onglet bas (layoutId) — ressort léger ; 0ms si reduced motion */
+  const mobileBottomNavPillTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { type: 'spring' as const, stiffness: 420, damping: 36, mass: 0.78 };
   const dashboardPanelKey = useMemo(() => {
     if (activeTab === 'settings') return `settings-${settingsTab}`;
     if (activeTab === 'clients') return `clients-${clientsView}`;
@@ -323,6 +336,19 @@ export const DashboardPro: React.FC = () => {
     if (activeTab === 'requests') return `requests-${requestsSubTab}`;
     return activeTab;
   }, [activeTab, settingsTab, clientsView, financeView, planningView, requestsSubTab]);
+
+  /** Données pour `NotificationPopover` (titre / message / dates alignés sur le contexte studio). */
+  const notificationPopoverItems: NotificationPopoverItem[] = useMemo(
+    () =>
+      notifications.slice(0, 15).map((n) => ({
+        id: n.id,
+        title: n.title,
+        description: n.message,
+        timestamp: new Date(n.createdAt),
+        read: n.read,
+      })),
+    [notifications],
+  );
 
   const handleSetupNavigate = useCallback(
     (target: 'settings-vitrine' | 'settings-availability' | 'settings-payments' | 'flash' | 'appointments') => {
@@ -391,6 +417,11 @@ export const DashboardPro: React.FC = () => {
   const [generalEmail, setGeneralEmail] = useState(user?.email || '');
   const [generalSiret, setGeneralSiret] = useState('');
   const [generalGooglePlaceId, setGeneralGooglePlaceId] = useState<string | null>(null);
+  const [googleBusinessConnected, setGoogleBusinessConnected] = useState(false);
+  const [googleBusinessLocationName, setGoogleBusinessLocationName] = useState<string | null>(null);
+  const [googleBusinessNeedsLocationSelection, setGoogleBusinessNeedsLocationSelection] = useState(false);
+  const [googleBusinessLocations, setGoogleBusinessLocations] = useState<{ name: string; title: string; accountName: string }[]>([]);
+  const [loadingGoogleBusinessLocations, setLoadingGoogleBusinessLocations] = useState(false);
   const [generalSaving, setGeneralSaving] = useState(false);
   const [generalSaved, setGeneralSaved] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
@@ -409,7 +440,6 @@ export const DashboardPro: React.FC = () => {
   /** Onglet initial pour Demandes (ex: 'history' quand on clique sur l'alerte RDV sans acompte) */
   const [requestsInitialTab, setRequestsInitialTab] = useState<'rdv' | 'bookings' | 'projects' | 'history' | null>(null);
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [overviewCalendarMonth, setOverviewCalendarMonth] = useState(() => new Date());
@@ -424,23 +454,50 @@ export const DashboardPro: React.FC = () => {
   const isRestricted = subscriptionStatus === 'restricted'
     || (!!trialEndsAt && new Date(trialEndsAt) <= new Date() && subscriptionStatus !== 'active');
 
-  const moduleFlags = useMemo(
-    () => ({
+  /** Membre invité (email ≠ email propriétaire du studio). */
+  const isCollaboratorUser = Boolean(
+    studioOwnerEmail &&
+      user?.email &&
+      user.email.trim().toLowerCase() !== studioOwnerEmail.trim().toLowerCase()
+  );
+
+  const myArtistPermissions = useMemo(() => {
+    if (!isCollaboratorUser || !user?.email) return null;
+    const row = artistAccounts.find(
+      (a) => a.email.trim().toLowerCase() === user.email.trim().toLowerCase()
+    );
+    return row?.permissions ?? null;
+  }, [isCollaboratorUser, user?.email, artistAccounts]);
+
+  const moduleFlags = useMemo(() => {
+    const base = {
       finance: isModuleEnabled(dashboardPreferences, 'finance'),
       planning: isModuleEnabled(dashboardPreferences, 'planning'),
       flashShop: isModuleEnabled(dashboardPreferences, 'flash_shop'),
       vitrine: isModuleEnabled(dashboardPreferences, 'vitrine'),
       loyalty: isModuleEnabled(dashboardPreferences, 'loyalty'),
-    }),
-    [dashboardPreferences]
-  );
+    };
+    if (!isCollaboratorUser || !myArtistPermissions) return base;
+    const p = myArtistPermissions;
+    return {
+      finance: base.finance && p.view_finance === true,
+      planning:
+        base.planning && (p.view_appointments === true || p.manage_appointments === true),
+      flashShop: base.flashShop && p.manage_flash === true,
+      vitrine: base.vitrine && p.manage_vitrine === true,
+      loyalty: base.loyalty && p.view_clients === true,
+    };
+  }, [dashboardPreferences, isCollaboratorUser, myArtistPermissions]);
 
   const visibleSettingsTabs = useMemo(() => {
     return SETTINGS_MAIN_TABS.filter((tab) => {
+      if (isCollaboratorUser && (tab.id === 'billing' || tab.id === 'modules' || tab.id === 'payments')) {
+        return false;
+      }
       if (tab.id === 'vitrine' || tab.id === 'public_app') return moduleFlags.vitrine;
       return true;
     });
-  }, [moduleFlags]);
+  }, [moduleFlags, isCollaboratorUser]);
 
   /** Si le compte est restreint (essai expiré), on redirige vers Abonnement — sauf si `allowWhenRestricted` (abonnement, page vitrine / personnalisation). */
   const handleSidebarNav = useCallback((action: () => void, allowWhenRestricted = false) => {
@@ -537,6 +594,63 @@ export const DashboardPro: React.FC = () => {
       });
   }, [studioId, useSupabase]);
 
+  // Load Google Business status directly from DB (no edge function call on mount)
+  // Utilise google_business_refresh_token comme indicateur "connecté" (cohérent avec l'edge function)
+  const refreshGoogleBusinessStatus = useCallback(async () => {
+    if (!studioId || !useSupabase) return;
+    try {
+      const { data } = await supabase
+        .from('inkflow_studios')
+        .select('google_business_refresh_token, google_business_location_name')
+        .eq('id', studioId)
+        .maybeSingle();
+      const connected = Boolean(data?.google_business_refresh_token);
+      const locationName = (data?.google_business_location_name as string | null) ?? null;
+      setGoogleBusinessConnected(connected);
+      setGoogleBusinessLocationName(locationName);
+      setGoogleBusinessNeedsLocationSelection(connected && !locationName);
+    } catch {
+      // statut non critique — silencieux
+    }
+  }, [studioId, useSupabase]);
+
+  // Charge les fiches dispo — appelé uniquement quand l'UI de sélection est visible
+  const loadGoogleBusinessLocations = useCallback(async () => {
+    if (!studioId) return;
+    setLoadingGoogleBusinessLocations(true);
+    try {
+      const locs = await listGoogleBusinessLocations(studioId);
+      setGoogleBusinessLocations(locs);
+    } catch { /* silencieux */ }
+    setLoadingGoogleBusinessLocations(false);
+  }, [studioId]);
+
+  useEffect(() => {
+    refreshGoogleBusinessStatus();
+  }, [refreshGoogleBusinessStatus]);
+
+
+  const handleConnectGoogleBusiness = useCallback(async () => {
+    if (!studioId) return;
+    const authUrl = await initiateGoogleBusinessAuth(studioId);
+    window.location.href = authUrl;
+  }, [studioId]);
+
+  const handleDisconnectGoogleBusiness = useCallback(async () => {
+    if (!studioId) return;
+    await disconnectGoogleBusiness(studioId);
+    setGoogleBusinessConnected(false);
+    setGoogleBusinessLocationName(null);
+    setGoogleBusinessNeedsLocationSelection(false);
+    setGoogleBusinessLocations([]);
+  }, [studioId]);
+
+  const handleSelectGoogleBusinessLocation = useCallback(async (locationName: string) => {
+    if (!studioId) return;
+    await saveGoogleBusinessLocation(studioId, locationName);
+    await refreshGoogleBusinessStatus();
+  }, [studioId, refreshGoogleBusinessStatus]);
+
   /**
    * Après inscription email : `ensureStudio` a déjà écrit nom / e-mail / studio en base.
    * Sans ce passage, le bouton « Enregistrer » reste gris comme si rien n’était sauvegardé.
@@ -603,6 +717,10 @@ export const DashboardPro: React.FC = () => {
   useEffect(() => {
     if (!moduleFlags.flashShop && (activeTab === 'flash' || activeTab === 'portfolio')) setActiveTab('overview');
   }, [moduleFlags.flashShop, activeTab]);
+
+  useEffect(() => {
+    if (isCollaboratorUser && activeTab === 'etablissement') setActiveTab('overview');
+  }, [isCollaboratorUser, activeTab]);
 
   useEffect(() => {
     if (!moduleFlags.loyalty && clientsView === 'loyalty') setClientsView('overview');
@@ -722,12 +840,44 @@ export const DashboardPro: React.FC = () => {
   }, [loyaltyEntries, user?.email, studioId, useSupabase]);
 
   useEffect(() => {
-    if (!studioId || !useSupabase || artistAccounts.length === 0) return;
+    if (!studioId || !useSupabase || artistAccounts.length === 0 || isCollaboratorUser) return;
     const t = window.setTimeout(() => {
-      syncArtistAccountsToSupabase(studioId, artistAccounts).catch(() => {});
+      void syncArtistAccountsToSupabase(studioId, artistAccounts);
+      void upsertArtistAccountsToSupabase(studioId, artistAccounts).catch(() => {});
     }, 1500);
     return () => window.clearTimeout(t);
-  }, [studioId, useSupabase, artistAccounts]);
+  }, [studioId, useSupabase, artistAccounts, isCollaboratorUser]);
+
+  /** Droits équipe depuis Supabase (permissions à jour quand le patron modifie). */
+  useEffect(() => {
+    if (!studioId || !useSupabase) return;
+    let cancelled = false;
+    void fetchArtistAccountsForStudio(studioId).then((rows) => {
+      if (!cancelled && rows.length > 0) setArtistAccounts(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [studioId, useSupabase]);
+
+  /** Collaborateurs : recharger les permissions quand l’onglet reprend le focus (patron a pu modifier les droits). */
+  useEffect(() => {
+    if (!studioId || !useSupabase || !isCollaboratorUser) return;
+    const refresh = () => {
+      void fetchArtistAccountsForStudio(studioId).then((rows) => {
+        if (rows.length > 0) setArtistAccounts(rows);
+      });
+    };
+    const onVis = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [studioId, useSupabase, isCollaboratorUser]);
 
   // Auto-checkout: when landing with ?subscribe=starter|pro|studio, redirect to Stripe Payment Link; solo|studio use createSubscription
   const subscribeAttempted = React.useRef(false);
@@ -761,6 +911,24 @@ export const DashboardPro: React.FC = () => {
         });
     }
   }, [studioId, user?.email]);
+
+  // Google Business OAuth callback: ?connected=google-business → rafraîchir statut + ouvrir Vitrine > Avis
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('connected') === 'google-business') {
+      window.history.replaceState({}, '', '/dashboard');
+      refreshGoogleBusinessStatus();
+      setActiveTab('settings');
+      setSettingsTab('vitrine');
+      toast.success('Google Business connecté ! Vos avis apparaissent maintenant sur votre vitrine.');
+    } else if (params.get('error') === 'google-business-denied') {
+      window.history.replaceState({}, '', '/dashboard');
+      toast.error('Connexion Google Business annulée.');
+    } else if (params.get('error')?.startsWith('google-business')) {
+      window.history.replaceState({}, '', '/dashboard');
+      toast.error('Erreur lors de la connexion Google Business. Réessayez.');
+    }
+  }, [toast, refreshGoogleBusinessStatus]);
 
   // Instagram OAuth callback: ?ig=connected → ouvrir Paramètres > Messagerie
   useEffect(() => {
@@ -945,18 +1113,16 @@ export const DashboardPro: React.FC = () => {
 
       const prThreadIds = Array.from(threadMap.keys()).filter((id) => id.startsWith('pr_'));
       if (prThreadIds.length > 0) {
-        const prIds = prThreadIds.map((tid) => tid.slice(3));
         const { data: prRows } = await supabase
           .from('inkflow_project_requests')
           .select('id, client_email, client_name, description')
           .eq('studio_id', studioId)
-          .in('id', prIds);
+          .in('id', prThreadIds);
         const prByPrId = new Map<string, { email: string; name: string; description?: string }>();
         if (prRows) for (const r of prRows) prByPrId.set(r.id, { email: r.client_email || '', name: r.client_name || '', description: r.description || undefined });
         for (const threadId of prThreadIds) {
-          const prId = threadId.slice(3);
           const t = threadMap.get(threadId);
-          const pr = prByPrId.get(prId);
+          const pr = prByPrId.get(threadId);
           if (t && pr) {
             if (pr.email) t.clientEmail = pr.email;
             if (pr.name) t.clientName = t.clientName || pr.name;
@@ -1241,6 +1407,7 @@ export const DashboardPro: React.FC = () => {
     welcomeUserKey &&
     shouldShowWelcomeFlow(user?.email, user?.id) &&
     !welcomeComplete &&
+    !isCollaboratorUser &&
     studioId &&
     studioSlug &&
     user?.email;
@@ -1690,10 +1857,12 @@ export const DashboardPro: React.FC = () => {
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'account' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Mon compte
                       </button>
+                      {!isCollaboratorUser && (
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('etablissement'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'etablissement' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'etablissement' ? 'bg-violet-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Établissement
                       </button>
+                      )}
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab('billing'); setSidebarOpen(false); }, true)} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'settings' && settingsTab === 'billing' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'settings' && settingsTab === 'billing' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
                         Abonnement
@@ -1886,7 +2055,6 @@ export const DashboardPro: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setHeaderMoreMenuOpen((o) => !o);
-                  setShowNotifications(false);
                   setShowProfileDropdown(false);
                 }}
                 className={`flex p-2.5 rounded-xl hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] items-center justify-center transition-colors touch-manipulation ${
@@ -1930,160 +2098,54 @@ export const DashboardPro: React.FC = () => {
                 </>
               )}
             </div>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowNotifications(!showNotifications);
-                  setShowProfileDropdown(false);
-                  setHeaderMoreMenuOpen(false);
+            <div className="relative z-[50]">
+              <NotificationPopover
+                notifications={notificationPopoverItems}
+                onNotificationsChange={(merged) => {
+                  merged.forEach((m) => {
+                    if (!m.read) return;
+                    const src = notifications.find((x) => x.id === m.id);
+                    if (src && !src.read) {
+                      markNotificationAsRead(m.id);
+                    }
+                  });
                 }}
-                className="relative p-2.5 rounded-full hover:bg-white/60 dark:hover:bg-white/10 transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center"
-              >
-                <Bell className="w-5 h-5 text-[#6B7280] dark:text-[var(--text-secondary)]" />
-                {notifications.filter(n => !n.read).length > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full ring-2 ring-white dark:ring-[var(--bg-primary)]" />
-                )}
-              </button>
-              {showNotifications && (
-                <>
-                  <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowNotifications(false)} aria-hidden />
-                  <div className="fixed sm:absolute inset-x-2 sm:inset-x-auto sm:right-0 top-[4.25rem] sm:top-full sm:mt-2 sm:w-96 max-h-[78svh] sm:max-h-[480px] border border-zinc-200 dark:border-zinc-800 rounded-2xl z-50 animate-slide-up bg-white dark:bg-black shadow-xl shadow-black/10 overflow-hidden flex flex-col">
-                    {/* Header */}
-                    <div className="p-3 sm:p-4 border-b border-zinc-100 dark:border-zinc-800 bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-black flex-shrink-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
-                          <h4 className="font-bold text-sm text-zinc-900 dark:text-white">Notifications</h4>
-                          {notifications.filter(n => !n.read).length > 0 && (
-                            <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold">
-                              {notifications.filter(n => !n.read).length}
-                            </span>
-                          )}
-                        </div>
-                        {notifications.filter(n => !n.read).length > 0 && (
+                onNotificationSelect={(n) => {
+                  markNotificationAsRead(n.id);
+                  handleSidebarNav(() => setActiveTab('requests'));
+                }}
+                onOpenChange={(open) => {
+                  if (open) {
+                    setShowProfileDropdown(false);
+                    setHeaderMoreMenuOpen(false);
+                  }
+                }}
+                emptyListLabel="Vous serez notifié des nouvelles réservations et demandes."
+                footer={
+                  notifications.length > 0
+                    ? ({ close }) => (
+                        <div className="p-2">
                           <button
-                            onClick={() => { notifications.filter(n => !n.read).forEach(n => markNotificationAsRead(n.id)); }}
-                            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors"
+                            type="button"
+                            onClick={() => {
+                              close();
+                              handleSidebarNav(() => setActiveTab('notifications'));
+                            }}
+                            className="w-full py-2.5 rounded-xl text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
                           >
-                            <MailOpen className="w-3.5 h-3.5" />
-                            Tout lire
+                            Voir toutes les notifications
+                            <ChevronRight className="w-4 h-4" aria-hidden />
                           </button>
-                        )}
-                      </div>
-                      {/* Statut connexion + Push rapide */}
-                      <div className="flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isOnline ? 'bg-emerald-400' : 'bg-red-400 animate-pulse'}`} />
-                        <span className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-none">
-                          {!isOnline
-                            ? 'Hors ligne — données en cache'
-                            : typeof Notification !== 'undefined' && Notification.permission === 'granted'
-                              ? 'Temps réel · Push activées'
-                              : 'Temps réel · Push désactivées'}
-                        </span>
-                        {isOnline && typeof Notification !== 'undefined' && Notification.permission === 'default' && (
-                          <button
-                            onClick={() => { setShowNotifications(false); handleSidebarNav(() => setActiveTab('notifications')); }}
-                            className="ml-auto text-[10px] font-semibold text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors whitespace-nowrap"
-                          >
-                            Activer →
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Content */}
-                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-                      {notifications.length === 0 ? (
-                        <div className="p-8 text-center">
-                          <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
-                            <Bell className="w-6 h-6 text-zinc-400" />
-                          </div>
-                          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Aucune notification</p>
-                          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Vous serez notifié des nouvelles réservations</p>
                         </div>
-                      ) : (
-                        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                          {notifications.slice(0, 10).map(notif => {
-                            const iconMap: Record<string, React.ReactNode> = {
-                              booking: <Calendar className="w-4 h-4 text-blue-500" />,
-                              payment: <CreditCard className="w-4 h-4 text-emerald-500" />,
-                              reminder: <Clock className="w-4 h-4 text-amber-500" />,
-                              cancellation: <AlertTriangle className="w-4 h-4 text-red-500" />,
-                              review: <Star className="w-4 h-4 text-violet-500" />,
-                            };
-                            const bgMap: Record<string, string> = {
-                              booking: 'bg-blue-100 dark:bg-blue-500/20',
-                              payment: 'bg-emerald-100 dark:bg-emerald-500/20',
-                              reminder: 'bg-amber-100 dark:bg-amber-500/20',
-                              cancellation: 'bg-red-100 dark:bg-red-500/20',
-                              review: 'bg-violet-100 dark:bg-violet-500/20',
-                            };
-                            
-                            const formatTimeAgo = (dateStr: string) => {
-                              const date = new Date(dateStr);
-                              const now = new Date();
-                              const diffMs = now.getTime() - date.getTime();
-                              const diffMins = Math.floor(diffMs / 60000);
-                              const diffHours = Math.floor(diffMs / 3600000);
-                              const diffDays = Math.floor(diffMs / 86400000);
-                              
-                              if (diffMins < 1) return "À l'instant";
-                              if (diffMins < 60) return `${diffMins}min`;
-                              if (diffHours < 24) return `${diffHours}h`;
-                              if (diffDays < 7) return `${diffDays}j`;
-                              return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-                            };
-                            
-                            return (
-                              <button
-                                key={notif.id}
-                                onClick={() => { markNotificationAsRead(notif.id); setShowNotifications(false); handleSidebarNav(() => setActiveTab('requests')); }}
-                                className={`w-full text-left p-3 sm:p-4 transition-colors duration-150 group ${!notif.read ? 'bg-blue-50/60 dark:bg-blue-500/10 hover:bg-blue-50 dark:hover:bg-blue-500/15' : 'bg-zinc-50/80 dark:bg-zinc-900/70 hover:bg-zinc-100 dark:hover:bg-zinc-800/80'}`}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <div className={`p-2 rounded-xl flex-shrink-0 ${bgMap[notif.type] || 'bg-zinc-100 dark:bg-zinc-800'}`}>
-                                    {iconMap[notif.type] || <Bell className="w-4 h-4 text-zinc-500" />}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <p className={`text-sm font-medium line-clamp-1 ${!notif.read ? 'text-zinc-900 dark:text-white' : 'text-zinc-700 dark:text-zinc-300'}`}>
-                                        {notif.title}
-                                      </p>
-                                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500 whitespace-nowrap font-medium">
-                                        {formatTimeAgo(notif.createdAt)}
-                                      </span>
-                                    </div>
-                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">
-                                      {notif.message}
-                                    </p>
-                                  </div>
-                                  {!notif.read && (
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1" />
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Footer */}
-                    {notifications.length > 0 && (
-                      <div className="p-3 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900 flex-shrink-0">
-                        <button
-                          onClick={() => { setShowNotifications(false); handleSidebarNav(() => setActiveTab('notifications')); }}
-                          className="w-full py-2.5 rounded-xl text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors flex items-center justify-center gap-2"
-                        >
-                          Voir toutes les notifications
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
+                      )
+                    : undefined
+                }
+                triggerAriaLabel="Notifications"
+                titleLabel="Notifications"
+                markAllReadLabel="Tout lire"
+                buttonClassName="!h-auto !min-h-[44px] !min-w-[44px] !w-auto !rounded-full border-0 bg-transparent shadow-none hover:bg-white/60 dark:hover:bg-white/10 px-2.5 text-[#6B7280] dark:text-[var(--text-secondary)] [&_svg]:text-[#6B7280] dark:[&_svg]:text-[var(--text-secondary)]"
+                popoverClassName="border border-zinc-200/90 bg-white dark:bg-zinc-950 dark:border-zinc-800 shadow-xl shadow-black/10 sm:!w-[min(100vw-2rem,24rem)]"
+              />
             </div>
             {/* Avatar/Profil — masqué sur mobile SEULEMENT pour overview car doublon avec Bottom Tab Bar > Réglages */}
             <div className={`relative flex items-center min-w-0 ${activeTab === 'overview' ? 'hidden md:flex' : ''}`}>
@@ -2091,7 +2153,6 @@ export const DashboardPro: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setShowProfileDropdown(!showProfileDropdown);
-                  setShowNotifications(false);
                   setHeaderMoreMenuOpen(false);
                 }}
                 className="flex items-center gap-2.5 p-1.5 pr-2 sm:pr-3 rounded-full hover:bg-white/60 dark:hover:bg-white/10 transition-colors duration-150 min-h-[44px]"
@@ -2155,7 +2216,7 @@ export const DashboardPro: React.FC = () => {
           {/* ====== SCROLLABLE CONTENT ZONE ====== */}
           <div
             onScroll={(e) => setHeaderScrolled((e.target as HTMLDivElement).scrollTop > 8)}
-            className={`app-shell-content px-3 py-4 sm:p-6 md:p-8 xl:px-10 2xl:px-12 ${activeTab === 'overview' ? 'dashboard-overview-bg' : 'dashboard-pages-bg'}`}
+            className={`app-shell-content min-w-0 px-3 py-4 sm:p-6 md:p-8 xl:px-10 2xl:px-12 ${activeTab === 'overview' ? 'dashboard-overview-bg overflow-x-hidden' : 'dashboard-pages-bg'}`}
           >
           {isRestricted && !(activeTab === 'settings' && settingsTab === 'billing') ? (
             <PaywallView
@@ -2468,7 +2529,7 @@ export const DashboardPro: React.FC = () => {
                   onDepositUpdated={retry}
                 />
               ) : (
-                <FinanceDashboard appointments={appointments} />
+                <FinanceDashboard appointments={appointments} studioId={studioId} useSupabase={useSupabase ?? false} />
               )}
             </Suspense>
             </div>
@@ -3046,6 +3107,15 @@ export const DashboardPro: React.FC = () => {
                     userEmail={user.email}
                     studioSlug={studioSlug}
                     studioId={studioId}
+                    googleBusinessConnected={googleBusinessConnected}
+                    googleBusinessLocationName={googleBusinessLocationName}
+                    googleBusinessNeedsLocationSelection={googleBusinessNeedsLocationSelection}
+                    googleBusinessLocations={googleBusinessLocations}
+                    loadingGoogleBusinessLocations={loadingGoogleBusinessLocations}
+                    onConnectGoogleBusiness={studioId && useSupabase ? handleConnectGoogleBusiness : undefined}
+                    onDisconnectGoogleBusiness={studioId && useSupabase ? handleDisconnectGoogleBusiness : undefined}
+                    onSelectGoogleBusinessLocation={studioId && useSupabase ? handleSelectGoogleBusinessLocation : undefined}
+                    onLoadGoogleBusinessLocations={studioId && useSupabase ? loadGoogleBusinessLocations : undefined}
                   />
                 ) : (
                   <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 max-w-xl">
@@ -3145,6 +3215,15 @@ export const DashboardPro: React.FC = () => {
                 onGoToBilling={() => { setActiveTab('settings'); setSettingsTab('billing'); }}
                 subscriptionStatus={subscriptionStatus ?? undefined}
                 trialEndsAt={trialEndsAt}
+                googleBusinessConnected={googleBusinessConnected}
+                googleBusinessLocationName={googleBusinessLocationName}
+                googleBusinessNeedsLocationSelection={googleBusinessNeedsLocationSelection}
+                googleBusinessLocations={googleBusinessLocations}
+                loadingGoogleBusinessLocations={loadingGoogleBusinessLocations}
+                onConnectGoogleBusiness={studioId && useSupabase ? handleConnectGoogleBusiness : undefined}
+                onDisconnectGoogleBusiness={studioId && useSupabase ? handleDisconnectGoogleBusiness : undefined}
+                onSelectGoogleBusinessLocation={studioId && useSupabase ? handleSelectGoogleBusinessLocation : undefined}
+                onLoadGoogleBusinessLocations={studioId && useSupabase ? loadGoogleBusinessLocations : undefined}
               />
             </div>
             </div>
@@ -3273,18 +3352,22 @@ export const DashboardPro: React.FC = () => {
           googlePlaceConfigured={!!generalGooglePlaceId}
         />
       )}
-      <ImageCropModal
-        isOpen={Boolean(avatarCropSrc)}
-        imageSrc={avatarCropSrc ?? ''}
-        aspect={1}
-        cropShape="round"
-        title="Ajuster le cadrage"
-        onClose={revokeAvatarCrop}
-        onConfirm={async (dataUrl) => {
-          revokeAvatarCrop();
-          await applyAvatarFromCroppedDataUrl(dataUrl);
-        }}
-      />
+      {avatarCropSrc ? (
+        <Suspense fallback={<ImageCropModalSuspenseFallback />}>
+          <LazyImageCropModal
+            isOpen
+            imageSrc={avatarCropSrc}
+            aspect={1}
+            cropShape="round"
+            title="Ajuster le cadrage"
+            onClose={revokeAvatarCrop}
+            onConfirm={async (dataUrl) => {
+              revokeAvatarCrop();
+              await applyAvatarFromCroppedDataUrl(dataUrl);
+            }}
+          />
+        </Suspense>
+      ) : null}
       {/* ====== MOBILE: FAB DRAWER (bottom sheet) — fond opaque #18181B, z-index 70 ====== */}
       {showFabMenu && (
         <>
@@ -3446,76 +3529,121 @@ export const DashboardPro: React.FC = () => {
         </>
       )}
 
-      {/* ====== MOBILE BOTTOM NAVIGATION BAR (style iOS: 5 onglets plats, sans FAB) ====== */}
+      {/* ====== MOBILE BOTTOM NAVIGATION BAR (style iOS: 5 onglets + pastille active layoutId) ====== */}
       <nav className="bottom-nav md:hidden" role="navigation" aria-label="Navigation principale mobile">
-        <div className="flex items-stretch justify-between gap-0.5 px-1 pb-1 max-w-lg mx-auto w-full">
-          {/* Accueil — onglet type iOS : pastille active + accent navigation */}
+        <div className="mx-auto flex w-full max-w-lg items-stretch justify-between gap-0.5 px-1 pb-1">
+          {/* Accueil */}
           <button
             type="button"
             onClick={() => handleSidebarNav(() => { setActiveTab('overview'); setShowFabMenu(false); })}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 min-w-0 min-h-[56px] rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
               activeTab === 'overview'
-                ? 'bg-zinc-200/95 dark:bg-white/[0.08] text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.08]'
+                ? 'text-sky-600 dark:text-sky-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
-            <LayoutDashboard className="w-[23px] h-[23px] shrink-0" strokeWidth={activeTab === 'overview' ? 2.35 : 1.65} aria-hidden />
-            <span className="text-[11px] font-semibold leading-none tracking-tight truncate max-w-full">Accueil</span>
+            {activeTab === 'overview' && (
+              <motion.div
+                layoutId="dashboard-mobile-bottom-nav-pill"
+                className="absolute inset-0 rounded-2xl bg-zinc-200/95 shadow-sm ring-1 ring-black/[0.04] dark:bg-white/[0.08] dark:ring-white/[0.08]"
+                transition={mobileBottomNavPillTransition}
+              />
+            )}
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
+              <LayoutDashboard className="h-[23px] w-[23px] shrink-0" strokeWidth={activeTab === 'overview' ? 2.35 : 1.65} aria-hidden />
+              <span className="max-w-full truncate text-[11px] font-semibold leading-none tracking-tight">Accueil</span>
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => handleSidebarNav(() => { setActiveTab('appointments'); setShowFabMenu(false); })}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 min-w-0 min-h-[56px] rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
               activeTab === 'appointments'
-                ? 'bg-zinc-200/95 dark:bg-white/[0.08] text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.08]'
+                ? 'text-sky-600 dark:text-sky-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
-            <Calendar className="w-[23px] h-[23px] shrink-0" strokeWidth={activeTab === 'appointments' ? 2.35 : 1.65} aria-hidden />
-            <span className="text-[11px] font-semibold leading-none tracking-tight truncate max-w-full">Agenda</span>
+            {activeTab === 'appointments' && (
+              <motion.div
+                layoutId="dashboard-mobile-bottom-nav-pill"
+                className="absolute inset-0 rounded-2xl bg-zinc-200/95 shadow-sm ring-1 ring-black/[0.04] dark:bg-white/[0.08] dark:ring-white/[0.08]"
+                transition={mobileBottomNavPillTransition}
+              />
+            )}
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
+              <Calendar className="h-[23px] w-[23px] shrink-0" strokeWidth={activeTab === 'appointments' ? 2.35 : 1.65} aria-hidden />
+              <span className="max-w-full truncate text-[11px] font-semibold leading-none tracking-tight">Agenda</span>
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setShowFabMenu(false); })}
-            className={`relative flex flex-col items-center justify-center gap-1 flex-1 min-w-0 min-h-[56px] rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
               activeTab === 'requests'
-                ? 'bg-zinc-200/95 dark:bg-white/[0.08] text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.08]'
+                ? 'text-sky-600 dark:text-sky-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
-            <span className="relative inline-flex items-center justify-center">
-              <Inbox className="w-[23px] h-[23px] shrink-0" strokeWidth={activeTab === 'requests' ? 2.35 : 1.65} aria-hidden />
-              <BadgeNotification count={demandes.total} showCount className="-top-1 -right-2" />
+            {activeTab === 'requests' && (
+              <motion.div
+                layoutId="dashboard-mobile-bottom-nav-pill"
+                className="absolute inset-0 rounded-2xl bg-zinc-200/95 shadow-sm ring-1 ring-black/[0.04] dark:bg-white/[0.08] dark:ring-white/[0.08]"
+                transition={mobileBottomNavPillTransition}
+              />
+            )}
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
+              <span className="relative inline-flex items-center justify-center">
+                <Inbox className="h-[23px] w-[23px] shrink-0" strokeWidth={activeTab === 'requests' ? 2.35 : 1.65} aria-hidden />
+                <BadgeNotification count={demandes.total} showCount className="-top-1 -right-2" />
+              </span>
+              <span className="max-w-full truncate text-[11px] font-semibold leading-none tracking-tight">Demandes</span>
             </span>
-            <span className="text-[11px] font-semibold leading-none tracking-tight truncate max-w-full">Demandes</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleSidebarNav(() => { setActiveTab('clients'); setShowFabMenu(false); })}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 min-w-0 min-h-[56px] rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
               activeTab === 'clients'
-                ? 'bg-zinc-200/95 dark:bg-white/[0.08] text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.08]'
+                ? 'text-sky-600 dark:text-sky-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
-            <Users className="w-[23px] h-[23px] shrink-0" strokeWidth={activeTab === 'clients' ? 2.35 : 1.65} aria-hidden />
-            <span className="text-[11px] font-semibold leading-none tracking-tight truncate max-w-full">Clients</span>
+            {activeTab === 'clients' && (
+              <motion.div
+                layoutId="dashboard-mobile-bottom-nav-pill"
+                className="absolute inset-0 rounded-2xl bg-zinc-200/95 shadow-sm ring-1 ring-black/[0.04] dark:bg-white/[0.08] dark:ring-white/[0.08]"
+                transition={mobileBottomNavPillTransition}
+              />
+            )}
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
+              <Users className="h-[23px] w-[23px] shrink-0" strokeWidth={activeTab === 'clients' ? 2.35 : 1.65} aria-hidden />
+              <span className="max-w-full truncate text-[11px] font-semibold leading-none tracking-tight">Clients</span>
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => handleSidebarNav(() => { setActiveTab('settings'); setSettingsTab(isRestricted ? 'billing' : settingsTab); setShowFabMenu(false); }, true)}
-            className={`flex flex-col items-center justify-center gap-1 flex-1 min-w-0 min-h-[56px] rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
               activeTab === 'settings'
-                ? 'bg-zinc-200/95 dark:bg-white/[0.08] text-sky-600 dark:text-sky-400 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.08]'
+                ? 'text-sky-600 dark:text-sky-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
-            <Settings className="w-[23px] h-[23px] shrink-0" strokeWidth={activeTab === 'settings' ? 2.35 : 1.65} aria-hidden />
-            <span className="text-[11px] font-semibold leading-none tracking-tight truncate max-w-full">Réglages</span>
+            {activeTab === 'settings' && (
+              <motion.div
+                layoutId="dashboard-mobile-bottom-nav-pill"
+                className="absolute inset-0 rounded-2xl bg-zinc-200/95 shadow-sm ring-1 ring-black/[0.04] dark:bg-white/[0.08] dark:ring-white/[0.08]"
+                transition={mobileBottomNavPillTransition}
+              />
+            )}
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
+              <Settings className="h-[23px] w-[23px] shrink-0" strokeWidth={activeTab === 'settings' ? 2.35 : 1.65} aria-hidden />
+              <span className="max-w-full truncate text-[11px] font-semibold leading-none tracking-tight">Réglages</span>
+            </span>
           </button>
         </div>
       </nav>

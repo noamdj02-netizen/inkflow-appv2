@@ -23,7 +23,6 @@ import {
   Lock,
   CircleHelp,
   Palette,
-  Star,
   Camera,
   Maximize2,
   X,
@@ -31,10 +30,13 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
+import { Modal } from '../../components/ui/Modal';
+import { NotificationPopover, type Notification as ClientBellNotification } from '../../components/ui/notification-popover';
 import { supabase } from '../../lib/supabase';
 import { LANDING_URL } from '../../lib/urls';
 import { clientNavigate } from '../../lib/clientAppNavigate';
 import { getFavoriteFlashIds, isFavoriteFlashId, toggleFavoriteFlashId } from '../../lib/clientFavoritesLocal';
+import { hydrateClientFavoritesFromSupabase, toggleFavoriteWithSupabaseSync } from '../../lib/clientFavoritesSync';
 import { CLIENT_DASHBOARD_THEME, buildClientDesignTokens } from '../../lib/clientDashboardTheme';
 import { useToast } from '../../contexts/ToastContext';
 import { isClientPortalFullyReady } from '../../lib/clientOnboardingGate';
@@ -44,6 +46,7 @@ import {
   type FlashPreview,
 } from '../../lib/supabaseGeo';
 import { getStudioByEmail } from '../../lib/supabaseDashboard';
+import { parseVitrineProjectDescription } from '../../lib/parseVitrineProjectDescription';
 import { isInkflowDemoAccount } from '../../lib/demoAccount';
 import {
   getInkflowDemoClientPortalBookings,
@@ -146,6 +149,78 @@ function ClientGuestAuthCard({ layout }: { layout: 'home' | 'profile' }) {
 
 // ─── Style filter tabs ────────────────────────────────────────────────────────
 const STYLE_TABS = ['Tous', 'Flash', 'Fine line', 'Blackwork', 'Réalisme', 'Japonais', 'Géométrique'] as const;
+
+type FlashSortKey = 'distance' | 'price_asc' | 'price_desc' | 'title';
+
+const FLASH_SORT_OPTIONS: { key: FlashSortKey; label: string }[] = [
+  { key: 'distance', label: 'Plus proches' },
+  { key: 'price_asc', label: 'Prix croissant' },
+  { key: 'price_desc', label: 'Prix décroissant' },
+  { key: 'title', label: 'Titre (A→Z)' },
+];
+
+function flashPriceSafe(f: FlashPreview): number {
+  const n = Number(f.price);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Clé stable pour listes / tri (évite collisions si même id côté données). */
+function flashRowKey(row: { flash: FlashPreview; studioIdx: number; studio: NearbyStudio | null }): string {
+  const sid = row.studio?.id ?? `idx-${row.studioIdx}`;
+  return `${sid}:${row.flash.id}`;
+}
+
+function sortFlashEntries(
+  entries: { flash: FlashPreview; studioIdx: number; studio: NearbyStudio | null }[],
+  key: FlashSortKey,
+): void {
+  const distKm = (s: NearbyStudio | null) => {
+    const d = s?.distance_km;
+    if (d == null || !Number.isFinite(d)) return Number.POSITIVE_INFINITY;
+    return d;
+  };
+
+  const tiebreak = (
+    a: { flash: FlashPreview; studioIdx: number; studio: NearbyStudio | null },
+    b: { flash: FlashPreview; studioIdx: number; studio: NearbyStudio | null },
+  ): number => {
+    const byPrice = flashPriceSafe(a.flash) - flashPriceSafe(b.flash);
+    if (byPrice !== 0) return byPrice;
+    const byTitle = a.flash.title.localeCompare(b.flash.title, 'fr', { sensitivity: 'base' });
+    if (byTitle !== 0) return byTitle;
+    return flashRowKey(a).localeCompare(flashRowKey(b));
+  };
+
+  entries.sort((a, b) => {
+    switch (key) {
+      case 'distance': {
+        const da = distKm(a.studio);
+        const db = distKm(b.studio);
+        if (da !== db) return da - db;
+        return tiebreak(a, b);
+      }
+      case 'price_asc': {
+        const pa = flashPriceSafe(a.flash);
+        const pb = flashPriceSafe(b.flash);
+        if (pa !== pb) return pa - pb;
+        return tiebreak(a, b);
+      }
+      case 'price_desc': {
+        const pa = flashPriceSafe(a.flash);
+        const pb = flashPriceSafe(b.flash);
+        if (pa !== pb) return pb - pa;
+        return tiebreak(a, b);
+      }
+      case 'title': {
+        const t = a.flash.title.localeCompare(b.flash.title, 'fr', { sensitivity: 'base' });
+        if (t !== 0) return t;
+        return tiebreak(a, b);
+      }
+      default:
+        return 0;
+    }
+  });
+}
 
 // ─── Utils ───────────────────────────────────────────────────────────────────
 /** Exclut les photos de banques d'images web — seules les URLs Supabase Storage sont affichées. */
@@ -343,70 +418,88 @@ function ArtistPill({ studio, index, onClick }: { studio: NearbyStudio; index: n
   const pal = PALETTES[index % PALETTES.length];
   const [broken, setBroken] = useState(false);
   const dist = distLabel(studio.distance_km);
+  const locLine = [discoveryLocationLine(studio), dist].filter(Boolean).join(' · ');
+  const ariaLabel = locLine
+    ? `Voir un flash de ${studio.studio_name}, ${locLine}`
+    : `Voir un flash de ${studio.studio_name}`;
 
   return (
-    <button onClick={onClick} style={{
-      flexShrink: 0,
-      width: 140,
-      background: D.card,
-      border: `1px solid ${D.border}`,
-      borderRadius: D.r.lg,
-      overflow: 'hidden',
-      cursor: 'pointer',
-      textAlign: 'left',
-      padding: 0,
-      transition: 'transform 0.15s, box-shadow 0.15s',
-    }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = D.shadow; }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className="group flex w-[158px] shrink-0 flex-col touch-manipulation overflow-hidden rounded-[14px] border text-left transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98] motion-reduce:active:scale-100 sm:w-[168px] sm:hover:-translate-y-px sm:motion-reduce:hover:translate-y-0 sm:hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
+      style={{
+        background: D.contentCardBg,
+        borderColor: D.borderMid,
+        padding: 0,
+        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+      }}
     >
-      {/* Avatar zone */}
-      <div style={{
-        height: 100, position: 'relative',
-        background: pal.bg,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
+      {/* Avatar — pleine largeur carte, empilé au-dessus du texte (flex-col sur le bouton) */}
+      <div
+        className="relative flex w-full shrink-0 items-center justify-center overflow-hidden"
+        style={{
+          height: 108,
+          background: pal.bg,
+        }}
+      >
         {studio.avatar_url && !broken && !isStockPhoto(studio.avatar_url) ? (
           <img
             src={studio.avatar_url}
-            alt={studio.studio_name}
+            alt=""
+            loading="lazy"
+            decoding="async"
             onError={() => setBroken(true)}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            className="h-full w-full min-h-[108px] object-cover object-center transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:group-hover:scale-100"
           />
         ) : (
-          <div style={{
-            width: 44, height: 44, borderRadius: D.r.full,
-            background: `${pal.dot}22`, border: `1.5px solid ${pal.dot}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 16, fontWeight: 800, color: pal.dot,
-          }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: D.r.full,
+              background: `${pal.dot}18`,
+              border: `1px solid ${pal.dot}40`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 15,
+              fontWeight: 700,
+              color: pal.dot,
+              letterSpacing: '-0.02em',
+            }}
+          >
             {initials(studio.studio_name)}
           </div>
         )}
-        {/* Online dot */}
-        <div style={{
-          position: 'absolute', bottom: 8, right: 8,
-          width: 9, height: 9, borderRadius: D.r.full,
-          background: D.green, border: `2px solid ${D.card}`,
-        }} />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/[0.06] to-transparent"
+          aria-hidden
+        />
       </div>
       {/* Body */}
-      <div style={{ padding: '10px 11px 12px' }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: D.text, letterSpacing: '-0.02em', marginBottom: 3, lineHeight: 1.2 }}>
-          {studio.studio_name.length > 14 ? studio.studio_name.slice(0, 13) + '…' : studio.studio_name}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 5 }}>
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={D.muted} strokeWidth="2.5" strokeLinecap="round">
-            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
-          </svg>
-          <span style={{ fontSize: 10, color: D.muted }}>
-            {[discoveryLocationLine(studio), dist].filter(Boolean).join(' · ')}
+      <div className="flex min-h-0 flex-1 flex-col gap-2 px-3 pb-3 pt-2.5 font-client-app">
+        <p
+          className="line-clamp-2 text-[13px] font-semibold leading-[1.25] tracking-[-0.02em]"
+          style={{ color: D.text }}
+          title={studio.studio_name}
+        >
+          {studio.studio_name}
+        </p>
+        <div className="flex min-w-0 items-start gap-1.5">
+          <MapPin className="mt-px h-3.5 w-3.5 shrink-0 opacity-80" style={{ color: D.muted }} strokeWidth={2} aria-hidden />
+          <span className="line-clamp-2 text-[11px] leading-snug" style={{ color: D.muted }}>
+            {locLine || '—'}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Star className="w-3 h-3 shrink-0" style={{ color: D.gold }} fill={D.gold} strokeWidth={0} aria-hidden />
-          <span style={{ fontSize: 10, fontWeight: 600, color: D.textSub }}>4.9</span>
-          <span style={{ fontSize: 10, color: D.muted }}>(87)</span>
+        <div className="mt-auto flex items-center justify-between gap-2 border-t pt-2" style={{ borderColor: `${D.border}` }}>
+          <span className="text-[11px] tabular-nums" style={{ color: D.muted }}>
+            {(studio.flash?.length ?? 0)} flash{(studio.flash?.length ?? 0) !== 1 ? 's' : ''}
+          </span>
+          <span className="text-[11px] font-medium tabular-nums" style={{ color: D.textSub }}>
+            {dist ?? '—'}
+          </span>
         </div>
       </div>
     </button>
@@ -416,6 +509,7 @@ function ArtistPill({ studio, index, onClick }: { studio: NearbyStudio; index: n
 // ─── Flash card vertical ──────────────────────────────────────────────────────
 function FlashCard({
   flash, studioIdx, studioCity, onClick, onFavoritesDirty, bookingActionsEnabled = true,
+  clientEmailForSync,
 }: {
   flash: FlashPreview;
   studioIdx: number;
@@ -424,10 +518,13 @@ function FlashCard({
   onFavoritesDirty?: () => void;
   /** Faux tant que profil + santé incomplets (utilisateur connecté). */
   bookingActionsEnabled?: boolean;
+  /** Si renseigné, sync Supabase après toggle local (session avec Edge Function). */
+  clientEmailForSync?: string | null;
 }) {
   const toast = useToast();
   const pal = PALETTES[studioIdx % PALETTES.length];
   const [broken, setBroken] = useState(false);
+  const [heartBusy, setHeartBusy] = useState(false);
   const hasImg = flash.imageUrl && !broken && !isStockPhoto(flash.imageUrl);
   const fav = isFavoriteFlashId(flash.id);
 
@@ -435,7 +532,7 @@ function FlashCard({
     onClick();
   };
 
-  const onHeart = (e: React.MouseEvent) => {
+  const onHeart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!bookingActionsEnabled) {
@@ -443,9 +540,23 @@ function FlashCard({
       window.location.href = '/onboarding/finaliser-profil';
       return;
     }
-    const now = toggleFavoriteFlashId(flash.id);
-    onFavoritesDirty?.();
-    toast.success(now ? 'Ajouté aux favoris' : 'Retiré des favoris');
+    if (heartBusy) return;
+    if (!clientEmailForSync?.trim()) {
+      const now = toggleFavoriteFlashId(flash.id);
+      onFavoritesDirty?.();
+      toast.success(now ? 'Ajouté aux favoris' : 'Retiré des favoris');
+      return;
+    }
+    setHeartBusy(true);
+    try {
+      const now = await toggleFavoriteWithSupabaseSync(flash.id, clientEmailForSync);
+      onFavoritesDirty?.();
+      toast.success(now ? 'Ajouté aux favoris' : 'Retiré des favoris');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Synchronisation impossible. Réessaie.');
+    } finally {
+      setHeartBusy(false);
+    }
   };
 
   /** Hauteur image homogène sur toutes les cartes ; lisible en 2 colonnes étroites */
@@ -530,7 +641,8 @@ function FlashCard({
         <button
           type="button"
           onClick={onHeart}
-          className="absolute right-1.5 top-1.5 z-[2] flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl active:scale-95 transition-transform sm:min-h-[44px] sm:min-w-[44px] sm:right-2 sm:top-2"
+          disabled={heartBusy}
+          className="absolute right-1.5 top-1.5 z-[2] flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl active:scale-95 transition-transform sm:min-h-[44px] sm:min-w-[44px] sm:right-2 sm:top-2 disabled:opacity-60"
           style={{
             background: D.contentCardBg,
             border: `1px solid ${D.border}`,
@@ -605,6 +717,7 @@ function FlashCard({
 // ─── Flash detail sheet ───────────────────────────────────────────────────────
 function FlashSheet({
   flash, studioIdx, studio, onClose, onFavoritesDirty, viewerStudioSlug, bookingActionsEnabled = true,
+  clientEmailForSync,
 }: {
   flash: FlashPreview;
   studioIdx: number;
@@ -614,11 +727,13 @@ function FlashSheet({
   /** Slug du studio connecté (tatoueur) — si égal au flash, affiche les liens d’édition */
   viewerStudioSlug?: string | null;
   bookingActionsEnabled?: boolean;
+  clientEmailForSync?: string | null;
 }) {
   const toast = useToast();
   const pal = PALETTES[studioIdx % PALETTES.length];
   const [broken, setBroken] = useState(false);
   const [fullImageOpen, setFullImageOpen] = useState(false);
+  const [heartBusy, setHeartBusy] = useState(false);
   const [studioRowAvatarBroken, setStudioRowAvatarBroken] = useState(false);
   const [slot, setSlot] = useState(1);
   const deposit = Math.round(flash.price * 0.2);
@@ -684,15 +799,29 @@ function FlashSheet({
     onClose();
   };
 
-  const onSheetHeart = () => {
+  const onSheetHeart = async () => {
     if (!bookingActionsEnabled) {
       toast.info('Complète ton profil et le questionnaire santé pour utiliser les favoris.');
       window.location.href = '/onboarding/finaliser-profil';
       return;
     }
-    const now = toggleFavoriteFlashId(flash.id);
-    onFavoritesDirty?.();
-    toast.success(now ? 'Ajouté aux favoris' : 'Retiré des favoris');
+    if (heartBusy) return;
+    if (!clientEmailForSync?.trim()) {
+      const now = toggleFavoriteFlashId(flash.id);
+      onFavoritesDirty?.();
+      toast.success(now ? 'Ajouté aux favoris' : 'Retiré des favoris');
+      return;
+    }
+    setHeartBusy(true);
+    try {
+      const now = await toggleFavoriteWithSupabaseSync(flash.id, clientEmailForSync);
+      onFavoritesDirty?.();
+      toast.success(now ? 'Ajouté aux favoris' : 'Retiré des favoris');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Synchronisation impossible. Réessaie.');
+    } finally {
+      setHeartBusy(false);
+    }
   };
 
   const sheetSlug = (studio?.slug?.trim() || flash.studioSlug?.trim() || '').toLowerCase();
@@ -783,6 +912,7 @@ function FlashSheet({
           <button
             type="button"
             onClick={onSheetHeart}
+            disabled={heartBusy}
             aria-label={fav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
             style={{
               position: 'absolute', top: 12, right: 12, zIndex: 20,
@@ -790,7 +920,8 @@ function FlashSheet({
               background: D.mediaOverlayBtnBg, backdropFilter: D.blur,
               border: `1px solid ${D.border}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer',
+              cursor: heartBusy ? 'wait' : 'pointer',
+              opacity: heartBusy ? 0.65 : 1,
               color: fav ? D.gold : D.mediaOverlayBtnFg,
             }}
           >
@@ -1038,11 +1169,22 @@ function FlashSheet({
 // ─── Skeleton cards ───────────────────────────────────────────────────────────
 function SkeletonPill() {
   return (
-    <div style={{ flexShrink: 0, width: 140, height: 166, background: D.card, borderRadius: D.r.lg, border: `1px solid ${D.border}` }}>
-      <div style={{ height: 100, background: D.skeleton }} />
-      <div style={{ padding: 10 }}>
-        <div style={{ height: 12, width: '70%', background: D.skeleton, borderRadius: 6, marginBottom: 6 }} />
-        <div style={{ height: 10, width: '50%', background: D.skeleton, borderRadius: 5 }} />
+    <div
+      className="w-[158px] shrink-0 animate-pulse overflow-hidden rounded-[14px] sm:w-[168px]"
+      style={{
+        minHeight: 198,
+        background: D.contentCardBg,
+        border: `1px solid ${D.borderMid}`,
+        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+      }}
+    >
+      <div style={{ height: 108, background: D.skeleton }} />
+      <div className="space-y-2 border-t px-3 pb-3 pt-2.5" style={{ borderColor: D.border }}>
+        <div style={{ height: 16, width: '78%', background: D.skeleton, borderRadius: 6 }} />
+        <div style={{ height: 11, width: '92%', background: D.skeleton, borderRadius: 5 }} />
+        <div className="pt-2" style={{ borderTop: `1px solid ${D.border}` }}>
+          <div style={{ height: 11, width: '45%', background: D.skeleton, borderRadius: 5 }} />
+        </div>
       </div>
     </div>
   );
@@ -1083,21 +1225,83 @@ const SIDEBAR_NAV: { id: Tab; label: string; tabBarLabel: string; Icon: typeof H
   { id: 'profile', label: 'Profil', tabBarLabel: 'Profil', Icon: UserIcon },
 ];
 
+/** Icône d’onglet + pastilles (messages non lus, push indisponible / refusé). */
+function ClientTabIconWithBadges({
+  tabId,
+  Icon,
+  iconClassName,
+  strokeWidth,
+  unreadMessages,
+  pushDisconnected,
+  badgeRingColor,
+}: {
+  tabId: Tab;
+  Icon: typeof Home;
+  iconClassName: string;
+  strokeWidth: number;
+  unreadMessages: number;
+  pushDisconnected: boolean;
+  badgeRingColor: string;
+}) {
+  const showMsg = tabId === 'rdv' && unreadMessages > 0;
+  const showPush = tabId === 'profile' && pushDisconnected;
+  const msgLabel =
+    unreadMessages > 1
+      ? `${unreadMessages} messages non lus`
+      : '1 message non lu';
+  return (
+    <span className="relative inline-flex shrink-0">
+      <Icon className={iconClassName} strokeWidth={strokeWidth} aria-hidden />
+      {showMsg ? (
+        <span
+          className="absolute -right-1 -top-1 flex h-[15px] min-w-[15px] items-center justify-center rounded-full px-0.5 text-[9px] font-bold leading-none text-white pointer-events-none"
+          style={{
+            background: D.red,
+            boxShadow: `0 0 0 2px ${badgeRingColor}`,
+          }}
+          aria-hidden
+        >
+          {unreadMessages > 9 ? '9+' : unreadMessages}
+        </span>
+      ) : null}
+      {showPush ? (
+        <span
+          className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full pointer-events-none"
+          style={{
+            background: D.warning,
+            boxShadow: `0 0 0 2px ${badgeRingColor}`,
+          }}
+          title="Notifications push désactivées ou indisponibles"
+          aria-hidden
+        />
+      ) : null}
+      {showMsg ? <span className="sr-only">{msgLabel}</span> : null}
+    </span>
+  );
+}
+
 /** Tab bar fixe mobile — 44pt+ cibles, état sélectionné façon barre iOS (tint + pastille légère), safe area */
-function ClientMobileTabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
+function ClientMobileTabBar({
+  active,
+  onChange,
+  unreadMessages = 0,
+  pushDisconnected = false,
+}: {
+  active: Tab;
+  onChange: (t: Tab) => void;
+  unreadMessages?: number;
+  pushDisconnected?: boolean;
+}) {
   return (
     <nav
-      className="client-mobile-tab-bar lg:hidden fixed bottom-0 left-0 right-0 z-[50] flex touch-manipulation"
+      className="client-mobile-tab-bar lg:hidden fixed bottom-0 left-0 right-0 z-[50] flex touch-manipulation border-t border-zinc-200/70 bg-white/90 shadow-[0_-8px_32px_rgba(15,23,42,0.07)] backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-white/80"
       role="navigation"
       aria-label="Navigation principale"
       style={{
-        background: D.sidebarBg,
-        borderTop: `1px solid ${D.sidebarBorder}`,
         paddingTop: 6,
         paddingBottom: 'max(10px, env(safe-area-inset-bottom, 0px))',
         paddingLeft: 'max(6px, env(safe-area-inset-left, 0px))',
         paddingRight: 'max(6px, env(safe-area-inset-right, 0px))',
-        boxShadow: '0 -4px 22px rgba(15, 23, 42, 0.05)',
       }}
     >
       {SIDEBAR_NAV.map(({ id, tabBarLabel, Icon }) => {
@@ -1107,14 +1311,22 @@ function ClientMobileTabBar({ active, onChange }: { active: Tab; onChange: (t: T
             key={id}
             type="button"
             onClick={() => onChange(id)}
-            className="flex flex-1 flex-col items-center justify-center gap-1 min-h-[56px] min-w-0 mx-0.5 py-1.5 rounded-xl transition-colors active:scale-[0.97] motion-reduce:active:scale-100"
+            className="flex flex-1 flex-col items-center justify-center gap-1 min-h-[56px] min-w-0 mx-0.5 py-1.5 rounded-xl transition-colors duration-200 active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             style={{
               color: isOn ? D.gold : D.muted,
               background: isOn ? D.goldDim : 'transparent',
             }}
             aria-current={isOn ? 'page' : undefined}
           >
-            <Icon className="w-[23px] h-[23px] shrink-0 pointer-events-none" strokeWidth={isOn ? 2.25 : 1.5} aria-hidden />
+            <ClientTabIconWithBadges
+              tabId={id}
+              Icon={Icon}
+              iconClassName="w-[23px] h-[23px] shrink-0 pointer-events-none"
+              strokeWidth={isOn ? 2.25 : 1.5}
+              unreadMessages={unreadMessages}
+              pushDisconnected={pushDisconnected}
+              badgeRingColor={D.sidebarBg}
+            />
             <span className="text-[11px] font-semibold leading-none text-center px-0.5 truncate w-full max-w-[4.5rem]">
               {tabBarLabel}
             </span>
@@ -1130,6 +1342,7 @@ function ClientMobileTabBar({ active, onChange }: { active: Tab; onChange: (t: T
 // ══════════════════════════════════════════════════════════════════════════════
 function TabExplore({
   studios, allFlashes, onFlashClick, exploreSearchFocusNonce, onFavoritesDirty, bookingActionsEnabled = true,
+  discoveryStyleFilter, onDiscoveryStyleFilter, flashSortKey, onFlashSortChange, clientEmailForSync,
 }: {
   studios: NearbyStudio[];
   allFlashes: { flash: FlashPreview; studioIdx: number; studio: NearbyStudio | null }[];
@@ -1137,10 +1350,14 @@ function TabExplore({
   exploreSearchFocusNonce: number;
   onFavoritesDirty?: () => void;
   bookingActionsEnabled?: boolean;
+  discoveryStyleFilter: string;
+  onDiscoveryStyleFilter: (f: string) => void;
+  flashSortKey: FlashSortKey;
+  onFlashSortChange: (k: FlashSortKey) => void;
+  clientEmailForSync?: string | null;
 }) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<string>('Tous');
 
   useEffect(() => {
     if (!exploreSearchFocusNonce) return;
@@ -1151,12 +1368,23 @@ function TabExplore({
     return () => window.clearTimeout(t);
   }, [exploreSearchFocusNonce]);
 
-  const filtered = allFlashes.filter(({ flash: f, studio: s }) => {
-    const matchStyle = filter === 'Tous' || f.style?.toLowerCase().includes(filter.toLowerCase());
+  const filtered = useMemo(() => allFlashes.filter(({ flash: f, studio: s }) => {
+    const matchStyle =
+      discoveryStyleFilter === 'Tous'
+        ? true
+        : discoveryStyleFilter === 'Flash'
+          ? true
+          : f.style?.toLowerCase().includes(discoveryStyleFilter.toLowerCase());
     const matchQ = !query || f.title.toLowerCase().includes(query.toLowerCase())
       || s?.studio_name.toLowerCase().includes(query.toLowerCase());
     return matchStyle && matchQ;
-  });
+  }), [allFlashes, discoveryStyleFilter, query]);
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    sortFlashEntries(arr, flashSortKey);
+    return arr;
+  }, [filtered, flashSortKey]);
 
   return (
     <div className="px-2 pt-3 pb-8 sm:px-4 sm:pt-4 md:px-6">
@@ -1203,12 +1431,12 @@ function TabExplore({
           <button
             key={f}
             type="button"
-            onClick={() => setFilter(f)}
+            onClick={() => onDiscoveryStyleFilter(f)}
             className="shrink-0 touch-manipulation min-h-[44px] flex items-center px-4 rounded-full active:scale-[0.98] transition-transform"
             style={{
               fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer',
-              background: filter === f ? D.gold : D.card,
-              color: filter === f ? D.onAccent : D.muted,
+              background: discoveryStyleFilter === f ? D.gold : D.card,
+              color: discoveryStyleFilter === f ? D.onAccent : D.muted,
               transition: 'all 0.15s',
             }}
           >
@@ -1217,33 +1445,69 @@ function TabExplore({
         ))}
       </div>
 
+      {/* Tri — aligné avec l’accueil */}
+      <div className="mb-4">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide" style={{ color: D.muted }}>
+          Trier
+        </p>
+        <div
+          className="flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x pb-1 -mx-1 px-1"
+          style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
+        >
+              {FLASH_SORT_OPTIONS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onFlashSortChange(key);
+                  }}
+                  className="relative z-[1] shrink-0 touch-manipulation min-h-[40px] rounded-full px-3.5 py-2 text-xs font-semibold transition-transform active:scale-[0.98]"
+                  style={{
+                    border: `1px solid ${flashSortKey === key ? D.gold : D.border}`,
+                    background: flashSortKey === key ? D.goldDim : D.card,
+                    color: flashSortKey === key ? D.gold : D.muted,
+                    touchAction: 'manipulation',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+        </div>
+      </div>
+
       {/* Results label */}
       <div style={{ fontSize: 12, color: D.muted, marginBottom: 14 }}>
-        {filtered.length} flash{filtered.length !== 1 ? 's' : ''} disponible{filtered.length !== 1 ? 's' : ''}
+        {sorted.length} flash{sorted.length !== 1 ? 's' : ''} disponible{sorted.length !== 1 ? 's' : ''}
       </div>
 
       {/* Grid */}
-      {filtered.length > 0 ? (
+      {sorted.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(152px,1fr))] [grid-auto-rows:minmax(0,1fr)] gap-3 sm:gap-4 mb-8 items-stretch">
-          {filtered.map(({ flash, studioIdx, studio: s }) => (
-            <Fragment key={flash.id}>
+          {sorted.map((row) => {
+            const { flash, studioIdx, studio: s } = row;
+            return (
+            <Fragment key={flashRowKey(row)}>
               <FlashCard
                 flash={flash}
                 studioIdx={studioIdx}
                 studioCity={discoveryLocationLine(s)}
                 onFavoritesDirty={onFavoritesDirty}
                 bookingActionsEnabled={bookingActionsEnabled}
+                clientEmailForSync={clientEmailForSync}
                 onClick={() => onFlashClick(flash, studioIdx, s)}
               />
             </Fragment>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div style={{ padding: '64px 0', textAlign: 'center', color: D.muted, fontSize: 14 }}>
           <ClientEmptyGlyph>
             <Search className="w-7 h-7" style={{ color: D.muted }} strokeWidth={1.65} aria-hidden />
           </ClientEmptyGlyph>
-          Aucun résultat pour « {query || filter} »
+          Aucun résultat pour « {query || discoveryStyleFilter} »
         </div>
       )}
 
@@ -1287,18 +1551,23 @@ function TabExplore({
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// TAB — FAVORIS (localStorage MVP)
+// TAB — FAVORIS (local + sync compte)
 // ══════════════════════════════════════════════════════════════════════════════
 function TabFavorites({
   allFlashes,
   onFlashClick,
   onFavoritesDirty,
   bookingActionsEnabled = true,
+  accountEmail,
+  clientEmailForSync,
 }: {
   allFlashes: { flash: FlashPreview; studioIdx: number; studio: NearbyStudio | null }[];
   onFlashClick: (f: FlashPreview, si: number, s: NearbyStudio | null) => void;
   onFavoritesDirty?: () => void;
   bookingActionsEnabled?: boolean;
+  /** E-mail session (affichage aide) */
+  accountEmail?: string | null;
+  clientEmailForSync?: string | null;
 }) {
   const ids = getFavoriteFlashIds();
   const list = allFlashes.filter(({ flash }) => ids.has(flash.id));
@@ -1306,7 +1575,9 @@ function TabFavorites({
   return (
     <div className="px-2 pt-3 pb-8 sm:px-4 sm:pt-4 md:px-6">
       <p className="text-xs mb-4" style={{ color: D.muted }}>
-        Stockés sur cet appareil — bientôt synchronisés avec ton compte.
+        {accountEmail?.trim()
+          ? 'Tes cœurs sont enregistrés sur ce compte et sur cet appareil (hors ligne).'
+          : 'Stockés sur cet appareil. Connecte-toi pour les retrouver sur tous tes appareils.'}
       </p>
       {list.length === 0 ? (
         <div style={{
@@ -1323,18 +1594,22 @@ function TabFavorites({
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(152px,1fr))] [grid-auto-rows:minmax(0,1fr)] gap-3 sm:gap-4 items-stretch">
-          {list.map(({ flash, studioIdx, studio: s }) => (
-            <Fragment key={flash.id}>
+          {list.map((row) => {
+            const { flash, studioIdx, studio: s } = row;
+            return (
+            <Fragment key={flashRowKey(row)}>
               <FlashCard
                 flash={flash}
                 studioIdx={studioIdx}
                 studioCity={discoveryLocationLine(s)}
                 onFavoritesDirty={onFavoritesDirty}
                 bookingActionsEnabled={bookingActionsEnabled}
+                clientEmailForSync={clientEmailForSync}
                 onClick={() => onFlashClick(flash, studioIdx, s)}
               />
             </Fragment>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -1508,6 +1783,34 @@ interface ClientProjectRequest {
   description: string;
   status: string;
   created_at: string;
+  client_name?: string;
+  placement?: string | null;
+  estimated_size?: string | null;
+  budget?: string | null;
+  client_instagram?: string | null;
+  project_type?: string;
+  reference_image_url?: string | null;
+  reference_images?: string[] | null;
+}
+
+function parseProjectReferenceImages(raw: unknown): string[] | null {
+  if (raw == null) return null;
+  if (Array.isArray(raw)) {
+    const urls = raw.filter((u): u is string => typeof u === 'string' && u.trim().length > 0);
+    return urls.length ? urls : null;
+  }
+  return null;
+}
+
+function clientProjectRefImageUrls(p: ClientProjectRequest): string[] {
+  const out: string[] = [];
+  const push = (u: string | null | undefined) => {
+    const t = u?.trim();
+    if (t && !out.includes(t)) out.push(t);
+  };
+  push(p.reference_image_url);
+  if (p.reference_images) for (const u of p.reference_images) push(u);
+  return out;
 }
 
 const PROJECT_STATUS_LABEL: Record<string, { label: string; color: string; bg: string }> = {
@@ -1781,6 +2084,7 @@ function TabRDV({
   userEmail: string;
   onNavigateTab?: (t: Tab) => void;
 }) {
+  const [projectDetail, setProjectDetail] = useState<ClientProjectRequest | null>(null);
 
   const formatDate = (d: string) => {
     try {
@@ -1789,7 +2093,8 @@ function TabRDV({
   };
 
   const openProjectThread = (projectId: string) => {
-    clientNavigate(`/messages/pr_${projectId}`);
+    const tid = projectId.startsWith('pr_') ? projectId : `pr_${projectId}`;
+    clientNavigate(`/messages/${encodeURIComponent(tid)}`);
   };
 
   if (!userEmail.trim()) {
@@ -1830,8 +2135,203 @@ function TabRDV({
     );
   }
 
+  const projectTypeLabel = (t: string | undefined) => {
+    const k = (t || 'custom').toLowerCase();
+    if (k === 'custom') return 'Projet sur mesure';
+    if (k === 'flash') return 'Flash';
+    return t || 'Projet';
+  };
+
   return (
     <div className="px-2 pt-3 pb-8 sm:px-4 sm:pt-4 md:px-6">
+      <Modal
+        isOpen={projectDetail !== null}
+        onClose={() => setProjectDetail(null)}
+        title={projectDetail ? `Détail — ${projectDetail.studio_name ?? 'Studio'}` : 'Détail'}
+        size="lg"
+      >
+        {projectDetail ? (
+          <div className="space-y-5 select-text">
+            {(() => {
+              const st = PROJECT_STATUS_LABEL[projectDetail.status] ?? {
+                label: projectDetail.status,
+                color: D.muted,
+                bg: D.card,
+              };
+              const vit = parseVitrineProjectDescription(projectDetail.description || '');
+              const refUrls = clientProjectRefImageUrls(projectDetail);
+              const messageLabel =
+                vit.subjectLabel || vit.phone ? 'Ton message' : 'Description / idée';
+              return (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+                      style={{ color: st.color, background: st.bg }}
+                    >
+                      {st.label}
+                    </span>
+                    <span className="text-xs tabular-nums" style={{ color: D.muted }}>
+                      Demandé le {projectDetail.created_at ? formatDate(projectDetail.created_at) : '—'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
+                      Studio
+                    </p>
+                    <p className="text-sm font-semibold" style={{ color: D.text }}>
+                      {projectDetail.studio_name ?? 'Studio'}
+                    </p>
+                  </div>
+
+                  {projectDetail.client_name ? (
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
+                        Nom sur la demande
+                      </p>
+                      <p className="text-sm" style={{ color: D.text }}>
+                        {projectDetail.client_name}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {vit.subjectLabel ? (
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
+                        Type de demande
+                      </p>
+                      <p className="text-sm" style={{ color: D.text }}>
+                        {vit.subjectLabel}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
+                        Type de projet
+                      </p>
+                      <p className="text-sm" style={{ color: D.text }}>
+                        {projectTypeLabel(projectDetail.project_type)}
+                      </p>
+                    </div>
+                  )}
+
+                  {vit.phone ? (
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
+                        Téléphone indiqué
+                      </p>
+                      <p className="text-sm tabular-nums" style={{ color: D.text }}>
+                        {vit.phone}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
+                      {messageLabel}
+                    </p>
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: D.text }}>
+                      {vit.message?.trim() || '—'}
+                    </p>
+                  </div>
+
+                  {projectDetail.placement?.trim() ? (
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
+                        Emplacement (corps)
+                      </p>
+                      <p className="text-sm" style={{ color: D.text }}>
+                        {projectDetail.placement}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {projectDetail.estimated_size?.trim() ? (
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
+                        Taille estimée
+                      </p>
+                      <p className="text-sm" style={{ color: D.text }}>
+                        {projectDetail.estimated_size}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {projectDetail.budget?.trim() ? (
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
+                        Budget
+                      </p>
+                      <p className="text-sm" style={{ color: D.text }}>
+                        {projectDetail.budget}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {projectDetail.client_instagram?.trim() ? (
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
+                        Instagram
+                      </p>
+                      <p className="text-sm" style={{ color: D.text }}>
+                        {projectDetail.client_instagram}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {refUrls.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
+                        Références visuelles
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {refUrls.map((url) => (
+                          <a
+                            key={url}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="relative block overflow-hidden rounded-xl border bg-zinc-100 dark:bg-zinc-800 min-h-[100px]"
+                            style={{ borderColor: D.border }}
+                          >
+                            <img src={url} alt="" className="h-full w-full max-h-[160px] object-cover" loading="lazy" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:justify-end" style={{ borderColor: D.border }}>
+                    <button
+                      type="button"
+                      onClick={() => setProjectDetail(null)}
+                      className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border px-4 text-sm font-semibold transition-all active:scale-[0.98] touch-manipulation sm:w-auto"
+                      style={{ borderColor: D.border, background: D.card, color: D.text }}
+                    >
+                      Fermer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const id = projectDetail.id;
+                        setProjectDetail(null);
+                        openProjectThread(id);
+                      }}
+                      className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-all active:scale-[0.98] touch-manipulation sm:w-auto"
+                      style={{ background: D.gold, color: D.onAccent }}
+                    >
+                      <MessageCircle className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                      Ouvrir la messagerie
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        ) : null}
+      </Modal>
+
       <div className="text-base sm:text-lg font-display tracking-tight mb-4" style={{ color: D.text }}>
         Mes réservations
       </div>
@@ -1895,10 +2395,20 @@ function TabRDV({
               <div className="flex flex-col gap-3">
                 {projectRequests.map((p) => {
                   const st = PROJECT_STATUS_LABEL[p.status] ?? { label: p.status, color: D.muted, bg: D.card };
+                  const vit = parseVitrineProjectDescription(p.description || '');
                   return (
                     <div
                       key={p.id}
-                      className="flex min-h-[108px] flex-col rounded-2xl border p-4 shadow-sm"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setProjectDetail(p)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setProjectDetail(p);
+                        }
+                      }}
+                      className="flex min-h-[108px] cursor-pointer flex-col rounded-2xl border p-4 text-left shadow-sm transition-transform active:scale-[0.99] touch-manipulation"
                       style={{ background: D.contentCardBg, borderColor: D.border }}
                     >
                       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
@@ -1908,24 +2418,51 @@ function TabRDV({
                         >
                           {p.studio_name ?? 'Studio'}
                         </div>
-                        <span
-                          className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
-                          style={{ color: st.color, background: st.bg }}
-                        >
-                          {st.label}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <span
+                            className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+                            style={{ color: st.color, background: st.bg }}
+                          >
+                            {st.label}
+                          </span>
+                          <ChevronRight className="h-4 w-4 opacity-40" aria-hidden />
+                        </div>
                       </div>
                       <div className="text-[13px] tabular-nums" style={{ color: D.muted }}>
                         {p.created_at ? formatDate(p.created_at) : ''}
                       </div>
                       {p.description ? (
-                        <div className="mt-2 line-clamp-2 text-[13px] leading-snug" style={{ color: D.textSub }}>
-                          {p.description}
+                        <div className="mt-2 space-y-1.5">
+                          {vit.subjectLabel ? (
+                            <p className="text-[12px] leading-snug" style={{ color: D.text }}>
+                              <span className="font-semibold">Demande : </span>
+                              {vit.subjectLabel}
+                            </p>
+                          ) : null}
+                          {vit.phone ? (
+                            <p className="text-[12px] tabular-nums" style={{ color: D.textSub }}>
+                              <span className="font-medium" style={{ color: D.muted }}>
+                                Tél.{' '}
+                              </span>
+                              {vit.phone}
+                            </p>
+                          ) : null}
+                          {(vit.message || (!vit.subjectLabel && !vit.phone)) ? (
+                            <div className="line-clamp-2 text-[13px] leading-snug" style={{ color: D.textSub }}>
+                              {vit.message || p.description}
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
+                      <p className="mt-2 text-[11px]" style={{ color: D.muted }}>
+                        Appuie pour voir tout le détail (emplacement, budget, références…)
+                      </p>
                       <button
                         type="button"
-                        onClick={() => openProjectThread(p.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openProjectThread(p.id);
+                        }}
                         className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-transform active:scale-[0.98] touch-manipulation"
                         style={{ background: D.gold, color: D.onAccent }}
                       >
@@ -2295,7 +2832,7 @@ function TabProfile({
           <ChevronRight className="w-4 h-4 shrink-0" style={{ color: D.muted }} aria-hidden />
         </button>
         <a
-          href="/onboarding/finaliser-profil"
+          href="/client/compte-sante"
           className="touch-manipulation active:scale-[0.99] transition-transform"
           style={{
             display: 'flex', alignItems: 'center', gap: 14,
@@ -2308,7 +2845,7 @@ function TabProfile({
           </ClientMenuGlyph>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: D.text }}>Questionnaire santé</div>
-            <div style={{ fontSize: 11, color: D.muted, marginTop: 2 }}>Rempli une fois — réservations plus rapides</div>
+            <div style={{ fontSize: 11, color: D.muted, marginTop: 2 }}>Consulte ou modifie tes réponses</div>
           </div>
           <ChevronRight className="w-4 h-4 shrink-0" style={{ color: D.muted }} aria-hidden />
         </a>
@@ -2445,11 +2982,14 @@ export function ClientDashboard() {
   const [studios, setStudios]     = useState<NearbyStudio[]>([]);
   const [loading, setLoading]     = useState(true);
   const [userPos, setUserPos]     = useState<{ lat: number; lng: number } | null>(null);
-  const [activeFilter, setFilter] = useState<string>('Tous');
+  const [discoveryStyleFilter, setDiscoveryStyleFilter] = useState<string>('Tous');
+  const [flashSortKey, setFlashSortKey] = useState<FlashSortKey>('distance');
   const [selectedFlash, setFlash] = useState<{ flash: FlashPreview; studioIdx: number; studio: NearbyStudio | null } | null>(null);
   const [bookings, setBookings] = useState<ClientBooking[]>([]);
   const [projectRequests, setProjectRequests] = useState<ClientProjectRequest[]>([]);
   const [rdvLoading, setRdvLoading] = useState(true);
+  const [clientUnreadMessages, setClientUnreadMessages] = useState(0);
+  const [pushSurfaceDisconnected, setPushSurfaceDisconnected] = useState(false);
   const [, bumpFavs] = useReducer((n: number) => n + 1, 0);
   const [exploreSearchFocusNonce, setExploreSearchFocusNonce] = useState(0);
   const [authHydrated, setAuthHydrated] = useState(false);
@@ -2587,6 +3127,44 @@ export function ClientDashboard() {
     },
     [userId, portalReady, toast]
   );
+
+  const clientBellNotifications = useMemo((): ClientBellNotification[] => {
+    const out: ClientBellNotification[] = [];
+    if (clientUnreadMessages > 0) {
+      out.push({
+        id: 'unread-messages',
+        title: 'Messages non lus',
+        description:
+          clientUnreadMessages === 1
+            ? 'Tu as 1 message non lu du studio.'
+            : `Tu as ${clientUnreadMessages} messages non lus du studio.`,
+        timestamp: new Date(),
+        read: false,
+      });
+    }
+    if (pushSurfaceDisconnected) {
+      out.push({
+        id: 'push-off',
+        title: 'Notifications navigateur',
+        description: 'Les alertes push ne sont pas actives sur cet appareil.',
+        timestamp: new Date(),
+        read: false,
+      });
+    }
+    if (out.length === 0) {
+      out.push({
+        id: 'all-clear',
+        title: 'Rien de nouveau',
+        description:
+          userId && bookings.length > 0
+            ? 'Tes conversations et rendez-vous sont à jour.'
+            : 'Connecte-toi pour retrouver tes rendez-vous et messages.',
+        timestamp: new Date(),
+        read: true,
+      });
+    }
+    return out;
+  }, [bookings.length, clientUnreadMessages, pushSurfaceDisconnected, userId]);
 
   const bookingActionsEnabled = !userId || portalReady === true;
 
@@ -2751,6 +3329,14 @@ export function ClientDashboard() {
       description: string;
       status: string;
       created_at: string | null;
+      client_name: string;
+      placement: string | null;
+      estimated_size: string | null;
+      budget: string | null;
+      client_instagram: string | null;
+      project_type: string;
+      reference_image_url: string | null;
+      reference_images: unknown;
       inkflow_studios?: { studio_name: string } | null;
     };
 
@@ -2773,6 +3359,14 @@ export function ClientDashboard() {
         description: r.description || '',
         status: r.status,
         created_at: r.created_at || '',
+        client_name: r.client_name,
+        placement: r.placement,
+        estimated_size: r.estimated_size,
+        budget: r.budget,
+        client_instagram: r.client_instagram,
+        project_type: r.project_type || 'custom',
+        reference_image_url: r.reference_image_url,
+        reference_images: parseProjectReferenceImages(r.reference_images),
       }));
 
     void (async () => {
@@ -2796,7 +3390,23 @@ export function ClientDashboard() {
           .limit(50),
         supabase
           .from('inkflow_project_requests')
-          .select('id, description, status, created_at, inkflow_studios ( studio_name )')
+          .select(
+            `
+          id,
+          description,
+          status,
+          created_at,
+          client_name,
+          placement,
+          estimated_size,
+          budget,
+          client_instagram,
+          project_type,
+          reference_image_url,
+          reference_images,
+          inkflow_studios ( studio_name )
+        `
+          )
           .eq('client_email', userEmail)
           .order('created_at', { ascending: false })
           .limit(50),
@@ -2847,19 +3457,108 @@ export function ClientDashboard() {
     };
   }, [userEmail]);
 
+  const refreshPushSurface = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (!('Notification' in window)) {
+      setPushSurfaceDisconnected(true);
+      return;
+    }
+    setPushSurfaceDisconnected(Notification.permission === 'denied');
+  }, []);
+
+  useEffect(() => {
+    refreshPushSurface();
+    const onVis = () => {
+      if (document.visibilityState === 'visible') refreshPushSurface();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [refreshPushSurface]);
+
+  const fetchClientUnreadMessages = useCallback(async () => {
+    if (!userEmail.trim() || !userId) {
+      setClientUnreadMessages(0);
+      return;
+    }
+    if (isInkflowDemoAccount(userEmail)) {
+      setClientUnreadMessages(0);
+      return;
+    }
+    const { data, error } = await supabase.rpc('get_client_unread_message_count', {
+      p_client_email: userEmail.trim(),
+    });
+    if (error) {
+      if (import.meta.env.DEV) {
+        console.warn('[ClientDashboard] get_client_unread_message_count', error.message);
+      }
+      return;
+    }
+    if (typeof data === 'number') setClientUnreadMessages(data);
+  }, [userEmail, userId]);
+
+  useEffect(() => {
+    void fetchClientUnreadMessages();
+    const intervalId = window.setInterval(() => void fetchClientUnreadMessages(), 90_000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void fetchClientUnreadMessages();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [fetchClientUnreadMessages]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [tab]);
+
+  // Hydratation favoris cloud → local (union)
+  useEffect(() => {
+    if (!authHydrated || !userEmail?.trim()) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await hydrateClientFavoritesFromSupabase(userEmail);
+        if (!cancelled) bumpFavs();
+      } catch (e) {
+        if (import.meta.env.DEV) console.warn('[ClientDashboard] hydrate favorites', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authHydrated, userEmail]);
 
   // Flashes filtrés
   const allFlashes = studios.flatMap((s, si) =>
     (s.flash ?? []).map((f) => ({ flash: f, studioIdx: si, studio: s }))
   );
-  const filtered = activeFilter === 'Tous' ? allFlashes
-    : allFlashes.filter((x) =>
-        activeFilter === 'Flash' ? true
-        : x.flash.style?.toLowerCase().includes(activeFilter.toLowerCase())
-      );
+  const styleFiltered = useMemo(() => (
+    discoveryStyleFilter === 'Tous'
+      ? allFlashes
+      : allFlashes.filter((x) =>
+          discoveryStyleFilter === 'Flash'
+            ? true
+            : x.flash.style?.toLowerCase().includes(discoveryStyleFilter.toLowerCase()),
+        )
+  ), [allFlashes, discoveryStyleFilter]);
+
+  const sortedDiscoveryFlashes = useMemo(() => {
+    const arr = [...styleFiltered];
+    sortFlashEntries(arr, flashSortKey);
+    return arr;
+  }, [styleFiltered, flashSortKey]);
+
+  /** Heuristique « Pour toi » : les plus proches (indépendant du tri courant). */
+  const pourToiFlashes = useMemo(() => {
+    const arr = [...styleFiltered];
+    sortFlashEntries(arr, 'distance');
+    return arr.slice(0, 4);
+  }, [styleFiltered]);
+
+  const clientFavoritesSyncEmail =
+    userId && bookingActionsEnabled && userEmail?.trim() ? userEmail : null;
 
   const openFlash = useCallback((flash: FlashPreview, studioIdx: number, studio: NearbyStudio | null) => {
     setFlash({ flash, studioIdx, studio });
@@ -2868,7 +3567,8 @@ export function ClientDashboard() {
 
   const firstName = userName.split(' ')[0];
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bonsoir' : 'Bonsoir';
+  /** Bonjour jusqu’en fin d’après-midi, Bonsoir le soir (typo unique Inter via font-client-app ci-dessous). */
+  const greeting = hour >= 18 ? 'Bonsoir' : 'Bonjour';
   const prefersReducedMotion = useReducedMotion();
 
   return (
@@ -2928,7 +3628,15 @@ export function ClientDashboard() {
                       boxShadow: tab === id ? D.shadow : undefined,
                     }}
                   >
-                    <Icon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+                    <ClientTabIconWithBadges
+                      tabId={id}
+                      Icon={Icon}
+                      iconClassName="w-4 h-4 shrink-0"
+                      strokeWidth={1.5}
+                      unreadMessages={clientUnreadMessages}
+                      pushDisconnected={pushSurfaceDisconnected}
+                      badgeRingColor={tab === id ? D.card : D.sidebarBg}
+                    />
                     <span className="flex-1 text-left">{label}</span>
                     {tab === id && (
                       <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: D.gold }} />
@@ -3001,11 +3709,11 @@ export function ClientDashboard() {
           >
             <div className="flex items-start sm:items-center justify-between gap-2 sm:gap-4 min-w-0">
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-medium truncate min-w-0" style={{ color: D.muted }}>
-                  <span className="font-client-accent text-[12px] sm:text-[13px]" style={{ color: D.text }}>
-                    {greeting}
-                  </span>
-                  {firstName ? `, ${firstName}` : ''}
+                <p className="font-client-app text-[12px] sm:text-[13px] font-semibold leading-snug tracking-tight truncate min-w-0">
+                  <span style={{ color: D.muted }}>{greeting}</span>
+                  {firstName ? (
+                    <span style={{ color: D.text }}>{`, ${firstName}`}</span>
+                  ) : null}
                 </p>
                 <h1 className="text-[clamp(1.05rem,4vw,1.35rem)] sm:text-xl tracking-tight font-client-app leading-tight truncate" style={{ color: D.text }}>
                   {TAB_META[tab].title}
@@ -3019,7 +3727,7 @@ export function ClientDashboard() {
               <button
                 type="button"
                 onClick={() => goTab('explore')}
-                className="sm:hidden flex items-center justify-center rounded-xl border min-w-[44px] min-h-[44px] transition-all active:scale-[0.98] touch-manipulation"
+                className="sm:hidden flex items-center justify-center rounded-xl border min-w-[44px] min-h-[44px] transition-all active:scale-[0.98] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2"
                 style={{ borderColor: D.border, background: D.card, color: D.muted }}
                 aria-label="Rechercher"
               >
@@ -3028,21 +3736,55 @@ export function ClientDashboard() {
               <button
                 type="button"
                 onClick={() => goTab('explore')}
-                className="hidden sm:flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition-all active:scale-[0.98] min-h-[44px] max-w-[min(100%,280px)] touch-manipulation"
+                className="hidden sm:flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition-all active:scale-[0.98] min-h-[44px] max-w-[min(100%,280px)] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2"
                 style={{ borderColor: D.border, background: D.card, color: D.muted }}
               >
                 <Search className="w-4 h-4 shrink-0" strokeWidth={1.5} />
                 <span className="truncate">Styles, artistes…</span>
               </button>
-              <button
-                type="button"
-                onClick={() => toast.info('Les notifications arrivent bientôt.')}
-                className="flex min-w-[44px] min-h-[44px] w-11 h-11 items-center justify-center rounded-xl border transition-all active:scale-[0.98] touch-manipulation"
-                style={{ borderColor: D.border, background: D.card, color: D.textSub }}
-                aria-label="Notifications — bientôt disponible"
-              >
-                <Bell className="w-[18px] h-[18px]" strokeWidth={1.5} />
-              </button>
+              <NotificationPopover
+                notifications={clientBellNotifications}
+                triggerAriaLabel={
+                  clientUnreadMessages > 0
+                    ? 'Messages non lus — ouvrir les notifications'
+                    : userId && bookings.length > 0
+                      ? 'Notifications — voir mes rendez-vous'
+                      : 'Notifications'
+                }
+                buttonClassName="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl border shadow-none transition-all active:scale-[0.98] touch-manipulation hover:opacity-95"
+                buttonStyle={{ borderColor: D.border, background: D.card, color: D.textSub }}
+                popoverClassName="rounded-2xl border shadow-lg"
+                popoverStyle={{
+                  background: D.contentCardBg,
+                  borderColor: D.border,
+                  color: D.text,
+                  boxShadow: D.shadowLg,
+                }}
+                themeStyles={{
+                  header: { borderColor: D.border },
+                  headerTitle: { color: D.text },
+                  itemTitle: { color: D.text },
+                  itemDescription: { color: D.muted },
+                  itemDate: { color: D.muted },
+                  markAllRead: { color: D.muted },
+                  badge: { background: D.red, borderColor: D.card, color: D.onAccent },
+                }}
+                onNotificationSelect={(n) => {
+                  if (n.id === 'unread-messages' || n.id === 'push-off') {
+                    goTab('rdv');
+                    return;
+                  }
+                  if (n.id === 'all-clear') {
+                    if (userId && bookings.length > 0) {
+                      goTab('rdv');
+                      return;
+                    }
+                    toast.info(
+                      'Les alertes push arrivent bientôt. Tes rendez-vous confirmés sont dans l’onglet Rendez-vous.',
+                    );
+                  }
+                }}
+              />
               {!authHydrated ? (
                 <div
                   className="h-11 w-11 shrink-0 animate-pulse rounded-full"
@@ -3112,6 +3854,11 @@ export function ClientDashboard() {
             exploreSearchFocusNonce={exploreSearchFocusNonce}
             onFavoritesDirty={bumpFavs}
             bookingActionsEnabled={bookingActionsEnabled}
+            discoveryStyleFilter={discoveryStyleFilter}
+            onDiscoveryStyleFilter={setDiscoveryStyleFilter}
+            flashSortKey={flashSortKey}
+            onFlashSortChange={setFlashSortKey}
+            clientEmailForSync={clientFavoritesSyncEmail}
           />
         )}
         {tab === 'favorites' && (
@@ -3120,6 +3867,8 @@ export function ClientDashboard() {
             onFlashClick={openFlash}
             onFavoritesDirty={bumpFavs}
             bookingActionsEnabled={bookingActionsEnabled}
+            accountEmail={userEmail}
+            clientEmailForSync={clientFavoritesSyncEmail}
           />
         )}
         {tab === 'map' && (
@@ -3153,30 +3902,56 @@ export function ClientDashboard() {
           />
         )}
 
-        {tab === 'home' && <div className="pb-6 pt-1 sm:pb-8 sm:pt-2">
+        {tab === 'home' && (
+        <div className="mx-auto w-full max-w-6xl px-4 pb-6 pt-2 sm:px-5 sm:pb-8 sm:pt-3 md:px-6">
           {authHydrated && !userId ? <ClientGuestAuthCard layout="home" /> : null}
 
-          {/* ARTISTES PROCHES */}
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <div className="font-display" style={{ fontSize: 17, color: D.text }}>
-                Artistes proches
+          {/* ARTISTES PROCHES — bloc carte, hiérarchie calme */}
+          <section
+            aria-labelledby="home-artists-heading"
+            className="mb-7 overflow-hidden rounded-2xl border sm:mb-8"
+            style={{
+              borderColor: D.border,
+              background: D.contentCardBg,
+              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
+            }}
+          >
+            <div className="border-b px-4 py-4 sm:px-5 sm:py-4" style={{ borderColor: D.border, background: D.card }}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h2
+                    id="home-artists-heading"
+                    className="font-display text-[1.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-xl"
+                    style={{ color: D.text }}
+                  >
+                    Artistes proches
+                  </h2>
+                  <p className="font-client-app mt-1 text-[12px] leading-snug sm:text-[13px]" style={{ color: D.muted }}>
+                    Découvre des studios autour de toi
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    goTab('explore');
+                    setExploreSearchFocusNonce((n) => n + 1);
+                  }}
+                  className="shrink-0 touch-manipulation rounded-full border px-3.5 py-2 text-xs font-semibold transition-all active:scale-[0.98] sm:min-h-0 min-h-[40px] sm:px-4 sm:text-[13px]"
+                  style={{
+                    borderColor: D.borderMid,
+                    background: D.contentCardBg,
+                    color: D.gold,
+                    cursor: 'pointer',
+                    font: 'inherit',
+                  }}
+                >
+                  Tout voir
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  goTab('explore');
-                  setExploreSearchFocusNonce((n) => n + 1);
-                }}
-                className="text-xs sm:text-sm font-semibold touch-manipulation active:scale-[0.98] transition-transform"
-                style={{ color: D.gold, background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
-              >
-                Voir tout
-              </button>
             </div>
             <div
-              className="flex gap-2.5 sm:gap-3 overflow-x-auto overscroll-x-contain snap-x snap-mandatory touch-pan-x pb-1 -mx-1 px-1"
-              style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
+              className="client-home-artists-scroll flex gap-3 overflow-x-auto overscroll-x-contain scroll-pl-1 scroll-pr-4 snap-x snap-mandatory touch-pan-x px-4 py-4 sm:gap-3.5 sm:px-5 sm:py-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              style={{ WebkitOverflowScrolling: 'touch', background: D.contentCardBg }}
             >
               {loading
                 ? Array.from({ length: 4 }, (_, i) => <SkeletonPill key={i} />)
@@ -3203,26 +3978,26 @@ export function ClientDashboard() {
                   )
               }
             </div>
-          </div>
+          </section>
 
           {/* FILTER CHIPS — au-dessus de la carte */}
           <div
-            className="flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x pb-2 -mx-1 px-1"
-            style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', marginBottom: 20 }}
+            className="mb-5 flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {STYLE_TABS.map((f) => (
               <button
                 key={f}
                 type="button"
-                onClick={() => setFilter(f)}
+                onClick={() => setDiscoveryStyleFilter(f)}
                 className="shrink-0 touch-manipulation active:scale-[0.98] transition-transform min-h-[44px] flex items-center"
                 style={{
                   padding: '0 16px', borderRadius: D.r.full,
                   fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em',
                   border: 'none', cursor: 'pointer',
-                  background: activeFilter === f ? D.gold : D.card,
-                  color: activeFilter === f ? D.onAccent : D.muted,
-                  boxShadow: activeFilter === f ? `0 4px 16px ${D.accentShadow}` : 'none',
+                  background: discoveryStyleFilter === f ? D.gold : D.card,
+                  color: discoveryStyleFilter === f ? D.onAccent : D.muted,
+                  boxShadow: discoveryStyleFilter === f ? `0 4px 16px ${D.accentShadow}` : 'none',
                   transition: 'all 0.15s',
                 }}
               >
@@ -3230,6 +4005,77 @@ export function ClientDashboard() {
               </button>
             ))}
           </div>
+
+          {/* Tri — même logique que l’onglet Explorer */}
+          <div className="mb-5">
+            <p className="mb-2 font-client-app text-[11px] font-medium uppercase tracking-wide" style={{ color: D.muted }}>
+              Trier
+            </p>
+            <div
+              className="flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              {FLASH_SORT_OPTIONS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setFlashSortKey(key);
+                  }}
+                  className="relative z-[1] shrink-0 touch-manipulation min-h-[40px] rounded-full px-3.5 py-2 text-xs font-semibold transition-transform active:scale-[0.98]"
+                  style={{
+                    border: `1px solid ${flashSortKey === key ? D.gold : D.border}`,
+                    background: flashSortKey === key ? D.goldDim : D.card,
+                    color: flashSortKey === key ? D.gold : D.muted,
+                    touchAction: 'manipulation',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Pour toi — heuristique distance (sans ML) */}
+          {!loading && pourToiFlashes.length > 0 && (
+            <section aria-labelledby="home-for-you-heading" className="mb-7">
+              <div className="mb-3 flex flex-col gap-0.5 sm:mb-4">
+                <h2
+                  id="home-for-you-heading"
+                  className="font-display text-[1.05rem] font-bold leading-tight tracking-tight sm:text-lg"
+                  style={{ color: D.text }}
+                >
+                  Pour toi
+                </h2>
+                <p className="font-client-app text-[11px] leading-snug sm:text-xs" style={{ color: D.muted }}>
+                  Les flashs des studios les plus proches
+                </p>
+              </div>
+              <div
+                className="client-home-artists-scroll flex gap-3 overflow-x-auto overscroll-x-contain scroll-pl-1 scroll-pr-4 snap-x snap-mandatory touch-pan-x [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
+                {pourToiFlashes.map((row) => {
+                  const { flash, studioIdx, studio: s } = row;
+                  return (
+                  <div key={`pourtoi-${flashRowKey(row)}`} className="w-[min(100%,168px)] shrink-0 snap-start">
+                    <FlashCard
+                      flash={flash}
+                      studioIdx={studioIdx}
+                      studioCity={discoveryLocationLine(s)}
+                      onFavoritesDirty={bumpFavs}
+                      bookingActionsEnabled={bookingActionsEnabled}
+                      clientEmailForSync={clientFavoritesSyncEmail}
+                      onClick={() => openFlash(flash, studioIdx, s)}
+                    />
+                  </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {/* MAP HERO */}
           {loading ? (
@@ -3248,47 +4094,61 @@ export function ClientDashboard() {
           )}
 
           {/* FLASH SECTION */}
-          <div style={{ marginBottom: 32 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <div>
-                <div className="font-display" style={{ fontSize: 17, color: D.text }}>
+          <section aria-labelledby="home-flash-explore-heading" className="mb-8 scroll-mt-4">
+            <div className="mb-3 flex flex-col gap-1 sm:mb-4">
+              <p className="font-client-app text-[11px] font-medium leading-tight sm:text-xs" style={{ color: D.muted }}>
+                {loading ? 'Chargement…' : `${sortedDiscoveryFlashes.length} flash disponible${sortedDiscoveryFlashes.length !== 1 ? 's' : ''}`}
+              </p>
+              <div className="flex items-end justify-between gap-3">
+                <h2
+                  id="home-flash-explore-heading"
+                  className="font-display text-[1.05rem] font-bold leading-tight tracking-tight sm:text-lg"
+                  style={{ color: D.text }}
+                >
                   À explorer
-                </div>
-                <div style={{ fontSize: 11, color: D.muted, marginTop: 2 }}>
-                  {loading ? '…' : `${filtered.length} flash disponible${filtered.length !== 1 ? 's' : ''}`}
-                </div>
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    goTab('explore');
+                    setExploreSearchFocusNonce((n) => n + 1);
+                  }}
+                  className="shrink-0 touch-manipulation rounded-full border px-3.5 py-2 text-xs font-semibold transition-all active:scale-[0.98] min-h-[40px] sm:min-h-0 sm:px-4 sm:text-[13px]"
+                  style={{
+                    borderColor: D.borderMid,
+                    background: D.contentCardBg,
+                    color: D.gold,
+                    cursor: 'pointer',
+                    font: 'inherit',
+                  }}
+                >
+                  Filtres
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  goTab('explore');
-                  setExploreSearchFocusNonce((n) => n + 1);
-                }}
-                className="text-xs sm:text-sm font-semibold touch-manipulation active:scale-[0.98] transition-transform"
-                style={{ color: D.gold, background: 'none', border: 'none', cursor: 'pointer', font: 'inherit' }}
-              >
-                Filtres
-              </button>
             </div>
 
             {loading ? (
               <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(152px,1fr))] [grid-auto-rows:minmax(0,1fr)] gap-3 sm:gap-4 items-stretch min-h-[200px]">
                 {Array.from({ length: 4 }, (_, i) => <SkeletonFlash key={i} />)}
               </div>
-            ) : filtered.length > 0 ? (
+            ) : sortedDiscoveryFlashes.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(152px,1fr))] [grid-auto-rows:minmax(0,1fr)] gap-3 sm:gap-4 items-stretch">
-                {filtered.slice(0, 12).map(({ flash, studioIdx, studio: s }) => (
-                  <Fragment key={flash.id}>
+                {sortedDiscoveryFlashes.slice(0, 12).map((row) => {
+                  const { flash, studioIdx, studio: s } = row;
+                  return (
+                  <Fragment key={flashRowKey(row)}>
                     <FlashCard
                       flash={flash}
                       studioIdx={studioIdx}
                       studioCity={discoveryLocationLine(s)}
                       onFavoritesDirty={bumpFavs}
                       bookingActionsEnabled={bookingActionsEnabled}
+                      clientEmailForSync={clientFavoritesSyncEmail}
                       onClick={() => openFlash(flash, studioIdx, s)}
                     />
                   </Fragment>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div style={{
@@ -3303,7 +4163,7 @@ export function ClientDashboard() {
                 Aucun flash pour ce style
                 <br />
                 <button
-                  onClick={() => setFilter('Tous')}
+                  onClick={() => setDiscoveryStyleFilter('Tous')}
                   style={{
                     marginTop: 12, fontSize: 12, color: D.gold,
                     background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600,
@@ -3313,7 +4173,7 @@ export function ClientDashboard() {
                 </button>
               </div>
             )}
-          </div>
+          </section>
 
           {/* BLOC "Tu es tatoueur ?" */}
           <div style={{
@@ -3344,7 +4204,8 @@ export function ClientDashboard() {
             </a>
           </div>
 
-        </div>}
+        </div>
+        )}
               </motion.div>
             </AnimatePresence>
             </div>
@@ -3354,7 +4215,14 @@ export function ClientDashboard() {
         <ClientDashboardRightRail bookings={bookings} projectRequests={projectRequests} />
       </div>
 
-      {!selectedFlash && <ClientMobileTabBar active={tab} onChange={goTab} />}
+      {!selectedFlash && (
+        <ClientMobileTabBar
+          active={tab}
+          onChange={goTab}
+          unreadMessages={clientUnreadMessages}
+          pushDisconnected={pushSurfaceDisconnected}
+        />
+      )}
 
       {selectedFlash && (
         <FlashSheet
@@ -3365,6 +4233,7 @@ export function ClientDashboard() {
           onFavoritesDirty={bumpFavs}
           viewerStudioSlug={ownedStudioSlug}
           bookingActionsEnabled={bookingActionsEnabled}
+          clientEmailForSync={clientFavoritesSyncEmail}
         />
       )}
     </div>

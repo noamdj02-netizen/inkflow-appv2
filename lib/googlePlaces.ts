@@ -135,12 +135,31 @@ export async function fetchPublicGoogleReviews(
 
 // ── Google Business Profile OAuth ─────────────────────────────────────────────
 
+/** Appelle google-business-auth avec JWT frais + retry automatique. */
+async function invokeGoogleBusinessJwt<T>(
+  body: Record<string, unknown>
+): Promise<{ data: T | null; error: { message: string } | null }> {
+  await ensureFreshAuthForEdge();
+  let res = await supabase.functions.invoke<T>('google-business-auth', { body });
+  if (res.error && isJwtRejectedMessage(res.error.message)) {
+    await supabase.auth.refreshSession().catch(() => {});
+    res = await supabase.functions.invoke<T>('google-business-auth', { body });
+  }
+  if (res.error) {
+    const msg = res.error.message ?? '';
+    const lower = msg.toLowerCase();
+    if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('non-2xx')) {
+      return { data: null, error: { message: 'Google Business non configure sur ce projet. Contactez le support Inkflow.' } };
+    }
+  }
+  return { data: res.data ?? null, error: res.error as { message: string } | null };
+}
+
 /** Genere l'URL OAuth Google Business et redirige l'utilisateur. */
 export async function initiateGoogleBusinessAuth(studioId: string): Promise<string> {
-  const { data, error } = await supabase.functions.invoke<{ authUrl?: string; error?: string }>(
-    'google-business-auth',
-    { body: { action: 'initiate', studioId } }
-  );
+  const { data, error } = await invokeGoogleBusinessJwt<{ authUrl?: string; error?: string }>({
+    action: 'initiate', studioId,
+  });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
   if (!data?.authUrl) throw new Error('authUrl manquant');
@@ -149,10 +168,9 @@ export async function initiateGoogleBusinessAuth(studioId: string): Promise<stri
 
 /** Verifie si le studio a connecte un compte Google Business. */
 export async function getGoogleBusinessStatus(studioId: string): Promise<GoogleBusinessStatus> {
-  const { data, error } = await supabase.functions.invoke<GoogleBusinessStatus & { error?: string }>(
-    'google-business-auth',
-    { body: { action: 'status', studioId } }
-  );
+  const { data, error } = await invokeGoogleBusinessJwt<GoogleBusinessStatus & { error?: string }>({
+    action: 'status', studioId,
+  });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
   return {
@@ -166,10 +184,10 @@ export async function getGoogleBusinessStatus(studioId: string): Promise<GoogleB
 export async function listGoogleBusinessLocations(
   studioId: string
 ): Promise<{ name: string; title: string; accountName: string }[]> {
-  const { data, error } = await supabase.functions.invoke<{
+  const { data, error } = await invokeGoogleBusinessJwt<{
     locations?: { name: string; title: string; accountName: string }[];
     error?: string;
-  }>('google-business-auth', { body: { action: 'locations', studioId } });
+  }>({ action: 'locations', studioId });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
   return data?.locations ?? [];
@@ -177,20 +195,18 @@ export async function listGoogleBusinessLocations(
 
 /** Enregistre la fiche Google Business choisie. */
 export async function saveGoogleBusinessLocation(studioId: string, locationName: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke<{ error?: string }>(
-    'google-business-auth',
-    { body: { action: 'save_location', studioId, locationName } }
-  );
+  const { data, error } = await invokeGoogleBusinessJwt<{ error?: string }>({
+    action: 'save_location', studioId, locationName,
+  });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
 }
 
 /** Revoque et supprime les tokens Google Business. */
 export async function disconnectGoogleBusiness(studioId: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke<{ error?: string }>(
-    'google-business-auth',
-    { body: { action: 'disconnect', studioId } }
-  );
+  const { data, error } = await invokeGoogleBusinessJwt<{ error?: string }>({
+    action: 'disconnect', studioId,
+  });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
 }

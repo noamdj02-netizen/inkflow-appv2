@@ -3,8 +3,10 @@
  * L’Edge Function renvoie soit un .pkpass (Apple), soit du JSON (config / Google save URL).
  */
 
-const getSupabaseUrl = () => import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const getAnonKey = () => import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const getSupabaseUrl = () =>
+  (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim().replace(/\/+$/, '');
+const getAnonKey = () =>
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim().replace(/^['"]|['"]$/g, '');
 
 export interface WalletPassJsonOk {
   ok: true;
@@ -51,7 +53,7 @@ export async function requestWalletPass(
   accessToken: string,
   platform: 'apple' | 'google'
 ): Promise<WalletPassResult> {
-  const base = getSupabaseUrl()?.replace(/\/$/, '');
+  const base = getSupabaseUrl();
   const anon = getAnonKey();
   if (!base || !anon) {
     return { success: false, error: 'Application non configurée (Supabase).' };

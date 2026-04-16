@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { Suspense, useState, useRef, useEffect } from 'react';
 import { Upload, X, Filter, Image as ImageIcon, Plus, Pencil, Trash2, Sparkles, Camera, Share2, Loader2, Wand2, Copy, Download, ChevronDown } from 'lucide-react';
-import { ImageCropModal } from '../ui/ImageCropModal';
+import { LazyImageCropModal } from '../ui/lazyImageCropModal';
+import { ImageCropModalSuspenseFallback } from '../ui/skeleton';
 import { uploadPortfolioImage, dataUrlToBlob } from '../../lib/supabasePortfolio';
 import { analyzePortfolioPhoto, isGeminiConfigured } from '../../lib/geminiAI';
 import { useToast } from '../../contexts/ToastContext';
@@ -366,19 +367,23 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
         </button>
       </div>
 
-      <ImageCropModal
-        isOpen={Boolean(cropSession)}
-        imageSrc={cropSession?.src ?? ''}
-        aspect={1}
-        cropShape="rect"
-        title="Ajuster le cadrage"
-        onClose={revokeCropSession}
-        onConfirm={async (dataUrl) => {
-          const field = cropSession?.field;
-          revokeCropSession();
-          if (field) setNewItem(prev => ({ ...prev, [field]: dataUrl }));
-        }}
-      />
+      {cropSession ? (
+        <Suspense fallback={<ImageCropModalSuspenseFallback />}>
+          <LazyImageCropModal
+            isOpen
+            imageSrc={cropSession.src}
+            aspect={1}
+            cropShape="rect"
+            title="Ajuster le cadrage"
+            onClose={revokeCropSession}
+            onConfirm={async (dataUrl) => {
+              const field = cropSession.field;
+              revokeCropSession();
+              if (field) setNewItem(prev => ({ ...prev, [field]: dataUrl }));
+            }}
+          />
+        </Suspense>
+      ) : null}
 
       {/* Filters toolbar */}
       <div className="flex flex-wrap items-center gap-3 p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]">

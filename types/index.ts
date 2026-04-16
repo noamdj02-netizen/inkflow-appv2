@@ -78,6 +78,10 @@ export interface Client {
   lastVisit?: string;
   firstVisit: string;
   notes?: string;
+  /** Compte espace client (auth) si synchronisé via paiement */
+  portalUserId?: string | null;
+  /** Questionnaire santé copié au dernier paiement (JSON) */
+  healthProfileSnapshot?: import('./database').Json | null;
   tattoos: TattooRecord[];
   preferences?: ClientPreferences;
   status: 'active' | 'inactive' | 'vip';

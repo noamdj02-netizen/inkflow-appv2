@@ -260,55 +260,68 @@ export const ClientList: React.FC<ClientListProps> = ({
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Clients</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-1">Gérez votre base de clients et leur historique</p>
+      {/* Header — mobile : titre compact + grille 2 colonnes pour les CTA (pouce) */}
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">
+              Clients
+            </h1>
+            <p className="text-sm sm:text-base text-zinc-500 dark:text-zinc-400 mt-0.5 sm:mt-1 leading-snug max-w-xl">
+              Gérez votre base de clients et leur historique
+            </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div
+            className={
+              onImportCsv && csvImportRemainingSlots !== 0 && !clientLimitReached && onAddClient
+                ? 'grid grid-cols-2 gap-2 w-full sm:flex sm:flex-row sm:w-auto sm:shrink-0'
+                : 'grid grid-cols-1 gap-2 w-full sm:flex sm:flex-row sm:w-auto sm:shrink-0'
+            }
+          >
             {onImportCsv && csvImportRemainingSlots !== 0 && !clientLimitReached && (
               <button
                 type="button"
                 onClick={() => setShowCsvImportModal(true)}
-                className="flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl font-medium border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98]"
+                className="flex items-center justify-center gap-1.5 sm:gap-2 min-h-[48px] min-w-0 px-3 sm:px-5 py-2.5 rounded-xl text-[13px] sm:text-sm font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 bg-white dark:bg-zinc-900/80 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950"
               >
-                <FileSpreadsheet className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
-                Importer CSV
+                <FileSpreadsheet className="w-[18px] h-[18px] shrink-0" strokeWidth={2} aria-hidden />
+                <span className="truncate">Importer CSV</span>
               </button>
             )}
             {onAddClient && (
               <button
                 onClick={() => (clientLimitReached ? onUpgradeClick?.() : setShowAddModal(true))}
                 disabled={clientLimitReached}
-                className={`flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-xl font-medium transition-all active:scale-[0.98] ${
+                className={`flex items-center justify-center gap-1.5 sm:gap-2 min-h-[48px] min-w-0 px-3 sm:px-5 py-2.5 rounded-xl text-[13px] sm:text-sm font-semibold transition-all active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950 ${
                   clientLimitReached
-                    ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed'
-                    : 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100'
+                    ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed focus-visible:ring-zinc-400/30'
+                    : 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 focus-visible:ring-blue-500/40'
                 }`}
               >
-                <UserPlus className="w-[18px] h-[18px] shrink-0" strokeWidth={2} /> Nouveau client
+                <UserPlus className="w-[18px] h-[18px] shrink-0" strokeWidth={2} aria-hidden />
+                <span className="truncate sm:whitespace-normal">Nouveau client</span>
               </button>
             )}
           </div>
         </div>
 
         {useSupabase && onOpenGoogleReviewsSettings && !googlePlaceConfigured && (
-          <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/40 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex gap-3 min-w-0">
-              <IconBox icon={MapPin} variant="inverse" size="md" />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-zinc-900 dark:text-white">Avis Google sur la vitrine</p>
-                <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
-                  Renseigne ton Google Place ID dans <strong>Établissement</strong> pour afficher les avis sur ta page publique (thèmes vitrine).
+          <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-900/50 p-3.5 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div className="flex gap-3 min-w-0 items-start">
+              <div className="shrink-0 pt-0.5">
+                <IconBox icon={MapPin} variant="inverse" size="md" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-tight">Avis Google sur la vitrine</p>
+                <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1 leading-relaxed">
+                  Renseigne ton Google Place ID dans <strong className="font-semibold text-zinc-700 dark:text-zinc-300">Établissement</strong> pour afficher les avis sur ta page publique (thèmes vitrine).
                 </p>
               </div>
             </div>
             <button
               type="button"
               onClick={onOpenGoogleReviewsSettings}
-              className="shrink-0 min-h-[44px] px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98]"
+              className="w-full sm:w-auto shrink-0 min-h-[48px] px-4 py-3 sm:py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950"
             >
               Configurer
             </button>
@@ -329,40 +342,50 @@ export const ClientList: React.FC<ClientListProps> = ({
           </div>
         )}
 
-        {/* Filtres */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative min-w-[200px]">
+        {/* Filtres — mobile : tri + chips sur une ligne (scroll horizontal) ; desktop : tout sur une rangée */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-3">
+          <div className="flex-1 relative min-w-0 sm:min-w-[200px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-zinc-400 pointer-events-none" strokeWidth={2} aria-hidden />
             <input
               type="search"
               placeholder="Rechercher un client..." value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all text-sm"
+              className="w-full min-h-[48px] sm:min-h-0 pl-10 pr-4 py-3 sm:py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
               aria-label="Rechercher un client"
+              autoComplete="off"
             />
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-row items-stretch gap-2 min-w-0">
             <button
               type="button"
               onClick={() => setSortBy(s => s === 'recent' ? 'alpha' : 'recent')}
-              className="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center gap-2 font-medium transition-all text-sm"
+              className="shrink-0 min-h-[44px] px-2.5 sm:px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 inline-flex items-center justify-center gap-1.5 font-medium transition-all text-xs sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35"
               title={sortBy === 'recent' ? 'Trier par nom (A-Z)' : 'Trier par dernière visite'}
             >
               {sortBy === 'recent' ? (
-                <ArrowUpDown className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
+                <ArrowUpDown className="w-[17px] h-[17px] sm:w-[18px] sm:h-[18px] shrink-0" strokeWidth={2} aria-hidden />
               ) : (
-                <ArrowDownAZ className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
+                <ArrowDownAZ className="w-[17px] h-[17px] sm:w-[18px] sm:h-[18px] shrink-0" strokeWidth={2} aria-hidden />
               )}
-              {sortBy === 'recent' ? 'Récent' : 'A-Z'}
+              {sortBy === 'recent' ? 'Récent' : 'A–Z'}
             </button>
-            <div className="flex gap-1.5">
+            <div
+              className="flex flex-1 min-w-0 gap-1.5 overflow-x-auto pb-0.5 items-center [scrollbar-width:thin]"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+              role="group"
+              aria-label="Filtrer par statut"
+            >
               {(['all', 'active', 'vip', 'inactive'] as const).map(status => (
-                <button key={status} onClick={() => setFilterStatus(status)}
-                  className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                    filterStatus === status 
-                      ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' 
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setFilterStatus(status)}
+                  className={`shrink-0 min-h-[44px] px-3.5 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 ${
+                    filterStatus === status
+                      ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
                       : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                  }`}>
+                  }`}
+                >
                   {status === 'all' ? 'Tous' : status === 'vip' ? 'VIP' : status.charAt(0).toUpperCase() + status.slice(1)}
                 </button>
               ))}

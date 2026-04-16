@@ -28,6 +28,7 @@ import type { Appointment, Client, FlashDesign, ProjectRequest } from '../../typ
 import type { DashboardWidget } from './DashboardWidgets';
 import { IconInkCap } from '../icons/InkCraftIcons';
 import { StudioSetupChecklist } from './StudioSetupChecklist';
+import { IconBox } from '../ui/IconBox';
 
 /** Image d’en-tête mobile si aucune image vitrine (fichier dans /public) */
 const MOBILE_OVERVIEW_HEADER_BG_FALLBACK = '/images/hero-tattoo-artist.png';
@@ -882,12 +883,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   setActiveTab('appointments');
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
-                className="mt-2 flex w-fit items-center gap-1.5 rounded-xl bg-white/15 backdrop-blur-sm px-2.5 py-1.5 text-[11px] font-semibold text-white ring-1 ring-white/25 active:scale-[0.98] transition-all touch-manipulation"
+                className="mt-2 inline-flex min-h-[44px] max-w-full flex-wrap items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-left text-[11px] font-semibold text-white shadow-sm ring-1 ring-white/25 backdrop-blur-sm active:scale-[0.98] transition-all touch-manipulation min-[400px]:w-fit min-[400px]:max-w-none min-[400px]:flex-nowrap min-[400px]:py-1.5 min-[400px]:px-2.5"
                 aria-label={`${todayAppointments.length} rendez-vous aujourd’hui, ouvrir l’agenda`}
               >
-                <Calendar className="w-3.5 h-3.5 opacity-95 shrink-0" strokeWidth={2} aria-hidden />
+                <Calendar className="w-3.5 h-3.5 shrink-0 opacity-95" strokeWidth={2} aria-hidden />
                 <span className="tabular-nums">{todayAppointments.length}</span>
-                <span className="font-medium text-white/90">RDV aujourd’hui</span>
+                <span className="min-[340px]:hidden font-medium text-white/90">RDV ce jour</span>
+                <span className="hidden min-[340px]:inline font-medium text-white/90">RDV aujourd’hui</span>
               </button>
 
               {(unpaidCount > 0 || todayOrTomorrowCount > 0) && (
@@ -914,53 +916,61 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           </div>
         </div>
 
-        {/* Actions rapides — grille type design system (bordure + ombre légères) */}
+        {/* Actions rapides — sous 400px : grille 2×2 (cibles 44px+, libellés lisibles) · 400px+ : 4 colonnes */}
         <div className="px-3 min-[400px]:px-4 pt-2 pb-1 sm:pt-3">
-          <div className="grid grid-cols-4 gap-2 min-[400px]:gap-2.5 min-w-0">
+          <div className="grid min-w-0 grid-cols-2 gap-2.5 min-[400px]:grid-cols-4 min-[400px]:gap-2.5">
             <button
               type="button"
             onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-              className="flex min-w-0 min-h-[52px] flex-col items-center justify-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] motion-reduce:active:scale-100 active:opacity-95 transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
+              className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
           >
-              <Plus className="w-5 h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} aria-hidden />
-              <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400 text-center leading-tight px-0.5">Nouveau RDV</span>
+              <Plus className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300" strokeWidth={2} aria-hidden />
+              <span className="px-0.5 text-center text-[11px] font-medium leading-tight text-zinc-600 dark:text-zinc-400 min-[400px]:text-[10px]">Nouveau RDV</span>
           </button>
           <button
               type="button"
             onClick={() => setActiveTab('flash')}
-              className="flex min-w-0 min-h-[52px] flex-col items-center justify-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] motion-reduce:active:scale-100 active:opacity-95 transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
+              className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
           >
-              <Zap className="w-5 h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} aria-hidden />
-              <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400 text-center leading-tight">Flash</span>
+              <Zap className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300" strokeWidth={2} aria-hidden />
+              <span className="text-center text-[11px] font-medium leading-tight text-zinc-600 dark:text-zinc-400 min-[400px]:text-[10px]">Flash</span>
           </button>
             {vitrineSlug ? (
             <a
               href={`/studio/${vitrineSlug}`}
               target="_blank"
               rel="noopener noreferrer"
-                className="flex min-w-0 min-h-[52px] flex-col items-center justify-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] motion-reduce:active:scale-100 active:opacity-95 transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
+                className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
             >
-                <ExternalLink className="w-5 h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} aria-hidden />
-                <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400 text-center leading-tight">Vitrine</span>
+                <ExternalLink className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300" strokeWidth={2} aria-hidden />
+                <span className="text-center text-[11px] font-medium leading-tight text-zinc-600 dark:text-zinc-400 min-[400px]:text-[10px]">Vitrine</span>
             </a>
             ) : (
-              <div className="flex min-w-0 min-h-[52px] flex-col items-center justify-center gap-1 py-2.5 px-0.5 rounded-2xl bg-zinc-50/80 dark:bg-zinc-900/40 border border-dashed border-zinc-200 dark:border-zinc-700 opacity-60 pointer-events-none">
-                <ExternalLink className="w-5 h-5 text-zinc-400 shrink-0" strokeWidth={2} aria-hidden />
-                <span className="text-[10px] font-medium text-zinc-400 text-center leading-tight">Vitrine</span>
+              <div className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/80 px-1 py-2.5 opacity-60 pointer-events-none dark:border-zinc-700 dark:bg-zinc-900/40 min-[400px]:min-h-[52px]">
+                <ExternalLink className="h-5 w-5 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
+                <span className="text-center text-[11px] font-medium leading-tight text-zinc-400 min-[400px]:text-[10px]">Vitrine</span>
               </div>
           )}
           <button
               type="button"
             onClick={() => setActiveTab('requests')}
-              className="relative flex min-w-0 min-h-[52px] flex-col items-center justify-center gap-1 py-2.5 px-0.5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200/90 dark:border-zinc-800 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none active:scale-[0.98] motion-reduce:active:scale-100 active:opacity-95 transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
+              aria-label={
+                pendingDemandesCount > 0
+                  ? `Demandes, ${pendingDemandesCount} en attente`
+                  : 'Demandes'
+              }
+              className="relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
           >
             {pendingDemandesCount > 0 && (
-                <span className="absolute top-1.5 right-1 min-w-[18px] h-[18px] px-0.5 rounded-full bg-zinc-800 dark:bg-zinc-200 text-white dark:text-zinc-900 text-[10px] font-bold flex items-center justify-center tabular-nums leading-none">
-                  {pendingDemandesCount > 9 ? '9+' : pendingDemandesCount}
-                </span>
+              <span
+                aria-hidden
+                className="absolute right-1 top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-600 px-0.5 text-[10px] font-bold tabular-nums leading-none text-white shadow-sm ring-2 ring-white dark:bg-red-500 dark:ring-zinc-900"
+              >
+                {pendingDemandesCount > 9 ? '9+' : pendingDemandesCount}
+              </span>
             )}
-              <Inbox className="w-5 h-5 text-zinc-700 dark:text-zinc-300 shrink-0" strokeWidth={2} aria-hidden />
-              <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400 text-center leading-tight">Demandes</span>
+              <Inbox className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300" strokeWidth={2} aria-hidden />
+              <span className="text-center text-[11px] font-medium leading-tight text-zinc-600 dark:text-zinc-400 min-[400px]:text-[10px]">Demandes</span>
           </button>
           </div>
         </div>
@@ -1016,23 +1026,23 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
         {flashDesigns[0] && (
           <div className="px-3 min-[400px]:px-4 mb-2">
-            <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-4 flex gap-4 items-center shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:shadow-none">
-              <div className="w-[72px] h-[72px] rounded-xl overflow-hidden ring-1 ring-inset ring-black/[0.06] dark:ring-white/[0.08] shrink-0 bg-zinc-100 dark:bg-zinc-800">
-                <img src={flashDesigns[0].imageUrl} alt="" className="w-full h-full object-cover" />
+            <div className="flex items-start gap-3 rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-none min-[400px]:gap-4 min-[400px]:p-4">
+              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-zinc-100 ring-1 ring-inset ring-black/[0.06] dark:bg-zinc-800 dark:ring-white/[0.08] min-[400px]:h-[72px] min-[400px]:w-[72px]">
+                <img src={flashDesigns[0].imageUrl} alt="" className="h-full w-full object-cover" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800/90 px-2 py-0.5 mb-1.5">
-                  <IconInkCap className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" aria-hidden />
+                <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-md bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800/90">
+                  <IconInkCap className="h-3.5 w-3.5 shrink-0 text-zinc-500 dark:text-zinc-400" aria-hidden />
                   <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-600 dark:text-zinc-400">
                     Flash du jour
                   </span>
                 </div>
-                <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate leading-snug">{flashDesigns[0].title}</p>
-                <div className="flex flex-wrap gap-2 mt-3">
+                <p className="truncate text-sm font-semibold leading-snug text-zinc-900 dark:text-white">{flashDesigns[0].title}</p>
+                <div className="mt-3 flex min-h-[44px] flex-col gap-2 min-[400px]:min-h-0 min-[400px]:flex-row min-[400px]:flex-wrap">
                   <button
                     type="button"
                     onClick={() => setActiveTab('flash')}
-                    className="inline-flex items-center justify-center rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-3.5 py-1.5 text-xs font-semibold active:scale-[0.98] transition-transform touch-manipulation"
+                    className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-zinc-900 px-3.5 text-xs font-semibold text-white transition-transform touch-manipulation active:scale-[0.98] dark:bg-white dark:text-zinc-900 min-[400px]:min-h-0 min-[400px]:w-auto min-[400px]:py-1.5"
                   >
                     Galerie Flash
                   </button>
@@ -1041,7 +1051,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       href={`/studio/${vitrineSlug}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/50 px-3.5 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-200 active:scale-[0.98] transition-transform touch-manipulation"
+                      className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full border border-zinc-200 bg-white px-3.5 text-xs font-medium text-zinc-700 transition-transform touch-manipulation active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-200 min-[400px]:min-h-0 min-[400px]:w-auto min-[400px]:py-1.5"
                     >
                       Vitrine publique
                     </a>
@@ -1306,13 +1316,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     onClick={() => setActiveTab('requests')}
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors"
                   >
-                    <AlertCircle className="w-3 h-3" />
+                    <AlertCircle className="w-4 h-4 shrink-0" strokeWidth={2} />
                     {unpaidCount} sans acompte
                   </button>
                 )}
                 {todayOrTomorrowCount > 0 && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs font-medium">
-                    <CalendarCheck className="w-3 h-3" />
+                    <CalendarCheck className="w-4 h-4 shrink-0" strokeWidth={2} />
                     {todayOrTomorrowCount} RDV bientôt
                   </span>
                 )}
@@ -1381,9 +1391,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-3 min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-4 min-w-0">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-500/20 shrink-0">
-                    <Move className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
+                  <IconBox icon={Move} variant="blue" size="md" />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">Mode personnalisation</p>
                     <p className="text-xs text-blue-600 dark:text-blue-400">Glissez les widgets ou ajoutez-en de nouveaux</p>
@@ -1394,7 +1402,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   onClick={() => setShowWidgetPicker(true)}
                   className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 shrink-0 w-full min-[520px]:w-auto"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
                   Ajouter un widget
                 </button>
               </div>
@@ -1449,7 +1457,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     onClick={() => setActiveTab('finance')} 
                     className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 transition-colors"
                   >
-                    Détails <ArrowUpRight className="w-3 h-3" />
+                    Détails <ArrowUpRight className="w-4 h-4 shrink-0" strokeWidth={2} />
                   </button>
                 </div>
                             <RevenueChart
@@ -1694,7 +1702,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         <p className="text-xl font-bold truncate mb-1">{nextClient.clientName}</p>
                         <p className="text-sm text-white/70">{nextClient.service || 'Tatouage'}</p>
                         <div className="flex items-center gap-3 mt-2 text-xs">
-                                {nextClient.duration && <span className="flex items-center gap-1 text-white/70"><Clock className="w-3 h-3" /> {nextClient.duration}min</span>}
+                                {nextClient.duration && <span className="flex items-center gap-1 text-white/70"><Clock className="w-4 h-4 shrink-0" strokeWidth={2} /> {nextClient.duration}min</span>}
                                 {nextClient.price && (
                                   <span className="font-bold text-white">{privacyMode ? '••••' : `${nextClient.price}€`}</span>
                                 )}
@@ -1744,7 +1752,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                         {client.avatar ? <img src={client.avatar} alt="" className="w-full h-full object-cover" /> : <span className="text-zinc-600 dark:text-zinc-300 text-sm font-semibold">{client.name?.charAt(0)}</span>}
                               </div>
                               <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-1.5"><span className="text-sm font-medium text-zinc-900 dark:text-white truncate">{client.name}</span>{(client.totalSpent ?? 0) >= 500 && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}</div>
+                                        <div className="flex items-center gap-1.5"><span className="text-sm font-medium text-zinc-900 dark:text-white truncate">{client.name}</span>{(client.totalSpent ?? 0) >= 500 && <Star className="w-4 h-4 shrink-0 text-amber-500 fill-amber-500" strokeWidth={2} />}</div>
                                 <span className="text-xs text-zinc-500 dark:text-zinc-500">
                                   {privacyMode ? '••••' : `${client.totalSpent}€`}
                                 </span>
@@ -1820,8 +1828,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     acc[service] = (acc[service] || 0) + 1;
                     return acc;
                   }, {} as Record<string, number>);
-                  const topServices = Object.entries(serviceStats)
-                    .sort((a, b) => (b[1] as number) - (a[1] as number))
+                  const topServices = Object.entries<number>(serviceStats)
+                    .sort((a, b) => b[1] - a[1])
                     .slice(0, 3);
 
                   return (
