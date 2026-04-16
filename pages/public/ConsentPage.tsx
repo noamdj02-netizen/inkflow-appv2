@@ -36,10 +36,14 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ consentId }) => {
       });
   }, [consentId]);
 
-  const handleSign = async (signatureData: string) => {
+  const handleSign = async (payload: { signatureData: string; filledTemplateText: string }) => {
     await supabase
       .from('inkflow_consent_forms')
-      .update({ signature_data: signatureData, signed_at: new Date().toISOString() })
+      .update({
+        signature_data: payload.signatureData,
+        signed_at: new Date().toISOString(),
+        filled_template_text: payload.filledTemplateText,
+      })
       .eq('id', consentId);
   };
 
