@@ -197,8 +197,8 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
       {/* Header */}
       <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
-            <MapPin className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+            <MapPin className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
             <h3 className="text-base font-semibold text-zinc-900 dark:text-white">
@@ -236,14 +236,14 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
               onChange={(e) => setAddressInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleGeocode()}
               placeholder="12 rue de la Paix, 75001 Paris"
-              className="w-full min-w-0 flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/60 transition-all"
+              className="w-full min-w-0 flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/60 transition-all"
             />
             <div className="flex gap-2 shrink-0">
               <button
                 type="button"
                 onClick={handleGeocode}
                 disabled={geocoding}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium transition-colors disabled:opacity-60 min-h-[44px]"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-60 min-h-[44px]"
               >
                 {geocoding ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
                 Géocoder
@@ -305,7 +305,7 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
             type="button"
             onClick={() => setVisible(!visible)}
             className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
-              visible ? 'bg-amber-500' : 'bg-zinc-300 dark:bg-zinc-600'
+              visible ? 'bg-blue-600 dark:bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'
             }`}
           >
             <span
@@ -322,7 +322,7 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
             href={`/studio/${studioSlug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 hover:underline"
+            className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
           >
             <ExternalLink className="w-3.5 h-3.5" />
             Voir ma page vitrine · /studio/{studioSlug}
@@ -334,11 +334,11 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
           type="button"
           onClick={handleSave}
           disabled={!hasCoords || saving}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{
-            background: hasCoords ? '#c9a96e' : undefined,
-            color: hasCoords ? '#fff' : undefined,
-          }}
+          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] ${
+            hasCoords
+              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+              : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400'
+          }`}
         >
           {saving ? (
             <><Loader2 className="w-4 h-4 animate-spin" /> Sauvegarde…</>

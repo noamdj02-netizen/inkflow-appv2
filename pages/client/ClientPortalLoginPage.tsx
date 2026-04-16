@@ -287,7 +287,7 @@ export const ClientPortalLoginPage: React.FC = () => {
             <div className="flex items-center gap-3 mb-6">
               <Logo className="rounded-xl shadow-sm" size="md" />
               <div>
-                <span className="text-lg font-bold tracking-tight text-zinc-900 font-display block leading-tight">
+                <span className="text-lg font-bold tracking-tight text-zinc-900 font-sans block leading-tight">
                   Inkflow
                 </span>
                 <span className="text-xs font-medium text-zinc-400">Espace client</span>
@@ -297,7 +297,7 @@ export const ClientPortalLoginPage: React.FC = () => {
             {phase === 'boot' && (
               <div className="space-y-5" aria-busy="true" aria-live="polite">
                 <div className="space-y-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-sans">
                     Bienvenue
                   </h1>
                   <p className="text-sm text-zinc-500">Vérification de ta session en cours…</p>
@@ -318,7 +318,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                 <div className="mb-6 space-y-2">
                   {phase === 'login' && (
                     <>
-                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-sans">
                         Connexion
                       </h1>
                       <p className="text-sm text-zinc-500 max-w-md">
@@ -328,7 +328,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                   )}
                   {phase === 'password' && (
                     <>
-                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-sans">
                         Choisis ton mot de passe
                       </h1>
                       <p className="text-sm text-zinc-500">Accès sécurisé à ton espace.</p>
@@ -336,7 +336,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                   )}
                   {phase === 'register' && (
                     <>
-                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-sans">
                         Créer un compte
                       </h1>
                       <p className="text-sm text-zinc-500">
@@ -346,7 +346,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                   )}
                   {sentRegister && (
                     <>
-                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-display">
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-sans">
                         Confirme ton e-mail
                       </h1>
                       <p className="text-sm text-zinc-500">

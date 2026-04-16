@@ -365,56 +365,108 @@ img, video {
   color: #a1a1aa;
 }
 
-/* Cartes dashboard — Figma Clean / Vercel style (depth, elevation) */
+/*
+ * Cartes dashboard — élévation douce (clair) / profondeur lisible (sombre), aligné zinc.
+ * Hover : bordure + ombre renforcées (pas de translate — mobile-friendly).
+ */
 .prodify-card {
   background: white;
   border-radius: 1rem;
   border: 1px solid #e4e4e7;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow:
+    0 1px 2px -1px rgba(0, 0, 0, 0.06),
+    0 4px 16px -4px rgba(0, 0, 0, 0.08);
+  transition: border-color 0.2s ease, box-shadow 0.22s ease;
 }
 .prodify-card:hover {
   border-color: #d4d4d8;
+  box-shadow:
+    0 2px 4px -1px rgba(0, 0, 0, 0.08),
+    0 10px 28px -8px rgba(0, 0, 0, 0.1);
 }
 :root[data-theme="dark"] .prodify-card {
   background: #18181b;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 8px 28px -6px rgba(0, 0, 0, 0.55);
 }
 :root[data-theme="dark"] .prodify-card:hover {
-  border-color: rgba(255,255,255,0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.5),
+    0 14px 40px -8px rgba(0, 0, 0, 0.45);
 }
 
-/* Legacy alias — MiniCalendar, etc. */
+/* Legacy alias — CRM, messagerie, widgets, tableaux */
 .dashboard-widget-card {
   background: white;
   border-radius: 1rem;
   border: 1px solid #e4e4e7;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  transition: border-color 0.2s ease;
+  box-shadow:
+    0 1px 2px -1px rgba(0, 0, 0, 0.06),
+    0 4px 16px -4px rgba(0, 0, 0, 0.08);
+  transition: border-color 0.2s ease, box-shadow 0.22s ease;
 }
 .dashboard-widget-card:hover {
   border-color: #d4d4d8;
+  box-shadow:
+    0 2px 4px -1px rgba(0, 0, 0, 0.08),
+    0 10px 28px -8px rgba(0, 0, 0, 0.1);
 }
 :root[data-theme="dark"] .dashboard-widget-card {
   background: #18181b;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 1rem;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 8px 28px -6px rgba(0, 0, 0, 0.55);
 }
 :root[data-theme="dark"] .dashboard-widget-card:hover {
-  border-color: rgba(255,255,255,0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.5),
+    0 14px 40px -8px rgba(0, 0, 0, 0.45);
 }
 
-/* Bento / spatial card — premium minimaliste */
+/* Cartes cliquables (bouton / lien) — anneau focus visible */
+button.dashboard-widget-card:focus-visible,
+a.dashboard-widget-card:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.55);
+  outline-offset: 3px;
+}
+:root[data-theme="dark"] button.dashboard-widget-card:focus-visible,
+:root[data-theme="dark"] a.dashboard-widget-card:focus-visible {
+  outline-color: rgba(167, 139, 250, 0.65);
+}
+
+/* Bento / cartes spatiales (messagerie, layouts) */
 .card-bento {
   background: var(--bg-card);
   border-radius: 1rem;
   border: 1px solid var(--border);
-  transition: border-color 0.2s ease;
+  box-shadow:
+    0 1px 2px -1px rgba(0, 0, 0, 0.05),
+    0 4px 14px -4px rgba(0, 0, 0, 0.07);
+  transition: border-color 0.2s ease, box-shadow 0.22s ease;
+}
+:root[data-theme="dark"] .card-bento {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 6px 22px -6px rgba(0, 0, 0, 0.5);
 }
 .card-bento:hover {
   border-color: var(--border-light);
+  box-shadow:
+    0 2px 4px -1px rgba(0, 0, 0, 0.07),
+    0 10px 26px -8px rgba(0, 0, 0, 0.09);
+}
+:root[data-theme="dark"] .card-bento:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.48),
+    0 12px 36px -10px rgba(0, 0, 0, 0.42);
 }
 
 /* Boutons dashboard — iOS-native (rounded-xl, touch targets 44px) */
@@ -668,10 +720,27 @@ img, video {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 1rem;
-  transition: all 0.2s ease;
+  box-shadow:
+    0 1px 2px -1px rgba(0, 0, 0, 0.05),
+    0 3px 12px -3px rgba(0, 0, 0, 0.06);
+  transition: border-color 0.2s ease, box-shadow 0.22s ease;
+}
+:root[data-theme="dark"] .card-dash {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 6px 20px -6px rgba(0, 0, 0, 0.48);
 }
 .card-dash:hover {
   border-color: var(--border-light);
+  box-shadow:
+    0 2px 4px -1px rgba(0, 0, 0, 0.07),
+    0 8px 22px -6px rgba(0, 0, 0, 0.08);
+}
+:root[data-theme="dark"] .card-dash:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.48),
+    0 10px 32px -8px rgba(0, 0, 0, 0.4);
 }
 .row-clickable {
   touch-action: manipulation;

@@ -21,7 +21,17 @@ export interface PaymentReceiptPayload {
   stripeSessionId?: string;
 }
 
-export type StructuredMessagePayload = PaymentCardPayload | PaymentReceiptPayload;
+/** Formulaire de consentement à remplir dans le fil (ligne inkflow_consent_forms créée côté studio). */
+export interface ConsentFormRequestPayload {
+  kind: 'consent_form_request';
+  consentFormId: string;
+  title: string;
+}
+
+export type StructuredMessagePayload =
+  | PaymentCardPayload
+  | PaymentReceiptPayload
+  | ConsentFormRequestPayload;
 
 export function tryParseStructuredMessage(content: string): StructuredMessagePayload | null {
   const t = content.trim();
@@ -33,6 +43,18 @@ export function tryParseStructuredMessage(content: string): StructuredMessagePay
     }
     if (o.kind === 'payment_receipt' && typeof o.amount === 'number') {
       return o as unknown as PaymentReceiptPayload;
+    }
+    if (
+      o.kind === 'consent_form_request' &&
+      typeof o.consentFormId === 'string' &&
+      o.consentFormId.length > 0 &&
+      typeof o.title === 'string'
+    ) {
+      return {
+        kind: 'consent_form_request',
+        consentFormId: o.consentFormId,
+        title: o.title,
+      };
     }
   } catch {
     return null;

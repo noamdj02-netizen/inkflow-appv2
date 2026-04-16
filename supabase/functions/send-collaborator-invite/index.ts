@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { getGoTrueUser } from "../_shared/supabaseAuth.ts";
 import { sendEmail } from "../_shared/resend.ts";
 import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
@@ -47,12 +48,26 @@ async function resolveCallerEmail(req: Request): Promise<{ email: string | null;
   if (role === "service_role") {
     return { email: null, authHint: "service_role" };
   }
-  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const { data, error } = await client.auth.getUser(jwt);
-  if (error || !data.user?.email) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return { email: null, authHint: "invalid_user_jwt" };
+  }
+
+  const gt = await getGoTrueUser(SUPABASE_URL, SUPABASE_ANON_KEY, jwt);
+  if (!gt?.id) {
     return { email: null, authHint: role === "anon" ? "anon_key" : "invalid_user_jwt" };
   }
-  return { email: data.user.email };
+
+  let email = gt.email;
+  if (!email) {
+    const admin = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "");
+    const { data: full } = await admin.auth.admin.getUserById(gt.id);
+    email = full.user?.email?.trim() ?? null;
+  }
+
+  if (!email) {
+    return { email: null, authHint: "invalid_user_jwt" };
+  }
+  return { email };
 }
 
 function jsonBizError(message: string, cors: Record<string, string>) {
@@ -115,7 +130,10 @@ Deno.serve(async (req: Request) => {
 
     const ownerEmail = (studio.email as string)?.toLowerCase?.() ?? "";
     if (!ownerEmail || ownerEmail !== callerEmail.toLowerCase()) {
-      return jsonBizError("Accès refusé : seul le propriétaire du studio peut inviter", cors);
+      return jsonBizError(
+        "Accès refusé : l’invitation n’est possible que depuis le compte dont l’email est celui du studio (fiche Établissement). Connectez-vous avec ce compte ou mettez à jour l’email du studio.",
+        cors,
+      );
     }
 
     const studioDisplayName = (studio.studio_name as string)?.trim() || (studio.name as string)?.trim() || "votre studio";

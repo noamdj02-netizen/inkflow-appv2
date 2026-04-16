@@ -15,6 +15,14 @@ import {
   Loader2,
   ClipboardCheck,
   FileText,
+  MailCheck,
+  Mail,
+  User,
+  Link2,
+  Shield,
+  Scale,
+  Heart,
+  Copy,
 } from 'lucide-react';
 import { getInstagramStatus } from '../../lib/instagram';
 import { InstagramMessagingView } from './InstagramMessagingView';
@@ -23,9 +31,32 @@ import { sendMessageNotificationToClient } from '../../lib/sendNotification';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { ensurePlaceholderAppointmentForProject } from '../../lib/supabaseDashboard';
 import { tryParseStructuredMessage } from '../../lib/messageContent';
+import { ConsentFormMessageCard } from './ConsentFormMessageCard';
 import { useToast } from '../../contexts/ToastContext';
 import { Modal } from '../ui/Modal';
+import {
+  CONSENT_FORM_PRESETS,
+  consentPresetChipClassName,
+  consentPresetCompactLabel,
+  type ConsentFormPreset,
+} from '../../lib/consentFormPresets';
 import type { MessageThread, Message } from '../../types';
+
+function ConsentPresetChipIcon({ icon }: { icon?: string }) {
+  const c = 'w-3 h-3 shrink-0 opacity-90';
+  switch (icon) {
+    case 'standard':
+      return <Shield className={c} aria-hidden />;
+    case 'minor':
+      return <Heart className={c} aria-hidden />;
+    case 'piercing':
+      return <Scale className={c} aria-hidden />;
+    case 'simple':
+      return <FileText className={c} aria-hidden />;
+    default:
+      return <FileText className={c} aria-hidden />;
+  }
+}
 
 interface MessagingTabProps {
   studioId: string;
@@ -65,9 +96,16 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  /** Modale « contacter le client » avec confirmation de consentement (envoi direct + notif e-mail si connu) */
+  const [directContactOpen, setDirectContactOpen] = useState(false);
+  const [directContactConsent, setDirectContactConsent] = useState(false);
+  const [directContactDraft, setDirectContactDraft] = useState('');
+  const [activeConsentPreset, setActiveConsentPreset] = useState<ConsentFormPreset | null>(null);
+  const [threadHeaderMenuOpen, setThreadHeaderMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const threadHeaderMenuRef = useRef<HTMLDivElement>(null);
 
   /** Fil ouvert (ex. depuis Demandes) mais pas encore dans la liste construite depuis les messages */
   const [fallbackThread, setFallbackThread] = useState<MessageThread | null>(null);
@@ -109,19 +147,18 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
     void (async () => {
       try {
         if (selectedThreadId.startsWith('pr_')) {
-          const prId = selectedThreadId.slice(3);
           const { data: pr } = await supabase
             .from('inkflow_project_requests')
             .select('id, client_name, client_email')
             .eq('studio_id', studioId)
-            .eq('id', prId)
+            .eq('id', selectedThreadId)
             .maybeSingle();
           if (cancelled) return;
           setFallbackThread(
             buildFallback({
               clientName: pr?.client_name?.trim() || 'Client',
               clientEmail: pr?.client_email?.trim() || '',
-              projectRequestId: pr?.id ?? prId,
+              projectRequestId: pr?.id ?? selectedThreadId,
             })
           );
         } else if (selectedThreadId.startsWith('bk_')) {
@@ -205,12 +242,11 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
         }
 
         if (selectedThreadId.startsWith('pr_')) {
-          const prId = selectedThreadId.slice(3);
           const { data: apts } = await supabase
             .from('inkflow_appointments')
             .select('id')
             .eq('studio_id', studioId)
-            .eq('project_request_id', prId);
+            .eq('project_request_id', selectedThreadId);
           if (cancelled) return;
           const aptIds = (apts ?? []).map((a) => a.id).filter(Boolean);
 
@@ -330,6 +366,31 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    if (!threadHeaderMenuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (threadHeaderMenuRef.current?.contains(e.target as Node)) return;
+      setThreadHeaderMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setThreadHeaderMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [threadHeaderMenuOpen]);
+
+  useEffect(() => {
+    setThreadHeaderMenuOpen(false);
+  }, [selectedThreadId]);
+
+  useEffect(() => {
+    setActiveConsentPreset(null);
+  }, [selectedThreadId]);
+
   const loadMessages = async (threadId: string) => {
     const { data } = await supabase
       .from('inkflow_messages')
@@ -353,17 +414,28 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
     }
   };
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedThreadId || sending) return;
+  const defaultDirectContactText = useMemo(() => {
+    const studio = studioName?.trim();
+    return studio
+      ? `Bonjour, nous vous contactons depuis ${studio} pour faire suite à votre demande sur Inkflow.`
+      : `Bonjour, nous vous contactons depuis le studio pour faire suite à votre demande sur Inkflow.`;
+  }, [studioName]);
+
+  const sendOutboundArtistMessage = async (
+    rawContent: string,
+    options?: { toastOnError?: boolean }
+  ): Promise<boolean> => {
+    const content = rawContent.trim();
+    if (!content || !selectedThreadId || sending) return false;
     setSending(true);
     try {
       const msg = {
         id: `msg_${Date.now()}`,
         studio_id: studioId,
         thread_id: selectedThreadId,
-        sender_type: 'artist',
+        sender_type: 'artist' as const,
         sender_name: artistName,
-        content: newMessage.trim(),
+        content,
         read: false,
       };
       const { error } = await supabase.from('inkflow_messages').insert(msg);
@@ -374,14 +446,131 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
           clientName: selectedThread.clientName || 'Client',
           studioName,
           senderName: artistName,
-          messagePreview: newMessage.trim(),
+          messagePreview: content,
           threadId: selectedThreadId,
         });
       }
       setNewMessage('');
       inputRef.current?.focus();
+      return true;
     } catch {
-      // Silently fail
+      if (options?.toastOnError !== false) {
+        toast.error("Le message n'a pas pu être envoyé. Réessaie.");
+      }
+      return false;
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const sendMessage = async () => {
+    await sendOutboundArtistMessage(newMessage, { toastOnError: false });
+  };
+
+  const openDirectContactModal = () => {
+    setDirectContactConsent(false);
+    setDirectContactDraft('');
+    setDirectContactOpen(true);
+  };
+
+  const handleSendDirectContact = async () => {
+    if (!directContactConsent) {
+      toast.error('Coche la case pour confirmer le consentement du client.');
+      return;
+    }
+    const body = directContactDraft.trim() || defaultDirectContactText;
+    const ok = await sendOutboundArtistMessage(body, { toastOnError: true });
+    if (ok) {
+      toast.success('Message envoyé au client.');
+      setDirectContactOpen(false);
+      setDirectContactConsent(false);
+      setDirectContactDraft('');
+    }
+  };
+
+  const copyFromThreadMenu = (text: string, successLabel: string) => {
+    void navigator.clipboard.writeText(text).then(
+      () => {
+        toast.success(successLabel);
+        setThreadHeaderMenuOpen(false);
+      },
+      () => toast.error('Copie impossible')
+    );
+  };
+
+  const buildConsentMessageBody = (preset: ConsentFormPreset) =>
+    `[${preset.title}]\n\n${preset.content}`;
+
+  const insertConsentPresetInComposer = (preset: ConsentFormPreset) => {
+    setNewMessage(buildConsentMessageBody(preset));
+    setActiveConsentPreset(null);
+    toast.success('Modèle inséré dans le champ — relis avant d’envoyer.');
+    setTimeout(() => {
+      inputRef.current?.focus({ preventScroll: false });
+      inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 50);
+  };
+
+  const copyConsentPresetPlain = (preset: ConsentFormPreset) => {
+    void navigator.clipboard.writeText(preset.content).then(
+      () => toast.success('Texte du formulaire copié'),
+      () => toast.error('Copie impossible')
+    );
+  };
+
+  /** Envoie un formulaire interactif (remplissage + signature dans le fil + enregistrement CRM au signalement). */
+  const sendInteractiveConsentForm = async (preset: ConsentFormPreset) => {
+    if (!selectedThreadId || !studioId) return;
+    const email = (selectedThread?.clientEmail || '').trim();
+    if (!email) {
+      toast.error(
+        'E-mail client introuvable sur ce fil. Utilise un fil lié à une demande ou réservation avec e-mail, ou envoie le texte brut depuis le modèle.'
+      );
+      return;
+    }
+    setSending(true);
+    try {
+      const consentFormId = `cf_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      const clientName = (selectedThread?.clientName || 'Client').trim() || 'Client';
+      const { error: cErr } = await supabase.from('inkflow_consent_forms').insert({
+        id: consentFormId,
+        studio_id: studioId,
+        client_name: clientName,
+        client_email: email,
+        template: preset.content,
+      });
+      if (cErr) {
+        toast.error(cErr.message || 'Enregistrement du formulaire impossible.');
+        return;
+      }
+      const payload = JSON.stringify({
+        kind: 'consent_form_request',
+        consentFormId,
+        title: preset.title,
+      });
+      const { error: mErr } = await supabase.from('inkflow_messages').insert({
+        id: `msg_${Date.now()}`,
+        studio_id: studioId,
+        thread_id: selectedThreadId,
+        sender_type: 'artist',
+        sender_name: artistName,
+        content: payload,
+        read: false,
+      });
+      if (mErr) throw mErr;
+      sendMessageNotificationToClient({
+        clientEmail: email,
+        clientName,
+        studioName,
+        senderName: artistName,
+        messagePreview: `Formulaire « ${preset.title} » — à remplir dans la conversation Inkflow`,
+        threadId: selectedThreadId,
+      });
+      toast.success('Formulaire envoyé — le client peut le remplir dans la conversation.');
+      setActiveConsentPreset(null);
+      await loadMessages(selectedThreadId);
+    } catch {
+      toast.error("L'envoi du formulaire a échoué. Réessaie.");
     } finally {
       setSending(false);
     }
@@ -394,13 +583,12 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
       toast.error('Indique un montant valide');
       return;
     }
-    const prId = selectedThreadId.slice(3);
     setPaymentBusy(true);
     try {
       const { data: pr, error: prErr } = await supabase
         .from('inkflow_project_requests')
         .select('id, client_name, client_email, description')
-        .eq('id', prId)
+        .eq('id', selectedThreadId)
         .single();
       if (prErr || !pr) {
         toast.error('Demande de projet introuvable');
@@ -534,15 +722,26 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
         </div>
       );
     }
+    if (structured?.kind === 'consent_form_request') {
+      return (
+        <ConsentFormMessageCard
+          consentFormId={structured.consentFormId}
+          title={structured.title}
+          mode={isOutbound ? 'studio_status' : 'client_sign'}
+        />
+      );
+    }
     return (
       <div
-        className={`px-4 py-3 rounded-2xl shadow-sm ${
+        className={`min-w-0 max-w-full overflow-hidden px-4 py-3 rounded-2xl shadow-sm ${
           isOutbound
             ? 'bg-blue-500 text-white rounded-br-md'
             : 'bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 text-zinc-900 dark:text-white rounded-bl-md'
         }`}
       >
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] max-w-full">
+          {msg.content}
+        </p>
       </div>
     );
   };
@@ -793,13 +992,94 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                         {selectedThread.clientEmail || 'Client Inkflow'}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      aria-label="Plus d’options"
-                      className="shrink-0 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors -mr-1"
-                    >
-                      <MoreVertical className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
-                    </button>
+                    <div className="relative shrink-0 -mr-1" ref={threadHeaderMenuRef}>
+                      <button
+                        type="button"
+                        id="thread-header-menu-button"
+                        aria-expanded={threadHeaderMenuOpen}
+                        aria-haspopup="menu"
+                        aria-controls={threadHeaderMenuOpen ? 'thread-header-menu' : undefined}
+                        onClick={() => setThreadHeaderMenuOpen((o) => !o)}
+                        className="shrink-0 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors active:scale-[0.98]"
+                        aria-label="Plus d’options pour cette conversation"
+                      >
+                        <MoreVertical className="w-5 h-5 text-zinc-500 dark:text-zinc-400" aria-hidden />
+                      </button>
+                      {threadHeaderMenuOpen ? (
+                        <div
+                          id="thread-header-menu"
+                          role="menu"
+                          aria-labelledby="thread-header-menu-button"
+                          className="absolute right-0 top-full mt-1 z-[60] w-[min(100vw-2rem,17rem)] rounded-xl border border-zinc-200/90 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-1 shadow-lg"
+                        >
+                          <button
+                            type="button"
+                            role="menuitem"
+                            disabled={!selectedThread.clientEmail?.trim()}
+                            onClick={() =>
+                              selectedThread.clientEmail?.trim() &&
+                              copyFromThreadMenu(selectedThread.clientEmail.trim(), 'E-mail copié')
+                            }
+                            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:pointer-events-none disabled:opacity-40 min-h-[44px] transition-colors"
+                          >
+                            <Mail className="w-4 h-4 shrink-0 opacity-80" aria-hidden />
+                            Copier l&apos;e-mail
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() =>
+                              copyFromThreadMenu(selectedThread.clientName.trim() || 'Client', 'Nom copié')
+                            }
+                            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 min-h-[44px] transition-colors"
+                          >
+                            <User className="w-4 h-4 shrink-0 opacity-80" aria-hidden />
+                            Copier le nom
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() =>
+                              copyFromThreadMenu(
+                                `${typeof window !== 'undefined' ? window.location.origin : ''}/messages/${encodeURIComponent(selectedThreadId)}`,
+                                'Lien conversation (côté client) copié'
+                              )
+                            }
+                            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 min-h-[44px] transition-colors"
+                          >
+                            <Link2 className="w-4 h-4 shrink-0 opacity-80" aria-hidden />
+                            Copier le lien client
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setThreadHeaderMenuOpen(false);
+                              openDirectContactModal();
+                            }}
+                            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 min-h-[44px] transition-colors"
+                          >
+                            <MailCheck className="w-4 h-4 shrink-0 opacity-80" aria-hidden />
+                            Contacter avec consentement
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setThreadHeaderMenuOpen(false);
+                              inputRef.current?.focus({ preventScroll: false });
+                              setTimeout(() => {
+                                inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                              }, 0);
+                            }}
+                            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 min-h-[44px] transition-colors"
+                          >
+                            <MessageCircle className="w-4 h-4 shrink-0 opacity-80" aria-hidden />
+                            Écrire un message
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
 
                   <div className="flex flex-nowrap items-center gap-1.5 min-w-0 overflow-x-auto [scrollbar-width:thin]">
@@ -837,7 +1117,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                         type="button"
                         onClick={() =>
                           onOpenLinkedProjectRequest(
-                            selectedThread.projectRequestId ?? selectedThreadId.slice(3)
+                            selectedThread.projectRequestId ?? selectedThreadId
                           )
                         }
                         className="inline-flex items-center gap-1 rounded-md border border-slate-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-2 py-1 text-[10px] sm:text-[11px] font-medium text-slate-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 active:scale-[0.98] transition-all shrink-0 min-h-[32px]"
@@ -859,13 +1139,37 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                         <ExternalLink className="w-3 h-3 shrink-0 opacity-70" aria-hidden />
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={openDirectContactModal}
+                      className="inline-flex items-center gap-1 rounded-md border border-emerald-200/90 dark:border-emerald-500/35 bg-emerald-50/90 dark:bg-emerald-500/10 px-2 py-1 text-[10px] sm:text-[11px] font-medium text-emerald-900 dark:text-emerald-200 hover:bg-emerald-100/90 dark:hover:bg-emerald-500/20 active:scale-[0.98] transition-all shrink-0 min-h-[32px]"
+                      title="Envoyer un message au client après confirmation de consentement (e-mail si disponible)"
+                      aria-label="Contacter le client avec confirmation de consentement"
+                    >
+                      <MailCheck className="w-3 h-3 shrink-0 opacity-90" aria-hidden />
+                      <span className="hidden min-[380px]:inline">Contacter le client</span>
+                      <span className="min-[380px]:hidden">Contacter</span>
+                    </button>
+                    {CONSENT_FORM_PRESETS.map((preset) => (
+                      <button
+                        key={preset.title}
+                        type="button"
+                        onClick={() => setActiveConsentPreset(preset)}
+                        title={preset.title}
+                        aria-label={`Ouvrir le modèle : ${preset.title}`}
+                        className={consentPresetChipClassName(preset.color)}
+                      >
+                        <ConsentPresetChipIcon icon={preset.icon} />
+                        <span className="truncate">{consentPresetCompactLabel(preset)}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
             </header>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-zinc-50/50 dark:bg-zinc-950/50">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-5 space-y-4 bg-zinc-50/50 dark:bg-zinc-950/50">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <div className="w-16 h-16 bg-white dark:bg-zinc-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-zinc-200/80 dark:border-zinc-700">
@@ -882,10 +1186,10 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                   return (
                     <div
                       key={msg.id}
-                      className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}
+                      className={`flex min-w-0 w-full ${isOutbound ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[85%] sm:max-w-[75%] group ${
+                        className={`min-w-0 max-w-[85%] sm:max-w-[75%] group ${
                           isOutbound ? 'order-1' : 'order-2'
                         }`}
                       >
@@ -1023,6 +1327,148 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
       </div>
       )}
     </div>
+
+    <Modal
+      isOpen={directContactOpen}
+      onClose={() => {
+        if (!sending) {
+          setDirectContactOpen(false);
+          setDirectContactConsent(false);
+          setDirectContactDraft('');
+        }
+      }}
+      title="Contacter le client"
+      size="md"
+    >
+      <div className="space-y-4">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+          Envoie un message dans le fil et, si l&apos;e-mail du client est connu, une notification par e-mail. Indique un
+          texte personnalisé ou laisse vide pour utiliser le message d&apos;accroche proposé.
+        </p>
+        {!selectedThread?.clientEmail ? (
+          <p className="text-xs rounded-xl border border-amber-200/90 dark:border-amber-500/35 bg-amber-50/90 dark:bg-amber-500/10 px-3 py-2 text-amber-900 dark:text-amber-100">
+            Aucun e-mail sur ce fil : le message sera visible uniquement dans Inkflow (pas de notification mail).
+          </p>
+        ) : null}
+        <div>
+          <label
+            htmlFor="direct-contact-body"
+            className="block text-xs font-medium text-zinc-500 dark:text-zinc-500 mb-1.5"
+          >
+            Message (facultatif)
+          </label>
+          <textarea
+            id="direct-contact-body"
+            rows={3}
+            value={directContactDraft}
+            onChange={(e) => setDirectContactDraft(e.target.value)}
+            placeholder={defaultDirectContactText}
+            className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/25 resize-y min-h-[88px]"
+          />
+          <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1.5">
+            Si tu laisses vide, ce texte sera envoyé : « {defaultDirectContactText.slice(0, 72)}
+            {defaultDirectContactText.length > 72 ? '…' : ''} »
+          </p>
+        </div>
+        <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-900/50 p-3">
+          <input
+            type="checkbox"
+            checked={directContactConsent}
+            onChange={(e) => setDirectContactConsent(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500/30"
+          />
+          <span className="text-sm text-zinc-700 dark:text-zinc-300 leading-snug">
+            Je confirme disposer du consentement du client pour le contacter à ce sujet (messagerie Inkflow et, le cas
+            échéant, e-mail lié à sa demande ou son rendez-vous).
+          </span>
+        </label>
+        <div className="flex flex-wrap gap-2 justify-end pt-1">
+          <button
+            type="button"
+            disabled={sending}
+            onClick={() => {
+              setDirectContactOpen(false);
+              setDirectContactConsent(false);
+              setDirectContactDraft('');
+            }}
+            className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 active:scale-[0.98] transition-all"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            disabled={sending}
+            onClick={handleSendDirectContact}
+            className="px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-medium hover:opacity-90 disabled:opacity-50 active:scale-[0.98] transition-all inline-flex items-center gap-2"
+          >
+            {sending ? (
+              <span className="w-4 h-4 border-2 border-white/30 border-t-white dark:border-zinc-400/30 dark:border-t-zinc-900 rounded-full animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+            Envoyer
+          </button>
+        </div>
+      </div>
+    </Modal>
+
+    <Modal
+      isOpen={activeConsentPreset != null}
+      onClose={() => {
+        if (!sending) setActiveConsentPreset(null);
+      }}
+      title={activeConsentPreset?.title ?? 'Formulaire de consentement'}
+      size="lg"
+    >
+      {activeConsentPreset ? (
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <strong className="text-zinc-800 dark:text-zinc-200">Recommandé :</strong> envoyer le formulaire interactif — le
+            client le remplit et signe dans la conversation ; la réponse est ajoutée à sa fiche CRM (si l’e-mail du fil
+            correspond à un client).
+            {selectedThread?.clientEmail
+              ? ' Une notification e-mail peut l’alerter.'
+              : ' Ici, e-mail client absent : utilise « Texte brut » ou un fil avec e-mail.'}
+          </p>
+          <div className="max-h-[min(50vh,420px)] overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-950/50 p-3">
+            <pre className="whitespace-pre-wrap break-words text-[11px] sm:text-xs font-mono text-zinc-800 dark:text-zinc-200 leading-relaxed">
+              {activeConsentPreset.content}
+            </pre>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-end pt-1">
+            <button
+              type="button"
+              onClick={() => copyConsentPresetPlain(activeConsentPreset)}
+              className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all inline-flex items-center gap-2"
+            >
+              <Copy className="w-4 h-4" aria-hidden />
+              Copier le texte
+            </button>
+            <button
+              type="button"
+              disabled={sending}
+              onClick={() => insertConsentPresetInComposer(activeConsentPreset)}
+              className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 active:scale-[0.98] transition-all"
+            >
+              Insérer texte brut
+            </button>
+            <button
+              type="button"
+              disabled={sending}
+              onClick={() => void sendInteractiveConsentForm(activeConsentPreset)}
+              className="px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-medium hover:opacity-90 disabled:opacity-50 active:scale-[0.98] transition-all inline-flex items-center gap-2"
+            >
+              {sending ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white dark:border-zinc-400/30 dark:border-t-zinc-900 rounded-full animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" aria-hidden />
+              )}
+              Envoyer formulaire (conversation)
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </Modal>
 
     <Modal
       isOpen={paymentModalOpen}

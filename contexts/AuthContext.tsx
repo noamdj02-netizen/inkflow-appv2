@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { ensureStudio, getStudioAvatarUrlByEmail } from '../lib/supabaseDashboard';
+import { linkCollaboratorArtistAccountToUser } from '../lib/collaboratorStudio';
 import { clearAllInkflowStorage } from '../lib/clearAuthStorage';
 import { getAuthCallbackRedirectTo, LANDING_URL } from '../lib/urls';
 import { useSupabaseEnabled } from '../hooks/useSupabaseEnabled';
@@ -42,7 +43,16 @@ interface AuthContextType {
   authLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
-  signup: (email: string, password: string, name: string, studioName: string, referralCode?: string) => Promise<{ needsEmailConfirmation: boolean }>;
+  signup: (
+    email: string,
+    password: string,
+    name: string,
+    studioName: string,
+    referralCode?: string,
+    options?: { teamInviteStudioLabel?: string | null }
+  ) => Promise<{ needsEmailConfirmation: boolean }>;
+  /** Renvoie l’e-mail de confirmation d’inscription (Supabase). */
+  resendSignupConfirmation: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
   isAuthenticated: boolean;
@@ -218,13 +228,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('inkflow_user', JSON.stringify(mockUser));
   }, [isSupabaseAuthEnabled]);
 
-  const signup = useCallback(async (email: string, password: string, name: string, studioName: string, referralCode?: string): Promise<{ needsEmailConfirmation: boolean }> => {
+  const signup = useCallback(async (
+    email: string,
+    password: string,
+    name: string,
+    studioName: string,
+    referralCode?: string,
+    options?: { teamInviteStudioLabel?: string | null }
+  ): Promise<{ needsEmailConfirmation: boolean }> => {
     if (isSupabaseAuthEnabled) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { name, studio_name: studioName, referral_code: referralCode || null },
+          data: {
+            name,
+            studio_name: studioName,
+            referral_code: referralCode || null,
+            studio_invite: options?.teamInviteStudioLabel?.trim() || null,
+          },
           /** Toujours l'app (ex. app.ink-flow.me/auth/callback), jamais la Site URL landing Framer. */
           emailRedirectTo: getAuthCallbackRedirectTo(),
         },
@@ -242,8 +264,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const appUser = appUserFromSupabase(data.user);
           setUser(appUser);
           localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+          const isTeamInvite = Boolean(options?.teamInviteStudioLabel?.trim());
           try {
-            await ensureStudio(email, appUser.name, studioName || appUser.studioName, referralCode);
+            if (isTeamInvite) {
+              await linkCollaboratorArtistAccountToUser(data.user.id, email);
+            } else {
+              await ensureStudio(email, appUser.name, studioName || appUser.studioName, referralCode);
+            }
           } catch {
             // Ne pas bloquer l'inscription si le studio échoue (ex. table pas encore migrée)
           }
@@ -262,6 +289,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(newUser);
     localStorage.setItem('inkflow_user', JSON.stringify(newUser));
     return { needsEmailConfirmation: false };
+  }, [isSupabaseAuthEnabled]);
+
+  const resendSignupConfirmation = useCallback(async (email: string) => {
+    if (!isSupabaseAuthEnabled) {
+      throw new Error('Confirmation par e-mail non disponible.');
+    }
+    const trimmed = email.trim();
+    if (!trimmed) throw new Error('Adresse e-mail requise.');
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: trimmed,
+      options: {
+        emailRedirectTo: getAuthCallbackRedirectTo(),
+      },
+    });
+    if (error) throw new Error(error.message);
   }, [isSupabaseAuthEnabled]);
 
   const logout = useCallback(async () => {
@@ -290,12 +333,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       login,
       loginWithGoogle,
       signup,
+      resendSignupConfirmation,
       logout,
       updateUser,
       isAuthenticated: !!user,
       isGoogleAuthEnabled: isSupabaseAuthEnabled,
     }),
-    [user, authLoading, login, loginWithGoogle, signup, logout, updateUser, isSupabaseAuthEnabled]
+    [user, authLoading, login, loginWithGoogle, signup, resendSignupConfirmation, logout, updateUser, isSupabaseAuthEnabled]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -366,13 +366,37 @@ const LandingPage: React.FC = () => (
   </Suspense>
 );
 
+/** Formate une valeur rejetée (Error, Postgrest, objet anonyme) pour logs / toasts lisibles. */
+function formatUnhandledRejectionReason(reason: unknown): string {
+  if (reason instanceof Error) return reason.message || 'Erreur';
+  if (reason == null) return 'Erreur inconnue';
+  if (typeof reason === 'string') return reason || 'Erreur';
+  if (typeof reason === 'object') {
+    const o = reason as Record<string, unknown>;
+    if (typeof o.message === 'string' && o.message.trim()) return o.message;
+    // Postgrest / erreurs API typiques
+    const code = typeof o.code === 'string' ? o.code : '';
+    const details = typeof o.details === 'string' ? o.details : '';
+    const hint = typeof o.hint === 'string' ? o.hint : '';
+    const msg = typeof o.msg === 'string' ? o.msg : '';
+    const parts = [code, msg || details || hint].filter(Boolean);
+    if (parts.length) return parts.join(' — ');
+    try {
+      return JSON.stringify(reason).slice(0, 200);
+    } catch {
+      return 'Erreur (objet non sérialisable)';
+    }
+  }
+  return String(reason);
+}
+
 /** Log et affiche un toast sur les promesses rejetées non gérées (détection de bugs en prod). */
 const UnhandledRejectionHandler: React.FC = () => {
   const toast = useToast();
   useEffect(() => {
     const handler = (event: PromiseRejectionEvent) => {
       const reason = event.reason;
-      const msg = reason instanceof Error ? reason.message : String(reason);
+      const msg = formatUnhandledRejectionReason(reason);
       if (import.meta.env.DEV) {
         console.error('[unhandledrejection]', reason);
       }

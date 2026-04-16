@@ -10,6 +10,7 @@ import { GoogleSignInButton } from '../GoogleSignInButton';
 import { signupSchema } from '../../lib/authValidation';
 import { getAuthErrorMessage } from './LoginForm';
 import { LANDING_TERMS_URL, LANDING_PRIVACY_URL, getPostSignupDashboardPath } from '../../lib/urls';
+import { supabase } from '../../lib/supabase';
 import { REDIRECT_AFTER_LOGIN_KEY } from '../../contexts/AuthContext';
 import { markJustSignedUp, markWelcomeRequired } from '../../lib/welcomeStorage';
 
@@ -88,16 +89,25 @@ export const SignupForm: React.FC = () => {
         parsed.data.password,
         parsed.data.name,
         parsed.data.studioName ?? '',
-        formData.referralCode?.trim().toUpperCase() || undefined
+        formData.referralCode?.trim().toUpperCase() || undefined,
+        inviteStudioLabel ? { teamInviteStudioLabel: inviteStudioLabel } : undefined
       );
       setSuccess(true);
       markJustSignedUp();
       markWelcomeRequired(parsed.data.email.trim().toLowerCase());
       if (needsEmailConfirmation) {
-        window.location.href = '/login?message=check-email';
+        const q = new URLSearchParams();
+        q.set('message', 'check-email');
+        q.set('email', parsed.data.email.trim());
+        if (inviteStudioLabel) q.set('invite', '1');
+        window.location.assign(`/login?${q.toString()}`);
         return;
       }
-      window.location.href = postAuthPath;
+      /** Safari / WebKit : laisser le temps d’écrire la session avant la navigation pleine page. */
+      await supabase.auth.getSession();
+      await supabase.auth.refreshSession().catch(() => {});
+      await new Promise((r) => setTimeout(r, 150));
+      window.location.assign(postAuthPath);
     } catch (err) {
       setError(getAuthErrorMessage(err));
     } finally {

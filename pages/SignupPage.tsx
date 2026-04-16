@@ -14,7 +14,7 @@ export const SignupPage: React.FC = () => {
 
   return (
     <motion.div
-      className="min-h-screen flex bg-white dark:bg-black"
+      className="min-h-[100dvh] min-h-screen flex bg-white dark:bg-black"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
@@ -27,7 +27,7 @@ export const SignupPage: React.FC = () => {
         ogImageAlt="Inscription InkFlow"
       />
       {/* ── LEFT — Signup Form ── */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
+      <div className="flex-1 flex flex-col min-h-0 min-h-[100dvh]">
         <header className="p-4 sm:p-6 safe-top flex-shrink-0">
           <a
             href={LANDING_URL}
@@ -40,9 +40,13 @@ export const SignupPage: React.FC = () => {
           </a>
         </header>
 
-        <div className="flex-1 flex items-center justify-center px-6 sm:px-10 py-8 safe-bottom">
+        <div
+          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          <div className="flex min-h-min min-h-full flex-col justify-start sm:justify-center px-6 sm:px-10 py-6 sm:py-8 pb-8 safe-bottom">
           <motion.div
-            className="w-full max-w-sm"
+            className="w-full max-w-sm mx-auto"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
@@ -98,6 +102,7 @@ export const SignupPage: React.FC = () => {
               ))}
             </div>
           </motion.div>
+          </div>
         </div>
       </div>
 

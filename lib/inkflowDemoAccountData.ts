@@ -191,6 +191,14 @@ export function getInkflowDemoClientPortalProjectRequests(): Array<{
   description: string;
   status: string;
   created_at: string;
+  client_name?: string;
+  placement?: string | null;
+  estimated_size?: string | null;
+  budget?: string | null;
+  client_instagram?: string | null;
+  project_type?: string;
+  reference_image_url?: string | null;
+  reference_images?: string[] | null;
 }> {
   return [
     {
@@ -199,6 +207,14 @@ export function getInkflowDemoClientPortalProjectRequests(): Array<{
       description: 'Mandala coude — budget 200–250€, dispo le week-end.',
       status: 'pending',
       created_at: new Date().toISOString(),
+      client_name: 'Démo client',
+      placement: 'Coude droit',
+      estimated_size: 'M (~8 cm)',
+      budget: '200–250 €',
+      client_instagram: '@demo_ink',
+      project_type: 'custom',
+      reference_image_url: null,
+      reference_images: [],
     },
   ];
 }

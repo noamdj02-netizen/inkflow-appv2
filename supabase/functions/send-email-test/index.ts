@@ -6,7 +6,7 @@
  * Déploiement : supabase functions deploy send-email-test
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { createSupabaseUserClient } from "../_shared/supabaseAuth.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { addPreviewBccToPayload, RESEND_FROM } from "../_shared/resend.ts";
 import { escapeHtml, wrapEmailLayout, EMAIL_STYLES } from "../_shared/emailLayout.ts";
@@ -19,8 +19,8 @@ async function getUserEmailFromJwt(req: Request): Promise<string | null> {
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return null;
   const jwt = auth.slice(7);
-  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const { data, error } = await client.auth.getUser(jwt);
+  const client = createSupabaseUserClient(SUPABASE_URL, SUPABASE_ANON_KEY, jwt);
+  const { data, error } = await client.auth.getUser();
   if (error || !data.user?.email) return null;
   return data.user.email;
 }

@@ -181,11 +181,14 @@ function extractLatLngFromQueryParams(rawUrl: string): { lat: number; lng: numbe
   return null;
 }
 
-/** `@lat,lng`, puis `!3d!4d` dans data, puis `?ll=` / `center=` */
+/**
+ * `!3d!4d` dans le bloc data (position du lieu) en priorité — le `@lat,lng` est souvent le centre de la carte,
+ * pas le pin (Nearby 250 m pouvait rater). Puis `@`, puis `?ll=` / `center=`.
+ */
 function extractLatLngFromMapsUrlExtended(rawUrl: string): { lat: number; lng: number } | null {
   return (
-    extractLatLngFromMapsUrl(rawUrl) ??
     extractLatLngFromMapsDataBlock(rawUrl) ??
+    extractLatLngFromMapsUrl(rawUrl) ??
     extractLatLngFromQueryParams(rawUrl)
   );
 }
@@ -212,7 +215,7 @@ async function nearbySearchPlaces(lat: number, lng: number, keyword: string): Pr
   if (kw.length < 2) return [];
   const params = new URLSearchParams({
     location: `${lat},${lng}`,
-    radius: "250",
+    radius: "750",
     keyword: kw,
     key: PLACES_SERVER_KEY,
     language: "fr",
@@ -649,7 +652,7 @@ Deno.serve(async (req: Request) => {
       return json(origin, { error: "Non authentifié" }, 401);
     }
     const input = String(payload.input || "").trim();
-    if (input.length < 3 || input.length > 2500) {
+    if (input.length < 3 || input.length > 16384) {
       return json(origin, { error: "Texte invalide" }, 400);
     }
     const placeId = await resolveMapsPasteToPlaceId(input);

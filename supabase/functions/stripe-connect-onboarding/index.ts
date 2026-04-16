@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { createSupabaseUserClient } from "../_shared/supabaseAuth.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
@@ -58,9 +59,8 @@ Deno.serve(async (req: Request) => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
-    /** Même pattern que send-collaborator-invite : `getUser()` sans JWT ne valide pas toujours le Bearer dans Edge. */
-    const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const { data: userData, error: authErr } = await supabaseUser.auth.getUser(jwt);
+    const supabaseUser = createSupabaseUserClient(SUPABASE_URL, SUPABASE_ANON_KEY, jwt);
+    const { data: userData, error: authErr } = await supabaseUser.auth.getUser();
     const user = userData?.user;
     if (authErr || !user?.id) {
       console.error("[stripe-connect-onboarding] getUser:", authErr?.message ?? "no user id");

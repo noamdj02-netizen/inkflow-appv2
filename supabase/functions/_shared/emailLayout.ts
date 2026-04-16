@@ -35,6 +35,11 @@ function getSiteUrl(): string {
   return envGet("SITE_URL", INKFLOW_SITE).replace(/\/+$/, "");
 }
 
+/** Logo PNG servi par l’app (même origine que les liens du mail). */
+function getEmailLogoUrl(): string {
+  return `${getAppUrl()}/logo-inkflow.png`;
+}
+
 export function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -102,11 +107,11 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
     : "";
 
   const headlineHtml = hasTwoTone
-    ? `<h1 style="margin:0 0 8px;font-size:26px;font-weight:700;line-height:1.2;font-family:Helvetica,Arial,sans-serif;color:${TEXT_PRIMARY};">
+    ? `<h1 style="margin:0 0 8px;font-size:26px;font-weight:700;line-height:1.2;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:${TEXT_PRIMARY};">
          <span style="color:${BLUE};">${safeTitleBlue}</span>
          <span style="color:${TEXT_PRIMARY};"> ${safeTitleBlack}</span>
        </h1>`
-    : `<h1 style="margin:0 0 8px;font-size:26px;font-weight:700;line-height:1.25;font-family:Helvetica,Arial,sans-serif;color:${TEXT_PRIMARY};">${safeTitleBlack}</h1>`;
+    : `<h1 style="margin:0 0 8px;font-size:26px;font-weight:700;line-height:1.25;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:${TEXT_PRIMARY};">${safeTitleBlack}</h1>`;
 
   const subtitleHtml = safeSubtitle
     ? `<p style="margin:0 0 24px;font-size:15px;color:${TEXT_MUTED};line-height:1.55;">${safeSubtitle}</p>`
@@ -122,7 +127,7 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
 
   const buttonHtml = button
     ? `<div style="text-align:center;margin:32px 0 12px;">
-        <a href="${escapeHtml(button.url)}" style="display:inline-block;background:${BLUE};color:#ffffff!important;text-decoration:none;padding:14px 36px;border-radius:9999px;font-size:16px;font-weight:600;font-family:Helvetica,Arial,sans-serif;">${escapeHtml(button.text)}</a>
+        <a href="${escapeHtml(button.url)}" style="display:inline-block;background:${BLUE};color:#ffffff!important;text-decoration:none;padding:14px 36px;border-radius:9999px;font-size:16px;font-weight:600;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">${escapeHtml(button.text)}</a>
         ${safeButtonSubtext ? `<p style="margin:12px 0 0;font-size:13px;color:${TEXT_MUTED};text-align:center;">${safeButtonSubtext}</p>` : ""}
       </div>`
     : "";
@@ -136,6 +141,7 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
 
   const appUrl = getAppUrl();
   const siteUrl = getSiteUrl();
+  const logoUrl = getEmailLogoUrl();
 
   const appCardHtml = hideAppPromo
     ? ""
@@ -186,20 +192,21 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 </head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:${BG_PAGE};">
+<body style="margin:0;padding:0;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:${BG_PAGE};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG_PAGE};padding:40px 16px 48px;">
     <tr>
       <td align="center">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;">
           <tr>
             <td align="center" style="padding:0 0 28px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;background:${WHITE};border-radius:12px;padding:12px 18px;border:1px solid ${BORDER_LIGHT};box-shadow:0 1px 2px rgba(0,0,0,0.04);">
-                <tr>
-                  <td style="font-size:22px;font-weight:800;font-style:italic;letter-spacing:-0.5px;color:${TEXT_PRIMARY};line-height:1;">IF.</td>
-                </tr>
-              </table>
-              <p style="margin:12px 0 0;font-size:11px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:${TEXT_MUTED};">InkFlow</p>
+              <a href="${escapeHtml(appUrl)}" style="text-decoration:none;display:inline-block;">
+                <img src="${escapeHtml(logoUrl)}" width="132" height="auto" alt="InkFlow" style="display:block;margin:0 auto;height:auto;max-width:140px;border:0;outline:none;" />
+              </a>
+              <p style="margin:14px 0 0;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:${TEXT_MUTED};font-family:'Plus Jakarta Sans',-apple-system,sans-serif;">La plateforme des tatoueurs</p>
             </td>
           </tr>
           ${greetingHtml ? `<tr><td style="padding:0 8px 20px;">${greetingHtml}</td></tr>` : ""}

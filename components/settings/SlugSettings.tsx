@@ -3,6 +3,7 @@ import { Link2, Check, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { checkSlugAvailable, updateStudioSlug } from '../../lib/supabaseDashboard';
 import { APP_URL } from '../../lib/urls';
+import { Modal } from '../ui/Modal';
 
 const SLUG_REGEX = /^[a-z0-9-]+$/;
 const SLUG_MIN_LENGTH = 3;
@@ -62,6 +63,7 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
   const [availability, setAvailability] = useState<'idle' | 'available' | 'taken' | 'invalid'>('idle');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [showSlugChangeConfirm, setShowSlugChangeConfirm] = useState(false);
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : APP_URL;
   const prefix = `${baseUrl}/studio/`;
@@ -136,30 +138,48 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
   }, [slug, currentSlug, studioId]);
 
   const isValid = slug.length >= SLUG_MIN_LENGTH && SLUG_REGEX.test(slug);
-  const canSave = isValid && (availability === 'available' || slug === currentSlug) && !saving;
+  const hasSlugChange = slug !== currentSlug;
+  const canSave =
+    isValid &&
+    hasSlugChange &&
+    availability === 'available' &&
+    !saving;
 
-  const handleSave = async () => {
-    if (!canSave || !slug) return;
-    // Double guard — refuse reserved slugs even if canSave somehow passed
-    if (isReservedSlug(slug)) {
-      toast.error('Ce slug est réservé par le système.');
-      return;
-    }
+  const performSave = async (nextSlug: string) => {
     setSaving(true);
     try {
-      await updateStudioSlug(studioId, slug);
-      if (currentSlug && currentSlug !== slug) {
+      await updateStudioSlug(studioId, nextSlug);
+      if (currentSlug && currentSlug !== nextSlug) {
         localStorage.removeItem(`inkflow-vitrine-${currentSlug}`);
       }
-      onSlugUpdated?.(slug);
+      onSlugUpdated?.(nextSlug);
       toast.success('URL personnalisée enregistrée');
       setAvailability('idle');
       setSuggestions([]);
+      setShowSlugChangeConfirm(false);
     } catch {
       toast.error('Erreur lors de la sauvegarde. Ce slug est peut-être déjà pris.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveClick = () => {
+    if (!canSave || !slug) return;
+    if (isReservedSlug(slug)) {
+      toast.error('Ce slug est réservé par le système.');
+      return;
+    }
+    if (currentSlug && slug !== currentSlug) {
+      setShowSlugChangeConfirm(true);
+      return;
+    }
+    void performSave(slug);
+  };
+
+  const handleConfirmSlugChange = () => {
+    if (!slug || !canSave) return;
+    void performSave(slug);
   };
 
   const pickSuggestion = useCallback((s: string) => {
@@ -175,7 +195,7 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
         URL personnalisée
       </h3>
       <p className="text-sm text-[var(--text-secondary)] mb-4">
-        Choisissez l&apos;adresse unique de votre page vitrine. Uniquement minuscules, chiffres et tirets.
+        Choisissez l&apos;adresse de votre page vitrine. Uniquement minuscules, chiffres et tirets ({SLUG_MIN_LENGTH}–{SLUG_MAX_LENGTH} caractères). Modifier l&apos;URL après coup invalide les anciens liens et QR — une confirmation vous sera demandée.
       </p>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -208,7 +228,8 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
           )}
         </div>
         <button
-          onClick={handleSave}
+          type="button"
+          onClick={handleSaveClick}
           disabled={!canSave}
           className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] min-h-[44px]"
         >
@@ -276,6 +297,44 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
           </>
         )}
       </div>
+
+      <Modal
+        isOpen={showSlugChangeConfirm}
+        onClose={() => !saving && setShowSlugChangeConfirm(false)}
+        title="Confirmer le changement d’URL"
+        size="sm"
+      >
+        <div className="space-y-4 text-[var(--text-secondary)] text-sm">
+          <p>
+            L&apos;adresse <span className="font-mono text-[var(--text-primary)]">/studio/{currentSlug}</span> ne fonctionnera plus. Les clients qui utilisent encore ce lien ou un QR imprimé devront utiliser la nouvelle URL.
+          </p>
+          <p className="font-medium text-[var(--text-primary)]">
+            Nouvelle URL :{' '}
+            <span className="font-mono break-all">
+              {prefix}
+              {slug}
+            </span>
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3 pt-2">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => setShowSlugChangeConfirm(false)}
+              className="min-h-[44px] rounded-xl border border-[var(--border)] px-4 py-2.5 font-semibold text-[var(--text-primary)] transition-all hover:bg-[var(--bg-hover)] active:scale-[0.98] disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={handleConfirmSlugChange}
+              className="min-h-[44px] rounded-xl bg-violet-600 px-4 py-2.5 font-semibold text-white transition-all hover:bg-violet-700 active:scale-[0.98] disabled:opacity-50"
+            >
+              {saving ? 'Enregistrement…' : 'Confirmer et enregistrer'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

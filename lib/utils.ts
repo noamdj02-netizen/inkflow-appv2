@@ -2,6 +2,14 @@
  * Utilitaires partagés InkFlow
  */
 
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+/** Fusion de classes Tailwind (shadcn / CVA) */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 /** Date locale au format YYYY-MM-DD (évite le bug UTC de toISOString) */
 export function toLocalDateString(date: Date): string {
   const y = date.getFullYear();

@@ -34,7 +34,7 @@ export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ on
 
   return (
     <motion.div
-      className="fixed inset-0 z-[100] flex min-h-screen bg-white dark:bg-black"
+      className="fixed inset-0 z-[100] flex flex-col lg:flex-row min-h-0 h-[100dvh] max-h-[100dvh] overflow-hidden bg-white dark:bg-black"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
@@ -43,7 +43,7 @@ export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ on
       aria-describedby="founder-note"
     >
       {/* Left — Contenu */}
-      <div className="flex-1 flex flex-col min-h-screen min-h-[100dvh] overflow-y-auto">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
         {/* Hero compact mobile */}
         <div className="lg:hidden flex-shrink-0 h-32 sm:h-40 relative overflow-hidden safe-top">
           <img

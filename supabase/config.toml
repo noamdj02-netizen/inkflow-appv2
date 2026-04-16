@@ -13,3 +13,7 @@ verify_jwt = false
 # sync / login_links / disconnect — valide le JWT dans le handler (comme onboarding).
 [functions.stripe-connect-actions]
 verify_jwt = false
+
+# Invitation collaborateur : évite 401 côté passerelle avec certains JWT (ex. ES256). Session vérifiée dans le handler (GET /auth/v1/user).
+[functions.send-collaborator-invite]
+verify_jwt = false

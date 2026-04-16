@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { sanitizePostAuthRedirect } from './urls';
+import { normalizePublicMessageThreadId } from './threadIds';
 const CLIENT_HOME = '/client/dashboard';
 
 /**
@@ -38,6 +39,19 @@ function emailNorm(e: string | undefined): string {
 }
 
 /**
+ * Nom affiché pour les messages publics (sans formulaire) : métadonnées, partie locale de l’e-mail, ou « Client ».
+ */
+export function getPublicMessageSenderDisplayName(user: User | null): string {
+  if (!user) return 'Client';
+  const meta = user.user_metadata as Record<string, unknown> | undefined;
+  if (typeof meta?.full_name === 'string' && meta.full_name.trim()) return meta.full_name.trim();
+  if (typeof meta?.name === 'string' && meta.name.trim()) return meta.name.trim();
+  const local = user.email?.split('@')[0]?.trim();
+  if (local) return local;
+  return 'Client';
+}
+
+/**
  * Page publique `/messages/:threadId` : évite l’écran « nom » si le visiteur est le bon client.
  * - `pr_*` : e-mail auth = client_email sur la demande projet (RLS `project_requests_client_self`).
  * - `bk_*` : e-mail auth = client_email sur la réservation (policy existante `client_booking_self`).
@@ -47,6 +61,8 @@ export async function resolvePublicMessageAutoProfile(
   threadId: string,
   user: User | null
 ): Promise<{ skipNameGate: boolean; displayName: string }> {
+  const tid = normalizePublicMessageThreadId(threadId);
+
   if (!user?.email?.trim()) {
     return { skipNameGate: false, displayName: '' };
   }
@@ -59,12 +75,11 @@ export async function resolvePublicMessageAutoProfile(
         ? meta.name.trim()
         : user.email.split('@')[0];
 
-  if (threadId.startsWith('pr_')) {
-    const prId = threadId.slice(3);
+  if (tid.startsWith('pr_')) {
     const { data } = await supabase
       .from('inkflow_project_requests')
       .select('client_name, client_email')
-      .eq('id', prId)
+      .eq('id', tid)
       .maybeSingle();
     if (data?.client_email && emailNorm(data.client_email) === emailNorm(user.email)) {
       const dn = (data.client_name && String(data.client_name).trim()) || fallbackName;
@@ -73,11 +88,11 @@ export async function resolvePublicMessageAutoProfile(
     return { skipNameGate: false, displayName: '' };
   }
 
-  if (threadId.startsWith('bk_')) {
+  if (tid.startsWith('bk_')) {
     const { data } = await supabase
       .from('inkflow_bookings')
       .select('client_name, client_email')
-      .eq('id', threadId)
+      .eq('id', tid)
       .maybeSingle();
     if (data?.client_email && emailNorm(data.client_email) === emailNorm(user.email)) {
       const dn = (data.client_name && String(data.client_name).trim()) || fallbackName;

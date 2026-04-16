@@ -6,6 +6,7 @@ import { LoginForm } from '../components/auth/LoginForm';
 import { SEO } from '../components/SEO';
 import { LANDING_URL, APP_URL, sanitizePostAuthRedirect } from '../lib/urls';
 import { REDIRECT_AFTER_LOGIN_KEY, useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { CLIENT_DASHBOARD_THEME } from '../lib/clientDashboardTheme';
 
 const LOGIN_HERO_PRIMARY = '/images/login-hero.jpg';
@@ -214,9 +215,35 @@ function ClientOnboarding({ onDone }: { onDone: () => void }) {
   );
 }
 
+function readLoginPageQueryOnce(): {
+  checkEmail: boolean;
+  inviteTeam: boolean;
+  confirmEmail: string;
+  redirectParam: string | null;
+} {
+  if (typeof window === 'undefined') {
+    return { checkEmail: false, inviteTeam: false, confirmEmail: '', redirectParam: null };
+  }
+  const params = new URLSearchParams(window.location.search);
+  return {
+    checkEmail: params.get('message') === 'check-email',
+    inviteTeam: params.get('invite') === '1',
+    confirmEmail: params.get('email')?.trim() ?? '',
+    redirectParam: params.get('redirect') || params.get('returnTo') || params.get('next'),
+  };
+}
+
 export const LoginPage: React.FC = () => {
-  const { isAuthenticated, authLoading } = useAuth();
-  const [checkEmailMessage, setCheckEmailMessage] = useState(false);
+  const { isAuthenticated, authLoading, resendSignupConfirmation } = useAuth();
+  const toast = useToast();
+  const initialQ = readLoginPageQueryOnce();
+  const [checkEmailMessage, setCheckEmailMessage] = useState(initialQ.checkEmail);
+  const [inviteTeamEmailPending, setInviteTeamEmailPending] = useState(initialQ.inviteTeam);
+  /** E-mail pour renvoyer la confirmation (URL + saisie dans le formulaire). */
+  const [loginEmailForResend, setLoginEmailForResend] = useState(initialQ.confirmEmail);
+  const [resendLoading, setResendLoading] = useState(false);
+  const canResendConfirmation =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmailForResend.trim());
   const [heroSrc, setHeroSrc] = useState(LOGIN_HERO_PRIMARY);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const handleHeroError = () => {
@@ -237,10 +264,7 @@ export const LoginPage: React.FC = () => {
         /* ignore */
       }
     }
-    if (params.get('message') === 'check-email') {
-      setCheckEmailMessage(true);
-      window.history.replaceState({}, '', '/login');
-    } else if (redirectParam) {
+    if (params.get('message') === 'check-email' || redirectParam || params.get('email') || params.get('invite')) {
       window.history.replaceState({}, '', '/login');
     }
   }, []);
@@ -277,7 +301,7 @@ export const LoginPage: React.FC = () => {
       )}
     </AnimatePresence>
     <motion.div
-      className="min-h-screen flex bg-white dark:bg-black"
+      className="min-h-[100dvh] min-h-screen flex bg-white dark:bg-black"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
@@ -289,8 +313,8 @@ export const LoginPage: React.FC = () => {
         keywords="connexion InkFlow, espace tatoueur, login studio tattoo"
         ogImageAlt="Connexion InkFlow"
       />
-      {/* ── LEFT — Login Form ── */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      {/* ── LEFT — Login Form (scrollable : Safari / clavier mobile) ── */}
+      <div className="flex-1 flex flex-col min-h-0 min-h-[100dvh]">
         <header className="p-4 sm:p-6 safe-top flex-shrink-0">
           <a
             href={LANDING_URL}
@@ -303,9 +327,13 @@ export const LoginPage: React.FC = () => {
           </a>
         </header>
 
-        <div className="flex-1 flex items-center justify-center px-6 sm:px-10 py-8 safe-bottom">
+        <div
+          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          <div className="flex min-h-min min-h-full flex-col justify-start sm:justify-center px-6 sm:px-10 py-6 sm:py-8 pb-8 safe-bottom">
           <motion.div
-            className="w-full max-w-sm"
+            className="w-full max-w-sm mx-auto"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
@@ -321,10 +349,10 @@ export const LoginPage: React.FC = () => {
                   />
                 </div>
                 <span
-                  className="text-[22px] font-black text-zinc-900 dark:text-white"
+                  className="text-[22px] font-black text-zinc-900 dark:text-white uppercase"
                   style={{ letterSpacing: '-0.04em', lineHeight: 1 }}
                 >
-                  InkFlow
+                  INKFLOW
                 </span>
               </div>
               <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
@@ -344,13 +372,48 @@ export const LoginPage: React.FC = () => {
                     Compte créé ! Vérifiez votre boîte mail.
                   </p>
                   <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
-                    Cliquez sur le lien dans l&apos;email pour activer votre compte.
+                    {inviteTeamEmailPending ? (
+                      <>
+                        Invitation équipe : ouvrez l&apos;email de confirmation, validez votre compte, puis{' '}
+                        <strong className="font-semibold">revenez sur cette page</strong> pour vous connecter avec la
+                        même adresse (celle du tatoueur).
+                      </>
+                    ) : (
+                      <>Cliquez sur le lien dans l&apos;email pour activer votre compte.</>
+                    )}
+                  </p>
+                  <p className="text-xs text-emerald-700/90 dark:text-emerald-300/90 mt-2">
+                    Rien reçu ? Vérifiez les courriers indésirables, puis utilisez le bouton sous le champ e-mail.
                   </p>
                 </div>
               </div>
             )}
 
-            <LoginForm />
+            <LoginForm
+              prefillEmail={initialQ.confirmEmail || undefined}
+              onEmailChange={setLoginEmailForResend}
+            />
+
+            {checkEmailMessage && (
+              <button
+                type="button"
+                disabled={resendLoading || !canResendConfirmation}
+                onClick={async () => {
+                  setResendLoading(true);
+                  try {
+                    await resendSignupConfirmation(loginEmailForResend.trim());
+                    toast.success('E-mail de confirmation renvoyé. Vérifiez votre boîte.');
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : 'Impossible de renvoyer l’e-mail.');
+                  } finally {
+                    setResendLoading(false);
+                  }
+                }}
+                className="mt-3 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm font-semibold text-zinc-900 shadow-sm transition-all active:scale-[0.98] disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-100 min-h-[48px]"
+              >
+                {resendLoading ? 'Envoi…' : 'Renvoyer l’e-mail de confirmation'}
+              </button>
+            )}
 
             {/* Séparateur */}
             <div className="relative my-1 flex items-center gap-3">
@@ -384,6 +447,7 @@ export const LoginPage: React.FC = () => {
               </a>
             </p>
           </motion.div>
+          </div>
         </div>
       </div>
 

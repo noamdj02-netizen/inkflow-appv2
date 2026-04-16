@@ -15,6 +15,7 @@ function mapAuthNoise(raw: string): string {
   if (
     lower.includes('invalid jwt') ||
     lower.includes('jwt expired') ||
+    lower.includes('unsupported jwt algorithm') ||
     (lower.includes('jwt') && (lower.includes('malformed') || lower.includes('invalid')))
   ) {
     return SESSION_HINT;

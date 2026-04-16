@@ -25,6 +25,8 @@ import {
   mapFlashFromDb,
   mapNotificationFromDb
 } from '../lib/supabaseDashboard';
+import { supabase } from '../lib/supabase';
+import { getCollaboratorStudioByEmail, linkCollaboratorArtistAccountToUser } from '../lib/collaboratorStudio';
 import { pushAppointmentToGoogle, deleteGoogleEvent } from '../lib/googleCalendar';
 import { updateAppBadge } from '../lib/appBadge';
 import { useOptimisticMutation } from './useOptimisticMutation';
@@ -51,6 +53,8 @@ export const useSupabaseDashboard = () => {
   const { user } = useAuth();
   const toast = useToast();
   const [studioId, setStudioId] = useState<string | null>(null);
+  /** Email du propriétaire (ligne inkflow_studios.email) — pour distinguer collaborateur vs patron. */
+  const [studioOwnerEmail, setStudioOwnerEmail] = useState<string | null>(null);
   const [studioSlug, setStudioSlug] = useState<string | null>(null);
   /** Quota import CSV persisté (webhook Stripe) ; undefined = non chargé ; nombre = plafond côté DB (croisé avec la formule plan − count) */
   const [studioCsvImportSlots, setStudioCsvImportSlots] = useState<number | null | undefined>(undefined);
@@ -132,6 +136,7 @@ export const useSupabaseDashboard = () => {
       setSubscriptionStatus(null);
       setTrialEndsAt(null);
       setStudioCsvImportSlots(undefined);
+      setStudioOwnerEmail(null);
       setLastSyncedAt(null);
       setLoading(false);
       initializedRef.current = false;
@@ -142,7 +147,6 @@ export const useSupabaseDashboard = () => {
       setLoading(true);
       try {
         if (useSupabase) {
-          // Use existing studio for this email so changing the studio name doesn't switch to another studio
           const existing = await getStudioByEmail(user.email);
           let sid: string;
           let slug: string;
@@ -156,18 +160,35 @@ export const useSupabaseDashboard = () => {
                 ? undefined
                 : existing.csv_import_slots_remaining,
             );
+            setStudioOwnerEmail(user.email.trim().toLowerCase());
           } else {
-            const created = await ensureStudio(user.email, user.name, user.studioName || 'Mon Studio');
-            sid = created.studioId;
-            slug = created.slug;
-            setSubscriptionStatus('trialing');
-            const refreshed = await getStudioByEmail(user.email);
-            setTrialEndsAt(refreshed?.trial_ends_at ?? null);
-            setStudioCsvImportSlots(
-              refreshed?.csv_import_slots_remaining === undefined
-                ? undefined
-                : refreshed.csv_import_slots_remaining,
-            );
+            const collabStudio = await getCollaboratorStudioByEmail(user.email);
+            if (collabStudio) {
+              sid = collabStudio.id;
+              slug = collabStudio.slug;
+              setSubscriptionStatus(collabStudio.subscription_status ?? 'trialing');
+              setTrialEndsAt(collabStudio.trial_ends_at ?? null);
+              setStudioCsvImportSlots(
+                collabStudio.csv_import_slots_remaining === undefined
+                  ? undefined
+                  : collabStudio.csv_import_slots_remaining,
+              );
+              setStudioOwnerEmail(collabStudio.studioOwnerEmail.trim().toLowerCase());
+              await linkCollaboratorArtistAccountToUser(user.id, user.email);
+            } else {
+              const created = await ensureStudio(user.email, user.name, user.studioName || 'Mon Studio');
+              sid = created.studioId;
+              slug = created.slug;
+              setSubscriptionStatus('trialing');
+              const refreshed = await getStudioByEmail(user.email);
+              setTrialEndsAt(refreshed?.trial_ends_at ?? null);
+              setStudioCsvImportSlots(
+                refreshed?.csv_import_slots_remaining === undefined
+                  ? undefined
+                  : refreshed.csv_import_slots_remaining,
+              );
+              setStudioOwnerEmail(user.email.trim().toLowerCase());
+            }
           }
           setStudioId(sid);
           setStudioSlug(slug);
@@ -199,6 +220,7 @@ export const useSupabaseDashboard = () => {
         if (!initializedRef.current) {
           setStudioId(null);
           setStudioSlug(null);
+          setStudioOwnerEmail(null);
           setStudioCsvImportSlots(undefined);
           setSubscriptionStatus(null);
           setTrialEndsAt(null);
@@ -372,22 +394,28 @@ export const useSupabaseDashboard = () => {
     setStudioSlug(newSlug);
   }, []);
 
-  /** Recharge subscription_status / trial_ends_at depuis la ligne studio (ex. après « fin d’essai »). */
+  /** Recharge subscription_status / trial_ends_at depuis la ligne studio (propriétaire ou collaborateur). */
   const refreshStudioSubscription = useCallback(async () => {
-    if (!user?.email || !useSupabase) return;
+    if (!useSupabase || !studioId) return;
     try {
-      const existing = await getStudioByEmail(user.email);
-      if (existing) {
-        setSubscriptionStatus(existing.subscription_status ?? null);
-        setTrialEndsAt(existing.trial_ends_at ?? null);
-      }
+      const { data, error } = await supabase
+        .from('inkflow_studios')
+        .select('subscription_status, trial_ends_at, csv_import_slots_remaining')
+        .eq('id', studioId)
+        .maybeSingle();
+      if (error || !data) return;
+      setSubscriptionStatus((data as { subscription_status?: string }).subscription_status ?? null);
+      setTrialEndsAt((data as { trial_ends_at?: string | null }).trial_ends_at ?? null);
+      const csv = (data as { csv_import_slots_remaining?: number | null }).csv_import_slots_remaining;
+      setStudioCsvImportSlots(csv === undefined ? undefined : csv);
     } catch {
       /* ignore */
     }
-  }, [user?.email, useSupabase]);
+  }, [useSupabase, studioId]);
 
   return {
     studioId,
+    studioOwnerEmail,
     studioSlug,
     studioCsvImportSlots,
     refreshStudioSlug,

@@ -7,6 +7,7 @@
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { createSupabaseUserClient } from "../_shared/supabaseAuth.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { sendEmail } from "../_shared/resend.ts";
 import { wrapEmailLayout, EMAIL_STYLES, escapeHtml } from "../_shared/emailLayout.ts";
@@ -41,8 +42,8 @@ Deno.serve(async (req: Request) => {
   }
 
   const jwt = authHeader.slice(7);
-  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const { data: authData, error: authErr } = await userClient.auth.getUser(jwt);
+  const userClient = createSupabaseUserClient(SUPABASE_URL, SUPABASE_ANON_KEY, jwt);
+  const { data: authData, error: authErr } = await userClient.auth.getUser();
 
   if (authErr || !authData.user?.email) {
     return new Response(

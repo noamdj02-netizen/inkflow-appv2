@@ -20,8 +20,15 @@ function getAuthErrorMessage(err: unknown): string {
   return 'Une erreur est survenue. Réessayez.';
 }
 
-export const LoginForm: React.FC = () => {
-  const [email, setEmail] = useState('');
+export interface LoginFormProps {
+  /** Préremplissage (ex. e-mail après inscription + nettoyage de l’URL). */
+  prefillEmail?: string;
+  /** Pour « renvoyer l’e-mail de confirmation » depuis la page login. */
+  onEmailChange?: (email: string) => void;
+}
+
+export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChange }) => {
+  const [email, setEmail] = useState(() => prefillEmail?.trim() ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -35,8 +42,15 @@ export const LoginForm: React.FC = () => {
     const emailParam = params.get('email')?.trim();
     if (emailParam && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailParam)) {
       setEmail(emailParam);
+      onEmailChange?.(emailParam);
+      return;
     }
-  }, []);
+    const pre = prefillEmail?.trim();
+    if (pre && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pre)) {
+      setEmail(pre);
+      onEmailChange?.(pre);
+    }
+  }, [prefillEmail, onEmailChange]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +118,11 @@ export const LoginForm: React.FC = () => {
           id="login-email"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setEmail(v);
+            onEmailChange?.(v);
+          }}
           className="
             w-full px-4 py-3.5 min-h-[50px] text-[15px]
             bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800
@@ -164,18 +182,18 @@ export const LoginForm: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Remember / Forgot ── */}
-      <div className="flex items-center justify-between pt-0.5">
-        <label className="flex items-center gap-2 cursor-pointer min-h-[44px]">
+      {/* ── Remember / Forgot (colonne sur très petit écran pour éviter coupure Safari) ── */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-0.5">
+        <label className="flex items-center gap-2 cursor-pointer min-h-[44px] shrink-0">
           <input
             type="checkbox"
-            className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 accent-white"
+            className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 accent-white shrink-0"
           />
           <span className="text-xs text-zinc-500">Se souvenir de moi</span>
         </label>
         <a
           href="/reset-password"
-          className="text-xs text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors min-h-[44px] flex items-center"
+          className="text-xs text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors min-h-[44px] flex items-center sm:justify-end py-1 sm:py-0"
         >
           Mot de passe oublié ?
         </a>

@@ -171,14 +171,14 @@ export const OnboardingEstablishmentStep: React.FC<OnboardingEstablishmentStepPr
 
   return (
     <motion.div
-      className="fixed inset-0 z-[100] flex min-h-screen bg-white dark:bg-black"
+      className="fixed inset-0 z-[100] flex flex-col lg:flex-row min-h-0 h-[100dvh] max-h-[100dvh] overflow-hidden bg-white dark:bg-black"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
       role="dialog"
       aria-labelledby="est-title"
     >
-      <div className="flex-1 flex flex-col min-h-screen min-h-[100dvh] overflow-y-auto">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
         <div className="lg:hidden flex-shrink-0 h-28 sm:h-36 relative overflow-hidden safe-top">
           <img src={heroImg} alt="" className="absolute inset-0 w-full h-full object-cover object-center" loading="eager" />
           <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-black via-transparent to-transparent" />

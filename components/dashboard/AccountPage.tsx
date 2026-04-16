@@ -65,7 +65,7 @@ const Row: React.FC<RowProps> = ({ icon, label, value, onClick, danger, accent, 
       ${danger
         ? 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'
         : accent
-        ? 'text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10'
+        ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10'
         : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/60'
       }
     `}
@@ -76,7 +76,7 @@ const Row: React.FC<RowProps> = ({ icon, label, value, onClick, danger, accent, 
       ${danger
         ? 'bg-red-100 dark:bg-red-500/15 text-red-500 dark:text-red-400'
         : accent
-        ? 'bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400'
+        ? 'bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400'
         : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
       }
     `}>
@@ -88,7 +88,7 @@ const Row: React.FC<RowProps> = ({ icon, label, value, onClick, danger, accent, 
 
     {/* Badge */}
     {badge && (
-      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
+      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400">
         {badge}
       </span>
     )}
@@ -196,7 +196,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           {/* Edit button */}
           <button
             onClick={() => setView('profil')}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-lg hover:bg-amber-400 transition-colors active:scale-95"
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg hover:bg-blue-500 transition-colors active:scale-95"
             aria-label="Modifier le profil"
           >
             <Camera className="w-4 h-4" />
@@ -211,7 +211,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 className="w-20 h-20 rounded-full object-cover ring-4 ring-white dark:ring-zinc-900 shadow"
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center ring-4 ring-white dark:ring-zinc-900 shadow">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center ring-4 ring-white dark:ring-zinc-900 shadow">
                 <span className="text-2xl font-bold text-white">
                   {firstName.slice(0, 1).toUpperCase()}
                 </span>
@@ -236,7 +236,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             ${subscriptionStatus === 'active'
               ? 'bg-green-50 dark:bg-green-500/15 text-green-700 dark:text-green-400'
               : subscriptionStatus === 'trialing'
-              ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400'
+              ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400'
               : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
             }
           `}>
@@ -305,7 +305,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 className="w-16 h-16 rounded-full object-cover ring-2 ring-zinc-200 dark:ring-zinc-700"
               />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
                 <span className="text-xl font-bold text-white">{firstName.slice(0, 1).toUpperCase()}</span>
               </div>
             )}
@@ -316,7 +316,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             )}
             <button
               onClick={onAvatarClick}
-              className="absolute -bottom-1 -right-1 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center shadow hover:bg-amber-400 transition-colors"
+              className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center shadow hover:bg-blue-500 transition-colors"
             >
               <Camera className="w-3 h-3" />
             </button>

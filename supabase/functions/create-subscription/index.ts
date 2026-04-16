@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { createSupabaseUserClient } from "../_shared/supabaseAuth.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { allowRateLimit, clientIpFromRequest } from "../_shared/rateLimit.ts";
 import { resolveAbsoluteSiteBase } from "../_shared/siteUrl.ts";
@@ -87,8 +88,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const { data: userData, error: authErr } = await supabaseUser.auth.getUser(jwt);
+    const supabaseUser = createSupabaseUserClient(SUPABASE_URL, SUPABASE_ANON_KEY, jwt);
+    const { data: userData, error: authErr } = await supabaseUser.auth.getUser();
     const user = userData?.user;
     if (authErr || !user?.id) {
       return new Response(JSON.stringify({ error: "Non authentifié" }), {

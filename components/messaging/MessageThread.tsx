@@ -174,15 +174,15 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({ studioId, thre
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-[var(--bg-primary)]/30">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-5 space-y-4 bg-[var(--bg-primary)]/30">
         {messages.map(msg => (
-          <div key={msg.id} className={`flex ${msg.senderType === 'artist' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[75%] px-4 py-3 rounded-2xl ${
+          <div key={msg.id} className={`flex min-w-0 w-full ${msg.senderType === 'artist' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`min-w-0 max-w-[75%] overflow-hidden px-4 py-3 rounded-2xl ${
               msg.senderType === 'artist'
                 ? 'bg-blue-600 text-white rounded-br-md shadow-sm'
                 : 'bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-primary)] rounded-bl-md'
             }`}>
-              <p className="text-sm leading-relaxed">{msg.content}</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] max-w-full">{msg.content}</p>
               <span className={`text-xs mt-1 block ${msg.senderType === 'artist' ? 'text-white/70' : 'text-[var(--text-tertiary)]'}`}>
                 {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
               </span>

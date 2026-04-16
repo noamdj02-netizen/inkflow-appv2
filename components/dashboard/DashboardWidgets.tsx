@@ -87,7 +87,7 @@ export const WidgetCard: React.FC<{
   };
 
   return (
-    <div className="group relative dashboard-widget-card p-5 min-h-[140px] flex flex-col">
+    <div className="group relative dashboard-widget-card rounded-2xl p-5 min-h-[140px] flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center ${WIDGET_COLORS[widget.type]}`}>
@@ -159,7 +159,7 @@ export const DashboardWidgets: React.FC<DashboardWidgetsProps> = ({ widgets, onW
       {onAddWidget && (
         <button
           onClick={onAddWidget}
-          className="dashboard-widget-card p-5 flex flex-col items-center justify-center min-h-[120px] border-2 border-dashed border-[var(--border)] hover:border-blue-400 hover:bg-blue-500/10 transition-all group"
+          className="dashboard-widget-card rounded-2xl p-5 flex flex-col items-center justify-center min-h-[120px] border-2 border-dashed border-[var(--border)] hover:border-blue-400 hover:bg-blue-500/10 transition-all group"
         >
           <div className="w-12 h-12 rounded-xl bg-blue-100 group-hover:bg-blue-200 dark:bg-blue-500/20 dark:group-hover:bg-blue-500/30 flex items-center justify-center mb-3 transition-colors">
             <Plus className="w-6 h-6 text-blue-600 dark:text-blue-400" />
