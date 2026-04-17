@@ -305,6 +305,28 @@ Deno.serve(async (req: Request) => {
       // (évite le quota Google de 1 req/min sur My Business Account Management API).
       // Force refresh via body.force === true.
       const cached = row.google_business_locations_cache as { name: string; title: string; accountName: string }[] | null;
+      const cachedAtMs = row.google_business_locations_cached_at
+        ? new Date(row.google_business_locations_cached_at as string).getTime()
+        : 0;
+      /** Même avec « Rafraîchir », ne pas rappeler Google si le cache a moins de 70 s (quota ~1 req/min / projet). */
+      const CACHE_MIN_INTERVAL_MS = 70_000;
+      if (
+        force &&
+        Array.isArray(cached) &&
+        cached.length > 0 &&
+        cachedAtMs > 0 &&
+        Date.now() - cachedAtMs < CACHE_MIN_INTERVAL_MS
+      ) {
+        return json({
+          locations: cached,
+          accountsCount: cached.length,
+          cached: true,
+          rateLimited: true,
+          warning:
+            "Quota Google Business (~1 requête/min par projet). La liste en cache a moins d’une minute — réessayez « Rafraîchir » dans un instant.",
+        });
+      }
+
       if (!force && Array.isArray(cached) && cached.length > 0) {
         return json({ locations: cached, accountsCount: cached.length, cached: true });
       }
@@ -321,9 +343,33 @@ Deno.serve(async (req: Request) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!accountsRes.ok) {
-        const body = await accountsRes.text();
-        console.error("[google-business-auth] Accounts API error:", accountsRes.status, body.slice(0, 500));
-        return json({ error: `Accounts API: ${accountsRes.status}`, detail: body.slice(0, 500) }, 502);
+        const errBody = await accountsRes.text();
+        console.error("[google-business-auth] Accounts API error:", accountsRes.status, errBody.slice(0, 500));
+        const is429 = accountsRes.status === 429 ||
+          errBody.includes("RESOURCE_EXHAUSTED") ||
+          errBody.includes("RATE_LIMIT_EXCEEDED");
+        // Quota projet : servir le cache plutôt qu’un 502 (le client affiche la liste + avertissement).
+        if (is429 && Array.isArray(cached) && cached.length > 0) {
+          return json({
+            locations: cached,
+            accountsCount: cached.length,
+            cached: true,
+            rateLimited: true,
+            warning:
+              "Quota Google temporairement atteint (~1 requête/min). Fiches affichées depuis le cache — réessayez dans une minute pour mettre à jour.",
+          });
+        }
+        if (is429) {
+          return json({
+            locations: [],
+            accountsCount: 0,
+            rateLimited: true,
+            warning:
+              "Quota Google Business temporairement atteint (~1 requête/minute pour ce projet). Patientez une minute puis touchez « Rafraîchir la liste ».",
+            errors: [],
+          });
+        }
+        return json({ error: `Accounts API: ${accountsRes.status}`, detail: errBody.slice(0, 500) }, 502);
       }
 
       const accountsBody = await accountsRes.json() as {

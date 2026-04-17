@@ -141,6 +141,9 @@ export interface BookingFormData {
   description: string;
   referenceImages?: File[];
   agreedToDeposit: boolean;
+  /** Flux studio uniquement (nouvelle réservation manuelle) — prix et acompte saisis par le tatoueur */
+  price?: number;
+  deposit?: number;
 }
 
 export type ProjectRequestStatus = 'pending' | 'accepted' | 'confirmed' | 'rejected';

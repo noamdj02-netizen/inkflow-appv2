@@ -102,6 +102,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from 'next-themes';
 import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
+import { isGoogleBusinessOAuthUiEnabled } from '../../lib/googleBusinessOAuth';
 import { LANDING_PRICING_URL, getVitrineShareUrl } from '../../lib/urls';
 import { safeJsonParse } from '../../lib/utils';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
@@ -255,6 +256,7 @@ export const DashboardPro: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
   const { resolvedTheme } = useTheme();
   const toast = useToast();
+  const googleBusinessOAuthUi = isGoogleBusinessOAuthUiEnabled();
   /** Thème effectif — fallback DOM pour mobile/PWA (resolvedTheme peut être undefined avant hydration) */
   const effectiveTheme = resolvedTheme ?? (typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null : null) ?? 'light';
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
@@ -422,6 +424,8 @@ export const DashboardPro: React.FC = () => {
   const [googleBusinessNeedsLocationSelection, setGoogleBusinessNeedsLocationSelection] = useState(false);
   const [googleBusinessLocations, setGoogleBusinessLocations] = useState<{ name: string; title: string; accountName: string }[]>([]);
   const [loadingGoogleBusinessLocations, setLoadingGoogleBusinessLocations] = useState(false);
+  /** Message d’aide après chargement (liste vide ou erreur) — affiché dans Vitrine / Établissement. */
+  const [googleBusinessLocationsHint, setGoogleBusinessLocationsHint] = useState<string | null>(null);
   // Modal de confirmation après OAuth Google Business réussi
   const [showGoogleBusinessSuccess, setShowGoogleBusinessSuccess] = useState(false);
   const [generalSaving, setGeneralSaving] = useState(false);
@@ -616,15 +620,39 @@ export const DashboardPro: React.FC = () => {
     }
   }, [studioId, useSupabase]);
 
-  // Charge les fiches dispo — appelé uniquement quand l'UI de sélection est visible
-  const loadGoogleBusinessLocations = useCallback(async () => {
+  // Charge les fiches dispo — appelé quand l’UI de sélection est visible ; `force` ignore le cache Supabase.
+  const loadGoogleBusinessLocations = useCallback(async (force?: boolean) => {
     if (!studioId) return;
     setLoadingGoogleBusinessLocations(true);
+    setGoogleBusinessLocationsHint(null);
     try {
-      const locs = await listGoogleBusinessLocations(studioId);
-      setGoogleBusinessLocations(locs);
-    } catch { /* silencieux */ }
-    setLoadingGoogleBusinessLocations(false);
+      const result = await listGoogleBusinessLocations(studioId, Boolean(force));
+      setGoogleBusinessLocations(result.locations);
+      if (result.warning) {
+        setGoogleBusinessLocationsHint(result.warning);
+      } else if (result.locations.length === 0) {
+        if (result.fetchErrors?.length) {
+          setGoogleBusinessLocationsHint(result.fetchErrors.join('\n'));
+        } else if (result.accountsCount === 0) {
+          setGoogleBusinessLocationsHint(
+            'Aucun compte Google Business n’est associé à ce compte Google. Utilisez le compte qui gère votre fiche « Google Maps / Profil d’établissement », ou renseignez un Place Google dans Paramètres > Établissement.'
+          );
+        } else {
+          setGoogleBusinessLocationsHint(
+            'Aucune fiche d’établissement n’a été renvoyée. Vérifiez les droits sur Google Business Profile, puis touchez « Rafraîchir la liste » (nouvel appel à Google).'
+          );
+        }
+      } else {
+        setGoogleBusinessLocationsHint(null);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setGoogleBusinessLocationsHint(msg);
+      toast.error(msg.length > 160 ? `${msg.slice(0, 157)}…` : msg);
+    } finally {
+      setLoadingGoogleBusinessLocations(false);
+    }
+    // toast volontairement omis des deps (évite re-création en boucle si le contexte change à chaque rendu).
   }, [studioId]);
 
   useEffect(() => {
@@ -645,11 +673,13 @@ export const DashboardPro: React.FC = () => {
     setGoogleBusinessLocationName(null);
     setGoogleBusinessNeedsLocationSelection(false);
     setGoogleBusinessLocations([]);
+    setGoogleBusinessLocationsHint(null);
   }, [studioId]);
 
   const handleSelectGoogleBusinessLocation = useCallback(async (locationName: string) => {
     if (!studioId) return;
     await saveGoogleBusinessLocation(studioId, locationName);
+    setGoogleBusinessLocationsHint(null);
     await refreshGoogleBusinessStatus();
   }, [studioId, refreshGoogleBusinessStatus]);
 
@@ -1294,18 +1324,35 @@ export const DashboardPro: React.FC = () => {
   };
 
   const handleNewBooking = (data: BookingFormData) => {
+    const priceFromForm = typeof data.price === 'number' && !Number.isNaN(data.price) ? Math.max(0, data.price) : undefined;
+    const depositFromForm = typeof data.deposit === 'number' && !Number.isNaN(data.deposit) ? Math.max(0, data.deposit) : undefined;
+    const resolvedPrice =
+      priceFromForm !== undefined
+        ? priceFromForm
+        : selectedFlash
+          ? selectedFlash.price
+          : 0;
+    const resolvedDeposit =
+      depositFromForm !== undefined
+        ? depositFromForm
+        : selectedFlash
+          ? (typeof selectedFlash.depositAmount === 'number' && !Number.isNaN(selectedFlash.depositAmount)
+              ? selectedFlash.depositAmount
+              : Math.round(selectedFlash.price * 0.3))
+          : 0;
+
     const newAppointment: Appointment = {
       id: `a${Date.now()}`,
       clientId: 'new',
       clientName: data.clientName,
       clientEmail: data.clientEmail,
-      clientPhone: data.clientPhone,
+      clientPhone: data.clientPhone?.trim() || '',
       date: data.date,
       time: data.time,
       service: data.tattooType === 'flash' && selectedFlash ? `Flash - ${selectedFlash.title}` : data.description,
       duration: selectedFlash ? selectedFlash.estimatedDuration : 60,
-      price: selectedFlash ? selectedFlash.price : 0,
-      deposit: selectedFlash ? selectedFlash.depositAmount : 50,
+      price: resolvedPrice,
+      deposit: resolvedDeposit,
       depositPaid: false,
       status: 'pending',
       tattooType: data.tattooType,
@@ -3125,10 +3172,11 @@ export const DashboardPro: React.FC = () => {
                     googleBusinessNeedsLocationSelection={googleBusinessNeedsLocationSelection}
                     googleBusinessLocations={googleBusinessLocations}
                     loadingGoogleBusinessLocations={loadingGoogleBusinessLocations}
-                    onConnectGoogleBusiness={studioId && useSupabase ? handleConnectGoogleBusiness : undefined}
-                    onDisconnectGoogleBusiness={studioId && useSupabase ? handleDisconnectGoogleBusiness : undefined}
-                    onSelectGoogleBusinessLocation={studioId && useSupabase ? handleSelectGoogleBusinessLocation : undefined}
-                    onLoadGoogleBusinessLocations={studioId && useSupabase ? loadGoogleBusinessLocations : undefined}
+                    googleBusinessLocationsHint={googleBusinessLocationsHint}
+                    onConnectGoogleBusiness={studioId && useSupabase && googleBusinessOAuthUi ? handleConnectGoogleBusiness : undefined}
+                    onDisconnectGoogleBusiness={studioId && useSupabase && (googleBusinessOAuthUi || googleBusinessConnected) ? handleDisconnectGoogleBusiness : undefined}
+                    onSelectGoogleBusinessLocation={studioId && useSupabase && googleBusinessOAuthUi ? handleSelectGoogleBusinessLocation : undefined}
+                    onLoadGoogleBusinessLocations={studioId && useSupabase && googleBusinessOAuthUi ? loadGoogleBusinessLocations : undefined}
                   />
                 ) : (
                   <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 max-w-xl">
@@ -3233,10 +3281,11 @@ export const DashboardPro: React.FC = () => {
                 googleBusinessNeedsLocationSelection={googleBusinessNeedsLocationSelection}
                 googleBusinessLocations={googleBusinessLocations}
                 loadingGoogleBusinessLocations={loadingGoogleBusinessLocations}
-                onConnectGoogleBusiness={studioId && useSupabase ? handleConnectGoogleBusiness : undefined}
-                onDisconnectGoogleBusiness={studioId && useSupabase ? handleDisconnectGoogleBusiness : undefined}
-                onSelectGoogleBusinessLocation={studioId && useSupabase ? handleSelectGoogleBusinessLocation : undefined}
-                onLoadGoogleBusinessLocations={studioId && useSupabase ? loadGoogleBusinessLocations : undefined}
+                googleBusinessLocationsHint={googleBusinessLocationsHint}
+                onConnectGoogleBusiness={studioId && useSupabase && googleBusinessOAuthUi ? handleConnectGoogleBusiness : undefined}
+                onDisconnectGoogleBusiness={studioId && useSupabase && (googleBusinessOAuthUi || googleBusinessConnected) ? handleDisconnectGoogleBusiness : undefined}
+                onSelectGoogleBusinessLocation={studioId && useSupabase && googleBusinessOAuthUi ? handleSelectGoogleBusinessLocation : undefined}
+                onLoadGoogleBusinessLocations={studioId && useSupabase && googleBusinessOAuthUi ? loadGoogleBusinessLocations : undefined}
               />
             </div>
             </div>
@@ -3348,9 +3397,19 @@ export const DashboardPro: React.FC = () => {
       {showBookingModal && (
         <Modal isOpen={showBookingModal} onClose={() => { setShowBookingModal(false); setSelectedFlash(null); }} title="Nouvelle réservation" size="lg">
           <BookingForm
+            studioManualMode
             onSubmit={handleNewBooking}
             onCancel={() => { setShowBookingModal(false); setSelectedFlash(null); }}
-            preselectedFlash={selectedFlash ? { id: selectedFlash.id, title: selectedFlash.title, price: selectedFlash.price } : undefined}
+            preselectedFlash={
+              selectedFlash
+                ? {
+                    id: selectedFlash.id,
+                    title: selectedFlash.title,
+                    price: selectedFlash.price,
+                    depositAmount: selectedFlash.depositAmount,
+                  }
+                : undefined
+            }
           />
         </Modal>
       )}

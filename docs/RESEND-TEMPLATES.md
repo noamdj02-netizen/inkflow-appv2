@@ -45,6 +45,8 @@ const result = await sendWithTemplate({
 
 Si tu préfères garder le HTML généré par `emailLayout.ts`, continue d’utiliser `sendEmail()` avec le HTML construit en Edge Function ; les templates sont optionnels.
 
+**DA (2026)** : le HTML transactionnel suit la charte « InkFlow Black » (`supabase/functions/_shared/emailLayout.ts`) — fond `#eae7e2`, wordmark INKFLOW, CTA noir / texte crème, aligné sur `emails/EmailBase.tsx` et les 12 variantes dans `emails/templates/index.tsx`.
+
 ## Référence API Resend
 
 - [Créer un template](https://resend.com/docs/api-reference/templates/create-template)

@@ -22,6 +22,8 @@ import {
   Link2,
   Link2Off,
   Loader2,
+  RefreshCw,
+  Info,
 } from 'lucide-react';
 import { VitrineLinkButton } from '../dashboard/VitrineLinkButton';
 import { getVitrineShareUrl } from '../../lib/urls';
@@ -31,6 +33,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useAutoSave } from '../../hooks/useAutoSave';
 import type { VitrineData, VitrineService, VitrineArtist, VitrineTestimonial, VitrinePortfolioItem, VitrineFlashDesign, VitrineFaq, VitrineWhyChooseUs } from '../../types/vitrine';
 import { getVitrineData, getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
+import { isGoogleBusinessOAuthUiEnabled } from '../../lib/googleBusinessOAuth';
 
 const ICON_OPTIONS = [
   { value: 'sparkles', label: 'Étincelles' },
@@ -61,10 +64,13 @@ interface VitrineSettingsProps {
   googleBusinessNeedsLocationSelection?: boolean;
   googleBusinessLocations?: { name: string; title: string; accountName: string }[];
   loadingGoogleBusinessLocations?: boolean;
+  /** Explication si la liste des fiches est vide ou erreur API (rempli par le parent). */
+  googleBusinessLocationsHint?: string | null;
   onConnectGoogleBusiness?: () => Promise<void>;
   onDisconnectGoogleBusiness?: () => Promise<void>;
   onSelectGoogleBusinessLocation?: (locationName: string) => Promise<void>;
-  onLoadGoogleBusinessLocations?: () => Promise<void>;
+  /** `force=true` contourne le cache Supabase (bouton Rafraîchir). */
+  onLoadGoogleBusinessLocations?: (force?: boolean) => Promise<void>;
 }
 
 export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
@@ -74,6 +80,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
   googleBusinessNeedsLocationSelection = false,
   googleBusinessLocations = [],
   loadingGoogleBusinessLocations = false,
+  googleBusinessLocationsHint = null,
   onConnectGoogleBusiness,
   onDisconnectGoogleBusiness,
   onSelectGoogleBusinessLocation,
@@ -87,19 +94,26 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
   const [connectingBusiness, setConnectingBusiness] = useState(false);
   const [disconnectingBusiness, setDisconnectingBusiness] = useState(false);
   const initialLoadRef = useRef(true);
+  const showGoogleBusinessOAuth = isGoogleBusinessOAuthUiEnabled();
 
   // Charge les fiches dispo seulement quand le sélecteur de localisation est visible
   useEffect(() => {
+    if (!showGoogleBusinessOAuth) return;
     if (
       activeSection === 'testimonials' &&
       googleBusinessNeedsLocationSelection &&
       googleBusinessLocations.length === 0 &&
       onLoadGoogleBusinessLocations
     ) {
-      onLoadGoogleBusinessLocations().catch(() => {});
+      onLoadGoogleBusinessLocations(false).catch(() => {});
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSection, googleBusinessNeedsLocationSelection]);
+  }, [
+    activeSection,
+    googleBusinessNeedsLocationSelection,
+    googleBusinessLocations.length,
+    onLoadGoogleBusinessLocations,
+    showGoogleBusinessOAuth,
+  ]);
   const dirtyRef = useRef(false);
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -607,7 +621,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
           <div className="space-y-6">
             <h3 className="font-bold text-lg">Avis clients</h3>
 
-            {/* Google Business OAuth connection */}
+            {/* Avis Google : OAuth Business Profile (optionnel) ou Place ID + témoignages */}
             <div className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] space-y-3">
               <div className="flex items-center gap-2 mb-1">
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -616,100 +630,165 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                <label className="block text-sm font-semibold text-[var(--text-primary)]">Avis Google (compte connecté)</label>
+                <label className="block text-sm font-semibold text-[var(--text-primary)]">Avis Google</label>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Connectez votre compte Google Business pour afficher vos vrais avis directement sur votre page vitrine.
-              </p>
 
-              {googleBusinessConnected ? (
+              {!showGoogleBusinessOAuth ? (
                 <div className="space-y-3">
-                  {/* Stripe-style connected row */}
-                  <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* Google logo */}
-                      <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                      </svg>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-[var(--text-primary)]">Google Business</span>
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                            Connecté
-                          </span>
-                        </div>
-                        {googleBusinessLocationName ? (
-                          <p className="text-[11px] text-zinc-400 truncate mt-0.5" title={googleBusinessLocationName}>
-                            {googleBusinessLocationName.split('/').slice(-1)[0] || googleBusinessLocationName}
-                          </p>
-                        ) : (
-                          <p className="text-[11px] text-amber-400 mt-0.5">Choisissez une fiche ci-dessous</p>
-                        )}
-                      </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Parcours recommandé tant que le projet Google Cloud n’est pas approuvé pour l’API Business Profile : liez votre fiche via l’URL Maps ou le{' '}
+                    <strong className="text-zinc-700 dark:text-zinc-300">Place ID</strong> dans{' '}
+                    <strong className="text-zinc-700 dark:text-zinc-300">Paramètres → Établissement</strong>
+                    {' '}(avis publics via Google Places), puis complétez avec les témoignages manuels ci-dessous.
+                  </p>
+                  <div className="flex gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/20 px-3 py-2.5">
+                    <Info className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" aria-hidden />
+                    <div className="text-[11px] sm:text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed space-y-1.5">
+                      <p>
+                        La connexion « compte Google Business » (tous les avis, API Account Management) est désactivée côté app. Pour la réactiver après validation Google : variable{' '}
+                        <code className="font-mono text-[10px] text-zinc-800 dark:text-zinc-200">VITE_GOOGLE_BUSINESS_OAUTH_ENABLED=true</code>
+                        {' '}sur Vercel ou dans <code className="font-mono text-[10px]">.env.local</code>.
+                      </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!onDisconnectGoogleBusiness) return;
-                        setDisconnectingBusiness(true);
-                        try { await onDisconnectGoogleBusiness(); toast.success('Compte Google déconnecté'); }
-                        catch { toast.error('Impossible de déconnecter'); }
-                        finally { setDisconnectingBusiness(false); }
-                      }}
-                      disabled={disconnectingBusiness || !onDisconnectGoogleBusiness}
-                      className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-red-400 border border-red-900/40 hover:bg-red-950/30 disabled:opacity-50 transition-all min-h-[36px]"
-                    >
-                      {disconnectingBusiness ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2Off className="w-3.5 h-3.5" />}
-                      Déconnecter
-                    </button>
                   </div>
-
-                  {googleBusinessNeedsLocationSelection && (
-                    <div>
-                      <p className="text-xs text-zinc-400 mb-2">Quelle fiche correspond à votre vitrine ?</p>
-                      {loadingGoogleBusinessLocations ? (
-                        <div className="flex items-center gap-2 text-xs text-zinc-400">
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Chargement…
-                        </div>
-                      ) : (
-                        <ul className="rounded-xl border border-[var(--border)] divide-y divide-zinc-800 overflow-hidden">
-                          {googleBusinessLocations.map((loc) => (
-                            <li key={loc.name}>
-                              <button
-                                type="button"
-                                onClick={() => onSelectGoogleBusinessLocation?.(loc.name)}
-                                className="w-full text-left px-4 py-3 hover:bg-zinc-800/60 transition-all active:scale-[0.99]"
-                              >
-                                <p className="text-sm font-medium text-[var(--text-primary)]">{loc.title}</p>
-                                <p className="text-xs text-zinc-400 mt-0.5">{loc.accountName}</p>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                  {googleBusinessConnected && (
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">Compte encore lié côté serveur</p>
+                        <p className="text-[11px] text-amber-500/90 dark:text-amber-400/90 mt-0.5">
+                          La synchro OAuth n’est pas utilisée avec la config actuelle. Déconnectez pour nettoyer, ou activez l’OAuth comme ci-dessus.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!onDisconnectGoogleBusiness) return;
+                          setDisconnectingBusiness(true);
+                          try { await onDisconnectGoogleBusiness(); toast.success('Compte Google déconnecté'); }
+                          catch { toast.error('Impossible de déconnecter'); }
+                          finally { setDisconnectingBusiness(false); }
+                        }}
+                        disabled={disconnectingBusiness || !onDisconnectGoogleBusiness}
+                        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-red-400 border border-red-900/40 hover:bg-red-950/30 disabled:opacity-50 transition-all min-h-[36px]"
+                      >
+                        {disconnectingBusiness ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2Off className="w-3.5 h-3.5" />}
+                        Déconnecter
+                      </button>
                     </div>
                   )}
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!onConnectGoogleBusiness) return;
-                    setConnectingBusiness(true);
-                    try { await onConnectGoogleBusiness(); }
-                    catch (err) { toast.error((err as Error).message || 'Impossible de lancer la connexion'); setConnectingBusiness(false); }
-                  }}
-                  disabled={connectingBusiness || !onConnectGoogleBusiness}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
-                >
-                  {connectingBusiness
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Connexion…</>
-                    : <><Link2 className="w-4 h-4" /> Connecter Google Business</>}
-                </button>
+                <>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Connectez votre compte Google Business pour afficher vos avis Google sur la vitrine (API Google, soumise à quotas et validation Cloud).
+                  </p>
+                  {googleBusinessConnected ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                          </svg>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-[var(--text-primary)]">Google Business</span>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                                Connecté
+                              </span>
+                            </div>
+                            {googleBusinessLocationName ? (
+                              <p className="text-[11px] text-zinc-400 truncate mt-0.5" title={googleBusinessLocationName}>
+                                {googleBusinessLocationName.split('/').slice(-1)[0] || googleBusinessLocationName}
+                              </p>
+                            ) : (
+                              <p className="text-[11px] text-amber-400 mt-0.5">Choisissez une fiche ci-dessous</p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!onDisconnectGoogleBusiness) return;
+                            setDisconnectingBusiness(true);
+                            try { await onDisconnectGoogleBusiness(); toast.success('Compte Google déconnecté'); }
+                            catch { toast.error('Impossible de déconnecter'); }
+                            finally { setDisconnectingBusiness(false); }
+                          }}
+                          disabled={disconnectingBusiness || !onDisconnectGoogleBusiness}
+                          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-red-400 border border-red-900/40 hover:bg-red-950/30 disabled:opacity-50 transition-all min-h-[36px]"
+                        >
+                          {disconnectingBusiness ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2Off className="w-3.5 h-3.5" />}
+                          Déconnecter
+                        </button>
+                      </div>
+
+                      {googleBusinessNeedsLocationSelection && (
+                        <div>
+                          <p className="text-xs text-zinc-400 mb-2">Quelle fiche correspond à votre vitrine ?</p>
+                          {loadingGoogleBusinessLocations ? (
+                            <div className="flex items-center gap-2 text-xs text-zinc-400">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Chargement…
+                            </div>
+                          ) : googleBusinessLocations.length === 0 ? (
+                            <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3 space-y-3">
+                              <p className="text-sm font-medium text-[var(--text-primary)]">Aucune fiche trouvée</p>
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                                {googleBusinessLocationsHint ||
+                                  'Si votre établissement est bien sur Google Maps, vérifiez que vous avez connecté le bon compte Google, ou renseignez un Place ID dans Paramètres > Établissement.'}
+                              </p>
+                              {onLoadGoogleBusinessLocations && (
+                                <button
+                                  type="button"
+                                  onClick={() => void onLoadGoogleBusinessLocations(true)}
+                                  disabled={loadingGoogleBusinessLocations}
+                                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-zinc-800/50 disabled:opacity-50 transition-all active:scale-[0.98]"
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                                  Rafraîchir la liste
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <ul className="rounded-xl border border-[var(--border)] divide-y divide-zinc-800 overflow-hidden">
+                              {googleBusinessLocations.map((loc) => (
+                                <li key={loc.name}>
+                                  <button
+                                    type="button"
+                                    onClick={() => onSelectGoogleBusinessLocation?.(loc.name)}
+                                    className="w-full text-left px-4 py-3 hover:bg-zinc-800/60 transition-all active:scale-[0.99]"
+                                  >
+                                    <p className="text-sm font-medium text-[var(--text-primary)]">{loc.title}</p>
+                                    <p className="text-xs text-zinc-400 mt-0.5">{loc.accountName}</p>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!onConnectGoogleBusiness) return;
+                        setConnectingBusiness(true);
+                        try { await onConnectGoogleBusiness(); }
+                        catch (err) { toast.error((err as Error).message || 'Impossible de lancer la connexion'); setConnectingBusiness(false); }
+                      }}
+                      disabled={connectingBusiness || !onConnectGoogleBusiness}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-zinc-800 disabled:opacity-50 transition-all active:scale-[0.98]"
+                    >
+                      {connectingBusiness
+                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Connexion…</>
+                        : <><Link2 className="w-4 h-4" /> Connecter Google Business</>}
+                    </button>
+                  )}
+                </>
               )}
             </div>
             {data.testimonials.map((t, idx) => (

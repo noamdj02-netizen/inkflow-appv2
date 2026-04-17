@@ -13,6 +13,7 @@ import type {
   GoogleBusinessReview,
   GoogleBusinessReviewsPayload,
   GoogleBusinessStatus,
+  GoogleBusinessLocationsResult,
 } from '../types/googlePlaces';
 
 function friendlyError(_fn: string, raw: string): string {
@@ -75,6 +76,37 @@ async function ensureFreshAuthForEdge(): Promise<void> {
 function isJwtRejectedMessage(msg: string): boolean {
   const lower = msg.toLowerCase();
   return lower.includes('invalid jwt') || lower.includes('jwt expired');
+}
+
+/** Messages toast pour les échecs `invoke` vers `google-business-auth` (sans confondre avec « projet non configuré »). */
+function formatGoogleBusinessAuthInvokeError(raw: string): string {
+  const lower = raw.toLowerCase();
+  if (isJwtRejectedMessage(raw) || lower.includes('missing authorization')) {
+    return 'Session expirée ou invalide. Déconnectez-vous, reconnectez-vous à Inkflow, puis réessayez.';
+  }
+  if (
+    lower.includes('401') ||
+    lower.includes('unauthorized') ||
+    lower.includes('non-2xx') ||
+    lower.includes('403') ||
+    lower.includes('forbidden')
+  ) {
+    return 'Accès refusé. Reconnectez-vous à Inkflow ou reconnectez Google Business (Paramètres > Vitrine ou Établissement). Si le problème continue, vérifiez que la fonction edge `google-business-auth` est déployée sur Supabase.';
+  }
+  if (
+    lower.includes('failed to fetch') ||
+    lower.includes('network') ||
+    lower.includes('functionsrelayerror') ||
+    lower.includes('functionsfetcherror')
+  ) {
+    return 'Connexion au serveur impossible. Vérifiez le réseau ou réessayez plus tard.';
+  }
+  return raw.length > 200 ? `${raw.slice(0, 197)}…` : raw;
+}
+
+/** Export pour alignement avec `formatGooglePlacesInvokeError` (toasts / UI). */
+export function formatGoogleBusinessAuthError(raw: string): string {
+  return formatGoogleBusinessAuthInvokeError(raw);
 }
 
 /**
@@ -145,14 +177,24 @@ async function invokeGoogleBusinessJwt<T>(
     await supabase.auth.refreshSession().catch(() => {});
     res = await supabase.functions.invoke<T>('google-business-auth', { body });
   }
-  if (res.error) {
-    const msg = res.error.message ?? '';
-    const lower = msg.toLowerCase();
-    if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('non-2xx')) {
-      return { data: null, error: { message: 'Google Business non configure sur ce projet. Contactez le support Inkflow.' } };
-    }
+  // En 4xx/5xx, Supabase peut quand même remplir `data` avec le JSON de l’Edge Function (ex. `{ error: "Non connecté" }`).
+  const payload = res.data as { error?: unknown } | null | undefined;
+  if (
+    res.error &&
+    payload &&
+    typeof payload === 'object' &&
+    typeof payload.error === 'string' &&
+    payload.error.trim().length > 0
+  ) {
+    return { data: res.data as T, error: null };
   }
-  return { data: res.data ?? null, error: res.error as { message: string } | null };
+  if (res.error) {
+    return {
+      data: res.data ?? null,
+      error: { message: formatGoogleBusinessAuthInvokeError(res.error.message ?? '') },
+    };
+  }
+  return { data: res.data ?? null, error: null };
 }
 
 /** Genere l'URL OAuth Google Business et redirige l'utilisateur. */
@@ -184,16 +226,32 @@ export async function getGoogleBusinessStatus(studioId: string): Promise<GoogleB
 export async function listGoogleBusinessLocations(
   studioId: string,
   force = false
-): Promise<{ name: string; title: string; accountName: string }[]> {
+): Promise<GoogleBusinessLocationsResult> {
   const { data, error } = await invokeGoogleBusinessJwt<{
     locations?: { name: string; title: string; accountName: string }[];
+    errors?: string[];
+    accountsCount?: number;
     cached?: boolean;
+    rateLimited?: boolean;
+    warning?: string;
     autoSelected?: string | null;
     error?: string;
+    detail?: string;
   }>({ action: 'locations', studioId, force });
   if (error) throw new Error(error.message);
-  if (data?.error) throw new Error(data.error);
-  return data?.locations ?? [];
+  if (data?.error) {
+    const detail = data.detail != null ? String(data.detail).slice(0, 400) : '';
+    throw new Error(detail ? `${data.error}: ${detail}` : data.error);
+  }
+  return {
+    locations: Array.isArray(data?.locations) ? data.locations : [],
+    fetchErrors:
+      Array.isArray(data?.errors) && data.errors.length > 0 ? data.errors : undefined,
+    accountsCount: typeof data?.accountsCount === 'number' ? data.accountsCount : undefined,
+    cached: Boolean(data?.cached),
+    rateLimited: Boolean(data?.rateLimited),
+    warning: typeof data?.warning === 'string' && data.warning.trim() ? data.warning : undefined,
+  };
 }
 
 /** Enregistre la fiche Google Business choisie. */
