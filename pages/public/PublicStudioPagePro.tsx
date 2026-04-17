@@ -519,7 +519,9 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     return <StudioThemeRouter data={studio} fallback={null} googleReviews={googleReviewsPayload} />;
   }
 
-  const studioName = studioDisplay.name || studioSlug.replace(/-/g, ' ');
+  const studioName = studioDisplay.name?.trim() || studioSlug.replace(/-/g, ' ');
+  const heroCover = (studioDisplay.coverImage || '').trim();
+  const heroAvatar = (studioDisplay.avatar || '').trim();
   const studioSchema = createTattooStudioSchema({
     name: studioDisplay.name,
     description: studioDisplay.description || studioDisplay.tagline,
@@ -540,7 +542,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         title={`${studioName} | Tatoueur & Prise de RDV - InkFlow`}
         description={`Découvrez les flashs et prenez rendez-vous avec ${studioName}. Réservez votre prochain tatouage facilement en ligne.`}
         canonical={`/studio/${studioSlug}`}
-        ogImage={studioDisplay.coverImage || studioDisplay.avatar}
+        ogImage={heroCover || heroAvatar}
         ogImageAlt={`Vitrine ${studioName} — studio de tatouage sur InkFlow`}
         keywords={`${studioName}, tatoueur, réservation tatouage, studio tattoo, InkFlow`}
         schema={studioSchema}
@@ -557,9 +559,11 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 </a>
               )}
               <Logo />
-              <div className="hidden sm:block">
-                <div className="font-bold text-lg text-black">{studioDisplay.name}</div>
-                <div className="text-xs text-neutral-700">{studioDisplay.tagline}</div>
+              <div className="hidden sm:block min-w-0">
+                <div className="font-bold text-lg text-black truncate">{studioDisplay.name || studioName}</div>
+                {studioDisplay.tagline?.trim() ? (
+                  <div className="text-xs text-neutral-700 truncate">{studioDisplay.tagline}</div>
+                ) : null}
               </div>
             </div>
             <nav className="hidden lg:flex items-center gap-8">
@@ -613,34 +617,54 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
       {/* Hero Cover */}
       <div className="relative h-[65vh] sm:h-[70vh] md:h-[80vh] overflow-hidden mt-16 sm:mt-20" data-joyride="vitrine-hero">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${studioDisplay.coverImage})` }} />
+        <div
+          className={`absolute inset-0 bg-cover bg-center ${heroCover ? '' : 'bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900'}`}
+          style={heroCover ? { backgroundImage: `url(${heroCover})` } : undefined}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-12 safe-bottom">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end gap-4 sm:gap-8">
               <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6 min-w-0">
-                <img src={studioDisplay.avatar} alt={studioDisplay.name} className="w-20 h-20 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white shadow-2xl object-cover flex-shrink-0" />
+                {heroAvatar ? (
+                  <img src={heroAvatar} alt="" className="w-20 h-20 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white shadow-2xl object-cover flex-shrink-0" />
+                ) : (
+                  <div
+                    className="w-20 h-20 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white/40 shadow-2xl flex-shrink-0 flex items-center justify-center bg-white/10 text-white text-xl sm:text-3xl md:text-4xl font-bold"
+                    aria-hidden
+                  >
+                    {studioName.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
                 <div className="flex-1 text-white pb-0 sm:pb-2 min-w-0">
                   <div className="inline-flex items-center gap-2 bg-green-500/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4">
                     <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse" />
                     {isOpen() ? 'Ouvert maintenant' : 'Fermé'}
                   </div>
-                  <h1 className="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-2 sm:mb-3 drop-shadow-lg leading-tight">{studioDisplay.name}</h1>
-                  <p className="text-base sm:text-xl md:text-2xl opacity-95 mb-4 sm:mb-6 drop-shadow">{studioDisplay.tagline}</p>
+                  <h1 className="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-2 sm:mb-3 drop-shadow-lg leading-tight">{studioDisplay.name?.trim() || studioName}</h1>
+                  {studioDisplay.tagline?.trim() ? (
+                    <p className="text-base sm:text-xl md:text-2xl opacity-95 mb-4 sm:mb-6 drop-shadow">{studioDisplay.tagline}</p>
+                  ) : null}
                   <div className="flex flex-wrap gap-2 sm:gap-3">
-                    <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 text-sm sm:text-base">
-                      <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-yellow-400 text-yellow-400 flex-shrink-0" />
-                      <span className="font-bold">{studioDisplay.rating}</span>
-                      <span className="opacity-90">• {studioDisplay.reviewCount} avis</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 text-sm sm:text-base">
-                      <MapPin className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                      <span className="truncate max-w-[140px] sm:max-w-none">{studioDisplay.address || 'Paris 11e'}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 text-sm sm:text-base">
-                      <Award className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                      <span>{studioDisplay.yearsExperience} ans d'expertise</span>
-                    </div>
+                    {(studioDisplay.rating > 0 || studioDisplay.reviewCount > 0) && (
+                      <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 text-sm sm:text-base">
+                        <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-yellow-400 text-yellow-400 flex-shrink-0" />
+                        <span className="font-bold">{studioDisplay.rating}</span>
+                        <span className="opacity-90">• {studioDisplay.reviewCount} avis</span>
+                      </div>
+                    )}
+                    {studioDisplay.address?.trim() ? (
+                      <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 text-sm sm:text-base">
+                        <MapPin className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                        <span className="truncate max-w-[140px] sm:max-w-none">{studioDisplay.address}</span>
+                      </div>
+                    ) : null}
+                    {studioDisplay.yearsExperience > 0 ? (
+                      <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 text-sm sm:text-base">
+                        <Award className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                        <span>{studioDisplay.yearsExperience} ans d&apos;expertise</span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>

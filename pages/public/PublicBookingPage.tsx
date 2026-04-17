@@ -151,7 +151,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
   const studio = studioInfo ?? { name: studioSlug, avatar: '', coverImage: '' };
 
   return (
-    <div className="landing-scroll min-h-screen bg-ink-bg">
+    <div className="book-public-root bg-ink-bg">
       <SEO
         title={`Réserver chez ${studio.name}`}
         description={`Prenez rendez-vous en ligne chez ${studio.name}. Choisissez la date, décrivez votre projet et réglez l'acompte en toute sécurité.`}
@@ -161,6 +161,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         keywords={`réservation tatouage, ${studio.name}, RDV tattoo, acompte tatouage`}
       />
 
+      <div className="book-public-scroll">
       {studio.coverImage ? (
         <div className="relative w-full h-36 sm:h-44 overflow-hidden bg-zinc-200">
           <img
@@ -174,19 +175,6 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
           />
         </div>
       ) : null}
-
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-ink-surface/95 backdrop-blur-sm border-b border-ink-border safe-top">
-        <div className="max-w-md mx-auto px-4 py-3">
-          <a
-            href={`/studio/${studioSlug}`}
-            className="inline-flex items-center gap-2 text-ink-muted hover:text-ink-text font-medium text-sm transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" strokeWidth={1.5} />
-            Retour au studio
-          </a>
-        </div>
-      </header>
 
       {showPaymentsOfflineBanner && (
         <div
@@ -206,7 +194,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         </div>
       )}
 
-      <main className="max-w-md mx-auto px-4 pb-[260px] sm:pb-[220px]">
+      <main className="max-w-md mx-auto px-4 pb-8 sm:pb-10">
         {/* En-tête Tatoueur */}
         <section className="pt-8 pb-6 text-center">
           <div className="w-20 h-20 mx-auto rounded-full overflow-hidden bg-zinc-200 border-2 border-white shadow-lg ring-2 ring-zinc-100">
@@ -227,13 +215,16 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               : 'Réservation & Acompte'}
           </p>
           <span
-            className={`inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full text-xs font-medium ${
+            className={`inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full text-xs font-medium border ${
               showPaymentsOfflineBanner
-                ? 'bg-ink-surface text-ink-muted'
-                : 'bg-ink-surface text-ink-muted'
+                ? 'bg-amber-50/90 text-amber-950 border-amber-200/80'
+                : 'bg-emerald-50/95 text-emerald-900 border-emerald-200/80'
             }`}
           >
-            <Lock className="w-3.5 h-3.5" strokeWidth={1.5} />
+            <Lock
+              className={`w-3.5 h-3.5 shrink-0 ${showPaymentsOfflineBanner ? 'text-amber-700' : 'text-emerald-600'}`}
+              strokeWidth={1.5}
+            />
             {showPaymentsOfflineBanner ? 'Encaissement à activer côté studio' : 'Paiement sécurisé'}
           </span>
         </section>
@@ -479,8 +470,8 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               </div>
             )}
 
-            {/* 2. Choix du flash */}
-            <section className="mb-6">
+            {/* 2. Choix du flash — flow-root + cartes pleine largeur pour éviter l’effondrement de hauteur (aspect-ratio) */}
+            <section className="mb-8 relative z-0 isolate">
               <div className="bg-ink-surface rounded-2xl border border-ink-border p-5">
                 <h2 className="text-sm font-semibold text-ink-text mb-1">Choisissez un flash</h2>
                 <p className="text-xs text-ink-muted mb-4">
@@ -495,7 +486,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                     Aucun flash disponible pour le moment. Revenez plus tard ou contactez le studio.
                   </p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="grid w-full grid-cols-2 gap-3 sm:gap-4 [grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] flow-root pb-1">
                     {availableFlashes.map((flash) => {
                       const isSelected = selectedFlashId === flash.id;
                       const priceLabel =
@@ -510,18 +501,18 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                             setSelectedFlashId(flash.id);
                             replaceUrlFlashParam(flash.id);
                           }}
-                          className={`group rounded-2xl border overflow-hidden text-left transition-all active:scale-[0.99] touch-manipulation shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 ${
+                          className={`group flex w-full min-w-0 flex-col rounded-2xl border text-left transition-all active:scale-[0.99] touch-manipulation shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 ${
                             isSelected
                               ? 'ring-2 ring-emerald-500 border-emerald-500/80 shadow-md'
                               : 'border-ink-border/90 hover:border-ink-accent/50 hover:shadow-md'
                           }`}
                         >
                           {flash.imageUrl ? (
-                            <div className="relative aspect-[3/4] bg-ink-surface">
+                            <div className="relative w-full min-h-[160px] aspect-[3/4] shrink-0 bg-ink-surface overflow-hidden rounded-2xl">
                               <img
                                 src={flash.imageUrl}
                                 alt={flash.title || 'Flash'}
-                                className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+                                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
                               />
                               <div
                                 className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent"
@@ -545,8 +536,8 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                               </div>
                             </div>
                           ) : (
-                            <div className="flex flex-col">
-                              <div className="relative flex aspect-[3/4] items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200/80">
+                            <div className="flex w-full min-w-0 flex-col overflow-hidden rounded-2xl">
+                              <div className="relative flex w-full min-h-[160px] aspect-[3/4] shrink-0 items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200/80">
                                 <Zap className="h-12 w-12 text-zinc-400" strokeWidth={1.25} />
                                 {isSelected && (
                                   <div className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md ring-2 ring-white">
@@ -651,7 +642,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             )}
 
             {/* 3. Disponibilités */}
-            <section className="mb-6">
+            <section className="mb-6 relative z-0">
               <div className="bg-ink-surface rounded-2xl border border-ink-border p-5">
                 <h2 className="text-sm font-semibold text-ink-text mb-3">Disponibilités</h2>
                 {availabilityLoading ? (
@@ -853,6 +844,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
           </>
         )}
       </main>
+      </div>
 
       {/* Modal Questionnaire de Santé */}
       {showHealthForm && (
@@ -880,10 +872,10 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         </div>
       )}
 
-      {/* Sticky Footer Paiement — visible uniquement en mode flash */}
+      {/* Barre d’action paiement — en flux sous le scroll (plus de fixed = plus de chevauchement) */}
       {bookingMode === 'flash' && !showHealthForm && (
-        <footer className="fixed bottom-0 left-0 right-0 z-50 bg-ink-surface border-t border-ink-border shadow-[0_-4px_20px_rgba(0,0,0,0.4)] safe-bottom">
-          <div className="max-w-md mx-auto px-4 py-4">
+        <footer className="relative z-10 shrink-0 border-t border-ink-border bg-ink-surface shadow-[0_-2px_16px_rgba(0,0,0,0.12)] safe-bottom">
+          <div className="max-w-md mx-auto px-4 py-3 sm:py-4">
             {selectedFlash && typeof selectedFlash.price === 'number' && (
               <div className="flex items-center justify-between mb-2 text-xs text-ink-muted">
                 <span>Prix du tatouage</span>

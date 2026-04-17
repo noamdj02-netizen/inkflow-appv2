@@ -695,7 +695,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   isMdUp ? (
                     <div className="mt-2 min-h-[24px] flex items-end">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300">
-                        ⭐ {vipClients} VIP
+                        <Star className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden />
+                        {vipClients} VIP
                       </span>
                     </div>
                   ) : (
@@ -1224,13 +1225,18 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     </span>
                     <span className="text-[17px] font-normal text-zinc-900 dark:text-white truncate flex-1">{apt.clientName}</span>
                     <span
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
+                      className={`inline-flex items-center justify-center min-w-[2rem] min-h-[2rem] rounded-lg ${
                       apt.status === 'confirmed'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
                           : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'
                       }`}
+                      title={apt.status === 'confirmed' ? 'Confirmé' : 'En attente'}
                     >
-                      {apt.status === 'confirmed' ? '✓' : '?'}
+                      {apt.status === 'confirmed' ? (
+                        <Check className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden />
+                      ) : (
+                        <Clock className="w-3.5 h-3.5" strokeWidth={2} aria-hidden />
+                      )}
                     </span>
                   </button>
                 ))}
@@ -1552,12 +1558,19 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                             {new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                           </span>
                           <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate flex-1">{apt.clientName}</span>
-                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold ${
+                          <span
+                            className={`inline-flex items-center justify-center min-w-[1.75rem] min-h-[1.75rem] rounded-lg ${
                             apt.status === 'confirmed'
                               ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
                               : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
-                          }`}>
-                            {apt.status === 'confirmed' ? '✓' : '?'}
+                            }`}
+                            title={apt.status === 'confirmed' ? 'Confirmé' : 'En attente'}
+                          >
+                            {apt.status === 'confirmed' ? (
+                              <Check className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden />
+                            ) : (
+                              <Clock className="w-3.5 h-3.5" strokeWidth={2} aria-hidden />
+                            )}
                           </span>
                         </button>
                       ))}

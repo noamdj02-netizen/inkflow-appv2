@@ -176,6 +176,7 @@ const Router: React.FC = () => {
           }
         } else {
           document.querySelector('.app-shell-content')?.scrollTo(0, 0);
+          document.querySelector('.book-public-scroll')?.scrollTo(0, 0);
           document.querySelector('.landing-scroll')?.scrollTo(0, 0);
         }
       }

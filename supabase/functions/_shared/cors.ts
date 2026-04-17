@@ -13,12 +13,20 @@ const ALLOWED_ORIGINS = [
   "https://inkdlow.vercel.app",
 ];
 
-const DEV_ORIGINS = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "http://127.0.0.1:5173",
-  "http://127.0.0.1:3000",
-];
+/**
+ * Dev local : HTTP sur localhost / 127.0.0.1 avec n’importe quel port.
+ * Sinon une origine non listée retombe sur ink-flow.me → préflight CORS échoue (« Failed to fetch »).
+ */
+function isHttpLocalhostAnyPort(origin: string): boolean {
+  try {
+    const u = new URL(origin);
+    if (u.protocol !== "http:") return false;
+    const h = u.hostname;
+    return h === "localhost" || h === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
 
 function extraAllowedOrigins(): string[] {
   const raw = (Deno.env.get("INKFLOW_CORS_EXTRA_ORIGINS") || "").trim();
@@ -30,7 +38,8 @@ export function getCorsHeaders(origin?: string | null): Record<string, string> {
   const allowedOrigin = getAllowedOrigin(origin);
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, stripe-signature, x-cron-secret",
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   };
 }
@@ -51,7 +60,7 @@ function getAllowedOrigin(origin?: string | null): string {
     return origin;
   }
 
-  if (DEV_ORIGINS.includes(origin)) {
+  if (isHttpLocalhostAnyPort(origin)) {
     return origin;
   }
 

@@ -1,5 +1,5 @@
 import React, { Suspense, useState, useRef, useEffect } from 'react';
-import { Upload, X, Filter, Image as ImageIcon, Plus, Pencil, Trash2, Sparkles, Camera, Share2, Loader2, Wand2, Copy, Download, ChevronDown } from 'lucide-react';
+import { Upload, X, Filter, Image as ImageIcon, Plus, Pencil, Trash2, Sparkles, Camera, Share2, Loader2, Wand2, Copy, Download, ChevronDown, Check } from 'lucide-react';
 import { LazyImageCropModal } from '../ui/lazyImageCropModal';
 import { ImageCropModalSuspenseFallback } from '../ui/skeleton';
 import { uploadPortfolioImage, dataUrlToBlob } from '../../lib/supabasePortfolio';
@@ -286,7 +286,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
   const getInstagramCaption = (item: PortfolioItem): string => {
     const parts: string[] = [];
     if (item.description) parts.push(item.description);
-    if (studioName) parts.push(`\n📍 ${studioName}`);
+    if (studioName) parts.push(`\nStudio — ${studioName}`);
     const tags = item.tags?.length ? item.tags : [item.category];
     const hashtags = tags.map(t => `#${t.replace(/\s/g, '')}`).join(' ');
     if (hashtags) parts.push(`\n${hashtags}`);
@@ -688,7 +688,14 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({ items, onAdd
                       : 'bg-white dark:bg-zinc-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-zinc-600 hover:bg-slate-100 dark:hover:bg-zinc-600'
                   }`}
                 >
-                  {newItem.beforeUrl ? '✓ Photo ajoutée' : 'Ajouter'}
+                  {newItem.beforeUrl ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                      Photo ajoutée
+                    </span>
+                  ) : (
+                    'Ajouter'
+                  )}
                 </button>
                 <input
                   ref={beforeRef}

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Globe, Star, Users, Link2, Sparkles, X } from 'lucide-react';
+import { Check, Globe, Star, Users, Link2, Sparkles, X, Zap } from 'lucide-react';
 import type { SubscriptionPlan } from '../../types';
 import { PLAN_CONFIG, canAccessFeature } from '../../lib/subscriptionPlans';
 
@@ -116,11 +116,15 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
                 <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Paiement confirmé</p>
                 <h2 id="payment-success-title" className="text-xl sm:text-2xl font-bold tracking-tight text-white">
                   {isElitePlan ? (
-                    <>
-                      Bienvenue dans l&apos;élite, {displayName}&nbsp;! <span aria-hidden>⚡️</span>
-                    </>
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      <span>Bienvenue dans l&apos;élite, {displayName}&nbsp;!</span>
+                      <Zap className="w-6 h-6 shrink-0 text-amber-400" aria-hidden />
+                    </span>
                   ) : (
-                    <>Félicitations, {displayName}&nbsp;! <span aria-hidden>✨</span></>
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      <span>Félicitations, {displayName}&nbsp;!</span>
+                      <Sparkles className="w-6 h-6 shrink-0 text-violet-400" aria-hidden />
+                    </span>
                   )}
                 </h2>
               </div>

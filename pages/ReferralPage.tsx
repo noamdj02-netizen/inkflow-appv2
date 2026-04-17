@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase';
 import { useToast } from '../contexts/ToastContext';
 import { Logo } from '../components/Logo';
 import { getInviteBaseUrl } from '../lib/urls';
+import { openMailtoHref } from '../lib/mailto';
 import { SEO } from '../components/SEO';
 
 const heroWorkstationImg = '/images/referral-hero-studio1.png';
@@ -140,10 +141,12 @@ export const ReferralPage: React.FC = () => {
   }, [inviteUrl, toast]);
 
   const shareEmail = useCallback(() => {
-    const subject = encodeURIComponent('InkFlow — 1 mois offert pour toi et pour moi 🎁');
-    const body = encodeURIComponent(shareMessage);
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
-  }, [inviteUrl]);
+    const params = new URLSearchParams({
+      subject: 'InkFlow — 1 mois offert pour toi et pour moi 🎁',
+      body: shareMessage,
+    });
+    openMailtoHref(`mailto:?${params.toString()}`);
+  }, [shareMessage]);
 
   if (loading) {
     return (

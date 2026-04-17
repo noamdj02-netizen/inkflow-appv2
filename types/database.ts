@@ -365,6 +365,7 @@ export type Database = {
       inkflow_appointments: {
         Row: {
           apple_event_uid: string | null
+          balance_reminder_sent_at: string | null
           calendar_synced_at: string | null
           client_email: string
           client_id: string | null
@@ -397,6 +398,7 @@ export type Database = {
         }
         Insert: {
           apple_event_uid?: string | null
+          balance_reminder_sent_at?: string | null
           calendar_synced_at?: string | null
           client_email: string
           client_id?: string | null
@@ -429,6 +431,7 @@ export type Database = {
         }
         Update: {
           apple_event_uid?: string | null
+          balance_reminder_sent_at?: string | null
           calendar_synced_at?: string | null
           client_email?: string
           client_id?: string | null

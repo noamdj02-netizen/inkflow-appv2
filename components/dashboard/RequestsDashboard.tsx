@@ -42,6 +42,8 @@ interface RequestsDashboardProps {
   openRequestSheetBookingId?: string | null;
   onOpenRequestSheetBookingIdConsumed?: () => void;
   projectRequestsLoading?: boolean;
+  /** Garde la sous-navigation « Demandes » du shell alignée (sidebar). */
+  onSubTabChange?: (tab: 'rdv' | 'bookings' | 'projects' | 'history') => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -81,6 +83,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   openRequestSheetBookingId,
   onOpenRequestSheetBookingIdConsumed,
   projectRequestsLoading = false,
+  onSubTabChange,
 }) => {
   const toast = useToast();
   const clientByEmail = useMemo(() => {
@@ -120,6 +123,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'rdv' | 'bookings' | 'projects' | 'history'>(initialTab ?? 'rdv');
   const [bookingSubTab, setBookingSubTab] = useState<'all' | 'flash' | 'custom'>('all');
 
+  const selectTab = useCallback(
+    (tab: 'rdv' | 'bookings' | 'projects' | 'history') => {
+      setActiveTab(tab);
+      onSubTabChange?.(tab);
+    },
+    [onSubTabChange],
+  );
+
   // Synchroniser l'onglet quand la sidebar change (ex: clic sur Projets)
   useEffect(() => {
     if (initialTab && initialTab !== activeTab) {
@@ -147,7 +158,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     const pr = projectRequests.find((p) => p.id === openRequestSheetProjectId);
     if (pr) {
       setSheetItem({ ...pr, _type: 'project' });
-      setActiveTab('projects');
+      selectTab('projects');
     } else {
       toast.info('Demande de projet introuvable ou déjà traitée.');
     }
@@ -158,6 +169,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     projectRequests,
     onOpenRequestSheetProjectIdConsumed,
     toast,
+    selectTab,
   ]);
 
   useEffect(() => {
@@ -165,7 +177,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     const bk = bookings.find((b) => b.id === openRequestSheetBookingId);
     if (bk) {
       setSheetItem({ ...bk, _type: 'booking' });
-      setActiveTab('bookings');
+      selectTab('bookings');
     } else {
       toast.info('Demande vitrine introuvable.');
     }
@@ -176,6 +188,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     bookings,
     onOpenRequestSheetBookingIdConsumed,
     toast,
+    selectTab,
   ]);
   const [proposeDateItem, setProposeDateItem] = useState<SheetItem | null>(null);
 
@@ -571,87 +584,120 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     history: 'Consultez toutes vos demandes traitées et archivées',
   };
 
+  /** Une ligne d’aide contextuelle (évite la répétition de la légende 4× sous-titre). */
+  const tabHints: Record<typeof activeTab, string> = {
+    rdv: 'Confirmez ou refusez chaque créneau — l’agenda se met à jour immédiatement.',
+    bookings: 'Filtrez Flash ou projet sur mesure, puis proposez un acompte ou refusez depuis la ligne.',
+    projects: 'Ouvrez la discussion pour cadrer le brief ; vous pourrez envoyer un lien d’acompte depuis la messagerie.',
+    history: 'Demandes déjà traitées ou archivées — utile pour vérifier un refus ou un acompte passé.',
+  };
+
+  const tabPillBtn = (id: typeof activeTab) =>
+    `flex min-h-[44px] items-center gap-2 px-3 sm:px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/90 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-black ${
+      activeTab === id
+        ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
+        : 'text-zinc-600 dark:text-zinc-400 border border-transparent hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60'
+    }`;
+
+  const countBadge = (id: typeof activeTab, n: number) =>
+    n > 0 ? (
+      <span
+        className={`min-w-[22px] h-[22px] px-1.5 inline-flex items-center justify-center text-[11px] font-bold rounded-full tabular-nums ${
+          activeTab === id
+            ? 'bg-zinc-900/10 text-zinc-900 dark:bg-white/15 dark:text-zinc-100'
+            : 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-300'
+        }`}
+      >
+        {n}
+      </span>
+    ) : null;
+
   return (
     <div className="space-y-6 lg:space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Sticky : titre + onglets restent accessibles sur les longues listes (scroll dans .app-shell-content). */}
+      <div
+        className="sticky top-0 z-10 -mx-3 sm:-mx-6 md:-mx-8 xl:-mx-10 2xl:-mx-12 px-3 sm:px-6 md:px-8 xl:px-10 2xl:px-12 pt-0 pb-3 mb-1 bg-zinc-50/95 dark:bg-black/80 backdrop-blur-md border-b border-zinc-200/70 dark:border-zinc-800/80"
+      >
+        <div className="flex flex-col gap-3 sm:gap-4">
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
               Demandes
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1.5 text-sm sm:text-base max-w-2xl leading-relaxed">
+            <p className="text-zinc-500 dark:text-zinc-400 mt-1.5 text-sm sm:text-base max-w-2xl leading-relaxed">
               {tabDescriptions[activeTab]}
             </p>
           </div>
-        </div>
-        
-        {/* Navigation Tabs — Pills modernes */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
-          <button 
-            onClick={() => setActiveTab('rdv')}
-            className={`px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-2 active:scale-[0.98] ${
-              activeTab === 'rdv' 
-                ? 'bg-slate-900 text-white shadow-md dark:bg-white dark:text-slate-900' 
-                : 'bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-zinc-700'
-            }`}
+
+          <div
+            className="rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800 p-1 flex flex-wrap gap-1"
+            role="tablist"
+            aria-label="Types de demandes"
           >
-            <Calendar className="w-4 h-4" />
-            RDV
-            {pendingAppointments.length > 0 && (
-              <span className={`min-w-[20px] h-[20px] px-1.5 flex items-center justify-center text-[11px] font-bold rounded-full ${
-                activeTab === 'rdv' ? 'bg-white/25 text-white dark:bg-slate-900/25 dark:text-slate-900' : 'bg-blue-600 text-white'
-              }`}>{pendingAppointments.length}</span>
-            )}
-          </button>
-          <button 
-            onClick={() => setActiveTab('bookings')}
-            className={`px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-2 active:scale-[0.98] ${
-              activeTab === 'bookings' 
-                ? 'bg-slate-900 text-white shadow-md dark:bg-white dark:text-slate-900' 
-                : 'bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-zinc-700'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            Vitrine
-            {pendingBookings.length > 0 && (
-              <span className={`min-w-[20px] h-[20px] px-1.5 flex items-center justify-center text-[11px] font-bold rounded-full ${
-                activeTab === 'bookings' ? 'bg-white/25 text-white dark:bg-slate-900/25 dark:text-slate-900' : 'bg-blue-600 text-white'
-              }`}>{pendingBookings.length}</span>
-            )}
-          </button>
-          <button 
-            onClick={() => setActiveTab('projects')}
-            className={`px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-2 active:scale-[0.98] ${
-              activeTab === 'projects' 
-                ? 'bg-slate-900 text-white shadow-md dark:bg-white dark:text-slate-900' 
-                : 'bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-zinc-700'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            Projets
-            {pendingProjects.length > 0 && (
-              <span className={`min-w-[20px] h-[20px] px-1.5 flex items-center justify-center text-[11px] font-bold rounded-full ${
-                activeTab === 'projects' ? 'bg-white/25 text-white dark:bg-slate-900/25 dark:text-slate-900' : 'bg-blue-600 text-white'
-              }`}>{pendingProjects.length}</span>
-            )}
-          </button>
-          <button 
-            onClick={() => setActiveTab('history')}
-            className={`px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-2 active:scale-[0.98] ${
-              activeTab === 'history' 
-                ? 'bg-slate-900 text-white shadow-md dark:bg-white dark:text-slate-900' 
-                : 'bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-zinc-700'
-            }`}
-          >
-            <History className="w-4 h-4" />
-            Historique
-          </button>
+            <button
+              type="button"
+              id="requests-tab-rdv"
+              role="tab"
+              aria-selected={activeTab === 'rdv'}
+              aria-controls="requests-panel"
+              onClick={() => selectTab('rdv')}
+              className={tabPillBtn('rdv')}
+            >
+              <Calendar className={`w-4 h-4 shrink-0 stroke-[1.75] ${activeTab === 'rdv' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-500'}`} />
+              RDV
+              {countBadge('rdv', pendingAppointments.length)}
+            </button>
+            <button
+              type="button"
+              id="requests-tab-bookings"
+              role="tab"
+              aria-selected={activeTab === 'bookings'}
+              aria-controls="requests-panel"
+              onClick={() => selectTab('bookings')}
+              className={tabPillBtn('bookings')}
+            >
+              <Clock className={`w-4 h-4 shrink-0 stroke-[1.75] ${activeTab === 'bookings' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-500'}`} />
+              Vitrine
+              {countBadge('bookings', pendingBookings.length)}
+            </button>
+            <button
+              type="button"
+              id="requests-tab-projects"
+              role="tab"
+              aria-selected={activeTab === 'projects'}
+              aria-controls="requests-panel"
+              onClick={() => selectTab('projects')}
+              className={tabPillBtn('projects')}
+            >
+              <FileText className={`w-4 h-4 shrink-0 stroke-[1.75] ${activeTab === 'projects' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-500'}`} />
+              Projets
+              {countBadge('projects', pendingProjects.length)}
+            </button>
+            <button
+              type="button"
+              id="requests-tab-history"
+              role="tab"
+              aria-selected={activeTab === 'history'}
+              aria-controls="requests-panel"
+              onClick={() => selectTab('history')}
+              className={tabPillBtn('history')}
+            >
+              <History className={`w-4 h-4 shrink-0 stroke-[1.75] ${activeTab === 'history' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-500'}`} />
+              Historique
+            </button>
+          </div>
+
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-3xl leading-relaxed">
+            {tabHints[activeTab]}
+          </p>
         </div>
       </div>
 
-      {/* Content Card — Premium SaaS style */}
-      <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden lg:ring-1 lg:ring-slate-200/40 dark:lg:ring-zinc-700/50">
+      <div
+        id="requests-panel"
+        role="tabpanel"
+        aria-labelledby={`requests-tab-${activeTab}`}
+        className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm overflow-hidden"
+      >
         {activeTab === 'rdv' && (
           pendingAppointments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
@@ -668,68 +714,89 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               {pendingAppointments.map(apt => {
                 const stampRw = stampRewardForEmail(apt.clientEmail);
                 return (
-                <div key={apt.id} className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-500/20 dark:to-blue-500/10 flex items-center justify-center flex-shrink-0 overflow-hidden ring-1 ring-blue-200/50 dark:ring-blue-500/20">
-                    {(() => {
-                      const avatar = getAvatar(apt.clientEmail, apt.clientId, apt.clientName);
-                      return avatar ? (
-                        <img src={avatar} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">{apt.clientName.charAt(0).toUpperCase()}</span>
-                      );
-                    })()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-lg text-slate-900 dark:text-white">{apt.clientName}</div>
-                    <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5" />
-                      {apt.clientEmail}
+                <div
+                  key={apt.id}
+                  className="p-5 sm:p-6 flex flex-col gap-4 border-b border-zinc-100 dark:border-zinc-800 last:border-b-0 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/25 transition-colors"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-4 min-w-0">
+                    <div className="w-12 h-12 rounded-xl bg-zinc-200/90 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0 overflow-hidden ring-1 ring-zinc-300/80 dark:ring-zinc-600/80">
+                      {(() => {
+                        const avatar = getAvatar(apt.clientEmail, apt.clientId, apt.clientName);
+                        return avatar ? (
+                          <img src={avatar} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-zinc-700 dark:text-zinc-200 font-bold text-lg">{apt.clientName.charAt(0).toUpperCase()}</span>
+                        );
+                      })()}
                     </div>
-                    {stampRw && (
-                      <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/90 dark:border-emerald-500/35 dark:bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-900 dark:text-emerald-100">
-                        <Gift className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
-                        <span>
-                          Ce client possède un avantage de <strong>{stampRw.amountEuros}€</strong> à valoir sur ce projet — code{' '}
-                          <code className="font-mono text-xs bg-white/70 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">{stampRw.promoCode}</code>
-                        </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-lg text-zinc-900 dark:text-white">{apt.clientName}</div>
+                      <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1.5 min-w-0">
+                        <Mail className="w-3.5 h-3.5 shrink-0 stroke-[1.75] text-zinc-400 dark:text-zinc-500" />
+                        <span className="truncate">{apt.clientEmail}</span>
                       </div>
-                    )}
-                    <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-slate-500 dark:text-slate-400">
-                      <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-zinc-800 px-2.5 py-1 rounded-lg">
-                        <Calendar className="w-3.5 h-3.5" />
-                        {apt.date} • {apt.time}
+                      {stampRw && (
+                        <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/90 dark:border-emerald-500/35 dark:bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-900 dark:text-emerald-100">
+                          <Gift className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                          <span>
+                            Ce client possède un avantage de <strong>{stampRw.amountEuros}€</strong> à valoir sur ce projet — code{' '}
+                            <code className="font-mono text-xs bg-white/70 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">{stampRw.promoCode}</code>
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2 mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+                        <span className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-1 rounded-lg text-zinc-700 dark:text-zinc-300">
+                          <Calendar className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
+                          {apt.date} • {apt.time}
+                        </span>
+                        <span className="font-medium text-zinc-800 dark:text-zinc-200">{apt.service}</span>
+                        <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">{apt.price}€</span>
+                      </div>
+                      <span className="inline-block mt-3 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
+                        En attente
                       </span>
-                      <span className="font-medium text-slate-700 dark:text-slate-300">{apt.service}</span>
-                      <span className="font-bold text-blue-600 dark:text-blue-400">{apt.price}€</span>
                     </div>
-                    <span className="inline-block mt-3 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">En attente</span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-                    {apt.projectRequestId && onOpenProjectDiscussion && (
+
+                  <div className="flex flex-col gap-2 sm:items-end sm:ml-14">
+                    <div className="flex flex-wrap gap-2 w-full sm:justify-end">
                       <button
                         type="button"
-                        onClick={() => onOpenProjectDiscussion(`pr_${apt.projectRequestId}`)}
-                        className="flex min-h-[44px] items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all text-sm shadow-sm"
+                        onClick={() => handleConfirm(apt)}
+                        className="flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all text-sm shadow-sm"
                       >
-                        <MessageCircle className="w-4 h-4 shrink-0" /> Discussion (même fil client)
+                        <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" /> Accepter
                       </button>
-                    )}
-                    {studioId && (
                       <button
-                        onClick={() => openDepositModal(apt)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200 active:scale-[0.98] transition-all text-sm dark:bg-zinc-800 dark:text-slate-300 dark:hover:bg-zinc-700"
+                        type="button"
+                        onClick={() => handleReject(apt)}
+                        className="flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 dark:border-red-500/35 bg-white dark:bg-zinc-900/40 text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm"
                       >
-                        <CreditCard className="w-4 h-4" /> Acompte
+                        <XCircle className="w-4 h-4 shrink-0 stroke-[1.75]" /> Refuser
                       </button>
+                    </div>
+                    {(studioId || (apt.projectRequestId && onOpenProjectDiscussion)) && (
+                      <div className="flex flex-wrap gap-2 w-full sm:justify-end">
+                        {studioId && (
+                          <button
+                            type="button"
+                            onClick={() => openDepositModal(apt)}
+                            className="flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-800 dark:text-zinc-200 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all text-sm"
+                          >
+                            <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" /> Acompte
+                          </button>
+                        )}
+                        {apt.projectRequestId && onOpenProjectDiscussion && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenProjectDiscussion(`pr_${apt.projectRequestId}`)}
+                            className="flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all text-sm shadow-sm"
+                          >
+                            <MessageCircle className="w-4 h-4 shrink-0 stroke-[1.75]" /> Discussion
+                          </button>
+                        )}
+                      </div>
                     )}
-                    <button onClick={() => handleConfirm(apt)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all text-sm shadow-sm">
-                      <CheckCircle className="w-4 h-4" /> Accepter
-                    </button>
-                    <button onClick={() => handleReject(apt)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm">
-                      <XCircle className="w-4 h-4" /> Refuser
-                    </button>
                   </div>
                 </div>
               );})}
@@ -740,8 +807,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         {activeTab === 'bookings' && (
           bookingsLoading ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
-              <p className="text-slate-500 dark:text-slate-400">Chargement des demandes...</p>
+              <Loader2 className="w-8 h-8 text-zinc-400 dark:text-zinc-500 animate-spin mb-4" />
+              <p className="text-zinc-500 dark:text-zinc-400">Chargement des demandes...</p>
             </div>
           ) : pendingBookings.length === 0 && bookings.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
@@ -949,10 +1016,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       )}
                       {studioId && onAddAppointment && (
                         <button
+                          type="button"
                           onClick={() => openDepositModalForBooking(bk)}
-                          className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all text-sm shadow-sm"
+                          className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all text-sm shadow-sm"
                         >
-                          <CreditCard className="w-4 h-4 shrink-0" /> Lien d&apos;acompte
+                          <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" /> Lien d&apos;acompte
                         </button>
                       )}
                       <button onClick={() => handleRejectBooking(bk)}
@@ -981,10 +1049,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             </div>
           ) : (
             <div className="divide-y divide-slate-100 dark:divide-zinc-800">
-              <div className="px-5 sm:px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50/50 dark:from-blue-950/40 dark:to-indigo-950/20 border-b border-blue-100/80 dark:border-blue-900/40">
-                <p className="text-sm text-blue-700 dark:text-blue-300 font-medium flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  <span><strong>Conseil :</strong> Ouvrez la discussion pour échanger avec le client — vous pouvez envoyer une carte de paiement depuis la messagerie.</span>
+              <div className="px-5 sm:px-6 py-4 bg-zinc-50/90 dark:bg-zinc-800/40 border-b border-zinc-200/80 dark:border-zinc-700/80">
+                <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400 stroke-[1.75]" />
+                  <span><strong className="font-semibold text-zinc-900 dark:text-white">Conseil :</strong> ouvrez la discussion pour échanger avec le client — vous pouvez envoyer une carte de paiement depuis la messagerie.</span>
                 </p>
               </div>
               {pendingProjects.map(pr => {

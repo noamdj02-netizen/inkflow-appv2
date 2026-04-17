@@ -1,5 +1,8 @@
 /**
- * remind-unpaid-deposits — Cron Edge Function (appelée toutes les heures)
+ * remind-unpaid-deposits — Cron Edge Function (appelée toutes les heures via pg_net).
+ *
+ * Passerelle : `verify_jwt = false` dans supabase/config.toml (sinon 401 sans Authorization JWT).
+ * Optionnel : EDGE_CRON_SECRET + en-tête `x-cron-secret` (voir _shared/cronGate.ts).
  *
  * Pour chaque RDV avec :
  *   - status IN ('pending', 'confirmed')
@@ -10,7 +13,7 @@
  * → Envoie un email de relance au CLIENT avec le lien de paiement existant.
  * → Met à jour reminder_sent_at sur l'appointment pour ne pas renvoyer.
  *
- * Scheduling : cron `0 * * * *` (toutes les heures) dans supabase/config.toml
+ * Scheduling : cron `0 * * * *` (migrations pg_cron + net.http_post).
  */
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -18,6 +21,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { escapeHtml, wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { assertCronAuthorized } from "../_shared/cronGate.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -109,19 +113,20 @@ async function sendReminderEmail(
 }
 
 Deno.serve(async (req: Request) => {
-  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
-
-  // Autoriser uniquement les appels internes Supabase (cron) ou avec le service role key
-  const authHeader = req.headers.get("Authorization") || "";
-  const isServiceRole = authHeader.includes(SUPABASE_SERVICE_ROLE_KEY);
-  const isCron = req.headers.get("x-supabase-cron-trigger") === "true";
-  if (!isServiceRole && !isCron) {
-    // En mode cron Supabase, pas d'Authorization — on accepte tout appel interne
-    // (l'isolation vient du fait que --no-verify-jwt n'est PAS activé pour cette fonction)
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
+
+  const cronDeny = assertCronAuthorized(req, origin);
+  if (cronDeny) return cronDeny;
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 

@@ -9,6 +9,11 @@ import type { LoyaltySettings } from '../components/dashboard/LoyaltyManager';
 import type { DashboardWidget } from '../components/dashboard/DashboardWidgets';
 import type { StudioDashboardPreferences } from '../types/studioPreferences';
 import { DEFAULT_STUDIO_DASHBOARD_PREFERENCES, STUDIO_PREFERENCES_SCHEMA_VERSION } from '../types/studioPreferences';
+import {
+  isLegacyTemplateFingerprintStats,
+  isTemplateStockImageUrl,
+  LEGACY_VITRINE_NAME,
+} from './vitrineTemplateGuards';
 
 export function getStudioSlug(studioName: string): string {
   return (studioName || 'mon-studio')
@@ -322,6 +327,8 @@ export async function getStudioIdBySlug(slug: string): Promise<string | null> {
 /** Récupère id + thème + SIRET + URLs photo studio (repli vitrine) à partir du slug. */
 export async function getStudioPublicBySlug(slug: string): Promise<{
   id: string;
+  /** Nom affichage fiable (studio_name → name) pour titres / OG quand la vitrine JSON est vide ou template. */
+  displayName: string;
   vitrineTheme: string;
   siret?: string | null;
   avatarUrl: string | null;
@@ -332,8 +339,12 @@ export async function getStudioPublicBySlug(slug: string): Promise<{
   const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: normalizePublicStudioSlug(slug) });
   const row = Array.isArray(data) ? data[0] : data;
   if (error || !row?.id) return null;
+  const studioName = String((row as { studio_name?: string }).studio_name || '').trim();
+  const legalName = String((row as { name?: string }).name || '').trim();
+  const displayName = studioName || legalName;
   return {
     id: row.id as string,
+    displayName,
     vitrineTheme: (row.vitrine_theme as string) || 'light',
     siret: (row.siret as string | null) ?? null,
     avatarUrl: (row.avatar_url as string | null) ?? null,
@@ -348,12 +359,25 @@ export async function getVitrineDataBySlugFromSupabase(slug: string, defaultData
   const studio = await getStudioPublicBySlug(normalized);
   if (!studio) return { ...defaultData, slug: normalized };
   const data = await getVitrineDataFromSupabase(studio.id, { ...defaultData, slug: normalized });
+  const mergedNameRaw = (data.name || '').trim();
+
+  const publicLabel = studio.displayName.trim();
+  let name = mergedNameRaw;
+  if (!name || name === LEGACY_VITRINE_NAME) {
+    name = publicLabel || name;
+  }
 
   const rowAvatar = studio.avatarUrl?.trim() || '';
   const rowCover = studio.portfolioCoverUrl?.trim() || '';
   let coverImage = (data.coverImage || '').trim();
   let avatar = (data.avatar || '').trim();
-  const firstPortfolioUrl = (data.portfolio ?? []).map((p) => p.url?.trim()).find(Boolean) || '';
+
+  if (isTemplateStockImageUrl(coverImage)) coverImage = '';
+  if (isTemplateStockImageUrl(avatar)) avatar = '';
+
+  const firstPortfolioUrl = (data.portfolio ?? [])
+    .map((p) => p.url?.trim())
+    .find((u) => u && !isTemplateStockImageUrl(u)) as string | undefined;
 
   if (!coverImage) {
     if (rowCover) coverImage = rowCover;
@@ -362,14 +386,32 @@ export async function getVitrineDataBySlugFromSupabase(slug: string, defaultData
   }
   if (!avatar && rowAvatar) avatar = rowAvatar;
 
-  return {
+  let next: VitrineData = {
     ...data,
+    name,
     slug: normalized,
     coverImage,
     avatar,
     theme: studio.vitrineTheme,
     siret: studio.siret ?? undefined,
   };
+
+  if (
+    isLegacyTemplateFingerprintStats(next) &&
+    (mergedNameRaw === LEGACY_VITRINE_NAME || !mergedNameRaw)
+  ) {
+    next = {
+      ...next,
+      rating: 0,
+      reviewCount: 0,
+      totalTattoos: 0,
+      satisfactionRate: 0,
+      repeatClients: 0,
+      yearsExperience: 0,
+    };
+  }
+
+  return next;
 }
 
 export async function saveVitrineDataToSupabase(studioId: string, data: VitrineData): Promise<void> {

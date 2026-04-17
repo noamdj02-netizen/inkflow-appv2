@@ -123,7 +123,7 @@ const tabs: { id: TabId | 'referral'; label: string; icon: React.ReactNode; badg
   { id: 'messaging', label: 'Messagerie', icon: <Inbox {...iconProps} /> },
   { id: 'portfolio', label: 'Portfolio', icon: <Image {...iconProps} /> },
   { id: 'finance', label: 'Finance', icon: <Wallet {...iconProps} /> },
-  // { id: 'referral', label: '🎁 Mois offerts', icon: <Gift {...iconProps} />, href: '/referral' }, // V2
+  // { id: 'referral', label: 'Mois offerts', icon: <Gift {...iconProps} />, href: '/referral' }, // V2
   { id: 'settings', label: 'Paramètres', icon: <Settings {...iconProps} /> },
 ];
 
@@ -448,6 +448,8 @@ export const DashboardPro: React.FC = () => {
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  /** Évite de rouvrir le tiroir en boucle si l’URL contient encore ?appointment= */
+  const appointmentEmailLinkHandledRef = React.useRef<string | null>(null);
   const [overviewCalendarMonth, setOverviewCalendarMonth] = useState(() => new Date());
   const [planningSidebarDate, setPlanningSidebarDate] = useState<string | null>(null);
   const [planningSidebarMonth, setPlanningSidebarMonth] = useState(() => new Date());
@@ -1037,10 +1039,30 @@ export const DashboardPro: React.FC = () => {
       'messaging', 'portfolio', 'settings', 'notifications', 'account', 'etablissement',
     ];
     if (tabParam && allowed.includes(tabParam as TabId)) {
-      window.history.replaceState({}, '', '/dashboard');
+      const next = new URLSearchParams(window.location.search);
+      next.delete('tab');
+      const q = next.toString();
+      window.history.replaceState({}, '', q ? `/dashboard?${q}` : '/dashboard');
       setActiveTab(tabParam as TabId);
     }
   }, []);
+
+  /** Lien e-mail / cron : /dashboard?tab=appointments&appointment=<id> → ouvre l’aperçu client */
+  useEffect(() => {
+    if (!appointments.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const aptId = params.get('appointment');
+    if (!aptId) return;
+    if (appointmentEmailLinkHandledRef.current === aptId) return;
+    const apt = appointments.find((a) => a.id === aptId);
+    if (!apt) return;
+    appointmentEmailLinkHandledRef.current = aptId;
+    setActiveTab('appointments');
+    setSelectedAppointment(apt);
+    params.delete('appointment');
+    const q = params.toString();
+    window.history.replaceState({}, '', q ? `/dashboard?${q}` : '/dashboard');
+  }, [appointments]);
 
   const handlePaymentSuccessModalClose = useCallback(() => {
     setPaymentSuccessModalOpen(false);
@@ -1432,9 +1454,11 @@ export const DashboardPro: React.FC = () => {
 
   const buildClientPreviewData = useCallback((apt: Appointment | null): ClientPreviewData | null => {
     if (!apt) return null;
-    const clientMatch = clients.find(c =>
-      c.email?.toLowerCase() === apt.clientEmail?.toLowerCase() ||
-      c.name?.toLowerCase() === apt.clientName?.toLowerCase()
+    const clientMatch = clients.find(
+      (c) =>
+        (apt.clientId && c.id === apt.clientId) ||
+        c.email?.toLowerCase() === apt.clientEmail?.toLowerCase() ||
+        c.name?.toLowerCase() === apt.clientName?.toLowerCase()
     );
     return {
       appointment: apt,
@@ -1445,6 +1469,41 @@ export const DashboardPro: React.FC = () => {
   const previewDataForDrawer = useMemo(() =>
     selectedAppointment ? buildClientPreviewData(selectedAppointment) : null,
   [selectedAppointment, buildClientPreviewData]);
+
+  /** Fil messagerie à ouvrir depuis l’aperçu (e-mail connu ou demande projet liée au RDV) */
+  const previewInkflowMessagingThreadId = useMemo(() => {
+    const apt = selectedAppointment;
+    if (!apt) return null;
+    const em = apt.clientEmail?.trim().toLowerCase();
+    if (em) {
+      const hit = messageThreads.find((t) => (t.clientEmail || '').trim().toLowerCase() === em);
+      if (hit) return hit.threadId;
+    }
+    if (apt.projectRequestId) return apt.projectRequestId;
+    return null;
+  }, [selectedAppointment, messageThreads]);
+
+  /** Compte espace client synchronisé (app) — affiche le bloc « Discussion InkFlow » */
+  const previewHasInkflowClientAccount = useMemo(() => {
+    const apt = selectedAppointment;
+    if (!apt) return false;
+    const c = clients.find(
+      (cl) =>
+        (apt.clientId && cl.id === apt.clientId) ||
+        cl.email?.toLowerCase() === apt.clientEmail?.toLowerCase() ||
+        cl.name?.toLowerCase() === apt.clientName?.toLowerCase()
+    );
+    return !!c?.portalUserId;
+  }, [selectedAppointment, clients]);
+
+  const handleOpenInkflowDiscussionFromPreview = useCallback(() => {
+    handleSidebarNav(() => {
+      setOpenMessageThreadId(previewInkflowMessagingThreadId);
+      setActiveTab('messaging');
+      setSelectedAppointment(null);
+      setSidebarOpen(false);
+    });
+  }, [handleSidebarNav, previewInkflowMessagingThreadId]);
 
   // sortableOverviewItems removed — KPIs now inline in Prodify layout, custom widgets rendered separately
 
@@ -2371,6 +2430,7 @@ export const DashboardPro: React.FC = () => {
               studioId={studioId}
               studioSlug={studioSlug}
               initialTab={requestsInitialTab ?? requestsSubTab}
+              onSubTabChange={setRequestsSubTab}
               appointments={appointments}
               clients={clients}
               onUpdateAppointment={updateAppointment}
@@ -2950,7 +3010,7 @@ export const DashboardPro: React.FC = () => {
                           disabled={generalSaving}
                           className={`w-full sm:w-auto px-6 py-3 rounded-xl font-semibold transition-all active:scale-[0.98] ${
                             generalSaved
-                              ? 'bg-green-600 text-white'
+                              ? 'bg-emerald-600 text-white dark:bg-emerald-600'
                               : 'bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100'
                           } disabled:opacity-50`}
                         >
@@ -2962,7 +3022,14 @@ export const DashboardPro: React.FC = () => {
                               </svg>
                               Enregistrement...
                             </span>
-                          ) : generalSaved ? '✓ Enregistré' : 'Enregistrer les modifications'}
+                          ) : generalSaved ? (
+                            <span className="inline-flex items-center gap-2">
+                              <Check className="w-4 h-4 shrink-0" strokeWidth={2.5} aria-hidden />
+                              Enregistré
+                            </span>
+                          ) : (
+                            'Enregistrer les modifications'
+                          )}
                         </button>
                       </div>
                     </div>
@@ -3084,7 +3151,22 @@ export const DashboardPro: React.FC = () => {
               )}
               {settingsTab === 'care' && <CareSheetsSettings userEmail={user?.email} studioName={user?.studioName} />}
               {settingsTab === 'consent' && <ConsentFormEditor templates={consentTemplates} onSave={setConsentTemplates} />}
-              {settingsTab === 'availability' && <AvailabilitySettings />}
+              {settingsTab === 'availability' && studioId && (
+                <AvailabilitySettings
+                  studioId={studioId}
+                  onSave={() => {
+                    setAvailabilitySetupComplete(true);
+                    toast.success('Disponibilités enregistrées');
+                  }}
+                />
+              )}
+              {settingsTab === 'availability' && !studioId && (
+                <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 max-w-xl">
+                  <p className="text-sm text-zinc-600 dark:text-zinc-300">
+                    Connectez-vous avec un compte studio pour configurer les disponibilités.
+                  </p>
+                </div>
+              )}
               {settingsTab === 'waitlist' && (
                 <WaitlistManager
                   entries={waitlistEntries}
@@ -3395,9 +3477,11 @@ export const DashboardPro: React.FC = () => {
         />
       )}
       {showBookingModal && (
-        <Modal isOpen={showBookingModal} onClose={() => { setShowBookingModal(false); setSelectedFlash(null); }} title="Nouvelle réservation" size="lg">
+        <Modal isOpen={showBookingModal} onClose={() => { setShowBookingModal(false); setSelectedFlash(null); }} title="Nouveau RDV" size="lg">
           <BookingForm
             studioManualMode
+            studioId={studioId ?? undefined}
+            existingAppointments={appointments}
             onSubmit={handleNewBooking}
             onCancel={() => { setShowBookingModal(false); setSelectedFlash(null); }}
             preselectedFlash={
@@ -3814,6 +3898,9 @@ export const DashboardPro: React.FC = () => {
         artistName={user?.name || 'Artiste'}
         appointment={selectedAppointment}
         onUpdateAppointment={updateAppointment}
+        showInkflowClientDiscussion={previewHasInkflowClientAccount}
+        inkflowMessagingThreadId={previewInkflowMessagingThreadId}
+        onOpenInkflowDiscussion={previewHasInkflowClientAccount ? handleOpenInkflowDiscussionFromPreview : undefined}
       />
     </div>
   );

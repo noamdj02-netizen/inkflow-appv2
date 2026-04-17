@@ -25,3 +25,24 @@ verify_jwt = false
 # google-business-auth : callback OAuth = GET depuis Google (pas de Bearer Supabase). POST dashboard = JWT ES256 peut être rejeté par la passerelle.
 [functions.google-business-auth]
 verify_jwt = false
+
+# google-places : public_reviews / business_public_reviews sont appelés depuis la vitrine publique sans session.
+# Sans verify_jwt = false, la passerelle répond 401 avant le handler. Les actions sensibles vérifient le JWT dans le code (getUserEmailFromJwt).
+[functions.google-places]
+verify_jwt = false
+
+# Cron pg_net : pas d’Authorization JWT — sans verify_jwt = false la passerelle répond 401 avant Deno.
+# Optionnel : secret EDGE_CRON_SECRET + en-tête x-cron-secret (voir _shared/cronGate.ts).
+[functions.send-appointment-reminders]
+verify_jwt = false
+
+[functions.remind-unpaid-deposits]
+verify_jwt = false
+
+# Rappel solde jour J (pg_cron) — pas de JWT ; optionnel EDGE_CRON_SECRET + x-cron-secret
+[functions.remind-balance-day-of]
+verify_jwt = false
+
+# Réservation publique : POST avec { studioId } sans session Supabase.
+[functions.get-studio-availability]
+verify_jwt = false

@@ -6,7 +6,7 @@
  * - La clé serveur `GOOGLE_PLACES_SERVER_KEY` est lue dans `supabase/functions/google-places/index.ts`
  *   (`Deno.env.get`). Les réponses JSON (avis, note, etc.) sont renvoyées au client après succès.
  */
-import { supabase } from './supabase';
+import { isAccessTokenForCurrentSupabaseProject, supabase } from './supabase';
 import type {
   GooglePlaceSearchResultDTO,
   GoogleReviewsPayload,
@@ -167,34 +167,180 @@ export async function fetchPublicGoogleReviews(
 
 // ── Google Business Profile OAuth ─────────────────────────────────────────────
 
-/** Appelle google-business-auth avec JWT frais + retry automatique. */
+function getSupabaseUrlAndAnonForEdge(): { baseUrl: string; anonKey: string } {
+  const baseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
+  return { baseUrl, anonKey };
+}
+
+/**
+ * Appelle `google-business-auth` via fetch explicite (JWT + apikey), comme Stripe Connect.
+ * Évite les échecs opaques de `supabase.functions.invoke` (« Failed to send a request to the Edge Function »).
+ */
 async function invokeGoogleBusinessJwt<T>(
   body: Record<string, unknown>
 ): Promise<{ data: T | null; error: { message: string } | null }> {
   await ensureFreshAuthForEdge();
-  let res = await supabase.functions.invoke<T>('google-business-auth', { body });
-  if (res.error && isJwtRejectedMessage(res.error.message)) {
-    await supabase.auth.refreshSession().catch(() => {});
-    res = await supabase.functions.invoke<T>('google-business-auth', { body });
-  }
-  // En 4xx/5xx, Supabase peut quand même remplir `data` avec le JSON de l’Edge Function (ex. `{ error: "Non connecté" }`).
-  const payload = res.data as { error?: unknown } | null | undefined;
-  if (
-    res.error &&
-    payload &&
-    typeof payload === 'object' &&
-    typeof payload.error === 'string' &&
-    payload.error.trim().length > 0
-  ) {
-    return { data: res.data as T, error: null };
-  }
-  if (res.error) {
+
+  const { baseUrl, anonKey } = getSupabaseUrlAndAnonForEdge();
+  const fnUrl = `${baseUrl}/functions/v1/google-business-auth`;
+
+  type PostResult =
+    | { kind: 'network'; message: string }
+    | { kind: 'http'; res: Response; text: string; parsed: (T & { error?: string }) | null };
+
+  const postJson = async (accessToken: string | null): Promise<PostResult> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (anonKey) headers.apikey = anonKey;
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+    try {
+      const res = await fetch(fnUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+      const text = await res.text();
+      let parsed: (T & { error?: string }) | null = null;
+      if (text) {
+        try {
+          parsed = JSON.parse(text) as T & { error?: string };
+        } catch {
+          parsed = null;
+        }
+      }
+      return { kind: 'http', res, text, parsed };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return { kind: 'network', message };
+    }
+  };
+
+  const mapHttpToReturn = (
+    o: Extract<PostResult, { kind: 'http' }>
+  ): { data: T | null; error: { message: string } | null } => {
+    const { res, text, parsed } = o;
+    const payload = parsed as { error?: unknown } | null | undefined;
+
+    // Même logique que `functions.invoke` : 4xx/5xx mais corps JSON avec `error` → exposé comme `data`.
+    if (
+      !res.ok &&
+      payload &&
+      typeof payload === 'object' &&
+      typeof payload.error === 'string' &&
+      payload.error.trim().length > 0
+    ) {
+      return { data: parsed as T, error: null };
+    }
+
+    if (!res.ok) {
+      const hint =
+        (payload && typeof payload === 'object' && typeof payload.error === 'string' && payload.error) ||
+        text.slice(0, 400);
+      return {
+        data: parsed ?? null,
+        error: { message: formatGoogleBusinessAuthInvokeError(hint || `HTTP ${res.status}`) },
+      };
+    }
+
+    return { data: parsed ?? null, error: null };
+  };
+
+  const shouldRetryJwt = (o: Extract<PostResult, { kind: 'http' }>): boolean => {
+    if (o.res.ok) return false;
+    if (o.res.status === 401) return true;
+    return isJwtRejectedMessage(o.text.slice(0, 500));
+  };
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  let accessToken = session?.access_token ?? null;
+
+  if (!accessToken) {
     return {
-      data: res.data ?? null,
-      error: { message: formatGoogleBusinessAuthInvokeError(res.error.message ?? '') },
+      data: null,
+      error: { message: 'Session expirée ou absente. Reconnectez-vous puis réessayez.' },
     };
   }
-  return { data: res.data ?? null, error: null };
+
+  if (!isAccessTokenForCurrentSupabaseProject(accessToken)) {
+    return {
+      data: null,
+      error: {
+        message:
+          'Votre session correspond à un autre projet Supabase que celui configuré dans cette app (.env). Déconnectez-vous, vérifiez VITE_SUPABASE_URL, puis reconnectez-vous.',
+      },
+    };
+  }
+
+  let outcome = await postJson(accessToken);
+
+  if (outcome.kind === 'http' && !outcome.res.ok && shouldRetryJwt(outcome)) {
+    await supabase.auth.refreshSession().catch(() => {});
+    const {
+      data: { session: s2 },
+    } = await supabase.auth.getSession();
+    accessToken = s2?.access_token ?? null;
+    if (accessToken && isAccessTokenForCurrentSupabaseProject(accessToken)) {
+      outcome = await postJson(accessToken);
+    }
+  }
+
+  let result: { data: T | null; error: { message: string } | null };
+  if (outcome.kind === 'network') {
+    result = {
+      data: null,
+      error: { message: formatGoogleBusinessAuthInvokeError(outcome.message) },
+    };
+  } else {
+    result = mapHttpToReturn(outcome);
+  }
+
+  // #region agent log
+  {
+    const {
+      data: { session: sLog },
+    } = await supabase.auth.getSession();
+    const tok = sLog?.access_token;
+    const jwtMatch =
+      typeof tok === 'string' && tok.length > 0 ? isAccessTokenForCurrentSupabaseProject(tok) : null;
+    const httpStatus =
+      outcome.kind === 'http' ? outcome.res.status : 'network';
+    const errSlice =
+      result.error?.message?.slice(0, 160) ??
+      (outcome.kind === 'http' ? outcome.text.slice(0, 120) : outcome.message.slice(0, 120));
+    const payload = {
+      sessionId: 'df269f',
+      runId: 'post-fix',
+      hypothesisId: 'H1-H5',
+      location: 'lib/googlePlaces.ts:invokeGoogleBusinessJwt',
+      message: 'google-business-auth fetch',
+      data: {
+        action: String(body.action ?? '?'),
+        httpStatus,
+        errSlice,
+        hasInvokeError: Boolean(result.error),
+        hasSession: Boolean(tok),
+        jwtProjectMatchesEnv: jwtMatch,
+        transport: 'fetch',
+      },
+      timestamp: Date.now(),
+    };
+    fetch('http://127.0.0.1:7478/ingest/9ba54e13-e981-4aca-a0ca-1aa98d457b97', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'df269f' },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+    try {
+      sessionStorage.setItem('__inkflow_dbg_gba', JSON.stringify(payload.data));
+    } catch {
+      /* ignore */
+    }
+  }
+  // #endregion
+
+  return result;
 }
 
 /** Genere l'URL OAuth Google Business et redirige l'utilisateur. */

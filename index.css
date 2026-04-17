@@ -999,6 +999,29 @@ body:has(.public-page-scroll) {
   overscroll-behavior: auto;
 }
 
+/* Tunnel /book (PublicBookingPage) : shell flex plein écran + scroll interne + footer en flux
+   (évite le chevauchement d’un footer fixed sur les flashs / calendrier). */
+.book-public-root {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+.book-public-scroll {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
 /* 4. SAFE AREAS — header padding-top, bottom-nav padding-bottom */
 @supports (padding: max(0px)) {
   .safe-top { padding-top: max(0.75rem, env(safe-area-inset-top)) !important; }

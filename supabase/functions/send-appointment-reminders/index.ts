@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { assertCronAuthorized } from "../_shared/cronGate.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
@@ -35,7 +36,20 @@ function getReminderSubject(reminderType: string, studioName: string): string {
 }
 
 Deno.serve(async (req: Request) => {
-  const corsHeaders = getCorsHeaders(req.headers.get("origin"));
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+  const cronDeny = assertCronAuthorized(req, origin);
+  if (cronDeny) return cronDeny;
+
   try {
     if (!RESEND_API_KEY) {
       console.error("[send-appointment-reminders] RESEND_API_KEY is not configured");

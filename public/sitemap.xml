@@ -103,12 +103,6 @@
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://ink-flow.me/studio/mon-studio</loc>
-    <lastmod>2026-04-17</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
     <loc>https://ink-flow.me/studio/inkflow</loc>
     <lastmod>2026-04-17</lastmod>
     <changefreq>weekly</changefreq>
@@ -151,7 +145,13 @@
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://ink-flow.me/book/mon-studio</loc>
+    <loc>https://ink-flow.me/studio/mon-studio</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://ink-flow.me/studio/mon-studio-5z0uyya</loc>
     <lastmod>2026-04-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
@@ -194,6 +194,18 @@
   </url>
   <url>
     <loc>https://ink-flow.me/book/alex</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://ink-flow.me/book/mon-studio</loc>
+    <lastmod>2026-04-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://ink-flow.me/book/mon-studio-5z0uyya</loc>
     <lastmod>2026-04-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>

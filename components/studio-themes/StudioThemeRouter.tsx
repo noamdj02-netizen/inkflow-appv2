@@ -50,7 +50,7 @@ function vitrineToStudioThemeProps(data: VitrineData, baseUrl: string): StudioTh
 
   return {
     studio: {
-      name: data.name,
+      name: data.name?.trim() || data.slug.replace(/-/g, ' '),
       slug: data.slug,
       bio: trimOrNull(data.description) ?? trimOrNull(data.tagline),
       avatarUrl: data.avatar || null,
@@ -102,14 +102,16 @@ export const StudioThemeRouter: React.FC<StudioThemeRouterProps> = ({ data, fall
   const ThemeComponent = themeMap[themeId] ?? themeMap.classic;
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const props: StudioThemeProps = { ...vitrineToStudioThemeProps(data, baseUrl), googleReviews: googleReviews ?? null };
+  const displayName = data.name?.trim() || data.slug.replace(/-/g, ' ');
+  const ogImage = (data.coverImage || '').trim() || (data.avatar || '').trim();
 
   return (
     <div className="landing-scroll">
       <SEO
-        title={`${data.name} | Tatoueur & Prise de RDV - InkFlow`}
-        description={data.description || data.tagline || `Découvrez les flashs et prenez rendez-vous avec ${data.name}.`}
+        title={`${displayName} | Tatoueur & Prise de RDV - InkFlow`}
+        description={data.description || data.tagline || `Découvrez les flashs et prenez rendez-vous avec ${displayName}.`}
         canonical={`/studio/${data.slug}`}
-        ogImage={data.avatar || data.coverImage}
+        ogImage={ogImage || undefined}
       />
       <ThemeComponent {...props} />
     </div>

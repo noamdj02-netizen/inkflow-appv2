@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Plus, Trash2, Save, Calendar, AlertCircle, Timer, Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../contexts/ToastContext';
 
 interface AvailabilitySettingsProps {
   studioId?: string | null;
@@ -35,6 +36,7 @@ const DEFAULT_SCHEDULE: WeeklySchedule = {
 };
 
 export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ studioId, onSave }) => {
+  const toast = useToast();
   const [schedule, setSchedule] = useState<WeeklySchedule>(DEFAULT_SCHEDULE);
 
   const [bookingSettings, setBookingSettings] = useState({
@@ -200,9 +202,11 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
   }, [studioId]);
 
   const handleSave = async () => {
+    if (!studioId) {
+      toast.error('Studio introuvable. Rechargez la page ou reconnectez-vous.');
+      return;
+    }
     const settings = { schedule, bookingSettings, closedDates, customSlots, blockedRanges };
-    onSave?.(settings);
-    if (!studioId) return;
     setSaveStatus('saving');
     try {
       // Structure complète des paramètres de disponibilité
@@ -239,9 +243,16 @@ export const AvailabilitySettings: React.FC<AvailabilitySettingsProps> = ({ stud
         .update({ availability_settings: availabilitySettings })
         .eq('id', studioId);
       if (error) throw error;
+      onSave?.(settings);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 3000);
-    } catch {
+    } catch (e) {
+      console.error('availability_settings save:', e);
+      toast.error(
+        e && typeof e === 'object' && 'message' in e && typeof (e as Error).message === 'string'
+          ? (e as Error).message
+          : 'Impossible d’enregistrer les disponibilités.'
+      );
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 4000);
     }

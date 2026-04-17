@@ -3,7 +3,7 @@ import {
   Building2, User, Hash, Palette, Shield, Plus, Trash2, Save,
   Check, Loader2, ChevronRight, CreditCard, FileText, Upload,
   Crown, Hammer, GraduationCap, X, AlertCircle,
-  Link2, Link2Off, Star, RefreshCw, Info,
+  Link2, Link2Off, Star, RefreshCw, Info, Clock, AlertTriangle,
 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import type { ArtistAccount } from '../../types';
@@ -829,7 +829,22 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
                 : inTrial ? 'text-amber-700 dark:text-amber-400'
                 : 'text-red-700 dark:text-red-400'
               }`}>
-                {isActive ? '✓ Abonnement actif' : inTrial ? `⏳ Essai — ${trialDaysLeft}j restants` : '⚠ Accès restreint'}
+                {isActive ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Check className="w-4 h-4 shrink-0" strokeWidth={2.5} aria-hidden />
+                    Abonnement actif
+                  </span>
+                ) : inTrial ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Clock className="w-4 h-4 shrink-0" aria-hidden />
+                    Essai — {trialDaysLeft}j restants
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden />
+                    Accès restreint
+                  </span>
+                )}
               </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                 {isActive ? 'Plan Solo — renouvellement mensuel' : inTrial ? 'Passez à un plan payant pour continuer' : 'Abonnez-vous pour débloquer l\'accès'}
