@@ -177,11 +177,12 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { action, code, studioId, locationName } = await req.json() as {
+    const { action, code, studioId, locationName, force } = await req.json() as {
       action?: string;
       code?: string;
       studioId?: string;
       locationName?: string;
+      force?: boolean;
     };
 
     // ─── initiate ──────────────────────────────────────────────────────────────
@@ -292,12 +293,20 @@ Deno.serve(async (req: Request) => {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       const { data: row } = await supabase
         .from("inkflow_studios")
-        .select("google_business_access_token, google_business_refresh_token, google_business_token_expiry")
+        .select("google_business_access_token, google_business_refresh_token, google_business_token_expiry, google_business_locations_cache, google_business_locations_cached_at, google_business_location_name")
         .eq("id", studioId)
         .single();
 
       if (!row?.google_business_refresh_token) {
         return json({ error: "Non connecté" }, 401);
+      }
+
+      // ── Cache : si on a déjà fetché récemment, on renvoie la cache
+      // (évite le quota Google de 1 req/min sur My Business Account Management API).
+      // Force refresh via body.force === true.
+      const cached = row.google_business_locations_cache as { name: string; title: string; accountName: string }[] | null;
+      if (!force && Array.isArray(cached) && cached.length > 0) {
+        return json({ locations: cached, accountsCount: cached.length, cached: true });
       }
 
       const token = await getValidAccessToken(
@@ -312,18 +321,23 @@ Deno.serve(async (req: Request) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!accountsRes.ok) {
-        return json({ error: `Accounts API: ${accountsRes.status}` }, 502);
+        const body = await accountsRes.text();
+        console.error("[google-business-auth] Accounts API error:", accountsRes.status, body.slice(0, 500));
+        return json({ error: `Accounts API: ${accountsRes.status}`, detail: body.slice(0, 500) }, 502);
       }
 
       const accountsBody = await accountsRes.json() as {
         accounts?: { name?: string; accountName?: string }[];
       };
+      console.log("[google-business-auth] accounts count:", (accountsBody.accounts || []).length);
 
       const allLocations: { name: string; title: string; accountName: string }[] = [];
+      const locationErrors: string[] = [];
       for (const account of accountsBody.accounts || []) {
         if (!account.name) continue;
         try {
           const locs = await fetchLocations(account.name, token);
+          console.log("[google-business-auth] account", account.name, "locations:", locs.length);
           for (const loc of locs) {
             if (loc.name) {
               allLocations.push({
@@ -333,12 +347,31 @@ Deno.serve(async (req: Request) => {
               });
             }
           }
-        } catch {
-          // ignore errors for individual accounts
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.warn("[google-business-auth] fetchLocations failed for", account.name, msg);
+          locationErrors.push(`${account.name}: ${msg}`);
         }
       }
 
-      return json({ locations: allLocations });
+      // Cache la liste pour éviter le quota 1/min aux prochaines ouvertures.
+      // Auto-sélection si 1 seule fiche et pas encore choisie (évite à l'user de cliquer).
+      const patch: Record<string, unknown> = {
+        google_business_locations_cache: allLocations,
+        google_business_locations_cached_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      if (allLocations.length === 1 && !row.google_business_location_name) {
+        patch.google_business_location_name = allLocations[0].name;
+      }
+      await supabase.from("inkflow_studios").update(patch).eq("id", studioId);
+
+      return json({
+        locations: allLocations,
+        accountsCount: (accountsBody.accounts || []).length,
+        errors: locationErrors,
+        autoSelected: allLocations.length === 1 ? allLocations[0].name : null,
+      });
     }
 
     // ─── save_location ─────────────────────────────────────────────────────────
@@ -378,6 +411,8 @@ Deno.serve(async (req: Request) => {
           google_business_refresh_token: null,
           google_business_token_expiry:  null,
           google_business_location_name: null,
+          google_business_locations_cache: null,
+          google_business_locations_cached_at: null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", studioId);

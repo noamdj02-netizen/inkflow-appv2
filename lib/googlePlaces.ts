@@ -180,14 +180,17 @@ export async function getGoogleBusinessStatus(studioId: string): Promise<GoogleB
   };
 }
 
-/** Liste les fiches Google Business disponibles pour ce compte. */
+/** Liste les fiches Google Business. `force=true` ignore la cache DB (bouton Rafraîchir). */
 export async function listGoogleBusinessLocations(
-  studioId: string
+  studioId: string,
+  force = false
 ): Promise<{ name: string; title: string; accountName: string }[]> {
   const { data, error } = await invokeGoogleBusinessJwt<{
     locations?: { name: string; title: string; accountName: string }[];
+    cached?: boolean;
+    autoSelected?: string | null;
     error?: string;
-  }>({ action: 'locations', studioId });
+  }>({ action: 'locations', studioId, force });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
   return data?.locations ?? [];
