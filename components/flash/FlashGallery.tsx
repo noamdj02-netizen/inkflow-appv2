@@ -5,6 +5,7 @@ import { Modal } from '../ui/Modal';
 import { ImageUploadField } from '../ui/ImageUploadField';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { useToast } from '../../contexts/ToastContext';
+import { getVitrineShareUrl } from '../../lib/urls';
 
 const STYLE_OPTIONS = ['Minimaliste', 'Traditional', 'Géométrique', 'Japonais', 'Réalisme', 'Blackwork', 'Autre'];
 
@@ -31,7 +32,7 @@ export const FlashGallery: React.FC<FlashGalleryProps> = ({
 }) => {
   const toast = useToast();
   const [linkCopied, setLinkCopied] = useState(false);
-  const vitrineUrl = studioSlug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/studio/${studioSlug}` : '';
+  const vitrineUrl = studioSlug ? getVitrineShareUrl(studioSlug) : '';
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDesign, setSelectedDesign] = useState<FlashDesign | null>(null);

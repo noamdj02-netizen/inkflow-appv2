@@ -19,6 +19,7 @@ import { getStudioSlug } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
 import { useSupabaseEnabled } from '../../hooks/useSupabaseEnabled';
 import { getVitrineLinkSettingsFromSupabase, saveVitrineLinkSettingsToSupabase } from '../../lib/supabaseDashboard';
+import { getVitrineShareUrl } from '../../lib/urls';
 
 const STORAGE_KEY = 'inkflow-vitrine-settings';
 
@@ -116,7 +117,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
   const studioId = userEmail && safeName ? getStudioId(userEmail, safeName) : null;
 
   const slug = (studioSlugFromDb != null && studioSlugFromDb !== '') ? studioSlugFromDb : getStudioSlug(studioName ?? safeName);
-  const vitrineUrl = `${window.location.origin}/studio/${slug}`;
+  const vitrineUrl = getVitrineShareUrl(slug);
   const textOnPrimary = isLightColor(settings.primaryColor) ? '#171717' : '#ffffff';
 
   useEffect(() => {

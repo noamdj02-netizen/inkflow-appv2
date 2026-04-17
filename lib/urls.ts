@@ -123,6 +123,40 @@ export function getInviteShareOrigin(): string {
 
 /** Base path des invitations : `https://app…/invite` */
 export const getInviteBaseUrl = () => `${getInviteShareOrigin()}/invite`;
+
+/**
+ * URL publique canonique pour partager la vitrine d'un studio.
+ * - En local (`localhost`) → on renvoie quand même `https://app.ink-flow.me/studio/<slug>`
+ *   pour que le lien partagé fonctionne en production.
+ * - Sur la landing Framer (`ink-flow.me`) → force `app.ink-flow.me`.
+ * - Sur l'app (app.ink-flow.me / vercel preview) → utilise l'origine courante.
+ */
+export function getVitrineShareUrl(slug: string): string {
+  const safeSlug = encodeURIComponent(String(slug ?? '').trim());
+  // Priorité à l'env explicite (utile en dev local pour forcer le domaine public).
+  const fromEnv =
+    (import.meta.env.VITE_APP_URL as string | undefined)?.trim() ||
+    (import.meta.env.VITE_PUBLIC_INVITE_ORIGIN as string | undefined)?.trim();
+  let origin: string;
+  if (fromEnv && /^https?:\/\//i.test(fromEnv)) {
+    try {
+      origin = new URL(fromEnv).origin.replace(/\/$/, '');
+    } catch {
+      origin = getCanonicalAppOrigin();
+    }
+  } else if (typeof window !== 'undefined') {
+    const host = window.location.hostname.toLowerCase();
+    // En local (ou IP) : on renvoie le domaine prod pour que le lien partagé fonctionne hors de la machine.
+    if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local')) {
+      origin = APP_URL.replace(/\/$/, '');
+    } else {
+      origin = getCanonicalAppOrigin().replace(/\/$/, '');
+    }
+  } else {
+    origin = APP_URL.replace(/\/$/, '');
+  }
+  return `${origin}/studio/${safeSlug}`;
+}
 export const LANDING_PRICING_URL = `${LANDING_URL}/#pricing`;
 /** Pages légales sur la landing Framer */
 export const LANDING_PRIVACY_URL = `${LANDING_URL}/politique-confidentialite`;

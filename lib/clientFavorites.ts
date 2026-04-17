@@ -6,82 +6,87 @@ function getSupabaseEdgeConfig(): { url: string; anonKey: string } {
   return { url, anonKey };
 }
 
-export async function toggleFlashFavorite(flashId: string, add: boolean): Promise<boolean> {
+/** Récupère un access_token frais ; rafraîchit la session si expiration imminente. */
+async function getFreshAccessToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return null;
+  const expMs = (session.expires_at ?? 0) * 1000;
+  // Refresh si < 60s ou si pas d'expiration connue
+  if (!expMs || expMs - Date.now() < 60_000) {
+    const { data: refreshed } = await supabase.auth.refreshSession().catch(() => ({ data: { session: null } }));
+    return refreshed?.session?.access_token ?? session.access_token ?? null;
+  }
+  return session.access_token;
+}
+
+async function callFavoriteEdge(
+  body: { flash_id?: string; studio_id?: string },
+  method: 'POST' | 'DELETE',
+): Promise<void> {
   const { url, anonKey } = getSupabaseEdgeConfig();
   if (!url || !anonKey) {
     throw new Error('Application non configurée (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
   }
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) {
-    throw new Error('Connectez-vous pour enregistrer vos favoris.');
-  }
-
-  const method = add ? 'POST' : 'DELETE';
-  let res: Response;
-  try {
-    res = await fetch(`${url}/functions/v1/client-favorite`, {
+  const doFetch = async (token: string): Promise<Response> => {
+    return fetch(`${url}/functions/v1/client-favorite`, {
       method,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
         apikey: anonKey,
       },
-      body: JSON.stringify({ flash_id: flashId }),
+      body: JSON.stringify(body),
     });
+  };
+
+  let token = await getFreshAccessToken();
+  if (!token) {
+    throw new Error('Connectez-vous pour enregistrer vos favoris.');
+  }
+
+  let res: Response;
+  try {
+    res = await doFetch(token);
   } catch {
     throw new Error('Connexion instable. Vérifiez le réseau et réessayez.');
   }
 
+  // Si 401 : force refresh session et retry une fois
+  if (res.status === 401) {
+    await supabase.auth.refreshSession().catch(() => {});
+    const { data: { session: s2 } } = await supabase.auth.getSession();
+    token = s2?.access_token ?? null;
+    if (token) {
+      try {
+        res = await doFetch(token);
+      } catch {
+        throw new Error('Connexion instable. Vérifiez le réseau et réessayez.');
+      }
+    }
+  }
+
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (res.status === 401) {
+      throw new Error('Session expirée. Reconnectez-vous pour enregistrer vos favoris.');
+    }
     throw new Error(
       typeof data.error === 'string' && data.error.trim()
         ? data.error
         : 'Impossible de mettre à jour le favori pour le moment.',
     );
   }
+}
 
+export async function toggleFlashFavorite(flashId: string, add: boolean): Promise<boolean> {
+  await callFavoriteEdge({ flash_id: flashId }, add ? 'POST' : 'DELETE');
   return true;
 }
 
 /** Favori studio / tatoueur (carte « Artistes proches ») — même Edge Function, corps `studio_id`. */
 export async function toggleStudioFavorite(studioId: string, add: boolean): Promise<boolean> {
-  const { url, anonKey } = getSupabaseEdgeConfig();
-  if (!url || !anonKey) {
-    throw new Error('Application non configurée (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
-  }
-
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) {
-    throw new Error('Connectez-vous pour enregistrer vos favoris.');
-  }
-
-  const method = add ? 'POST' : 'DELETE';
-  let res: Response;
-  try {
-    res = await fetch(`${url}/functions/v1/client-favorite`, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-        apikey: anonKey,
-      },
-      body: JSON.stringify({ studio_id: studioId }),
-    });
-  } catch {
-    throw new Error('Connexion instable. Vérifiez le réseau et réessayez.');
-  }
-
-  if (!res.ok) {
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(
-      typeof data.error === 'string' && data.error.trim()
-        ? data.error
-        : 'Impossible de mettre à jour le favori studio pour le moment.',
-    );
-  }
-
+  await callFavoriteEdge({ studio_id: studioId }, add ? 'POST' : 'DELETE');
   return true;
 }
 

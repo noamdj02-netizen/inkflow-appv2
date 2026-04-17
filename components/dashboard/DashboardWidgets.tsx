@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LayoutGrid, StickyNote, Link2, BarChart2, Trash2, Plus, MessageSquare, Calendar, Users, Wallet, Image, Settings, ExternalLink } from 'lucide-react';
+import { getVitrineShareUrl } from '../../lib/urls';
 export type WidgetType = 'note' | 'link' | 'stat' | 'shortcut';
 
 export interface DashboardWidget {
@@ -197,7 +198,7 @@ export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({ isOpen, onClose,
     setColor('#171717');
   };
 
-  const vitrineUrl = studioSlug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/studio/${studioSlug}` : '';
+  const vitrineUrl = studioSlug ? getVitrineShareUrl(studioSlug) : '';
 
   const handleAddShortcut = (id: ShortcutTabId) => {
     onAdd({

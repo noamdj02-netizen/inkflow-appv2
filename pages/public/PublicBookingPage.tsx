@@ -206,7 +206,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         </div>
       )}
 
-      <main className="max-w-md mx-auto px-4 pb-32">
+      <main className="max-w-md mx-auto px-4 pb-[260px] sm:pb-[220px]">
         {/* En-tête Tatoueur */}
         <section className="pt-8 pb-6 text-center">
           <div className="w-20 h-20 mx-auto rounded-full overflow-hidden bg-zinc-200 border-2 border-white shadow-lg ring-2 ring-zinc-100">

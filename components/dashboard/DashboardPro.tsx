@@ -102,7 +102,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from 'next-themes';
 import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
-import { LANDING_PRICING_URL } from '../../lib/urls';
+import { LANDING_PRICING_URL, getVitrineShareUrl } from '../../lib/urls';
 import { safeJsonParse } from '../../lib/utils';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
@@ -422,6 +422,8 @@ export const DashboardPro: React.FC = () => {
   const [googleBusinessNeedsLocationSelection, setGoogleBusinessNeedsLocationSelection] = useState(false);
   const [googleBusinessLocations, setGoogleBusinessLocations] = useState<{ name: string; title: string; accountName: string }[]>([]);
   const [loadingGoogleBusinessLocations, setLoadingGoogleBusinessLocations] = useState(false);
+  // Modal de confirmation après OAuth Google Business réussi
+  const [showGoogleBusinessSuccess, setShowGoogleBusinessSuccess] = useState(false);
   const [generalSaving, setGeneralSaving] = useState(false);
   const [generalSaved, setGeneralSaved] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
@@ -918,15 +920,26 @@ export const DashboardPro: React.FC = () => {
     if (params.get('connected') === 'google-business') {
       window.history.replaceState({}, '', '/dashboard');
       refreshGoogleBusinessStatus();
-      setActiveTab('settings');
-      setSettingsTab('vitrine');
-      toast.success('Google Business connecté ! Vos avis apparaissent maintenant sur votre vitrine.');
+      // Ouvre la modale de confirmation (au lieu d'un simple toast) — l'utilisateur
+      // choisira s'il veut afficher ses avis Google sur la vitrine maintenant.
+      setShowGoogleBusinessSuccess(true);
     } else if (params.get('error') === 'google-business-denied') {
       window.history.replaceState({}, '', '/dashboard');
       toast.error('Connexion Google Business annulée.');
     } else if (params.get('error')?.startsWith('google-business')) {
+      const code = params.get('error') || '';
       window.history.replaceState({}, '', '/dashboard');
-      toast.error('Erreur lors de la connexion Google Business. Réessayez.');
+      // Message précis selon le code — facilite le diagnostic et guide l'utilisateur.
+      const msg =
+        code === 'google-business-token'
+          ? "Échec de l'échange avec Google (token). Vérifiez que l'API Business Profile est activée et que le Client ID/Secret correspondent bien au domaine autorisé."
+          : code === 'google-business-invalid'
+          ? 'Lien OAuth invalide ou expiré. Relancez la connexion depuis Paramètres > Vitrine > Avis.'
+          : code === 'google-business-server'
+          ? 'Erreur serveur Supabase lors de la connexion Google. Réessayez dans un instant.'
+          : `Erreur Google Business (${code}). Réessayez.`;
+      console.error('[Google Business OAuth] error code:', code);
+      toast.error(msg);
     }
   }, [toast, refreshGoogleBusinessStatus]);
 
@@ -3368,6 +3381,66 @@ export const DashboardPro: React.FC = () => {
           />
         </Suspense>
       ) : null}
+      {/* ====== Modale succès connexion Google Business — demande si on affiche les avis ====== */}
+      {showGoogleBusinessSuccess && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+          onClick={() => setShowGoogleBusinessSuccess(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="gb-success-title"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-3xl border border-neutral-200 dark:border-zinc-700 shadow-2xl overflow-hidden"
+            style={{ backgroundColor: effectiveTheme === 'dark' ? '#18181B' : '#ffffff' }}
+          >
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-full bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <h3 id="gb-success-title" className="text-base font-bold text-neutral-900 dark:text-white">
+                    Google Business connecté
+                  </h3>
+                  <p className="text-sm text-neutral-600 dark:text-[var(--text-secondary)] mt-1">
+                    Souhaitez-vous afficher vos avis Google sur votre page vitrine ?
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-xl border border-neutral-200 dark:border-zinc-700 bg-neutral-50 dark:bg-[#27272A] px-3 py-2 text-xs text-neutral-600 dark:text-[var(--text-secondary)]">
+                Vous pourrez choisir la fiche Google correspondant à votre studio à l'étape suivante.
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleBusinessSuccess(false)}
+                  className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold border border-neutral-200 dark:border-zinc-700 text-neutral-700 dark:text-[var(--text-secondary)] hover:bg-neutral-100 dark:hover:bg-[#27272A] min-h-[44px] transition-colors"
+                >
+                  Plus tard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowGoogleBusinessSuccess(false);
+                    setActiveTab('settings');
+                    setSettingsTab('vitrine');
+                    toast.success('Choisissez votre fiche Google pour afficher les avis.');
+                  }}
+                  className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold bg-emerald-500 hover:bg-emerald-600 text-white min-h-[44px] transition-colors"
+                >
+                  Oui, afficher mes avis
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ====== MOBILE: FAB DRAWER (bottom sheet) — fond opaque #18181B, z-index 70 ====== */}
       {showFabMenu && (
         <>
@@ -3458,7 +3531,7 @@ export const DashboardPro: React.FC = () => {
                         return;
                       }
                       const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user?.studioName ?? '');
-                      window.open(`${window.location.origin}/studio/${slug}`, '_blank');
+                      window.open(getVitrineShareUrl(slug), '_blank');
                     }}
                     className="flex items-center gap-3 w-full bg-neutral-50 dark:bg-[#27272A] hover:bg-neutral-100 dark:hover:bg-[#3f3f46] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-zinc-600 font-semibold text-neutral-900 dark:text-white min-h-[52px] text-left transition-colors touch-target"
                   >
@@ -3471,7 +3544,7 @@ export const DashboardPro: React.FC = () => {
                     onClick={async () => {
                       setShowFabMenu(false);
                       const slug = (studioSlug != null && studioSlug !== '') ? studioSlug : getVitrineSlug(user?.studioName ?? '');
-                      const url = `${window.location.origin}/studio/${slug}`;
+                      const url = getVitrineShareUrl(slug);
                       try {
                         await navigator.clipboard.writeText(url);
                         toast.success('Lien copié !');

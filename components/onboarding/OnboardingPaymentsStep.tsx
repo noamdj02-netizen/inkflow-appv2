@@ -10,6 +10,7 @@ import { startStripeConnectOnboarding } from '../../lib/stripeClient';
 import { useToast } from '../../contexts/ToastContext';
 import { setWelcomeFlowCheckpoint } from '../../lib/welcomeStorage';
 import { maybeStartStripeConnectResumePoll, registerStripeConnectResumePoll } from '../../lib/stripeConnectResume';
+import { getVitrineShareUrl } from '../../lib/urls';
 
 export interface OnboardingPaymentsStepProps {
   userScopedId: string;
@@ -30,10 +31,7 @@ export const OnboardingPaymentsStep: React.FC<OnboardingPaymentsStepProps> = ({
   const [chargesEnabled, setChargesEnabled] = useState(false);
   const [connectAccountId, setConnectAccountId] = useState<string | null>(null);
 
-  const vitrineUrl =
-    typeof window !== 'undefined' && studioSlug
-      ? `${window.location.origin}/studio/${studioSlug}`
-      : '';
+  const vitrineUrl = studioSlug ? getVitrineShareUrl(studioSlug) : '';
 
   const loadStatus = useCallback(async () => {
     setLoading(true);

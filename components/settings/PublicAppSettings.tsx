@@ -23,6 +23,7 @@ import {
   type MirrorFlashPreview,
   type MirrorPreviewAccent,
 } from '../dashboard/ClientAppMirrorPreview';
+import { getVitrineShareUrl } from '../../lib/urls';
 
 const BIO_MAX = 500;
 const TAGLINE_MAX = 140;
@@ -155,8 +156,7 @@ export const PublicAppSettings: React.FC<PublicAppSettingsProps> = ({
     }
   };
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const studioPublicUrl = studioSlug ? `${origin}/studio/${studioSlug}` : '';
+  const studioPublicUrl = studioSlug ? getVitrineShareUrl(studioSlug) : '';
 
   const copyText = async (msg: string, text: string) => {
     try {

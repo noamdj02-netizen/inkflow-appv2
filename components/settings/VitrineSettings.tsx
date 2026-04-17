@@ -24,6 +24,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { VitrineLinkButton } from '../dashboard/VitrineLinkButton';
+import { getVitrineShareUrl } from '../../lib/urls';
 import { ThemeSelector } from './ThemeSelector';
 import { ImageUploadField } from '../ui/ImageUploadField';
 import { useToast } from '../../contexts/ToastContext';
@@ -186,9 +187,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
     el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }, [activeSection]);
 
-  const publicUrl = typeof window !== 'undefined' && slug
-    ? `${window.location.origin}/studio/${slug}`
-    : '';
+  const publicUrl = slug ? getVitrineShareUrl(slug) : '';
   const slugConflict = (studioSlugFromDb != null && studioSlugFromDb !== '') &&
     getVitrineSlug(studioName) !== studioSlugFromDb;
 

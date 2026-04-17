@@ -1256,9 +1256,10 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
       {/* Flash Detail Modal */}
       {selectedFlash && (
-        <div className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setSelectedFlash(null)}>
-          <div className="bg-white rounded-3xl max-w-4xl w-full my-8" onClick={(e) => e.stopPropagation()} data-joyride="vitrine-flash-modal">
-            <div className="grid md:grid-cols-2 gap-8 p-8">
+        <div className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm overflow-y-auto" onClick={() => setSelectedFlash(null)}>
+          <div className="min-h-full flex items-start sm:items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-4xl w-full my-4 sm:my-8" onClick={(e) => e.stopPropagation()} data-joyride="vitrine-flash-modal">
+            <div className="grid md:grid-cols-2 gap-6 sm:gap-8 p-4 sm:p-8">
               <div className="relative aspect-square rounded-2xl overflow-hidden">
                 <img src={selectedFlash.imageUrl} alt={selectedFlash.title} className="w-full h-full object-cover" />
                 {!selectedFlash.available && (
@@ -1418,6 +1419,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
       )}
