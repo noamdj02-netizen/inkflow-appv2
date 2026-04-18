@@ -3,7 +3,7 @@
  * Connexion e-mail + mot de passe, inscription, définition du mot de passe (première connexion lien / legacy).
  * UI alignée sur CLIENT_DASHBOARD_THEME (même famille que /client/dashboard).
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Mail, ArrowRight, CheckCircle, Loader2, Lock, User as UserIcon } from 'lucide-react';
 import { SEO } from '../../components/SEO';
 import { Logo } from '../../components/Logo';
@@ -35,6 +35,10 @@ const inputClassNoIcon =
 
 export const ClientPortalLoginPage: React.FC = () => {
   const isSupabaseEnabled = useSupabaseEnabled();
+  const fromOnboarding = useMemo(
+    () => new URLSearchParams(window.location.search).get('from') === 'onboarding',
+    [],
+  );
   const [email, setEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [phase, setPhase] = useState<Phase>('boot');
@@ -321,7 +325,16 @@ export const ClientPortalLoginPage: React.FC = () => {
                       <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-sans">
                         Connexion
                       </h1>
-                      <p className="text-sm text-zinc-500 max-w-md">
+                      {fromOnboarding && (
+                        <div
+                          className="mt-3 rounded-2xl border border-blue-200/90 bg-blue-50/95 px-4 py-3 text-sm text-blue-950 leading-snug"
+                          role="status"
+                        >
+                          Tu viens de la présentation : entre ton e-mail ci-dessous pour recevoir ton lien de
+                          connexion, puis finalise ton profil et ton questionnaire santé.
+                        </div>
+                      )}
+                      <p className="text-sm text-zinc-500 max-w-md mt-3">
                         Accède à tes rendez-vous, messages et avantages fidélité.
                       </p>
                     </>
@@ -339,7 +352,16 @@ export const ClientPortalLoginPage: React.FC = () => {
                       <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 font-sans">
                         Créer un compte
                       </h1>
-                      <p className="text-sm text-zinc-500">
+                      {fromOnboarding && (
+                        <div
+                          className="mt-3 rounded-2xl border border-blue-200/90 bg-blue-50/95 px-4 py-3 text-sm text-blue-950 leading-snug"
+                          role="status"
+                        >
+                          Presque fini : après l’inscription, tu complètes ton profil et la partie santé comme
+                          prévu.
+                        </div>
+                      )}
+                      <p className={`text-sm text-zinc-500 ${fromOnboarding ? 'mt-3' : ''}`}>
                         E-mail et mot de passe, puis finalisation du profil et questionnaire santé.
                       </p>
                     </>
@@ -516,8 +538,15 @@ export const ClientPortalLoginPage: React.FC = () => {
                         </button>
                       </p>
                       <p className="text-center text-xs text-zinc-500">
+                        <a
+                          href="/client/bienvenue"
+                          className="font-medium text-blue-600 hover:text-blue-700 underline underline-offset-2"
+                        >
+                          Première visite ? Découvre l’app
+                        </a>
+                        <span className="mx-1.5 text-zinc-300">·</span>
                         <a href="/" className="font-medium text-zinc-700 underline underline-offset-2 hover:text-zinc-900">
-                          Découvrir Inkflow
+                          Inkflow Pro
                         </a>
                       </p>
                     </div>

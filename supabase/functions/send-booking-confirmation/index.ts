@@ -57,7 +57,13 @@ function timeToHHMM(t: string | null): { hour: number; min: number } {
 function buildIcsContent(payload: Payload): string {
   const { requestedDate, requestedTime } = payload;
   const { hour, min } = timeToHHMM(requestedTime);
-  const [y, m, d] = requestedDate.split("-").map(Number);
+  const dateOk = /^\d{4}-\d{2}-\d{2}$/.test((requestedDate || "").trim());
+  const [y, m, d] = dateOk
+    ? requestedDate.split("-").map(Number)
+    : (() => {
+        const t = new Date();
+        return [t.getFullYear(), t.getMonth() + 1, t.getDate()] as const;
+      })();
   const start = new Date(y, m - 1, d, hour, min, 0);
   const end = new Date(start.getTime() + 60 * 60 * 1000);
   const fmtLocal = (d: Date) =>
@@ -102,15 +108,19 @@ function formatDateDisplay(requestedDate: string, requestedTime: string | null):
 }
 
 function buildRdvConfirmeHtml(payload: Payload): string {
+  const descriptionRaw = typeof payload.description === "string" ? payload.description : "";
   const dateDisplay = formatDateDisplay(payload.requestedDate, payload.requestedTime);
   const hasPaymentLink = !!payload.paymentLink?.trim?.();
   const rawCta = payload.paymentLink || payload.conversationLink || APP_URL;
   const ctaUrl = ensureAbsoluteUrl(rawCta, APP_URL);
   const ctaLabel = hasPaymentLink ? "Régler mon acompte" : "Confirmer mon rendez-vous";
+  const clientDashboardUrl = `${APP_URL}/client/dashboard`;
   const safeClientName = escapeHtml(payload.clientName);
   const safeStudioName = escapeHtml(payload.studioName);
   const rawPaymentUrl = hasPaymentLink ? payload.paymentLink!.trim() : "";
-  const safeDescription = escapeHtml(payload.description.length > 120 ? payload.description.slice(0, 117) + "..." : payload.description);
+  const safeDescription = escapeHtml(
+    descriptionRaw.length > 120 ? descriptionRaw.slice(0, 117) + "..." : descriptionRaw,
+  );
 
   const intro = hasPaymentLink
     ? `${safeClientName}, le studio a bien reçu votre demande et a validé votre créneau. Pour bloquer définitivement cette date dans l'agenda, il ne vous reste plus qu'à régler votre acompte.`
@@ -142,6 +152,8 @@ function buildRdvConfirmeHtml(payload: Payload): string {
       : "Récapitulatif de votre demande.",
     bodyHtml,
     button: { text: ctaLabel, url: ctaUrl },
+    secondaryButton: { text: "Ouvrir mon espace client", url: clientDashboardUrl },
+    buttonSubtext: "Retrouve tes rendez-vous et messages dans l’app InkFlow.",
     linkHint: hasPaymentLink
       ? { label: "Si le bouton ne s'affiche pas, copiez ce lien :", url: rawPaymentUrl }
       : undefined,
@@ -223,9 +235,13 @@ Deno.serve(async (req: Request) => {
       { headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
     console.error("Edge function error:", err);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({
+        error: "Internal server error",
+        details: detail.slice(0, 400),
+      }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

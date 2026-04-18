@@ -1475,21 +1475,25 @@ function TabExplore({
         )}
       </div>
 
-      {/* Filter chips */}
+      {/* Filtres styles — barre frosted (même look que l’accueil) */}
       <div
-        className="flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x pb-2 -mx-1 px-1"
-        style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', marginBottom: 20 }}
+        className="ios-chip-scroller touch-pan-x -mx-1 px-1 pb-2"
+        style={{ marginBottom: 20 }}
       >
         {STYLE_TABS.map((f) => (
           <button
             key={f}
             type="button"
             onClick={() => onDiscoveryStyleFilter(f)}
-            className="shrink-0 touch-manipulation min-h-[44px] flex items-center px-4 rounded-full active:scale-[0.98] transition-transform"
+            className="shrink-0 touch-manipulation min-h-[36px] flex items-center rounded-full px-3.5 active:scale-[0.98] transition-transform"
             style={{
-              fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer',
-              background: discoveryStyleFilter === f ? D.gold : D.card,
-              color: discoveryStyleFilter === f ? D.onAccent : D.muted,
+              fontSize: 13,
+              fontWeight: 600,
+              letterSpacing: '-0.02em',
+              border: 'none',
+              cursor: 'pointer',
+              background: discoveryStyleFilter === f ? D.gold : 'rgba(60, 60, 67, 0.08)',
+              color: discoveryStyleFilter === f ? D.onAccent : D.textSub,
               transition: 'all 0.15s',
             }}
           >
@@ -1498,35 +1502,32 @@ function TabExplore({
         ))}
       </div>
 
-      {/* Tri — aligné avec l’accueil */}
+      {/* Tri — segmented iOS */}
       <div className="mb-4">
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide" style={{ color: D.muted }}>
+        <p className="mb-2 text-[12px] font-semibold tracking-[-0.01em]" style={{ color: D.muted }}>
           Trier
         </p>
-        <div
-          className="flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x pb-1 -mx-1 px-1"
-          style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}
-        >
-              {FLASH_SORT_OPTIONS.map(({ key, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onFlashSortChange(key);
-                  }}
-                  className="relative z-[1] shrink-0 touch-manipulation min-h-[40px] rounded-full px-3.5 py-2 text-xs font-semibold transition-transform active:scale-[0.98]"
-                  style={{
-                    border: `1px solid ${flashSortKey === key ? D.gold : D.border}`,
-                    background: flashSortKey === key ? D.goldDim : D.card,
-                    color: flashSortKey === key ? D.gold : D.muted,
-                    touchAction: 'manipulation',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+        <div className="ios-segmented-track" role="tablist" aria-label="Ordre d’affichage des flashs">
+          {FLASH_SORT_OPTIONS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-pressed={flashSortKey === key}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onFlashSortChange(key);
+              }}
+              className="touch-manipulation active:scale-[0.99]"
+              style={{
+                color: flashSortKey === key ? D.text : D.muted,
+                touchAction: 'manipulation',
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -2153,8 +2154,10 @@ function TabRDV({
   if (!userEmail.trim()) {
     return (
       <div className="px-2 pt-3 pb-8 sm:px-4 sm:pt-4 md:px-6">
-        <div className="text-base sm:text-lg font-display tracking-tight mb-4" style={{ color: D.text }}>
-          Mes réservations
+        <div className="mb-5 max-w-lg">
+          <p className="text-sm leading-relaxed" style={{ color: D.muted }}>
+            Connecte-toi avec le même e-mail que pour tes réservations pour tout afficher ici.
+          </p>
         </div>
         <div style={{
           padding: '64px 24px', textAlign: 'center',
@@ -2375,7 +2378,7 @@ function TabRDV({
                       style={{ background: D.gold, color: D.onAccent }}
                     >
                       <MessageCircle className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-                      Ouvrir la messagerie
+                      Conversation avec le studio
                     </button>
                   </div>
                 </>
@@ -2385,8 +2388,10 @@ function TabRDV({
         ) : null}
       </Modal>
 
-      <div className="text-base sm:text-lg font-display tracking-tight mb-4" style={{ color: D.text }}>
-        Mes réservations
+      <div className="mb-5 sm:mb-6 max-w-lg">
+        <p className="text-sm leading-relaxed" style={{ color: D.muted }}>
+          Tes demandes de projet et tes rendez-vous confirmés sont listés ci-dessous.
+        </p>
       </div>
 
       {rdvLoading ? (
@@ -2434,16 +2439,16 @@ function TabRDV({
       ) : (
         <div className="mb-8 flex flex-col gap-6">
           {projectRequests.length > 0 && (
-            <section aria-labelledby="client-project-messages-heading">
+            <section aria-labelledby="client-project-messages-heading" className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: D.border, background: D.card }}>
               <h2
                 id="client-project-messages-heading"
-                className="mb-1 text-[13px] font-semibold uppercase tracking-wider"
-                style={{ color: D.muted }}
+                className="text-base font-semibold tracking-tight"
+                style={{ color: D.text }}
               >
-                Messagerie — tes demandes projet
+                Demandes auprès des studios
               </h2>
-              <p className="mb-3 text-[12px] leading-relaxed" style={{ color: D.textSub }}>
-                Discute avec le studio : messages, liens d&apos;acompte et confirmations apparaissent ici (même fil que sur l&apos;espace pro).
+              <p className="mt-1 mb-4 text-sm leading-relaxed" style={{ color: D.muted }}>
+                Touche une carte pour le détail. Utilise le bouton doré pour ouvrir la conversation (paiements et messages).
               </p>
               <div className="flex flex-col gap-3">
                 {projectRequests.map((p) => {
@@ -2461,7 +2466,7 @@ function TabRDV({
                           setProjectDetail(p);
                         }
                       }}
-                      className="flex min-h-[108px] cursor-pointer flex-col rounded-2xl border p-4 text-left shadow-sm transition-transform active:scale-[0.99] touch-manipulation"
+                      className="flex min-h-[108px] cursor-pointer flex-col rounded-2xl border p-4 text-left shadow-sm transition-transform active:scale-[0.99] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                       style={{ background: D.contentCardBg, borderColor: D.border }}
                     >
                       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
@@ -2507,20 +2512,17 @@ function TabRDV({
                           ) : null}
                         </div>
                       ) : null}
-                      <p className="mt-2 text-[11px]" style={{ color: D.muted }}>
-                        Appuie pour voir tout le détail (emplacement, budget, références…)
-                      </p>
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           openProjectThread(p.id);
                         }}
-                        className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-transform active:scale-[0.98] touch-manipulation"
+                        className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-transform active:scale-[0.98] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                         style={{ background: D.gold, color: D.onAccent }}
                       >
                         <MessageCircle className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-                        Ouvrir la messagerie
+                        Conversation avec le studio
                       </button>
                     </div>
                   );
@@ -2530,14 +2532,17 @@ function TabRDV({
           )}
 
           {bookings.length > 0 && (
-            <section aria-labelledby="client-slot-bookings-heading">
+            <section aria-labelledby="client-slot-bookings-heading" className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: D.border, background: D.card }}>
               <h2
                 id="client-slot-bookings-heading"
-                className="mb-3 text-[13px] font-semibold uppercase tracking-wider"
-                style={{ color: D.muted }}
+                className="text-base font-semibold tracking-tight mb-1"
+                style={{ color: D.text }}
               >
-                Créneaux & réservations
+                Tes rendez-vous
               </h2>
+              <p className="mb-4 text-sm leading-relaxed" style={{ color: D.muted }}>
+                Dates et créneaux demandés auprès du studio.
+              </p>
               <div className="flex flex-col gap-3">
                 {bookings.map((b) => {
                   const st = STATUS_LABEL[b.status] ?? { label: b.status, color: D.muted, bg: D.card };
@@ -3956,31 +3961,33 @@ export function ClientDashboard() {
         )}
 
         {tab === 'home' && (
-        <div className="mx-auto w-full max-w-6xl px-4 pb-6 pt-2 sm:px-5 sm:pb-8 sm:pt-3 md:px-6">
+        <div className="client-portal-discovery mx-auto w-full max-w-6xl px-4 pb-6 pt-2 sm:px-5 sm:pb-8 sm:pt-3 md:px-6">
           {authHydrated && !userId ? <ClientGuestAuthCard layout="home" /> : null}
 
-          {/* ARTISTES PROCHES — bloc carte, hiérarchie calme */}
+          {/* ARTISTES PROCHES — carte type iOS grouped + header léger blur */}
           <section
             aria-labelledby="home-artists-heading"
-            className="mb-7 overflow-hidden rounded-2xl border sm:mb-8"
+            className="ios-hero-card mb-7 overflow-hidden rounded-[22px] border sm:mb-8"
             style={{
               borderColor: D.border,
               background: D.contentCardBg,
-              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
             }}
           >
-            <div className="border-b px-4 py-4 sm:px-5 sm:py-4" style={{ borderColor: D.border, background: D.card }}>
+            <div
+              className="border-b bg-white/[0.88] px-4 py-4 backdrop-blur-xl sm:px-5 sm:py-4"
+              style={{ borderColor: D.border }}
+            >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <h2
                     id="home-artists-heading"
-                    className="font-display text-[1.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-xl"
+                    className="font-client-app text-[1.0625rem] font-bold leading-tight tracking-[-0.02em] sm:text-[1.125rem]"
                     style={{ color: D.text }}
                   >
                     Artistes proches
                   </h2>
-                  <p className="font-client-app mt-1 text-[12px] leading-snug sm:text-[13px]" style={{ color: D.muted }}>
-                    Découvre des studios autour de toi
+                  <p className="mt-1 text-[13px] font-medium leading-snug sm:text-[13px]" style={{ color: D.muted }}>
+                    Studios autour de toi
                   </p>
                 </div>
                 <button
@@ -3989,13 +3996,13 @@ export function ClientDashboard() {
                     goTab('explore');
                     setExploreSearchFocusNonce((n) => n + 1);
                   }}
-                  className="shrink-0 touch-manipulation rounded-full border px-3.5 py-2 text-xs font-semibold transition-all active:scale-[0.98] sm:min-h-0 min-h-[40px] sm:px-4 sm:text-[13px]"
+                  className="shrink-0 touch-manipulation rounded-full px-4 py-2 text-[13px] font-semibold transition-all active:scale-[0.98] min-h-[40px] sm:min-h-[36px] shadow-sm"
                   style={{
-                    borderColor: D.borderMid,
-                    background: D.contentCardBg,
-                    color: D.gold,
+                    background: D.gold,
+                    color: D.onAccent,
                     cursor: 'pointer',
                     font: 'inherit',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
                   }}
                 >
                   Tout voir
@@ -4035,24 +4042,23 @@ export function ClientDashboard() {
             </div>
           </section>
 
-          {/* FILTER CHIPS — au-dessus de la carte */}
-          <div
-            className="mb-5 flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
+          {/* Filtres styles — barre frosted iOS */}
+          <div className="ios-chip-scroller mb-5 touch-pan-x">
             {STYLE_TABS.map((f) => (
               <button
                 key={f}
                 type="button"
                 onClick={() => setDiscoveryStyleFilter(f)}
-                className="shrink-0 touch-manipulation active:scale-[0.98] transition-transform min-h-[44px] flex items-center"
+                className="shrink-0 touch-manipulation active:scale-[0.98] transition-transform min-h-[36px] flex items-center rounded-full px-3.5"
                 style={{
-                  padding: '0 16px', borderRadius: D.r.full,
-                  fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em',
-                  border: 'none', cursor: 'pointer',
-                  background: discoveryStyleFilter === f ? D.gold : D.card,
-                  color: discoveryStyleFilter === f ? D.onAccent : D.muted,
-                  boxShadow: discoveryStyleFilter === f ? `0 4px 16px ${D.accentShadow}` : 'none',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  letterSpacing: '-0.02em',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: discoveryStyleFilter === f ? D.gold : 'rgba(60, 60, 67, 0.08)',
+                  color: discoveryStyleFilter === f ? D.onAccent : D.textSub,
+                  boxShadow: discoveryStyleFilter === f ? `0 2px 8px ${D.accentShadow}` : 'none',
                   transition: 'all 0.15s',
                 }}
               >
@@ -4061,29 +4067,26 @@ export function ClientDashboard() {
             ))}
           </div>
 
-          {/* Tri — même logique que l’onglet Explorer */}
+          {/* Tri — segmented control iOS */}
           <div className="mb-5">
-            <p className="mb-2 font-client-app text-[11px] font-medium uppercase tracking-wide" style={{ color: D.muted }}>
+            <p className="mb-2 text-[12px] font-semibold tracking-[-0.01em]" style={{ color: D.muted }}>
               Trier
             </p>
-            <div
-              className="flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              style={{ WebkitOverflowScrolling: 'touch' }}
-            >
+            <div className="ios-segmented-track" role="tablist" aria-label="Ordre d’affichage des flashs">
               {FLASH_SORT_OPTIONS.map(({ key, label }) => (
                 <button
                   key={key}
                   type="button"
+                  role="tab"
+                  aria-pressed={flashSortKey === key}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     setFlashSortKey(key);
                   }}
-                  className="relative z-[1] shrink-0 touch-manipulation min-h-[40px] rounded-full px-3.5 py-2 text-xs font-semibold transition-transform active:scale-[0.98]"
+                  className="touch-manipulation active:scale-[0.99]"
                   style={{
-                    border: `1px solid ${flashSortKey === key ? D.gold : D.border}`,
-                    background: flashSortKey === key ? D.goldDim : D.card,
-                    color: flashSortKey === key ? D.gold : D.muted,
+                    color: flashSortKey === key ? D.text : D.muted,
                     touchAction: 'manipulation',
                   }}
                 >
@@ -4099,13 +4102,13 @@ export function ClientDashboard() {
               <div className="mb-3 flex flex-col gap-0.5 sm:mb-4">
                 <h2
                   id="home-for-you-heading"
-                  className="font-display text-[1.05rem] font-bold leading-tight tracking-tight sm:text-lg"
+                  className="font-client-app text-[1.0625rem] font-bold leading-tight tracking-[-0.02em] sm:text-lg"
                   style={{ color: D.text }}
                 >
                   Pour toi
                 </h2>
-                <p className="font-client-app text-[11px] leading-snug sm:text-xs" style={{ color: D.muted }}>
-                  Les flashs des studios les plus proches
+                <p className="text-[13px] font-medium leading-snug sm:text-[13px]" style={{ color: D.muted }}>
+                  Flashs des studios les plus proches
                 </p>
               </div>
               <div
@@ -4151,13 +4154,13 @@ export function ClientDashboard() {
           {/* FLASH SECTION */}
           <section aria-labelledby="home-flash-explore-heading" className="mb-8 scroll-mt-4">
             <div className="mb-3 flex flex-col gap-1 sm:mb-4">
-              <p className="font-client-app text-[11px] font-medium leading-tight sm:text-xs" style={{ color: D.muted }}>
+              <p className="text-[12px] font-semibold leading-tight tracking-[-0.01em] sm:text-[13px]" style={{ color: D.muted }}>
                 {loading ? 'Chargement…' : `${sortedDiscoveryFlashes.length} flash disponible${sortedDiscoveryFlashes.length !== 1 ? 's' : ''}`}
               </p>
               <div className="flex items-end justify-between gap-3">
                 <h2
                   id="home-flash-explore-heading"
-                  className="font-display text-[1.05rem] font-bold leading-tight tracking-tight sm:text-lg"
+                  className="font-client-app text-[1.0625rem] font-bold leading-tight tracking-[-0.02em] sm:text-lg"
                   style={{ color: D.text }}
                 >
                   À explorer
@@ -4168,13 +4171,13 @@ export function ClientDashboard() {
                     goTab('explore');
                     setExploreSearchFocusNonce((n) => n + 1);
                   }}
-                  className="shrink-0 touch-manipulation rounded-full border px-3.5 py-2 text-xs font-semibold transition-all active:scale-[0.98] min-h-[40px] sm:min-h-0 sm:px-4 sm:text-[13px]"
+                  className="shrink-0 touch-manipulation rounded-full px-4 py-2 text-[13px] font-semibold transition-all active:scale-[0.98] min-h-[40px] sm:min-h-[36px] shadow-sm"
                   style={{
-                    borderColor: D.borderMid,
-                    background: D.contentCardBg,
-                    color: D.gold,
+                    background: D.gold,
+                    color: D.onAccent,
                     cursor: 'pointer',
                     font: 'inherit',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
                   }}
                 >
                   Filtres

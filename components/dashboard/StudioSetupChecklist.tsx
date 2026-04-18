@@ -36,33 +36,47 @@ export const StudioSetupChecklist: React.FC<StudioSetupChecklistProps> = ({
     if (!studioSlug?.trim()) {
       out.push({
         id: 'slug',
-        label: 'Définir votre lien vitrine (URL publique)',
+        label: 'Choisir l’URL de votre page vitrine (lien à partager)',
         action: () => onGoTo('settings-vitrine'),
       });
     }
     if (flashDesigns.length === 0) {
       out.push({
         id: 'flash',
-        label: 'Ajouter au moins un flash à la galerie',
+        label: 'Publier au moins un flash dans la galerie',
         action: () => onGoTo('flash'),
-      });
-    }
-    if (appointments.length === 0) {
-      out.push({
-        id: 'rdv',
-        label: 'Créer un premier rendez-vous',
-        action: () => onGoTo('appointments'),
       });
     }
     if (availabilitySetupComplete === false) {
       out.push({
         id: 'availability',
-        label: 'Enregistrer vos horaires et créneaux (réservation en ligne)',
+        label: 'Ouvrir des créneaux réservables par les clients',
         action: () => onGoTo('settings-availability'),
       });
     }
+    if (paymentsSetupComplete === false) {
+      out.push({
+        id: 'payments',
+        label: 'Connecter Stripe pour encaisser les acomptes en ligne',
+        action: () => onGoTo('settings-payments'),
+      });
+    }
+    if (appointments.length === 0) {
+      out.push({
+        id: 'rdv',
+        label: 'Poser un premier RDV pour valider l’agenda',
+        action: () => onGoTo('appointments'),
+      });
+    }
     return out;
-  }, [studioSlug, flashDesigns.length, appointments.length, availabilitySetupComplete, onGoTo]);
+  }, [
+    studioSlug,
+    flashDesigns.length,
+    appointments.length,
+    availabilitySetupComplete,
+    paymentsSetupComplete,
+    onGoTo,
+  ]);
 
   const handleDismiss = useCallback(() => {
     try {
@@ -85,9 +99,11 @@ export const StudioSetupChecklist: React.FC<StudioSetupChecklistProps> = ({
             <Sparkles className="w-4 h-4" aria-hidden />
           </div>
           <div className="min-w-0">
-            <h3 className="font-semibold text-zinc-900 dark:text-white text-sm sm:text-base">Configurer votre studio</h3>
+            <h3 className="font-semibold text-zinc-900 dark:text-white text-sm sm:text-base">
+              Prêt à recevoir des résas en ligne ?
+            </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Étapes pour être prêt à recevoir des clients en ligne.
+              Quelques étapes pour que vitrine, créneaux et paiements travaillent ensemble.
             </p>
           </div>
         </div>
@@ -120,10 +136,12 @@ export const StudioSetupChecklist: React.FC<StudioSetupChecklistProps> = ({
         {(() => {
           const needAvail = availabilitySetupComplete === false;
           const needPay = paymentsSetupComplete === false;
-          if (needAvail && needPay) return 'Paramètres → Disponibilités et Paiements pour finaliser réservation + encaissement.';
-          if (needAvail) return 'Acomptes Stripe : Paramètres → Paiements.';
-          if (needPay) return 'Créneaux : Paramètres → Disponibilités.';
-          return 'Paramètres regroupe aussi Disponibilités, Paiements (Stripe) et la page vitrine.';
+          if (needAvail && needPay) {
+            return 'Paramètres : Disponibilités (créneaux) et Paiements (Stripe) pour activer réservation + acomptes.';
+          }
+          if (needAvail) return 'Il reste à enregistrer vos créneaux (Paramètres → Disponibilités).';
+          if (needPay) return 'Connectez Stripe pour les acomptes (Paramètres → Paiements).';
+          return 'Vous pouvez ajuster vitrine, créneaux et paiements à tout moment dans Paramètres.';
         })()}
       </p>
     </div>

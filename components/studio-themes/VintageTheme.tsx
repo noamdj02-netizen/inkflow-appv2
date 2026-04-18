@@ -20,7 +20,7 @@ export const VintageTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, p
         aria-hidden
       />
 
-      <main className="relative max-w-4xl mx-auto px-4 py-24">
+      <main id="contenu-vitrine" tabIndex={-1} className="relative max-w-4xl mx-auto px-4 py-24 outline-none">
         {/* Header */}
         <header className="text-center mb-16">
           {studio.avatarUrl && (

@@ -84,7 +84,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
   if (paymentVerified === true) {
     return (
-      <div className="landing-scroll min-h-screen bg-ink-bg flex flex-col items-center justify-center p-6">
+      <div className="landing-scroll safe-top min-h-screen bg-ink-bg flex flex-col items-center justify-center p-6">
         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-6">
           <Check className="w-8 h-8 text-emerald-600" strokeWidth={2} />
         </div>
@@ -107,7 +107,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     new URLSearchParams(window.location.search).has('session_id')
   ) {
     return (
-      <div className="landing-scroll min-h-screen bg-ink-bg flex flex-col items-center justify-center p-6">
+      <div className="landing-scroll safe-top min-h-screen bg-ink-bg flex flex-col items-center justify-center p-6">
         <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-6">
           <AlertCircle className="w-8 h-8 text-amber-600" strokeWidth={2} />
         </div>
@@ -128,7 +128,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
   if (studioId === 'loading') {
     return (
-      <div className="landing-scroll min-h-screen bg-ink-bg flex items-center justify-center">
+      <div className="landing-scroll safe-top min-h-screen bg-ink-bg flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-ink-border border-t-zinc-900 rounded-full animate-spin" />
       </div>
     );
@@ -142,7 +142,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
   if (supabaseEnabled && studioId === null) {
     return (
-      <div className="landing-scroll min-h-screen bg-ink-bg flex items-center justify-center p-4">
+      <div className="landing-scroll safe-top min-h-screen bg-ink-bg flex items-center justify-center p-4">
         <p className="text-ink-muted">Studio introuvable.</p>
       </div>
     );
@@ -161,18 +161,40 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         keywords={`réservation tatouage, ${studio.name}, RDV tattoo, acompte tatouage`}
       />
 
-      <div className="book-public-scroll">
+      <a
+        href="#book-public-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-30 focus:px-4 focus:py-2.5 focus:rounded-xl focus:bg-zinc-900 focus:text-white focus:text-sm focus:font-semibold focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ink-accent focus:ring-offset-2 focus:ring-offset-ink-bg"
+      >
+        Aller au contenu de réservation
+      </a>
+
+      <div
+        id="book-public-content"
+        tabIndex={-1}
+        role="region"
+        aria-labelledby="booking-studio-title"
+        className="book-public-scroll outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-accent/50"
+      >
+      <main id="booking-main">
       {studio.coverImage ? (
-        <div className="relative w-full h-36 sm:h-44 overflow-hidden bg-zinc-200">
+        <div className="relative w-full h-36 sm:h-44 overflow-hidden bg-zinc-900">
           <img
             src={studio.coverImage}
             alt=""
             className="absolute inset-0 h-full w-full object-cover"
+            decoding="async"
           />
           <div
-            className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-zinc-50"
+            className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/25 to-black"
             aria-hidden
           />
+          <a
+            href={`/studio/${studioSlug}`}
+            className="absolute left-3 top-[max(0.5rem,env(safe-area-inset-top,0px))] z-10 inline-flex min-h-[44px] max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-full bg-black/50 px-3.5 py-2 text-left text-sm font-medium text-white shadow-sm ring-1 ring-white/15 backdrop-blur-md transition-all hover:bg-black/65 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
+          >
+            <ArrowLeft className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
+            <span className="leading-tight">Retour à la vitrine</span>
+          </a>
         </div>
       ) : null}
 
@@ -194,9 +216,27 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         </div>
       )}
 
-      <main className="max-w-md mx-auto px-4 pb-8 sm:pb-10">
+      <div
+        className={`max-w-md mx-auto px-4 pb-[max(2rem,env(safe-area-inset-bottom))] sm:pb-10 ${
+          !studio.coverImage ? 'pt-[max(1rem,env(safe-area-inset-top,0px))]' : ''
+        }`}
+      >
+        {!studio.coverImage && (
+          <nav className="pb-3" aria-label="Navigation vers la vitrine">
+            <a
+              href={`/studio/${studioSlug}`}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-1 -ml-1 text-sm font-medium text-ink-muted transition-all hover:text-ink-text active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+            >
+              <ArrowLeft className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
+              Retour à la vitrine
+            </a>
+          </nav>
+        )}
         {/* En-tête Tatoueur */}
-        <section className="pt-8 pb-6 text-center">
+        <section
+          className={`${studio.coverImage ? 'pt-8' : 'pt-2'} pb-6 text-center`}
+          aria-describedby="booking-step-hint"
+        >
           <div className="w-20 h-20 mx-auto rounded-full overflow-hidden bg-zinc-200 border-2 border-white shadow-lg ring-2 ring-zinc-100">
             {studio.avatar ? (
               <img src={studio.avatar} alt={studio.name} className="w-full h-full object-cover" />
@@ -206,8 +246,10 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               </div>
             )}
           </div>
-          <h1 className="text-2xl font-bold text-ink-text mt-4 tracking-tight">{studio.name}</h1>
-          <p className="text-ink-muted text-sm mt-1">
+          <h1 id="booking-studio-title" className="text-2xl font-bold text-ink-text mt-4 tracking-tight">
+            {studio.name}
+          </h1>
+          <p id="booking-step-hint" className="text-ink-muted text-sm mt-1">
             {bookingMode === 'select'
               ? 'Choisissez votre type de prestation'
               : bookingMode === 'project'
@@ -231,51 +273,73 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
         {/* — Écran 0 : Sélection Flash / Projet — */}
         {bookingMode === 'select' && (
-          <section className="mb-6 space-y-4">
+          <section className="mb-6 space-y-3 sm:space-y-4" aria-label="Type de prestation">
             <button
+              type="button"
               onClick={() => {
                 setBookingMode('flash');
                 setSelectedFlashId(null);
                 replaceUrlFlashParam(null);
               }}
-              className="w-full bg-ink-surface rounded-2xl border border-ink-border p-5 text-left flex items-start gap-4 hover:border-ink-accent/50 transition-colors active:scale-[0.99]"
+              className="group w-full min-h-[100px] rounded-2xl border border-ink-border border-l-[4px] border-l-amber-500 bg-ink-surface p-4 sm:p-5 text-left shadow-sm flex items-stretch gap-3 sm:gap-4 transition-all duration-200 hover:border-ink-accent/40 hover:shadow-md active:scale-[0.99] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
             >
-              <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                <Zap className="w-6 h-6 text-amber-500" strokeWidth={1.5} />
+              <div
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0 self-center ring-1 ring-amber-500/15"
+                aria-hidden
+              >
+                <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-amber-600" strokeWidth={1.5} />
               </div>
-              <div>
-                <div className="font-semibold text-ink-text text-base">Flash</div>
-                <div className="text-ink-muted text-sm mt-0.5">
+              <div className="flex-1 min-w-0 py-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-ink-text text-base tracking-tight">Flash</span>
+                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-amber-800/90 bg-amber-100/90 px-2 py-0.5 rounded-md">
+                    Rapide
+                  </span>
+                </div>
+                <p className="text-ink-muted text-sm mt-1.5 leading-relaxed">
                   {showPaymentsOfflineBanner
                     ? 'Créneau et acompte : le studio doit activer Stripe pour payer en ligne.'
-                    : 'Dessin déjà prêt — réservez un créneau et payez l&apos;acompte maintenant.'}
-                </div>
+                    : "Dessin déjà prêt — créneau + acompte en ligne."}
+                </p>
               </div>
               <ChevronRight
-                className="w-5 h-5 text-zinc-400 ml-auto self-center flex-shrink-0"
+                className="w-5 h-5 text-zinc-400 self-center flex-shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
                 strokeWidth={1.5}
+                aria-hidden
               />
             </button>
             <button
+              type="button"
               onClick={() => {
                 setBookingMode('project');
                 setSelectedFlashId(null);
                 replaceUrlFlashParam(null);
               }}
-              className="w-full bg-ink-surface rounded-2xl border border-ink-border p-5 text-left flex items-start gap-4 hover:border-ink-accent/50 transition-colors active:scale-[0.99]"
+              className="group w-full min-h-[100px] rounded-2xl border border-ink-border border-l-[4px] border-l-violet-500 bg-ink-surface p-4 sm:p-5 text-left shadow-sm flex items-stretch gap-3 sm:gap-4 transition-all duration-200 hover:border-ink-accent/40 hover:shadow-md active:scale-[0.99] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
             >
-              <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center flex-shrink-0">
-                <Pencil className="w-6 h-6 text-violet-500" strokeWidth={1.5} />
+              <div
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-violet-500/10 flex items-center justify-center flex-shrink-0 self-center ring-1 ring-violet-500/15"
+                aria-hidden
+              >
+                <Pencil className="w-6 h-6 sm:w-7 sm:h-7 text-violet-600" strokeWidth={1.5} />
               </div>
-              <div>
-                <div className="font-semibold text-ink-text text-base">Projet sur mesure</div>
-                <div className="text-ink-muted text-sm mt-0.5">
-                  Décrivez votre idée — l&apos;artiste vous répond et vous ouvre ensuite le planning.
+              <div className="flex-1 min-w-0 py-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-ink-text text-base tracking-tight">
+                    Projet sur mesure
+                  </span>
+                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-violet-800/90 bg-violet-100/90 px-2 py-0.5 rounded-md">
+                    Sur mesure
+                  </span>
                 </div>
+                <p className="text-ink-muted text-sm mt-1.5 leading-relaxed">
+                  Décrivez votre idée — l'artiste répond puis vous propose un créneau.
+                </p>
               </div>
               <ChevronRight
-                className="w-5 h-5 text-zinc-400 ml-auto self-center flex-shrink-0"
+                className="w-5 h-5 text-zinc-400 self-center flex-shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
                 strokeWidth={1.5}
+                aria-hidden
               />
             </button>
           </section>
@@ -291,7 +355,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                 </div>
                 <h2 className="text-xl font-bold text-ink-text mb-2">Demande envoyée !</h2>
                 <p className="text-ink-muted text-sm max-w-xs">
-                  L&apos;artiste va étudier votre projet et vous recontacte avec le tarif et un lien
+                  L'artiste va étudier votre projet et vous recontacte avec le tarif et un lien
                   pour choisir votre créneau.
                 </p>
                 <a
@@ -305,14 +369,15 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             ) : (
               <section className="space-y-4 mb-6">
                 <button
+                  type="button"
                   onClick={() => {
                     setBookingMode('select');
                     setSelectedFlashId(null);
                     replaceUrlFlashParam(null);
                   }}
-                  className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm mb-2 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm mb-2 transition-colors min-h-[44px] rounded-lg px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
                 >
-                  <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+                  <ArrowLeft className="w-4 h-4" strokeWidth={1.5} aria-hidden />
                   Changer de type
                 </button>
                 <div className="bg-ink-surface rounded-2xl border border-ink-border p-5">
@@ -405,7 +470,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                       className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors text-sm"
                     />
                     <p className="text-[11px] text-zinc-400 mt-1.5">
-                      Pour échanger plus facilement avec l&apos;artiste en message privé.
+                      Pour échanger plus facilement avec l'artiste en message privé.
                     </p>
                   </div>
                 </div>
@@ -416,6 +481,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                   </div>
                 )}
                 <button
+                  type="button"
                   onClick={handleProjectSubmit}
                   disabled={
                     !projectForm.firstName ||
@@ -424,7 +490,8 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                     !projectForm.description ||
                     projectSubmitting
                   }
-                  className={`w-full h-14 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all ${
+                  aria-busy={projectSubmitting}
+                  className={`w-full min-h-[56px] rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all ${
                     !projectForm.firstName ||
                     !projectForm.lastName ||
                     !projectForm.email ||
@@ -457,14 +524,15 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             {!new URLSearchParams(window.location.search).get('flash') && (
               <div className="mb-4">
                 <button
+                  type="button"
                   onClick={() => {
                     setBookingMode('select');
                     setSelectedFlashId(null);
                     replaceUrlFlashParam(null);
                   }}
-                  className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm transition-colors"
+                  className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm transition-colors min-h-[44px] rounded-lg px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
                 >
-                  <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+                  <ArrowLeft className="w-4 h-4" strokeWidth={1.5} aria-hidden />
                   Changer de type
                 </button>
               </div>
@@ -478,8 +546,14 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                   Prix et acompte selon le design sélectionné.
                 </p>
                 {flashListLoading ? (
-                  <div className="py-12 flex items-center justify-center">
-                    <div className="w-8 h-8 border-2 border-ink-border border-t-zinc-900 rounded-full animate-spin" />
+                  <div
+                    className="py-12 flex items-center justify-center"
+                    role="status"
+                    aria-live="polite"
+                    aria-busy="true"
+                    aria-label="Chargement des flashs"
+                  >
+                    <div className="w-8 h-8 border-2 border-ink-border border-t-zinc-900 rounded-full animate-spin motion-reduce:animate-none" />
                   </div>
                 ) : availableFlashes.length === 0 ? (
                   <p className="text-sm text-ink-muted text-center py-8">
@@ -497,6 +571,8 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                         <button
                           key={flash.id}
                           type="button"
+                          aria-pressed={isSelected}
+                          aria-label={`${flash.title || 'Flash'}, ${priceLabel}${isSelected ? ', sélectionné' : ''}`}
                           onClick={() => {
                             setSelectedFlashId(flash.id);
                             replaceUrlFlashParam(flash.id);
@@ -654,28 +730,30 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                     <div className="flex items-center justify-between mb-4">
                       <button
                         type="button"
+                        aria-label="Mois précédent"
                         onClick={() =>
                           setCalendarMonth(
                             (p) => new Date(p.getFullYear(), p.getMonth() - 1)
                           )
                         }
-                        className="p-2 rounded-lg hover:bg-ink-surface text-ink-muted transition-colors"
+                        className="p-2 rounded-lg hover:bg-ink-surface text-ink-muted transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
                       >
-                        <ChevronLeft className="w-5 h-5" />
+                        <ChevronLeft className="w-5 h-5" aria-hidden />
                       </button>
                       <span className="font-semibold text-ink-text text-sm">
                         {MONTHS[calendarMonth.getMonth()]} {calendarMonth.getFullYear()}
                       </span>
                       <button
                         type="button"
+                        aria-label="Mois suivant"
                         onClick={() =>
                           setCalendarMonth(
                             (p) => new Date(p.getFullYear(), p.getMonth() + 1)
                           )
                         }
-                        className="p-2 rounded-lg hover:bg-ink-surface text-ink-muted transition-colors"
+                        className="p-2 rounded-lg hover:bg-ink-surface text-ink-muted transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
                       >
-                        <ChevronRight className="w-5 h-5" />
+                        <ChevronRight className="w-5 h-5" aria-hidden />
                       </button>
                     </div>
                     <div className="grid grid-cols-7 gap-1 mb-2">
@@ -843,6 +921,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             </section>
           </>
         )}
+      </div>
       </main>
       </div>
 
@@ -901,9 +980,11 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               </div>
             )}
             <button
+              type="button"
               onClick={handlePay}
               disabled={!canPay || isSubmitting}
-              className={`w-full h-14 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
+              aria-busy={isSubmitting}
+              className={`w-full min-h-[56px] rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
                 canPay && !isSubmitting
                   ? 'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[0.99]'
                   : 'bg-zinc-200 text-ink-muted cursor-not-allowed'

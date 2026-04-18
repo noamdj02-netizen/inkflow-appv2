@@ -73,7 +73,11 @@ export const ReferenceImageUpload: React.FC<ReferenceImageUploadProps> = ({
     (incoming: File[]) => {
       const remaining = MAX_IMAGES - value.length;
       if (remaining <= 0) return;
-      const valid = incoming.filter((f) => f.type.startsWith('image/')).slice(0, remaining);
+      const looksLikeImage = (f: File) => {
+        if (f.type.startsWith('image/')) return true;
+        return /\.(jpe?g|png|webp|gif|heic|heif|bmp|tif)$/i.test(f.name);
+      };
+      const valid = incoming.filter(looksLikeImage).slice(0, remaining);
       if (valid.length === 0) return;
       pendingQueueRef.current = valid;
       accumulatedRef.current = [];

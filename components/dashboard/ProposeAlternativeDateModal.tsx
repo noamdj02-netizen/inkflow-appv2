@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Mail, AtSign, Loader2, Copy } from 'lucide-react';
+import { Mail, AtSign, Loader2, Copy, MessageCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import type { ProjectRequest, Booking } from '../../types';
 import {
@@ -28,6 +28,8 @@ interface ProposeAlternativeDateModalProps {
   /** Réponse aux e-mails (compte connecté) */
   replyToEmail: string | null | undefined;
   instagramHandle: string | null;
+  /** Ouvre l’onglet Messagerie sur le fil (pr_… ou id booking) après copie du texte. */
+  onOpenInkflowDiscussion?: (threadId: string) => void;
 }
 
 function previousContextFromItem(item: SheetItem): string | undefined {
@@ -52,6 +54,7 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
   studioName,
   replyToEmail,
   instagramHandle,
+  onOpenInkflowDiscussion,
 }) => {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
@@ -143,9 +146,13 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
       toast.error('Choisis une date et un créneau dans ton planning.');
       return;
     }
+    if (!clientEmail?.trim()) {
+      toast.error('Le client n’a pas d’e-mail sur cette demande — utilise Instagram ou la messagerie.');
+      return;
+    }
     setSending(true);
     try {
-      await sendAlternativeDateProposal({
+      const result = await sendAlternativeDateProposal({
         clientEmail,
         clientName,
         studioName,
@@ -154,12 +161,22 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
         previousContext,
         replyToEmail: replyToEmail ?? undefined,
       });
+      if (!result.ok) {
+        toast.error(result.error || "L'e-mail n'a pas pu être envoyé (Resend, JWT ou fonction non déployée).");
+        return;
+      }
       toast.success('E-mail de proposition envoyé au client (il peut répondre directement au studio).');
       onClose();
     } finally {
       setSending(false);
     }
   };
+
+  const threadIdForItem = item
+    ? item._type === 'project'
+      ? `pr_${item.id}`
+      : item.id
+    : '';
 
   const handleInstagram = async () => {
     if (!instagramHandle?.trim()) return;
@@ -176,6 +193,22 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
     }
   };
 
+  const handleMessagerieInkFlow = async () => {
+    if (!onOpenInkflowDiscussion || !threadIdForItem) return;
+    if (!igMessage) {
+      toast.error('Choisis d’abord une date et un créneau.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(igMessage);
+      toast.success('Texte copié — ouvre la conversation ; colle le message (⌘V / Ctrl+V).');
+      onOpenInkflowDiscussion(threadIdForItem);
+      onClose();
+    } catch {
+      toast.error('Impossible de copier le message.');
+    }
+  };
+
   if (!item) return null;
 
   return (
@@ -184,15 +217,15 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4 space-y-2">
           <p className="text-sm font-semibold text-[var(--text-primary)]">Gestion des reports simplifiée</p>
           <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-            Pas de discussion inutile : choisis un créneau aligné sur ton planning, puis envoie un e-mail pro ou
-            copie le message pour Instagram.
+            Choisis un créneau aligné sur ton planning, puis envoie l’e-mail InkFlow, ou copie le même texte vers
+            Instagram ou la messagerie intégrée.
           </p>
           <ul className="text-xs text-[var(--text-tertiary)] space-y-1 list-disc list-inside">
             <li>
-              <strong className="text-[var(--text-secondary)]">Option A</strong> — message prêt + DM Instagram (copier / coller).
+              <strong className="text-[var(--text-secondary)]">E-mail</strong> — envoi automatique (Resend) avec réponse au studio.
             </li>
             <li>
-              <strong className="text-[var(--text-secondary)]">Option B</strong> — calendrier basé sur tes dispos, puis e-mail automatique InkFlow avec réponse au studio.
+              <strong className="text-[var(--text-secondary)]">Instagram / Messagerie</strong> — le texte est copié, puis ouverture du DM ou du fil InkFlow pour coller.
             </li>
           </ul>
         </div>
@@ -259,28 +292,45 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-2 pt-2">
+        <div className="space-y-2 pt-2">
           <button
             type="button"
-            disabled={sending || !selectedYmd || !selectedSlot}
+            disabled={sending || !selectedYmd || !selectedSlot || !clientEmail?.trim()}
             onClick={() => void handleSendEmail()}
-            className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold px-4 py-2.5 active:scale-[0.98] transition-all disabled:opacity-50"
+            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold px-4 py-2.5 active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            <Mail className="w-4 h-4" />
+            <Mail className="w-4 h-4 shrink-0" />
             {sending ? 'Envoi…' : 'Envoyer l’e-mail au client'}
           </button>
-          {instagramHandle?.trim() && (
-            <button
-              type="button"
-              disabled={!selectedSlot}
-              onClick={() => void handleInstagram()}
-              className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] font-semibold px-4 py-2.5 active:scale-[0.98] transition-all disabled:opacity-50"
-            >
-              <Copy className="w-4 h-4" />
-              <AtSign className="w-4 h-4" />
-              Copier + Instagram
-            </button>
-          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {onOpenInkflowDiscussion && (
+              <button
+                type="button"
+                disabled={!selectedSlot}
+                onClick={() => void handleMessagerieInkFlow()}
+                className="min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold px-4 py-2.5 shadow-sm active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                <MessageCircle className="w-4 h-4 shrink-0" />
+                Messagerie InkFlow
+              </button>
+            )}
+            {instagramHandle?.trim() ? (
+              <button
+                type="button"
+                disabled={!selectedSlot}
+                onClick={() => void handleInstagram()}
+                className="min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500/15 to-purple-500/15 border border-pink-200/80 dark:border-pink-500/30 text-pink-800 dark:text-pink-200 font-semibold px-4 py-2.5 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                <Copy className="w-4 h-4 shrink-0" />
+                <AtSign className="w-4 h-4 shrink-0" />
+                Copier + Instagram
+              </button>
+            ) : onOpenInkflowDiscussion ? null : (
+              <p className="text-xs text-[var(--text-tertiary)] sm:col-span-2">
+                Aucun Instagram détecté sur la demande — ajoute @ dans le brief client ou utilise la messagerie.
+              </p>
+            )}
+          </div>
         </div>
         <p className="text-xs text-[var(--text-tertiary)]">
           L’e-mail part d’InkFlow ; le client répond à{' '}

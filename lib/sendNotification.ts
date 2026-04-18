@@ -1,5 +1,10 @@
 import { supabase } from './supabase';
-import { getInvokeErrorMessage, invokeWithJwtRetry } from './edgeFunctionInvoke';
+import {
+  getInvokeFailureMessage,
+  getInvokeErrorMessage,
+  invokeEdgeFunctionViaFetch,
+  invokeWithJwtRetry,
+} from './edgeFunctionInvoke';
 import type { Notification } from '../types';
 
 const MAX_TEXT_LENGTH = 2000;
@@ -21,29 +26,6 @@ function sanitizeEmail(email: string): string {
 export function logEdgeInvokeError(functionName: string, error: unknown, extra?: unknown): void {
   const msg = error instanceof Error ? error.message : String(error);
   console.error(`[InkFlow] ${functionName}:`, msg, extra !== undefined ? extra : '');
-}
-
-type InvokeErrorLike = {
-  message?: string;
-  context?: { json?: () => Promise<unknown>; status?: number };
-};
-
-async function parseEdgeInvokeErrorDetails(error: InvokeErrorLike, data: unknown): Promise<string | undefined> {
-  if (data && typeof data === 'object') {
-    const d = data as { userMessage?: string; error?: string; details?: string };
-    if (d.userMessage) return d.userMessage;
-    if (d.details) return d.details;
-    if (typeof d.error === 'string') return d.error;
-  }
-  if (typeof error?.context?.json === 'function') {
-    try {
-      const body = (await error.context.json()) as { userMessage?: string; error?: string; details?: string };
-      return body?.userMessage || body?.details || (typeof body?.error === 'string' ? body.error : undefined);
-    } catch {
-      /* ignore */
-    }
-  }
-  return undefined;
 }
 
 /**
@@ -70,12 +52,13 @@ export async function testEmailConnection(): Promise<{
   try {
     const { data, error } = await invokeWithJwtRetry('send-email-test', {});
     if (error) {
-      const details = await parseEdgeInvokeErrorDetails(error, data);
+      const msg = await getInvokeFailureMessage(
+        error,
+        data,
+        "Échec send-email-test — déployez la fonction : supabase functions deploy send-email-test",
+      );
       logEdgeInvokeError('send-email-test', error, data);
-      const msg =
-        details ||
-        getInvokeErrorMessage(error, "Échec send-email-test — déployez la fonction : supabase functions deploy send-email-test");
-      return { ok: false, message: msg, details };
+      return { ok: false, message: msg, details: msg };
     }
     const d = data as { success?: boolean; error?: string; userMessage?: string; details?: string } | null;
     if (d && (d.error || d.success === false)) {
@@ -144,9 +127,11 @@ export interface SendBookingConfirmationParams {
 
 /**
  * Envoie au client un email de confirmation de RDV quand le tatoueur confirme une demande RDV vitrine.
- * Non bloquant : les erreurs sont loguées en dev uniquement.
+ * Retourne `ok` pour afficher un toast correct (l’appel Edge peut échouer : JWT, Resend, etc.).
  */
-export async function sendBookingConfirmation(params: SendBookingConfirmationParams): Promise<void> {
+export async function sendBookingConfirmation(
+  params: SendBookingConfirmationParams,
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const body = {
       clientEmail: sanitizeEmail(params.clientEmail),
@@ -159,10 +144,25 @@ export async function sendBookingConfirmation(params: SendBookingConfirmationPar
       paymentLink: params.paymentLink ? sanitizeText(params.paymentLink, 500) : undefined,
       studioAddress: params.studioAddress ? sanitizeText(params.studioAddress, 300) : undefined,
     };
-    const { error } = await invokeWithJwtRetry('send-booking-confirmation', body);
-    if (error) logEdgeInvokeError('send-booking-confirmation', error);
+    const { data, error } = await invokeWithJwtRetry('send-booking-confirmation', body);
+    if (error) {
+      const details = await getInvokeFailureMessage(error, data, 'Échec envoi email');
+      // Log le message résolu (corps JSON Resend / 502), pas seulement « non-2xx » + data null
+      console.error('[InkFlow] send-booking-confirmation:', details);
+      if (import.meta.env.DEV) {
+        console.error('  raw invoke error:', error, 'data:', data);
+      }
+      return { ok: false, error: details };
+    }
+    const d = data as { error?: string; success?: boolean } | null;
+    if (d && typeof d.error === 'string' && d.error) {
+      logEdgeInvokeError('send-booking-confirmation', d.error, data);
+      return { ok: false, error: d.error };
+    }
+    return { ok: true };
   } catch (err) {
     logEdgeInvokeError('send-booking-confirmation', err);
+    return { ok: false, error: err instanceof Error ? err.message : 'Erreur inconnue' };
   }
 }
 
@@ -213,20 +213,6 @@ export async function sendConversationLinkToClient(params: SendConversationLinkT
       studioName: params.studioName || undefined,
       threadId: params.threadId,
     });
-    const getErrorDetails = async (): Promise<string | undefined> => {
-      const fromData = (data as { userMessage?: string } | undefined)?.userMessage;
-      if (fromData) return fromData;
-      const err = error as { context?: { json?: () => Promise<{ userMessage?: string; error?: string }> } };
-      if (typeof err?.context?.json === 'function') {
-        try {
-          const body = await err.context.json();
-          return body?.userMessage || body?.error;
-        } catch {
-          return undefined;
-        }
-      }
-      return undefined;
-    };
     if (error) {
       const retryStatus = (error as { context?: { status?: number } })?.context?.status;
       const em = getInvokeErrorMessage(error, '');
@@ -235,7 +221,7 @@ export async function sendConversationLinkToClient(params: SendConversationLinkT
         || em.includes('461')
         || em.toLowerCase().includes('unauthorized');
       logEdgeInvokeError('send-client-conversation-link', error, data);
-      const errorDetails = await getErrorDetails();
+      const errorDetails = await getInvokeFailureMessage(error, data, '');
       return { sent: false, unauthorized: unauthorized || undefined, errorDetails };
     }
     if (
@@ -293,11 +279,18 @@ export interface SendAlternativeDateProposalParams {
 
 /**
  * E-mail de contre-proposition de date (Reply-To = boîte pro si fournie).
+ * Retourne `ok` pour les toasts (Edge / Resend / JWT peuvent échouer).
  */
-export async function sendAlternativeDateProposal(params: SendAlternativeDateProposalParams): Promise<void> {
+export async function sendAlternativeDateProposal(
+  params: SendAlternativeDateProposalParams,
+): Promise<{ ok: boolean; error?: string }> {
   try {
+    const clientEmail = sanitizeEmail(params.clientEmail);
+    if (!clientEmail) {
+      return { ok: false, error: 'Adresse e-mail du client manquante ou invalide.' };
+    }
     const body = {
-      clientEmail: sanitizeEmail(params.clientEmail),
+      clientEmail,
       clientName: sanitizeText(params.clientName, MAX_NAME_LENGTH) ?? '',
       studioName: sanitizeText(params.studioName, MAX_NAME_LENGTH) ?? '',
       proposedDate: params.proposedDate,
@@ -305,10 +298,22 @@ export async function sendAlternativeDateProposal(params: SendAlternativeDatePro
       previousContext: params.previousContext ? sanitizeText(params.previousContext, 500) : undefined,
       replyToEmail: params.replyToEmail ? sanitizeEmail(params.replyToEmail) : undefined,
     };
-    const { error } = await invokeWithJwtRetry('send-alternative-date-proposal', body);
-    if (error) logEdgeInvokeError('send-alternative-date-proposal', error);
+    /** `fetch` explicite : le SDK `functions.invoke` renvoie souvent une erreur opaque avec `data: null`. */
+    const { data, error: fetchErr } = await invokeEdgeFunctionViaFetch(
+      'send-alternative-date-proposal',
+      body,
+    );
+    if (fetchErr) {
+      logEdgeInvokeError('send-alternative-date-proposal', new Error(fetchErr), data);
+      return { ok: false, error: fetchErr };
+    }
+    return { ok: true };
   } catch (err) {
     logEdgeInvokeError('send-alternative-date-proposal', err);
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Erreur inconnue',
+    };
   }
 }
 

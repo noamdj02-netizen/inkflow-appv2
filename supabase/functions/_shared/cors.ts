@@ -64,6 +64,17 @@ function getAllowedOrigin(origin?: string | null): string {
     return origin;
   }
 
+  /** Vite / dev HTTPS (cert local) — même logique que HTTP localhost */
+  try {
+    const u = new URL(origin);
+    if (u.protocol === "https:") {
+      const h = u.hostname;
+      if (h === "localhost" || h === "127.0.0.1") return origin;
+    }
+  } catch {
+    /* ignore */
+  }
+
   if (origin.includes("supabase.co") || origin.includes("supabase.in")) {
     return origin;
   }

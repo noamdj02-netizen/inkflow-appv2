@@ -350,13 +350,22 @@ img, video {
   border: 1px solid rgba(255, 255, 255, 0.07) !important;
 }
 
-/* ===== Dashboard Overview — premium minimaliste ===== */
+/* ===== Dashboard Overview — canvas type portfolio (Dribbble / Behance : profondeur douce) ===== */
 .dashboard-overview-bg {
-  background: #fafafa;
+  background-color: #f7f7f8;
+  background-image:
+    radial-gradient(ellipse 90% 55% at 12% -15%, rgba(16, 185, 129, 0.09), transparent 52%),
+    radial-gradient(ellipse 70% 45% at 92% 8%, rgba(59, 130, 246, 0.07), transparent 48%),
+    radial-gradient(ellipse 50% 30% at 50% 100%, rgba(244, 244, 245, 0.9), transparent 60%),
+    linear-gradient(180deg, #fafbfc 0%, #f4f4f6 55%, #f0f0f3 100%);
   background-attachment: local;
 }
 :root[data-theme="dark"] .dashboard-overview-bg {
-  background: #000000;
+  background-color: #030303;
+  background-image:
+    radial-gradient(ellipse 85% 50% at 15% -10%, rgba(16, 185, 129, 0.14), transparent 52%),
+    radial-gradient(ellipse 65% 42% at 95% 5%, rgba(59, 130, 246, 0.1), transparent 48%),
+    linear-gradient(180deg, #050506 0%, #000000 100%);
 }
 .greeting-gradient {
   color: #71717a;
@@ -370,33 +379,37 @@ img, video {
  * Hover : bordure + ombre renforcées (pas de translate — mobile-friendly).
  */
 .prodify-card {
-  background: white;
-  border-radius: 1rem;
-  border: 1px solid #e4e4e7;
+  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+  border-radius: 1.125rem;
+  border: 1px solid rgba(228, 228, 231, 0.95);
   box-shadow:
-    0 1px 2px -1px rgba(0, 0, 0, 0.06),
-    0 4px 16px -4px rgba(0, 0, 0, 0.08);
-  transition: border-color 0.2s ease, box-shadow 0.22s ease;
+    0 1px 0 rgba(255, 255, 255, 0.75) inset,
+    0 1px 2px -1px rgba(0, 0, 0, 0.05),
+    0 8px 24px -6px rgba(15, 23, 42, 0.07);
+  transition: border-color 0.2s ease, box-shadow 0.22s ease, transform 0.2s ease;
 }
 .prodify-card:hover {
   border-color: #d4d4d8;
   box-shadow:
-    0 2px 4px -1px rgba(0, 0, 0, 0.08),
-    0 10px 28px -8px rgba(0, 0, 0, 0.1);
+    0 1px 0 rgba(255, 255, 255, 0.85) inset,
+    0 2px 6px -2px rgba(0, 0, 0, 0.06),
+    0 14px 36px -10px rgba(15, 23, 42, 0.12);
 }
 :root[data-theme="dark"] .prodify-card {
-  background: #18181b;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 1rem;
+  background: linear-gradient(180deg, #1c1c1f 0%, #18181b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.125rem;
   box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
     0 1px 2px rgba(0, 0, 0, 0.45),
-    0 8px 28px -6px rgba(0, 0, 0, 0.55);
+    0 10px 32px -8px rgba(0, 0, 0, 0.55);
 }
 :root[data-theme="dark"] .prodify-card:hover {
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.5),
-    0 14px 40px -8px rgba(0, 0, 0, 0.45);
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 16px 44px -10px rgba(0, 0, 0, 0.45);
 }
 
 /* Legacy alias — CRM, messagerie, widgets, tableaux */
@@ -1154,6 +1167,18 @@ input, select, textarea {
   }
 }
 
+/* Dashboard Pro — barre supérieure (mode nuit) : verre dépoli, même esprit que le canvas */
+:root[data-theme="dark"] .dashboard-pro-shell > .app-shell-row > .app-shell-main > header.dashboard-pro-header-dark {
+  background: rgba(15, 15, 17, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
+    0 4px 24px -8px rgba(0, 0, 0, 0.45);
+}
+/* Accueil : pas d’override opaque — le flou et la transparence viennent des classes Tailwind sur le header */
+
 @media (prefers-reduced-motion: reduce) {
   .dashboard-pro-shell .bottom-nav button {
     transition-duration: 0.01ms !important;
@@ -1183,6 +1208,88 @@ input, select, textarea {
 @media (prefers-reduced-motion: reduce) {
   .client-mobile-tab-bar button {
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Portail client — canvas type iOS « grouped » (sans impacter le dashboard studio) */
+.client-dashboard-shell .app-shell-content.dashboard-pages-bg {
+  background: #f2f2f7;
+}
+
+.client-dashboard-shell .client-portal-discovery {
+  font-feature-settings: 'kern' 1, 'liga' 1;
+}
+
+/* Carte section accueil — ombre douce type Figma / Materials léger */
+.client-dashboard-shell .ios-hero-card {
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.03),
+    0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+/* Filtres styles — barre défilante façon « frosted » iOS */
+.client-dashboard-shell .ios-chip-scroller {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border: 0.5px solid rgba(60, 60, 67, 0.14);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.client-dashboard-shell .ios-chip-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tri — segmented control iOS */
+.client-dashboard-shell .ios-segmented-track {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 11px;
+  background: #e5e5ea;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.client-dashboard-shell .ios-segmented-track::-webkit-scrollbar {
+  display: none;
+}
+.client-dashboard-shell .ios-segmented-track > button {
+  flex: 1 0 auto;
+  min-height: 36px;
+  min-width: fit-content;
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    box-shadow 0.16s ease,
+    color 0.16s ease,
+    transform 0.12s ease;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.client-dashboard-shell .ios-segmented-track > button[aria-pressed='true'] {
+  background: #ffffff;
+  box-shadow:
+    0 3px 1px rgba(0, 0, 0, 0.04),
+    0 3px 8px rgba(0, 0, 0, 0.12);
+}
+@media (prefers-reduced-motion: reduce) {
+  .client-dashboard-shell .ios-segmented-track > button {
+    transition-duration: 0.01ms;
   }
 }
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { History, CheckCircle, XCircle, Calendar, FileText, Mail, Clock, CreditCard, Copy, Loader2, AlertTriangle, MapPin, Ruler, Sparkles, Gift, MessageCircle, AtSign, MessageSquare } from 'lucide-react';
+import { History, CheckCircle, XCircle, Calendar, FileText, Mail, Clock, CreditCard, Copy, Loader2, AlertTriangle, MapPin, Ruler, Sparkles, Gift, MessageCircle, AtSign, MessageSquare, ListOrdered } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
 import { Appointment, ProjectRequest, Booking, BookingStatus, Client } from '../../types';
 import { RequestQuickViewSheet } from './RequestQuickViewSheet';
@@ -10,7 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { saveAppointmentToSupabase } from '../../lib/supabaseDashboard';
-import { isSlotAvailableForBooking } from '../../lib/supabaseBookings';
+import { findNextAvailableSlotForStudio, isSlotAvailableForBooking } from '../../lib/supabaseBookings';
 import { sendBookingConfirmation, sendBookingRefusal } from '../../lib/sendNotification';
 import type { PendingStampReward } from '../../lib/stampLoyalty';
 import { parseInstagramHandle, instagramMessageUrl } from '../../lib/instagramUtils';
@@ -62,6 +62,14 @@ const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
   rejected: 'Refusé',
   cancelled: 'Annulé',
 };
+
+/** Bordure gauche par source — aligné patterns AppointmentsView (repère visuel rapide). */
+const SOURCE_ACCENT = {
+  agenda: 'border-l-amber-500',
+  vitrineFlash: 'border-l-amber-400',
+  vitrineCustom: 'border-l-violet-500',
+  brief: 'border-l-violet-600',
+} as const;
 
 export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   studioId,
@@ -239,7 +247,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
 
   const handleConfirm = async (apt: Appointment) => {
     onUpdateAppointment(apt.id, { status: 'confirmed' });
-    sendBookingConfirmation({
+    const sent = await sendBookingConfirmation({
       clientEmail: apt.clientEmail,
       clientName: apt.clientName,
       studioName: user?.studioName || 'Le studio',
@@ -247,7 +255,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       requestedTime: apt.time || null,
       description: apt.service,
     });
-    toast.success('RDV confirmé — un email de confirmation a été envoyé au client');
+    if (sent.ok) {
+      toast.success('RDV confirmé — un email de confirmation a été envoyé au client');
+    } else {
+      toast.error(sent.error || "L'email de confirmation n'a pas pu être envoyé (vérifiez Resend / les secrets Supabase).");
+    }
   };
 
   const handleReject = (apt: Appointment) => {
@@ -279,7 +291,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   const handleConfirmBooking = async (bk: Booking) => {
     try {
       await onUpdateBookingStatus?.(bk.id, 'confirmed');
-      sendBookingConfirmation({
+      const sent = await sendBookingConfirmation({
         clientEmail: bk.clientEmail,
         clientName: bk.clientName,
         studioName: user?.studioName || 'Le studio',
@@ -287,7 +299,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         requestedTime: bk.requestedTime ?? null,
         description: bk.description,
       });
-      toast.success('RDV confirmé — un email de confirmation a été envoyé au client');
+      if (sent.ok) {
+        toast.success('RDV confirmé — un email de confirmation a été envoyé au client');
+      } else {
+        toast.error(sent.error || "L'email de confirmation n'a pas pu être envoyé.");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur');
     }
@@ -375,7 +391,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         });
         if ('url' in result) {
           setDepositUrl(result.url);
-          await sendBookingConfirmation({
+          const sent = await sendBookingConfirmation({
             clientEmail: depositModalAppointment.clientEmail,
             clientName: depositModalAppointment.clientName,
             studioName: user?.studioName || 'Le studio',
@@ -384,7 +400,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             description: depositModalAppointment.service,
             paymentLink: result.url,
           });
-          toast.success('Lien généré et email envoyé au client avec le lien de paiement.');
+          if (sent.ok) {
+            toast.success('Lien généré et email envoyé au client avec le lien de paiement.');
+          } else {
+            toast.error(sent.error || "Lien créé mais l'email n'a pas été envoyé.");
+          }
         } else {
           setDepositError(result.error || 'stripe_config');
         }
@@ -458,7 +478,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           type: 'deposit',
         });
         if ('url' in result) {
-          await sendBookingConfirmation({
+          const sent = await sendBookingConfirmation({
             clientEmail: depositModalBooking.clientEmail,
             clientName: depositModalBooking.clientName,
             studioName: user?.studioName || 'Le studio',
@@ -468,8 +488,13 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             paymentLink: result.url,
           });
           await onUpdateBookingStatus?.(depositModalBooking.id, 'confirmed');
-          toast.success('RDV confirmé et email envoyé avec le lien de paiement !');
-          closeDepositModal();
+          if (sent.ok) {
+            toast.success('RDV confirmé et email envoyé avec le lien de paiement !');
+            closeDepositModal();
+          } else {
+            toast.error(sent.error || "RDV enregistré mais l'email n'a pas été envoyé.");
+            closeDepositModal();
+          }
         } else {
           setDepositError(result.error || 'stripe_config');
         }
@@ -484,12 +509,24 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       }
     }
 
-    // Cas 3 : depuis une demande de projet → créer un RDV puis générer le lien
+    // Cas 3 : depuis une demande de projet → créer un RDV placeholder (créneau libre auto) puis générer le lien
     if (depositModalProject && onAddAppointment) {
       setDepositLoading(true);
       setDepositUrl(null);
+      let slotDate: string;
+      let slotTime: string;
+      try {
+        const slot = await findNextAvailableSlotForStudio(studioId);
+        slotDate = slot.date;
+        slotTime = slot.time;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Créneau indisponible';
+        setDepositError(msg);
+        toast.error(msg);
+        setDepositLoading(false);
+        return;
+      }
       const now = new Date().toISOString();
-      const today = new Date().toISOString().split('T')[0];
       const aptId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
       const serviceName = depositModalProject.description.length > 50
         ? `${depositModalProject.description.slice(0, 47)}...`
@@ -500,8 +537,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         clientName: depositModalProject.clientName,
         clientEmail: depositModalProject.clientEmail,
         clientPhone: '',
-        date: today,
-        time: '10:00',
+        date: slotDate,
+        time: slotTime,
         service: `Projet - ${serviceName}`,
         duration: 60,
         price: 0,
@@ -534,16 +571,20 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         });
         if ('url' in result) {
           setDepositUrl(result.url);
-          await sendBookingConfirmation({
+          const sent = await sendBookingConfirmation({
             clientEmail: depositModalProject.clientEmail,
             clientName: depositModalProject.clientName,
             studioName: user?.studioName || 'Le studio',
             requestedDate: newApt.date,
-            requestedTime: null,
+            requestedTime: newApt.time,
             description: newApt.service,
             paymentLink: result.url,
           });
-          toast.success('RDV créé, lien généré et email envoyé au client avec le lien de paiement.');
+          if (sent.ok) {
+            toast.success('RDV créé, lien généré et email envoyé au client avec le lien de paiement.');
+          } else {
+            toast.error(sent.error || "RDV créé mais l'email n'a pas été envoyé.");
+          }
         } else {
           setDepositError(result.error || 'stripe_config');
         }
@@ -565,31 +606,37 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     }
   };
 
-  const tabDescriptions = {
-    rdv: pendingAppointments.length === 0 
-      ? 'Aucun rendez-vous en attente — profitez-en pour créer votre vitrine !' 
-      : pendingAppointments.length === 1 
-        ? '1 rendez-vous en attente de confirmation' 
-        : `${pendingAppointments.length} rendez-vous en attente de confirmation`,
-    bookings: pendingBookings.length === 0 
-      ? 'Les demandes de votre vitrine apparaîtront ici' 
-      : pendingBookings.length === 1 
-        ? '1 nouvelle demande depuis votre vitrine' 
-        : `${pendingBookings.length} demandes depuis votre vitrine`,
-    projects: pendingProjects.length === 0 
-      ? 'Aucun projet soumis pour le moment' 
-      : pendingProjects.length === 1 
-        ? '1 demande de projet à traiter' 
-        : `${pendingProjects.length} demandes de projets en cours`,
-    history: 'Consultez toutes vos demandes traitées et archivées',
+  /** Statut court (compteur) — le détail d’action est dans `tabFlowHint`. */
+  const tabStatusLine: Record<typeof activeTab, string> = {
+    rdv:
+      pendingAppointments.length === 0
+        ? 'Aucun créneau agenda à valider pour l’instant.'
+        : pendingAppointments.length === 1
+          ? '1 créneau agenda à traiter.'
+          : `${pendingAppointments.length} créneaux agenda à traiter.`,
+    bookings:
+      pendingBookings.length === 0
+        ? 'Aucune demande depuis la page book (/book) en attente.'
+        : pendingBookings.length === 1
+          ? '1 demande page book en attente de réponse.'
+          : `${pendingBookings.length} demandes page book en attente de réponse.`,
+    projects:
+      pendingProjects.length === 0
+        ? 'Aucun brief « sans date » en attente.'
+        : pendingProjects.length === 1
+          ? '1 brief projet (formulaire sans date) à lire.'
+          : `${pendingProjects.length} briefs projet à lire.`,
+    history: 'Anciennes demandes déjà traitées (refus, acomptes, archivées).',
   };
 
-  /** Une ligne d’aide contextuelle (évite la répétition de la légende 4× sous-titre). */
-  const tabHints: Record<typeof activeTab, string> = {
-    rdv: 'Confirmez ou refusez chaque créneau — l’agenda se met à jour immédiatement.',
-    bookings: 'Filtrez Flash ou projet sur mesure, puis proposez un acompte ou refusez depuis la ligne.',
-    projects: 'Ouvrez la discussion pour cadrer le brief ; vous pourrez envoyer un lien d’acompte depuis la messagerie.',
-    history: 'Demandes déjà traitées ou archivées — utile pour vérifier un refus ou un acompte passé.',
+  /** Une seule phrase « fil client → vous » par onglet — évite le double paragraphe sous-titre + hint. */
+  const tabFlowHint: Record<typeof activeTab, string> = {
+    rdv: 'Source : agenda (RDV déjà posé). Confirmer ou refuser met à jour l’agenda et prévient le client.',
+    bookings:
+      'Source : page book — le client a choisi jour / plage sur /book (flash ou sur-mesure). Ensuite : confirmer ou refuser, acompte si besoin, puis messagerie / e-mail / Instagram.',
+    projects:
+      'Source : formulaire « projet sans date » (pas le même flux que le sur-mesure avec créneau sur /book). Lisez, échangez, puis acompte ou refus — la messagerie reste le fil principal.',
+    history: 'Retrouvez une ancienne demande pour vérifier un statut ou un paiement.',
   };
 
   const tabPillBtn = (id: typeof activeTab) =>
@@ -624,8 +671,39 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               Demandes
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-1.5 text-sm sm:text-base max-w-2xl leading-relaxed">
-              {tabDescriptions[activeTab]}
+              Trois entrées possibles : créneaux déjà dans l’agenda, réservations /book, ou brief sans date — chaque onglet correspond à une source.
             </p>
+            <p className="text-zinc-600 dark:text-zinc-300 mt-2 text-sm font-medium max-w-2xl">
+              {tabStatusLine[activeTab]}
+            </p>
+          </div>
+
+          <div
+            className="grid gap-2 sm:grid-cols-3 max-w-4xl rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-zinc-50/90 dark:bg-zinc-900/40 px-3 py-3 sm:px-4"
+            role="region"
+            aria-label="Les trois sources de demandes"
+          >
+            <div className="flex gap-2 min-w-0">
+              <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500`} aria-hidden />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-100">Agenda</p>
+                <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 leading-snug">RDV en attente de validation (pas encore confirmé).</p>
+              </div>
+            </div>
+            <div className="flex gap-2 min-w-0">
+              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sky-500" aria-hidden />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-100">Page book</p>
+                <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 leading-snug">Client a réservé un créneau sur /book (flash ou sur-mesure).</p>
+              </div>
+            </div>
+            <div className="flex gap-2 min-w-0 sm:col-span-1">
+              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-violet-500" aria-hidden />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-100">Brief sans date</p>
+                <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 leading-snug">Formulaire projet — pas la même chose que le sur-mesure avec date sur /book.</p>
+              </div>
+            </div>
           </div>
 
           <div
@@ -641,9 +719,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               aria-controls="requests-panel"
               onClick={() => selectTab('rdv')}
               className={tabPillBtn('rdv')}
+              title="Créneaux agenda à confirmer ou refuser"
             >
               <Calendar className={`w-4 h-4 shrink-0 stroke-[1.75] ${activeTab === 'rdv' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-500'}`} />
-              RDV
+              Créneaux agenda
               {countBadge('rdv', pendingAppointments.length)}
             </button>
             <button
@@ -654,9 +733,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               aria-controls="requests-panel"
               onClick={() => selectTab('bookings')}
               className={tabPillBtn('bookings')}
+              title="Réservations depuis la page /book"
             >
               <Clock className={`w-4 h-4 shrink-0 stroke-[1.75] ${activeTab === 'bookings' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-500'}`} />
-              Vitrine
+              Page book
               {countBadge('bookings', pendingBookings.length)}
             </button>
             <button
@@ -667,9 +747,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               aria-controls="requests-panel"
               onClick={() => selectTab('projects')}
               className={tabPillBtn('projects')}
+              title="Formulaire projet sans date (brief)"
             >
               <FileText className={`w-4 h-4 shrink-0 stroke-[1.75] ${activeTab === 'projects' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-500 dark:text-zinc-500'}`} />
-              Projets
+              Brief sans date
               {countBadge('projects', pendingProjects.length)}
             </button>
             <button
@@ -686,9 +767,25 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             </button>
           </div>
 
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-3xl leading-relaxed">
-            {tabHints[activeTab]}
-          </p>
+          <div
+            className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-zinc-50/90 dark:bg-zinc-900/40 px-3.5 py-3 sm:px-4 max-w-3xl"
+            role="note"
+            aria-live="polite"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-1.5">
+              Client → vous
+            </p>
+            <p className="text-sm text-zinc-700 dark:text-zinc-200 leading-relaxed">
+              {tabFlowHint[activeTab]}
+            </p>
+            <p className="mt-2.5 flex items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              <ListOrdered className="w-4 h-4 shrink-0 mt-0.5 text-zinc-500 dark:text-zinc-500" aria-hidden />
+              <span>
+                <span className="font-semibold text-zinc-700 dark:text-zinc-300">Ordre conseillé :</span>{' '}
+                décider (accepter / refuser) → acompte Stripe si besoin → échanger (messagerie InkFlow, e-mail ou Instagram selon le cas).
+              </span>
+            </p>
+          </div>
         </div>
       </div>
 
@@ -710,13 +807,13 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-zinc-800">
+            <div className="p-3 sm:p-4 space-y-3">
               {pendingAppointments.map(apt => {
                 const stampRw = stampRewardForEmail(apt.clientEmail);
                 return (
                 <div
                   key={apt.id}
-                  className="p-5 sm:p-6 flex flex-col gap-4 border-b border-zinc-100 dark:border-zinc-800 last:border-b-0 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/25 transition-colors"
+                  className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm border-l-4 ${SOURCE_ACCENT.agenda} p-5 sm:p-6 flex flex-col gap-4 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/25 transition-colors`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start gap-4 min-w-0">
                     <div className="w-12 h-12 rounded-xl bg-zinc-200/90 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0 overflow-hidden ring-1 ring-zinc-300/80 dark:ring-zinc-600/80">
@@ -815,15 +912,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
                 <Clock className="w-8 h-8 text-slate-400 dark:text-slate-500" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Aucune demande de RDV</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Aucune demande page book</h3>
               <p className="text-slate-500 dark:text-slate-400 max-w-sm text-sm">
-                Les demandes envoyées depuis votre vitrine apparaîtront ici en temps réel.
+                Quand un client réserve un flash ou un créneau sur votre page /book, la demande s’affiche ici.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-zinc-800">
-              {/* Sub-filter : Toutes / Flash / Projet sur mesure */}
-              <div className="px-4 sm:px-6 py-3 flex gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide border-b border-slate-100 dark:border-zinc-800 bg-slate-50/60 dark:bg-zinc-800/30 -mx-px">
+            <div className="flex flex-col gap-3 p-3 sm:p-4">
+              {/* Sous-filtres : Toutes / Flash / Sur-mesure (créneau /book) */}
+              <div className="flex gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide rounded-xl border border-slate-200/80 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/30 px-3 py-2.5">
                 <button
                   onClick={() => setBookingSubTab('all')}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
@@ -859,8 +956,9 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       ? 'bg-violet-600 text-white'
                       : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-zinc-700 hover:border-violet-300 dark:hover:border-violet-600'
                   }`}
+                  title="Sur-mesure avec créneau choisi sur /book (différent de l’onglet Brief sans date)"
                 >
-                  <FileText className="w-3 h-3" /> Projet
+                  <FileText className="w-3 h-3" /> Sur-mesure
                   {pendingCustomBookings.length > 0 && (
                     <span className={`min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full ${
                       bookingSubTab === 'custom' ? 'bg-white/25 text-white' : 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-400'
@@ -888,9 +986,13 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 const stampRwBk = stampRewardForEmail(bk.clientEmail);
                 const igHandle = parseInstagramHandle(undefined, bk.description);
                 const bookingMailtoHref = buildMailtoHref(bk.clientEmail, 'Votre demande de tatouage');
+                const vitrineAccent = reqType === 'flash' ? SOURCE_ACCENT.vitrineFlash : SOURCE_ACCENT.vitrineCustom;
                 return (
-                <div key={bk.id} className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors border-b border-slate-100 dark:border-zinc-800 last:border-b-0">
-                  <button type="button" onClick={() => setSheetItem({ ...bk, _type: 'booking' })} className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto">
+                <div
+                  key={bk.id}
+                  className={`p-5 sm:p-6 flex flex-col lg:flex-row lg:items-start gap-4 group rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm border-l-4 ${vitrineAccent} hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors touch-manipulation`}
+                >
+                  <button type="button" onClick={() => setSheetItem({ ...bk, _type: 'booking' })} className="flex flex-1 min-w-0 text-left w-full lg:flex-initial lg:min-w-0 lg:max-w-[min(100%,42rem)] xl:max-w-[min(100%,48rem)]">
                     <div className="flex gap-4 items-start md:items-center">
                       <div className={`w-16 h-16 ${isProfileThumb ? 'rounded-full' : 'rounded-xl'} bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700`}>
                         {displayThumb ? (
@@ -919,7 +1021,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         <div className="flex flex-wrap gap-1.5 mt-2.5">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
                             {reqType === 'flash' ? <Sparkles className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
-                            {reqType === 'flash' ? 'Flash' : 'Custom'}
+                            {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
                           </span>
                           {placement && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
@@ -955,32 +1057,77 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                   </button>
                   {bk.status === 'pending' && (
                     <div
-                      className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 flex-shrink-0 w-full pt-3 mt-1 border-t border-slate-100 dark:border-zinc-800 sm:pt-0 sm:mt-0 sm:border-t-0 md:ml-4 md:w-auto"
+                      className="flex-shrink-0 w-full lg:w-[min(100%,20.5rem)] xl:w-[22rem] pt-3 mt-1 border-t border-slate-100 dark:border-zinc-800 lg:pt-0 lg:mt-0 lg:border-t-0 lg:ml-auto"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {bk.clientAvatarUrl && onOpenProjectDiscussion && (
-                        <button
-                          type="button"
-                          onClick={() => onOpenProjectDiscussion(bk.id)}
-                          className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all text-sm shadow-sm"
-                        >
-                          <MessageCircle className="w-4 h-4 shrink-0" /> Ouvrir la discussion
-                        </button>
-                      )}
-                      {igHandle && (
-                        <>
-                          <a
-                            href={instagramMessageUrl(igHandle)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-pink-500/15 to-purple-500/15 border border-pink-200/80 dark:border-pink-500/30 text-pink-700 dark:text-pink-300 text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
-                            onClick={(e) => e.stopPropagation()}
+                      <div
+                        className="rounded-2xl border border-zinc-200/90 dark:border-zinc-700/90 bg-zinc-50/90 dark:bg-zinc-900/45 p-3 sm:p-3.5 shadow-sm space-y-3"
+                        role="group"
+                        aria-label="Actions pour cette demande vitrine"
+                      >
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            title="Envoie un email de confirmation au client sans exiger d’acompte."
+                            onClick={() => handleConfirmBooking(bk)}
+                            className="flex min-h-[44px] min-w-[min(100%,10rem)] flex-1 basis-[8.5rem] justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all text-sm shadow-sm"
                           >
-                            <AtSign className="w-4 h-4 shrink-0" /> Instagram
-                          </a>
+                            <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />
+                            <span className="truncate">Confirmer</span>
+                          </button>
+                          {studioId && onAddAppointment && (
+                            <button
+                              type="button"
+                              onClick={() => openDepositModalForBooking(bk)}
+                              className="flex min-h-[44px] min-w-[min(100%,10rem)] flex-1 basis-[8.5rem] justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800/70 text-zinc-900 dark:text-zinc-100 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all text-sm"
+                            >
+                              <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" />
+                              <span className="truncate">
+                                Acompte<span className="hidden min-[380px]:inline"> (Stripe)</span>
+                              </span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRejectBooking(bk)}
+                            className="flex min-h-[44px] min-w-[min(100%,10rem)] flex-1 basis-[8.5rem] justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200/90 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/35 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm"
+                          >
+                            <XCircle className="w-4 h-4 shrink-0" />
+                            <span className="truncate">Refuser</span>
+                          </button>
+                        </div>
+
+                        <div
+                          className="h-px bg-zinc-200/80 dark:bg-zinc-700/80"
+                          aria-hidden="true"
+                        />
+
+                        <div className="flex flex-wrap gap-2">
+                          {onOpenProjectDiscussion && (
+                            <button
+                              type="button"
+                              aria-label="Ouvrir Messagerie InkFlow"
+                              onClick={() => onOpenProjectDiscussion(bk.id)}
+                              className="flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] sm:min-w-[7rem] sm:flex-1 justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
+                            >
+                              <MessageCircle className="w-4 h-4 shrink-0" />
+                              <span className="truncate">Messagerie</span>
+                            </button>
+                          )}
+                          {igHandle && (
+                            <a
+                              href={instagramMessageUrl(igHandle)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] sm:min-w-[7rem] sm:flex-1 justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl bg-gradient-to-r from-pink-500/15 to-purple-500/15 border border-pink-200/80 dark:border-pink-500/30 text-pink-700 dark:text-pink-300 text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <AtSign className="w-4 h-4 shrink-0" /> IG
+                            </a>
+                          )}
                           <a
                             href={bookingMailtoHref ?? '#'}
-                            className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-600 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all touch-manipulation"
+                            className="flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] sm:min-w-[7rem] sm:flex-1 justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white/80 dark:bg-zinc-800/50 text-zinc-800 dark:text-zinc-200 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all touch-manipulation"
                             aria-disabled={!bookingMailtoHref}
                             onClick={(e) => {
                               if (!bookingMailtoHref) {
@@ -994,39 +1141,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                           >
                             <Mail className="w-4 h-4 shrink-0" /> Email
                           </a>
-                        </>
-                      )}
-                      {!igHandle && (
-                        <a
-                          href={bookingMailtoHref ?? '#'}
-                          className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-600 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all touch-manipulation"
-                          aria-disabled={!bookingMailtoHref}
-                          onClick={(e) => {
-                            if (!bookingMailtoHref) {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              toast.error('Adresse e-mail du client invalide ou manquante.');
-                              return;
-                            }
-                            handleMailtoClick(e, bookingMailtoHref);
-                          }}
-                        >
-                          <Mail className="w-4 h-4 shrink-0" /> Email
-                        </a>
-                      )}
-                      {studioId && onAddAppointment && (
-                        <button
-                          type="button"
-                          onClick={() => openDepositModalForBooking(bk)}
-                          className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all text-sm shadow-sm"
-                        >
-                          <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" /> Lien d&apos;acompte
-                        </button>
-                      )}
-                      <button onClick={() => handleRejectBooking(bk)}
-                        className="flex min-h-[44px] w-full sm:w-auto justify-center items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm">
-                        <XCircle className="w-4 h-4 shrink-0" /> Refuser
-                      </button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1042,17 +1158,19 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-5 ring-1 ring-slate-200/60 dark:ring-zinc-700">
                 <FileText className="w-8 h-8 text-slate-400 dark:text-slate-500" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Aucune demande de projet</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Aucun brief sans date</h3>
               <p className="text-slate-500 dark:text-slate-400 max-w-md text-sm leading-relaxed">
-                Les projets soumis depuis votre page vitrine apparaîtront ici.
+                Les demandes envoyées via le formulaire « projet » (sans créneau /book) apparaissent ici — ce n’est pas la même liste que la page book.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-zinc-800">
-              <div className="px-5 sm:px-6 py-4 bg-zinc-50/90 dark:bg-zinc-800/40 border-b border-zinc-200/80 dark:border-zinc-700/80">
+            <div className="flex flex-col gap-3 p-3 sm:p-4">
+              <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-700/80 px-4 py-3 bg-zinc-50/90 dark:bg-zinc-800/40">
                 <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium flex items-start gap-2">
                   <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400 stroke-[1.75]" />
-                  <span><strong className="font-semibold text-zinc-900 dark:text-white">Conseil :</strong> ouvrez la discussion pour échanger avec le client — vous pouvez envoyer une carte de paiement depuis la messagerie.</span>
+                  <span>
+                    <strong className="font-semibold text-zinc-900 dark:text-white">À savoir :</strong> sans date dans la demande, un acompte place souvent le RDV sur le premier créneau libre — déplacez-le dans l’agenda ou proposez une autre date au client.
+                  </span>
                 </p>
               </div>
               {pendingProjects.map(pr => {
@@ -1060,7 +1178,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 const reqType = inferRequestType(pr.description, pr.placement);
                 const igProject = parseInstagramHandle(pr.clientInstagram, pr.description);
                 return (
-                <div key={pr.id} className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                <div
+                  key={pr.id}
+                  className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm border-l-4 ${SOURCE_ACCENT.brief} p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors touch-manipulation`}
+                >
                   <button type="button" onClick={() => setSheetItem({ ...pr, _type: 'project' })} className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto">
                     <div className="flex gap-4 items-start md:items-center">
                       <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700">
@@ -1086,7 +1207,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         <div className="flex flex-wrap gap-1.5 mt-2.5">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
                             {reqType === 'flash' ? <Sparkles className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
-                            {reqType === 'flash' ? 'Flash' : 'Custom'}
+                            {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
                           </span>
                           {pr.placement && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
@@ -1107,28 +1228,40 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       </div>
                     </div>
                   </button>
-                  <div className="flex flex-wrap items-center gap-2 flex-shrink-0 md:ml-4" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      onClick={() => onOpenProjectDiscussion?.(`pr_${pr.id}`)}
-                      className="flex min-h-[44px] items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all text-sm shadow-sm"
-                    >
-                      <MessageCircle className="w-4 h-4 shrink-0" /> Ouvrir la discussion
-                    </button>
-                    {studioId && onAddAppointment && (
-                      <button
-                        type="button"
-                        onClick={() => openDepositModalForProject(pr)}
-                        className="flex min-h-[44px] items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-zinc-600 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
-                      >
-                        <CreditCard className="w-4 h-4 shrink-0" /> Lien d&apos;acompte
-                      </button>
-                    )}
-                    <button onClick={() => handleRejectProject(pr)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm"
-                    >
-                      <XCircle className="w-4 h-4" /> Refuser
-                    </button>
+                  <div
+                    className="flex flex-col gap-3 flex-shrink-0 w-full md:w-auto md:max-w-sm md:ml-4"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 px-0.5">
+                        Actions
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onOpenProjectDiscussion?.(`pr_${pr.id}`)}
+                          className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all text-sm shadow-sm"
+                        >
+                          <MessageCircle className="w-4 h-4 shrink-0" /> Messagerie InkFlow
+                        </button>
+                        {studioId && onAddAppointment && (
+                          <button
+                            type="button"
+                            onClick={() => openDepositModalForProject(pr)}
+                            className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
+                          >
+                            <CreditCard className="w-4 h-4 shrink-0" /> Lien d&apos;acompte (Stripe)
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRejectProject(pr)}
+                          className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm"
+                        >
+                          <XCircle className="w-4 h-4 shrink-0" /> Refuser
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 );
@@ -1242,6 +1375,9 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           setProposeDateItem(item);
           setSheetItem(null);
         }}
+        onConfirmVitrineBooking={async (item) => {
+          if (item._type === 'booking') await handleConfirmBooking(item);
+        }}
         onOpenProjectDiscussion={onOpenProjectDiscussion}
       />
 
@@ -1260,6 +1396,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               )
             : null
         }
+        onOpenInkflowDiscussion={onOpenProjectDiscussion}
       />
 
       {/* Modale : montant acompte → génération lien Stripe → copier */}
@@ -1277,7 +1414,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                   {depositModalBooking
                     ? "Un RDV sera créé et un email contenant le lien de paiement Stripe sera automatiquement envoyé au client pour confirmer sa réservation."
                     : depositModalProject
-                      ? "Un RDV sera créé avec les infos du projet, puis un lien de paiement sera généré. Partagez-le au client par e-mail ou Instagram pour encaisser l'acompte."
+                      ? "InkFlow place un premier RDV sur le prochain créneau libre de ton agenda (le client n’a pas encore choisi de date). Tu pourras le déplacer après l’acompte. Un email avec le lien Stripe sera envoyé au client."
                       : "Montant de l'acompte à demander au client. Le lien de paiement Stripe sera généré."}
                 </p>
                 <div>

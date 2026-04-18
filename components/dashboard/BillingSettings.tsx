@@ -117,20 +117,23 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
     setSubscribing(plan);
     const interval = isAnnual ? 'annual' : 'monthly';
     const directLink = getStripeBillingLink(plan, interval);
-    const url = await createSubscription({
+    const result = await createSubscription({
       studioId,
       email: userEmail,
       plan,
       interval,
     });
-    if (url) {
-      window.location.href = url;
-    } else if (directLink) {
-      window.location.href = directLink;
-    } else {
-      toast.error('Erreur lors de la création de l\'abonnement.');
-      setSubscribing(null);
+    if ('url' in result) {
+      window.location.href = result.url;
+      return;
     }
+    if (directLink) {
+      window.location.href = directLink;
+      setSubscribing(null);
+      return;
+    }
+    toast.error(result.error);
+    setSubscribing(null);
   };
 
   const active = isSubscriptionActive(subscription);

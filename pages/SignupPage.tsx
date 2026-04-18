@@ -21,9 +21,9 @@ export const SignupPage: React.FC = () => {
     >
       <SEO
         title="Créer un compte gratuit"
-        description="Inscrivez-vous sur InkFlow : 14 jours d'essai, réservations en ligne, CRM tatoueur, acomptes Stripe et vitrine personnalisée."
+        description="Créez votre compte studio en France : 14 jours pour tester résa en ligne, CRM, acomptes Stripe (EUR), page vitrine. Sans carte au départ."
         canonical="/signup"
-        keywords="inscription InkFlow, essai gratuit tatoueur, créer compte studio tattoo"
+        keywords="inscription InkFlow, essai gratuit tatoueur France, créer compte studio tattoo, logiciel tatoueur"
         ogImageAlt="Inscription InkFlow"
       />
       {/* ── LEFT — Signup Form ── */}
@@ -71,10 +71,10 @@ export const SignupPage: React.FC = () => {
               )}
 
               <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
-                Créez votre compte
+                Ouvre ton compte studio
               </h1>
               <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-                Essai gratuit de 14 jours · Sans carte bancaire
+                Environ 1 minute · 14 jours d&apos;essai · Sans carte au départ
               </p>
             </div>
 

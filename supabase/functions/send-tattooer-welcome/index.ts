@@ -84,23 +84,24 @@ Deno.serve(async (req: Request) => {
   );
 
   const bodyHtml = `
-<p style="${EMAIL_STYLES.text}">Merci d’avoir rejoint InkFlow. Ton compte est prêt : retrouve ton agenda, tes demandes et ta messagerie depuis le tableau de bord.</p>
+<p style="${EMAIL_STYLES.text}">Bienvenue sur InkFlow. Ton compte studio est actif : en quelques minutes tu peux publier ton <strong>lien vitrine</strong>, poser tes <strong>créneaux</strong> et recevoir des <strong>demandes</strong> sans tout gérer sur Insta.</p>
+<p style="${EMAIL_STYLES.text}">Retrouve l’agenda, les demandes et la messagerie depuis le tableau de bord.</p>
 <p style="${EMAIL_STYLES.text}">Une question ? Écris-nous à ${escapeHtml("contact@ink-flow.me")}.</p>
 `;
 
   const html = wrapEmailLayout({
     tag: "BIENVENUE",
     title: "Bienvenue sur InkFlow",
-    subtitle: "Ton studio est à portée de clic",
+    subtitle: "Vitrine, agenda et demandes au même endroit",
     greetingName: displayName,
-    introLine: "Nous sommes ravis de t’accompagner.",
+    introLine: "On est contents de t’accompagner.",
     bodyHtml,
     button: { text: "Ouvrir le tableau de bord", url: `${appUrl}/dashboard` },
   });
 
   const sent = await sendEmail({
     to: [u.email],
-    subject: "Bienvenue sur InkFlow — ton espace est prêt",
+    subject: "Ton espace InkFlow est prêt",
     html,
   });
 

@@ -28,6 +28,9 @@ const SignupPage = lazy(() => import('./pages/SignupPage').then((m) => ({ defaul
 const ClientPortalLoginPage = lazy(() =>
   import('./pages/client/ClientPortalLoginPage').then((m) => ({ default: m.ClientPortalLoginPage })),
 );
+const ClientWelcomeOnboardingPage = lazy(() =>
+  import('./pages/client/ClientWelcomeOnboardingPage').then((m) => ({ default: m.ClientWelcomeOnboardingPage })),
+);
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const PublicStudioPagePro = lazy(() => import('./pages/public/PublicStudioPagePro').then(m => ({ default: m.PublicStudioPagePro })));
 const PublicBookingPage = lazy(() => import('./pages/public/PublicBookingPage').then(m => ({ default: m.PublicBookingPage })));
@@ -224,6 +227,7 @@ const Router: React.FC = () => {
     { path: '/admin/debug-experience', component: DebugExperiencePage, requiresAuth: true },
     // ── Portail client "My Inkflow" ─────────────────────────────────────────
     { path: /^\/onboarding\/finaliser-profil\/?$/, component: ClientOnboardingFinalizePage },
+    { path: /^\/client\/bienvenue\/?$/, component: ClientWelcomeOnboardingPage },
     { path: '/client', component: ClientPortalLoginPage },
     { path: /^\/client\/vitrine\/?$/, component: ClientVitrineEmbedPage },
     { path: /^\/client\/studio\/flash\/?$/, component: ClientFlashToolsEmbedPage },
@@ -340,14 +344,14 @@ const NotFoundPage: React.FC = () => (
   <div className="landing-scroll bg-neutral-50 flex items-center justify-center px-4">
     <SEO
       title="Page non trouvée (404)"
-      description="La page demandée n'existe pas sur InkFlow."
+      description="Cette adresse ne mène nulle part sur InkFlow."
       noindex
       canonical="/404"
       ogImageAlt="InkFlow"
     />
     <div className="text-center">
       <h1 className="text-6xl font-bold mb-4">404</h1>
-      <p className="text-xl text-neutral-600 mb-8">Page non trouvée</p>
+      <p className="text-xl text-neutral-600 mb-8">Soit la page a bougé, soit l&apos;URL est fausse.</p>
       <a href={LANDING_URL} className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800 transition-colors">
         Retour à l'accueil
       </a>

@@ -23,15 +23,19 @@ export const PaywallView: React.FC<PaywallViewProps> = ({ onChoosePlan, onOpenBi
         <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] mb-4">
           Votre essai de 14 jours est terminé
         </h1>
-        <p className="text-[var(--text-secondary)] text-base leading-relaxed mb-8">
-          Pour continuer à utiliser InkFlow et accéder à toutes les fonctionnalités — réservations, paiements, galerie Flash, CRM — choisissez un plan adapté à votre activité.
+        <p className="text-[var(--text-secondary)] text-base leading-relaxed mb-2">
+          Reprenez l’agenda, les réservations et les paiements en un clic : vos données restent en place, rien à
+          reconfigurer.
+        </p>
+        <p className="text-[var(--text-tertiary)] text-sm leading-relaxed mb-8">
+          Paiement sécurisé par Stripe — annulez quand vous voulez selon les conditions de votre formule.
         </p>
         <button
           onClick={onChoosePlan}
           className="w-full max-w-xs mx-auto flex items-center justify-center gap-3 px-8 py-4 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 rounded-2xl font-bold text-lg hover:opacity-90 active:scale-[0.98] transition-all shadow-lg"
         >
           <CreditCard className="w-6 h-6" />
-          Choisir mon plan
+          Voir les formules et continuer
         </button>
         {onOpenBilling && (
           <button

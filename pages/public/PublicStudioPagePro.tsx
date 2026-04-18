@@ -13,7 +13,7 @@ import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
 import { SEO, createTattooStudioSchema } from '../../components/SEO';
 import { createProjectRequest } from '../../lib/supabaseProjectRequests';
 import { createCheckoutSession } from '../../lib/stripeClient';
-import { supabase } from '../../lib/supabase';
+import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { useRealtimeVitrine } from '../../hooks/useRealtimeSync';
 import { useToast } from '../../contexts/ToastContext';
 import type { VitrineData, VitrineFlashDesign } from '../../types/vitrine';
@@ -92,6 +92,8 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [bookingStudioId, setBookingStudioId] = useState<string | null>(null);
   /** Résolu tôt pour l’upload des images « demande de projet » (même bucket que réservations). */
   const [projectRequestStudioId, setProjectRequestStudioId] = useState<string | null>(null);
+  /** Évite de confondre « pas encore résolu » et « aucun studio en base » (slug invalide / RLS). */
+  const [studioRecordResolved, setStudioRecordResolved] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
@@ -138,8 +140,19 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
   useEffect(() => {
     let cancelled = false;
+    setStudioRecordResolved(false);
+    if (!isSupabaseConfigured()) {
+      setProjectRequestStudioId(null);
+      setStudioRecordResolved(true);
+      return () => {
+        cancelled = true;
+      };
+    }
     getStudioIdBySlug(studioSlug).then((id) => {
-      if (!cancelled) setProjectRequestStudioId(id ?? null);
+      if (!cancelled) {
+        setProjectRequestStudioId(id ?? null);
+        setStudioRecordResolved(true);
+      }
     });
     return () => {
       cancelled = true;
@@ -248,6 +261,32 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   }, [selectedFlashId]);
 
   useEffect(() => {
+    const modalOpen =
+      showProjectRequestForm ||
+      showBookingForm ||
+      showContactForm ||
+      selectedFlash != null ||
+      selectedImage != null;
+    if (!modalOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (showProjectRequestForm) setShowProjectRequestForm(false);
+      else if (showBookingForm) setShowBookingForm(false);
+      else if (showContactForm) setShowContactForm(false);
+      else if (selectedFlash) setSelectedFlash(null);
+      else if (selectedImage) setSelectedImage(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [
+    showProjectRequestForm,
+    showBookingForm,
+    showContactForm,
+    selectedFlash,
+    selectedImage,
+  ]);
+
+  useEffect(() => {
     const scroller = landingScrollRef.current;
     if (!scroller) return;
 
@@ -310,9 +349,14 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       toast.error('Ce studio n\'est pas encore configuré. Contactez-nous directement.');
       return;
     }
-    await createProjectRequest(data, studioId);
-    setRequestSuccess(true);
-    setShowProjectRequestForm(false);
+    try {
+      await createProjectRequest(data, studioId);
+      setRequestSuccess(true);
+      setShowProjectRequestForm(false);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Une erreur est survenue. Réessayez.';
+      toast.error(msg);
+    }
   };
 
   const openBookingForm = async () => {
@@ -503,13 +547,50 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
   const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 
-  if (loading || !studioDisplay) {
+  /** Attendre la RPC slug avant d’afficher une vitrine (sinon template par défaut puis « introuvable »). */
+  const awaitingPublicSlugResolution =
+    isSupabaseConfigured() && studioSlug !== 'demo' && !studioRecordResolved;
+
+  const studioMissingInSupabase =
+    isSupabaseConfigured() &&
+    studioSlug !== 'demo' &&
+    studioRecordResolved &&
+    projectRequestStudioId === null;
+
+  if (loading || !studioDisplay || awaitingPublicSlugResolution) {
     return (
-      <div className="landing-scroll bg-neutral-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
-          <p className="text-neutral-600 font-medium">Chargement de la vitrine...</p>
+      <div className="landing-scroll min-h-[100dvh] bg-neutral-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 sm:pt-28 pb-12 space-y-8 animate-pulse motion-reduce:animate-none">
+          <div className="h-[50vh] sm:h-[55vh] rounded-2xl bg-neutral-200/90" aria-hidden />
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-4">
+              <div className="h-8 w-48 rounded-lg bg-neutral-200" aria-hidden />
+              <div className="h-24 rounded-xl bg-neutral-100 border border-neutral-200/80" aria-hidden />
+              <div className="h-40 rounded-xl bg-neutral-100 border border-neutral-200/80" aria-hidden />
+            </div>
+            <div className="h-64 rounded-xl bg-neutral-100 border border-neutral-200/80" aria-hidden />
+          </div>
+          <p className="text-center text-sm font-medium text-neutral-500">Chargement de la vitrine…</p>
         </div>
+      </div>
+    );
+  }
+
+  if (studioMissingInSupabase) {
+    return (
+      <div className="landing-scroll min-h-[100dvh] bg-neutral-50 flex flex-col items-center justify-center px-4 py-16">
+        <AlertCircle className="w-12 h-12 text-amber-600 mb-4 shrink-0" aria-hidden />
+        <h1 className="text-xl font-semibold text-neutral-900 text-center">Studio introuvable</h1>
+        <p className="text-sm text-neutral-600 text-center max-w-md mt-2">
+          Ce lien ne correspond à aucun studio InkFlow. Vérifiez l’URL ou que le slug en base correspond bien (casse, tirets). En développement, ouvrez la console : les appels{' '}
+          <code className="text-xs bg-neutral-200/80 px-1 rounded">get_studio_public_by_slug</code> sont tracés.
+        </p>
+        <a
+          href={LANDING_URL}
+          className="mt-6 text-sm font-medium text-neutral-900 underline-offset-2 hover:underline active:scale-[0.98] transition-all"
+        >
+          Retour à l’accueil
+        </a>
       </div>
     );
   }
@@ -535,7 +616,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   return (
     <div
       ref={landingScrollRef}
-      className={`landing-scroll min-h-[100dvh] ${activeTheme?.containerClasses ?? 'bg-neutral-50'}`}
+      className={`landing-scroll relative min-h-[100dvh] ${activeTheme?.containerClasses ?? 'bg-neutral-50'}`}
       style={{ ['--vitrine-primary' as string]: primaryColor }}
     >
       <SEO
@@ -547,6 +628,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         keywords={`${studioName}, tatoueur, réservation tatouage, studio tattoo, InkFlow`}
         schema={studioSchema}
       />
+      <a
+        href="#contenu-vitrine"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2.5 focus:rounded-xl focus:bg-neutral-900 focus:text-white focus:font-semibold focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-neutral-900"
+      >
+        Aller au contenu
+      </a>
       {/* Sticky Header */}
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 safe-top border-b border-neutral-200/60 ${headerScrolled ? 'bg-[#f7f7f5]/95 backdrop-blur-md shadow-sm' : 'bg-[#f7f7f5]/90 backdrop-blur-sm'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -566,35 +653,35 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 ) : null}
               </div>
             </div>
-            <nav className="hidden lg:flex items-center gap-8">
+            <nav className="hidden lg:flex items-center gap-8" aria-label="Sections de la page">
               {navSections.map(section => (
                 <button key={section.id} type="button" onClick={() => scrollToSection(section.id)}
-                  className={`text-sm font-medium transition-all relative group ${activeSection === section.id ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'}`}>
+                  className={`text-sm font-medium transition-all relative group rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 ${activeSection === section.id ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'}`}>
                   {section.label}
-                  <span className={`absolute -bottom-1 left-0 right-0 h-0.5 bg-neutral-900 transition-transform ${activeSection === section.id ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`} />
+                  <span className={`absolute -bottom-1 left-0 right-0 h-0.5 bg-neutral-900 transition-transform ${activeSection === section.id ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`} aria-hidden />
                 </button>
               ))}
             </nav>
             <div className="flex items-center gap-3">
-              <button onClick={shareStudio} className="hidden md:flex items-center gap-2 px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors">
-                <Share2 className="w-5 h-5" />
+              <button type="button" onClick={shareStudio} aria-label="Partager la page" className="hidden md:flex items-center gap-2 px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
+                <Share2 className="w-5 h-5" aria-hidden />
               </button>
-              <button onClick={() => setShowContactForm(true)} className="hidden md:flex items-center gap-2 px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors">
-                <MessageCircle className="w-5 h-5" />
+              <button type="button" onClick={() => setShowContactForm(true)} className="hidden md:flex items-center gap-2 px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
+                <MessageCircle className="w-5 h-5" aria-hidden />
                 <span className="text-sm font-medium">Contact</span>
               </button>
-              <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} data-joyride="vitrine-reserver" className="bg-[var(--vitrine-primary)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center cursor-pointer">
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+              <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} data-joyride="vitrine-reserver" className="bg-[var(--vitrine-primary)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 active:scale-[0.98]">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" aria-hidden />
                 <span>Réserver</span>
               </a>
-              <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="lg:hidden p-2 text-neutral-700 hover:bg-neutral-100 rounded-lg">
+              <button type="button" onClick={() => setShowMobileMenu(!showMobileMenu)} aria-expanded={showMobileMenu} aria-controls="vitrine-mobile-nav" aria-label={showMobileMenu ? 'Fermer le menu' : 'Ouvrir le menu'} className="lg:hidden p-2 text-neutral-700 hover:bg-neutral-100 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
                 {showMobileMenu ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
             </div>
           </div>
           {showMobileMenu && (
-            <div className="lg:hidden py-4 border-t border-neutral-200">
-              <nav className="space-y-1">
+            <div id="vitrine-mobile-nav" className="lg:hidden py-4 border-t border-neutral-200">
+              <nav className="space-y-1" aria-label="Navigation mobile">
                 {navSections.map(section => (
                   <button key={section.id} type="button" onClick={() => scrollToSection(section.id)}
                     className={`w-full text-left px-4 py-3 rounded-lg font-medium min-h-[44px] flex items-center ${activeSection === section.id ? 'bg-neutral-900 text-white' : 'text-neutral-800 hover:bg-neutral-100'}`}>
@@ -615,19 +702,22 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         </div>
       </header>
 
+      <main id="contenu-vitrine" tabIndex={-1} className="outline-none">
+
       {/* Hero Cover */}
-      <div className="relative h-[65vh] sm:h-[70vh] md:h-[80vh] overflow-hidden mt-16 sm:mt-20" data-joyride="vitrine-hero">
+      <section aria-labelledby="vitrine-studio-title" className="relative h-[65vh] sm:h-[70vh] md:h-[80vh] overflow-hidden mt-16 sm:mt-20" data-joyride="vitrine-hero">
         <div
+          aria-hidden
           className={`absolute inset-0 bg-cover bg-center ${heroCover ? '' : 'bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900'}`}
           style={heroCover ? { backgroundImage: `url(${heroCover})` } : undefined}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" aria-hidden />
         <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-12 safe-bottom">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row md:items-end gap-4 sm:gap-8">
               <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6 min-w-0">
                 {heroAvatar ? (
-                  <img src={heroAvatar} alt="" className="w-20 h-20 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white shadow-2xl object-cover flex-shrink-0" />
+                  <img src={heroAvatar} alt={`Photo du studio ${studioName}`} className="w-20 h-20 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white shadow-2xl object-cover flex-shrink-0" />
                 ) : (
                   <div
                     className="w-20 h-20 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white/40 shadow-2xl flex-shrink-0 flex items-center justify-center bg-white/10 text-white text-xl sm:text-3xl md:text-4xl font-bold"
@@ -638,10 +728,10 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 )}
                 <div className="flex-1 text-white pb-0 sm:pb-2 min-w-0">
                   <div className="inline-flex items-center gap-2 bg-green-500/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4">
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse" />
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse motion-reduce:animate-none" aria-hidden />
                     {isOpen() ? 'Ouvert maintenant' : 'Fermé'}
                   </div>
-                  <h1 className="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-2 sm:mb-3 drop-shadow-lg leading-tight">{studioDisplay.name?.trim() || studioName}</h1>
+                  <h1 id="vitrine-studio-title" className="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-2 sm:mb-3 drop-shadow-lg leading-tight">{studioDisplay.name?.trim() || studioName}</h1>
                   {studioDisplay.tagline?.trim() ? (
                     <p className="text-base sm:text-xl md:text-2xl opacity-95 mb-4 sm:mb-6 drop-shadow">{studioDisplay.tagline}</p>
                   ) : null}
@@ -673,9 +763,9 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   type="button"
                   onClick={shareStudio}
                   aria-label="Partager la vitrine"
-                  className="p-3 sm:p-4 bg-white/20 backdrop-blur-md rounded-xl hover:bg-white/30 transition-all border border-white/30 min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-[0.98]"
+                  className="p-3 sm:p-4 bg-white/20 backdrop-blur-md rounded-xl hover:bg-white/30 transition-all border border-white/30 min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
                 >
-                  <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" aria-hidden />
                 </button>
                 <button
                   type="button"
@@ -683,7 +773,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   aria-pressed={studioFavorite}
                   aria-label={studioFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                   title={studioFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                  className={`p-3 sm:p-4 backdrop-blur-md rounded-xl transition-all border min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-[0.98] ${
+                  className={`p-3 sm:p-4 backdrop-blur-md rounded-xl transition-all border min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 ${
                     studioFavorite
                       ? 'bg-rose-500/35 border-rose-300/60 hover:bg-rose-500/45'
                       : 'bg-white/20 hover:bg-white/30 border-white/30'
@@ -693,20 +783,21 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                     className={`w-5 h-5 sm:w-6 sm:h-6 ${
                       studioFavorite ? 'fill-rose-300 text-rose-50' : 'text-white fill-transparent'
                     }`}
+                    aria-hidden
                   />
                 </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Stats Banner — masquable via Paramètres > Vitrine > Statistiques */}
       {studioDisplay.showStatsBanner !== false && (
       <div className="bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white py-4 sm:py-6 relative overflow-hidden pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-0 left-1/4 w-64 h-64 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white rounded-full blur-3xl" />
+        <div className="absolute inset-0 opacity-5 pointer-events-none" aria-hidden>
+          <div className="absolute top-0 left-1/4 w-64 h-64 bg-white rounded-full blur-3xl motion-reduce:blur-none" />
+          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white rounded-full blur-3xl motion-reduce:blur-none" />
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex md:grid flex-nowrap md:grid-cols-4 overflow-x-auto md:overflow-visible gap-4 md:gap-6 pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory scrollbar-hide">
@@ -732,7 +823,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       )}
 
       {/* Main Content — safe-bottom pour éviter contenu coupé sur mobile */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 pb-[max(2rem,env(safe-area-inset-bottom))]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 pb-[max(7rem,env(safe-area-inset-bottom))] lg:pb-[max(2rem,env(safe-area-inset-bottom))]">
         <div className="grid lg:grid-cols-3 gap-8 sm:gap-12">
           <div className="lg:col-span-2 space-y-10 sm:space-y-16 relative z-10">
             {/* About */}
@@ -1210,8 +1301,10 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         </div>
       </div>
 
+      </main>
+
       {/* Footer — safe-bottom pour éviter coupure sur mobile */}
-      <footer className="bg-neutral-900 text-white mt-24 py-16 pb-[max(4rem,env(safe-area-inset-bottom))]">
+      <footer className="bg-neutral-900 text-white mt-24 py-16 pb-[max(7rem,env(safe-area-inset-bottom))] lg:pb-[max(4rem,env(safe-area-inset-bottom))]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {studioDisplay.siret && (
             <p className="text-neutral-500 text-sm mb-6">
@@ -1268,19 +1361,61 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         </div>
       </footer>
 
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex gap-2 border-t border-neutral-200/90 bg-[#f7f7f5]/95 backdrop-blur-md px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_rgba(0,0,0,0.08)]"
+        aria-label="Actions rapides vitrine"
+      >
+        <a
+          href={`/book/${studioSlug}`}
+          onClick={(e) => {
+            e.preventDefault();
+            navigateTo(`/book/${studioSlug}`);
+          }}
+          className="flex-1 inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-[var(--vitrine-primary)] text-white font-semibold text-sm shadow-sm active:scale-[0.98] transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2"
+        >
+          <Calendar className="w-5 h-5 shrink-0" aria-hidden />
+          Réserver
+        </a>
+        <button
+          type="button"
+          onClick={() => setShowContactForm(true)}
+          className="flex-1 inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl border border-neutral-300 bg-white font-semibold text-sm text-neutral-900 active:scale-[0.98] transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2"
+        >
+          <MessageCircle className="w-5 h-5 shrink-0" aria-hidden />
+          Contact
+        </button>
+      </nav>
+
       {/* Image Lightbox */}
       {selectedImage && (
-        <div className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedImage(null)}>
-          <button onClick={() => setSelectedImage(null)} className="absolute top-6 right-6 w-12 h-12 bg-neutral-200 hover:bg-neutral-300 rounded-full flex items-center justify-center transition-colors">
-            <X className="w-6 h-6 text-neutral-700" />
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Agrandissement du portfolio"
+          className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm flex items-center justify-center p-4 motion-reduce:transition-none"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setSelectedImage(null)}
+            aria-label="Fermer"
+            className="absolute top-6 right-6 w-12 h-12 bg-neutral-200 hover:bg-neutral-300 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2"
+          >
+            <X className="w-6 h-6 text-neutral-700" aria-hidden />
           </button>
-          <img src={selectedImage} alt="Portfolio" className="max-w-full max-h-full object-contain rounded-2xl" onClick={(e) => e.stopPropagation()} />
+          <img src={selectedImage} alt="Œuvre du portfolio en grand format" className="max-w-full max-h-full object-contain rounded-2xl" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
 
       {/* Flash Detail Modal */}
       {selectedFlash && (
-        <div className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm overflow-y-auto" onClick={() => setSelectedFlash(null)}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="vitrine-flash-title"
+          className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm overflow-y-auto motion-reduce:transition-none"
+          onClick={() => setSelectedFlash(null)}
+        >
           <div className="min-h-full flex items-start sm:items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-4xl w-full my-4 sm:my-8" onClick={(e) => e.stopPropagation()} data-joyride="vitrine-flash-modal">
             <div className="grid md:grid-cols-2 gap-6 sm:gap-8 p-4 sm:p-8">
@@ -1297,10 +1432,10 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                       <span className="px-3 py-1 bg-neutral-100 rounded-full text-xs font-semibold">{selectedFlash.style}</span>
                       <span className="px-3 py-1 bg-neutral-100 rounded-full text-xs font-semibold">{selectedFlash.size}</span>
                     </div>
-                    <h3 className="text-3xl font-bold mb-2">{selectedFlash.title}</h3>
+                    <h3 id="vitrine-flash-title" className="text-3xl font-bold mb-2">{selectedFlash.title}</h3>
                   </div>
-                  <button onClick={() => setSelectedFlash(null)} className="w-10 h-10 hover:bg-neutral-100 rounded-full flex items-center justify-center transition-colors">
-                    <X className="w-6 h-6" />
+                  <button type="button" onClick={() => setSelectedFlash(null)} aria-label="Fermer la fiche flash" className="w-10 h-10 hover:bg-neutral-100 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
+                    <X className="w-6 h-6" aria-hidden />
                   </button>
                 </div>
                 <p className="text-neutral-700 mb-6 leading-relaxed">{selectedFlash.description}</p>
@@ -1450,12 +1585,18 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
       {/* Booking Form Modal (Demande de RDV) */}
       {showBookingForm && (
-        <div className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowBookingForm(false)}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="vitrine-booking-title"
+          className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setShowBookingForm(false)}
+        >
           <div className="bg-white rounded-3xl max-w-2xl w-full p-8 my-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold">Demande de rendez-vous</h3>
-              <button onClick={() => setShowBookingForm(false)} className="w-10 h-10 hover:bg-neutral-100 rounded-full flex items-center justify-center transition-colors">
-                <X className="w-6 h-6" />
+              <h3 id="vitrine-booking-title" className="text-2xl font-bold">Demande de rendez-vous</h3>
+              <button type="button" onClick={() => setShowBookingForm(false)} aria-label="Fermer" className="w-10 h-10 hover:bg-neutral-100 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
+                <X className="w-6 h-6" aria-hidden />
               </button>
             </div>
             {bookingStudioId ? (
@@ -1480,12 +1621,18 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
       {/* Project Request Form Modal */}
       {showProjectRequestForm && (
-        <div className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowProjectRequestForm(false)}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="vitrine-project-title"
+          className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setShowProjectRequestForm(false)}
+        >
           <div className="bg-white rounded-3xl max-w-2xl w-full p-8 my-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold">Demande de projet</h3>
-              <button onClick={() => setShowProjectRequestForm(false)} className="w-10 h-10 hover:bg-neutral-100 rounded-full flex items-center justify-center transition-colors">
-                <X className="w-6 h-6" />
+              <h3 id="vitrine-project-title" className="text-2xl font-bold">Demande de projet</h3>
+              <button type="button" onClick={() => setShowProjectRequestForm(false)} aria-label="Fermer" className="w-10 h-10 hover:bg-neutral-100 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
+                <X className="w-6 h-6" aria-hidden />
               </button>
             </div>
             <ProjectRequestForm
@@ -1512,12 +1659,18 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
 
       {/* Contact Form Modal */}
       {showContactForm && (
-        <div className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowContactForm(false)}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="vitrine-contact-title"
+          className="fixed inset-0 z-50 bg-white/90 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setShowContactForm(false)}
+        >
           <div className="bg-white rounded-3xl max-w-2xl w-full p-8 my-8" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-8">
-              <h3 className="text-3xl font-bold">Nous contacter</h3>
-              <button onClick={() => setShowContactForm(false)} className="w-10 h-10 hover:bg-neutral-100 rounded-full flex items-center justify-center transition-colors">
-                <X className="w-6 h-6" />
+              <h3 id="vitrine-contact-title" className="text-3xl font-bold">Nous contacter</h3>
+              <button type="button" onClick={() => setShowContactForm(false)} aria-label="Fermer" className="w-10 h-10 hover:bg-neutral-100 rounded-full flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
+                <X className="w-6 h-6" aria-hidden />
               </button>
             </div>
             <form className="space-y-6" onSubmit={handleContactSubmit}>

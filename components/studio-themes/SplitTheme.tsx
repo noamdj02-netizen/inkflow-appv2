@@ -51,7 +51,7 @@ export const SplitTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, por
         </aside>
 
         {/* Colonne droite — scroll */}
-        <main className="p-6 lg:p-10 overflow-y-auto">
+        <main id="contenu-vitrine" tabIndex={-1} className="p-6 lg:p-10 overflow-y-auto outline-none">
           <StudioThemeFlashSection items={flashItems} bookingUrl={bookingUrl} variant="split" />
 
           {/* Portfolio */}

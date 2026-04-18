@@ -188,7 +188,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const returnUrl = `${APP_URL}/dashboard`;
+    /** Retour utilisateur : ouvre Facturation dans l’app (effet `billing_portal` dans DashboardPro). */
+    const returnUrl = `${APP_URL}/dashboard?billing_portal=return`;
     const body = new URLSearchParams({
       customer: customerId,
       return_url: returnUrl,

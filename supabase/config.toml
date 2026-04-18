@@ -18,6 +18,10 @@ verify_jwt = false
 [functions.send-collaborator-invite]
 verify_jwt = false
 
+# Proposition de date alternative (e-mail) : même cause ES256 sur la passerelle ; identité vérifiée dans le handler (getGoTrueUser).
+[functions.send-alternative-date-proposal]
+verify_jwt = false
+
 # Lien d’activation studio (magic link) — appel public avec anon + apikey (comme send-client-magic-link).
 [functions.send-studio-auth-link]
 verify_jwt = false

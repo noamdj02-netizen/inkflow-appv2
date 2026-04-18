@@ -106,13 +106,19 @@ export const StudioThemeRouter: React.FC<StudioThemeRouterProps> = ({ data, fall
   const ogImage = (data.coverImage || '').trim() || (data.avatar || '').trim();
 
   return (
-    <div className="landing-scroll">
+    <div className="landing-scroll relative">
       <SEO
         title={`${displayName} | Tatoueur & Prise de RDV - InkFlow`}
         description={data.description || data.tagline || `Découvrez les flashs et prenez rendez-vous avec ${displayName}.`}
         canonical={`/studio/${data.slug}`}
         ogImage={ogImage || undefined}
       />
+      <a
+        href="#contenu-vitrine"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2.5 focus:rounded-xl focus:bg-violet-600 focus:text-white focus:font-semibold focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-violet-950"
+      >
+        Aller au contenu
+      </a>
       <ThemeComponent {...props} />
     </div>
   );

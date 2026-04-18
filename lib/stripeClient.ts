@@ -184,12 +184,19 @@ interface CreateSubscriptionParams {
   interval: 'monthly' | 'annual';
 }
 
-export async function createSubscription(params: CreateSubscriptionParams): Promise<string | null> {
+export type CreateSubscriptionResult = { url: string } | { error: string };
+
+/** Crée une session Checkout Stripe pour l'abonnement InkFlow (JWT requis). */
+export async function createSubscription(params: CreateSubscriptionParams): Promise<CreateSubscriptionResult> {
   try {
     const { url: baseUrl, key } = getSupabaseConfig();
-    if (!baseUrl || !key) return null;
+    if (!baseUrl || !key) {
+      return { error: 'Supabase non configuré (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).' };
+    }
     const token = await resolveAccessTokenForEdgeFn();
-    if (!token) return null;
+    if (!token) {
+      return { error: 'Session expirée : reconnecte-toi pour souscrire à un plan.' };
+    }
     const fnUrl = `${baseUrl.replace(/\/$/, '')}/functions/v1/create-subscription`;
     const res = await fetch(fnUrl, {
       method: 'POST',
@@ -200,13 +207,33 @@ export async function createSubscription(params: CreateSubscriptionParams): Prom
       },
       body: JSON.stringify(params),
     });
-    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-    if (!res.ok || !data?.url) {
-      return null;
+    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string };
+    if (res.ok && data?.url) {
+      return { url: data.url };
     }
-    return data.url;
-  } catch {
-    return null;
+    const raw = (data.error || data.details || '').trim();
+    if (res.status === 401) {
+      return { error: 'Session expirée : reconnecte-toi puis réessaie depuis Paramètres > Facturation.' };
+    }
+    if (res.status === 403 && raw) {
+      return { error: raw.length > 280 ? `${raw.slice(0, 277)}…` : raw };
+    }
+    if (res.status === 404 && raw) {
+      return { error: raw.length > 280 ? `${raw.slice(0, 277)}…` : raw };
+    }
+    if (raw && !looksLikeTechnicalError(raw)) {
+      return { error: raw.length > 280 ? `${raw.slice(0, 277)}…` : raw };
+    }
+    return {
+      error:
+        'Impossible d’ouvrir la page de paiement pour l’instant. Réessaie depuis Paramètres > Facturation ou vérifie ta connexion.',
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message === 'Failed to fetch') {
+      return { error: 'Connexion instable. Vérifie le réseau et réessaie.' };
+    }
+    return { error: 'Impossible de créer la session de paiement. Réessaie dans quelques instants.' };
   }
 }
 

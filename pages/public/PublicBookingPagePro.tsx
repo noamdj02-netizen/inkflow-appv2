@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Check, MapPin, Instagram, User, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Check, MapPin, Instagram, User, XCircle, AlertCircle, Star } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { VitrineBookingForm } from '../../components/booking/VitrineBookingForm';
 import { getStudioIdBySlug } from '../../lib/supabaseDashboard';
 import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 import { useToast } from '../../contexts/ToastContext';
+import { LANDING_URL } from '../../lib/urls';
 
 const supabaseEnabled = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 
@@ -28,47 +29,80 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
   })();
 
   useEffect(() => {
+    let cancelled = false;
     if (supabaseEnabled) {
-      getStudioIdBySlug(studioSlug).then((id) => setStudioId(id ?? null));
+      getStudioIdBySlug(studioSlug).then((id) => {
+        if (!cancelled) setStudioId(id ?? null);
+      });
     } else {
       setStudioId(null);
     }
+    return () => {
+      cancelled = true;
+    };
   }, [studioSlug]);
 
   const [studioInfo, setStudioInfo] = useState<{ name: string; address: string; avatar: string; instagram: string; rating: number; reviewCount: number } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     getVitrineDataBySlugAsync(studioSlug)
       .then((data) => {
-        if (data) {
+        if (!cancelled && data) {
           setStudioInfo({
             name: data.name,
             address: data.address || '',
             avatar: data.avatar || '',
             instagram: data.instagram || '',
-            rating: 4.9,
-            reviewCount: data.testimonials?.length || 0,
+            rating: typeof data.rating === 'number' ? data.rating : 0,
+            reviewCount: typeof data.reviewCount === 'number' ? data.reviewCount : 0,
           });
         }
       })
       .catch(() => {
-        toast.error('Impossible de charger les informations du studio');
+        if (!cancelled) toast.error('Impossible de charger les informations du studio');
       });
-  }, [studioSlug]);
+    return () => {
+      cancelled = true;
+    };
+  }, [studioSlug, toast]);
 
   const studio = studioInfo ?? { name: studioSlug, address: '', avatar: '', instagram: '', rating: 0, reviewCount: 0 };
 
   if (supabaseEnabled && studioId === 'loading') {
     return (
-      <div className="landing-scroll bg-neutral-50 min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
+      <div className="landing-scroll bg-neutral-50 min-h-screen flex items-center justify-center px-4">
+        <div
+          className="w-10 h-10 min-w-[44px] min-h-[44px] border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin"
+          role="status"
+          aria-live="polite"
+          aria-label="Chargement de la réservation"
+        />
       </div>
     );
   }
   if (supabaseEnabled && studioId === null) {
     return (
-      <div className="landing-scroll bg-neutral-50 min-h-screen flex items-center justify-center">
-        <p className="text-neutral-600">Studio introuvable.</p>
+      <div className="landing-scroll bg-neutral-50 min-h-screen flex flex-col items-center justify-center px-4 py-12">
+        <AlertCircle className="w-12 h-12 text-amber-600 mb-4 shrink-0" aria-hidden />
+        <h1 className="text-lg font-semibold text-neutral-900 text-center">Studio introuvable</h1>
+        <p className="text-sm text-neutral-600 text-center max-w-md mt-2">
+          Ce lien ne correspond à aucun studio. Vérifiez l&apos;URL ou contactez le tatoueur.
+        </p>
+        <div className="mt-8 flex flex-col sm:flex-row gap-3">
+          <a
+            href={`/studio/${encodeURIComponent(studioSlug)}`}
+            className="inline-flex min-h-[44px] items-center justify-center px-6 py-3 rounded-xl bg-neutral-900 text-white font-medium hover:bg-neutral-800 active:scale-[0.98] transition-all"
+          >
+            Réessayer la vitrine
+          </a>
+          <a
+            href={LANDING_URL}
+            className="inline-flex min-h-[44px] items-center justify-center px-6 py-3 rounded-xl border border-neutral-300 text-neutral-800 font-medium hover:bg-neutral-100 active:scale-[0.98] transition-all"
+          >
+            Accueil InkFlow
+          </a>
+        </div>
       </div>
     );
   }
@@ -197,6 +231,20 @@ export const PublicBookingPagePro: React.FC<PublicBookingPageProProps> = ({ stud
                         const match = raw.match(/instagram\.com\/([^/?]+)/);
                         return match ? `@${match[1]}` : `@${raw}`;
                       })()}
+                    </span>
+                  )}
+                  {(studio.rating > 0 || studio.reviewCount > 0) && (
+                    <span className="flex items-center gap-1.5 text-zinc-300">
+                      <Star className="w-4 h-4 flex-shrink-0 text-amber-400" strokeWidth={1.5} aria-hidden />
+                      {studio.rating > 0 && (
+                        <span className="font-medium tabular-nums">{studio.rating.toFixed(1)}</span>
+                      )}
+                      {studio.reviewCount > 0 && (
+                        <span className="text-zinc-500">
+                          {studio.rating > 0 ? ' · ' : ''}
+                          {studio.reviewCount} avis
+                        </span>
+                      )}
                     </span>
                   )}
                 </div>

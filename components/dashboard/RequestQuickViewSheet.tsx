@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, MapPin, Ruler, Euro, Calendar, Mail, Sparkles, FileText, CheckCircle, XCircle, Clock, AtSign, MessageCircle } from 'lucide-react';
+import { X, MapPin, Ruler, Euro, Calendar, Mail, Sparkles, FileText, CheckCircle, XCircle, Clock, AtSign, MessageCircle, CreditCard } from 'lucide-react';
 import type { ProjectRequest, Booking } from '../../types';
 import { instagramMessageUrl } from '../../lib/instagramUtils';
 import { buildMailtoHref, handleMailtoClick } from '../../lib/mailto';
@@ -24,6 +24,8 @@ interface RequestQuickViewSheetProps {
   /** Pseudo Instagram résolu (champ ou extrait de la description) */
   instagramHandle?: string | null;
   onAcceptAndDeposit?: (item: RequestItem) => void;
+  /** Demande vitrine en attente : confirme le créneau et envoie l’email (sans acompte obligatoire). */
+  onConfirmVitrineBooking?: (item: RequestItem) => void | Promise<void>;
   onReject?: (item: RequestItem) => void;
   onProposeDate?: (item: RequestItem) => void;
   /** Demande vitrine : ouvre l’onglet Messagerie sur le fil `pr_<id>`. */
@@ -63,6 +65,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
   studioId,
   instagramHandle,
   onAcceptAndDeposit,
+  onConfirmVitrineBooking,
   onReject,
   onProposeDate,
   onOpenProjectDiscussion,
@@ -73,6 +76,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
   const isProject = item._type === 'project';
   const pr = isProject ? (item as ProjectRequest & { _type: 'project' }) : null;
   const bk = !isProject ? (item as Booking & { _type: 'booking' }) : null;
+  const vitrinePending = Boolean(bk && bk.status === 'pending');
 
   const clientName = pr?.clientName ?? bk?.clientName ?? '';
   const clientEmail = pr?.clientEmail ?? bk?.clientEmail ?? '';
@@ -263,51 +267,132 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
               </div>
             )}
 
-            {/* Actions */}
-            <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
-              <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase mb-3">Actions</p>
-              <div className="flex flex-col gap-2">
-                {isProject && pr && onOpenProjectDiscussion && (
+            {/* Actions (alignées liste Vitrine : décider puis contact messagerie si besoin) */}
+            <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4">
+              <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase">Actions</p>
+              {vitrinePending && (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 px-0.5">
+                    Décider
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {onConfirmVitrineBooking && (
+                      <button
+                        type="button"
+                        title="Envoie un email de confirmation au client sans exiger d’acompte."
+                        onClick={async () => {
+                          await onConfirmVitrineBooking(item);
+                          onClose();
+                        }}
+                        className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-sm"
+                      >
+                        <CheckCircle className="w-5 h-5 shrink-0 stroke-[1.75]" />
+                        Confirmer le RDV
+                      </button>
+                    )}
+                    {studioId && onAcceptAndDeposit && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onAcceptAndDeposit(item);
+                          onClose();
+                        }}
+                        className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
+                      >
+                        <CreditCard className="w-5 h-5 shrink-0 stroke-[1.75]" />
+                        Lien d&apos;acompte (Stripe)
+                      </button>
+                    )}
+                    {onProposeDate && (
+                      <button
+                        type="button"
+                        onClick={() => onProposeDate(item)}
+                        className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
+                      >
+                        <Calendar className="w-5 h-5" />
+                        Proposer une autre date
+                      </button>
+                    )}
+                    {onReject && (
+                      <button
+                        type="button"
+                        onClick={() => onReject(item)}
+                        className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white text-red-600 dark:bg-zinc-800 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-500/10 border border-red-200 dark:border-red-500/30 active:scale-[0.98] transition-all"
+                      >
+                        <XCircle className="w-5 h-5" />
+                        Refuser
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!vitrinePending && (
+                <div className="flex flex-col gap-2">
+                  {isProject && pr && onOpenProjectDiscussion && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenProjectDiscussion(`pr_${pr.id}`);
+                        onClose();
+                      }}
+                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
+                    >
+                      <MessageCircle className="w-5 h-5 shrink-0" />
+                      Messagerie InkFlow
+                    </button>
+                  )}
+                  {studioId && onAcceptAndDeposit && (
+                    <button
+                      type="button"
+                      onClick={() => onAcceptAndDeposit(item)}
+                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all"
+                    >
+                      <CheckCircle className="w-5 h-5" />
+                      Envoyer le lien d&apos;acompte (Stripe)
+                    </button>
+                  )}
+                  {onProposeDate && (
+                    <button
+                      type="button"
+                      onClick={() => onProposeDate(item)}
+                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
+                    >
+                      <Calendar className="w-5 h-5" />
+                      Proposer une autre date
+                    </button>
+                  )}
+                  {onReject && (
+                    <button
+                      type="button"
+                      onClick={() => onReject(item)}
+                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-500/30 active:scale-[0.98] transition-all"
+                    >
+                      <XCircle className="w-5 h-5" />
+                      Refuser
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {vitrinePending && onOpenProjectDiscussion && bk && (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 px-0.5">
+                    Contacter le client
+                  </p>
                   <button
                     type="button"
                     onClick={() => {
-                      onOpenProjectDiscussion(`pr_${pr.id}`);
+                      onOpenProjectDiscussion(bk.id);
                       onClose();
                     }}
-                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
+                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
                   >
                     <MessageCircle className="w-5 h-5 shrink-0" />
-                    Ouvrir la discussion
+                    Messagerie InkFlow
                   </button>
-                )}
-                {studioId && onAcceptAndDeposit && (
-                  <button
-                    onClick={() => onAcceptAndDeposit(item)}
-                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all"
-                  >
-                    <CheckCircle className="w-5 h-5" />
-                    Envoyer le lien d&apos;acompte (Stripe)
-                  </button>
-                )}
-                {onProposeDate && (
-                  <button
-                    onClick={() => onProposeDate(item)}
-                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-800 font-semibold text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
-                  >
-                    <Calendar className="w-5 h-5" />
-                    Proposer une autre date
-                  </button>
-                )}
-                {onReject && (
-                  <button
-                    onClick={() => onReject(item)}
-                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-500/30 active:scale-[0.98] transition-all"
-                  >
-                    <XCircle className="w-5 h-5" />
-                    Refuser
-                  </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

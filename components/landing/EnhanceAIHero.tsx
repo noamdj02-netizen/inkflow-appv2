@@ -120,7 +120,7 @@ export const EnhanceAIHero: React.FC = () => {
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400 text-xs font-semibold mb-6"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" aria-hidden />
-              +200 tatoueurs utilisent Inkflow en France
+              Déjà utilisé par des centaines de tatoueurs en France
             </motion.div>
 
             <motion.h1
@@ -128,9 +128,9 @@ export const EnhanceAIHero: React.FC = () => {
               custom={1}
               className="font-hero-title text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl font-bold text-neutral-900 tracking-tight leading-[1.1] mb-5 sm:mb-6"
             >
-              Vos DMs Instagram
+              Les demandes Insta
               <br />
-              transformés en rendez-vous
+              qui finissent en rendez-vous
             </motion.h1>
 
             <motion.p
@@ -138,7 +138,7 @@ export const EnhanceAIHero: React.FC = () => {
               custom={2}
               className="text-base sm:text-lg md:text-xl text-slate-600 max-w-xl mx-auto lg:mx-0 mb-6 leading-relaxed"
             >
-              Inkflow qualifie vos demandes, encaisse les acomptes et gère votre agenda. Vous, vous tatouez.
+              Les messages arrivent, tu qualifies, l&apos;acompte part sur Stripe, le créneau se bloque. Toi tu restes à la machine.
             </motion.p>
 
             {/* Features bullets */}

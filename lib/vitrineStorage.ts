@@ -115,7 +115,8 @@ export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineDa
     if (typeof window !== 'undefined' && !localRaw) {
       localStorage.setItem(key, JSON.stringify({ ...fromDb, slug: normalized }));
     }
-    // Brouillon local : fusionner avec le serveur — ne pas écraser avatar/couverture par des chaînes vides
+    // Brouillon local : cette page est la vitrine **publique** — le serveur fait foi pour le texte / sections.
+    // (Ancien ordre ...fromDb, ...localData écrasait le contenu Supabase avec un vieux template en localStorage.)
     if (localRaw) {
       try {
         const localParsed = JSON.parse(localRaw) as Partial<VitrineData>;
@@ -125,14 +126,23 @@ export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineDa
           const r = (remoteVal || '').trim();
           return l || r;
         };
-        return {
-          ...fromDb,
+        const merged: VitrineData = {
           ...localData,
+          ...fromDb,
           slug: normalized,
           theme: fromDb.theme ?? localData.theme,
           coverImage: pickUrl(localData.coverImage, fromDb.coverImage),
           avatar: pickUrl(localData.avatar, fromDb.avatar),
         };
+        // Réaligner le cache navigateur sur la vérité serveur pour les prochains chargements
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem(key, JSON.stringify(merged));
+          } catch {
+            /* quota / mode privé */
+          }
+        }
+        return merged;
       } catch {
         return fromDb;
       }

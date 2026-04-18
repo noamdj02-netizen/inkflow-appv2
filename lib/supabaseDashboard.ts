@@ -1,4 +1,5 @@
 import { supabase, getStudioId } from './supabase';
+import { findNextAvailableSlotForStudio } from './supabaseBookings';
 import { buildFlashSlug } from './flashSlug';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db: any = supabase;
@@ -28,6 +29,51 @@ export function getStudioSlug(studioName: string): string {
 /** Slug URL vitrine (/studio/:slug) — toujours comparer en minuscules (évite les ratés RPC si la casse diverge). */
 export function normalizePublicStudioSlug(slug: string): string {
   return (slug || '').trim().toLowerCase();
+}
+
+type StudioPublicRpcRow = {
+  id: string;
+  studio_name?: string | null;
+  name?: string | null;
+  vitrine_theme?: string | null;
+  siret?: string | null;
+  avatar_url?: string | null;
+  portfolio_cover_url?: string | null;
+  payments_online?: boolean;
+};
+
+/**
+ * RPC unique pour le slug public (évite lecture directe sur inkflow_studios + logs DEV pour slug / RLS).
+ */
+async function fetchStudioPublicRowBySlug(slug: string): Promise<{
+  normalized: string;
+  row: StudioPublicRpcRow | null;
+  error: { message: string; code?: string } | null;
+}> {
+  const normalized = normalizePublicStudioSlug(slug);
+  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: normalized });
+  const raw = Array.isArray(data) ? data[0] : data;
+  const hasId =
+    raw &&
+    typeof raw === 'object' &&
+    'id' in raw &&
+    typeof (raw as { id?: unknown }).id === 'string' &&
+    (raw as { id: string }).id.length > 0;
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.log('[Inkflow] get_studio_public_by_slug', {
+      rawSlug: slug,
+      normalizedSlug: normalized,
+      data,
+      error: error?.message ?? null,
+      rowFound: hasId,
+    });
+  }
+  return {
+    normalized,
+    row: hasId ? (raw as StudioPublicRpcRow) : null,
+    error: error ?? null,
+  };
 }
 
 /** Suffixe déterministe à partir de l'id pour rendre un slug unique */
@@ -224,12 +270,11 @@ export async function getStudioSlugByStudioId(studioId: string): Promise<string 
 
 /** Vérifie si un slug est disponible (non pris par un autre studio). Si excludeStudioId est fourni, le slug est considéré dispo si c'est le nôtre. */
 export async function checkSlugAvailable(slug: string, excludeStudioId?: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: normalizePublicStudioSlug(slug) });
+  const { row, error } = await fetchStudioPublicRowBySlug(slug);
   if (error) {
     console.warn('[checkSlugAvailable] RPC error — slug traité comme indisponible:', error.message);
     return false;
   }
-  const row = Array.isArray(data) ? data[0] : data;
   if (!row?.id) return true;
   if (excludeStudioId && row.id === excludeStudioId) return true;
   return false;
@@ -318,10 +363,9 @@ export async function getVitrineDataFromSupabase(studioId: string, defaultData: 
 
 /** Récupère le studio_id à partir du slug (pour la page publique). Utilise la RPC sécurisée pour ne pas exposer les emails. */
 export async function getStudioIdBySlug(slug: string): Promise<string | null> {
-  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: normalizePublicStudioSlug(slug) });
-  const row = Array.isArray(data) ? data[0] : data;
+  const { row, error } = await fetchStudioPublicRowBySlug(slug);
   if (error || !row?.id) return null;
-  return row.id as string;
+  return row.id;
 }
 
 /** Récupère id + thème + SIRET + URLs photo studio (repli vitrine) à partir du slug. */
@@ -336,19 +380,18 @@ export async function getStudioPublicBySlug(slug: string): Promise<{
   /** Stripe Connect prêt — paiements Checkout possibles (même règle que create-checkout-session). */
   paymentsOnline: boolean;
 } | null> {
-  const { data, error } = await supabase.rpc('get_studio_public_by_slug', { p_slug: normalizePublicStudioSlug(slug) });
-  const row = Array.isArray(data) ? data[0] : data;
+  const { row, error } = await fetchStudioPublicRowBySlug(slug);
   if (error || !row?.id) return null;
-  const studioName = String((row as { studio_name?: string }).studio_name || '').trim();
-  const legalName = String((row as { name?: string }).name || '').trim();
+  const studioName = String(row.studio_name || '').trim();
+  const legalName = String(row.name || '').trim();
   const displayName = studioName || legalName;
   return {
-    id: row.id as string,
+    id: row.id,
     displayName,
-    vitrineTheme: (row.vitrine_theme as string) || 'light',
-    siret: (row.siret as string | null) ?? null,
-    avatarUrl: (row.avatar_url as string | null) ?? null,
-    portfolioCoverUrl: (row.portfolio_cover_url as string | null) ?? null,
+    vitrineTheme: row.vitrine_theme || 'light',
+    siret: row.siret ?? null,
+    avatarUrl: row.avatar_url ?? null,
+    portfolioCoverUrl: row.portfolio_cover_url ?? null,
     paymentsOnline: row.payments_online === true,
   };
 }
@@ -357,7 +400,15 @@ export async function getStudioPublicBySlug(slug: string): Promise<{
 export async function getVitrineDataBySlugFromSupabase(slug: string, defaultData: VitrineData): Promise<VitrineData> {
   const normalized = normalizePublicStudioSlug(slug);
   const studio = await getStudioPublicBySlug(normalized);
-  if (!studio) return { ...defaultData, slug: normalized };
+  if (!studio) {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.log('[Inkflow] getVitrineDataBySlugFromSupabase: aucune ligne studio pour le slug (RPC vide ou erreur déjà loguée)', {
+        normalizedSlug: normalized,
+      });
+    }
+    return { ...defaultData, slug: normalized };
+  }
   const data = await getVitrineDataFromSupabase(studio.id, { ...defaultData, slug: normalized });
   const mergedNameRaw = (data.name || '').trim();
 
@@ -791,7 +842,7 @@ export async function ensurePlaceholderAppointmentForProject(
   }
 
   const now = new Date().toISOString();
-  const today = new Date().toISOString().split('T')[0];
+  const { date: slotDate, time: slotTime } = await findNextAvailableSlotForStudio(studioId);
   const aptId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const serviceName = pr.description.length > 50 ? `${pr.description.slice(0, 47)}...` : pr.description;
   const apt: Appointment = {
@@ -800,8 +851,8 @@ export async function ensurePlaceholderAppointmentForProject(
     clientName: pr.clientName,
     clientEmail: pr.clientEmail,
     clientPhone: '',
-    date: today,
-    time: '10:00',
+    date: slotDate,
+    time: slotTime,
     service: `Projet - ${serviceName}`,
     duration: 60,
     price: 0,

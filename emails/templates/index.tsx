@@ -1,6 +1,6 @@
 /**
  * Templates email InkFlow — 12 variantes (react-email).
- * Prévisualisation : alignés sur la DA EmailBase ; production Edge = emailLayout.ts
+ * DA identique à `supabase-auth-confirm-signup.html` (EmailBase) et aux Edge Functions (`wrapEmailLayout`).
  */
 
 import { EmailBase } from '../EmailBase';

@@ -14,7 +14,7 @@ export const ClassicTheme: React.FC<StudioThemeProps> = ({ studio, flashItems, p
 
   return (
     <div className="min-h-[100dvh] bg-[#0a0a0b] text-neutral-100 font-sans">
-      <main className="max-w-2xl mx-auto px-4 py-12 sm:py-16">
+      <main id="contenu-vitrine" tabIndex={-1} className="max-w-2xl mx-auto px-4 py-12 sm:py-16 outline-none">
         {/* Header */}
         <header className="flex flex-col items-center text-center mb-12">
           {studio.avatarUrl && (

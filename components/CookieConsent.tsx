@@ -48,7 +48,7 @@ export const CookieConsent: React.FC = () => {
       <div className="bg-white dark:bg-[var(--bg-secondary)] border border-neutral-200 dark:border-neutral-700/60 rounded-xl md:rounded-2xl shadow-lg overflow-hidden">
         <div className="p-4 sm:p-5">
           <p className="text-sm text-[var(--text-primary)] leading-relaxed mb-4">
-            Nous utilisons des cookies pour améliorer votre expérience, analyser notre trafic et sécuriser l&apos;application.{' '}
+            On utilise des cookies pour mesurer l&apos;usage et garder la session propre.{' '}
             <a
               href="https://ink-flow.me/politique-confidentialite"
               className="text-blue-600 dark:text-blue-400 hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-[var(--bg-primary)] rounded"

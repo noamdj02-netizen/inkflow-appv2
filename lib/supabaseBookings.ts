@@ -77,6 +77,55 @@ export async function isSlotAvailableForBooking(
   return true;
 }
 
+/** Créneaux testés pour un RDV « placeholder » (projet sans date client) — évite le doublon sur (studio, date, heure). */
+const PLACEHOLDER_SLOT_TIMES = [
+  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
+  '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
+  '17:00', '17:30', '18:00', '18:30', '19:00',
+];
+
+/**
+ * Trouve le premier créneau où l’on peut insérer un RDV sans violer l’unicité agenda
+ * ni chevaucher une réservation vitrine confirmée.
+ * Utilisé pour les demandes projet (acompte Stripe) : le client n’a pas encore choisi de date.
+ */
+export async function findNextAvailableSlotForStudio(
+  studioId: string,
+): Promise<{ date: string; time: string }> {
+  const start = new Date();
+  const endLimit = new Date(start);
+  endLimit.setDate(endLimit.getDate() + 120);
+  const from = start.toISOString().split('T')[0];
+  const to = endLimit.toISOString().split('T')[0];
+
+  const { data: occupiedRows, error: occErr } = await supabase
+    .from('inkflow_appointments')
+    .select('date, time')
+    .eq('studio_id', studioId)
+    .gte('date', from)
+    .lte('date', to);
+  if (occErr) throw occErr;
+
+  const occupied = new Set(
+    (occupiedRows || []).map((r) => `${String(r.date)}|${String(r.time)}`),
+  );
+
+  for (let dayOffset = 0; dayOffset < 120; dayOffset++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + dayOffset);
+    const dateStr = d.toISOString().split('T')[0];
+    for (const time of PLACEHOLDER_SLOT_TIMES) {
+      if (occupied.has(`${dateStr}|${time}`)) continue;
+      const ok = await isSlotAvailableForBooking(studioId, dateStr, time, undefined);
+      if (ok) return { date: dateStr, time };
+    }
+  }
+
+  throw new Error(
+    "Aucun créneau libre trouvé dans les prochains mois. Libérez un horaire dans l'agenda ou déplacez un RDV existant.",
+  );
+}
+
 export async function getBookingsFromSupabase(studioId: string): Promise<Booking[]> {
   const { data, error } = await supabase
     .from('inkflow_bookings')
@@ -111,7 +160,7 @@ export async function uploadBookingReferenceImages(
     }
   }
   
-  const prefix = `${studioId}_${Date.now()}`;
+  const prefix = `${studioId}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   const urls: string[] = [];
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
@@ -124,7 +173,18 @@ export async function uploadBookingReferenceImages(
         upsert: false,
         contentType: blob.type || 'image/jpeg',
       });
-    if (error) throw error;
+    if (error) {
+      const raw = error.message || '';
+      if (/new row violates row-level security|rls|403|denied/i.test(raw)) {
+        throw new Error(
+          "Envoi de l'image refusé (droits). Déconnectez-vous du compte client puis réessayez, ou contactez le studio.",
+        );
+      }
+      if (/mime|type|not allowed|invalid/i.test(raw)) {
+        throw new Error("Format d'image non accepté par le serveur. Utilisez JPG ou PNG.");
+      }
+      throw new Error(raw || "Impossible d'enregistrer l'image. Réessayez.");
+    }
     const { data: urlData } = supabase.storage.from(BUCKET_BOOKING_REFS).getPublicUrl(data.path);
     urls.push(urlData.publicUrl);
   }

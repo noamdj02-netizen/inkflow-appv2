@@ -103,7 +103,7 @@ import { useTheme } from 'next-themes';
 import { getVitrineSlug, getVitrineDataAsync, saveVitrineDataAsync } from '../../lib/vitrineStorage';
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
 import { isGoogleBusinessOAuthUiEnabled } from '../../lib/googleBusinessOAuth';
-import { LANDING_PRICING_URL, getVitrineShareUrl } from '../../lib/urls';
+import { getVitrineShareUrl } from '../../lib/urls';
 import { safeJsonParse } from '../../lib/utils';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
@@ -432,7 +432,6 @@ export const DashboardPro: React.FC = () => {
   const [generalSaved, setGeneralSaved] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
   const [openAddClientModal, setOpenAddClientModal] = useState(false);
-  const [headerScrolled, setHeaderScrolled] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null);
   const avatarCropBlobRef = React.useRef<string | null>(null);
@@ -930,21 +929,18 @@ export const DashboardPro: React.FC = () => {
     }
 
     if (['solo', 'studio'].includes(subscribe) && studioId) {
-      createSubscription({ studioId, email: user.email, plan: subscribe as 'solo' | 'studio', interval })
-        .then((url) => {
-          if (url) {
-            window.location.href = url;
-          } else {
-            toast.error('Impossible de créer la session Stripe. Réessayez depuis Paramètres > Facturation.');
-            window.history.replaceState({}, '', '/dashboard');
+      void createSubscription({ studioId, email: user.email, plan: subscribe as 'solo' | 'studio', interval }).then(
+        (result) => {
+          if ('url' in result) {
+            window.location.href = result.url;
+            return;
           }
-        })
-        .catch(() => {
-          subscribeAttempted.current = false;
-          toast.error('Erreur lors de la redirection vers le paiement.');
-        });
+          toast.error(result.error);
+          window.history.replaceState({}, '', '/dashboard');
+        },
+      );
     }
-  }, [studioId, user?.email]);
+  }, [studioId, user?.email, toast]);
 
   // Google Business OAuth callback: ?connected=google-business → rafraîchir statut + ouvrir Vitrine > Avis
   useEffect(() => {
@@ -1121,6 +1117,17 @@ export const DashboardPro: React.FC = () => {
 
       if (attempts < maxAttempts) {
         paymentWelcomePollRef.current = window.setTimeout(tick, 1100);
+      } else {
+        clearPoll();
+        const u = new URL(window.location.href);
+        u.searchParams.delete('session_id');
+        u.searchParams.delete('subscription');
+        const q = u.searchParams.toString();
+        window.history.replaceState({}, '', q ? `${u.pathname}?${q}` : u.pathname);
+        toast.warning(
+          'Validation du paiement en cours. Si ton accès payant n’apparaît pas dans une minute, recharge la page (F5).',
+        );
+        void refreshStudioSubscription();
       }
     };
 
@@ -1129,7 +1136,33 @@ export const DashboardPro: React.FC = () => {
       cancelled = true;
       clearPoll();
     };
-  }, [studioId, useSupabase]);
+  }, [studioId, useSupabase, toast, refreshStudioSubscription]);
+
+  /** Retour Stripe Checkout sans paiement : URL propre + message rassurant + accès Facturation */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('subscription') !== 'cancelled') return;
+    window.history.replaceState({}, '', '/dashboard');
+    toast.info(
+      'Paiement annulé — aucun prélèvement. Tu peux choisir une formule quand tu veux dans Paramètres > Facturation.',
+    );
+    setActiveTab('settings');
+    setSettingsTab('billing');
+  }, [toast]);
+
+  /** Retour portail client Stripe (carte, factures, résiliation) */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('billing_portal') !== 'return') return;
+    const next = new URLSearchParams(window.location.search);
+    next.delete('billing_portal');
+    const q = next.toString();
+    window.history.replaceState({}, '', q ? `/dashboard?${q}` : '/dashboard');
+    setActiveTab('settings');
+    setSettingsTab('billing');
+    toast.success('Modifications enregistrées. Vérifie ton abonnement ci-dessous si besoin.');
+    void refreshStudioSubscription();
+  }, [toast, refreshStudioSubscription]);
 
   // Vitrine (cover + portfolio) : charger sur aperçu (bannière mobile), portfolio et Paramètres → Vitrine
   useEffect(() => {
@@ -1827,7 +1860,9 @@ export const DashboardPro: React.FC = () => {
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setRequestsSubTab('bookings'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
-                        <span className="flex-1 text-left">Vitrine</span>
+                        <span className="flex-1 text-left" title="Réservations depuis la page book">
+                          Book
+                        </span>
                         {demandes.pendingVitrine > 0 && (
                           <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">{demandes.pendingVitrine > 9 ? '9+' : demandes.pendingVitrine}</span>
                         )}
@@ -2069,12 +2104,12 @@ export const DashboardPro: React.FC = () => {
               </span>
             </div>
           )}
-          {/* Header — slim bar (non-overview) or transparent (overview, greeting is inline) */}
+          {/* Header — verre dépoli (backdrop-blur) pour s’intégrer au canvas dashboard, contrôles inchangés */}
           <header
             className={`app-shell-header safe-top px-4 sm:px-5 md:px-6 flex items-center justify-between gap-2 sm:gap-4 transition-all duration-300 shrink-0 overflow-visible ${
               activeTab === 'overview'
-                ? 'min-h-[52px] sm:min-h-0 h-12 sm:h-14 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md md:bg-transparent md:dark:bg-transparent md:backdrop-blur-none border-b border-zinc-200/80 dark:border-zinc-800 md:border-b-0'
-                : `h-14 sm:h-16 border-b ${headerScrolled ? 'bg-white dark:bg-zinc-950 border-[var(--border)]' : 'bg-white dark:bg-zinc-950 border-[var(--border)]'}`
+                ? 'min-h-[52px] sm:min-h-0 h-12 sm:h-14 border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 shadow-[0_1px_0_0_rgba(15,23,42,0.06)] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
+                : 'dashboard-pro-header-dark h-14 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
             }`}
           >
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -2123,11 +2158,11 @@ export const DashboardPro: React.FC = () => {
             <button
               type="button"
               onClick={() => setCommandPaletteOpen(true)}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 hover:border-violet-500/35 dark:hover:border-violet-500/30 transition-colors duration-100 w-64 lg:w-72 text-left"
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200/90 dark:border-white/10 bg-white/70 dark:bg-zinc-900/50 backdrop-blur-sm hover:border-violet-500/40 dark:hover:border-violet-400/25 hover:bg-white/90 dark:hover:bg-zinc-900/65 transition-colors duration-100 w-64 lg:w-72 text-left shadow-sm shadow-black/[0.04] dark:shadow-black/20"
             >
-              <Search className="w-4 h-4 text-zinc-500 dark:text-zinc-400 flex-shrink-0" aria-hidden />
-              <span className="text-sm text-zinc-500 dark:text-zinc-400 flex-1 min-w-0 truncate">Recherche rapide…</span>
-              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-200 dark:bg-zinc-800 rounded border border-zinc-300 dark:border-zinc-700 flex-shrink-0">
+              <Search className="w-4 h-4 text-zinc-600 dark:text-zinc-300 flex-shrink-0" aria-hidden />
+              <span className="text-sm text-zinc-600 dark:text-zinc-300 flex-1 min-w-0 truncate">Recherche rapide…</span>
+              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-300 bg-zinc-200/90 dark:bg-zinc-800/90 rounded border border-zinc-300/80 dark:border-zinc-600/80 flex-shrink-0">
                 ⌘K
               </kbd>
             </button>
@@ -2334,13 +2369,18 @@ export const DashboardPro: React.FC = () => {
 
           {/* ====== SCROLLABLE CONTENT ZONE ====== */}
           <div
-            onScroll={(e) => setHeaderScrolled((e.target as HTMLDivElement).scrollTop > 8)}
             className={`app-shell-content min-w-0 px-3 py-4 sm:p-6 md:p-8 xl:px-10 2xl:px-12 ${activeTab === 'overview' ? 'dashboard-overview-bg overflow-x-hidden' : 'dashboard-pages-bg'}`}
           >
           {isRestricted && !(activeTab === 'settings' && settingsTab === 'billing') ? (
             <PaywallView
-              onChoosePlan={() => { window.location.href = LANDING_PRICING_URL; }}
-              onOpenBilling={() => { setActiveTab('settings'); setSettingsTab('billing'); }}
+              onChoosePlan={() => {
+                setActiveTab('settings');
+                setSettingsTab('billing');
+              }}
+              onOpenBilling={() => {
+                setActiveTab('settings');
+                setSettingsTab('billing');
+              }}
             />
           ) : (
           <>
@@ -2407,6 +2447,12 @@ export const DashboardPro: React.FC = () => {
               availabilitySetupComplete={availabilitySetupComplete}
               paymentsSetupComplete={paymentsSetupComplete}
               onSetupNavigate={handleSetupNavigate}
+              studioSubscriptionStatus={subscriptionStatus ?? undefined}
+              trialEndsAt={trialEndsAt ?? undefined}
+              onOpenBilling={() => {
+                setActiveTab('settings');
+                setSettingsTab('billing');
+              }}
             />
             </div>
           )}
@@ -2505,7 +2551,10 @@ export const DashboardPro: React.FC = () => {
               useSupabase={useSupabase}
               clientLimitReached={hasReachedLimit('clients_crm', clients.length)}
               clientLimit={getLimit('clients_crm')}
-              onUpgradeClick={() => { window.location.href = LANDING_PRICING_URL; }}
+              onUpgradeClick={() => {
+                setActiveTab('settings');
+                setSettingsTab('billing');
+              }}
               openAddModal={openAddClientModal}
               onAddModalClose={() => setOpenAddClientModal(false)}
               view={clientsView}

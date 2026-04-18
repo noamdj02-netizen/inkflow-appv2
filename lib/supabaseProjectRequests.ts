@@ -21,7 +21,15 @@ export async function createProjectRequest(data: ProjectRequestFormData, studioI
     reference_image_url: refs[0] ?? data.referenceImageUrl?.trim() ?? null,
   };
   const { error } = await supabase.from('inkflow_project_requests').insert(row);
-  if (error) throw error;
+  if (error) {
+    const msg = error.message || '';
+    if (msg.includes('row-level security') || error.code === '42501') {
+      throw new Error(
+        "Impossible d'enregistrer la demande (accès serveur). Réessayez plus tard ou contactez le studio par un autre canal.",
+      );
+    }
+    throw error;
+  }
 
   sendProjectNotification({
     studioId,

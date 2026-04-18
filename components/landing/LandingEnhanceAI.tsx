@@ -24,10 +24,10 @@ export const LandingEnhanceAI: React.FC = () => {
   return (
   <div className="landing-scroll min-h-screen min-h-[100dvh] bg-white w-full max-w-full overflow-x-hidden">
     <SEO
-      title="InkFlow | Le logiciel de gestion et réservation pour Tatoueurs"
-      description="Révolutionnez votre studio de tatouage. Réservations, paiements Stripe, CRM et assistant IA. Gagnez du temps avec InkFlow."
+      title="InkFlow | Logiciel tatoueur France — agenda et réservations en ligne"
+      description="Logiciel de gestion pour tatoueurs en France : agenda, réservations en ligne, acomptes Stripe (EUR), CRM et vitrine. Moins d'allers-retours sur Insta, plus de temps pour tatouer. Essai 14 jours sans carte."
       canonical="/"
-      keywords="logiciel tatoueur, agenda tatouage, réservation tatoueur, SaaS tatouage, CRM studio tattoo, acompte Stripe tatouage, vitrine tatoueur"
+      keywords="logiciel tatoueur France, agenda tatouage, réservation tatouage en ligne, SaaS tatouage, CRM studio tattoo, gestion salon tatouage, acompte Stripe tatoueur, vitrine tatoueur, application tatoueur professionnel"
       ogImageAlt="InkFlow — application de gestion pour tatoueurs"
       schema={faqPageSchemaFr}
     />

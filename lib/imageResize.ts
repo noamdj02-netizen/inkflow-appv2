@@ -58,7 +58,11 @@ export function compressImageFileToWebP(
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Erreur de chargement'));
+      reject(
+        new Error(
+          'Impossible de lire cette image (format peu supporté). Essayez une photo JPG ou PNG.',
+        ),
+      );
     };
     img.src = url;
   });
