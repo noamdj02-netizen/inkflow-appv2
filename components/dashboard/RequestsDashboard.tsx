@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { History, CheckCircle, XCircle, Calendar, FileText, Mail, Clock, CreditCard, Copy, Loader2, AlertTriangle, MapPin, Ruler, Sparkles, Gift, MessageCircle, AtSign, MessageSquare, ListOrdered } from 'lucide-react';
+import { History, CheckCircle, XCircle, Calendar, FileText, Mail, Clock, CreditCard, Copy, Loader2, AlertTriangle, MapPin, Ruler, Sparkles, Gift, MessageCircle, AtSign, ListOrdered } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
 import { Appointment, ProjectRequest, Booking, BookingStatus, Client } from '../../types';
 import { RequestQuickViewSheet } from './RequestQuickViewSheet';
@@ -639,8 +639,24 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     history: 'Retrouvez une ancienne demande pour vérifier un statut ou un paiement.',
   };
 
+  /** Sous-titre mobile : le shell affiche déjà « Demandes » — le h1 reprend l’onglet actif pour éviter la redondance. */
+  const requestsSectionHeadline: Record<typeof activeTab, string> = {
+    rdv: 'Créneaux agenda',
+    bookings: 'Page book',
+    projects: 'Brief sans date',
+    history: 'Historique',
+  };
+
+  /** Version courte du hint (mobile). */
+  const tabFlowHintShort: Record<typeof activeTab, string> = {
+    rdv: 'Confirmer ou refuser → le client est prévenu.',
+    bookings: 'Confirmer / refuser → acompte si besoin → échanger.',
+    projects: 'Lire le brief → échanger → acompte ou refus.',
+    history: 'Consulter statut ou paiement.',
+  };
+
   const tabPillBtn = (id: typeof activeTab) =>
-    `flex min-h-[44px] items-center gap-2 px-3 sm:px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/90 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-black ${
+    `flex w-full min-w-0 sm:w-auto min-h-[44px] items-center justify-center gap-2 px-3 sm:px-3.5 py-2 rounded-xl text-sm font-semibold sm:whitespace-nowrap transition-all active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/90 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-black ${
       activeTab === id
         ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm border border-zinc-200/80 dark:border-zinc-700'
         : 'text-zinc-600 dark:text-zinc-400 border border-transparent hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60'
@@ -660,26 +676,30 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     ) : null;
 
   return (
-    <div className="space-y-6 lg:space-y-8 animate-fade-in">
-      {/* Sticky : titre + onglets restent accessibles sur les longues listes (scroll dans .app-shell-content). */}
+    <div className="isolate flex min-w-0 flex-col gap-5 sm:gap-6 lg:gap-8">
+      {/* Sticky : titre + onglets — ne pas envelopper avec animate-fade-in : le transform de l’animation casse position:sticky dans le scroll .app-shell-content. */}
       <div
-        className="sticky top-0 z-10 -mx-3 sm:-mx-6 md:-mx-8 xl:-mx-10 2xl:-mx-12 px-3 sm:px-6 md:px-8 xl:px-10 2xl:px-12 pt-0 pb-3 mb-1 bg-zinc-50/95 dark:bg-black/80 backdrop-blur-md border-b border-zinc-200/70 dark:border-zinc-800/80"
+        className="sticky top-0 z-20 shrink-0 -mx-3 sm:-mx-6 md:-mx-8 xl:-mx-10 2xl:-mx-12 px-3 sm:px-6 md:px-8 xl:px-10 2xl:px-12 pt-0 pb-4 mb-0.5 border-b border-zinc-200/80 dark:border-zinc-800/90 shadow-[0_6px_20px_-8px_rgba(15,23,42,0.12)] dark:shadow-[0_8px_24px_-10px_rgba(0,0,0,0.45)] max-sm:bg-zinc-50 max-sm:dark:bg-black sm:bg-zinc-50/98 sm:dark:bg-black/92 sm:backdrop-blur-md"
       >
-        <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex flex-col gap-2.5 sm:gap-4">
           <div className="min-w-0">
-            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500 sm:hidden mb-0.5">
               Demandes
+            </p>
+            <h1 className="font-display font-bold tracking-tight text-zinc-900 dark:text-white text-xl leading-snug sm:text-2xl md:text-3xl sm:leading-tight">
+              <span className="sm:hidden">{requestsSectionHeadline[activeTab]}</span>
+              <span className="hidden sm:inline">Demandes</span>
             </h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-1.5 text-sm sm:text-base max-w-2xl leading-relaxed">
+            <p className="text-zinc-500 dark:text-zinc-400 mt-1.5 text-sm sm:text-base max-w-2xl leading-relaxed hidden sm:block">
               Trois entrées possibles : créneaux déjà dans l’agenda, réservations /book, ou brief sans date — chaque onglet correspond à une source.
             </p>
-            <p className="text-zinc-600 dark:text-zinc-300 mt-2 text-sm font-medium max-w-2xl">
+            <p className="text-zinc-600 dark:text-zinc-300 mt-1 sm:mt-2 text-xs sm:text-sm font-medium max-w-2xl line-clamp-2 sm:line-clamp-none break-words">
               {tabStatusLine[activeTab]}
             </p>
           </div>
 
           <div
-            className="grid gap-2 sm:grid-cols-3 max-w-4xl rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-zinc-50/90 dark:bg-zinc-900/40 px-3 py-3 sm:px-4"
+            className="hidden sm:grid gap-2 sm:grid-cols-3 max-w-4xl rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-zinc-50/90 dark:bg-zinc-900/40 px-3 py-3 sm:px-4"
             role="region"
             aria-label="Les trois sources de demandes"
           >
@@ -707,7 +727,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           </div>
 
           <div
-            className="rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800 p-1 flex flex-wrap gap-1"
+            className="grid grid-cols-2 gap-1 rounded-2xl bg-zinc-100/80 dark:bg-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800 p-1 sm:flex sm:flex-wrap"
             role="tablist"
             aria-label="Types de demandes"
           >
@@ -768,17 +788,20 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           </div>
 
           <div
-            className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-zinc-50/90 dark:bg-zinc-900/40 px-3.5 py-3 sm:px-4 max-w-3xl"
+            className="rounded-2xl border border-zinc-200/80 dark:border-zinc-700/80 bg-zinc-50/90 dark:bg-zinc-900/40 px-3 py-2.5 sm:px-4 sm:py-3 max-w-3xl"
             role="note"
             aria-live="polite"
           >
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-1.5">
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-1 sm:mb-1.5">
               Client → vous
             </p>
-            <p className="text-sm text-zinc-700 dark:text-zinc-200 leading-relaxed">
+            <p className="sm:hidden text-xs text-zinc-700 dark:text-zinc-200 leading-snug line-clamp-3">
+              {tabFlowHintShort[activeTab]}
+            </p>
+            <p className="hidden sm:block text-sm text-zinc-700 dark:text-zinc-200 leading-relaxed">
               {tabFlowHint[activeTab]}
             </p>
-            <p className="mt-2.5 flex items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            <p className="mt-2 hidden sm:flex items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
               <ListOrdered className="w-4 h-4 shrink-0 mt-0.5 text-zinc-500 dark:text-zinc-500" aria-hidden />
               <span>
                 <span className="font-semibold text-zinc-700 dark:text-zinc-300">Ordre conseillé :</span>{' '}
@@ -789,21 +812,22 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         </div>
       </div>
 
-      <div
-        id="requests-panel"
-        role="tabpanel"
-        aria-labelledby={`requests-tab-${activeTab}`}
-        className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm overflow-hidden"
-      >
+      <div className="animate-fade-in min-w-0">
+        <div
+          id="requests-panel"
+          role="tabpanel"
+          aria-labelledby={`requests-tab-${activeTab}`}
+          className="scroll-mt-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm overflow-hidden"
+        >
         {activeTab === 'rdv' && (
           pendingAppointments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
               <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
                 <Calendar className="w-8 h-8 text-slate-400 dark:text-slate-500" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Aucune demande en attente</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Aucun créneau agenda en attente</h3>
               <p className="text-slate-500 dark:text-slate-400 max-w-sm text-sm">
-                Les nouvelles réservations de vos clients apparaîtront ici en temps réel.
+                Les RDV en attente de validation (agenda) apparaissent ici.
               </p>
             </div>
           ) : (
@@ -918,9 +942,9 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               </p>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 p-3 sm:p-4">
+            <div className="flex flex-col gap-2.5 sm:gap-3 p-2.5 sm:p-4 min-w-0">
               {/* Sous-filtres : Toutes / Flash / Sur-mesure (créneau /book) */}
-              <div className="flex gap-2 overflow-x-auto overflow-y-hidden scrollbar-hide rounded-xl border border-slate-200/80 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/30 px-3 py-2.5">
+              <div className="flex gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-hide rounded-xl border border-slate-200/80 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/30 px-2.5 py-2 sm:px-3 sm:py-2.5 touch-pan-x">
                 <button
                   onClick={() => setBookingSubTab('all')}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
@@ -972,7 +996,9 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     {bookingSubTab === 'flash' ? <Sparkles className="w-6 h-6 text-amber-400" /> : <FileText className="w-6 h-6 text-slate-400 dark:text-slate-500" />}
                   </div>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {bookingSubTab === 'flash' ? 'Aucune demande Flash pour le moment.' : 'Aucun projet sur mesure pour le moment.'}
+                    {bookingSubTab === 'flash'
+                      ? 'Aucune demande Flash pour le moment.'
+                      : 'Aucune demande sur-mesure (page book) pour le moment.'}
                   </p>
                 </div>
               ) : filteredBookings.map(bk => {
@@ -990,62 +1016,66 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 return (
                 <div
                   key={bk.id}
-                  className={`p-5 sm:p-6 flex flex-col lg:flex-row lg:items-start gap-4 group rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm border-l-4 ${vitrineAccent} hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors touch-manipulation`}
+                  className={`p-3.5 sm:p-5 md:p-6 flex flex-col lg:flex-row lg:items-start gap-3 sm:gap-4 group rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm border-l-4 ${vitrineAccent} hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors touch-manipulation min-w-0`}
                 >
                   <button type="button" onClick={() => setSheetItem({ ...bk, _type: 'booking' })} className="flex flex-1 min-w-0 text-left w-full lg:flex-initial lg:min-w-0 lg:max-w-[min(100%,42rem)] xl:max-w-[min(100%,48rem)]">
-                    <div className="flex gap-4 items-start md:items-center">
-                      <div className={`w-16 h-16 ${isProfileThumb ? 'rounded-full' : 'rounded-xl'} bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700`}>
+                    <div className="flex gap-3 sm:gap-4 items-start md:items-center min-w-0 w-full">
+                      <div className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 shrink-0 ${isProfileThumb ? 'rounded-full' : 'rounded-xl'} bg-slate-100 dark:bg-zinc-800 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700`}>
                         {displayThumb ? (
                           <img src={displayThumb} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                         ) : (
                           <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                            <FileText className="w-8 h-8" />
+                            <FileText className="w-6 h-6 sm:w-8 sm:h-8" />
                           </span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-lg text-slate-900 dark:text-white break-words">{bk.clientName}</div>
-                        <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-start gap-2 min-w-0">
+                        <div className="font-semibold text-base sm:text-lg text-slate-900 dark:text-white break-words">{bk.clientName}</div>
+                        <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-start gap-2 min-w-0">
                           <Mail className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                          <span className="min-w-0 break-all sm:break-words">{bk.clientEmail}</span>
+                          <span className="min-w-0 truncate sm:whitespace-normal sm:break-words">{bk.clientEmail}</span>
                         </div>
                         {stampRwBk && (
-                          <div className="mt-2.5 flex items-start gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/90 dark:border-emerald-500/35 dark:bg-emerald-500/10 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-100">
-                            <Gift className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
-                            <span>
-                              Avantage fidélité : <strong>{stampRwBk.amountEuros}€</strong> — code{' '}
-                              <code className="font-mono text-xs bg-white/70 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">{stampRwBk.promoCode}</code>
+                          <div className="mt-2 sm:mt-2.5 flex items-start gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-emerald-200/90 bg-emerald-50/90 dark:border-emerald-500/35 dark:bg-emerald-500/10 px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm text-emerald-900 dark:text-emerald-100">
+                            <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                            <span className="leading-snug">
+                              <span className="hidden sm:inline">Avantage fidélité : </span>
+                              <span className="sm:hidden">Fidélité </span>
+                              <strong>{stampRwBk.amountEuros}€</strong>
+                              <span className="hidden sm:inline"> — code </span>
+                              <span className="sm:hidden"> · </span>
+                              <code className="font-mono text-[10px] sm:text-xs bg-white/70 dark:bg-emerald-950/40 px-1 sm:px-1.5 py-0.5 rounded-md">{stampRwBk.promoCode}</code>
                             </span>
                           </div>
                         )}
-                        <div className="flex flex-wrap gap-1.5 mt-2.5">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
+                        <div className="flex flex-wrap gap-1.5 mt-2 sm:mt-2.5">
+                          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
                             {reqType === 'flash' ? <Sparkles className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
                             {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
                           </span>
                           {placement && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
+                            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
                               <MapPin className="w-3 h-3" /> {formatPlacementForBadge(placement)}
                             </span>
                           )}
                           {size && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
+                            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
                               <Ruler className="w-3 h-3" /> {formatSizeForBadge(size)}
                             </span>
                           )}
                         </div>
-                        <p className="mt-2.5 text-sm text-slate-700 dark:text-slate-300 line-clamp-2">{bk.description}</p>
-                        <div className="flex flex-wrap gap-2 mt-2 text-xs text-slate-500 dark:text-slate-400">
-                          <span className="bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded">
+                        <p className="mt-2 sm:mt-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 line-clamp-1 sm:line-clamp-2">{bk.description}</p>
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                          <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
                             {new Date(bk.requestedDate).toLocaleDateString('fr-FR', { dateStyle: 'medium' })}
                           </span>
                           {bk.requestedTime && (
-                            <span className="bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded">
+                            <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
                               {bk.requestedTime === 'morning' ? 'Matin' : bk.requestedTime === 'afternoon' ? 'Après-midi' : bk.requestedTime === 'evening' ? 'Soirée' : bk.requestedTime}
                             </span>
                           )}
                         </div>
-                        <span className={`inline-block mt-3 px-3 py-1 rounded-full text-xs font-semibold ${
+                        <span className={`inline-block mt-2 sm:mt-3 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${
                           bk.status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' :
                           bk.status === 'confirmed' || bk.status === 'accepted' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' :
                           'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-slate-400'
@@ -1057,11 +1087,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                   </button>
                   {bk.status === 'pending' && (
                     <div
-                      className="flex-shrink-0 w-full lg:w-[min(100%,20.5rem)] xl:w-[22rem] pt-3 mt-1 border-t border-slate-100 dark:border-zinc-800 lg:pt-0 lg:mt-0 lg:border-t-0 lg:ml-auto"
+                      className="flex-shrink-0 w-full lg:w-[min(100%,20.5rem)] xl:w-[22rem] pt-2.5 sm:pt-3 mt-0.5 border-t border-slate-100 dark:border-zinc-800 lg:pt-0 lg:mt-0 lg:border-t-0 lg:ml-auto"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div
-                        className="rounded-2xl border border-zinc-200/90 dark:border-zinc-700/90 bg-zinc-50/90 dark:bg-zinc-900/45 p-3 sm:p-3.5 shadow-sm space-y-3"
+                        className="rounded-xl sm:rounded-2xl border border-zinc-200/90 dark:border-zinc-700/90 bg-zinc-50/90 dark:bg-zinc-900/45 p-2.5 sm:p-3.5 shadow-sm space-y-2 sm:space-y-3"
                         role="group"
                         aria-label="Actions pour cette demande vitrine"
                       >
@@ -1098,11 +1128,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         </div>
 
                         <div
-                          className="h-px bg-zinc-200/80 dark:bg-zinc-700/80"
+                          className="hidden sm:block h-px bg-zinc-200/80 dark:bg-zinc-700/80"
                           aria-hidden="true"
                         />
 
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           {onOpenProjectDiscussion && (
                             <button
                               type="button"
@@ -1273,65 +1303,110 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         {activeTab === 'history' && (
           historyAppointments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
-                <MessageSquare className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+              <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
+                <History className="w-8 h-8 text-zinc-400 dark:text-zinc-500" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Aucun historique</h3>
-              <p className="text-slate-500 dark:text-slate-400 max-w-sm text-sm">
-                Vos demandes traitées et archivées apparaîtront ici.
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Aucun historique</h3>
+              <p className="text-zinc-500 dark:text-zinc-400 max-w-sm text-sm">
+                Les RDV agenda déjà traités (hors « en attente ») apparaissent ici.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-zinc-800">
-              {historyAppointments.map(apt => (
-                <div key={apt.id} className="p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700">
-                    {(() => {
-                      const avatar = getAvatar(apt.clientEmail, apt.clientId, apt.clientName);
-                      return avatar ? (
-                        <img src={avatar} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-slate-500 dark:text-slate-400 font-bold text-lg">{apt.clientName.charAt(0).toUpperCase()}</span>
-                      );
-                    })()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-lg text-slate-900 dark:text-white">{apt.clientName}</div>
-                    <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{apt.clientEmail}</div>
-                    <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-slate-500 dark:text-slate-400">
-                      <span className="bg-slate-100 dark:bg-zinc-800 px-2.5 py-1 rounded-lg">{apt.date} • {apt.time}</span>
-                      <span className="text-slate-700 dark:text-slate-300 font-medium">{apt.service}</span>
-                      <span className="font-bold text-blue-600 dark:text-blue-400">{apt.price}€</span>
+            <div className="p-3 sm:p-4 space-y-3">
+              {historyAppointments.map((apt) => {
+                const stampRw = stampRewardForEmail(apt.clientEmail);
+                const statusLabel =
+                  apt.status === 'confirmed'
+                    ? 'Confirmé'
+                    : apt.status === 'cancelled'
+                      ? 'Annulé'
+                      : STATUS_LABELS[apt.status] || apt.status;
+                return (
+                  <div
+                    key={apt.id}
+                    className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm border-l-4 ${SOURCE_ACCENT.agenda} p-5 sm:p-6 flex flex-col gap-4 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/25 transition-colors`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-4 min-w-0">
+                      <div className="w-12 h-12 rounded-xl bg-zinc-200/90 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0 overflow-hidden ring-1 ring-zinc-300/80 dark:ring-zinc-600/80">
+                        {(() => {
+                          const avatar = getAvatar(apt.clientEmail, apt.clientId, apt.clientName);
+                          return avatar ? (
+                            <img src={avatar} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-zinc-700 dark:text-zinc-200 font-bold text-lg">{apt.clientName.charAt(0).toUpperCase()}</span>
+                          );
+                        })()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-lg text-zinc-900 dark:text-white">{apt.clientName}</div>
+                        <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1.5 min-w-0">
+                          <Mail className="w-3.5 h-3.5 shrink-0 stroke-[1.75] text-zinc-400 dark:text-zinc-500" />
+                          <span className="truncate">{apt.clientEmail}</span>
+                        </div>
+                        {stampRw && (
+                          <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/90 dark:border-emerald-500/35 dark:bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-900 dark:text-emerald-100">
+                            <Gift className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                            <span>
+                              Ce client possède un avantage de <strong>{stampRw.amountEuros}€</strong> à valoir sur ce projet — code{' '}
+                              <code className="font-mono text-xs bg-white/70 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">{stampRw.promoCode}</code>
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap items-center gap-2 mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+                          <span className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-1 rounded-lg text-zinc-700 dark:text-zinc-300 tabular-nums">
+                            <Calendar className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
+                            {apt.date} • {apt.time}
+                          </span>
+                          <span className="font-medium text-zinc-800 dark:text-zinc-200">{apt.service}</span>
+                          <span className="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">{apt.price}€</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 mt-3">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-300">
+                            <Calendar className="w-3 h-3 shrink-0 stroke-[1.75]" aria-hidden />
+                            Agenda
+                          </span>
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                              apt.status === 'confirmed'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
+                                : apt.status === 'cancelled'
+                                  ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'
+                                  : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+                            }`}
+                          >
+                            {statusLabel}
+                          </span>
+                          {apt.status === 'confirmed' && apt.depositPaid && (
+                            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-300">
+                              Acompte payé
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <span className={`inline-block mt-3 px-3 py-1 rounded-full text-xs font-semibold ${
-                      apt.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' :
-                      apt.status === 'cancelled' ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400' : 
-                      'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-slate-400'
-                    }`}>
-                      {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'cancelled' ? 'Annulé' : STATUS_LABELS[apt.status] || apt.status}
-                    </span>
+
+                    <div className="flex flex-col gap-2 sm:items-end sm:ml-14">
+                      <div className="flex flex-wrap gap-2 w-full sm:justify-end">
+                        {apt.status === 'confirmed' && !apt.depositPaid && studioId && (
+                          <button
+                            type="button"
+                            onClick={() => openDepositModal(apt)}
+                            className="flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-800 dark:text-zinc-200 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all text-sm"
+                          >
+                            <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" /> Acompte
+                          </button>
+                        )}
+                        {user && <DevisButton appointment={apt} artist={user} />}
+                        {apt.status === 'confirmed' && user && <InvoiceButton appointment={apt} artist={user} />}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-                    {apt.status === 'confirmed' && !apt.depositPaid && studioId && (
-                      <button
-                        onClick={() => openDepositModal(apt)}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all text-sm shadow-sm"
-                      >
-                        <CreditCard className="w-4 h-4" /> Acompte
-                      </button>
-                    )}
-                    {user && (
-                      <DevisButton appointment={apt} artist={user} />
-                    )}
-                    {apt.status === 'confirmed' && user && (
-                      <InvoiceButton appointment={apt} artist={user} />
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )
         )}
+        </div>
       </div>
 
       {/* Sheet Quick View — aperçu rapide au clic sur une demande */}

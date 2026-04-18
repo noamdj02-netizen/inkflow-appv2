@@ -1853,15 +1853,15 @@ export const DashboardPro: React.FC = () => {
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setRequestsSubTab('rdv'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'rdv' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
-                        <span className="flex-1 text-left">En attente</span>
+                        <span className="flex-1 text-left" title="Créneaux agenda à valider">Créneaux agenda</span>
                         {demandes.pendingRdv > 0 && (
                           <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">{demandes.pendingRdv > 9 ? '9+' : demandes.pendingRdv}</span>
                         )}
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setRequestsSubTab('bookings'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'bookings' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
-                        <span className="flex-1 text-left" title="Réservations depuis la page book">
-                          Book
+                        <span className="flex-1 text-left" title="Réservations depuis la page /book">
+                          Page book
                         </span>
                         {demandes.pendingVitrine > 0 && (
                           <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">{demandes.pendingVitrine > 9 ? '9+' : demandes.pendingVitrine}</span>
@@ -1869,7 +1869,7 @@ export const DashboardPro: React.FC = () => {
                       </button>
                       <button onClick={() => handleSidebarNav(() => { setActiveTab('requests'); setRequestsSubTab('projects'); setSidebarOpen(false); })} className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'projects' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
-                        <span className="flex-1 text-left">Projets</span>
+                        <span className="flex-1 text-left" title="Formulaire projet sans date (brief)">Brief sans date</span>
                         {demandes.pendingProjects > 0 && (
                           <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">{demandes.pendingProjects > 9 ? '9+' : demandes.pendingProjects}</span>
                         )}
