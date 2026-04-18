@@ -1,0 +1,45 @@
+# InkFlow
+
+> Logiciel SaaS pour **tatoueurs** et **studios de tatouage** en **France** : agenda, réservations en ligne, acomptes Stripe (EUR), CRM clients, vitrine publique et galerie flash.
+
+## Public cible
+
+- Artistes tatoueurs indépendants et salons de tatouage en France
+- Interface et support orientés **français** ; tarification en **euros**
+
+## Essai et accès
+
+- **14 jours d’essai gratuit**, sans carte bancaire au départ
+- Application web (navigateur), PWA possible
+
+## Pages utiles (sources officielles)
+
+- Site marketing : https://ink-flow.me/
+- Tarifs (ancre page marketing) : https://ink-flow.me/#pricing
+- Tarifs lisibles par les agents (markdown, déployé avec l’app) : https://app.ink-flow.me/pricing.md
+- Ce fichier (llms.txt, déployé avec l’app) : https://app.ink-flow.me/llms.txt
+- Inscription : https://app.ink-flow.me/signup
+- Connexion : https://app.ink-flow.me/login
+
+## Fonctionnalités principales (résumé extractible)
+
+| Domaine        | Description courte |
+|----------------|--------------------|
+| Agenda / RDV   | Planning, statuts, rappels |
+| Réservation    | Page vitrine, créneaux, demandes |
+| Paiements      | Acomptes via **Stripe** (EUR) |
+| Clients        | Fiches CRM, historique |
+| Flash          | Galerie, visibilité vitrine |
+| Messagerie     | Échanges avec les clients (selon configuration) |
+
+## Conformité & données
+
+- Données hébergées pour un usage professionnel ; traitement compatible **RGPD** (responsabilité du studio sur les données clients).
+
+## Contact
+
+- contact@ink-flow.me
+
+## Dernière mise à jour du fichier
+
+- 2026-04-18
