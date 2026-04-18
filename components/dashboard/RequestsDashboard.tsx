@@ -676,10 +676,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     ) : null;
 
   return (
-    <div className="isolate flex min-w-0 flex-col gap-5 sm:gap-6 lg:gap-8">
-      {/* Sticky : titre + onglets — ne pas envelopper avec animate-fade-in : le transform de l’animation casse position:sticky dans le scroll .app-shell-content. */}
+    <div className="isolate flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+      {/* En-tête : fixe dans cette colonne — le scroll est uniquement sur la liste (plus de chevauchement avec position:sticky dans .app-shell-content). */}
       <div
-        className="sticky top-0 z-20 shrink-0 -mx-3 sm:-mx-6 md:-mx-8 xl:-mx-10 2xl:-mx-12 px-3 sm:px-6 md:px-8 xl:px-10 2xl:px-12 pt-0 pb-4 mb-0.5 border-b border-zinc-200/80 dark:border-zinc-800/90 shadow-[0_6px_20px_-8px_rgba(15,23,42,0.12)] dark:shadow-[0_8px_24px_-10px_rgba(0,0,0,0.45)] max-sm:bg-zinc-50 max-sm:dark:bg-black sm:bg-zinc-50/98 sm:dark:bg-black/92 sm:backdrop-blur-md"
+        className="shrink-0 z-10 -mx-3 sm:-mx-6 md:-mx-8 xl:-mx-10 2xl:-mx-12 px-3 sm:px-6 md:px-8 xl:px-10 2xl:px-12 pt-0 pb-4 border-b border-zinc-200/80 dark:border-zinc-800/90 shadow-[0_6px_20px_-8px_rgba(15,23,42,0.12)] dark:shadow-[0_8px_24px_-10px_rgba(0,0,0,0.45)] max-sm:bg-zinc-50 max-sm:dark:bg-black sm:bg-zinc-50/98 sm:dark:bg-black/92 sm:backdrop-blur-md"
       >
         <div className="flex flex-col gap-2.5 sm:gap-4">
           <div className="min-w-0">
@@ -812,13 +812,18 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         </div>
       </div>
 
-      <div className="animate-fade-in min-w-0">
-        <div
-          id="requests-panel"
-          role="tabpanel"
-          aria-labelledby={`requests-tab-${activeTab}`}
-          className="scroll-mt-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm overflow-hidden"
-        >
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] pt-1"
+        role="region"
+        aria-label="Liste des demandes"
+      >
+        <div className="animate-fade-in min-w-0 pb-4">
+          <div
+            id="requests-panel"
+            role="tabpanel"
+            aria-labelledby={`requests-tab-${activeTab}`}
+            className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm overflow-hidden"
+          >
         {activeTab === 'rdv' && (
           pendingAppointments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
@@ -1406,6 +1411,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             </div>
           )
         )}
+        </div>
         </div>
       </div>
 

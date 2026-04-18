@@ -154,20 +154,27 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
   const activeLabel = dateRangeChip === 'today' ? "Aujourd'hui" : dateRangeChip === 'week' ? 'Cette semaine' : selectedDate ? formatDateLabel(selectedDate) : null;
 
+  /** Mobile : le bottom nav dit « Agenda » — le h1 porte le contexte (semaine vs mois), pas un 2e « Rendez-vous ». */
+  const appointmentsMobileHeadline = planningView === 'month' ? 'Vue mois' : 'Liste & semaine';
+
   /** Mobile : 1 colonne (lignes pleine largeur) · sm+ : 3 tuiles côte à côte */
   const kpiGridClass = 'grid w-full grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3';
 
   return (
-    <div className="space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in font-sans motion-reduce:animate-none">
+    <div className="flex min-w-0 flex-col gap-4 sm:gap-6 md:gap-8 font-sans">
 
-      {/* ── En-tête page (hiérarchie type dashboard dense, repères ui-ux-pro-max) ── */}
+      {/* ── En-tête page (aligné Demandes / Clients : eyebrow mobile + titre contextuel) ── */}
       <div className="flex flex-col gap-4 sm:gap-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
-            <h1 className="font-display text-[1.35rem] font-bold leading-tight tracking-tight text-zinc-900 dark:text-white min-[380px]:text-2xl sm:text-3xl">
-              Rendez-vous
+            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500 sm:hidden mb-0.5">
+              Agenda
+            </p>
+            <h1 className="font-display font-bold leading-tight tracking-tight text-zinc-900 dark:text-white text-xl min-[380px]:text-[1.35rem] sm:text-2xl md:text-3xl">
+              <span className="sm:hidden">{appointmentsMobileHeadline}</span>
+              <span className="hidden sm:inline">Rendez-vous</span>
             </h1>
-            <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-zinc-500 dark:text-zinc-400 sm:text-sm sm:leading-normal md:text-base">
+            <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-zinc-500 dark:text-zinc-400 line-clamp-2 sm:line-clamp-none sm:text-sm sm:leading-normal md:text-base">
               <span className="sm:hidden">Filtre la période ci-dessous, puis Liste ou Planning.</span>
               <span className="hidden sm:inline">
                 Filtre par période et statut, puis passe en liste ou en planning pour voir la journée semaine par semaine.
@@ -296,6 +303,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         </div>
         </div>
       </div>
+
+      <div className="animate-fade-in motion-reduce:animate-none space-y-4 sm:space-y-6 md:space-y-8">
 
       {/* ── Barre d’outils groupée (vue + recherche + filtre) ── */}
       <div className="flex flex-col gap-2 rounded-2xl border border-zinc-200/70 bg-white/70 p-2 dark:border-zinc-800 dark:bg-zinc-900/50 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:p-3">
@@ -580,7 +589,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                         </td>
                         <td className="px-5 py-3.5 text-sm text-zinc-700 dark:text-zinc-300 font-medium">{apt.service}</td>
                         <td className="px-5 py-3.5">
-                          <span className="font-bold text-blue-600 dark:text-blue-400 tabular-nums">{apt.price}€</span>
+                          <span className="font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">{apt.price}€</span>
                         </td>
                         <td className="px-5 py-3.5">
                           <div className="flex flex-wrap items-center gap-1.5">
@@ -645,6 +654,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             </>
           )}
         </div>
+      </div>
+
       </div>
     </div>
   );

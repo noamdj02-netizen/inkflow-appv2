@@ -2369,7 +2369,7 @@ export const DashboardPro: React.FC = () => {
 
           {/* ====== SCROLLABLE CONTENT ZONE ====== */}
           <div
-            className={`app-shell-content min-w-0 px-3 py-4 sm:p-6 md:p-8 xl:px-10 2xl:px-12 ${activeTab === 'overview' ? 'dashboard-overview-bg overflow-x-hidden' : 'dashboard-pages-bg'}`}
+            className={`app-shell-content min-w-0 px-3 py-4 sm:p-6 md:p-8 xl:px-10 2xl:px-12 ${activeTab === 'overview' ? 'dashboard-overview-bg overflow-x-hidden' : 'dashboard-pages-bg'} ${activeTab === 'requests' ? 'flex min-h-0 flex-col overflow-hidden' : ''}`}
           >
           {isRestricted && !(activeTab === 'settings' && settingsTab === 'billing') ? (
             <PaywallView
@@ -2389,7 +2389,7 @@ export const DashboardPro: React.FC = () => {
             <AnimatePresence mode="wait">
               <motion.div
                 key={dashboardPanelKey}
-                className="min-w-0"
+                className={`min-w-0 ${activeTab === 'requests' ? 'flex min-h-0 flex-1 flex-col' : ''}`}
                 initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
@@ -2470,7 +2470,7 @@ export const DashboardPro: React.FC = () => {
           )}
 
           {activeTab === 'requests' && (
-            <div className="min-w-0">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
             <RequestsDashboard
               studioId={studioId}

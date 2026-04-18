@@ -25,7 +25,7 @@ import { useAutoSave } from '../../hooks/useAutoSave';
 import { ClientCsvImport, type ClientCsvImportRow } from './ClientCsvImport';
 import { fetchStampLoyaltySettings, fetchStampStateForClient, type StampLoyaltySettings, DEFAULT_STAMP_LOYALTY } from '../../lib/stampLoyalty';
 
-import { getClientStatusColor } from './clientListUtils';
+import { getClientStatusColor, getClientCardLeftAccent } from './clientListUtils';
 import { ClientProjectsView } from './ClientProjectsView';
 import { ClientDetailModal } from './ClientDetailModal';
 import { ClientAddModal } from './ClientAddModal';
@@ -259,15 +259,19 @@ export const ClientList: React.FC<ClientListProps> = ({
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header — mobile : titre compact + grille 2 colonnes pour les CTA (pouce) */}
+    <div className="flex min-w-0 flex-col gap-4 sm:gap-6 lg:gap-8">
+      {/* Header — mobile : pas de double « Clients » (bottom nav) ; h1 = contexte liste */}
       <div className="flex flex-col gap-3 sm:gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight font-display">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500 sm:hidden mb-0.5">
               Clients
+            </p>
+            <h1 className="font-display font-bold tracking-tight text-zinc-900 dark:text-white text-xl leading-snug sm:text-2xl md:text-3xl sm:leading-tight">
+              <span className="sm:hidden">Liste clients</span>
+              <span className="hidden sm:inline">Clients</span>
             </h1>
-            <p className="text-sm sm:text-base text-zinc-500 dark:text-zinc-400 mt-0.5 sm:mt-1 leading-snug max-w-xl">
+            <p className="text-zinc-500 dark:text-zinc-400 mt-1 sm:mt-1.5 text-xs sm:text-base max-w-2xl leading-snug sm:leading-relaxed line-clamp-2 sm:line-clamp-none">
               Gérez votre base de clients et leur historique
             </p>
           </div>
@@ -394,6 +398,8 @@ export const ClientList: React.FC<ClientListProps> = ({
         </div>
       </div>
 
+      {/* KPI + liste — animate séparé pour ne pas affecter un futur en-tête sticky (transform) */}
+      <div className="animate-fade-in motion-reduce:animate-none space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="dashboard-widget-card rounded-2xl p-4 sm:p-5">
@@ -429,7 +435,11 @@ export const ClientList: React.FC<ClientListProps> = ({
       {/* Mobile: Client Cards */}
       <div className="space-y-3 md:hidden">
         {sortedClients.map(client => (
-          <button key={client.id} onClick={() => setSelectedClient(client)} className="row-clickable dashboard-widget-card w-full text-left p-5 rounded-2xl">
+          <button
+            key={client.id}
+            onClick={() => setSelectedClient(client)}
+            className={`row-clickable dashboard-widget-card w-full text-left p-5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 border-l-4 ${getClientCardLeftAccent(client.status)} shadow-sm`}
+          >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {client.avatar ? (
@@ -452,7 +462,7 @@ export const ClientList: React.FC<ClientListProps> = ({
             </div>
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border)] text-sm">
               <span className="text-[var(--text-secondary)]">{client.appointmentsCount} RDV</span>
-              <span className="font-bold text-blue-600 dark:text-blue-400">{formatEuroPrivacy(client.totalSpent, privacyMode)}</span>
+              <span className="font-bold tabular-nums text-emerald-700 dark:text-emerald-400">{formatEuroPrivacy(client.totalSpent, privacyMode)}</span>
               <span className="text-[var(--text-tertiary)] text-xs">{client.lastVisit ? new Date(client.lastVisit).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : 'Jamais'}</span>
             </div>
           </button>
@@ -530,7 +540,7 @@ export const ClientList: React.FC<ClientListProps> = ({
                         </span>
                       </td>
                       <td className="px-6 py-4"><div className="text-sm font-semibold text-[var(--text-primary)]">{client.appointmentsCount}</div></td>
-                      <td className="px-6 py-4"><div className="text-sm font-bold text-blue-600 dark:text-blue-400">{formatEuroPrivacy(client.totalSpent, privacyMode)}</div></td>
+                      <td className="px-6 py-4"><div className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">{formatEuroPrivacy(client.totalSpent, privacyMode)}</div></td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-[var(--text-secondary)]">
                           {client.lastVisit ? new Date(client.lastVisit).toLocaleDateString('fr-FR') : 'Jamais'}
@@ -599,6 +609,8 @@ export const ClientList: React.FC<ClientListProps> = ({
           )}
         </div>
       )}
+
+      </div>
 
       {selectedClient && (
         <ClientDetailModal

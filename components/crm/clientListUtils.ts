@@ -62,3 +62,17 @@ export function getClientStatusColor(status: string): string {
       return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700';
   }
 }
+
+/** Bordure gauche carte mobile — aligné AppointmentsView / Demandes (repère statut). */
+export function getClientCardLeftAccent(status: string): string {
+  switch (status) {
+    case 'vip':
+      return 'border-l-violet-500';
+    case 'active':
+      return 'border-l-emerald-500';
+    case 'inactive':
+      return 'border-l-zinc-400 dark:border-l-zinc-600';
+    default:
+      return 'border-l-zinc-300 dark:border-l-zinc-600';
+  }
+}
