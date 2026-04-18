@@ -161,21 +161,21 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   const kpiGridClass = 'grid w-full grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3';
 
   return (
-    <div className="flex min-w-0 flex-col gap-4 sm:gap-6 md:gap-8 font-sans">
+    <section className="flex min-w-0 flex-col gap-4 sm:gap-6 md:gap-8 font-sans" aria-labelledby="appointments-heading">
 
-      {/* ── En-tête page (aligné Demandes / Clients : eyebrow mobile + titre contextuel) ── */}
+      {/* ── En-tête : pas d’eyebrow « Agenda » sur mobile (la bottom bar le dit déjà) — h1 = contexte liste / mois · desktop = « Rendez-vous » ── */}
       <div className="flex flex-col gap-4 sm:gap-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500 sm:hidden mb-0.5">
-              Agenda
-            </p>
-            <h1 className="font-display font-bold leading-tight tracking-tight text-zinc-900 dark:text-white text-xl min-[380px]:text-[1.35rem] sm:text-2xl md:text-3xl">
+            <h1
+              id="appointments-heading"
+              className="font-display font-bold leading-tight tracking-tight text-zinc-900 dark:text-white text-2xl md:text-3xl"
+            >
               <span className="sm:hidden">{appointmentsMobileHeadline}</span>
               <span className="hidden sm:inline">Rendez-vous</span>
             </h1>
             <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-zinc-500 dark:text-zinc-400 line-clamp-2 sm:line-clamp-none sm:text-sm sm:leading-normal md:text-base">
-              <span className="sm:hidden">Filtre la période ci-dessous, puis Liste ou Planning.</span>
+              <span className="sm:hidden">Période et statut ci-dessous, puis liste ou calendrier.</span>
               <span className="hidden sm:inline">
                 Filtre par période et statut, puis passe en liste ou en planning pour voir la journée semaine par semaine.
               </span>
@@ -499,7 +499,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <span className="text-sm font-semibold text-zinc-900 dark:text-white truncate leading-snug">{apt.clientName}</span>
-                          <span className="font-bold text-sky-600 dark:text-sky-400 text-sm tabular-nums shrink-0">{apt.price}€</span>
+                          <span className="font-bold text-emerald-700 dark:text-emerald-400 text-sm tabular-nums shrink-0">{apt.price}€</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                           <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums shrink-0">{apt.date}{apt.time ? ` · ${apt.time}` : ''}</span>
@@ -657,6 +657,6 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       </div>
 
       </div>
-    </div>
+    </section>
   );
 };
