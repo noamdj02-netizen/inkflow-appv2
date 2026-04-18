@@ -2367,8 +2367,9 @@ export const DashboardPro: React.FC = () => {
           </div>
           </header>
 
-          {/* ====== SCROLLABLE CONTENT ZONE ====== */}
+          {/* ====== ZONE CONTENU PRINCIPAL (scroll shell sauf onglet Demandes : scroll interne liste) ====== */}
           <div
+            data-inkflow-requests-scroll={activeTab === 'requests' ? 'true' : undefined}
             className={`app-shell-content min-w-0 px-3 py-4 sm:p-6 md:p-8 xl:px-10 2xl:px-12 ${activeTab === 'overview' ? 'dashboard-overview-bg overflow-x-hidden' : 'dashboard-pages-bg'} ${activeTab === 'requests' ? 'flex min-h-0 flex-col overflow-hidden' : ''}`}
           >
           {isRestricted && !(activeTab === 'settings' && settingsTab === 'billing') ? (

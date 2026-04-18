@@ -813,11 +813,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       </div>
 
       <div
-        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] pt-1"
+        className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] pt-1"
         role="region"
         aria-label="Liste des demandes"
       >
-        <div className="animate-fade-in min-w-0 pb-4">
+        <div className="animate-fade-in motion-reduce:animate-none min-w-0 pb-4">
           <div
             id="requests-panel"
             role="tabpanel"
@@ -1204,7 +1204,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium flex items-start gap-2">
                   <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400 stroke-[1.75]" />
                   <span>
-                    <strong className="font-semibold text-zinc-900 dark:text-white">À savoir :</strong> sans date dans la demande, un acompte place souvent le RDV sur le premier créneau libre — déplacez-le dans l’agenda ou proposez une autre date au client.
+                    <strong className="font-semibold text-zinc-900 dark:text-white">À savoir :</strong> sans date dans la demande, un acompte peut enregistrer le RDV sur un créneau automatique (souvent le premier libre). Depuis cette liste vous ne pouvez pas le déplacer dans le planning : pour un autre horaire, proposez une date au client ou ouvrez le rendez-vous dans l’onglet <span className="whitespace-nowrap">Agenda</span> pour modifier la date et l’heure.
                   </span>
                 </p>
               </div>

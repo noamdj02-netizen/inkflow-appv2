@@ -29,9 +29,58 @@ import type { DashboardWidget } from './DashboardWidgets';
 import { IconInkCap } from '../icons/InkCraftIcons';
 import { StudioSetupChecklist } from './StudioSetupChecklist';
 import { IconBox } from '../ui/IconBox';
+import { LANDING_PRICING_URL } from '../../lib/urls';
 
 /** Image d’en-tête mobile si aucune image vitrine (fichier dans /public) */
 const MOBILE_OVERVIEW_HEADER_BG_FALLBACK = '/images/hero-tattoo-artist.png';
+
+const MS_PER_DAY = 86400000;
+
+function getTrialDaysRemaining(trialEndsAt: string | null | undefined): number | null {
+  if (!trialEndsAt?.trim()) return null;
+  const end = new Date(trialEndsAt);
+  if (Number.isNaN(end.getTime())) return null;
+  return Math.ceil((end.getTime() - Date.now()) / MS_PER_DAY);
+}
+
+interface OverviewTrialBannerProps {
+  message: string;
+  onOpenBilling?: () => void;
+}
+
+function OverviewTrialBanner({ message, onOpenBilling }: OverviewTrialBannerProps) {
+  return (
+    <div
+      className="rounded-2xl border border-amber-200/90 dark:border-amber-500/30 bg-gradient-to-br from-amber-50/95 to-white dark:from-amber-950/35 dark:to-zinc-900/80 px-4 py-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm"
+      role="status"
+      aria-live="polite"
+    >
+      <p className="text-sm font-medium text-amber-950 dark:text-amber-100 leading-snug flex items-start gap-2 min-w-0">
+        <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" aria-hidden />
+        <span>{message}</span>
+      </p>
+      <div className="flex flex-wrap gap-2 shrink-0">
+        <a
+          href={LANDING_PRICING_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold shadow-sm transition-all active:scale-[0.98] hover:opacity-95"
+        >
+          Voir les formules
+        </a>
+        {onOpenBilling && (
+          <button
+            type="button"
+            onClick={onOpenBilling}
+            className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white/80 dark:bg-zinc-900/60 text-sm font-medium text-zinc-800 dark:text-zinc-200 transition-all active:scale-[0.98] hover:bg-zinc-50 dark:hover:bg-zinc-800"
+          >
+            Facturation
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /** Couleurs discrètes pour les lignes « Aujourd’hui » (bordure + bloc heure) */
 function getTodayRowTint(status: Appointment['status']) {
@@ -254,6 +303,12 @@ export interface DashboardOverviewTabProps {
   availabilitySetupComplete?: boolean;
   /** false = étape « Paiements / Stripe » ; undefined = chargement ou mode local */
   paymentsSetupComplete?: boolean;
+  /** Statut abonnement studio (Supabase) — bandeau essai si `trialing` */
+  studioSubscriptionStatus?: string | null;
+  /** Fin d’essai ISO — jours restants affichés dans le bandeau */
+  trialEndsAt?: string | null;
+  /** Ouvre Paramètres → Facturation (Stripe / plan) */
+  onOpenBilling?: () => void;
 }
 
 export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
@@ -293,9 +348,27 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   onSetupNavigate,
   availabilitySetupComplete,
   paymentsSetupComplete,
+  studioSubscriptionStatus,
+  trialEndsAt,
+  onOpenBilling,
 }) => {
   const { privacyMode } = useStudioPrivacy();
   const euro = (n: number) => formatEuroPrivacy(n, privacyMode);
+
+  const trialDaysRemaining = useMemo(() => getTrialDaysRemaining(trialEndsAt), [trialEndsAt]);
+
+  const trialBannerMessage = useMemo(() => {
+    if (studioSubscriptionStatus !== 'trialing') return null;
+    if (trialDaysRemaining === null) {
+      return 'Votre essai gratuit est en cours — aucune carte requise.';
+    }
+    if (trialDaysRemaining < 0) return null;
+    if (trialDaysRemaining === 0) {
+      return 'Votre essai se termine aujourd’hui. Choisissez une formule pour continuer sans interruption.';
+    }
+    if (trialDaysRemaining === 1) return 'Il vous reste 1 jour d’essai gratuit.';
+    return `Il vous reste ${trialDaysRemaining} jours d’essai gratuit.`;
+  }, [studioSubscriptionStatus, trialDaysRemaining]);
 
   const mobileHeaderBgUrl =
     typeof overviewHeaderBgUrl === 'string' && overviewHeaderBgUrl.trim() !== ''
@@ -465,11 +538,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     return h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
   })();
 
-  /** Desktop KPI (inchangé) vs mobile — Human Interface : grouped, plat, Footnote / Title styles */
+  /** Desktop KPI — cartes .prodify-card (relief portfolio, aligné index.css) */
   const desktopKpiShell =
-    'bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.06)] dark:shadow-none border border-zinc-100 dark:border-zinc-800 h-full flex flex-col justify-between min-h-[130px] min-w-0';
+    'prodify-card p-5 h-full flex flex-col justify-between min-h-[130px] min-w-0';
   const desktopKpiCaption =
-    'text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest shrink-0';
+    'text-[11px] font-medium text-zinc-500 dark:text-zinc-400 tracking-tight shrink-0';
   const desktopKpiIconBtn =
     'w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0';
   /** Cartes KPI mobile : fond « secondary grouped » + bandeau sémantique (équivalent tint iOS) */
@@ -917,6 +990,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           </div>
         </div>
 
+        <div className="px-3 min-[400px]:px-4 pt-2">
+          <p className="text-[11px] leading-snug text-zinc-500 dark:text-zinc-400 flex items-start gap-1.5">
+            <Users className="w-3.5 h-3.5 shrink-0 mt-0.5 text-emerald-600/90 dark:text-emerald-400/85" aria-hidden />
+            <span>500+ tatoueurs gèrent résas et vitrine avec InkFlow — comme vous.</span>
+          </p>
+        </div>
+
         {/* Actions rapides — sous 400px : grille 2×2 (cibles 44px+, libellés lisibles) · 400px+ : 4 colonnes */}
         <div className="px-3 min-[400px]:px-4 pt-2 pb-1 sm:pt-3">
           <div className="grid min-w-0 grid-cols-2 gap-2.5 min-[400px]:grid-cols-4 min-[400px]:gap-2.5">
@@ -975,6 +1055,12 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           </button>
           </div>
         </div>
+
+        {trialBannerMessage && (
+          <div className="px-3 min-[400px]:px-4 pb-2">
+            <OverviewTrialBanner message={trialBannerMessage} onOpenBilling={onOpenBilling} />
+          </div>
+        )}
 
         {onSetupNavigate && (
           <div className="px-3 min-[400px]:px-4 pb-2">
@@ -1302,18 +1388,18 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           DESKTOP LAYOUT — monté uniquement si isMdUp (pas de doublon d’IDs avec la vue mobile)
           ===================================================== */}
       {isMdUp && (
-      <div className="min-h-full bg-zinc-50/30 dark:bg-black isolate">
+      <div className="min-h-full w-full max-w-[1680px] mx-auto isolate">
 
-        {/* ===== HEADER — Compact avec alertes en pills ===== */}
-        <div className="px-5 sm:px-8 lg:px-10 pt-8 pb-6">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        {/* ===== HEADER — typo display + hiérarchie type showcase ===== */}
+        <div className="px-5 sm:px-8 lg:px-10 xl:px-12 pt-7 pb-6">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
             {/* Left: Greeting + Pills */}
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-1">
+              <p className="text-[13px] font-medium text-zinc-500 dark:text-zinc-400 mb-1.5 tracking-tight first-letter:uppercase">
                 {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
+                <h1 className="font-display text-[1.75rem] sm:text-[2rem] lg:text-[2.125rem] font-bold tracking-[-0.04em] text-zinc-900 dark:text-white">
                   {greeting}{firstName ? `, ${firstName}` : ''}
                 </h1>
                 {/* Compact Alert Pills */}
@@ -1333,28 +1419,31 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   </span>
                 )}
               </div>
+              <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400 max-w-2xl leading-snug flex items-start gap-2">
+                <Users className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600/85 dark:text-emerald-400/90" aria-hidden />
+                <span>Plus de 500 tatoueurs utilisent InkFlow pour leurs réservations et leur vitrine — vous êtes au bon endroit.</span>
+              </p>
             </div>
 
-            {/* Right: Action Buttons — pill style */}
-            <div className="flex items-center gap-2 flex-wrap">
+            {/* Right: actions — groupe visuel façon barre d’outils soft */}
+            <div className="flex items-center gap-1.5 flex-wrap rounded-2xl border border-zinc-200/80 bg-white/60 p-1.5 shadow-sm backdrop-blur-sm dark:border-zinc-800/80 dark:bg-zinc-900/40">
               <button
                 onClick={() => setIsEditMode(!isEditMode)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all active:scale-[0.98] ${
+                className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-all active:scale-[0.98] ${
                   isEditMode
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                    ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-700'
+                    : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/90 dark:hover:bg-zinc-800/80'
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
                 {isEditMode ? 'Terminer' : 'Widgets'}
               </button>
 
-              {/* Séparateur */}
-              <div className="w-px h-5 bg-zinc-200 dark:bg-zinc-700" />
+              <div className="hidden sm:block w-px h-6 bg-zinc-200/90 dark:bg-zinc-700" aria-hidden />
 
               <button
                 onClick={() => setActiveTab('flash')}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300 transition-colors hover:bg-zinc-100/90 dark:hover:bg-zinc-800/80"
               >
                 <Image className="w-3.5 h-3.5" /> Flash
               </button>
@@ -1363,23 +1452,28 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   href={`/studio/${vitrineSlug}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                  className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300 transition-colors hover:bg-zinc-100/90 dark:hover:bg-zinc-800/80"
                 >
                   <ExternalLink className="w-3.5 h-3.5" /> Vitrine
                 </a>
               )}
               <button
                 onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold hover:bg-zinc-700 dark:hover:bg-zinc-100 transition-all active:scale-[0.98] shadow-md"
+                className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-zinc-800 active:scale-[0.98] dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
               >
                 <Plus className="w-4 h-4" /> Nouveau RDV
               </button>
             </div>
           </div>
+          {trialBannerMessage && (
+            <div className="mt-5">
+              <OverviewTrialBanner message={trialBannerMessage} onOpenBilling={onOpenBilling} />
+            </div>
+          )}
         </div>
 
         {onSetupNavigate && (
-          <div className="px-5 sm:px-8 lg:px-10 pb-4">
+          <div className="px-5 sm:px-8 lg:px-10 xl:px-12 pb-4">
             <StudioSetupChecklist
               studioSlug={studioSlug}
               flashDesigns={flashDesigns}
@@ -1393,7 +1487,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
         {/* Edit Mode Banner */}
         {isEditMode && (
-          <div className="px-5 sm:px-8 lg:px-10 mb-4">
+          <div className="px-5 sm:px-8 lg:px-10 xl:px-12 mb-4">
             <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-3 min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-4 min-w-0">
                 <div className="flex items-center gap-3 min-w-0">
@@ -1424,8 +1518,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         )}
 
         {/* ===== MAIN GRID ===== */}
-        <div className="px-5 sm:px-8 lg:px-10 pb-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start [contain:layout]">
+        <div className="px-5 sm:px-8 lg:px-10 xl:px-12 pb-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start [contain:layout]">
             
             {/* ====== LEFT COLUMN (8/12) ====== */}
             <div className="lg:col-span-8 space-y-6 min-w-0">
@@ -1444,10 +1538,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     if (widgetId === 'revenue-chart') {
                       return (
                         <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
-              <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+              <div className="prodify-card rounded-[1.25rem] p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-1">Évolution du revenu</p>
+                    <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 tracking-tight mb-1">Évolution du revenu</p>
                                 <div className="flex items-baseline gap-2 flex-wrap">
                                   <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
                                     {euro(periodRevenue ?? totalRevenue)}
@@ -1479,10 +1573,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     if (widgetId === 'appointments-list') {
                       return (
                         <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
-              <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden">
+              <div className="prodify-card overflow-hidden">
                 <div className="px-6 py-5 flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Aujourd'hui</p>
+                    <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 tracking-tight">Aujourd'hui</p>
                     <p className="text-lg font-semibold text-zinc-900 dark:text-white mt-0.5">
                       {todayAppointments.length} rendez-vous
                     </p>
@@ -1591,7 +1685,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       
                       return (
                         <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
-                          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                          <div className="prodify-card p-6">
                             <div className="flex items-center justify-between mb-5">
                               <div className="flex items-center gap-3">
                                 <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-500/20">
@@ -1636,7 +1730,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
                       return (
                         <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
-                          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                          <div className="prodify-card p-6">
                             <div className="flex items-center justify-between mb-5">
                               <div className="flex items-center gap-3">
                                 <div className="p-2.5 rounded-xl bg-sky-100 dark:bg-sky-500/20">
@@ -1731,10 +1825,23 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     </OverviewSortableWidget>
               ) : (
                     <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
-                <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] text-center">
+                <div className="prodify-card p-6 text-center">
                         <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4"><Calendar className="w-6 h-6 text-zinc-400" /></div>
-                  <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">Pas de RDV aujourd'hui</p>
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500">Profitez de votre journée libre !</p>
+                  <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">Aucun RDV aujourd’hui</p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-4">
+                    Idéal pour préparer des flashs, du matériel ou la vitrine — ou bloquer un créneau tout de suite.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFlash(null);
+                      setShowBookingModal(true);
+                    }}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white px-4 py-2.5 text-sm font-semibold text-white dark:text-zinc-900 shadow-sm transition-all active:scale-[0.98] hover:opacity-95"
+                  >
+                    <Plus className="w-4 h-4 shrink-0" aria-hidden />
+                    Planifier un RDV
+                  </button>
                 </div>
                     </OverviewSortableWidget>
                   );
@@ -1743,7 +1850,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 if (widgetId === 'clients-deposits') {
                   return (
                     <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
-              <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] overflow-hidden">
+              <div className="prodify-card overflow-hidden">
                 <div className="px-5 pt-5 pb-0">
                   <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800">
                             <button onClick={() => setRightPanelTab('clients')} className={`flex-1 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${rightPanelTab === 'clients' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400'}`}>Clients</button>

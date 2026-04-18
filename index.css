@@ -1179,6 +1179,17 @@ input, select, textarea {
 }
 /* Accueil : pas d’override opaque — le flou et la transparence viennent des classes Tailwind sur le header */
 
+/*
+ * Demandes : liste scrollable interne (RequestsDashboard). Le bloc `.app-shell-content { overflow-y: auto }`
+ * plus haut a la même spécificité que `overflow-hidden` Tailwind — selon l’ordre des feuilles, le shell
+ * peut encore défiler et l’en-tête « part » avec. Cette règle (2 classes + attribut) impose overflow:hidden.
+ */
+.dashboard-pro-shell .app-shell-content[data-inkflow-requests-scroll='true'] {
+  overflow: hidden;
+  overscroll-behavior-y: none;
+  min-height: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dashboard-pro-shell .bottom-nav button {
     transition-duration: 0.01ms !important;
