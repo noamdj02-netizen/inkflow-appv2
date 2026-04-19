@@ -57,3 +57,10 @@ verify_jwt = false
 
 [functions.project-request-reject]
 verify_jwt = false
+
+# Web Push : JWT vérifié dans le handler (getGoTrueUser / service role).
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.push-subscribe]
+verify_jwt = false

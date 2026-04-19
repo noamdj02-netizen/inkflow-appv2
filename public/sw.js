@@ -18,7 +18,9 @@ registerRoute(
   })
 );
 
-// ─── Web Push Notifications ───
+// ─── Web Push Notifications (VAPID) — InkFlow prod : https://app.ink-flow.me
+const INKFLOW_APP_ORIGIN = 'https://app.ink-flow.me';
+
 self.addEventListener('push', (event) => {
   if (!event.data) return;
   let payload = { title: 'InkFlow', body: 'Nouvelle notification' };
@@ -29,8 +31,8 @@ self.addEventListener('push', (event) => {
   }
   const options = {
     body: payload.body,
-    icon: '/icon.svg',
-    badge: '/icon.svg',
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
     tag: payload.tag || 'inkflow-notification',
     data: payload.data || {},
     requireInteraction: !!payload.requireInteraction,
@@ -41,16 +43,20 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || event.notification.data?.actionUrl || '/dashboard';
+  const raw = event.notification.data?.url || event.notification.data?.actionUrl || '/dashboard';
+  const pathOrUrl = typeof raw === 'string' ? raw : '/dashboard';
+  const targetUrl = pathOrUrl.startsWith('http')
+    ? pathOrUrl
+    : `${INKFLOW_APP_ORIGIN}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`;
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(url);
+          client.navigate(targetUrl);
           return client.focus();
         }
       }
-      if (self.clients.openWindow) return self.clients.openWindow(url);
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
     })
   );
 });

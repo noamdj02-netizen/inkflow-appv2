@@ -2,6 +2,8 @@ import { compressImageFileToWebP } from './imageResize';
 import { supabase } from './supabase';
 import { safeExternalHttpUrl } from './urls';
 import type { Booking, BookingStatus, VitrineBookingFormData } from '../types';
+import { notifyArtistPushFromDashboard } from './artistPushNotification';
+import { isFlashBookingDescription } from './vitrineBookingFlash';
 
 export function mapBookingFromDb(row: Record<string, unknown>): Booking {
   const refImages = row.reference_images;
@@ -276,5 +278,22 @@ export async function updateBookingStatus(id: string, status: BookingStatus): Pr
       throw new Error('Ce créneau est déjà réservé pour une autre demande.');
     }
     throw error;
+  }
+
+  if (status === 'confirmed' || status === 'accepted') {
+    const { data: row } = await supabase
+      .from('inkflow_bookings')
+      .select('studio_id, description, client_name')
+      .eq('id', id)
+      .maybeSingle();
+    if (row?.studio_id && row.description && isFlashBookingDescription(row.description)) {
+      void notifyArtistPushFromDashboard({
+        studioId: row.studio_id,
+        title: 'Flash confirmé',
+        body: `${row.client_name || 'Client'} — demande vitrine confirmée.`,
+        url: '/dashboard?tab=requests',
+        tag: 'inkflow-flash-confirmed',
+      });
+    }
   }
 }

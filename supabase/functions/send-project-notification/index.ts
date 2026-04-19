@@ -8,6 +8,32 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "
 /** URL de l'app dashboard (jamais la landing Framer). Définir APP_URL dans les secrets Supabase. */
 const APP_URL = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
 
+async function notifyArtistPushNewProject(studioId: string, clientName: string): Promise<void> {
+  const pushUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-push-notification`;
+  try {
+    const res = await fetch(pushUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({
+        studioId,
+        title: "Nouvelle demande de projet",
+        body: `${clientName} — ouvre Demandes pour répondre.`,
+        url: `${APP_URL}/dashboard?tab=requests`,
+        tag: "inkflow-project-request",
+      }),
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      console.warn("[send-project-notification] push:", res.status, t);
+    }
+  } catch (e) {
+    console.warn("[send-project-notification] push error:", e);
+  }
+}
+
 interface NotificationPayload {
   studioId: string;
   clientName: string;
@@ -113,6 +139,8 @@ Deno.serve(async (req: Request) => {
         { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    await notifyArtistPushNewProject(payload.studioId, payload.clientName);
 
     const clientHtml = buildClientConfirmationHtml(payload.clientName, studio.studioName || "le studio");
     const clientSubject = `Demande envoyée à ${studio.studioName || "le studio"} — InkFlow`;

@@ -167,15 +167,20 @@ Deno.serve(async (req: Request) => {
         },
       });
 
-      // Push notification au tatoueur (fire-and-forget)
-      supabase.functions.invoke("send-push-notification", {
-        body: {
+      // Push notification au tatoueur (service role — même auth que stripe-webhook)
+      fetch(`${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-push-notification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({
           studioId,
           title: "Récompense fidélité débloquée 🎉",
           body: `${clientName || clientEmail} a atteint ${tattoosRequired} séances — ${rewardEuros}€ offerts !`,
           url: "/dashboard?tab=loyalty",
           tag: "stamp-reward",
-        },
+        }),
       }).catch((e: unknown) => console.warn("push-notification stamp reward:", e));
     }
 

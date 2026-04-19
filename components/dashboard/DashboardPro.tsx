@@ -5,6 +5,7 @@ import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../hooks/useSupabaseSync';
 import { useProjectRequests } from '../../hooks/useProjectRequests';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useIncomingBookings } from '../../hooks/useIncomingBookings';
 import { usePendingDemandesCounts } from '../../hooks/usePendingDemandesCounts';
 import { useNotificationSync } from '../../hooks/useNotificationSync';
@@ -261,8 +262,9 @@ export const DashboardPro: React.FC = () => {
   const effectiveTheme = resolvedTheme ?? (typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') as 'light' | 'dark' | null : null) ?? 'light';
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
   const { studioId, studioOwnerEmail, studioSlug, studioCsvImportSlots, refreshStudioSlug, refreshStudioSubscription, subscriptionStatus, trialEndsAt, useSupabase, demoAccountMode, appointments, clients, flashDesigns, notifications, addAppointment, updateAppointment, addFlash, updateFlash, deleteFlash, addClient, importClientsFromCsvRows, markNotificationAsRead, loadClientNotes, saveClientNotes, loading, isOnline, connectionError, lastSyncedAt, retry } = useSupabaseSync();
-  const { projectRequests, loading: projectRequestsLoading, updateStatus: updateProjectRequestStatus } = useProjectRequests(studioId, { demoMode: demoAccountMode });
+  const { projectRequests, loading: projectRequestsLoading, updateStatus: updateProjectRequestStatus, refetch: refetchProjectRequests } = useProjectRequests(studioId, { demoMode: demoAccountMode });
   const { bookings, loading: bookingsLoading, updateStatus: updateBookingStatus } = useIncomingBookings(studioId, useSupabase ?? false, demoAccountMode);
+  usePushNotifications(studioId, { demoMode: demoAccountMode });
   const demandes = usePendingDemandesCounts(appointments, bookings, projectRequests);
   const { canAccessFeature, hasReachedLimit, getLimit } = useSubscriptionPermissions(studioId);
   const [paymentSuccessModalOpen, setPaymentSuccessModalOpen] = useState(false);
@@ -2484,6 +2486,8 @@ export const DashboardPro: React.FC = () => {
               onAddAppointment={addAppointment}
               projectRequests={projectRequests}
               onUpdateProjectRequest={updateProjectRequestStatus}
+              onProjectRequestsInvalidate={refetchProjectRequests}
+              demoMode={demoAccountMode}
               bookings={bookings}
               onUpdateBookingStatus={updateBookingStatus}
               bookingsLoading={bookingsLoading}

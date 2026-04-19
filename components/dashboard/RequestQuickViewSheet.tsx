@@ -30,6 +30,8 @@ interface RequestQuickViewSheetProps {
   onProposeDate?: (item: RequestItem) => void;
   /** Demande vitrine : ouvre l’onglet Messagerie sur le fil `pr_<id>`. */
   onOpenProjectDiscussion?: (threadId: string) => void;
+  /** Brief projet en attente : ouvre la modale d’acceptation avec créneau. */
+  onAcceptProject?: (project: ProjectRequest) => void;
 }
 
 const PLACEMENT_LABELS: Record<string, string> = {
@@ -69,6 +71,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
   onReject,
   onProposeDate,
   onOpenProjectDiscussion,
+  onAcceptProject,
 }) => {
   const toast = useToast();
   if (!item) return null;
@@ -329,6 +332,19 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
 
               {!vitrinePending && (
                 <div className="flex flex-col gap-2">
+                  {isProject && pr && pr.status === 'pending' && onAcceptProject && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAcceptProject(pr);
+                        onClose();
+                      }}
+                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#00D4FF] text-[#0d0d0d] font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
+                    >
+                      <CheckCircle className="w-5 h-5 shrink-0 stroke-[1.75]" />
+                      Accepter le projet
+                    </button>
+                  )}
                   {isProject && pr && onOpenProjectDiscussion && (
                     <button
                       type="button"

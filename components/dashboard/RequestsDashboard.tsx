@@ -16,6 +16,7 @@ import type { PendingStampReward } from '../../lib/stampLoyalty';
 import { parseInstagramHandle, instagramMessageUrl } from '../../lib/instagramUtils';
 import { buildMailtoHref, handleMailtoClick } from '../../lib/mailto';
 import { ProposeAlternativeDateModal } from './ProposeAlternativeDateModal';
+import { AcceptProjectModal } from './AcceptProjectModal';
 
 interface RequestsDashboardProps {
   studioId: string | null;
@@ -44,6 +45,10 @@ interface RequestsDashboardProps {
   projectRequestsLoading?: boolean;
   /** Garde la sous-navigation « Demandes » du shell alignée (sidebar). */
   onSubTabChange?: (tab: 'rdv' | 'bookings' | 'projects' | 'history') => void;
+  /** Après acceptation projet (Edge) — rafraîchir la liste. */
+  onProjectRequestsInvalidate?: () => void;
+  /** Compte démo : pas d’appel accept réel. */
+  demoMode?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -92,6 +97,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   onOpenRequestSheetBookingIdConsumed,
   projectRequestsLoading = false,
   onSubTabChange,
+  onProjectRequestsInvalidate,
+  demoMode = false,
 }) => {
   const toast = useToast();
   const clientByEmail = useMemo(() => {
@@ -160,6 +167,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   // Sheet Quick View (aperçu rapide au clic sur une demande)
   type SheetItem = (ProjectRequest & { _type: 'project' }) | (Booking & { _type: 'booking' });
   const [sheetItem, setSheetItem] = useState<SheetItem | null>(null);
+  const [acceptProjectTarget, setAcceptProjectTarget] = useState<ProjectRequest | null>(null);
 
   useEffect(() => {
     if (!openRequestSheetProjectId || projectRequestsLoading) return;
@@ -1272,6 +1280,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         Actions
                       </p>
                       <div className="flex flex-col gap-2">
+                        {studioId && (
+                        <button
+                          type="button"
+                          onClick={() => setAcceptProjectTarget(pr)}
+                          className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#00D4FF] text-[#0d0d0d] font-semibold hover:opacity-90 active:scale-[0.98] transition-all text-sm shadow-sm"
+                        >
+                          <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" /> Accepter le projet
+                        </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => onOpenProjectDiscussion?.(`pr_${pr.id}`)}
@@ -1460,6 +1477,23 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           if (item._type === 'booking') await handleConfirmBooking(item);
         }}
         onOpenProjectDiscussion={onOpenProjectDiscussion}
+        onAcceptProject={
+          studioId
+            ? (project) => {
+                setAcceptProjectTarget(project);
+                setSheetItem(null);
+              }
+            : undefined
+        }
+      />
+
+      <AcceptProjectModal
+        isOpen={!!acceptProjectTarget}
+        onClose={() => setAcceptProjectTarget(null)}
+        projectRequest={acceptProjectTarget}
+        studioId={studioId}
+        demoMode={demoMode}
+        onSuccess={() => onProjectRequestsInvalidate?.()}
       />
 
       <ProposeAlternativeDateModal
