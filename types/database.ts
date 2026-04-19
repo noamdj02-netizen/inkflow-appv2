@@ -1690,6 +1690,7 @@ export type Database = {
       }
       inkflow_project_requests: {
         Row: {
+          artist_message: string | null
           budget: string | null
           client_email: string
           client_instagram: string | null
@@ -1700,12 +1701,15 @@ export type Database = {
           id: string
           placement: string | null
           project_type: string
+          proposed_slot: string | null
           reference_image_url: string | null
           reference_images: Json | null
+          slot_expires_at: string | null
           status: string
           studio_id: string
         }
         Insert: {
+          artist_message?: string | null
           budget?: string | null
           client_email: string
           client_instagram?: string | null
@@ -1716,12 +1720,15 @@ export type Database = {
           id: string
           placement?: string | null
           project_type?: string
+          proposed_slot?: string | null
           reference_image_url?: string | null
           reference_images?: Json | null
+          slot_expires_at?: string | null
           status?: string
           studio_id: string
         }
         Update: {
+          artist_message?: string | null
           budget?: string | null
           client_email?: string
           client_instagram?: string | null
@@ -1732,8 +1739,10 @@ export type Database = {
           id?: string
           placement?: string | null
           project_type?: string
+          proposed_slot?: string | null
           reference_image_url?: string | null
           reference_images?: Json | null
+          slot_expires_at?: string | null
           status?: string
           studio_id?: string
         }

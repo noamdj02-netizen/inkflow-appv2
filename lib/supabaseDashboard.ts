@@ -1022,7 +1022,10 @@ export function mapProjectRequestFromDb(row: Record<string, unknown>): ProjectRe
     status: (row.status as ProjectRequestStatus) || 'pending',
     referenceImageUrl: referenceImages[0] ?? (row.reference_image_url as string | undefined),
     referenceImages,
-    createdAt: (row.created_at as string) || new Date().toISOString()
+    createdAt: (row.created_at as string) || new Date().toISOString(),
+    proposedSlot: (row.proposed_slot as string | null | undefined) ?? null,
+    slotExpiresAt: (row.slot_expires_at as string | null | undefined) ?? null,
+    artistMessage: (row.artist_message as string | null | undefined) ?? null,
   };
 }
 

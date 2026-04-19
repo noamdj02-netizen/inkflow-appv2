@@ -36,6 +36,8 @@
     "deploy:function:stripe-webhook": "supabase functions deploy stripe-webhook --no-verify-jwt",
     "deploy:function:stripe-connect-onboarding": "supabase functions deploy stripe-connect-onboarding --no-verify-jwt",
     "deploy:function:stripe-connect-actions": "supabase functions deploy stripe-connect-actions --no-verify-jwt",
+    "deploy:function:project-request-accept": "supabase functions deploy project-request-accept --no-verify-jwt",
+    "deploy:function:project-request-reject": "supabase functions deploy project-request-reject --no-verify-jwt",
     "video:demo": "npm run start --prefix video/inkflow-demo",
     "video:demo:render": "npm run render --prefix video/inkflow-demo"
   },

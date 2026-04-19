@@ -50,3 +50,10 @@ verify_jwt = false
 # Réservation publique : POST avec { studioId } sans session Supabase.
 [functions.get-studio-availability]
 verify_jwt = false
+
+# Acceptation / refus demande projet — JWT vérifié dans le handler (getGoTrueUser), comme send-alternative-date-proposal.
+[functions.project-request-accept]
+verify_jwt = false
+
+[functions.project-request-reject]
+verify_jwt = false

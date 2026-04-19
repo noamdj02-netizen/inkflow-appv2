@@ -164,6 +164,12 @@ export interface ProjectRequest {
   referenceImageUrl?: string;
   referenceImages: string[];
   createdAt: string;
+  /** Créneau proposé par l’artiste (acceptation) */
+  proposedSlot?: string | null;
+  /** Expiration de la proposition */
+  slotExpiresAt?: string | null;
+  /** Message libre artiste → client */
+  artistMessage?: string | null;
 }
 
 export interface ProjectRequestFormData {
