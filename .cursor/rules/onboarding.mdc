@@ -1,0 +1,54 @@
+---
+description: Onboarding InkFlow — inscription tatoueur → activation premier RDV
+globs: components/auth/**,components/onboarding/**,apps/inkflow-client/app/login.tsx,apps/inkflow-client/app/set-password.tsx
+alwaysApply: false
+---
+
+# Onboarding InkFlow
+
+Pour **onboarding automatisé** (emails séquencés, relances, jalons flash/Stripe, métriques activation), charger **`.cursor/rules/onboarding-automation.mdc`** (AGENT 7).
+
+Tu travailles sur le tunnel **inscription → activation** du tatoueur (web SaaS) et l'**activation client** (magic link). Référence : `docs/SIGNUP-DASHBOARD-QA.md`.
+
+## Étapes critiques tatoueur
+
+| # | Étape | Surface | Risque |
+|---|-------|---------|--------|
+| 1 | Auth (email ou OAuth) | `components/auth/*` | Erreur SMTP Supabase (`docs/SUPABASE-AUTH-SMTP.md`) |
+| 2 | `ensureStudio` (création studio + slug) | `lib/supabaseDashboard.ts` | Course parallèle → erreur **23505** UNIQUE |
+| 3 | Setup vitrine (nom, bio, photo, slug perso) | `components/onboarding/*` + `SlugSettings` | Slug non vérifié → conflit |
+| 4 | Premier import clients (CSV) | `lib/clientImportMapping.ts` | Mauvaise table (`inkflow_clients`, pas `_customers`) |
+| 5 | Premier RDV créé | `components/dashboard/Booking*` | Pas de `studioId` → écriture rejetée RLS |
+| 6 | Lien `/book/:slug` partagé | `scripts/generate-sitemap.mjs` | Slug invalide → 404 |
+
+## Règles dev
+
+- **`ensureStudio`** doit retry sur Postgres `23505` avec suffixe alternatif (`-2`, `-3`).
+- **`checkSlugAvailable`** : sur erreur RPC → considérer slug **non disponible** (jamais « libre par défaut »).
+- Toute écriture studio → garde `if (!studioId) return` AVANT le `.insert()` / `.update()`.
+- Toast succès/erreur via `useToast` après chaque mutation.
+- Loading state désactive le bouton pour éviter double création de studio.
+
+## Activation client (magic link)
+
+- Envoi via `sendClientMagicLink.ts`.
+- Lien expire en 1h, redirection `apps/inkflow-client/app/index.tsx` → dashboard.
+- Si client existe déjà : ne pas écraser ses données studio.
+
+## UX onboarding
+
+- Pas plus de **3 écrans** avant le premier "wow" (vitrine prête + lien partageable).
+- Empty states avec CTA explicite : « Importe tes 10 premiers clients », « Crée ton premier RDV ».
+- Progress bar / checklist d'activation visible (à l'inspiration du DS — `border-l-4 border-l-emerald-500` quand fait).
+
+## Skill à charger
+
+- `app-onboarding-questionnaire/SKILL.md` pour designer un questionnaire d'onboarding type apps subscription.
+- `signup-flow-cro/SKILL.md` si on optimise les conversions.
+- `onboarding-cro/SKILL.md` si activation faible après signup.
+
+## Sortie attendue
+
+1. `Étape | Écran/fichier | Friction observée | Correctif (1 ligne)`.
+2. Checklist à 6 points pour qu'un tatoueur ait sa vitrine + 1 RDV en **< 10 min**.
+3. Copy proposée pour empty states / boutons d'activation.

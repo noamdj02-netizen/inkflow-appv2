@@ -1196,6 +1196,7 @@ export type Database = {
           reserved: boolean | null
           size: string | null
           slug: string | null
+          stock_current: number
           studio_id: string
           tags: Json | null
           title: string
@@ -1218,6 +1219,7 @@ export type Database = {
           reserved?: boolean | null
           size?: string | null
           slug?: string | null
+          stock_current?: number
           studio_id: string
           tags?: Json | null
           title: string
@@ -1240,6 +1242,7 @@ export type Database = {
           reserved?: boolean | null
           size?: string | null
           slug?: string | null
+          stock_current?: number
           studio_id?: string
           tags?: Json | null
           title?: string

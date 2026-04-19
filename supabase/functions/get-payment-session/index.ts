@@ -11,6 +11,7 @@ import {
   applyPaidCheckoutDbState,
   type StripeCheckoutSessionLike,
 } from "../_shared/applyPaidCheckoutDbState.ts";
+import { INKFLOW_PAYMENT_RECORD_STATUS } from "../_shared/inkflowPaymentRecordStatus.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -61,7 +62,7 @@ async function tryRecoverMissingPaymentRow(
     stripe_session_id: sessionId,
     amount: amountEur,
     currency: "eur",
-    status: "pending",
+    status: INKFLOW_PAYMENT_RECORD_STATUS.PENDING,
     type,
     client_name: typeof meta.client_name === "string" ? meta.client_name : "",
     client_email: typeof meta.client_email === "string" ? meta.client_email : "",
@@ -148,7 +149,7 @@ Deno.serve(async (req: Request) => {
 
     /** Si le webhook Stripe est en retard ou a échoué, la ligne reste "pending" alors que Stripe est "paid". */
     let paymentRow = paymentRowForFlow!;
-    if (paymentRow.status !== "completed") {
+    if (paymentRow.status !== INKFLOW_PAYMENT_RECORD_STATUS.COMPLETED) {
       if (!STRIPE_SECRET_KEY) {
         return new Response(
           JSON.stringify({ error: "Paiement non finalisé", status: paymentRow.status }),
@@ -186,7 +187,7 @@ Deno.serve(async (req: Request) => {
         .select("id, studio_id, appointment_id, amount, type, client_name, client_email, status")
         .eq("stripe_session_id", sessionId)
         .single();
-      if (refErr || !refreshed || refreshed.status !== "completed") {
+      if (refErr || !refreshed || refreshed.status !== INKFLOW_PAYMENT_RECORD_STATUS.COMPLETED) {
         console.error("[get-payment-session] reconcile failed after Stripe paid", refErr?.message);
         return new Response(
           JSON.stringify({ error: "Synchronisation du paiement en cours. Réessayez dans quelques secondes." }),

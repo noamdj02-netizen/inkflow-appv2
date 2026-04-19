@@ -43,7 +43,7 @@ Le signup dans l’app (`supabase.auth.signUp` avec `emailRedirectTo`) **ne pass
    - **Site URL** : URL canonique de l’app (ex. `https://app.ink-flow.me`).
    - **Redirect URLs** : inclure au minimum :
      - `http://localhost:3000/**` ou `http://localhost:5173/**` (selon votre port Vite)
-     - `https://app.ink-flow.me/**`
+     - `https://app.ink-flow.me/**` (inclut le reset mot de passe : après clic e-mail l’utilisateur arrive sur `https://app.ink-flow.me/reset-password`, puis redirection vers `/auth/update-password` pour choisir le nouveau mot de passe — ne pas utiliser `https://ink-flow.me` comme **Site URL** pour l’auth)
      - Toute URL de **preview Vercel** utilisée pour tester les liens de confirmation.
 
 Sans Redirect URLs correctes, le lien dans l’email de confirmation peut être refusé ou rediriger vers une origine non autorisée.

@@ -3,6 +3,7 @@
  * Utilisé par stripe-webhook et get-payment-session (réconciliation si webhook en retard).
  */
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import { INKFLOW_PAYMENT_RECORD_STATUS } from "./inkflowPaymentRecordStatus.ts";
 
 /** Session Stripe Checkout (champs utiles — webhook ou API retrieve). */
 export interface StripeCheckoutSessionLike {
@@ -51,7 +52,7 @@ export async function applyPaidCheckoutDbState(
   await supabase
     .from("inkflow_payments")
     .update({
-      status: "completed",
+      status: INKFLOW_PAYMENT_RECORD_STATUS.COMPLETED,
       stripe_payment_intent: pi,
       updated_at: new Date().toISOString(),
     })
@@ -108,15 +109,19 @@ export async function applyPaidCheckoutDbState(
     }
   }
 
-  const flashId = session.metadata?.flash_id;
-  if (flashId) {
-    await supabase
-      .from("inkflow_flash_designs")
-      .update({
-        available: false,
-        reserved: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", flashId);
+  const flashIdRaw = session.metadata?.flash_id;
+  if (flashIdRaw) {
+    const flashId = typeof flashIdRaw === "string" ? flashIdRaw.trim() : String(flashIdRaw);
+    /**
+     * Un seul UPDATE Postgres (RPC) : `available = false`, `reserved = true`, `stock_current = stock_current + 1`
+     * (via expression idempotente si webhook dupliqué — pas de double comptage).
+     * `INKFLOW_PAYMENT_RECORD_STATUS` ne s’applique qu’à `inkflow_payments` (mis à jour plus haut avec COMPLETED).
+     */
+    const { error: flashRpcErr } = await supabase.rpc("inkflow_apply_flash_checkout_reserve", {
+      p_flash_id: flashId,
+    });
+    if (flashRpcErr) {
+      console.error("[applyPaidCheckoutDbState] inkflow_apply_flash_checkout_reserve:", flashRpcErr.message);
+    }
   }
 }

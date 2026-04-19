@@ -17,11 +17,28 @@
 
 import { createClient } from '@supabase/supabase-js';
 
+/** Même logique que lib/urls getCanonicalAppOrigin : jamais ink-flow.me (Framer) pour les liens Auth. */
+function authRedirectOrigin() {
+  let r =
+    (process.env.VITE_APP_URL || process.env.SITE_URL || 'https://app.ink-flow.me').trim().replace(/\/+$/, '');
+  if (!/^https?:\/\//i.test(r)) {
+    r = `https://${r.replace(/^\/+/, '')}`;
+  }
+  try {
+    const u = new URL(r);
+    if (u.hostname === 'ink-flow.me' || u.hostname === 'www.ink-flow.me') {
+      return 'https://app.ink-flow.me';
+    }
+    return u.origin.replace(/\/+$/, '');
+  } catch {
+    return 'https://app.ink-flow.me';
+  }
+}
+
 function loadEnv() {
   const url = (process.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
   const anon = (process.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
-  const redirect =
-    (process.env.VITE_APP_URL || process.env.SITE_URL || 'https://app.ink-flow.me').trim().replace(/\/+$/, '');
+  const redirect = authRedirectOrigin();
   const serviceRole = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim().replace(/^['"]|['"]$/g, '');
   return { url, anon, redirect, serviceRole };
 }

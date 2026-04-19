@@ -48,9 +48,9 @@ export function getAuthCallbackRedirectTo(): string {
   return `${getCanonicalAppOrigin()}/auth/callback`;
 }
 
-/** redirectTo pour réinitialisation du mot de passe. */
+/** redirectTo pour resetPasswordForEmail — doit être l’app (app.ink-flow.me), pas la landing Framer. */
 export function getPasswordRecoveryRedirectTo(): string {
-  return `${getCanonicalAppOrigin()}/auth/update-password`;
+  return `${getCanonicalAppOrigin()}/reset-password`;
 }
 
 /**

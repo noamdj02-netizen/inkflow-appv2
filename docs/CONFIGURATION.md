@@ -53,7 +53,7 @@ Dans **Vercel Dashboard → Votre projet → Settings → Environment Variables*
 3. **Authentication → URL Configuration** (indispensable pour que le mail parte et que le lien fonctionne) :
    - **Site URL** : origine principale de l’app SPA, en pratique `https://app.ink-flow.me` (pas seulement la landing Framer).
    - **Redirect URLs** : listez toutes les origines où l’utilisateur peut atterrir après clic dans l’e-mail, par exemple :
-     - `https://app.ink-flow.me/**`
+     - `https://app.ink-flow.me/**` (reset mdp : `.../reset-password` puis `.../auth/update-password`)
      - `https://app.ink-flow.me/auth/callback`
      - `http://localhost:5173/**` et `http://127.0.0.1:5173/**`
      - `https://*.vercel.app/**` (previews Vercel)

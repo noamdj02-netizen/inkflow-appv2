@@ -4,6 +4,7 @@ import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { allowRateLimit, clientIpFromRequest } from "../_shared/rateLimit.ts";
 import { amountsMatchClientAndServer, resolveExpectedCheckoutAmountEur } from "../_shared/checkoutExpectedAmount.ts";
 import { resolveAbsoluteSiteBase } from "../_shared/siteUrl.ts";
+import { INKFLOW_PAYMENT_RECORD_STATUS } from "../_shared/inkflowPaymentRecordStatus.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -261,7 +262,7 @@ Deno.serve(async (req: Request) => {
       stripe_session_id: session.id,
       amount: validatedAmountEur,
       currency: "eur",
-      status: "pending",
+      status: INKFLOW_PAYMENT_RECORD_STATUS.PENDING,
       type: payload.type,
       client_name: payload.clientName,
       client_email: payload.clientEmail,

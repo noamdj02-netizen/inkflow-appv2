@@ -239,7 +239,7 @@ export interface StudioSettings {
   cancellationPolicy: string;
 }
 
-// Payments
+// Payments — inkflow_payments.status (voir supabase/functions/_shared/inkflowPaymentRecordStatus.ts)
 export interface Payment {
   id: string;
   studioId: string;
