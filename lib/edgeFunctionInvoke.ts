@@ -213,10 +213,10 @@ export async function invokeEdgeFunctionViaFetch<TBody extends Record<string, un
   let token = session?.access_token;
   if (!token) {
     await supabase.auth.refreshSession().catch(() => {});
-    ({
-      data: { session: s2 },
-    } = await supabase.auth.getSession());
-    token = s2?.access_token;
+    const {
+      data: { session: refreshedSession },
+    } = await supabase.auth.getSession();
+    token = refreshedSession?.access_token;
   }
   if (!token) {
     return { data: null, error: 'Session expirée. Reconnecte-toi puis réessaie.' };

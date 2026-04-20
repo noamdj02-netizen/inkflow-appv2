@@ -17,5 +17,15 @@
     "noEmit": true
   },
   "include": ["**/*.ts", "**/*.tsx", "types/**/*.d.ts"],
-  "exclude": ["node_modules", "dist", "supabase/functions", "app", "inkflow-mobile", "mobile", "pages/_error.tsx"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "supabase/functions",
+    "app",
+    "inkflow-mobile",
+    "mobile",
+    "pages/_error.tsx",
+    "claude-skills",
+    "mon-app"
+  ]
 }
