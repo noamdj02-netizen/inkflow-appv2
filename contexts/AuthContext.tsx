@@ -210,12 +210,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
     if (isSupabaseAuthEnabled) {
-      const LOGIN_TIMEOUT_MS = 15000;
+      const LOGIN_TIMEOUT_MS = 25000;
       const loginPromise = supabase.auth.signInWithPassword({ email, password });
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Connexion expirée. Vérifiez votre réseau.')), LOGIN_TIMEOUT_MS)
+        setTimeout(
+          () => reject(new Error('Connexion expirée — le serveur Supabase ne répond pas assez vite.')),
+          LOGIN_TIMEOUT_MS,
+        )
       );
-      const { data, error } = await Promise.race([loginPromise, timeoutPromise]);
+      let raceResult: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>;
+      try {
+        raceResult = await Promise.race([loginPromise, timeoutPromise]);
+      } catch (e) {
+        const m = e instanceof Error ? e.message : String(e);
+        if (m.includes('Failed to fetch') || m.toLowerCase().includes('network')) {
+          throw new Error(
+            'Failed to fetch — vérifie la connexion internet et que VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY sont corrects sur Vercel.',
+          );
+        }
+        throw e;
+      }
+      const { data, error } = raceResult;
       if (error) throw new Error(error.message);
       if (data?.user) {
         const appUser = appUserFromSupabase(data.user);

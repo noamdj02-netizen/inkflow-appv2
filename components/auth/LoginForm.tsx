@@ -12,10 +12,24 @@ import { getPostSignupDashboardPath } from '../../lib/urls';
 /** Mappe les erreurs Supabase Auth vers messages utilisateur */
 function getAuthErrorMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
   if (msg.includes('Invalid login credentials')) return 'Email ou mot de passe incorrect';
   if (msg.includes('Email not confirmed')) return 'Vérifiez votre boîte mail pour confirmer votre compte';
-  if (msg.includes('réseau') || msg.includes('network') || msg.includes('fetch')) return 'Erreur réseau. Vérifiez votre connexion.';
-  if (msg.includes('expirée') || msg.includes('timeout')) return msg;
+  /* Timeout / lent — avant toute règle qui matche « réseau » dans la même phrase */
+  if (msg.includes('expirée') || lower.includes('timeout') || msg.includes('auth_timeout')) {
+    return 'Connexion trop lente (délai dépassé). Réessaie sur un autre réseau ou vérifie que le projet Supabase est actif.';
+  }
+  if (
+    lower.includes('failed to fetch') ||
+    lower.includes('networkerror') ||
+    lower.includes('load failed') ||
+    msg.includes('TypeError')
+  ) {
+    return 'Impossible de joindre Supabase (réseau ou configuration). Vérifie ta connexion. En production : Vercel → Settings → Environment Variables → VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY, puis redéploiement.';
+  }
+  if (lower.includes('réseau') || lower.includes('network') || lower.includes('fetch')) {
+    return 'Erreur réseau. Vérifiez votre connexion.';
+  }
   if (msg.includes('Redirect URLs') || msg.includes('URL de retour')) return msg;
   if (msg.length > 0 && msg.length < 600) return msg;
   return 'Une erreur est survenue. Réessayez.';

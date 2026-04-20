@@ -62,7 +62,8 @@ Source : [`App.tsx`](../App.tsx) (mars 2026).
 | Dossier | Rôle |
 |---------|------|
 | **[`inkflow-mobile/`](../inkflow-mobile/)** | **Canonique** — `npm run start` ici ; dépendances complètes (`expo-blur`, `lucide-react-native`, `moti`, etc.). |
-| [`inkflow-mobile/inkflow-mobile/`](../inkflow-mobile/inkflow-mobile/) | **Non canonique** — copie emboîtée, moins de deps ; ne pas utiliser comme projet principal. Voir [AGENTS-INKFLOW.md](./AGENTS-INKFLOW.md). |
+
+*(L’ancien sous-dossier dupliqué `inkflow-mobile/inkflow-mobile/` a été retiré du dépôt.)*
 
 ### 3.2 Écrans (arborescence `inkflow-mobile/app/`)
 

@@ -25,7 +25,6 @@ import { StudioThemeRouter } from '../../components/studio-themes/StudioThemeRou
 import { GoogleReviews } from '../../components/vitrine/GoogleReviews';
 import { fetchPublicGoogleReviews, fetchBusinessPublicReviews } from '../../lib/googlePlaces';
 import type { GoogleReviewsPayload } from '../../types/googlePlaces';
-
 const STRUCTURAL_THEMES = ['classic', 'split', 'vintage'] as const;
 
 const ICON_MAP = { sparkles: Sparkles, award: Award, star: Star, camera: Camera, shield: Shield, heart: Heart, users: Users };
@@ -236,19 +235,6 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     }
   }, [studioSlug]);
 
-  useEffect(() => {
-    if (studioSlug !== 'demo' || !runVitrineTour || !studio) return;
-    if (vitrineStepIndex >= 4) {
-      const firstAvailable = studio.flashDesigns?.find((f) => f.available) ?? studio.flashDesigns?.[0];
-      if (firstAvailable) {
-        const timer = setTimeout(() => setSelectedFlash(firstAvailable), vitrineStepIndex === 4 ? 400 : 0);
-        return () => clearTimeout(timer);
-      }
-    } else {
-      setSelectedFlash(null);
-    }
-  }, [studioSlug, runVitrineTour, vitrineStepIndex, studio]);
-
   const selectedFlashId = selectedFlash?.id;
   useEffect(() => {
     if (selectedFlash) {
@@ -320,6 +306,19 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       whyChooseUs: studio.whyChooseUs.map(w => ({ ...w, icon: ICON_MAP[w.icon] || Award }))
     };
   }, [studio]);
+
+  useEffect(() => {
+    if (studioSlug !== 'demo' || !runVitrineTour || !studio) return;
+    if (vitrineStepIndex >= 4) {
+      const firstAvailable = studio.flashDesigns?.find((f) => f.available) ?? studio.flashDesigns?.[0];
+      if (firstAvailable) {
+        const timer = setTimeout(() => setSelectedFlash(firstAvailable), vitrineStepIndex === 4 ? 400 : 0);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setSelectedFlash(null);
+    }
+  }, [studioSlug, runVitrineTour, vitrineStepIndex, studio]);
 
   /** Lien Maps public : URL fiche Google (paramètres) ou recherche Maps sur l’adresse du studio */
   const publicGoogleMapsHref = useMemo(() => {
@@ -912,7 +911,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
             </section>
             )}
 
-            {/* Artists */}
+            {/* Artistes — contenu Paramètres > Vitrine (JSON) ; les pages tatoueur dédiées : /artist/:slug */}
             <section id="artists" className="scroll-mt-24 sm:scroll-mt-32">
               <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
                 <VitrineSectionHeading eyebrow="Équipe" title="Artistes" icon={Users} />
@@ -933,7 +932,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                           <div className="flex flex-wrap items-center gap-6 text-sm">
                             <div className="flex items-center gap-2 text-neutral-800">
                               <Award className="w-5 h-5 text-neutral-700" />
-                              <span className="font-semibold">{artist.experience} d'expérience</span>
+                              <span className="font-semibold">{artist.experience} d&apos;expérience</span>
                             </div>
                             <div className="flex items-center gap-2 text-neutral-800">
                               <Camera className="w-5 h-5 text-neutral-700" />

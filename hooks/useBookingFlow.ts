@@ -18,6 +18,10 @@ import { createProjectRequest } from '../lib/supabaseProjectRequests';
 import { fetchClientHealthProfile, isHealthFormComplete, upsertClientHealthProfile } from '../lib/clientHealthProfile';
 import { supabase } from '../lib/supabase';
 import type { HealthFormData } from '../components/booking/HealthQuestionnaireForm';
+import {
+  fetchPublicArtistsForStudio,
+  type PublicBookingArtist,
+} from '../lib/publicStudioArtists';
 
 export type BookingMode = 'select' | 'flash' | 'project';
 
@@ -36,6 +40,8 @@ export interface PublicFlash {
   durationMinutes?: number;
   /** Zones conseillées par l'artiste (vitrine ou Supabase) */
   placement?: string[];
+  /** Lien inkflow_artists — filtrage multi-artistes */
+  artistId?: string | null;
 }
 
 export const DEFAULT_BODY_PLACEMENTS = [
@@ -85,6 +91,7 @@ export function mapDbFlashToPublic(f: FlashDesign): PublicFlash {
     available: f.available && !f.reserved,
     durationMinutes: typeof f.estimatedDuration === 'number' ? f.estimatedDuration : undefined,
     placement: f.placement?.length ? f.placement : undefined,
+    artistId: f.artistId ?? null,
   };
 }
 
@@ -93,6 +100,15 @@ export function replaceUrlFlashParam(flashId: string | null): void {
   const url = new URL(window.location.href);
   if (flashId) url.searchParams.set('flash', flashId);
   else url.searchParams.delete('flash');
+  window.history.replaceState({}, '', url.toString());
+}
+
+/** Met à jour `?artist=` (slug public) sans recharger. */
+export function replaceUrlArtistParam(artistSlug: string | null): void {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (artistSlug) url.searchParams.set('artist', artistSlug);
+  else url.searchParams.delete('artist');
   window.history.replaceState({}, '', url.toString());
 }
 
@@ -107,6 +123,11 @@ export function useBookingFlow(studioSlug: string) {
   const [selectedFlashId, setSelectedFlashId] = useState<string | null>(() => flashInUrl);
   const [flashList, setFlashList] = useState<PublicFlash[]>([]);
   const [flashListLoading, setFlashListLoading] = useState(true);
+
+  /** Collaborateurs actifs — étape « avec quel tatoueur ? » si ≥ 2 */
+  const [publicArtists, setPublicArtists] = useState<PublicBookingArtist[]>([]);
+  const [artistsLoading, setArtistsLoading] = useState(false);
+  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
 
   // ── Projet sur mesure (UI : ProjectRequestForm + createProjectRequest, comme la vitrine)
   const [projectSubmitted, setProjectSubmitted] = useState(false);
@@ -266,6 +287,58 @@ export function useBookingFlow(studioSlug: string) {
     };
   }, [studioId]);
 
+  // Artistes du studio (RLS public)
+  useEffect(() => {
+    if (!studioId || studioId === 'loading' || !supabaseEnabled) {
+      setPublicArtists([]);
+      setArtistsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setArtistsLoading(true);
+    fetchPublicArtistsForStudio(studioId)
+      .then((rows) => {
+        if (!cancelled) setPublicArtists(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setPublicArtists([]);
+      })
+      .finally(() => {
+        if (!cancelled) setArtistsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [studioId]);
+
+  /** Tant que la liste charge, on n’affiche pas les flashs (évite un flash puis blocage multi-artistes). */
+  const artistContextLocked =
+    Boolean(supabaseEnabled && studioId && studioId !== 'loading' && artistsLoading);
+
+  const needsArtistChoice = !artistContextLocked && publicArtists.length >= 2;
+
+  /** Studio solo : un seul tatoueur en base → sélection implicite + URL optionnelle */
+  useEffect(() => {
+    if (artistContextLocked || publicArtists.length !== 1 || selectedArtistId) return;
+    setSelectedArtistId(publicArtists[0].id);
+  }, [artistContextLocked, publicArtists, selectedArtistId]);
+
+  /** ?artist=slug — pré-sélection (deep link vitrine) */
+  useEffect(() => {
+    if (artistContextLocked || publicArtists.length < 2 || typeof window === 'undefined') return;
+    const slug = new URLSearchParams(window.location.search).get('artist');
+    if (!slug?.trim()) return;
+    const match = publicArtists.find((a) => a.slug === slug.trim().toLowerCase());
+    if (match) setSelectedArtistId(match.id);
+  }, [artistContextLocked, publicArtists]);
+
+  /** Flash réservé à un artiste → aligne la sélection */
+  useEffect(() => {
+    if (!selectedFlashId || !flashList.length) return;
+    const flash = flashList.find((f) => f.id === selectedFlashId);
+    if (flash?.artistId) setSelectedArtistId(flash.artistId);
+  }, [selectedFlashId, flashList]);
+
   // Charger le depositPercentage global depuis availability_settings
   useEffect(() => {
     if (!studioId || studioId === 'loading' || !supabaseEnabled) return;
@@ -422,10 +495,33 @@ export function useBookingFlow(studioSlug: string) {
     [form.selectedDate, getAvailableSlotsForDate],
   );
 
-  const availableFlashes = flashList.filter((f) => f.available);
+  const artistStepResolved = !needsArtistChoice || Boolean(selectedArtistId);
+
+  const availableFlashes = useMemo(() => {
+    const base = flashList.filter((f) => f.available);
+    if (artistContextLocked) return [];
+    if (!artistStepResolved) return [];
+    if (!needsArtistChoice) return base;
+    return base.filter((f) => !f.artistId || f.artistId === selectedArtistId);
+  }, [
+    flashList,
+    artistContextLocked,
+    artistStepResolved,
+    needsArtistChoice,
+    selectedArtistId,
+  ]);
+
   const selectedFlash = selectedFlashId
     ? availableFlashes.find((f) => f.id === selectedFlashId)
     : undefined;
+
+  const selectedArtistLabel = useMemo(() => {
+    if (!selectedArtistId) return null;
+    return publicArtists.find((a) => a.id === selectedArtistId)?.name ?? null;
+  }, [selectedArtistId, publicArtists]);
+
+  const artistSelectionPending =
+    needsArtistChoice && !selectedArtistId && !artistContextLocked;
 
   const flashPlacementOptions = useMemo(() => {
     if (!selectedFlash) return [];
@@ -467,7 +563,13 @@ export function useBookingFlow(studioSlug: string) {
     }
     setProjectError(null);
     try {
-      await createProjectRequest(data, studioId);
+      const prefix = selectedArtistLabel
+        ? `Tatoueur souhaité : ${selectedArtistLabel}\n\n`
+        : '';
+      await createProjectRequest(
+        { ...data, description: prefix + data.description },
+        studioId
+      );
       setProjectSubmitted(true);
     } catch (e) {
       const msg =
@@ -555,6 +657,11 @@ export function useBookingFlow(studioSlug: string) {
       const now = new Date().toISOString();
 
       // Persiste le RDV avant Stripe — le webhook met à jour status→confirmed et deposit_paid→true
+      const serviceLabel =
+        selectedArtistLabel != null
+          ? `${selectedFlash.title || 'Flash'} — ${selectedArtistLabel}`
+          : selectedFlash.title || 'Flash';
+
       if (supabaseEnabled) {
         await saveAppointmentToSupabase(studioId, {
           id: appointmentId,
@@ -564,7 +671,7 @@ export function useBookingFlow(studioSlug: string) {
           clientPhone: form.phone,
           date: form.selectedDate,
           time: form.selectedTime,
-          service: selectedFlash.title || 'Flash',
+          service: serviceLabel,
           duration: 60,
           price: selectedFlash.price ?? 0,
           deposit: depositAmount,
@@ -598,7 +705,10 @@ export function useBookingFlow(studioSlug: string) {
         flashId: selectedFlashId || undefined,
         clientName,
         clientEmail,
-        serviceName: selectedFlash?.title || 'Réservation tatouage — Flash',
+        serviceName:
+          selectedArtistLabel != null
+            ? `${selectedFlash?.title || 'Flash'} — ${selectedArtistLabel}`
+            : selectedFlash?.title || 'Réservation tatouage — Flash',
         type: 'deposit',
         placement: resolvedPlacement,
         clientNotes: form.flashNotes.trim() || undefined,
@@ -671,6 +781,22 @@ export function useBookingFlow(studioSlug: string) {
     setShowHealthForm(true);
   };
 
+  const selectArtist = (artist: PublicBookingArtist) => {
+    setSelectedArtistId(artist.id);
+    replaceUrlArtistParam(artist.slug);
+  };
+
+  /** Retour à l’étape tatoueur (multi-artistes) — retire un flash réservé si besoin */
+  const clearArtistSelection = () => {
+    const flash = flashList.find((f) => f.id === selectedFlashId);
+    if (flash?.artistId) {
+      setSelectedFlashId(null);
+      replaceUrlFlashParam(null);
+    }
+    setSelectedArtistId(null);
+    replaceUrlArtistParam(null);
+  };
+
   return {
     // Studio
     studioId,
@@ -678,6 +804,17 @@ export function useBookingFlow(studioSlug: string) {
     // Mode
     bookingMode,
     setBookingMode,
+    // Artistes (multi-tatoueurs)
+    publicArtists,
+    artistsLoading,
+    artistContextLocked,
+    needsArtistChoice,
+    artistSelectionPending,
+    selectedArtistId,
+    setSelectedArtistId,
+    selectedArtistLabel,
+    selectArtist,
+    clearArtistSelection,
     // Flash
     selectedFlashId,
     setSelectedFlashId,

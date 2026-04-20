@@ -48,3 +48,6 @@ supabase/.temp
 # UI UX Pro Max (skill) — fichiers générés par --persist
 /design-system/
 .cursor/skills/**/__pycache__/
+
+# Doublon Expo par erreur (ne pas versionner si recréé localement)
+inkflow-mobile/inkflow-mobile/

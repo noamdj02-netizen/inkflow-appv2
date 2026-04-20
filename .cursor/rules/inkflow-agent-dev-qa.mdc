@@ -35,7 +35,7 @@ Tu interviens quand on audite la fiabilité technique, les données ou les régr
 ## Stack rappel
 
 - Web : Vite + React, client `lib/supabase` (variables `VITE_*`).
-- Mobile : Expo Router — racine canonique `inkflow-mobile/` ; ignorer le sous-dossier emboîté `inkflow-mobile/inkflow-mobile/` (voir `docs/AGENTS-INKFLOW.md`).
+- Mobile : Expo Router — racine canonique `inkflow-mobile/` uniquement (voir `docs/AGENTS-INKFLOW.md`).
 - RLS : `docs/SECURITY-AUDIT-RLS.md`.
 
 ## Interdits

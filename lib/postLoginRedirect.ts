@@ -4,8 +4,6 @@ import { sanitizePostAuthRedirect } from './urls';
 import { normalizePublicMessageThreadId } from './threadIds';
 import { isInkflowInternalStaffEmail } from './inkflowInternalStaff';
 
-const CLIENT_HOME = '/client/dashboard';
-
 /**
  * Client espace client (même logique que {@link resolvePostLoginPath}) : metadata ou ligne portail.
  * Utilisé par ex. `/messages/:threadId` pour préremplir le nom sans écran intermédiaire.
@@ -130,7 +128,9 @@ export async function resolvePublicMessageAutoProfile(
 }
 
 /**
- * Après connexion : envoie les clients portail vers /client/dashboard, les pros vers la cible habituelle.
+ * Après connexion : applique la cible `redirect` / sessionStorage / défaut (souvent `/dashboard`).
+ * Ne force plus `/client/dashboard` selon le seul profil portail : la page `/login` (« Bon retour »)
+ * mène au dashboard tatoueur ; l’espace client passe par `/client` ou une URL sous `/client/…`.
  */
 export async function resolvePostLoginPath(
   raw: string | null | undefined,
@@ -142,8 +142,6 @@ export async function resolvePostLoginPath(
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return base;
-    const { isPortalClient } = await getInkflowPortalClientInfo(user);
-    if (isPortalClient) return CLIENT_HOME;
     /**
      * Comptes équipe InkFlow (@ink-flow.me, @inkflow.me, VITE_FOUNDER_ADMIN_EMAILS).
      * Après OAuth / lien magique, la cible est souvent `/dashboard?subscribe=…` : l’égalité stricte

@@ -92,7 +92,7 @@ const InkflowThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       window.removeEventListener('inkflow-navigate', sync);
     };
   }, []);
-  const isDashboardPro = pathname === '/dashboard' || pathname === '/admin';
+  const isDashboardPro = pathname === '/dashboard' || pathname.startsWith('/admin');
   return (
     /* @ts-expect-error next-themes ThemeProvider children — React 19 compat */
     <ThemeProvider
@@ -228,6 +228,12 @@ const Router: React.FC = () => {
     { path: '/aide', component: AidePage },
     { path: '/referral', component: ReferralPage, requiresAuth: true },
     { path: '/admin/debug-experience', component: DebugExperiencePage, requiresAuth: true },
+    {
+      path: /^\/admin\/([^/]+)\/?$/,
+      component: FounderDashboardPage,
+      requiresAuth: true,
+      getProps: (m) => ({ section: m[1] }),
+    },
     { path: '/admin', component: FounderDashboardPage, requiresAuth: true },
     // ── Portail client "My Inkflow" ─────────────────────────────────────────
     { path: /^\/onboarding\/finaliser-profil\/?$/, component: ClientOnboardingFinalizePage },

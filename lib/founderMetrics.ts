@@ -61,9 +61,13 @@ function founderEmailsFromEnv(): Set<string> {
  * - E-mails **@ink-flow.me** / **@inkflow.me** : toujours autorisés (équipe produit, sans copier dans VITE).
  * - Si `VITE_FOUNDER_ADMIN_EMAILS` est **vide** : pas de blocage client — l’Edge tranche.
  * - Si renseignée : e-mail listé **ou** domaine équipe ci-dessus.
+ * - **Dev local uniquement** : `VITE_ADMIN_DEV_OPEN=true` → tout compte connecté peut ouvrir l’UI (les données restent filtrées par l’Edge). Inactif en build production (`import.meta.env.DEV` est false).
  */
 export function isFounderAllowlistedEmail(email: string | undefined | null): boolean {
   if (!email?.trim()) return false;
+  if (import.meta.env.DEV && import.meta.env.VITE_ADMIN_DEV_OPEN === 'true') {
+    return true;
+  }
   if (isInkflowInternalStaffEmail(email)) return true;
   const raw = (import.meta.env.VITE_FOUNDER_ADMIN_EMAILS as string | undefined) ?? '';
   if (!raw.trim()) return true;

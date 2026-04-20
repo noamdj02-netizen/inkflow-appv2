@@ -1793,8 +1793,12 @@ button, a, [role="button"], [role="tab"], [role="menuitem"], summary {
 
 /* ===== Bilan Finance — Impression / Export PDF ===== */
 @media print {
-  #root,
-  .app-root,
+  /*
+   * Par défaut on masque le shell pour ne laisser que les modales d’export.
+   * Exception : admin fondateur (/admin) — même #root/.app-root, sinon PDF vide.
+   */
+  #root:not(:has(.founder-admin-scroll-root)),
+  .app-root:not(:has(.founder-admin-scroll-root)),
   .app-shell {
     display: none !important;
   }
@@ -1870,4 +1874,33 @@ button, a, [role="button"], [role="tab"], [role="menuitem"], summary {
 @keyframes demo-scene-slide-in {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   Founder /admin — variables (import inkflow-admin-dashboard.zip)
+   Scope : .founder-admin-scroll-root uniquement
+   ============================================================ */
+.founder-admin-scroll-root {
+  --admin-bg: #0d0d0d;
+  --admin-card: #161616;
+  --admin-border: #2a2a2a;
+  --admin-text: #ffffff;
+  --admin-text-muted: #a0a0a0;
+  --admin-accent: #c9a96e;
+  --admin-accent-light: #f5d98b;
+  --admin-success: #10b981;
+  --admin-warning: #f59e0b;
+  --admin-danger: #dc2626;
+}
+
+.founder-admin-scroll-root.founder-admin-light,
+.founder-admin-scroll-root .founder-admin-light {
+  --admin-bg: #fafafa;
+  --admin-card: #ffffff;
+  --admin-border: #e5e5e5;
+  --admin-text: #0d0d0d;
+  --admin-text-muted: #6b6b6b;
+  /* Aligné sur le branding client (CLIENT_DASHBOARD_THEME.accent — bleu primaire) */
+  --admin-accent: #2563eb;
+  --admin-accent-light: #60a5fa;
 }

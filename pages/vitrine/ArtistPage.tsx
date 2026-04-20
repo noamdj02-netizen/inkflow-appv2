@@ -332,7 +332,11 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
 
           {artist.available_now ? (
             <a
-              href={artist.studio_slug ? `/book/${artist.studio_slug}` : '#'}
+              href={
+                artist.studio_slug
+                  ? `/book/${artist.studio_slug}?artist=${encodeURIComponent(artist.slug)}`
+                  : '#'
+              }
               className="flex w-full items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold transition-all"
               style={{ background: CX.accent, color: '#000' }}
             >

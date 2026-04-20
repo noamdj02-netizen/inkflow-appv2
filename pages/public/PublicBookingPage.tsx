@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Zap,
   Pencil,
+  Users,
   MapPin,
   Instagram,
   FileText,
@@ -48,6 +49,12 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     selectedFlashId,
     setSelectedFlashId,
     flashListLoading,
+    artistContextLocked,
+    artistSelectionPending,
+    publicArtists,
+    needsArtistChoice,
+    selectArtist,
+    clearArtistSelection,
     availableFlashes,
     selectedFlash,
     flashPlacementOptions,
@@ -246,7 +253,9 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             {studio.name}
           </h1>
           <p id="booking-step-hint" className="text-ink-muted text-sm mt-1">
-            {bookingMode === 'select'
+            {artistSelectionPending
+              ? 'Avec quel tatoueur souhaitez-vous réserver ?'
+              : bookingMode === 'select'
               ? 'Choisissez votre type de prestation'
               : bookingMode === 'project'
               ? 'Demande de projet sur mesure'
@@ -267,8 +276,43 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
           </span>
         </section>
 
+        {/* — Étape tatoueur (studios multi-artistes) — */}
+        {artistSelectionPending && (
+          <section className="mb-8 space-y-3" aria-label="Choix du tatoueur">
+            <div className="space-y-3">
+              {publicArtists.map((artist) => (
+                <button
+                  key={artist.id}
+                  type="button"
+                  onClick={() => selectArtist(artist)}
+                  className="group w-full min-h-[88px] rounded-2xl border border-ink-border border-l-[4px] border-l-emerald-500/90 bg-ink-surface p-4 sm:p-5 text-left shadow-sm flex items-center gap-4 transition-all duration-200 hover:border-ink-accent/40 hover:shadow-md active:scale-[0.99] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+                >
+                  <div className="w-14 h-14 rounded-full overflow-hidden bg-zinc-800 border border-ink-border flex-shrink-0 ring-1 ring-white/5">
+                    {artist.avatar_url ? (
+                      <img src={artist.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Users className="w-7 h-7 text-zinc-500" strokeWidth={1.5} aria-hidden />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-semibold text-ink-text text-base tracking-tight">{artist.name}</span>
+                    <p className="text-ink-muted text-xs mt-1">Réserver avec ce tatoueur</p>
+                  </div>
+                  <ChevronRight
+                    className="w-5 h-5 text-zinc-400 flex-shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+                    strokeWidth={1.5}
+                    aria-hidden
+                  />
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* — Écran 0 : Sélection Flash / Projet — */}
-        {bookingMode === 'select' && (
+        {!artistSelectionPending && bookingMode === 'select' && (
           <section className="mb-6 space-y-3 sm:space-y-4" aria-label="Type de prestation">
             <button
               type="button"
@@ -342,7 +386,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         )}
 
         {/* — Écran Projet sur mesure — */}
-        {bookingMode === 'project' && (
+        {!artistSelectionPending && bookingMode === 'project' && (
           <>
             {projectSubmitted ? (
               <section className="mb-6 flex flex-col items-center text-center py-8">
@@ -364,19 +408,31 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               </section>
             ) : (
               <section className="space-y-4 mb-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBookingMode('select');
-                    setSelectedFlashId(null);
-                    replaceUrlFlashParam(null);
-                    setProjectError(null);
-                  }}
-                  className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm mb-1 transition-colors min-h-[44px] rounded-lg px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
-                >
-                  <ArrowLeft className="w-4 h-4" strokeWidth={1.5} aria-hidden />
-                  Changer de type
-                </button>
+                <div className="flex flex-wrap gap-2 mb-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBookingMode('select');
+                      setSelectedFlashId(null);
+                      replaceUrlFlashParam(null);
+                      setProjectError(null);
+                    }}
+                    className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm transition-colors min-h-[44px] rounded-lg px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+                  >
+                    <ArrowLeft className="w-4 h-4" strokeWidth={1.5} aria-hidden />
+                    Changer de type
+                  </button>
+                  {needsArtistChoice && (
+                    <button
+                      type="button"
+                      onClick={clearArtistSelection}
+                      className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm transition-colors min-h-[44px] rounded-lg px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+                    >
+                      <Users className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
+                      Changer de tatoueur
+                    </button>
+                  )}
+                </div>
 
                 <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-6 dark:border-neutral-700 dark:bg-neutral-950">
                   {projectError && (
@@ -404,10 +460,10 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         )}
 
         {/* — Flux Flash — */}
-        {bookingMode === 'flash' && (
+        {!artistSelectionPending && bookingMode === 'flash' && (
           <>
-            {!new URLSearchParams(window.location.search).get('flash') && (
-              <div className="mb-4">
+            <div className="mb-4 flex flex-wrap gap-2">
+              {!new URLSearchParams(window.location.search).get('flash') && (
                 <button
                   type="button"
                   onClick={() => {
@@ -420,8 +476,18 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                   <ArrowLeft className="w-4 h-4" strokeWidth={1.5} aria-hidden />
                   Changer de type
                 </button>
-              </div>
-            )}
+              )}
+              {needsArtistChoice && (
+                <button
+                  type="button"
+                  onClick={clearArtistSelection}
+                  className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm transition-colors min-h-[44px] rounded-lg px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+                >
+                  <Users className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
+                  Changer de tatoueur
+                </button>
+              )}
+            </div>
 
             {/* 2. Choix du flash — flow-root + cartes pleine largeur pour éviter l’effondrement de hauteur (aspect-ratio) */}
             <section className="mb-8 relative z-0 isolate">
@@ -430,7 +496,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                 <p className="text-xs text-ink-muted mb-4">
                   Prix et acompte selon le design sélectionné.
                 </p>
-                {flashListLoading ? (
+                {flashListLoading || artistContextLocked ? (
                   <div
                     className="py-12 flex items-center justify-center"
                     role="status"
@@ -442,7 +508,9 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                   </div>
                 ) : availableFlashes.length === 0 ? (
                   <p className="text-sm text-ink-muted text-center py-8">
-                    Aucun flash disponible pour le moment. Revenez plus tard ou contactez le studio.
+                    {needsArtistChoice
+                      ? 'Aucun flash listé pour ce tatoueur pour le moment. Essayez un autre artiste ou contactez le studio.'
+                      : 'Aucun flash disponible pour le moment. Revenez plus tard ou contactez le studio.'}
                   </p>
                 ) : (
                   <div className="grid w-full grid-cols-2 gap-3 sm:gap-4 [grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] flow-root pb-1">
