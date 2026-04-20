@@ -1012,6 +1012,61 @@ body:has(.public-page-scroll) {
   overscroll-behavior: auto;
 }
 
+/* Founder /admin — hors .app-shell : .app-root est overflow:hidden sans zone scroll → contenu coupé */
+.founder-admin-scroll-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  min-height: calc(var(--vh, 1vh) * 100);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding: var(--sat) var(--sar) var(--sab) var(--sal);
+  box-sizing: border-box;
+}
+
+/* Bloc récap visible uniquement à l’impression (PDF) */
+.founder-print-only {
+  display: none;
+}
+
+/* Founder /admin — impression PDF / Papier (masque graphiques & actions) */
+@media print {
+  .founder-admin-no-print {
+    display: none !important;
+  }
+  .founder-admin-scroll-root {
+    position: static !important;
+    inset: auto !important;
+    z-index: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 12mm !important;
+    background: #fff !important;
+    color: #111 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .founder-admin-scroll-root header {
+    position: static !important;
+    backdrop-filter: none !important;
+    border-color: #ccc !important;
+    background: #f8f8f8 !important;
+  }
+  .founder-print-only {
+    display: block !important;
+  }
+  .founder-print-hide {
+    display: none !important;
+  }
+}
+
 /* Tunnel /book (PublicBookingPage) : shell flex plein écran + scroll interne + footer en flux
    (évite le chevauchement d’un footer fixed sur les flashs / calendrier). */
 .book-public-root {
@@ -1179,16 +1234,7 @@ input, select, textarea {
 }
 /* Accueil : pas d’override opaque — le flou et la transparence viennent des classes Tailwind sur le header */
 
-/*
- * Demandes : liste scrollable interne (RequestsDashboard). Le bloc `.app-shell-content { overflow-y: auto }`
- * plus haut a la même spécificité que `overflow-hidden` Tailwind — selon l’ordre des feuilles, le shell
- * peut encore défiler et l’en-tête « part » avec. Cette règle (2 classes + attribut) impose overflow:hidden.
- */
-.dashboard-pro-shell .app-shell-content[data-inkflow-requests-scroll='true'] {
-  overflow: hidden;
-  overscroll-behavior-y: none;
-  min-height: 0;
-}
+/* Demandes : un seul scroll — celui de `.app-shell-content` (titre, onglets, encart et liste défilent ensemble). */
 
 @media (prefers-reduced-motion: reduce) {
   .dashboard-pro-shell .bottom-nav button {

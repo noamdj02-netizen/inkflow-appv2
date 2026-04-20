@@ -10,7 +10,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { createSupabaseUserClient } from "../_shared/supabaseAuth.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { sendEmail } from "../_shared/resend.ts";
-import { wrapEmailLayout, EMAIL_STYLES, escapeHtml } from "../_shared/emailLayout.ts";
+import { htmlWelcomeImmediate } from "../_shared/onboardingEmailDark.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -78,30 +78,11 @@ Deno.serve(async (req: Request) => {
   const displayName =
     (typeof meta.name === "string" && meta.name.trim()) || u.email?.split("@")[0] || "toi";
 
-  const appUrl = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "https://app.ink-flow.me").replace(
-    /\/+$/,
-    "",
-  );
-
-  const bodyHtml = `
-<p style="${EMAIL_STYLES.text}">Bienvenue sur InkFlow. Ton compte studio est actif : en quelques minutes tu peux publier ton <strong>lien vitrine</strong>, poser tes <strong>créneaux</strong> et recevoir des <strong>demandes</strong> sans tout gérer sur Insta.</p>
-<p style="${EMAIL_STYLES.text}">Retrouve l’agenda, les demandes et la messagerie depuis le tableau de bord.</p>
-<p style="${EMAIL_STYLES.text}">Une question ? Écris-nous à ${escapeHtml("contact@ink-flow.me")}.</p>
-`;
-
-  const html = wrapEmailLayout({
-    tag: "BIENVENUE",
-    title: "Bienvenue sur InkFlow",
-    subtitle: "Vitrine, agenda et demandes au même endroit",
-    greetingName: displayName,
-    introLine: "On est contents de t’accompagner.",
-    bodyHtml,
-    button: { text: "Ouvrir le tableau de bord", url: `${appUrl}/dashboard` },
-  });
+  const html = htmlWelcomeImmediate(displayName);
 
   const sent = await sendEmail({
     to: [u.email],
-    subject: "Ton espace InkFlow est prêt",
+    subject: "Ton studio InkFlow est prêt — bookable en 10 min",
     html,
   });
 
@@ -117,6 +98,24 @@ Deno.serve(async (req: Request) => {
   }
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+  const emailNorm = (u.email || "").trim().toLowerCase();
+  if (emailNorm) {
+    const { data: studioRow } = await admin.from("inkflow_studios").select("id").eq("email", emailNorm).maybeSingle();
+    if (studioRow?.id) {
+      await admin.from("inkflow_user_settings").upsert(
+        {
+          studio_id: studioRow.id as string,
+          onboarding_step: 0,
+          onboarding_dismissed: false,
+          onboarding_welcome_sent_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "studio_id" },
+      );
+    }
+  }
+
   const merged = { ...meta, [WELCOME_META_KEY]: new Date().toISOString() };
   const { error: updErr } = await admin.auth.admin.updateUserById(u.id, {
     user_metadata: merged,

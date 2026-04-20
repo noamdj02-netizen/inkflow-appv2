@@ -684,10 +684,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     ) : null;
 
   return (
-    <div className="isolate flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-      {/* En-tête : fixe dans cette colonne — le scroll est uniquement sur la liste (plus de chevauchement avec position:sticky dans .app-shell-content). */}
+    <div className="w-full min-w-0">
+      {/* En-tête : défile avec le reste — le scroll est celui de .app-shell-content (toute la page du panneau). */}
       <div
-        className="shrink-0 z-10 -mx-3 sm:-mx-6 md:-mx-8 xl:-mx-10 2xl:-mx-12 px-3 sm:px-6 md:px-8 xl:px-10 2xl:px-12 pt-0 pb-4 border-b border-zinc-200/80 dark:border-zinc-800/90 shadow-[0_6px_20px_-8px_rgba(15,23,42,0.12)] dark:shadow-[0_8px_24px_-10px_rgba(0,0,0,0.45)] max-sm:bg-zinc-50 max-sm:dark:bg-black sm:bg-zinc-50/98 sm:dark:bg-black/92 sm:backdrop-blur-md"
+        className="relative -mx-3 sm:-mx-6 md:-mx-8 xl:-mx-10 2xl:-mx-12 px-3 sm:px-6 md:px-8 xl:px-10 2xl:px-12 pt-0 pb-5 sm:pb-5 border-b border-zinc-200/80 dark:border-zinc-800/90 shadow-[0_6px_20px_-8px_rgba(15,23,42,0.12)] dark:shadow-[0_8px_24px_-10px_rgba(0,0,0,0.45)] bg-zinc-50 dark:bg-zinc-950"
       >
         <div className="flex flex-col gap-2.5 sm:gap-4">
           <div className="min-w-0">
@@ -820,18 +820,13 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         </div>
       </div>
 
-      <div
-        className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] pt-1"
-        role="region"
-        aria-label="Liste des demandes"
-      >
-        <div className="animate-fade-in motion-reduce:animate-none min-w-0 pb-4">
-          <div
-            id="requests-panel"
-            role="tabpanel"
-            aria-labelledby={`requests-tab-${activeTab}`}
-            className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm overflow-hidden"
-          >
+      <div className="min-w-0 pt-4 sm:pt-5 pb-6">
+        <div
+          id="requests-panel"
+          role="tabpanel"
+          aria-labelledby={`requests-tab-${activeTab}`}
+          className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm overflow-hidden"
+        >
         {activeTab === 'rdv' && (
           pendingAppointments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
@@ -1207,8 +1202,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               </p>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 p-3 sm:p-4">
-              <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-700/80 px-4 py-3 bg-zinc-50/90 dark:bg-zinc-800/40">
+            <div className="flex flex-col gap-4 p-3 sm:p-4 min-h-0">
+              <div className="shrink-0 rounded-xl border border-zinc-200/80 dark:border-zinc-700/80 px-4 py-3 bg-zinc-50/90 dark:bg-zinc-800/40">
                 <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium flex items-start gap-2">
                   <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400 stroke-[1.75]" />
                   <span>
@@ -1284,7 +1279,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         <button
                           type="button"
                           onClick={() => setAcceptProjectTarget(pr)}
-                          className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#00D4FF] text-[#0d0d0d] font-semibold hover:opacity-90 active:scale-[0.98] transition-all text-sm shadow-sm"
+                          className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold shadow-sm hover:bg-emerald-700 active:scale-[0.98] transition-all text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
                         >
                           <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" /> Accepter le projet
                         </button>
@@ -1292,7 +1287,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         <button
                           type="button"
                           onClick={() => onOpenProjectDiscussion?.(`pr_${pr.id}`)}
-                          className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all text-sm shadow-sm"
+                          className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-900 font-semibold shadow-sm hover:bg-zinc-50 active:scale-[0.98] transition-all text-sm dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
                         >
                           <MessageCircle className="w-4 h-4 shrink-0" /> Messagerie InkFlow
                         </button>
@@ -1428,7 +1423,6 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             </div>
           )
         )}
-        </div>
         </div>
       </div>
 

@@ -339,7 +339,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
                         onAcceptProject(pr);
                         onClose();
                       }}
-                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#00D4FF] text-[#0d0d0d] font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
+                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 text-white font-semibold shadow-sm hover:bg-emerald-700 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
                     >
                       <CheckCircle className="w-5 h-5 shrink-0 stroke-[1.75]" />
                       Accepter le projet
@@ -352,7 +352,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
                         onOpenProjectDiscussion(`pr_${pr.id}`);
                         onClose();
                       }}
-                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
+                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-zinc-200 bg-white text-zinc-900 font-semibold shadow-sm hover:bg-zinc-50 active:scale-[0.98] transition-all dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
                     >
                       <MessageCircle className="w-5 h-5 shrink-0" />
                       Messagerie InkFlow
@@ -402,7 +402,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
                       onOpenProjectDiscussion(bk.id);
                       onClose();
                     }}
-                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
+                    className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-zinc-200 bg-white text-zinc-900 font-semibold shadow-sm hover:bg-zinc-50 active:scale-[0.98] transition-all dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
                   >
                     <MessageCircle className="w-5 h-5 shrink-0" />
                     Messagerie InkFlow

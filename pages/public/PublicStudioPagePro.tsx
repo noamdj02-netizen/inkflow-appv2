@@ -444,8 +444,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     }
   };
 
-  const handleContactSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleContactSubmit = async () => {
     setContactLoading(true);
     try {
       const studioId = await getStudioIdBySlug(studioSlug);
@@ -1673,7 +1672,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 <X className="w-6 h-6" aria-hidden />
               </button>
             </div>
-            <form className="space-y-6" onSubmit={handleContactSubmit}>
+            <div className="space-y-6" role="group" aria-labelledby="vitrine-contact-title">
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Nom *</label>
@@ -1702,7 +1701,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 <label className="block text-sm font-semibold mb-2">Message *</label>
                 <textarea required rows={6} value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none" placeholder="Décrivez votre projet ou posez vos questions..." />
               </div>
-              <button type="submit" disabled={contactLoading} className="w-full bg-neutral-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none min-h-[44px]">
+              <button
+                type="button"
+                disabled={contactLoading}
+                onClick={() => void handleContactSubmit()}
+                className="w-full bg-neutral-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none min-h-[44px]"
+              >
                 {contactLoading ? (
                   <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
@@ -1713,7 +1717,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 )}
               </button>
               <p className="text-sm text-neutral-600 text-center">Nous vous répondrons sous <strong>24 heures</strong></p>
-            </form>
+            </div>
           </div>
         </div>
       )}

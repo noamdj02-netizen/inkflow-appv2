@@ -8,6 +8,7 @@ import { ensureStudio } from '../lib/supabaseDashboard';
 import { resolvePostLoginPath } from '../lib/postLoginRedirect';
 import { CLIENT_ONBOARDING_FINALIZE_PATH } from '../lib/clientOnboardingGate';
 import { markJustSignedUp, markWelcomeRequired } from '../lib/welcomeStorage';
+import { isInkflowInternalStaffEmail } from '../lib/inkflowInternalStaff';
 
 export const AuthCallbackPage: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -76,8 +77,8 @@ export const AuthCallbackPage: React.FC = () => {
       const studioName = (meta.studio_name as string) || 'Mon studio';
       const referralCode = (meta.referral_code as string) || undefined;
       const isClientFlow = isClientCallback || redirectUrl.includes('/client');
-      /** Même feedback dashboard qu’après inscription email : OAuth depuis /login ou lien de confirmation. */
-      if (!isClientFlow) {
+      /** Parcours bienvenue tatoueur — pas pour les comptes équipe @ink-flow.me / founder. */
+      if (!isClientFlow && !isInkflowInternalStaffEmail(u.email)) {
         const createdMs = u.created_at ? new Date(u.created_at).getTime() : 0;
         const isVeryNewAccount =
           createdMs > 0 && Date.now() - createdMs < 5 * 60 * 1000;
@@ -87,7 +88,7 @@ export const AuthCallbackPage: React.FC = () => {
           if (scope) markWelcomeRequired(scope);
         }
       }
-      if (!isClientFlow) {
+      if (!isClientFlow && !isInkflowInternalStaffEmail(u.email)) {
         try {
           await ensureStudio(u.email ?? '', name, studioName, referralCode);
           await sendTattooerWelcomeEmailIfNeeded();

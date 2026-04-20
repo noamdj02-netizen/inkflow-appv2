@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { CheckCircle2, Circle, ChevronRight, X, Sparkles } from 'lucide-react';
+import { computeDashboardActivationPercent } from '../../lib/onboardingMetrics';
 import type { Appointment, FlashDesign } from '../../types';
 
 interface StudioSetupChecklistProps {
@@ -30,6 +31,24 @@ export const StudioSetupChecklist: React.FC<StudioSetupChecklistProps> = ({
       return false;
     }
   });
+
+  const activationPercent = useMemo(
+    () =>
+      computeDashboardActivationPercent({
+        studioSlug,
+        flashCount: flashDesigns.length,
+        availabilitySetupComplete,
+        paymentsSetupComplete,
+        appointmentCount: appointments.length,
+      }),
+    [
+      studioSlug,
+      flashDesigns.length,
+      availabilitySetupComplete,
+      paymentsSetupComplete,
+      appointments.length,
+    ],
+  );
 
   const items = useMemo(() => {
     const out: { id: string; label: string; action: () => void }[] = [];
@@ -100,11 +119,23 @@ export const StudioSetupChecklist: React.FC<StudioSetupChecklistProps> = ({
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-zinc-900 dark:text-white text-sm sm:text-base">
-              Prêt à recevoir des résas en ligne ?
+              Activation studio — {activationPercent}%
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Quelques étapes pour que vitrine, créneaux et paiements travaillent ensemble.
+              Objectif : vitrine remplie, flash, créneaux, Stripe — puis résas sans friction.
             </p>
+            <div
+              className="mt-2 h-1.5 w-full max-w-xs rounded-full bg-zinc-200/80 dark:bg-zinc-800 overflow-hidden"
+              role="progressbar"
+              aria-valuenow={activationPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div
+                className="h-full rounded-full bg-emerald-500 dark:bg-emerald-500/90 transition-[width] duration-500"
+                style={{ width: `${activationPercent}%` }}
+              />
+            </div>
           </div>
         </div>
         <button

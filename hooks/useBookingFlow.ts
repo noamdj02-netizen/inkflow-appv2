@@ -3,7 +3,7 @@
  * Extrait de PublicBookingPage.tsx pour réduire sa taille et faciliter les tests.
  */
 import { useState, useEffect, useMemo } from 'react';
-import type { FlashDesign } from '../types';
+import type { FlashDesign, ProjectRequestFormData } from '../types';
 import {
   getStudioPublicBySlug,
   getFlashDesignsFromSupabase,
@@ -14,8 +14,7 @@ import { getVitrineDataBySlugAsync } from '../lib/vitrineStorage';
 import { toLocalDateString } from '../lib/utils';
 import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS, type StudioAvailabilityResponse } from '../lib/studioAvailability';
 import { createCheckoutSession } from '../lib/stripeClient';
-import { createBooking, uploadBookingReferenceImages } from '../lib/supabaseBookings';
-import { getCurrentClientAvatarUrlForBooking } from '../lib/clientPortalProfile';
+import { createProjectRequest } from '../lib/supabaseProjectRequests';
 import { fetchClientHealthProfile, isHealthFormComplete, upsertClientHealthProfile } from '../lib/clientHealthProfile';
 import { supabase } from '../lib/supabase';
 import type { HealthFormData } from '../components/booking/HealthQuestionnaireForm';
@@ -33,6 +32,8 @@ export interface PublicFlash {
   depositPercentage?: number;
   imageUrl?: string;
   available: boolean;
+  /** Durée tatouage (minutes) — flash Supabase */
+  durationMinutes?: number;
   /** Zones conseillées par l'artiste (vitrine ou Supabase) */
   placement?: string[];
 }
@@ -82,6 +83,7 @@ export function mapDbFlashToPublic(f: FlashDesign): PublicFlash {
     depositAmount: f.depositAmount,
     imageUrl: f.imageUrl,
     available: f.available && !f.reserved,
+    durationMinutes: typeof f.estimatedDuration === 'number' ? f.estimatedDuration : undefined,
     placement: f.placement?.length ? f.placement : undefined,
   };
 }
@@ -106,18 +108,8 @@ export function useBookingFlow(studioSlug: string) {
   const [flashList, setFlashList] = useState<PublicFlash[]>([]);
   const [flashListLoading, setFlashListLoading] = useState(true);
 
-  // ── Projet sur mesure ────────────────────────────────────────────────────────
+  // ── Projet sur mesure (UI : ProjectRequestForm + createProjectRequest, comme la vitrine)
   const [projectSubmitted, setProjectSubmitted] = useState(false);
-  const [projectForm, setProjectForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    instagram: '',
-    description: '',
-  });
-  const [projectImages, setProjectImages] = useState<File[]>([]);
-  const [projectSubmitting, setProjectSubmitting] = useState(false);
   const [projectError, setProjectError] = useState<string | null>(null);
 
   // ── Studio / vitrine ─────────────────────────────────────────────────────────
@@ -468,64 +460,19 @@ export function useBookingFlow(studioSlug: string) {
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
-  const handleProjectSubmit = async () => {
-    if (
-      !projectForm.firstName ||
-      !projectForm.lastName ||
-      !projectForm.email ||
-      !projectForm.description
-    )
+  const handleProjectRequestSubmit = async (data: ProjectRequestFormData) => {
+    if (!studioId || studioId === 'loading') {
+      setProjectError('Studio introuvable. Réessayez dans un instant.');
       return;
-    if (!studioId || studioId === 'loading') return;
-    setProjectSubmitting(true);
+    }
     setProjectError(null);
     try {
-      let refUrls: string[] = [];
-      if (projectImages.length > 0) {
-        try {
-          refUrls = await uploadBookingReferenceImages(studioId, projectImages);
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          setProjectError(
-            msg ||
-              'Impossible d\'envoyer les images. Vérifiez le format (JPG, PNG, WebP) et la taille (max 5 Mo).'
-          );
-          return;
-        }
-      }
-
-      let descriptionBody = projectForm.description.trim();
-      if (refUrls.length > 0) {
-        descriptionBody += `\n\n--- Détails ---\n${refUrls.length} image(s) de référence jointes`;
-      }
-
-      let clientAvatarUrl: string | undefined;
-      try {
-        const av = await getCurrentClientAvatarUrlForBooking();
-        if (av) clientAvatarUrl = av;
-      } catch {
-        /* non connecté */
-      }
-
-      await createBooking(
-        {
-          clientName: `${projectForm.firstName} ${projectForm.lastName}`,
-          clientEmail: projectForm.email,
-          description: descriptionBody,
-          requestedDate: new Date().toISOString().split('T')[0],
-          requestedTime: null,
-          referenceImages: refUrls.length > 0 ? refUrls : undefined,
-          clientInstagram: projectForm.instagram.trim() || undefined,
-          ...(clientAvatarUrl ? { clientAvatarUrl } : {}),
-        },
-        studioId
-      );
+      await createProjectRequest(data, studioId);
       setProjectSubmitted(true);
-      setProjectImages([]);
-    } catch {
-      setProjectError('Erreur lors de l\'envoi. Veuillez réessayer.');
-    } finally {
-      setProjectSubmitting(false);
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : 'Erreur lors de l\'envoi. Veuillez réessayer.';
+      setProjectError(msg);
     }
   };
 
@@ -743,13 +690,9 @@ export function useBookingFlow(studioSlug: string) {
     depositAmount,
     // Project
     projectSubmitted,
-    projectForm,
-    setProjectForm,
-    projectImages,
-    setProjectImages,
-    projectSubmitting,
     projectError,
-    handleProjectSubmit,
+    setProjectError,
+    handleProjectRequestSubmit,
     // Availability
     availabilityLoading,
     availableDates,

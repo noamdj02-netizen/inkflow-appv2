@@ -2,6 +2,8 @@ import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { sanitizePostAuthRedirect } from './urls';
 import { normalizePublicMessageThreadId } from './threadIds';
+import { isInkflowInternalStaffEmail } from './inkflowInternalStaff';
+
 const CLIENT_HOME = '/client/dashboard';
 
 /**
@@ -36,6 +38,24 @@ export async function getInkflowPortalClientInfo(
 
 function emailNorm(e: string | undefined): string {
   return (e || '').toLowerCase().trim();
+}
+
+/** Path seul, sans query/hash — pour comparer `/dashboard` et `/dashboard?subscribe=…`. */
+function pathnameOnly(raw: string): string {
+  const s = String(raw || '').trim();
+  if (!s) return '/';
+  if (s.startsWith('/')) {
+    const noHash = s.split('#')[0] ?? s;
+    return (noHash.split('?')[0] || '/').replace(/\/+$/, '') || '/';
+  }
+  try {
+    const u = new URL(s);
+    let p = u.pathname || '/';
+    if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);
+    return p || '/';
+  } catch {
+    return '/';
+  }
 }
 
 /**
@@ -124,6 +144,18 @@ export async function resolvePostLoginPath(
     if (!user) return base;
     const { isPortalClient } = await getInkflowPortalClientInfo(user);
     if (isPortalClient) return CLIENT_HOME;
+    /**
+     * Comptes équipe InkFlow (@ink-flow.me, @inkflow.me, VITE_FOUNDER_ADMIN_EMAILS).
+     * Après OAuth / lien magique, la cible est souvent `/dashboard?subscribe=…` : l’égalité stricte
+     * sur `base === '/dashboard'` échouait → dashboard tatoueur en prod.
+     */
+    if (isInkflowInternalStaffEmail(user.email)) {
+      const p = pathnameOnly(base);
+      if (p.startsWith('/onboarding')) return base;
+      if (p.startsWith('/client')) return base;
+      if (p === '/admin' || p.startsWith('/admin/')) return base;
+      return '/admin';
+    }
     return base;
   } catch {
     return base;

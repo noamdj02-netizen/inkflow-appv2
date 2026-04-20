@@ -64,3 +64,11 @@ verify_jwt = false
 
 [functions.push-subscribe]
 verify_jwt = false
+
+# Founder dashboard — JWT vérifié dans le handler (getGoTrueUser + FOUNDER_ADMIN_EMAILS).
+[functions.admin-founder-metrics]
+verify_jwt = false
+
+# Séquence onboarding (cron) — secret EDGE_CRON_SECRET ; pas de JWT.
+[functions.onboarding-automation]
+verify_jwt = false

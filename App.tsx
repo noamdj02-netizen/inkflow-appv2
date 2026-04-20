@@ -44,6 +44,9 @@ const FeatureDetailPage = lazy(() => import('./pages/features/FeatureDetailPage'
 const InstagramCallbackPage = lazy(() => import('./pages/InstagramCallbackPage').then(m => ({ default: m.InstagramCallbackPage })));
 const AddToHomeScreenPage = lazy(() => import('./pages/AddToHomeScreenPage').then(m => ({ default: m.AddToHomeScreenPage })));
 const DebugExperiencePage = lazy(() => import('./pages/admin/DebugExperiencePage').then(m => ({ default: m.DebugExperiencePage })));
+const FounderDashboardPage = lazy(() =>
+  import('./pages/admin/FounderDashboardPage').then((m) => ({ default: m.FounderDashboardPage })),
+);
 const ClientVitrineEmbedPage = lazy(() => import('./pages/client/ClientStudioEmbedPage').then(m => ({ default: m.ClientVitrineEmbedPage })));
 const ClientFlashToolsEmbedPage = lazy(() => import('./pages/client/ClientStudioEmbedPage').then(m => ({ default: m.ClientFlashToolsEmbedPage })));
 const ClientDashboard = lazy(() => import('./pages/public/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
@@ -89,7 +92,7 @@ const InkflowThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       window.removeEventListener('inkflow-navigate', sync);
     };
   }, []);
-  const isDashboardPro = pathname === '/dashboard';
+  const isDashboardPro = pathname === '/dashboard' || pathname === '/admin';
   return (
     /* @ts-expect-error next-themes ThemeProvider children — React 19 compat */
     <ThemeProvider
@@ -225,6 +228,7 @@ const Router: React.FC = () => {
     { path: '/aide', component: AidePage },
     { path: '/referral', component: ReferralPage, requiresAuth: true },
     { path: '/admin/debug-experience', component: DebugExperiencePage, requiresAuth: true },
+    { path: '/admin', component: FounderDashboardPage, requiresAuth: true },
     // ── Portail client "My Inkflow" ─────────────────────────────────────────
     { path: /^\/onboarding\/finaliser-profil\/?$/, component: ClientOnboardingFinalizePage },
     { path: /^\/client\/bienvenue\/?$/, component: ClientWelcomeOnboardingPage },

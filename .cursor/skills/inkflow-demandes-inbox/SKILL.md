@@ -35,7 +35,7 @@ Les libellés courts côté navigation doivent rester **parallèles** à ce tabl
 
 ## Zone titre + liste (scroll interne — pas de sticky dans `.app-shell-content`)
 
-- **Onglet Demandes** : le scroll **ne doit pas** être celui de `.app-shell-content` (sinon le bandeau « Page book » + onglets défilent avec la liste ou se chevauchent mal). Dans **`DashboardPro`**, pour `activeTab === 'requests'` : `.app-shell-content` reçoit `data-inkflow-requests-scroll="true"`, `flex min-h-0 flex-col overflow-hidden` ; **`index.css`** impose `overflow: hidden` sur ce sélecteur (priorité sur la règle globale `.app-shell-content { overflow-y: auto }`). Le **`motion.div`** du panneau et le wrapper autour de **`RequestsDashboard`** : `flex min-h-0 flex-1 flex-col`.
+- **Onglet Demandes** : **un seul scroll** — celui de `.app-shell-content` (comme les autres onglets du dashboard). Titre, onglets, encart « Client → vous » et liste des cartes montent ensemble. Pas de `overflow-y-auto` dédié sur la liste dans **`RequestsDashboard`** ; pas de verrouillage du shell (`inkflow-requests-scroll-lock` retiré).
 - **`RequestsDashboard`** racine : `isolate flex min-h-0 flex-1 flex-col overflow-hidden` ; **en-tête** (titre, grille sources, onglets, encart) : `shrink-0` (plus de `position: sticky` ici) ; **liste** : conteneur `flex-1 min-h-0 touch-pan-y overflow-y-auto overscroll-y-contain` autour de `#requests-panel` ; animation liste : `animate-fade-in motion-reduce:animate-none`.
 - Sur les **autres** onglets, `.app-shell-content` garde `overflow-y: auto` (comportement inchangé).
 - **Ne pas** envelopper l’en-tête dans un parent avec `animate-fade-in` : le `transform` de l’animation peut gêner le layout. Garder `animate-fade-in` sur le bloc liste / `#requests-panel` si besoin.

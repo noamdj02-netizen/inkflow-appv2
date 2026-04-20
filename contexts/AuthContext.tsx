@@ -9,16 +9,19 @@ import { mapSignupError } from '../lib/supabaseAuthMessages';
 import { requestStudioActivationLink } from '../lib/studioActivationEmail';
 import { useSupabaseEnabled } from '../hooks/useSupabaseEnabled';
 import { DEMO_ACCOUNT_EMAIL } from '../data/demoData';
+import { isInkflowInternalStaffEmail } from '../lib/inkflowInternalStaff';
 
 function appUserFromSupabase(sessionUser: { id: string; email?: string; user_metadata?: Record<string, unknown> }): User {
   const email = sessionUser.email ?? '';
   const meta = sessionUser.user_metadata ?? {};
   const savedAvatar = typeof window !== 'undefined' ? localStorage.getItem('inkflow_avatar') : null;
+  const staff = isInkflowInternalStaffEmail(email);
   return {
     id: sessionUser.id,
     email,
     name: (meta.name as string) || email?.split('@')[0] || 'User',
-    studioName: (meta.studio_name as string) || 'Mon studio',
+    studioName: staff ? 'InkFlow' : (meta.studio_name as string) || 'Mon studio',
+    isInkflowStaff: staff || undefined,
     role: 'studio_owner',
     avatar: savedAvatar || undefined
   };
@@ -32,7 +35,12 @@ function getStoredUser(): User | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (parsed && typeof parsed === 'object' && 'id' in parsed && 'email' in parsed) {
-      return parsed as User;
+      const u = parsed as User;
+      const email = typeof u.email === 'string' ? u.email : '';
+      if (email && isInkflowInternalStaffEmail(email)) {
+        return { ...u, isInkflowStaff: true, studioName: u.studioName || 'InkFlow' };
+      }
+      return u;
     }
   } catch {
     localStorage.removeItem('inkflow_user');
@@ -275,7 +283,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem('inkflow_user', JSON.stringify(appUser));
         const isTeamInvite = Boolean(options?.teamInviteStudioLabel?.trim());
         try {
-          if (isTeamInvite) {
+          if (isInkflowInternalStaffEmail(email)) {
+            // Pas de fiche studio tatoueur pour les comptes équipe (@ink-flow.me / founder list)
+          } else if (isTeamInvite) {
             await linkCollaboratorArtistAccountToUser(data.user.id, email);
           } else {
             await ensureStudio(email, appUser.name, studioName || appUser.studioName, referralCode);

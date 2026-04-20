@@ -46,6 +46,8 @@ interface ProjectRequestFormProps {
   submitLabel?: string;
   /** Studio cible (upload Storage). Si null au moment de l’envoi, les photos ne pourront pas être jointes. */
   studioId: string | null;
+  /** ID du input file (plusieurs formulaires sur la même page) */
+  referenceInputId?: string;
 }
 
 export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
@@ -53,6 +55,7 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
   onCancel,
   submitLabel = 'Envoyer ma demande',
   studioId,
+  referenceInputId = 'project-ref-images',
 }) => {
   const toast = useToast();
   const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
@@ -215,7 +218,7 @@ export const ProjectRequestForm: React.FC<ProjectRequestFormProps> = ({
           onChange={setReferenceFiles}
           variant="light"
           label="Photos d’inspiration (optionnel)"
-          inputId="project-ref-images"
+          inputId={referenceInputId}
           className="mt-1"
         />
         <p className="text-xs text-neutral-500 mt-2">

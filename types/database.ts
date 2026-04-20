@@ -2167,19 +2167,37 @@ export type Database = {
       inkflow_user_settings: {
         Row: {
           onboarding_dismissed: boolean
+          onboarding_first_booking_celebration_sent_at: string | null
+          onboarding_reactivation_sent_at: string | null
+          onboarding_reminder_flash_sent_at: string | null
+          onboarding_reminder_profile_sent_at: string | null
+          onboarding_reminder_stripe_sent_at: string | null
           onboarding_step: number
+          onboarding_welcome_sent_at: string | null
           studio_id: string
           updated_at: string | null
         }
         Insert: {
           onboarding_dismissed?: boolean
+          onboarding_first_booking_celebration_sent_at?: string | null
+          onboarding_reactivation_sent_at?: string | null
+          onboarding_reminder_flash_sent_at?: string | null
+          onboarding_reminder_profile_sent_at?: string | null
+          onboarding_reminder_stripe_sent_at?: string | null
           onboarding_step?: number
+          onboarding_welcome_sent_at?: string | null
           studio_id: string
           updated_at?: string | null
         }
         Update: {
           onboarding_dismissed?: boolean
+          onboarding_first_booking_celebration_sent_at?: string | null
+          onboarding_reactivation_sent_at?: string | null
+          onboarding_reminder_flash_sent_at?: string | null
+          onboarding_reminder_profile_sent_at?: string | null
+          onboarding_reminder_stripe_sent_at?: string | null
           onboarding_step?: number
+          onboarding_welcome_sent_at?: string | null
           studio_id?: string
           updated_at?: string | null
         }

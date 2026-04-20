@@ -4,6 +4,8 @@ export interface User {
   name: string;
   studioName: string;
   avatar?: string;
+  /** Équipe InkFlow (@ink-flow.me / @inkflow.me ou liste founder) — pas de ligne studio tatoueur imposée */
+  isInkflowStaff?: boolean;
   role: 'artist' | 'studio_owner';
   phone?: string;
   address?: string;

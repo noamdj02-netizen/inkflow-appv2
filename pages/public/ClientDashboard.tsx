@@ -55,6 +55,10 @@ import {
   type NearbyStudio,
   type FlashPreview,
 } from '../../lib/supabaseGeo';
+import { distLabel, discoveryLocationLine } from '../../lib/clientDiscoveryFormat';
+import { FlashCardClient, ArtistCardClient } from '../../components/client-ui';
+import { CLIENT_CARD_PALETTES as PALETTES } from '../../components/client-ui/paletteRotation';
+import { isStockPhoto, initials } from '../../components/client-ui/clientUiHelpers';
 import { getStudioByEmail } from '../../lib/supabaseDashboard';
 import { parseVitrineProjectDescription } from '../../lib/parseVitrineProjectDescription';
 import { isInkflowDemoAccount } from '../../lib/demoAccount';
@@ -233,11 +237,6 @@ function sortFlashEntries(
 }
 
 // ─── Utils ───────────────────────────────────────────────────────────────────
-/** Exclut les photos de banques d'images web — seules les URLs Supabase Storage sont affichées. */
-function isStockPhoto(url: string): boolean {
-  return /unsplash\.com|pexels\.com|pixabay\.com|stocksnap\.io/i.test(url);
-}
-
 /** Avatar studio ou première image flash / portfolio (hors banques d’images génériques). */
 function getStudioThumbnailUrl(s: NearbyStudio): string | null {
   const ok = (u: string | null | undefined) => {
@@ -257,38 +256,9 @@ function getStudioThumbnailUrl(s: NearbyStudio): string | null {
   return null;
 }
 
-function initials(name: string) {
-  return name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('');
-}
-function distLabel(km: number | null) {
-  if (km == null) return null;
-  return km < 1 ? '< 1 km' : `${Math.round(km)} km`;
-}
-
-/** Première ligne d’adresse vitrine si présente, sinon ville (table studio). */
-function discoveryLocationLine(s: NearbyStudio | null | undefined): string | null {
-  if (!s) return null;
-  const raw = s.address?.trim();
-  if (raw) {
-    const first = raw.split('\n').map((l) => l.trim()).find((l) => l.length > 0);
-    if (first) return first;
-  }
-  const c = s.city?.trim();
-  return c || null;
-}
 function ratingLabel(n: number) {
   return n.toFixed(1);
 }
-
-// ─── Palette artiste (placeholder quand pas de photo) ────────────────────────
-const PALETTES = [
-  { bg: 'linear-gradient(135deg,#1a1a2e,#16213e)', dot: '#6366F1' },
-  { bg: 'linear-gradient(135deg,#0d1f0d,#1a3a1a)', dot: '#22C55E' },
-  { bg: 'linear-gradient(135deg,#1f0d0d,#3a1a1a)', dot: '#EF4444' },
-  { bg: 'linear-gradient(135deg,#1f180d,#3a2e1a)', dot: '#F59E0B' },
-  { bg: 'linear-gradient(135deg,#1a0d1f,#2e1a3a)', dot: '#A855F7' },
-  { bg: 'linear-gradient(135deg,#0d1a1f,#1a2e3a)', dot: '#0EA5E9' },
-] as const;
 
 // ─── Fake map dots (MVP — remplacer par Leaflet/Mapbox quand dispo) ───────────
 const DEFAULT_CENTER: [number, number] = [49.4432, 1.0993]; // Rouen
@@ -419,355 +389,6 @@ function MapHero({
         borderRadius: D.r.xl,
         zIndex: 9,
       }} />
-    </div>
-  );
-}
-
-// ─── Artist horizontal card ───────────────────────────────────────────────────
-function ArtistPill({
-  studio,
-  index,
-  onClick,
-  clientEmailForSync,
-  onFavoritesDirty,
-}: {
-  studio: NearbyStudio;
-  index: number;
-  onClick: () => void;
-  clientEmailForSync?: string | null;
-  onFavoritesDirty?: () => void;
-}) {
-  const toast = useToast();
-  const pal = PALETTES[index % PALETTES.length];
-  const [broken, setBroken] = useState(false);
-  const [heartBusy, setHeartBusy] = useState(false);
-  const dist = distLabel(studio.distance_km);
-  const locLine = [discoveryLocationLine(studio), dist].filter(Boolean).join(' · ');
-  const ariaLabel = locLine
-    ? `Voir un flash de ${studio.studio_name}, ${locLine}`
-    : `Voir un flash de ${studio.studio_name}`;
-  const studioFav = isFavoriteStudioId(studio.id);
-
-  const onHeart = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (heartBusy) return;
-    if (!clientEmailForSync?.trim()) {
-      const now = toggleFavoriteStudioId(studio.id);
-      onFavoritesDirty?.();
-      toast.success(now ? 'Artiste ajouté aux favoris' : 'Retiré des favoris');
-      return;
-    }
-    setHeartBusy(true);
-    try {
-      const now = await toggleStudioFavoriteWithSupabaseSync(studio.id, clientEmailForSync);
-      onFavoritesDirty?.();
-      toast.success(now ? 'Artiste ajouté aux favoris' : 'Retiré des favoris');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Synchronisation impossible. Réessaie.');
-    } finally {
-      setHeartBusy(false);
-    }
-  };
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      aria-label={ariaLabel}
-      className="group flex w-[158px] shrink-0 cursor-pointer flex-col touch-manipulation overflow-hidden rounded-[14px] border text-left transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98] motion-reduce:active:scale-100 sm:w-[168px] sm:hover:-translate-y-px sm:motion-reduce:hover:translate-y-0 sm:hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
-      style={{
-        background: D.contentCardBg,
-        borderColor: D.borderMid,
-        padding: 0,
-        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-      }}
-    >
-      {/* Avatar — cœur en overlay (pas de <button> imbriqué) */}
-      <div
-        className="relative flex w-full shrink-0 items-center justify-center overflow-hidden"
-        style={{
-          height: 108,
-          background: pal.bg,
-        }}
-      >
-        {studio.avatar_url && !broken && !isStockPhoto(studio.avatar_url) ? (
-          <img
-            src={studio.avatar_url}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            onError={() => setBroken(true)}
-            className="h-full w-full min-h-[108px] object-cover object-center transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:group-hover:scale-100"
-          />
-        ) : (
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: D.r.full,
-              background: `${pal.dot}18`,
-              border: `1px solid ${pal.dot}40`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 15,
-              fontWeight: 700,
-              color: pal.dot,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {initials(studio.studio_name)}
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={onHeart}
-          disabled={heartBusy}
-          className="absolute right-1.5 top-1.5 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-black/35 text-white shadow-sm backdrop-blur-sm transition-all active:scale-95 disabled:opacity-50"
-          aria-label={studioFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-        >
-          <Heart className="h-[18px] w-[18px]" fill={studioFav ? 'currentColor' : 'none'} strokeWidth={2} />
-        </button>
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/[0.06] to-transparent"
-          aria-hidden
-        />
-      </div>
-      {/* Body */}
-      <div className="flex min-h-0 flex-1 flex-col gap-2 px-3 pb-3 pt-2.5 font-client-app">
-        <p
-          className="line-clamp-2 text-[13px] font-semibold leading-[1.25] tracking-[-0.02em]"
-          style={{ color: D.text }}
-          title={studio.studio_name}
-        >
-          {studio.studio_name}
-        </p>
-        <div className="flex min-w-0 items-start gap-1.5">
-          <MapPin className="mt-px h-3.5 w-3.5 shrink-0 opacity-80" style={{ color: D.muted }} strokeWidth={2} aria-hidden />
-          <span className="line-clamp-2 text-[11px] leading-snug" style={{ color: D.muted }}>
-            {locLine || '—'}
-          </span>
-        </div>
-        <div className="mt-auto flex items-center justify-between gap-2 border-t pt-2" style={{ borderColor: `${D.border}` }}>
-          <span className="text-[11px] tabular-nums" style={{ color: D.muted }}>
-            {(studio.flash?.length ?? 0)} flash{(studio.flash?.length ?? 0) !== 1 ? 's' : ''}
-          </span>
-          <span className="text-[11px] font-medium tabular-nums" style={{ color: D.textSub }}>
-            {dist ?? '—'}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Flash card vertical ──────────────────────────────────────────────────────
-function FlashCard({
-  flash, studioIdx, studioCity, onClick, onFavoritesDirty, bookingActionsEnabled = true,
-  clientEmailForSync,
-}: {
-  flash: FlashPreview;
-  studioIdx: number;
-  studioCity: string | null;
-  onClick: () => void;
-  onFavoritesDirty?: () => void;
-  /** Faux tant que profil + santé incomplets (utilisateur connecté). */
-  bookingActionsEnabled?: boolean;
-  /** Si renseigné, sync Supabase après toggle local (session avec Edge Function). */
-  clientEmailForSync?: string | null;
-}) {
-  const toast = useToast();
-  const pal = PALETTES[studioIdx % PALETTES.length];
-  const [broken, setBroken] = useState(false);
-  const [heartBusy, setHeartBusy] = useState(false);
-  const hasImg = flash.imageUrl && !broken && !isStockPhoto(flash.imageUrl);
-  const fav = isFavoriteFlashId(flash.id);
-
-  const openCard = () => {
-    onClick();
-  };
-
-  const onHeart = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (heartBusy) return;
-    if (!clientEmailForSync?.trim()) {
-      const now = toggleFavoriteFlashId(flash.id);
-      onFavoritesDirty?.();
-      toast.success(now ? 'Ajouté aux favoris' : 'Retiré des favoris');
-      return;
-    }
-    setHeartBusy(true);
-    try {
-      const now = await toggleFavoriteWithSupabaseSync(flash.id, clientEmailForSync);
-      onFavoritesDirty?.();
-      toast.success(now ? 'Ajouté aux favoris' : 'Retiré des favoris');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Synchronisation impossible. Réessaie.');
-    } finally {
-      setHeartBusy(false);
-    }
-  };
-
-  /** Hauteur image homogène sur toutes les cartes ; lisible en 2 colonnes étroites */
-  const mediaH = 'clamp(128px, 36vw, 168px)';
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={openCard}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          openCard();
-        }
-      }}
-      className="h-full min-h-0 min-w-0 flex flex-col touch-manipulation"
-      style={{
-        background: D.card,
-        border: `1px solid ${D.border}`,
-        borderRadius: D.r.lg,
-        overflow: 'hidden',
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'border-color 0.2s, box-shadow 0.2s',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = `${CLIENT_DASHBOARD_THEME.accent}55`;
-        e.currentTarget.style.boxShadow = D.shadowLg;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = D.border;
-        e.currentTarget.style.boxShadow = 'none';
-      }}
-    >
-      {/* Visuel — prix en bas (plus de chevauchement cœur / 120 €) */}
-      <div
-        className="relative w-full shrink-0 overflow-hidden"
-        style={{ height: mediaH, background: pal.bg }}
-      >
-        {hasImg ? (
-          <img
-            src={flash.imageUrl}
-            alt=""
-            onError={() => setBroken(true)}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <svg width="48" height="48" viewBox="0 0 56 56" fill="none" className="opacity-80">
-              <path
-                d="M28 6L33 21H48L36 29L40 44L28 36L16 44L20 29L8 21H23Z"
-                stroke={pal.dot}
-                strokeWidth="1.5"
-                fill="none"
-              />
-            </svg>
-          </div>
-        )}
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-14"
-          style={{
-            background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%)',
-          }}
-        />
-        <div
-          className="absolute left-2 top-2 z-[1] max-w-[min(100%,calc(100%-3.5rem))]"
-          style={{
-            background: D.contentCardBg,
-            border: `1px solid ${D.gold}`,
-            borderRadius: D.r.full,
-            padding: '3px 8px',
-            fontSize: 8,
-            fontWeight: 800,
-            color: D.gold,
-            letterSpacing: '0.07em',
-            boxShadow: D.shadow,
-          }}
-        >
-          FLASH
-        </div>
-        <button
-          type="button"
-          onClick={onHeart}
-          disabled={heartBusy}
-          className="absolute right-1.5 top-1.5 z-[2] flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl active:scale-95 transition-transform sm:min-h-[44px] sm:min-w-[44px] sm:right-2 sm:top-2 disabled:opacity-60"
-          style={{
-            background: D.contentCardBg,
-            border: `1px solid ${D.border}`,
-            color: fav ? D.gold : D.muted,
-            boxShadow: D.shadow,
-          }}
-          aria-label={fav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-        >
-          <Heart className="h-[18px] w-[18px] sm:h-5 sm:w-5" fill={fav ? 'currentColor' : 'none'} strokeWidth={2} />
-        </button>
-        <div
-          className="absolute bottom-2 left-2 z-[1] tabular-nums"
-          style={{
-            background: D.contentCardBg,
-            backdropFilter: D.blur,
-            border: `1px solid ${D.border}`,
-            borderRadius: D.r.full,
-            padding: '4px 10px',
-            fontSize: 'clamp(12px, 3.4vw, 14px)',
-            fontWeight: 800,
-            color: D.text,
-            boxShadow: D.shadow,
-            lineHeight: 1,
-          }}
-        >
-          {flash.price}€
-        </div>
-      </div>
-
-      {/* Corps — pousse le CTA en bas : hauteurs alignées sur la grille */}
-      <div
-        className="flex min-h-0 flex-1 flex-col px-2.5 pb-2.5 pt-2.5 sm:px-3 sm:pb-3 sm:pt-3"
-        style={{ gap: 8 }}
-      >
-        <div className="min-h-0 flex-1">
-          <p
-            className="line-clamp-2 break-words font-semibold leading-snug"
-            style={{
-              color: D.text,
-              fontSize: 'clamp(12px, 3.4vw, 15px)',
-              minHeight: '2.5em',
-            }}
-          >
-            {flash.title}
-          </p>
-          <p
-            className="mt-1 line-clamp-2 break-words leading-tight"
-            style={{ color: D.muted, fontSize: 'clamp(9px, 2.8vw, 11px)' }}
-          >
-            {[flash.studioName, flash.style, studioCity].filter(Boolean).join(' · ')}
-          </p>
-        </div>
-        <div
-          className="mt-auto flex min-h-[44px] w-full shrink-0 items-center justify-center rounded-xl px-1.5 py-2 sm:px-2"
-          style={{ background: D.gold, color: D.onAccent }}
-        >
-          <span
-            className="text-center font-bold leading-tight"
-            style={{
-              fontSize: 'clamp(10.5px, 3.1vw, 13px)',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Réserver ce flash
-          </span>
-        </div>
-      </div>
     </div>
   );
 }
@@ -1543,7 +1164,7 @@ function TabExplore({
             const { flash, studioIdx, studio: s } = row;
             return (
             <Fragment key={flashRowKey(row)}>
-              <FlashCard
+              <FlashCardClient
                 flash={flash}
                 studioIdx={studioIdx}
                 studioCity={discoveryLocationLine(s)}
@@ -1568,7 +1189,7 @@ function TabExplore({
       {/* Studios section */}
       {studios.length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <div className="font-display" style={{ fontSize: 17, color: D.text, marginBottom: 14 }}>
+          <div className="font-client-app" style={{ fontSize: 17, color: D.text, marginBottom: 14 }}>
             Studios ({studios.length})
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1641,7 +1262,7 @@ function TabFavorites({
           <ClientEmptyGlyph>
             <Heart className="w-7 h-7" style={{ color: D.muted }} strokeWidth={1.65} aria-hidden />
           </ClientEmptyGlyph>
-          <div className="font-display" style={{ fontSize: 15, color: D.text, marginBottom: 8 }}>Aucun favori</div>
+          <div className="font-client-app" style={{ fontSize: 15, color: D.text, marginBottom: 8 }}>Aucun favori</div>
           <div style={{ fontSize: 13, color: D.muted, lineHeight: 1.5 }}>
             Touche le cœur sur une carte flash pour la retrouver ici.
           </div>
@@ -1652,7 +1273,7 @@ function TabFavorites({
             const { flash, studioIdx, studio: s } = row;
             return (
             <Fragment key={flashRowKey(row)}>
-              <FlashCard
+              <FlashCardClient
                 flash={flash}
                 studioIdx={studioIdx}
                 studioCity={discoveryLocationLine(s)}
@@ -2166,7 +1787,7 @@ function TabRDV({
           <ClientEmptyGlyph>
             <Lock className="w-7 h-7" style={{ color: D.muted }} strokeWidth={1.65} aria-hidden />
           </ClientEmptyGlyph>
-          <div className="font-display" style={{ fontSize: 15, color: D.text, marginBottom: 8 }}>Connecte-toi</div>
+          <div className="font-client-app" style={{ fontSize: 15, color: D.text, marginBottom: 8 }}>Connecte-toi</div>
           <div style={{ fontSize: 13, color: D.muted, lineHeight: 1.5, marginBottom: 20 }}>
             Connecte-toi pour voir tes demandes de réservation liées à ton e-mail.
           </div>
@@ -2421,7 +2042,7 @@ function TabRDV({
           <ClientEmptyGlyph>
             <Calendar className="w-7 h-7" style={{ color: D.muted }} strokeWidth={1.65} aria-hidden />
           </ClientEmptyGlyph>
-          <div className="font-display" style={{ fontSize: 15, color: D.text, marginBottom: 8 }}>Aucune réservation</div>
+          <div className="font-client-app" style={{ fontSize: 15, color: D.text, marginBottom: 8 }}>Aucune réservation</div>
           <div className="mx-auto max-w-sm text-[13px] leading-relaxed" style={{ color: D.muted }}>
             Trouve un tatoueur et réserve ton prochain flash depuis l’onglet Explorer.
           </div>
@@ -4020,7 +3641,7 @@ export function ClientDashboard() {
                       const studioIdx = studios.indexOf(s);
                       return (
                       <div key={s.id} className="snap-start shrink-0">
-                        <ArtistPill
+                        <ArtistCardClient
                           studio={s}
                           index={studioIdx}
                           onClick={() => {
@@ -4119,7 +3740,7 @@ export function ClientDashboard() {
                   const { flash, studioIdx, studio: s } = row;
                   return (
                   <div key={`pourtoi-${flashRowKey(row)}`} className="w-[min(100%,168px)] shrink-0 snap-start">
-                    <FlashCard
+                    <FlashCardClient
                       flash={flash}
                       studioIdx={studioIdx}
                       studioCity={discoveryLocationLine(s)}
@@ -4195,7 +3816,7 @@ export function ClientDashboard() {
                   const { flash, studioIdx, studio: s } = row;
                   return (
                   <Fragment key={flashRowKey(row)}>
-                    <FlashCard
+                    <FlashCardClient
                       flash={flash}
                       studioIdx={studioIdx}
                       studioCity={discoveryLocationLine(s)}

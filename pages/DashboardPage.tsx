@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
+import { isInkflowInternalStaffEmail } from '../lib/inkflowInternalStaff';
 import { StudioPrivacyProvider } from '../contexts/StudioPrivacyContext';
 import { SEO } from '../components/SEO';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -23,6 +24,14 @@ export const DashboardPage: React.FC = () => {
     }
   }, [isAuthenticated, authLoading]);
 
+  /** Compte équipe / fondateur : ne pas monter le dashboard tatoueur (email source de vérité — évite localStorage obsolète). */
+  React.useEffect(() => {
+    if (authLoading || !user?.email) return;
+    if (!isInkflowInternalStaffEmail(user.email) && !user.isInkflowStaff) return;
+    window.history.replaceState({}, '', '/admin');
+    window.dispatchEvent(new Event('inkflow-navigate'));
+  }, [authLoading, user?.email, user?.isInkflowStaff]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
@@ -35,6 +44,15 @@ export const DashboardPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
         <Logo size="lg" className="rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (isInkflowInternalStaffEmail(user.email) || user.isInkflowStaff) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex flex-col items-center justify-center gap-3 px-4">
+        <Logo size="lg" className="rounded-2xl" />
+        <p className="text-sm text-zinc-500 text-center">Ouverture du tableau fondateur…</p>
       </div>
     );
   }

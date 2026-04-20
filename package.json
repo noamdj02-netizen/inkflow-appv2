@@ -40,6 +40,9 @@
     "deploy:function:project-request-reject": "supabase functions deploy project-request-reject --no-verify-jwt",
     "deploy:function:send-push-notification": "supabase functions deploy send-push-notification --no-verify-jwt",
     "deploy:function:push-subscribe": "supabase functions deploy push-subscribe --no-verify-jwt",
+    "deploy:function:admin-founder-metrics": "supabase functions deploy admin-founder-metrics --no-verify-jwt",
+    "deploy:function:onboarding-automation": "supabase functions deploy onboarding-automation --no-verify-jwt",
+    "deploy:function:send-tattooer-welcome": "supabase functions deploy send-tattooer-welcome",
     "video:demo": "npm run start --prefix video/inkflow-demo",
     "video:demo:render": "npm run render --prefix video/inkflow-demo"
   },

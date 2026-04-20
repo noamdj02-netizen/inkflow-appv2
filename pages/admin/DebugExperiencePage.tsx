@@ -48,7 +48,7 @@ export const DebugExperiencePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 p-4 sm:p-8">
+    <div className="founder-admin-scroll-root bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 p-4 sm:p-8">
       <SEO title="Simulation Inkflow" description="Outil interne de test" noindex canonical="/admin/debug-experience" />
       <div className="max-w-xl mx-auto space-y-6">
         <button

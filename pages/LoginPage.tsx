@@ -5,6 +5,7 @@ import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { SEO } from '../components/SEO';
 import { LANDING_URL, APP_URL, sanitizePostAuthRedirect } from '../lib/urls';
+import { resolvePostLoginPath } from '../lib/postLoginRedirect';
 import { REDIRECT_AFTER_LOGIN_KEY, useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { CLIENT_DASHBOARD_THEME } from '../lib/clientDashboardTheme';
@@ -269,19 +270,27 @@ export const LoginPage: React.FC = () => {
     }
   }, []);
 
-  /** Déjà connecté : ne pas afficher le formulaire — renvoie vers le tableau de bord ou la cible sauvegardée. */
+  /** Déjà connecté : renvoie vers la cible résolue (dashboard tatoueur, /client, /admin équipe, etc.). */
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
-    let next = '/dashboard';
-    try {
-      const stored = sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY);
-      if (stored) next = sanitizePostAuthRedirect(stored);
-      sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
-    } catch {
-      /* ignore */
-    }
-    window.history.replaceState({}, '', next);
-    window.dispatchEvent(new Event('inkflow-navigate'));
+    let cancelled = false;
+    void (async () => {
+      let next = '/dashboard';
+      try {
+        const stored = sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY);
+        if (stored) next = sanitizePostAuthRedirect(stored);
+        sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
+      } catch {
+        /* ignore */
+      }
+      const path = await resolvePostLoginPath(next);
+      if (cancelled) return;
+      window.history.replaceState({}, '', path);
+      window.dispatchEvent(new Event('inkflow-navigate'));
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [authLoading, isAuthenticated]);
 
   if (!authLoading && isAuthenticated) {

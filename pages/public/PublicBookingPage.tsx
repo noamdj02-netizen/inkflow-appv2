@@ -14,15 +14,15 @@ import {
   AlertCircle,
   Zap,
   Pencil,
-  Send,
   MapPin,
   Instagram,
   FileText,
 } from 'lucide-react';
-import { ReferenceImageUpload } from '../../components/booking/ReferenceImageUpload';
+import { ProjectRequestForm } from '../../components/booking/ProjectRequestForm';
 import { HealthQuestionnaireForm } from '../../components/booking/HealthQuestionnaireForm';
 import { toLocalDateString } from '../../lib/utils';
 import { SEO } from '../../components/SEO';
+import { FlashCard } from '../../components/ui/FlashCard';
 import {
   useBookingFlow,
   replaceUrlFlashParam,
@@ -54,13 +54,9 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     resolvedPlacement,
     depositAmount,
     projectSubmitted,
-    projectForm,
-    setProjectForm,
-    projectImages,
-    setProjectImages,
-    projectSubmitting,
     projectError,
-    handleProjectSubmit,
+    setProjectError,
+    handleProjectRequestSubmit,
     availabilityLoading,
     availableDates,
     availableSlots,
@@ -374,145 +370,34 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                     setBookingMode('select');
                     setSelectedFlashId(null);
                     replaceUrlFlashParam(null);
+                    setProjectError(null);
                   }}
-                  className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm mb-2 transition-colors min-h-[44px] rounded-lg px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+                  className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink-text text-sm mb-1 transition-colors min-h-[44px] rounded-lg px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
                 >
                   <ArrowLeft className="w-4 h-4" strokeWidth={1.5} aria-hidden />
                   Changer de type
                 </button>
-                <div className="bg-ink-surface rounded-2xl border border-ink-border p-5">
-                  <h2 className="text-sm font-semibold text-ink-text mb-4">
-                    Décrivez votre projet
-                  </h2>
-                  <textarea
-                    value={projectForm.description}
-                    onChange={(e) =>
-                      setProjectForm((f) => ({ ...f, description: e.target.value }))
-                    }
-                    placeholder="Style, emplacement, taille, couleurs, idées... Plus c'est précis, mieux l'artiste peut vous répondre."
-                    rows={5}
-                    className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors resize-none text-sm"
-                  />
-                  <ReferenceImageUpload
-                    value={projectImages}
-                    onChange={setProjectImages}
-                    variant="light"
-                    inputId="ref-upload-project"
-                    className="mt-3"
-                  />
-                </div>
-                <div className="bg-ink-surface rounded-2xl border border-ink-border p-5">
-                  <h2 className="text-sm font-semibold text-ink-text mb-4">Vos coordonnées</h2>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <label className="block text-xs font-medium text-ink-muted mb-1.5">
-                        Prénom
-                      </label>
-                      <input
-                        type="text"
-                        value={projectForm.firstName}
-                        onChange={(e) =>
-                          setProjectForm((f) => ({ ...f, firstName: e.target.value }))
-                        }
-                        placeholder="Jean"
-                        className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors text-sm"
-                      />
+
+                <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:p-6 dark:border-neutral-700 dark:bg-neutral-950">
+                  {projectError && (
+                    <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-100 text-red-800 text-sm flex items-start gap-2 dark:bg-red-950/40 dark:border-red-900/50 dark:text-red-200">
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" aria-hidden />
+                      <span>{projectError}</span>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-ink-muted mb-1.5">Nom</label>
-                      <input
-                        type="text"
-                        value={projectForm.lastName}
-                        onChange={(e) =>
-                          setProjectForm((f) => ({ ...f, lastName: e.target.value }))
-                        }
-                        placeholder="Dupont"
-                        className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors text-sm"
-                      />
-                    </div>
-                  </div>
-                  <div className="mb-3">
-                    <label className="block text-xs font-medium text-ink-muted mb-1.5">Email</label>
-                    <input
-                      type="email"
-                      value={projectForm.email}
-                      onChange={(e) => setProjectForm((f) => ({ ...f, email: e.target.value }))}
-                      placeholder="jean@exemple.com"
-                      className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors text-sm"
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="block text-xs font-medium text-ink-muted mb-1.5">
-                      Téléphone
-                    </label>
-                    <input
-                      type="tel"
-                      value={projectForm.phone}
-                      onChange={(e) => setProjectForm((f) => ({ ...f, phone: e.target.value }))}
-                      placeholder="06 12 34 56 78"
-                      className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="flex items-center gap-1.5 text-xs font-medium text-ink-muted mb-1.5">
-                      <Instagram className="w-3.5 h-3.5" strokeWidth={1.5} />
-                      Instagram{' '}
-                      <span className="font-normal text-zinc-400">(optionnel)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={projectForm.instagram}
-                      onChange={(e) =>
-                        setProjectForm((f) => ({ ...f, instagram: e.target.value }))
-                      }
-                      placeholder="@votre_pseudo"
-                      autoComplete="off"
-                      className="w-full px-4 py-3 rounded-xl border border-ink-border text-ink-text placeholder:text-ink-muted focus:outline-none focus:border-ink-accent focus:ring-1 focus:ring-ink-accent transition-colors text-sm"
-                    />
-                    <p className="text-[11px] text-zinc-400 mt-1.5">
-                      Pour échanger plus facilement avec l'artiste en message privé.
-                    </p>
-                  </div>
-                </div>
-                {projectError && (
-                  <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>{projectError}</span>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={handleProjectSubmit}
-                  disabled={
-                    !projectForm.firstName ||
-                    !projectForm.lastName ||
-                    !projectForm.email ||
-                    !projectForm.description ||
-                    projectSubmitting
-                  }
-                  aria-busy={projectSubmitting}
-                  className={`w-full min-h-[56px] rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all ${
-                    !projectForm.firstName ||
-                    !projectForm.lastName ||
-                    !projectForm.email ||
-                    !projectForm.description ||
-                    projectSubmitting
-                      ? 'bg-zinc-200 text-ink-muted cursor-not-allowed'
-                      : 'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[0.99]'
-                  }`}
-                >
-                  {projectSubmitting ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Envoi en cours...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" strokeWidth={1.5} />
-                      Envoyer ma demande
-                    </>
                   )}
-                </button>
+                  <ProjectRequestForm
+                    studioId={studioId === 'loading' ? null : studioId}
+                    onSubmit={handleProjectRequestSubmit}
+                    onCancel={() => {
+                      setBookingMode('select');
+                      setSelectedFlashId(null);
+                      replaceUrlFlashParam(null);
+                      setProjectError(null);
+                    }}
+                    submitLabel="Envoyer ma demande"
+                    referenceInputId="project-ref-book"
+                  />
+                </div>
               </section>
             )}
           </>
@@ -563,75 +448,21 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                   <div className="grid w-full grid-cols-2 gap-3 sm:gap-4 [grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] flow-root pb-1">
                     {availableFlashes.map((flash) => {
                       const isSelected = selectedFlashId === flash.id;
-                      const priceLabel =
-                        typeof flash.price === 'number'
-                          ? `${flash.price.toLocaleString('fr-FR')} €`
-                          : '—';
                       return (
-                        <button
+                        <FlashCard
                           key={flash.id}
-                          type="button"
-                          aria-pressed={isSelected}
-                          aria-label={`${flash.title || 'Flash'}, ${priceLabel}${isSelected ? ', sélectionné' : ''}`}
+                          variant="booking"
+                          title={flash.title || 'Flash'}
+                          imageUrl={flash.imageUrl}
+                          price={flash.price}
+                          durationMinutes={flash.durationMinutes}
+                          available={flash.available}
+                          selected={isSelected}
                           onClick={() => {
                             setSelectedFlashId(flash.id);
                             replaceUrlFlashParam(flash.id);
                           }}
-                          className={`group flex w-full min-w-0 flex-col rounded-2xl border text-left transition-all active:scale-[0.99] touch-manipulation shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 ${
-                            isSelected
-                              ? 'ring-2 ring-emerald-500 border-emerald-500/80 shadow-md'
-                              : 'border-ink-border/90 hover:border-ink-accent/50 hover:shadow-md'
-                          }`}
-                        >
-                          {flash.imageUrl ? (
-                            <div className="relative w-full min-h-[160px] aspect-[3/4] shrink-0 bg-ink-surface overflow-hidden rounded-2xl">
-                              <img
-                                src={flash.imageUrl}
-                                alt={flash.title || 'Flash'}
-                                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]"
-                              />
-                              <div
-                                className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent"
-                                aria-hidden
-                              />
-                              {isSelected && (
-                                <div
-                                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md ring-2 ring-white/90"
-                                  aria-hidden
-                                >
-                                  <Check className="h-4 w-4" strokeWidth={2.5} />
-                                </div>
-                              )}
-                              <div className="absolute bottom-0 left-0 right-0 p-3 pt-10">
-                                <p className="text-[13px] font-semibold leading-snug text-white drop-shadow-md line-clamp-2">
-                                  {flash.title || 'Flash'}
-                                </p>
-                                <p className="mt-1 text-base font-bold tabular-nums tracking-tight text-white drop-shadow-md">
-                                  {priceLabel}
-                                </p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex w-full min-w-0 flex-col overflow-hidden rounded-2xl">
-                              <div className="relative flex w-full min-h-[160px] aspect-[3/4] shrink-0 items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-200/80">
-                                <Zap className="h-12 w-12 text-zinc-400" strokeWidth={1.25} />
-                                {isSelected && (
-                                  <div className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md ring-2 ring-white">
-                                    <Check className="h-4 w-4" strokeWidth={2.5} />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="border-t border-ink-border bg-ink-bg/80 p-3">
-                                <p className="text-[13px] font-semibold leading-snug text-ink-text line-clamp-2">
-                                  {flash.title || 'Flash'}
-                                </p>
-                                <p className="mt-1 text-base font-bold tabular-nums text-ink-text">
-                                  {priceLabel}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </button>
+                        />
                       );
                     })}
                   </div>
