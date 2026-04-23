@@ -53,3 +53,4 @@ supabase/.temp
 
 # Doublon Expo par erreur (ne pas versionner si recréé localement)
 inkflow-mobile/inkflow-mobile/
+.env*.local
