@@ -74,7 +74,7 @@ function buildIcsContent(payload: Payload): string {
   const desc = payload.description?.replace(/\r?\n/g, "\\n").slice(0, 500) || "Rendez-vous tatouage";
   const loc = payload.studioAddress?.replace(/\r?\n/g, " ") || "";
   const fmtUtc = (d: Date) =>
-    d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    d.toISOString().replaceAll("-", "").replaceAll(":", "").replace(/\.\d{3}/, "");
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",

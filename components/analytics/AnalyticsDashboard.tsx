@@ -190,19 +190,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         </p>
       </div>
 
-      {/* En-tête */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white print:text-zinc-900">
-            Statistiques
-          </h2>
-          <p className="text-sm sm:text-base text-zinc-500 dark:text-zinc-400 mt-1.5 max-w-2xl print:text-zinc-600">
-            Suivez vos performances en temps réel — vue détaillée pour la période choisie.
-          </p>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2 font-medium print:text-zinc-500">
-            Période : <span className="text-zinc-600 dark:text-zinc-300">{periodDescription}</span>
-          </p>
-        </div>
+      {/* Filtre période (titre + accroche : bandeau héros dans DashboardPro) */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <p className="min-w-0 text-xs text-zinc-400 dark:text-zinc-500 font-medium print:text-zinc-500 lg:flex-1">
+          Période : <span className="text-zinc-600 dark:text-zinc-300">{periodDescription}</span>
+        </p>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full lg:w-auto analytics-hide-print">
           <div

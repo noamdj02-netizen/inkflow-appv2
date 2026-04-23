@@ -278,8 +278,8 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
         {/* — Étape tatoueur (studios multi-artistes) — */}
         {artistSelectionPending && (
-          <section className="mb-8 space-y-3" aria-label="Choix du tatoueur">
-            <div className="space-y-3">
+          <section className="mb-8 flex flex-col gap-3" aria-label="Choix du tatoueur">
+            <div className="flex flex-col gap-3">
               {publicArtists.map((artist) => (
                 <button
                   key={artist.id}
@@ -313,7 +313,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
         {/* — Écran 0 : Sélection Flash / Projet — */}
         {!artistSelectionPending && bookingMode === 'select' && (
-          <section className="mb-6 space-y-3 sm:space-y-4" aria-label="Type de prestation">
+          <section className="mb-6 flex flex-col gap-3 sm:gap-4" aria-label="Type de prestation">
             <button
               type="button"
               onClick={() => {
@@ -407,7 +407,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                 </a>
               </section>
             ) : (
-              <section className="space-y-4 mb-6">
+              <section className="mb-6 flex flex-col gap-4">
                 <div className="flex flex-wrap gap-2 mb-1">
                   <button
                     type="button"

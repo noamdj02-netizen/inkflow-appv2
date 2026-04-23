@@ -4,6 +4,7 @@
  */
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { INKFLOW_PAYMENT_RECORD_STATUS } from "./inkflowPaymentRecordStatus.ts";
+import { findNextAvailablePlaceholderSlot } from "./placeholderSlot.ts";
 
 /** Session Stripe Checkout (champs utiles — webhook ou API retrieve). */
 export interface StripeCheckoutSessionLike {
@@ -12,6 +13,8 @@ export interface StripeCheckoutSessionLike {
   payment_status: string;
   payment_intent?: string | { id?: string } | null;
   amount_total?: number | null;
+  /** Présent sur les sessions Checkout complètes (récup. Stripe API). */
+  customer_email?: string | null;
   metadata?: Record<string, string | undefined> | null;
 }
 
@@ -27,6 +30,11 @@ export interface ApplyPaidCheckoutDbOptions {
   receiptUrlForProjectChat?: string | null;
 }
 
+export interface ApplyPaidCheckoutDbResult {
+  /** RDV créé pour flash vitrine sans `appointment_id` (id stable `apt_stripe_<sessionId>`). */
+  createdFlashAppointmentId?: string;
+}
+
 /**
  * Met à jour paiement, RDV, demande projet + message, flash réservé.
  * Idempotent : plusieurs appels avec la même session payée restent cohérents.
@@ -35,11 +43,11 @@ export async function applyPaidCheckoutDbState(
   supabase: SupabaseClient,
   session: StripeCheckoutSessionLike,
   opts: ApplyPaidCheckoutDbOptions = {},
-): Promise<void> {
-  if (session.payment_status !== "paid") return;
+): Promise<ApplyPaidCheckoutDbResult> {
+  if (session.payment_status !== "paid") return {};
   if (session.mode && session.mode !== "payment") {
     console.warn("[applyPaidCheckoutDbState] ignored: mode=", session.mode, "session=", session.id);
-    return;
+    return {};
   }
 
   const studioId = session.metadata?.studio_id || session.metadata?.studioId;
@@ -69,6 +77,93 @@ export async function applyPaidCheckoutDbState(
         .from("inkflow_appointments")
         .update({ deposit_paid: true, updated_at: new Date().toISOString() })
         .eq("id", appointmentId);
+    }
+  }
+
+  let createdFlashAppointmentId: string | undefined;
+
+  const flashIdRaw = session.metadata?.flash_id;
+  const flashId =
+    typeof flashIdRaw === "string" && flashIdRaw.trim()
+      ? flashIdRaw.trim()
+      : "";
+
+  /** Flash vitrine sans RDV préalable : créer un RDV agenda (créneau placeholder) pour le tatoueur + e-mails. */
+  if (studioId && flashId && !appointmentId) {
+    const deterministicId = `apt_stripe_${session.id}`;
+    const { data: existingApt } = await supabase
+      .from("inkflow_appointments")
+      .select("id")
+      .eq("id", deterministicId)
+      .maybeSingle();
+
+    if (existingApt?.id) {
+      createdFlashAppointmentId = deterministicId;
+      await supabase
+        .from("inkflow_payments")
+        .update({ appointment_id: deterministicId, updated_at: new Date().toISOString() })
+        .eq("stripe_session_id", session.id);
+    } else {
+      const metaEmail = (session.metadata?.client_email || "").trim();
+      const custEmail = (typeof session.customer_email === "string" ? session.customer_email : "").trim();
+      const clientEmailForApt = metaEmail || custEmail;
+      const clientNameForApt = (session.metadata?.client_name || "").trim() || "Client";
+
+      if (clientEmailForApt) {
+        try {
+          const { data: flashRow, error: flashLoadErr } = await supabase
+            .from("inkflow_flash_designs")
+            .select("title, price, deposit_amount, estimated_duration, size")
+            .eq("id", flashId)
+            .eq("studio_id", studioId)
+            .maybeSingle();
+
+          if (flashLoadErr || !flashRow) {
+            console.error(
+              "[applyPaidCheckoutDbState] flash row not found for checkout:",
+              flashId,
+              flashLoadErr?.message,
+            );
+          } else {
+            const slot = await findNextAvailablePlaceholderSlot(supabase, studioId);
+            const priceNum = Number(flashRow.price) || 0;
+            const placementMeta = (session.metadata?.placement || "").trim();
+            const ins = await supabase.from("inkflow_appointments").insert({
+              id: deterministicId,
+              studio_id: studioId,
+              client_name: clientNameForApt,
+              client_email: clientEmailForApt,
+              client_phone: null,
+              date: slot.date,
+              time: slot.time,
+              service: String(flashRow.title || "Flash"),
+              duration: Number(flashRow.estimated_duration) > 0 ? Number(flashRow.estimated_duration) : 60,
+              price: priceNum,
+              deposit: amountPaid,
+              deposit_paid: true,
+              status: "confirmed",
+              tattoo_type: "flash",
+              flash_id: flashId,
+              location: placementMeta || null,
+              size: typeof flashRow.size === "string" ? flashRow.size : null,
+              updated_at: new Date().toISOString(),
+            });
+            if (ins.error) {
+              console.error("[applyPaidCheckoutDbState] insert flash appointment:", ins.error.message);
+            } else {
+              createdFlashAppointmentId = deterministicId;
+              await supabase
+                .from("inkflow_payments")
+                .update({ appointment_id: deterministicId, updated_at: new Date().toISOString() })
+                .eq("stripe_session_id", session.id);
+            }
+          }
+        } catch (slotErr) {
+          console.error("[applyPaidCheckoutDbState] flash appointment slot/create:", slotErr);
+        }
+      } else {
+        console.warn("[applyPaidCheckoutDbState] flash checkout without client email in metadata/session");
+      }
     }
   }
 
@@ -109,9 +204,7 @@ export async function applyPaidCheckoutDbState(
     }
   }
 
-  const flashIdRaw = session.metadata?.flash_id;
-  if (flashIdRaw) {
-    const flashId = typeof flashIdRaw === "string" ? flashIdRaw.trim() : String(flashIdRaw);
+  if (flashId) {
     /**
      * Un seul UPDATE Postgres (RPC) : `available = false`, `reserved = true`, `stock_current = stock_current + 1`
      * (via expression idempotente si webhook dupliqué — pas de double comptage).
@@ -124,4 +217,6 @@ export async function applyPaidCheckoutDbState(
       console.error("[applyPaidCheckoutDbState] inkflow_apply_flash_checkout_reserve:", flashRpcErr.message);
     }
   }
+
+  return createdFlashAppointmentId ? { createdFlashAppointmentId } : {};
 }

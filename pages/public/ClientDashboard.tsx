@@ -31,7 +31,12 @@ import {
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { Modal } from '../../components/ui/Modal';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader } from '../../components/ui/card';
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../../components/ui/empty';
 import { NotificationPopover, type Notification as ClientBellNotification } from '../../components/ui/notification-popover';
+import { Skeleton } from '../../components/ui/skeleton';
+import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
 import { LANDING_URL } from '../../lib/urls';
 import { clientNavigate } from '../../lib/clientAppNavigate';
@@ -104,15 +109,11 @@ function ClientMenuGlyph({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Invité : valeur produit + accès /client (connexion / inscription). */
+/** Invité : valeur produit + accès /client (connexion / inscription) — shadcn Card + Button (charte D). */
 function ClientGuestAuthCard({ layout }: { layout: 'home' | 'profile' }) {
-  const primaryBtn =
-    'inline-flex min-h-[48px] flex-1 items-center justify-center rounded-xl px-4 text-sm font-bold transition-transform active:scale-[0.98] touch-manipulation';
-  const secondaryBtn =
-    'inline-flex min-h-[48px] flex-1 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition-transform active:scale-[0.98] touch-manipulation';
   return (
-    <section
-      aria-labelledby="client-guest-auth-title"
+    <Card
+      className={cn('!gap-0 overflow-hidden border-0 bg-transparent p-0 shadow-none ring-0')}
       style={{
         background: `linear-gradient(135deg, ${D.goldGlow}, transparent)`,
         border: `1px solid ${D.goldDim}`,
@@ -121,43 +122,61 @@ function ClientGuestAuthCard({ layout }: { layout: 'home' | 'profile' }) {
         marginBottom: layout === 'home' ? 28 : 24,
       }}
     >
-      <h2
-        id="client-guest-auth-title"
-        className="font-sans font-semibold tracking-tight"
-        style={{ fontSize: layout === 'home' ? 17 : 18, color: D.text, marginBottom: 8 }}
-      >
-        Créer mon compte ou me connecter
-      </h2>
-      <p style={{ fontSize: 13, color: D.muted, lineHeight: 1.55, marginBottom: 14 }}>
-        L’espace client sert à trouver ton tatoueur, suivre tes rendez-vous et garder tes idées au même endroit.
-      </p>
-      <ul className="mb-5 space-y-2.5" style={{ fontSize: 12, color: D.textSub, lineHeight: 1.45 }}>
-        <li className="flex gap-2.5">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: D.gold }} strokeWidth={1.65} aria-hidden />
-          <span>Explorer des artistes et flashs près de toi</span>
-        </li>
-        <li className="flex gap-2.5">
-          <Calendar className="mt-0.5 h-4 w-4 shrink-0" style={{ color: D.gold }} strokeWidth={1.65} aria-hidden />
-          <span>Voir l’historique et le statut de tes réservations</span>
-        </li>
-        <li className="flex gap-2.5">
-          <Palette className="mt-0.5 h-4 w-4 shrink-0" style={{ color: D.gold }} strokeWidth={1.65} aria-hidden />
-          <span>Enregistrer de l’inspiration (favoris) sur ton compte</span>
-        </li>
-      </ul>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-        <a href="/client" className={primaryBtn} style={{ background: D.gold, color: D.onAccent, textDecoration: 'none' }}>
-          Se connecter
-        </a>
-        <a
-          href="/client?register=1"
-          className={secondaryBtn}
-          style={{ borderColor: D.border, background: D.card, color: D.text, textDecoration: 'none' }}
+      <CardHeader className="flex flex-col gap-2 p-0 text-left">
+        <h2
+          id="client-guest-auth-title"
+          className="font-sans font-semibold tracking-tight"
+          style={{ fontSize: layout === 'home' ? 17 : 18, color: D.text }}
         >
-          Créer mon compte
-        </a>
-      </div>
-    </section>
+          Créer mon compte ou me connecter
+        </h2>
+        <p className="text-[13px] leading-snug" style={{ color: D.muted, lineHeight: 1.55 }}>
+          L’espace client sert à trouver ton tatoueur, suivre tes rendez-vous et garder tes idées au même endroit.
+        </p>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-0 p-0 pt-0">
+        <ul
+          className="mb-5 flex list-none flex-col gap-2.5 pl-0"
+          style={{ fontSize: 12, color: D.textSub, lineHeight: 1.45 }}
+        >
+          <li className="flex gap-2.5">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0" style={{ color: D.gold }} strokeWidth={1.65} aria-hidden />
+            <span>Explorer des artistes et flashs près de toi</span>
+          </li>
+          <li className="flex gap-2.5">
+            <Calendar className="mt-0.5 h-4 w-4 shrink-0" style={{ color: D.gold }} strokeWidth={1.65} aria-hidden />
+            <span>Voir l’historique et le statut de tes réservations</span>
+          </li>
+          <li className="flex gap-2.5">
+            <Palette className="mt-0.5 h-4 w-4 shrink-0" style={{ color: D.gold }} strokeWidth={1.65} aria-hidden />
+            <span>Enregistrer de l’inspiration (favoris) sur ton compte</span>
+          </li>
+        </ul>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+          <Button
+            asChild
+            size="lg"
+            className="min-h-12 flex-1 touch-manipulation rounded-xl border-0 font-bold shadow-none"
+            style={{ background: D.gold, color: D.onAccent }}
+          >
+            <a href="/client" className="no-underline" style={{ color: D.onAccent }}>
+              Se connecter
+            </a>
+          </Button>
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className="min-h-12 flex-1 touch-manipulation rounded-xl font-semibold bg-transparent"
+            style={{ borderColor: D.border, background: D.card, color: D.text }}
+          >
+            <a href="/client?register=1" className="no-underline" style={{ color: D.text, border: 'none' }}>
+              Créer mon compte
+            </a>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -853,7 +872,7 @@ function SkeletonPill() {
       }}
     >
       <div style={{ height: 108, background: D.skeleton }} />
-      <div className="space-y-2 border-t px-3 pb-3 pt-2.5" style={{ borderColor: D.border }}>
+      <div className="flex flex-col gap-2 border-t px-3 pb-3 pt-2.5" style={{ borderColor: D.border }}>
         <div style={{ height: 16, width: '78%', background: D.skeleton, borderRadius: 6 }} />
         <div style={{ height: 11, width: '92%', background: D.skeleton, borderRadius: 5 }} />
         <div className="pt-2" style={{ borderTop: `1px solid ${D.border}` }}>
@@ -868,7 +887,7 @@ function SkeletonFlash() {
     <div className="flex h-full min-h-0 flex-col overflow-hidden" style={{ background: D.card, borderRadius: D.r.lg, border: `1px solid ${D.border}` }}>
       <div style={{ height: 'clamp(128px, 36vw, 168px)', flexShrink: 0, background: D.skeleton }} />
       <div className="flex min-h-0 flex-1 flex-col gap-2 px-3 pb-3 pt-3">
-        <div className="min-h-0 flex-1 space-y-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
           <div style={{ height: 14, width: '72%', background: D.skeleton, borderRadius: 6 }} />
           <div style={{ height: 10, width: '48%', background: D.skeleton, borderRadius: 5 }} />
         </div>
@@ -1178,12 +1197,23 @@ function TabExplore({
           })}
         </div>
       ) : (
-        <div style={{ padding: '64px 0', textAlign: 'center', color: D.muted, fontSize: 14 }}>
-          <ClientEmptyGlyph>
-            <Search className="w-7 h-7" style={{ color: D.muted }} strokeWidth={1.65} aria-hidden />
-          </ClientEmptyGlyph>
-          Aucun résultat pour « {query || discoveryStyleFilter} »
-        </div>
+        <Empty
+          role="status"
+          className="mb-8 border-0 bg-transparent py-10"
+          style={{ color: D.muted }}
+        >
+          <EmptyHeader className="max-w-sm gap-3">
+            <ClientEmptyGlyph>
+              <Search className="h-7 w-7" style={{ color: D.muted }} strokeWidth={1.65} aria-hidden />
+            </ClientEmptyGlyph>
+            <EmptyTitle className="text-sm font-medium" style={{ color: D.text }}>
+              Aucun résultat pour « {query || discoveryStyleFilter} »
+            </EmptyTitle>
+            <EmptyDescription className="text-xs" style={{ color: D.muted }}>
+              Change de style ou efface la recherche pour voir plus de flashs.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
 
       {/* Studios section */}
@@ -1255,18 +1285,31 @@ function TabFavorites({
           : 'Stockés sur cet appareil. Connecte-toi pour les retrouver sur tous tes appareils.'}
       </p>
       {list.length === 0 ? (
-        <div style={{
-          padding: '64px 24px', textAlign: 'center',
-          background: D.card, borderRadius: D.r.xl, border: `1px solid ${D.border}`,
-        }}>
-          <ClientEmptyGlyph>
-            <Heart className="w-7 h-7" style={{ color: D.muted }} strokeWidth={1.65} aria-hidden />
-          </ClientEmptyGlyph>
-          <div className="font-client-app" style={{ fontSize: 15, color: D.text, marginBottom: 8 }}>Aucun favori</div>
-          <div style={{ fontSize: 13, color: D.muted, lineHeight: 1.5 }}>
-            Touche le cœur sur une carte flash pour la retrouver ici.
-          </div>
-        </div>
+        <Empty
+          className="border-solid py-12"
+          style={{
+            padding: '48px 24px',
+            textAlign: 'center',
+            background: D.card,
+            borderRadius: D.r.xl,
+            border: `1px solid ${D.border}`,
+          }}
+        >
+          <EmptyHeader className="gap-3">
+            <ClientEmptyGlyph>
+              <Heart className="h-7 w-7" style={{ color: D.muted }} strokeWidth={1.65} aria-hidden />
+            </ClientEmptyGlyph>
+            <EmptyTitle
+              className="font-client-app text-base font-medium"
+              style={{ color: D.text }}
+            >
+              Aucun favori
+            </EmptyTitle>
+            <EmptyDescription className="text-[13px] leading-normal" style={{ color: D.muted }}>
+              Touche le cœur sur une carte flash pour la retrouver ici.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(152px,1fr))] [grid-auto-rows:minmax(0,1fr)] gap-3 sm:gap-4 items-stretch">
           {list.map((row) => {
@@ -1367,11 +1410,25 @@ function TabMap({
         style={{ WebkitOverflowScrolling: 'touch', paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))' }}
       >
         {loading ? (
-          <div style={{ color: D.muted, fontSize: 13, textAlign: 'center', paddingTop: 24 }}>Chargement…</div>
-        ) : studios.length === 0 ? (
-          <div style={{ color: D.muted, fontSize: 13, textAlign: 'center', paddingTop: 24 }}>
-            Aucun studio dans la zone
+          <div className="flex flex-col gap-3 px-2 pt-4" role="status" aria-label="Chargement des studios">
+            <Skeleton className="h-4 w-[60%] max-w-xs rounded-md opacity-60" />
+            <Skeleton className="h-16 w-full max-w-md rounded-xl opacity-50" />
+            <Skeleton className="h-16 w-full max-w-md rounded-xl opacity-50" />
           </div>
+        ) : studios.length === 0 ? (
+          <Empty className="border-0 bg-transparent py-6" style={{ color: D.muted }}>
+            <EmptyHeader className="gap-3">
+              <ClientEmptyGlyph>
+                <MapPin className="h-7 w-7" style={{ color: D.muted }} strokeWidth={1.65} aria-hidden />
+              </ClientEmptyGlyph>
+              <EmptyTitle className="text-sm font-medium" style={{ color: D.text }}>
+                Aucun studio dans la zone
+              </EmptyTitle>
+              <EmptyDescription className="text-xs" style={{ color: D.muted }}>
+                Élargis la carte ou déplace le centre pour chercher ailleurs.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <>
             <div style={{ fontSize: 12, color: D.muted, marginBottom: 12 }}>
@@ -1581,7 +1638,7 @@ function ClientDashboardRightRail({
       className="hidden xl:flex flex-col w-[300px] flex-shrink-0 border-l min-h-0 overflow-y-auto overscroll-contain safe-bottom"
       style={{ borderColor: D.sidebarBorder, background: D.sidebarBg }}
     >
-      <div className="p-4 sm:p-5 space-y-4">
+      <div className="flex flex-col gap-4 p-4 sm:p-5">
         <div
           className="rounded-2xl border shadow-sm overflow-hidden"
           style={{ borderColor: D.border, background: D.contentCardBg, boxShadow: D.shadow }}
@@ -1714,13 +1771,13 @@ function ClientDashboardRightRail({
         </div>
 
         <div
-          className="rounded-2xl border p-4 space-y-3 shadow-sm"
+          className="flex flex-col gap-3 rounded-2xl border p-4 shadow-sm"
           style={{ borderColor: D.border, background: D.contentCardBg, boxShadow: D.shadow }}
         >
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: D.muted }}>
             Mes réservations
           </p>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-sm">
               <span style={{ color: D.textSub }}>Total actif</span>
               <span className="font-bold" style={{ color: D.text }}>
@@ -1828,7 +1885,7 @@ function TabRDV({
         size="lg"
       >
         {projectDetail ? (
-          <div className="space-y-5 select-text">
+          <div className="flex flex-col gap-5 select-text">
             {(() => {
               const st = PROJECT_STATUS_LABEL[projectDetail.status] ?? {
                 label: projectDetail.status,
@@ -1853,7 +1910,7 @@ function TabRDV({
                     </span>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="flex flex-col gap-1">
                     <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
                       Studio
                     </p>
@@ -1863,7 +1920,7 @@ function TabRDV({
                   </div>
 
                   {projectDetail.client_name ? (
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
                         Nom sur la demande
                       </p>
@@ -1874,7 +1931,7 @@ function TabRDV({
                   ) : null}
 
                   {vit.subjectLabel ? (
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
                         Type de demande
                       </p>
@@ -1883,7 +1940,7 @@ function TabRDV({
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
                         Type de projet
                       </p>
@@ -1894,7 +1951,7 @@ function TabRDV({
                   )}
 
                   {vit.phone ? (
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
                         Téléphone indiqué
                       </p>
@@ -1904,7 +1961,7 @@ function TabRDV({
                     </div>
                   ) : null}
 
-                  <div className="space-y-1">
+                  <div className="flex flex-col gap-1">
                     <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
                       {messageLabel}
                     </p>
@@ -1914,7 +1971,7 @@ function TabRDV({
                   </div>
 
                   {projectDetail.placement?.trim() ? (
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
                         Emplacement (corps)
                       </p>
@@ -1925,7 +1982,7 @@ function TabRDV({
                   ) : null}
 
                   {projectDetail.estimated_size?.trim() ? (
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
                         Taille estimée
                       </p>
@@ -1936,7 +1993,7 @@ function TabRDV({
                   ) : null}
 
                   {projectDetail.budget?.trim() ? (
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
                         Budget
                       </p>
@@ -1947,7 +2004,7 @@ function TabRDV({
                   ) : null}
 
                   {projectDetail.client_instagram?.trim() ? (
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
                         Instagram
                       </p>
@@ -1958,7 +2015,7 @@ function TabRDV({
                   ) : null}
 
                   {refUrls.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
                       <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
                         Références visuelles
                       </p>
@@ -2111,7 +2168,7 @@ function TabRDV({
                         {p.created_at ? formatDate(p.created_at) : ''}
                       </div>
                       {p.description ? (
-                        <div className="mt-2 space-y-1.5">
+                        <div className="mt-2 flex flex-col gap-1.5">
                           {vit.subjectLabel ? (
                             <p className="text-[12px] leading-snug" style={{ color: D.text }}>
                               <span className="font-semibold">Demande : </span>
@@ -2265,7 +2322,7 @@ function TabProfile({
     return (
       <div className="px-2 pt-8 pb-12 sm:px-4 md:px-6">
         <div
-          className="mx-auto max-w-md space-y-4 rounded-2xl border p-8"
+          className="mx-auto flex max-w-md flex-col gap-4 rounded-2xl border p-8"
           style={{ borderColor: D.border, background: D.contentCardBg }}
         >
           <div className="mx-auto h-20 w-20 animate-pulse rounded-full" style={{ background: D.skeleton }} />
@@ -2432,7 +2489,7 @@ function TabProfile({
           </button>
         ) : null}
 
-        <div className="w-full max-w-sm space-y-2">
+        <div className="flex w-full max-w-sm flex-col gap-2">
           <label className="block text-[11px] font-semibold uppercase tracking-wide" style={{ color: D.muted }}>
             Nom affiché
           </label>
@@ -2617,20 +2674,20 @@ function TabProfile({
         </a>
       ) : null}
 
-      {/* Sign out */}
-      <button
+      {/* Sign out — shadcn Button (bordure destructive, couleurs charte D) */}
+      <Button
         type="button"
+        variant="outline"
         onClick={handleSignOut}
-        className="w-full min-h-[48px] touch-manipulation active:scale-[0.98] transition-transform"
+        className="mb-8 w-full min-h-12 touch-manipulation rounded-xl border font-bold shadow-none"
         style={{
-          padding: '14px 0',
-          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-          borderRadius: D.r.lg, fontSize: 14, fontWeight: 700, color: D.red,
-          cursor: 'pointer', marginBottom: 32,
+          background: 'rgba(239,68,68,0.08)',
+          borderColor: 'rgba(239,68,68,0.2)',
+          color: D.red,
         }}
       >
         Se déconnecter
-      </button>
+      </Button>
     </div>
   );
 }
@@ -3286,7 +3343,7 @@ export function ClientDashboard() {
 
           <div className="relative z-10 mx-4 border-t my-2" style={{ borderColor: D.border }} />
 
-          <nav className="relative z-10 flex-1 min-h-0 px-3 py-2 overflow-y-auto overscroll-contain space-y-4">
+          <nav className="relative z-10 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-3 py-2">
             <div>
               <p
                 className="text-[10px] font-semibold tracking-widest uppercase px-3 mb-1.5"
@@ -3294,7 +3351,7 @@ export function ClientDashboard() {
               >
                 Navigation
               </p>
-              <div className="space-y-0.5">
+              <div className="flex flex-col gap-0.5">
                 {SIDEBAR_NAV.map(({ id, label, Icon }) => (
                   <button
                     key={id}
@@ -3327,7 +3384,7 @@ export function ClientDashboard() {
           </nav>
 
           <div
-            className="relative z-10 mt-auto px-3 py-3 border-t safe-bottom space-y-0.5"
+            className="relative z-10 mt-auto flex flex-col gap-0.5 border-t px-3 py-3 safe-bottom"
             style={{ borderColor: D.border }}
           >
             <a
@@ -3655,8 +3712,14 @@ export function ClientDashboard() {
                       );
                     })
                   : (
-                    <div style={{ padding: '20px 0', color: D.muted, fontSize: 13 }}>
-                      Aucun studio trouvé près de toi
+                    <div className="flex min-w-[200px] shrink-0 flex-col items-center justify-center px-4 py-5">
+                      <Empty className="min-h-0 border-0 bg-transparent p-0 py-0">
+                        <EmptyHeader className="gap-2">
+                          <EmptyTitle className="text-center text-xs font-medium" style={{ color: D.muted }}>
+                            Aucun studio trouvé près de toi
+                          </EmptyTitle>
+                        </EmptyHeader>
+                      </Empty>
                     </div>
                   )
               }

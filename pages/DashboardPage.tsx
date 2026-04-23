@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
 import { isInkflowInternalStaffEmail } from '../lib/inkflowInternalStaff';
+import { shouldRedirectPortalClientFromProDashboard } from '../lib/postLoginRedirect';
 import { StudioPrivacyProvider } from '../contexts/StudioPrivacyContext';
 import { SEO } from '../components/SEO';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -12,6 +13,7 @@ const DashboardPro = lazy(() =>
 
 export const DashboardPage: React.FC = () => {
   const { user, isAuthenticated, authLoading } = useAuth();
+  const [allowProDashboard, setAllowProDashboard] = React.useState(false);
 
   React.useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -31,6 +33,28 @@ export const DashboardPage: React.FC = () => {
     window.history.replaceState({}, '', '/admin');
     window.dispatchEvent(new Event('inkflow-navigate'));
   }, [authLoading, user?.email, user?.isInkflowStaff]);
+
+  React.useEffect(() => {
+    if (authLoading || !isAuthenticated || !user) return;
+    if (isInkflowInternalStaffEmail(user.email) || user.isInkflowStaff) {
+      setAllowProDashboard(true);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      if (await shouldRedirectPortalClientFromProDashboard(user)) {
+        if (!cancelled) {
+          window.history.replaceState({}, '', '/client/dashboard');
+          window.dispatchEvent(new Event('inkflow-navigate'));
+        }
+        return;
+      }
+      if (!cancelled) setAllowProDashboard(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isAuthenticated, user]);
 
   if (authLoading) {
     return (
@@ -53,6 +77,14 @@ export const DashboardPage: React.FC = () => {
       <div className="min-h-screen bg-neutral-50 flex flex-col items-center justify-center gap-3 px-4">
         <Logo size="lg" className="rounded-2xl" />
         <p className="text-sm text-zinc-500 text-center">Ouverture du tableau fondateur…</p>
+      </div>
+    );
+  }
+
+  if (!allowProDashboard) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <Logo size="lg" className="rounded-2xl" />
       </div>
     );
   }

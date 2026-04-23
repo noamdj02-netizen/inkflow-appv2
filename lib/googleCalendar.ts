@@ -113,7 +113,7 @@ export function generateICS(apt: {
   const start = new Date(`${apt.date}T${apt.time}:00`);
   const end = new Date(start.getTime() + (apt.duration || 60) * 60 * 1000);
 
-  const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const fmt = (d: Date) => d.toISOString().replaceAll('-', '').replaceAll(':', '').split('.')[0] + 'Z';
 
   return [
     'BEGIN:VCALENDAR',
@@ -155,7 +155,7 @@ export function generateICSAll(appointments: Parameters<typeof generateICS>[0][]
   const events = appointments.map(apt => {
     const start = new Date(`${apt.date}T${apt.time}:00`);
     const end = new Date(start.getTime() + (apt.duration || 60) * 60 * 1000);
-    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const fmt = (d: Date) => d.toISOString().replaceAll('-', '').replaceAll(':', '').split('.')[0] + 'Z';
     return [
       'BEGIN:VEVENT',
       `UID:${apt.id}@inkflow.app`,
@@ -208,7 +208,7 @@ export function getGoogleCalendarAddUrl(apt: {
   const start = new Date(`${apt.date}T${apt.time}:00`);
   const end = new Date(start.getTime() + (apt.duration || 60) * 60 * 1000);
 
-  const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const fmt = (d: Date) => d.toISOString().replaceAll('-', '').replaceAll(':', '').split('.')[0] + 'Z';
 
   const params = new URLSearchParams({
     action: 'TEMPLATE',

@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { getGoTrueUser } from "../_shared/supabaseAuth.ts";
 import { sendEmail } from "../_shared/resend.ts";
-import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
+import { wrapEmailLayout, escapeHtml, emailInfoBox, getDefaultEmailHeroBanner } from "../_shared/emailLayout.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -154,7 +154,7 @@ Deno.serve(async (req: Request) => {
       <p style="color:#525252;font-size:15px;line-height:1.6;margin:0 0 16px;">Vous avez été invité(e) à rejoindre l'équipe du studio <strong>${safeStudio}</strong> sur InkFlow.</p>
       ${emailInfoBox(
       `<p style="color:#737373;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 8px;">Adresse à utiliser</p>
-        <p style="color:#171717;font-size:16px;font-weight:600;margin:0;"><a href="mailto:${safeEmail}" style="color:#6161FF;text-decoration:none;">${safeEmail}</a></p>
+        <p style="color:#171717;font-size:16px;font-weight:600;margin:0;"><a href="mailto:${safeEmail}" style="color:#0b5394;text-decoration:none;">${safeEmail}</a></p>
         <p style="color:#525252;font-size:14px;line-height:1.5;margin:12px 0 0;">Créez votre compte ou connectez-vous avec cette adresse pour accéder au tableau de bord.</p>`,
     )}
       <p style="color:#737373;font-size:13px;line-height:1.5;margin:0;">Si vous n'attendiez pas cette invitation, vous pouvez ignorer ce message.</p>`;
@@ -164,6 +164,7 @@ Deno.serve(async (req: Request) => {
       titleBlack: "équipe",
       subtitle: studioDisplayName,
       bodyHtml,
+      heroBanner: getDefaultEmailHeroBanner(),
       button: { text: "Créer mon compte InkFlow", url: signupUrl },
       buttonSubtext: "Déjà un compte ? Utilisez la connexion avec la même adresse email.",
       linkHint: { label: "Connexion (compte existant)", url: loginUrl },

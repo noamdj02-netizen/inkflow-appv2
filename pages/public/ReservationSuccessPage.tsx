@@ -75,7 +75,7 @@ function buildGoogleCalendarUrl(apt: {
   const [hour, min] = (apt.time || '09:00').split(':').map(Number);
   const start = new Date(year, month - 1, day, hour, min, 0);
   const end = new Date(start.getTime() + (apt.duration || 60) * 60 * 1000);
-  const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const fmt = (d: Date) => d.toISOString().replaceAll('-', '').replaceAll(':', '').split('.')[0] + 'Z';
   const params = new URLSearchParams({
     action: 'TEMPLATE',
     text: apt.service,
@@ -94,7 +94,7 @@ function buildIcsBlob(
   const [hour, min] = (apt.time || '09:00').split(':').map(Number);
   const start = new Date(year, month - 1, day, hour, min, 0);
   const end = new Date(start.getTime() + (apt.duration || 60) * 60 * 1000);
-  const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const fmt = (d: Date) => d.toISOString().replaceAll('-', '').replaceAll(':', '').split('.')[0] + 'Z';
   const ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',

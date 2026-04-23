@@ -26,6 +26,7 @@
     "mobile",
     "pages/_error.tsx",
     "claude-skills",
-    "mon-app"
+    "mon-app",
+    "video"
   ]
 }

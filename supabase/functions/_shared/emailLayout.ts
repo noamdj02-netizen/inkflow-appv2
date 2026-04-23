@@ -84,9 +84,17 @@ export function escapeHtml(str: string): string {
 /** Typo unique e-mails (Inter uniquement) */
 const FONT_EMAIL = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
 
-/** Bannière pleine largeur (optionnelle) — même ratio que confirm signup */
+/** Bannière pleine largeur (optionnelle) — même ratio que confirm signup / reset password */
 export const DEFAULT_EMAIL_HERO_IMAGE =
   "https://images.unsplash.com/photo-1552627019-947c3789ffb5?ixlib=rb-4.1.0&auto=format&fit=crop&crop=entropy&w=1600&h=640&q=88";
+
+/** Hero par défaut : image tatouage + clic vers l’app (e-mails transactionnels Resend). */
+export function getDefaultEmailHeroBanner(): { imageUrl: string; linkUrl: string } {
+  return {
+    imageUrl: DEFAULT_EMAIL_HERO_IMAGE,
+    linkUrl: getAppUrl(),
+  };
+}
 
 export interface EmailLayoutOptions {
   /** Partie gauche du titre sur deux lignes (même couleur que le reste — plus d’accent or) */

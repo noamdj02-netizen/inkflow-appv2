@@ -691,17 +691,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       >
         <div className="flex flex-col gap-2.5 sm:gap-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500 sm:hidden mb-0.5">
-              Demandes
-            </p>
-            <h1 className="font-display font-bold tracking-tight text-zinc-900 dark:text-white text-xl leading-snug sm:text-2xl md:text-3xl sm:leading-tight">
-              <span className="sm:hidden">{requestsSectionHeadline[activeTab]}</span>
-              <span className="hidden sm:inline">Demandes</span>
-            </h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-1.5 text-sm sm:text-base max-w-2xl leading-relaxed hidden sm:block">
-              Trois entrées possibles : créneaux déjà dans l’agenda, réservations /book, ou brief sans date — chaque onglet correspond à une source.
-            </p>
-            <p className="text-zinc-600 dark:text-zinc-300 mt-1 sm:mt-2 text-xs sm:text-sm font-medium max-w-2xl line-clamp-2 sm:line-clamp-none break-words">
+            <h2 className="font-display font-bold tracking-tight text-zinc-900 dark:text-white text-lg leading-snug sm:hidden">
+              {requestsSectionHeadline[activeTab]}
+            </h2>
+            <p className="text-zinc-600 dark:text-zinc-300 mt-1 sm:mt-1.5 text-xs sm:text-sm font-medium max-w-2xl line-clamp-2 sm:line-clamp-none break-words">
               {tabStatusLine[activeTab]}
             </p>
           </div>

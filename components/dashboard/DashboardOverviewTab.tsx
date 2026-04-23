@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Plus, Inbox, Image, LayoutGrid, Calendar, UserPlus, CreditCard, Clock, ChevronRight, Wallet, Users, DollarSign, TrendingUp, ArrowUpRight, Star, ExternalLink, AlertCircle, CalendarCheck, Phone, MessageCircle, Home, Settings, Zap, Grip, Move, GripVertical, X, Target, Sparkles, BarChart3, Gift, Heart, Award, Percent, Bell, FileText, MapPin, Share2, Check, Loader2, Camera } from 'lucide-react';
 import {
   DndContext,
@@ -30,6 +31,10 @@ import { IconInkCap } from '../icons/InkCraftIcons';
 import { StudioSetupChecklist } from './StudioSetupChecklist';
 import { IconBox } from '../ui/IconBox';
 import { LANDING_PRICING_URL } from '../../lib/urls';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 /** Image d’en-tête mobile si aucune image vitrine (fichier dans /public) */
 const MOBILE_OVERVIEW_HEADER_BG_FALLBACK = '/images/hero-tattoo-artist.png';
@@ -48,37 +53,108 @@ interface OverviewTrialBannerProps {
   onOpenBilling?: () => void;
 }
 
-function OverviewTrialBanner({ message, onOpenBilling }: OverviewTrialBannerProps) {
+/** Rappels (acomptes, RDV 24h) — shadcn Alert + Button */
+function OverviewActivityAlerts({
+  alerts,
+  setDismissedAlerts,
+  onAlertNavigate,
+  className = '',
+}: {
+  alerts: { id: string; type: 'warning' | 'info'; msg: string; cta: string }[];
+  setDismissedAlerts: React.Dispatch<React.SetStateAction<Set<string>>>;
+  onAlertNavigate?: (alert: { id: string; type: string }) => void;
+  className?: string;
+}) {
+  if (alerts.length === 0) return null;
   return (
     <div
-      className="rounded-2xl border border-amber-200/90 dark:border-amber-500/30 bg-gradient-to-br from-amber-50/95 to-white dark:from-amber-950/35 dark:to-zinc-900/80 px-4 py-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm"
+      className={cn('flex flex-col gap-2', className)}
+      role="region"
+      aria-label="Rappels et actions rapides"
+    >
+      {alerts.map((a) => (
+        <Alert
+          key={a.id}
+          role={a.type === 'warning' ? 'alert' : 'status'}
+          className={cn(
+            a.type === 'warning'
+              ? 'border-amber-200/90 bg-amber-50/95 dark:border-amber-500/30 dark:bg-amber-950/30'
+              : 'border-sky-200/90 bg-sky-50/95 dark:border-sky-500/30 dark:bg-sky-950/30',
+            '[&_[data-slot=alert-description]]:font-medium [&_[data-slot=alert-description]]:text-foreground/95',
+            a.type === 'warning'
+              ? 'dark:[&_[data-slot=alert-description]]:text-amber-100'
+              : 'dark:[&_[data-slot=alert-description]]:text-sky-100',
+            a.type === 'warning'
+              ? '[&>svg]:text-amber-600 dark:[&>svg]:text-amber-400'
+              : '[&>svg]:text-sky-600 dark:[&>svg]:text-sky-400',
+          )}
+        >
+          {a.type === 'warning' ? (
+            <AlertCircle strokeWidth={2} aria-hidden />
+          ) : (
+            <Bell strokeWidth={2} aria-hidden />
+          )}
+          <AlertDescription>{a.msg}</AlertDescription>
+          <div className="col-span-2 flex flex-wrap items-center justify-end gap-2 border-t border-border/40 pt-2.5 dark:border-border/25">
+            <Button type="button" size="default" onClick={() => onAlertNavigate?.(a)} className="min-h-11 min-w-[5.5rem]">
+              {a.cta}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              onClick={() => setDismissedAlerts((prev) => new Set([...prev, a.id]))}
+              aria-label="Masquer ce rappel"
+            >
+              <X aria-hidden />
+            </Button>
+          </div>
+        </Alert>
+      ))}
+    </div>
+  );
+}
+
+function OverviewTrialBanner({ message, onOpenBilling }: OverviewTrialBannerProps) {
+  return (
+    <Card
+      className="border-amber-200/90 bg-gradient-to-br from-amber-50/95 to-white py-4 shadow-sm dark:border-amber-500/30 dark:from-amber-950/35 dark:to-zinc-900/80"
       role="status"
       aria-live="polite"
     >
-      <p className="text-sm font-medium text-amber-950 dark:text-amber-100 leading-snug flex items-start gap-2 min-w-0">
-        <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" aria-hidden />
-        <span>{message}</span>
-      </p>
-      <div className="flex flex-wrap gap-2 shrink-0">
-        <a
-          href={LANDING_PRICING_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold shadow-sm transition-all active:scale-[0.98] hover:opacity-95"
-        >
-          Voir les formules
-        </a>
-        {onOpenBilling && (
-          <button
-            type="button"
-            onClick={onOpenBilling}
-            className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white/80 dark:bg-zinc-900/60 text-sm font-medium text-zinc-800 dark:text-zinc-200 transition-all active:scale-[0.98] hover:bg-zinc-50 dark:hover:bg-zinc-800"
-          >
-            Facturation
-          </button>
-        )}
-      </div>
-    </div>
+      <CardContent className="px-4 sm:px-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex min-w-0 items-start gap-2 text-sm font-medium text-amber-950 dark:text-amber-100">
+            <Sparkles className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+            <span>{message}</span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              asChild
+              className="min-h-11"
+            >
+              <a
+                href={LANDING_PRICING_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Voir les formules
+              </a>
+            </Button>
+            {onOpenBilling && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onOpenBilling}
+                className="min-h-11"
+              >
+                Facturation
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -309,6 +385,8 @@ export interface DashboardOverviewTabProps {
   trialEndsAt?: string | null;
   /** Ouvre Paramètres → Facturation (Stripe / plan) */
   onOpenBilling?: () => void;
+  /** `true` quand le bandeau héros (DashboardPro) porte le titre de page « Vue d’ensemble » (md+) — le salut desktop passe en `h2` pour l’accessibilité */
+  pageTitleInShell?: boolean;
 }
 
 export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
@@ -329,6 +407,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   pendingDeposits,
   nextAppointmentIn2h,
   visibleAlerts,
+  setDismissedAlerts,
   setActiveTab,
   onAlertNavigate,
   setSelectedAppointment,
@@ -351,9 +430,56 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   studioSubscriptionStatus,
   trialEndsAt,
   onOpenBilling,
+  pageTitleInShell = false,
 }) => {
   const { privacyMode } = useStudioPrivacy();
   const euro = (n: number) => formatEuroPrivacy(n, privacyMode);
+  const prefersReducedMotion = useReducedMotion();
+  /**
+   * Ressort type UIKit (premium-frontend, transform/opacity seulement).
+   * L’opacité de l’onglet reste côté DashboardPro — variation locale légère ici.
+   */
+  const iosSpring = useCallback(
+    (delay: number) =>
+      prefersReducedMotion
+        ? { initial: false, animate: { y: 0, opacity: 1 }, transition: { duration: 0 } }
+        : {
+            initial: { y: 16, opacity: 0.9 },
+            animate: { y: 0, opacity: 1 },
+            transition: {
+              type: 'spring' as const,
+              stiffness: 400,
+              damping: 32,
+              mass: 0.86,
+              delay,
+            },
+          },
+    [prefersReducedMotion]
+  );
+
+  const quickGridVariants = useMemo(
+    () => ({
+      hidden: {},
+      visible: prefersReducedMotion
+        ? { transition: { duration: 0 } }
+        : { transition: { staggerChildren: 0.07, delayChildren: 0.1 } },
+    }),
+    [prefersReducedMotion]
+  );
+
+  const quickTileVariants = useMemo(
+    () => ({
+      hidden: prefersReducedMotion ? { y: 0, opacity: 1 } : { y: 12, opacity: 0.88 },
+      visible: prefersReducedMotion
+        ? { y: 0, opacity: 1, transition: { duration: 0 } }
+        : {
+            y: 0,
+            opacity: 1,
+            transition: { type: 'spring' as const, stiffness: 500, damping: 34, mass: 0.7 },
+          },
+    }),
+    [prefersReducedMotion]
+  );
 
   const trialDaysRemaining = useMemo(() => getTrialDaysRemaining(trialEndsAt), [trialEndsAt]);
 
@@ -885,7 +1011,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         
         {/* iOS Large Title Header */}
         <div className="px-3 min-[400px]:px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-2.5 sm:pt-6 sm:pb-3 safe-top">
-          <div className="relative rounded-2xl overflow-hidden border border-zinc-200/80 dark:border-zinc-800 shadow-md min-h-[128px] sm:min-h-[140px]">
+          <motion.div
+            className="relative overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800 min-h-[128px] sm:min-h-[140px] dashboard-pro-ios-hero-card"
+            {...iosSpring(0)}
+          >
             {/* Image de fond = couverture vitrine (pas l’avatar compte) */}
             <div
               className="absolute inset-0 bg-cover bg-center scale-105"
@@ -897,13 +1026,23 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/35 to-black/65 dark:from-black/55 dark:via-black/45 dark:to-black/75"
               aria-hidden
             />
+            {/* Profondeur organique + grain (premium-frontend — transform/opacity uniquement côté motion) */}
+            <div
+              className="pointer-events-none absolute -left-8 top-2 size-[9.5rem] rounded-full bg-emerald-400/22 blur-3xl dark:bg-emerald-500/18"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute -right-7 -bottom-3 size-32 rounded-full bg-violet-500/18 blur-2xl dark:bg-violet-500/12"
+              aria-hidden
+            />
+            <div className="dashboard-pro-ios-hero-film pointer-events-none absolute inset-0 z-[5] rounded-2xl" aria-hidden />
             <div className="relative z-10 p-3 pt-4 pb-3 min-[400px]:p-4 min-[400px]:pt-5 min-[400px]:pb-4">
               <div className="flex items-start justify-between gap-2 sm:gap-3">
                 <div className="flex-1 min-w-0 pr-1">
                   <p className="text-[12px] min-[400px]:text-[13px] font-medium text-white/80 mb-0.5 capitalize drop-shadow-sm line-clamp-2">
             {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
-                  <h1 className="text-[clamp(1.375rem,5.8vw,1.875rem)] sm:text-[28px] font-bold tracking-tight text-white leading-[1.15] font-display [text-shadow:0_2px_12px_rgba(0,0,0,0.35)]">
+                  <h1 className="text-[clamp(1.5rem,6.1vw,2.05rem)] font-bold tracking-[-0.03em] text-white leading-[1.12] font-display [text-shadow:0_2px_14px_rgba(0,0,0,0.38)] sm:text-[1.85rem]">
                     {greeting}{firstName ? `,` : ''}
                     <br />
                     {firstName || ''}
@@ -914,7 +1053,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     </p>
                   )}
                 </div>
-                <button
+                <motion.button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
@@ -924,7 +1063,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                   disabled={avatarUploading}
-                  className="relative mt-0.5 w-11 h-11 min-[400px]:w-12 min-[400px]:h-12 rounded-2xl flex-shrink-0 overflow-hidden shadow-lg ring-2 ring-white/40 active:scale-95 transition-transform touch-manipulation disabled:opacity-70"
+                  whileTap={prefersReducedMotion ? undefined : { scale: 0.94 }}
+                  transition={{ type: 'spring', stiffness: 520, damping: 32 }}
+                  className="relative mt-0.5 w-11 h-11 min-[400px]:w-12 min-[400px]:h-12 rounded-2xl flex-shrink-0 overflow-hidden shadow-lg ring-2 ring-white/40 motion-reduce:active:scale-100 active:scale-95 touch-manipulation disabled:opacity-70"
                   aria-label={onAvatarClick ? 'Changer la photo de profil (compte)' : 'Paramètres'}
                   title={onAvatarClick ? 'Photo de profil — pas la bannière' : undefined}
                 >
@@ -946,10 +1087,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       <Loader2 className="w-5 h-5 text-white animate-spin" aria-hidden />
                     </span>
                   )}
-                </button>
+                </motion.button>
         </div>
 
-              <button
+              <motion.button
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
@@ -957,14 +1098,16 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   setActiveTab('appointments');
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
-                className="mt-2 inline-flex min-h-[44px] max-w-full flex-wrap items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-left text-[11px] font-semibold text-white shadow-sm ring-1 ring-white/25 backdrop-blur-sm active:scale-[0.98] transition-all touch-manipulation min-[400px]:w-fit min-[400px]:max-w-none min-[400px]:flex-nowrap min-[400px]:py-1.5 min-[400px]:px-2.5"
+                whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
+                transition={{ type: 'spring', stiffness: 480, damping: 34 }}
+                className="mt-2 inline-flex min-h-[44px] max-w-full flex-wrap items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-left text-[11px] font-semibold text-white shadow-sm ring-1 ring-white/25 backdrop-blur-md motion-reduce:active:scale-100 active:scale-[0.98] touch-manipulation min-[400px]:w-fit min-[400px]:max-w-none min-[400px]:flex-nowrap min-[400px]:py-1.5 min-[400px]:px-2.5"
                 aria-label={`${todayAppointments.length} rendez-vous aujourd’hui, ouvrir l’agenda`}
               >
                 <Calendar className="w-3.5 h-3.5 shrink-0 opacity-95" strokeWidth={2} aria-hidden />
                 <span className="tabular-nums">{todayAppointments.length}</span>
                 <span className="min-[340px]:hidden font-medium text-white/90">RDV ce jour</span>
                 <span className="hidden min-[340px]:inline font-medium text-white/90">RDV aujourd’hui</span>
-              </button>
+              </motion.button>
 
               {(unpaidCount > 0 || todayOrTomorrowCount > 0) && (
                 <div className="flex flex-wrap gap-2 mt-3">
@@ -987,54 +1130,74 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
 
-        {/* Actions rapides — sous 400px : grille 2×2 (cibles 44px+, libellés lisibles) · 400px+ : 4 colonnes */}
-        <div className="px-3 min-[400px]:px-4 pt-2 pb-1 sm:pt-3">
-          <div className="grid min-w-0 grid-cols-2 gap-2.5 min-[400px]:grid-cols-4 min-[400px]:gap-2.5">
-            <button
-              type="button"
-            onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-              className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
+        {/* Actions rapides — stagger spring iOS ; micro-tactile (transform) */}
+        <motion.div className="px-3 min-[400px]:px-4 pt-2 pb-1 sm:pt-3" {...iosSpring(0.04)}>
+          <motion.div
+            className="grid min-w-0 grid-cols-2 gap-2.5 min-[400px]:grid-cols-4 min-[400px]:gap-2.5"
+            variants={quickGridVariants}
+            initial="hidden"
+            animate="visible"
           >
+            <motion.button
+              type="button"
+              onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
+              variants={quickTileVariants}
+              whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white/95 px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/85 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black [@media(hover:hover)]:hover:border-zinc-300/90 dark:[@media(hover:hover)]:hover:border-zinc-600"
+            >
               <Plus className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300" strokeWidth={2} aria-hidden />
               <span className="px-0.5 text-center text-[11px] font-medium leading-tight text-zinc-600 dark:text-zinc-400 min-[400px]:text-[10px]">Nouveau RDV</span>
-          </button>
-          <button
+            </motion.button>
+            <motion.button
               type="button"
-            onClick={() => setActiveTab('flash')}
-              className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
-          >
+              onClick={() => setActiveTab('flash')}
+              variants={quickTileVariants}
+              whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white/95 px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/85 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black [@media(hover:hover)]:hover:border-zinc-300/90 dark:[@media(hover:hover)]:hover:border-zinc-600"
+            >
               <Zap className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300" strokeWidth={2} aria-hidden />
               <span className="text-center text-[11px] font-medium leading-tight text-zinc-600 dark:text-zinc-400 min-[400px]:text-[10px]">Flash</span>
-          </button>
+            </motion.button>
             {vitrineSlug ? (
-            <a
+            <motion.a
               href={`/studio/${vitrineSlug}`}
               target="_blank"
               rel="noopener noreferrer"
-                className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
+              variants={quickTileVariants}
+              whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white/95 px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/85 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black [@media(hover:hover)]:hover:border-zinc-300/90 dark:[@media(hover:hover)]:hover:border-zinc-600"
             >
                 <ExternalLink className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300" strokeWidth={2} aria-hidden />
                 <span className="text-center text-[11px] font-medium leading-tight text-zinc-600 dark:text-zinc-400 min-[400px]:text-[10px]">Vitrine</span>
-            </a>
+            </motion.a>
             ) : (
-              <div className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/80 px-1 py-2.5 opacity-60 pointer-events-none dark:border-zinc-700 dark:bg-zinc-900/40 min-[400px]:min-h-[52px]">
+              <motion.div
+                variants={quickTileVariants}
+                className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/80 px-1 py-2.5 opacity-60 pointer-events-none dark:border-zinc-700 dark:bg-zinc-900/40 min-[400px]:min-h-[52px]"
+              >
                 <ExternalLink className="h-5 w-5 shrink-0 text-zinc-400" strokeWidth={2} aria-hidden />
                 <span className="text-center text-[11px] font-medium leading-tight text-zinc-400 min-[400px]:text-[10px]">Vitrine</span>
-              </div>
+              </motion.div>
           )}
-          <button
+            <motion.button
               type="button"
-            onClick={() => setActiveTab('requests')}
+              onClick={() => setActiveTab('requests')}
+              variants={quickTileVariants}
+              whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               aria-label={
                 pendingDemandesCount > 0
                   ? `Demandes, ${pendingDemandesCount} en attente`
                   : 'Demandes'
               }
-              className="relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black"
-          >
+              className="relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white/95 px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/85 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black [@media(hover:hover)]:hover:border-zinc-300/90 dark:[@media(hover:hover)]:hover:border-zinc-600"
+            >
             {pendingDemandesCount > 0 && (
               <span
                 aria-hidden
@@ -1045,13 +1208,23 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             )}
               <Inbox className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300" strokeWidth={2} aria-hidden />
               <span className="text-center text-[11px] font-medium leading-tight text-zinc-600 dark:text-zinc-400 min-[400px]:text-[10px]">Demandes</span>
-          </button>
-          </div>
-        </div>
+            </motion.button>
+          </motion.div>
+        </motion.div>
 
         {trialBannerMessage && (
           <div className="px-3 min-[400px]:px-4 pb-2">
             <OverviewTrialBanner message={trialBannerMessage} onOpenBilling={onOpenBilling} />
+          </div>
+        )}
+
+        {visibleAlerts.length > 0 && (
+          <div className="px-3 min-[400px]:px-4 pb-2">
+            <OverviewActivityAlerts
+              alerts={visibleAlerts}
+              setDismissedAlerts={setDismissedAlerts}
+              onAlertNavigate={onAlertNavigate}
+            />
           </div>
         )}
 
@@ -1142,8 +1315,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           </div>
         )}
 
-        {/* Main Content */}
-        <div className="px-3 min-[400px]:px-4 space-y-3 sm:space-y-4">
+        {/* Main Content — entrée ressort légère après hero + raccourcis */}
+        <motion.div className="px-3 min-[400px]:px-4 flex flex-col gap-3 sm:gap-4" {...iosSpring(0.12)}>
           
           {/* Prochain client — une seule zone cliquable, infos fusionnées (moins de blocs) */}
           {nextClient && (
@@ -1372,7 +1545,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
 
       </div>
       )}
@@ -1392,9 +1565,17 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="font-display text-[1.75rem] sm:text-[2rem] lg:text-[2.125rem] 2xl:text-[2.25rem] font-bold tracking-[-0.04em] text-zinc-900 dark:text-white">
-                  {greeting}{firstName ? `, ${firstName}` : ''}
-                </h1>
+                {pageTitleInShell ? (
+                  <h2 className="font-display text-[1.75rem] sm:text-[2rem] lg:text-[2.125rem] 2xl:text-[2.25rem] font-bold tracking-[-0.04em] text-zinc-900 dark:text-white">
+                    {greeting}
+                    {firstName ? `, ${firstName}` : ''}
+                  </h2>
+                ) : (
+                  <h1 className="font-display text-[1.75rem] sm:text-[2rem] lg:text-[2.125rem] 2xl:text-[2.25rem] font-bold tracking-[-0.04em] text-zinc-900 dark:text-white">
+                    {greeting}
+                    {firstName ? `, ${firstName}` : ''}
+                  </h1>
+                )}
                 {/* Compact Alert Pills */}
                 {unpaidCount > 0 && (
                   <button
@@ -1412,6 +1593,23 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   </span>
                 )}
               </div>
+              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 max-w-2xl leading-relaxed">
+                {user?.studioName && (
+                  <span className="font-medium text-zinc-700 dark:text-zinc-300">{user.studioName}</span>
+                )}
+                {user?.studioName && (
+                  <span className="text-zinc-400 dark:text-zinc-500" aria-hidden>
+                    {' '}
+                    ·{' '}
+                  </span>
+                )}
+                <span>
+                  {todayAppointments.length} RDV aujourd’hui
+                  {pendingDemandesCount > 0
+                    ? ` · ${pendingDemandesCount} demande${pendingDemandesCount > 1 ? 's' : ''} en attente`
+                    : ''}
+                </span>
+              </p>
             </div>
 
             {/* Right: actions — groupe visuel façon barre d’outils soft */}
@@ -1457,6 +1655,16 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           {trialBannerMessage && (
             <div className="mt-5">
               <OverviewTrialBanner message={trialBannerMessage} onOpenBilling={onOpenBilling} />
+            </div>
+          )}
+
+          {visibleAlerts.length > 0 && (
+            <div className="mt-4 md:mt-5">
+              <OverviewActivityAlerts
+                alerts={visibleAlerts}
+                setDismissedAlerts={setDismissedAlerts}
+                onAlertNavigate={onAlertNavigate}
+              />
             </div>
           )}
         </div>

@@ -503,7 +503,12 @@ Deno.serve(async (req: Request) => {
         const serviceName = session.metadata?.service_name || "Service";
 
         const receiptUrlForChat = await fetchStripeReceiptUrl(session.id);
-        await applyPaidCheckoutDbState(supabase, session, { receiptUrlForProjectChat: receiptUrlForChat });
+        const checkoutDbResult = await applyPaidCheckoutDbState(supabase, session, {
+          receiptUrlForProjectChat: receiptUrlForChat,
+        });
+        const metaAppointmentId = typeof appointmentId === "string" ? appointmentId.trim() : "";
+        const effectiveAppointmentId =
+          metaAppointmentId || checkoutDbResult.createdFlashAppointmentId || "";
 
         let amountRemaining = 0;
         let studioName = "Le studio";
@@ -519,11 +524,11 @@ Deno.serve(async (req: Request) => {
         let studioForEmail: { city: string | null; siret: string | null; slug: string } | null = null;
 
         let clientPhone: string | null = null;
-        if (appointmentId) {
+        if (effectiveAppointmentId) {
           const { data: apt } = await supabase
             .from("inkflow_appointments")
             .select("price, deposit, date, time, duration, service, client_phone")
-            .eq("id", appointmentId)
+            .eq("id", effectiveAppointmentId)
             .single();
           if (apt) {
             aptForEmail = apt as AptEmailRow;
@@ -577,11 +582,11 @@ Deno.serve(async (req: Request) => {
                 .eq("id", existingClient.id);
 
               // Lier le RDV au client si pas déjà lié
-              if (appointmentId) {
+              if (effectiveAppointmentId) {
                 await supabase
                   .from("inkflow_appointments")
                   .update({ client_id: existingClient.id })
-                  .eq("id", appointmentId)
+                  .eq("id", effectiveAppointmentId)
                   .is("client_id", null);
               }
             } else {
@@ -604,11 +609,11 @@ Deno.serve(async (req: Request) => {
               });
 
               // Lier le RDV au nouveau client
-              if (appointmentId) {
+              if (effectiveAppointmentId) {
                 await supabase
                   .from("inkflow_appointments")
                   .update({ client_id: newClientId })
-                  .eq("id", appointmentId);
+                  .eq("id", effectiveAppointmentId);
               }
             }
           } catch (clientSyncErr) {
@@ -685,7 +690,7 @@ Deno.serve(async (req: Request) => {
               type,
               stripeSessionId: session.id,
               stripeReceiptUrl: stripeReceiptUrl || undefined,
-              appointmentId: appointmentId || undefined,
+              appointmentId: effectiveAppointmentId || undefined,
               rdvDate: aptForEmail?.date,
               rdvTime: aptForEmail?.time,
               durationMinutes: aptForEmail?.duration ?? undefined,

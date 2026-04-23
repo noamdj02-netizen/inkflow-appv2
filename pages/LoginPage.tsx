@@ -5,7 +5,7 @@ import { Logo } from '../components/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { SEO } from '../components/SEO';
 import { LANDING_URL, APP_URL, sanitizePostAuthRedirect } from '../lib/urls';
-import { resolvePostLoginPath } from '../lib/postLoginRedirect';
+import { resolvePostLoginPath, shouldRedirectPortalClientFromProDashboard } from '../lib/postLoginRedirect';
 import { REDIRECT_AFTER_LOGIN_KEY, useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { CLIENT_DASHBOARD_THEME } from '../lib/clientDashboardTheme';
@@ -235,7 +235,7 @@ function readLoginPageQueryOnce(): {
 }
 
 export const LoginPage: React.FC = () => {
-  const { isAuthenticated, authLoading, resendSignupConfirmation } = useAuth();
+  const { user, isAuthenticated, authLoading, resendSignupConfirmation } = useAuth();
   const toast = useToast();
   const initialQ = readLoginPageQueryOnce();
   const [checkEmailMessage, setCheckEmailMessage] = useState(initialQ.checkEmail);
@@ -285,13 +285,15 @@ export const LoginPage: React.FC = () => {
       }
       const path = await resolvePostLoginPath(next);
       if (cancelled) return;
-      window.history.replaceState({}, '', path);
+      const target =
+        user && (await shouldRedirectPortalClientFromProDashboard(user)) ? '/client/dashboard' : path;
+      window.history.replaceState({}, '', target);
       window.dispatchEvent(new Event('inkflow-navigate'));
     })();
     return () => {
       cancelled = true;
     };
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, user]);
 
   if (!authLoading && isAuthenticated) {
     return (

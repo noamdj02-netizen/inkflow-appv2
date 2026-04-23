@@ -4,7 +4,7 @@
  * lien reçu officiel Stripe si disponible.
  */
 
-import { escapeHtml, wrapEmailLayout, EMAIL_STYLES } from "../_shared/emailLayout.ts";
+import { escapeHtml, wrapEmailLayout, EMAIL_STYLES, getDefaultEmailHeroBanner } from "../_shared/emailLayout.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
@@ -209,6 +209,7 @@ function buildPaymentConfirmationHtml(payload: Payload): string {
     title: `${title} — ${payload.studioName}`,
     subtitle: "Récapitulatif de votre transaction.",
     bodyHtml,
+    heroBanner: getDefaultEmailHeroBanner(),
   });
 }
 

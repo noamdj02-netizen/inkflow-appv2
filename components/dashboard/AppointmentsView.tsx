@@ -161,26 +161,20 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   const kpiGridClass = 'grid w-full grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3';
 
   return (
-    <section className="flex min-w-0 flex-col gap-4 sm:gap-6 md:gap-8 font-sans" aria-labelledby="appointments-heading">
+    <section
+      className="flex min-w-0 flex-col gap-4 sm:gap-6 md:gap-8 font-sans"
+      aria-label="Rendez-vous"
+    >
 
-      {/* ── En-tête : pas d’eyebrow « Agenda » sur mobile (la bottom bar le dit déjà) — h1 = contexte liste / mois · desktop = « Rendez-vous » ── */}
+      {/* Titre + accroche : bandeau héros dans DashboardPro — ici raccourci contexte (mobile) + action */}
       <div className="flex flex-col gap-4 sm:gap-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div className="min-w-0">
-            <h1
-              id="appointments-heading"
-              className="font-display font-bold leading-tight tracking-tight text-zinc-900 dark:text-white text-2xl md:text-3xl"
-            >
-              <span className="sm:hidden">{appointmentsMobileHeadline}</span>
-              <span className="hidden sm:inline">Rendez-vous</span>
-            </h1>
-            <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-zinc-500 dark:text-zinc-400 line-clamp-2 sm:line-clamp-none sm:text-sm sm:leading-normal md:text-base">
-              <span className="sm:hidden">Période et statut ci-dessous, puis liste ou calendrier.</span>
-              <span className="hidden sm:inline">
-                Filtre par période et statut, puis passe en liste ou en planning pour voir la journée semaine par semaine.
-              </span>
-            </p>
-          </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <p className="min-w-0 text-sm font-semibold text-zinc-800 dark:text-zinc-100 sm:text-base">
+            <span className="sm:hidden">{appointmentsMobileHeadline}</span>
+            <span className="hidden sm:inline text-zinc-500 dark:text-zinc-400 font-normal text-sm">
+              Filtre par période et statut, puis liste ou calendrier.
+            </span>
+          </p>
           <button
             type="button"
             onClick={onNewAppointment}

@@ -55,6 +55,7 @@ const AppointmentsView = lazy(() => import('./AppointmentsView').then(m => ({ de
 import { DashboardWidgets, AddWidgetModal, WidgetCard } from './DashboardWidgets';
 import { useDashboardWidgets } from '../../hooks/useDashboardWidgets';
 import { DashboardOverviewTab } from './DashboardOverviewTab';
+import { DashboardTabHero } from './DashboardTabHero';
 import { PlanningSidebar } from './PlanningSidebar';
 import { WaitlistManager } from './WaitlistManager';
 import { LoyaltyManager, type LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
@@ -328,6 +329,16 @@ export const DashboardPro: React.FC = () => {
   }, [activeTab]);
 
   const prefersReducedMotion = useReducedMotion();
+  /** Aligné sur `DashboardOverviewTab` (768px) — hero « Vue d’ensemble » shell uniquement md+ */
+  const [isMdUp, setIsMdUp] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const apply = () => setIsMdUp(mq.matches);
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
   /** Pastille onglet bas (layoutId) — ressort léger ; 0ms si reduced motion */
   const mobileBottomNavPillTransition = prefersReducedMotion
     ? { duration: 0 }
@@ -340,6 +351,106 @@ export const DashboardPro: React.FC = () => {
     if (activeTab === 'requests') return `requests-${requestsSubTab}`;
     return activeTab;
   }, [activeTab, settingsTab, clientsView, financeView, planningView, requestsSubTab]);
+
+  /** Bandeau héros (titre + accroche + optionnellement couverture vitrine). Vue d’ensemble : md+ seulement (mobile : hero iOS dans l’onglet). */
+  const tabHeroModel = useMemo((): { title: string; description: string } | null => {
+    if (activeTab === 'overview') {
+      return {
+        title: 'Vue d’ensemble',
+        description: 'Pilotage du jour : indicateurs, raccourcis, demandes et rendez-vous.',
+      };
+    }
+    switch (activeTab) {
+      case 'analytics':
+        return {
+          title: 'Statistiques',
+          description: 'Indicateurs, tendances et synthèse de votre activité tatouage.',
+        };
+      case 'requests': {
+        const bySub: Record<typeof requestsSubTab, string> = {
+          rdv: 'Demandes liées à l’agenda : créneaux, modifications et rappels.',
+          bookings: 'Réservations en ligne et suivi des statuts.',
+          projects: 'Devis, projets et dossiers en cours de traitement.',
+          history: 'Historique des demandes traitées ou archivées.',
+        };
+        return { title: 'Demandes', description: bySub[requestsSubTab] };
+      }
+      case 'appointments':
+        return {
+          title: 'Rendez-vous',
+          description:
+            planningView === 'month'
+              ? 'Vue mensuelle : repérez d’un coup d’œil la charge et les disponibilités.'
+              : 'Votre semaine : planifiez, déplacez et validez les séances.',
+        };
+      case 'flash':
+        return {
+          title: 'Galerie Flash',
+          description: 'Créez, organisez et mettez en avant vos flashs sur la vitrine.',
+        };
+      case 'clients':
+        if (clientsView === 'projects') {
+          return {
+            title: 'Projets',
+            description: 'Suivez les projets tatouage par client et par avancement.',
+          };
+        }
+        if (clientsView === 'loyalty') {
+          return {
+            title: 'Fidélité',
+            description: 'Points, paliers et campagnes de fidélisation.',
+          };
+        }
+        return {
+          title: 'Clients',
+          description: 'Carnet clients, historique et accès rapide aux fiches.',
+        };
+      case 'messaging':
+        return {
+          title: 'Messagerie',
+          description: 'Échanges avec vos clients et suivi des conversations.',
+        };
+      case 'portfolio':
+        return {
+          title: 'Portfolio',
+          description: 'Médias et réalisations affichés sur votre page publique.',
+        };
+      case 'finance': {
+        const byFin: Record<typeof financeView, string> = {
+          revenus: 'Revenus, encaissements et tendance globale.',
+          acomptes: 'Acomptes reçus, en attente et relances.',
+          stats: 'Indicateurs financiers et ventilation par période.',
+        };
+        return { title: 'Finance', description: byFin[financeView] };
+      }
+      case 'settings': {
+        const meta = SETTINGS_TAB_META[settingsTab];
+        return { title: meta.label, description: meta.description };
+      }
+      case 'notifications':
+        return {
+          title: 'Notifications',
+          description: 'Alertes studio, rappels et activité récente sur votre compte.',
+        };
+      case 'account':
+        return {
+          title: 'Mon compte',
+          description: 'Profil, identité visuelle compte et préférences de connexion.',
+        };
+      case 'etablissement':
+        return {
+          title: 'Établissement',
+          description: 'Paramètres liés à votre structure et à l’équipe.',
+        };
+      default:
+        return {
+          title: tabs.find((t) => t.id === activeTab)?.label ?? 'Tableau de bord',
+          description: 'Espace pro InkFlow.',
+        };
+    }
+  }, [activeTab, settingsTab, clientsView, financeView, planningView, requestsSubTab]);
+
+  const showTabHero = Boolean(tabHeroModel && !loading && (activeTab !== 'overview' || isMdUp));
 
   /** Données pour `NotificationPopover` (titre / message / dates alignés sur le contexte studio). */
   const notificationPopoverItems: NotificationPopoverItem[] = useMemo(
@@ -2129,6 +2240,9 @@ export const DashboardPro: React.FC = () => {
               </button>
               {activeTab === 'overview' ? (
                 <>
+                  {showTabHero && tabHeroModel ? (
+                    <span className="sr-only">{tabHeroModel.title}</span>
+                  ) : null}
                   {/* Mobile / tablette : marque visible sur l’écran d’accueil (desktop : logo dans la sidebar) */}
                   <div className="flex items-center gap-2.5 min-w-0 flex-1 lg:hidden">
                     <Logo size="sm" className="rounded-xl flex-shrink-0 shadow-sm ring-1 ring-black/5 dark:ring-white/10" />
@@ -2143,15 +2257,18 @@ export const DashboardPro: React.FC = () => {
                   </div>
                   <div className="hidden lg:block flex-1 min-w-0" aria-hidden />
                 </>
+              ) : showTabHero && tabHeroModel ? (
+                <span className="sr-only">{tabHeroModel.title}</span>
               ) : (
                 <h2 className="text-base sm:text-xl font-semibold truncate text-zinc-900 dark:text-white min-w-0 pr-1">
-                  {activeTab === 'account'
-                    ? 'Mon compte'
-                    : activeTab === 'clients' && clientsView === 'loyalty'
-                      ? 'Fidélité'
-                      : activeTab === 'clients' && clientsView === 'projects'
-                        ? 'Projets'
-                        : tabs.find(t => t.id === activeTab)?.label}
+                  {tabHeroModel?.title ??
+                    (activeTab === 'account'
+                      ? 'Mon compte'
+                      : activeTab === 'clients' && clientsView === 'loyalty'
+                        ? 'Fidélité'
+                        : activeTab === 'clients' && clientsView === 'projects'
+                          ? 'Projets'
+                          : tabs.find((t) => t.id === activeTab)?.label)}
                 </h2>
               )}
             </div>
@@ -2371,7 +2488,11 @@ export const DashboardPro: React.FC = () => {
 
           {/* ====== ZONE CONTENU PRINCIPAL (scroll unique : tout le panneau défiler, y compris Demandes entière) ====== */}
           <div
-            className={`app-shell-content min-w-0 px-3 py-4 sm:p-6 md:p-8 xl:px-10 2xl:px-12 ${activeTab === 'overview' ? 'dashboard-overview-bg overflow-x-hidden' : 'dashboard-pages-bg'}`}
+            className={`app-shell-content min-w-0 px-3 py-4 sm:p-6 ${
+              activeTab === 'overview'
+                ? 'md:px-7 md:py-6 lg:px-8 lg:py-7 xl:px-9 xl:py-7 2xl:px-11 2xl:py-8'
+                : 'md:p-8 xl:px-10 2xl:px-12'
+            } ${activeTab === 'overview' ? 'dashboard-overview-bg overflow-x-hidden' : 'dashboard-pages-bg'}`}
           >
           {isRestricted && !(activeTab === 'settings' && settingsTab === 'billing') ? (
             <PaywallView
@@ -2397,9 +2518,17 @@ export const DashboardPro: React.FC = () => {
                 exit={prefersReducedMotion ? undefined : { opacity: 0 }}
                 transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: [0.25, 0.1, 0.25, 1] }}
               >
+          {showTabHero && tabHeroModel && (
+            <DashboardTabHero
+              title={tabHeroModel.title}
+              description={tabHeroModel.description}
+              coverImageUrl={vitrineData?.coverImage ?? null}
+            />
+          )}
           {activeTab === 'overview' && (
             <div className="min-w-0">
             <DashboardOverviewTab
+              pageTitleInShell={Boolean(!loading && isMdUp)}
               now={now}
               firstName={firstName}
               user={user}

@@ -4,15 +4,42 @@
  * Prérequis : domaine vérifié dans Resend + expéditeur autorisé (ex. onboarding@domaine.com).
  *
  * Usage :
- *   node --env-file=.env.local scripts/send-resend-test.mjs
+ *   node scripts/send-resend-test.mjs destinataire@example.com
  *   node --env-file=.env.local scripts/send-resend-test.mjs destinataire@example.com
  *
  * Variables d’environnement :
- *   RESEND_API_KEY   — obligatoire (re_xxx)
- *   RESEND_FROM      — optionnel, défaut "InkFlow Test <onboarding@resend.dev>" (sandbox limité)
+ *   RESEND_API_KEY   — obligatoire (re_xxx), dans .env.local ou l’environnement
+ *   RESEND_FROM ou RESEND_FROM_EMAIL — optionnel expéditeur
  */
 
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { Resend } from 'resend';
+
+/** Charge .env puis .env.local (sans écraser les variables déjà définies). Node 18+ OK. */
+function mergeEnvFile(relativeName) {
+  const p = resolve(process.cwd(), relativeName);
+  if (!existsSync(p)) return;
+  let raw = readFileSync(p, 'utf8');
+  if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1);
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    if (process.env[key] !== undefined) continue;
+    let val = trimmed.slice(eq + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    process.env[key] = val;
+  }
+}
+
+mergeEnvFile('.env');
+mergeEnvFile('.env.local');
 
 /** Retire guillemets accidentels autour de la valeur dans .env */
 function normalizeApiKey(raw) {
@@ -25,12 +52,27 @@ function normalizeApiKey(raw) {
 }
 
 const apiKey = normalizeApiKey(process.env.RESEND_API_KEY);
-const from = process.env.RESEND_FROM?.trim() || 'InkFlow Test <onboarding@resend.dev>';
+const from =
+  process.env.RESEND_FROM?.trim() ||
+  process.env.RESEND_FROM_EMAIL?.trim() ||
+  'InkFlow Test <onboarding@resend.dev>';
 const to = process.argv[2]?.trim() || process.env.RESEND_TEST_TO?.trim();
 
 async function main() {
   if (!apiKey) {
-    console.error('Missing RESEND_API_KEY. Add it to .env.local and use: node --env-file=.env.local scripts/send-resend-test.mjs');
+    console.error(
+      [
+        'RESEND_API_KEY manquante.',
+        '',
+        '1) Dans .env.local, ajoute une ligne non commentée :',
+        '   RESEND_API_KEY=re_xxxxxxxx',
+        '   (copie la clé depuis dashboard.resend.com → API Keys, ou depuis Supabase → Edge Functions → Secrets si tu l’y as mise)',
+        '',
+        '2) Relance : node scripts/send-resend-test.mjs ton@email.com',
+        '',
+        'Note : les modèles dans .env.example sont souvent en # commenté — il faut décommenter ou recopier la clé.',
+      ].join('\n'),
+    );
     process.exit(1);
   }
   if (!apiKey.startsWith('re_')) {

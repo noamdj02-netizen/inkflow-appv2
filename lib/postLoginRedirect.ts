@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { sanitizePostAuthRedirect } from './urls';
 import { normalizePublicMessageThreadId } from './threadIds';
 import { isInkflowInternalStaffEmail } from './inkflowInternalStaff';
+import { getStudioByEmail } from './supabaseDashboard';
 
 /**
  * Client espace client (même logique que {@link resolvePostLoginPath}) : metadata ou ligne portail.
@@ -32,6 +33,20 @@ export async function getInkflowPortalClientInfo(
 
   if (profile) return { isPortalClient: true, displayName };
   return { isPortalClient: false, displayName: '' };
+}
+
+/**
+ * Comptes espace client (portail) sans studio InkFlow : ne pas les envoyer sur le dashboard tatoueur.
+ * Si l’e-mail a déjà un studio (tatoueur), on laisse accéder au /dashboard.
+ */
+export async function shouldRedirectPortalClientFromProDashboard(user: User | null): Promise<boolean> {
+  if (!user) return false;
+  const { isPortalClient } = await getInkflowPortalClientInfo(user);
+  if (!isPortalClient) return false;
+  const email = user.email?.trim().toLowerCase();
+  if (!email) return true;
+  const studio = await getStudioByEmail(email);
+  return !studio?.id;
 }
 
 function emailNorm(e: string | undefined): string {

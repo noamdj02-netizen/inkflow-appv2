@@ -14,7 +14,7 @@ Document vivant : à mettre à jour après chaque release majeure. Généré sel
 | Vitrine publique `/studio/:slug` | **Fait (web)** | Thèmes vitrine dans le code ; roadmap historique mentionnait `/p/:slug` — **écart de nom d’URL** |
 | PWA / install | **À valider manuellement** | `manifest`, service worker selon config Vite ; tester sur `app` déployé |
 | Fidélité J+1 / J+7 / J+30 | **Partiel** | Edge / emails partiels possibles ; dashboard : état surtout **local** selon [AUDIT-DASHBOARD.md](./AUDIT-DASHBOARD.md) |
-| Messagerie dashboard | **Partiel** | Tables Supabase ; **threads non chargés** comme liste complète côté dash (doc audit) |
+| Messagerie dashboard | **Fait (web)** | Chargement des fils depuis `inkflow_messages` dans `DashboardPro` + subscription Realtime ; voir [AUDIT-DASHBOARD.md](./AUDIT-DASHBOARD.md) |
 | Rappels automatiques (SMS/email) | **Partiel** | Fonctions `send-appointment-reminders` etc. — valider prod + secrets |
 | App mobile Expo | **Partiel** | Projet canonique sous `inkflow-mobile/` ; parité fonctionnelle ≠ web |
 
@@ -62,6 +62,8 @@ Source : [`App.tsx`](../App.tsx) (mars 2026).
 | Dossier | Rôle |
 |---------|------|
 | **[`inkflow-mobile/`](../inkflow-mobile/)** | **Canonique** — `npm run start` ici ; dépendances complètes (`expo-blur`, `lucide-react-native`, `moti`, etc.). |
+
+**Stores (tatoueur) :** `app.json` → iOS `me.inkflow.studio`, Android même `package` ; `eas.json` pour EAS Build/Submit. App cliente : [`apps/inkflow-client/`](../apps/inkflow-client/) → `me.inkflow.client`.
 
 *(L’ancien sous-dossier dupliqué `inkflow-mobile/inkflow-mobile/` a été retiré du dépôt.)*
 
@@ -123,7 +125,7 @@ Cocher après test sur **mobile web** et **desktop** (et **Expo** si concerné).
 | 5 | Vitrine publique `/studio/{slug}` (vrai slug) | À valider | |
 | 6 | Réservation `/book/{slug}` → succès ou erreur métier claire | À valider | |
 | 7 | Lien acompte / Stripe (si activé) | À valider | Secrets Edge Functions |
-| 8 | Messagerie (thread connu) | À valider | Voir limitations [AUDIT-DASHBOARD.md](./AUDIT-DASHBOARD.md) |
+| 8 | Messagerie (liste + thread) | À valider | Liste alimentée par Supabase ; tests manuels recommandés |
 | 9 | Paramètres studio / vitrine sauvegardés | À valider | |
 | 10 | PWA : install + refresh (pas de régression) | À valider | |
 | 11 | Mobile : safe area, pas d’overflow horizontal body | À valider | |
@@ -142,7 +144,7 @@ Les lignes 1–12 du tableau ci-dessus restent **à cocher manuellement** (auth,
 
 | Sujet | Gravité | Référence |
 |-------|---------|-----------|
-| Messagerie dashboard : liste threads incomplète | P2 | [AUDIT-DASHBOARD.md](./AUDIT-DASHBOARD.md) |
+| Messagerie dashboard | OK (code) | [AUDIT-DASHBOARD.md](./AUDIT-DASHBOARD.md) — valider en prod (Realtime, edge cases) |
 | Fidélité / consentement / file d’attente : persistance surtout locale | P2 | [AUDIT-DASHBOARD.md](./AUDIT-DASHBOARD.md) |
 | Types générés Supabase vs tables custom | P2 | [CHECKLIST-PRODUCTION.md](./CHECKLIST-PRODUCTION.md) |
 | Écran intermédiaire auth : fond clair (`bg-white`) sur redirection login | P3 → corrigé | [`App.tsx`](../App.tsx) — aligné fond sombre |
