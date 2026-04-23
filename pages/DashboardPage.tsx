@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
 import { isInkflowInternalStaffEmail } from '../lib/inkflowInternalStaff';
 import { shouldRedirectPortalClientFromProDashboard } from '../lib/postLoginRedirect';
+import { pathForClientDashboardTab } from '../lib/clientDashboardRoutes';
 import { StudioPrivacyProvider } from '../contexts/StudioPrivacyContext';
 import { SEO } from '../components/SEO';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -44,7 +45,7 @@ export const DashboardPage: React.FC = () => {
     void (async () => {
       if (await shouldRedirectPortalClientFromProDashboard(user)) {
         if (!cancelled) {
-          window.history.replaceState({}, '', '/client/dashboard');
+          window.history.replaceState({}, '', pathForClientDashboardTab('home'));
           window.dispatchEvent(new Event('inkflow-navigate'));
         }
         return;

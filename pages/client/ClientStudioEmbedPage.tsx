@@ -9,6 +9,7 @@ import { SEO } from '../../components/SEO';
 import { supabase } from '../../lib/supabase';
 import { getStudioByEmail } from '../../lib/supabaseDashboard';
 import { CLIENT_DASHBOARD_THEME, buildClientDesignTokens } from '../../lib/clientDashboardTheme';
+import { pathForClientDashboardTab } from '../../lib/clientDashboardRoutes';
 
 const D = buildClientDesignTokens(CLIENT_DASHBOARD_THEME);
 
@@ -83,7 +84,7 @@ function ClientStudioEmbed({
           Cette page est réservée aux comptes avec un studio Inkflow lié à cet email.
         </p>
         <a
-          href="/client/dashboard?tab=profile"
+          href={pathForClientDashboardTab('profile')}
           className="mx-auto inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold active:scale-[0.98] transition-transform"
           style={{ borderColor: D.border, background: D.card, color: D.text }}
         >
@@ -104,7 +105,7 @@ function ClientStudioEmbed({
         style={{ borderColor: D.border, background: D.headerBg, backdropFilter: D.blur }}
       >
         <a
-          href="/client/dashboard?tab=profile"
+          href={pathForClientDashboardTab('profile')}
           className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl active:scale-[0.98] transition-transform"
           style={{ color: D.text }}
           aria-label="Retour"

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useClientFramerGestures } from '../../lib/clientFramerGestures';
 import { MapPin, Star, Calendar, Heart, ArrowLeft, Share2, Instagram, ExternalLink, MessageCircle, Bell, Check, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { CX } from '../../components/client/clientExperienceTypes';
+import { pathForClientDashboardTab } from '../../lib/clientDashboardRoutes';
 
 interface Artist {
   id: string;
@@ -35,6 +37,7 @@ interface ArtistPageProps {
 }
 
 export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
+  const { tap, tapSoft } = useClientFramerGestures();
   const [artist, setArtist] = useState<Artist | null>(null);
   const [flashes, setFlashes] = useState<Flash[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,9 +179,9 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: CX.bg, color: CX.text }}>
         <p className="text-lg font-semibold mb-4">{error ?? 'Artiste introuvable'}</p>
-        <a href="/client/dashboard" className="text-sm underline" style={{ color: CX.accent }}>
+        <motion.a href={pathForClientDashboardTab('explore')} whileTap={tap} className="text-sm underline" style={{ color: CX.accent }}>
           Retour à l'exploration
-        </a>
+        </motion.a>
       </div>
     );
   }
@@ -187,24 +190,26 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
     <div className="min-h-screen pb-24" style={{ background: CX.bg, color: CX.text }}>
       {/* Header cover */}
       <div className="relative h-56" style={{ background: `linear-gradient(135deg, #1a1510 0%, #2d2418 100%)` }}>
-        <button
+        <motion.button
           type="button"
           onClick={() => window.history.back()}
           aria-label="Retour"
+          whileTap={tap}
           className="absolute top-4 left-4 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md border z-10"
           style={{ background: 'rgba(0,0,0,0.4)', borderColor: CX.border }}
         >
           <ArrowLeft className="w-5 h-5" style={{ color: CX.text }} />
-        </button>
-        <button
+        </motion.button>
+        <motion.button
           type="button"
           onClick={share}
           aria-label="Partager"
+          whileTap={tap}
           className="absolute top-4 right-4 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center backdrop-blur-md border z-10"
           style={{ background: 'rgba(0,0,0,0.4)', borderColor: CX.border }}
         >
           <Share2 className="w-5 h-5" style={{ color: CX.text }} />
-        </button>
+        </motion.button>
       </div>
 
       {/* Avatar + Name */}
@@ -306,7 +311,7 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
         <div className="space-y-3 mt-6">
           <div className="flex gap-3">
             <motion.button
-              whileTap={{ scale: 0.97 }}
+              whileTap={tapSoft}
               onClick={toggleFollow}
               className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-semibold transition-all"
               style={{
@@ -320,7 +325,7 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
             </motion.button>
 
             <motion.button
-              whileTap={{ scale: 0.97 }}
+              whileTap={tapSoft}
               onClick={openChat}
               className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl border text-sm font-semibold transition-all"
               style={{ background: CX.surface, borderColor: CX.border, color: CX.text }}
@@ -331,21 +336,22 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
           </div>
 
           {artist.available_now ? (
-            <a
+            <motion.a
               href={
                 artist.studio_slug
                   ? `/book/${artist.studio_slug}?artist=${encodeURIComponent(artist.slug)}`
                   : '#'
               }
+              whileTap={tap}
               className="flex w-full items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold transition-all"
               style={{ background: CX.accent, color: '#000' }}
             >
               <Calendar className="w-4 h-4" />
               Réserver
-            </a>
+            </motion.a>
           ) : (
             <motion.button
-              whileTap={{ scale: 0.97 }}
+              whileTap={tapSoft}
               onClick={!waitlisted ? joinWaitlist : undefined}
               className="flex w-full items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold border transition-all"
               style={{
@@ -388,7 +394,7 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
               <motion.a
                 key={f.id}
                 href={f.slug ? `/flash/${f.slug}` : '#'}
-                whileTap={{ scale: 0.98 }}
+                whileTap={tap}
                 className="rounded-2xl overflow-hidden border"
                 style={{ borderColor: CX.border, background: CX.surface }}
               >

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useOptimistic, useTransition } from 'react';
 import { motion } from 'framer-motion';
+import { useClientFramerGestures } from '../../lib/clientFramerGestures';
 import { ArrowLeft, Heart, Calendar, Share2, MapPin, Clock, Ruler, Instagram, ExternalLink } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { CX } from '../../components/client/clientExperienceTypes';
@@ -7,6 +8,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { SEO } from '../../components/SEO';
 import { APP_URL } from '../../lib/urls';
 import { isClientPortalFullyReady } from '../../lib/clientOnboardingGate';
+import { pathForClientDashboardTab } from '../../lib/clientDashboardRoutes';
 
 interface FlashData {
   id: string;
@@ -35,6 +37,7 @@ interface FlashPageProps {
 }
 
 export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
+  const { tap, tapSoft } = useClientFramerGestures();
   const toast = useToast();
   const [flash, setFlash] = useState<FlashData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -195,7 +198,7 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: CX.bg, color: CX.text }}>
         <p className="text-lg font-semibold mb-4">{error ?? 'Flash introuvable'}</p>
-        <a href="/client/dashboard" className="text-sm underline" style={{ color: CX.accent }}>
+        <a href={pathForClientDashboardTab('explore')} className="text-sm underline" style={{ color: CX.accent }}>
           Retour à l'exploration
         </a>
       </div>
@@ -359,7 +362,7 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
       >
         <div className="flex gap-3 max-w-lg mx-auto">
           <motion.button
-            whileTap={{ scale: 0.97 }}
+            whileTap={tapSoft}
             onClick={toggleFavorite}
             disabled={isPending}
             className="w-14 h-14 rounded-2xl border flex items-center justify-center transition-all"
@@ -376,7 +379,7 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
               }}
             />
           </motion.button>
-          <a
+          <motion.a
             href={flash.studio_slug ? `/book/${flash.studio_slug}?flash=${flash.id}` : '#'}
             onClick={(e) => {
               if (portalGate === 'need_onboarding') {
@@ -385,12 +388,13 @@ export const FlashPage: React.FC<FlashPageProps> = ({ flashSlug }) => {
                 window.location.href = '/onboarding/finaliser-profil';
               }
             }}
-            className="flex-1 flex items-center justify-center gap-2 h-14 rounded-2xl text-base font-bold transition-all active:scale-[0.98]"
+            whileTap={flash.available ? tap : undefined}
+            className="flex-1 flex items-center justify-center gap-2 h-14 rounded-2xl text-base font-bold transition-all"
             style={{ background: flash.available ? CX.accent : CX.muted, color: '#000' }}
           >
             <Calendar className="w-5 h-5" />
             {flash.available ? 'Réserver ce flash' : 'Indisponible'}
-          </a>
+          </motion.a>
         </div>
       </div>
     </div>

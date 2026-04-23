@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import { EmailBase } from './EmailBase';
+import { absoluteUrlForClientDashboardTab } from '../lib/clientDashboardRoutes';
 
 interface RdvConfirmeEmailProps {
   clientName?: string;
@@ -22,7 +23,7 @@ export const RdvConfirmeEmail = ({
   supportAddress = 'Paris, France',
 }: RdvConfirmeEmailProps) => {
   const appOrigin = 'https://app.ink-flow.me';
-  const ctaUrl = conversationLink || `${appOrigin}/client/dashboard`;
+  const ctaUrl = conversationLink || absoluteUrlForClientDashboardTab(appOrigin, 'rdv');
 
   const footerNote = [
     `Besoin d'aide ? Appelez-nous au ${supportPhone}, démarrez un chat dans l'application, ou consultez le centre d'assistance.`,

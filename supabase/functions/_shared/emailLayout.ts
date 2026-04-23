@@ -62,7 +62,7 @@ export function getEmailNavigationBaseUrls(): {
   return {
     appUrl,
     siteUrl: getSiteUrl(),
-    clientDashboardUrl: `${appUrl}/client/dashboard`,
+    clientDashboardUrl: `${appUrl}/client/dashboard?tab=rdv`,
     tattooerDashboardUrl: `${appUrl}/dashboard`,
   };
 }
@@ -197,7 +197,7 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
 
   const appUrl = getAppUrl();
   const siteUrl = getSiteUrl();
-  const clientDashboardUrl = `${appUrl}/client/dashboard`;
+  const clientDashboardUrl = `${appUrl}/client/dashboard?tab=rdv`;
   const logoUrl = getEmailLogoUrl();
 
   const appCardHtml = hideAppPromo

@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Check, Zap } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -45,6 +46,7 @@ export const FlashCard: React.FC<FlashCardProps> = ({
   className,
   variant = 'default',
 }) => {
+  const reduce = useReducedMotion();
   const priceLabel = formatPriceEUR(price);
   const durationLabel = formatDuration(durationMinutes);
   const showImage = Boolean(imageUrl?.trim());
@@ -172,16 +174,18 @@ export const FlashCard: React.FC<FlashCardProps> = ({
 
   if (interactive) {
     return (
-      <button
+      <motion.button
         type="button"
         aria-pressed={selected}
         aria-label={`${title || 'Flash'}, ${priceLabel}${selected ? ', sélectionné' : ''}`}
         disabled={!available}
         onClick={onClick}
-        className={cn(baseShell, focusRing, bookingFocus, 'active:scale-[0.99]', className)}
+        whileTap={reduce || !available ? undefined : { scale: 0.99 }}
+        transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+        className={cn(baseShell, focusRing, bookingFocus, className)}
       >
         {inner}
-      </button>
+      </motion.button>
     );
   }
 

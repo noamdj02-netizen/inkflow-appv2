@@ -47,6 +47,7 @@ const DebugExperiencePage = lazy(() => import('./pages/admin/DebugExperiencePage
 const FounderDashboardPage = lazy(() =>
   import('./pages/admin/FounderDashboardPage').then((m) => ({ default: m.FounderDashboardPage })),
 );
+const DailyBriefPage = lazy(() => import('./pages/admin/DailyBriefPage').then((m) => ({ default: m.DailyBriefPage })));
 const ClientVitrineEmbedPage = lazy(() => import('./pages/client/ClientStudioEmbedPage').then(m => ({ default: m.ClientVitrineEmbedPage })));
 const ClientFlashToolsEmbedPage = lazy(() => import('./pages/client/ClientStudioEmbedPage').then(m => ({ default: m.ClientFlashToolsEmbedPage })));
 const ClientDashboard = lazy(() => import('./pages/public/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
@@ -228,6 +229,7 @@ const Router: React.FC = () => {
     { path: '/aide', component: AidePage },
     { path: '/referral', component: ReferralPage, requiresAuth: true },
     { path: '/admin/debug-experience', component: DebugExperiencePage, requiresAuth: true },
+    { path: '/admin/daily-brief', component: DailyBriefPage, requiresAuth: true },
     {
       path: /^\/admin\/([^/]+)\/?$/,
       component: FounderDashboardPage,

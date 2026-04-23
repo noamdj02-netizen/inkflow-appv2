@@ -1386,20 +1386,104 @@ input, select, textarea {
   }
 }
 
+/* Barre d’outils bas — look barre d’outils / dock iOS (verre, coin sup., trait fin) */
+.client-dashboard-shell .client-native-tab-bar {
+  background: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-top: 0.5px solid rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 -0.5px 0 rgba(0, 0, 0, 0.04),
+    0 -8px 32px rgba(0, 0, 0, 0.06);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  isolation: isolate;
+}
+@supports (padding: max(0px)) {
+  .client-dashboard-shell .client-native-tab-bar {
+    padding-left: max(6px, env(safe-area-inset-left, 0px));
+    padding-right: max(6px, env(safe-area-inset-right, 0px));
+  }
+}
+@media (max-width: 1023.98px) and (min-width: 400px) {
+  .client-dashboard-shell .client-native-tab-bar {
+    max-width: min(100%, 520px);
+    margin-left: auto;
+    margin-right: auto;
+    border-left: 0.5px solid rgba(0, 0, 0, 0.04);
+    border-right: 0.5px solid rgba(0, 0, 0, 0.04);
+  }
+}
+
 /* Tab bar mobile client — réduction de mouvement (WCAG) */
 @media (prefers-reduced-motion: reduce) {
-  .client-mobile-tab-bar button {
+  .client-mobile-tab-bar button,
+  .client-native-tab-bar button {
     transition-duration: 0.01ms !important;
   }
 }
 
-/* Portail client — canvas type iOS « grouped » (sans impacter le dashboard studio) */
+/* Portail client — canvas type iOS « systemGroupedBackground » (léger dégradé haut) */
 .client-dashboard-shell .app-shell-content.dashboard-pages-bg {
-  background: #f2f2f7;
+  background: linear-gradient(180deg, #e8eaef 0%, #f2f2f7 10%, #f2f2f7 100%);
+  background-attachment: local;
+}
+@media (prefers-reduced-motion: reduce) {
+  .client-dashboard-shell .app-shell-content.dashboard-pages-bg {
+    background: #f2f2f7;
+  }
 }
 
 .client-dashboard-shell .client-portal-discovery {
   font-feature-settings: 'kern' 1, 'liga' 1;
+}
+
+/* En-tête — barre de navigation iOS (grand titre mobile + verre) */
+.client-dashboard-shell .client-ios-header {
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom-width: 0.5px !important;
+  box-shadow:
+    0 0.5px 0 rgba(0, 0, 0, 0.04),
+    0 4px 20px -6px rgba(0, 0, 0, 0.06);
+}
+
+/* Pastille / ligne zone (localisation) — type listing secondaire */
+.client-dashboard-shell .client-ios-loc-pill {
+  background: rgba(60, 60, 67, 0.06);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-top: 4px;
+}
+
+/* Search bar — proche UITextField (rempli gris) */
+.client-dashboard-shell .client-ios-search-field {
+  border: none;
+  background: #e3e3e8;
+  color: #3c3c43;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+}
+.client-dashboard-shell .client-ios-search-filter {
+  border: 0.5px solid rgba(60, 60, 67, 0.12);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+}
+
+/* Onglet RDV — groupe inset (lignes reliées, séparateurs) */
+.client-dashboard-shell .client-rdv-inset {
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.04),
+    0 2px 12px rgba(0, 0, 0, 0.04);
+}
+.client-dashboard-shell .client-rdv-inset [data-rdv-row] {
+  transition: background-color 0.12s var(--ease-ios, ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .client-dashboard-shell .client-rdv-inset [data-rdv-row]:hover {
+    background: rgba(0, 0, 0, 0.02);
+  }
 }
 
 /* Carte section accueil — ombre douce type Figma / Materials léger */

@@ -114,7 +114,7 @@ function buildRdvConfirmeHtml(payload: Payload): string {
   const rawCta = payload.paymentLink || payload.conversationLink || APP_URL;
   const ctaUrl = ensureAbsoluteUrl(rawCta, APP_URL);
   const ctaLabel = hasPaymentLink ? "Régler mon acompte" : "Confirmer mon rendez-vous";
-  const clientDashboardUrl = `${APP_URL}/client/dashboard`;
+  const clientDashboardUrl = `${APP_URL}/client/dashboard?tab=rdv`;
   const safeClientName = escapeHtml(payload.clientName);
   const safeStudioName = escapeHtml(payload.studioName);
   const rawPaymentUrl = hasPaymentLink ? payload.paymentLink!.trim() : "";

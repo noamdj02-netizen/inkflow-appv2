@@ -2,6 +2,10 @@
  * URLs centralisées pour la navigation entre la landing (Framer) et l'app.
  * Landing : https://ink-flow.me (Framer)
  * App : https://app.ink-flow.me ou inkdlow.vercel.app
+ *
+ * Espace client (`/client/dashboard`, requêtes `?tab=`) : chemins et onglets dans
+ * `lib/clientDashboardRoutes.ts` — `pathForClientDashboardTab`, `PATH_CLIENT_DASHBOARD`.
+ * Pour les URLs **absolues** (e-mail, liens, OAuth) : `getCanonicalAppOrigin()` et `APP_URL` ci-dessous.
  */
 
 import { CLIENT_ONBOARDING_FINALIZE_PATH } from './clientOnboardingGate';

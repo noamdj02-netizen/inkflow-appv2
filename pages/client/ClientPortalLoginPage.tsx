@@ -15,6 +15,7 @@ import { clientNeedsPassword } from '../../lib/clientAuth';
 import { isClientPortalFullyReady } from '../../lib/clientOnboardingGate';
 import { consumeSupabaseAuthUrlError } from '../../lib/supabaseAuthUrl';
 import { CLIENT_DASHBOARD_THEME } from '../../lib/clientDashboardTheme';
+import { pathForClientDashboardTab } from '../../lib/clientDashboardRoutes';
 import { useSupabaseEnabled } from '../../hooks/useSupabaseEnabled';
 import type { User } from '@supabase/supabase-js';
 
@@ -23,7 +24,7 @@ type Phase = 'boot' | 'login' | 'password' | 'register' | 'sent_register';
 const D = CLIENT_DASHBOARD_THEME;
 
 async function getClientDestinationAfterAuth(user: User): Promise<string> {
-  if (await isClientPortalFullyReady(user)) return '/client/dashboard';
+  if (await isClientPortalFullyReady(user)) return pathForClientDashboardTab('home');
   return '/onboarding/finaliser-profil';
 }
 

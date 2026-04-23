@@ -9,13 +9,11 @@ import { SEO } from '../../components/SEO';
 import { HealthQuestionnaireForm, type HealthFormData } from '../../components/booking/HealthQuestionnaireForm';
 import { upsertClientHealthProfile, fetchClientHealthProfile, isHealthFormComplete } from '../../lib/clientHealthProfile';
 import { useToast } from '../../contexts/ToastContext';
+import { pathForClientDashboardTab } from '../../lib/clientDashboardRoutes';
 
-const T = {
-  bg: '#000000',
-  text: '#e8e3dc',
-  muted: '#5a5a5a',
-  accent: '#c9a96e',
-};
+/** Même « system grouped » que le portail client (index.css / dashboard) */
+const PAGE_BG =
+  'linear-gradient(180deg, #e8eaef 0%, #f2f2f7 10%, #f2f2f7 100%)';
 
 export const ClientHealthOnboardingPage: React.FC = () => {
   const toast = useToast();
@@ -76,44 +74,47 @@ export const ClientHealthOnboardingPage: React.FC = () => {
       },
     });
     toast.success('Questionnaire enregistré — tes prochaines réservations seront plus rapides.');
-    window.location.replace('/client/dashboard');
+    window.location.replace(pathForClientDashboardTab('home'));
   };
 
   return (
     <div
-      className="min-h-[100dvh] flex flex-col"
-      style={{ background: T.bg, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      className="flex min-h-[100dvh] flex-col"
+      style={{
+        background: PAGE_BG,
+        backgroundAttachment: 'local',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
     >
       <SEO title="Questionnaire santé — My Inkflow" canonical="/client/compte-sante" noindex />
       <header
-        className="px-5 flex items-center gap-4 border-b border-zinc-800/80"
+        className="sticky top-0 z-10 flex items-center gap-4 border-b border-zinc-200/90 bg-[#f2f2f7]/85 px-5 backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-[#f2f2f7]/70"
         style={{ paddingTop: 'max(12px, env(safe-area-inset-top))', paddingBottom: 12 }}
       >
         <a
-          href="/client/dashboard"
-          className="inline-flex items-center gap-2 text-sm transition-colors min-h-[44px] rounded-xl px-2 -ml-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:opacity-90"
-          style={{ color: T.muted }}
+          href={pathForClientDashboardTab('home')}
+          className="-ml-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl px-2 text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f2f2f7] active:opacity-90"
         >
-          <ArrowLeft className="w-4 h-4 shrink-0" aria-hidden />
+          <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
           Plus tard
         </a>
       </header>
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y px-4 sm:px-6 py-6 max-w-lg mx-auto w-full pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight mb-1" style={{ color: T.text }}>
+      <div className="mx-auto flex w-full max-w-lg flex-1 min-h-0 flex-col touch-pan-y overflow-y-auto overscroll-y-contain px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6">
+        <h1 className="mb-1 text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
           Questionnaire de santé
         </h1>
-        <p className="text-sm sm:text-base mb-6 leading-relaxed" style={{ color: T.muted }}>
+        <p className="mb-6 text-sm leading-relaxed text-zinc-500 sm:text-base">
           {alreadyComplete
             ? 'Tes réponses sont enregistrées. Tu peux les mettre à jour ci-dessous à tout moment.'
             : 'Une seule fois : ces infos seront réutilisées quand tu réserves un tatouage connectée à ton compte.'}
         </p>
         {loading ? (
-          <div className="flex items-center gap-2 py-12 justify-center" style={{ color: T.muted }}>
-            <Loader2 className="w-5 h-5 animate-spin" />
+          <div className="flex items-center justify-center gap-2 py-12 text-zinc-500">
+            <Loader2 className="h-5 w-5 animate-spin" />
             Chargement…
           </div>
         ) : (
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-4 sm:p-6">
+          <div className="rounded-2xl border border-zinc-200/90 bg-white p-4 shadow-sm sm:p-6">
             <HealthQuestionnaireForm
               initialData={initial}
               clientName={clientName}

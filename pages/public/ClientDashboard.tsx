@@ -28,6 +28,7 @@ import {
   X,
   ClipboardList,
   MessageCircle,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { Modal } from '../../components/ui/Modal';
@@ -53,6 +54,11 @@ import {
   toggleStudioFavoriteWithSupabaseSync,
 } from '../../lib/clientFavoritesSync';
 import { CLIENT_DASHBOARD_THEME, buildClientDesignTokens } from '../../lib/clientDashboardTheme';
+import {
+  type ClientDashboardTab,
+  readClientDashboardTabFromLocation,
+  pathForClientDashboardTab,
+} from '../../lib/clientDashboardRoutes';
 import { useToast } from '../../contexts/ToastContext';
 import { isClientPortalFullyReady } from '../../lib/clientOnboardingGate';
 import {
@@ -60,7 +66,8 @@ import {
   type NearbyStudio,
   type FlashPreview,
 } from '../../lib/supabaseGeo';
-import { distLabel, discoveryLocationLine } from '../../lib/clientDiscoveryFormat';
+import { clientDiscoveryAreaLabel, distLabel, discoveryLocationLine } from '../../lib/clientDiscoveryFormat';
+import { useClientFramerGestures } from '../../lib/clientFramerGestures';
 import { FlashCardClient, ArtistCardClient } from '../../components/client-ui';
 import { CLIENT_CARD_PALETTES as PALETTES } from '../../components/client-ui/paletteRotation';
 import { isStockPhoto, initials } from '../../components/client-ui/clientUiHelpers';
@@ -898,7 +905,7 @@ function SkeletonFlash() {
 }
 
 // ─── Navigation (sidebar + header) ───────────────────────────────────────────
-type Tab = 'home' | 'explore' | 'favorites' | 'map' | 'rdv' | 'profile';
+type Tab = ClientDashboardTab;
 
 const TAB_META: Record<Tab, { title: string; subtitle: string }> = {
   home: { title: 'Découverte', subtitle: 'Studios et flashs près de toi' },
@@ -985,9 +992,10 @@ function ClientMobileTabBar({
   unreadMessages?: number;
   pushDisconnected?: boolean;
 }) {
+  const { tap } = useClientFramerGestures();
   return (
     <nav
-      className="client-mobile-tab-bar lg:hidden fixed bottom-0 left-0 right-0 z-[50] flex touch-manipulation border-t border-zinc-200/70 bg-white/90 shadow-[0_-8px_32px_rgba(15,23,42,0.07)] backdrop-blur-xl backdrop-saturate-150 supports-[backdrop-filter]:bg-white/80"
+      className="client-mobile-tab-bar client-native-tab-bar lg:hidden fixed bottom-0 left-0 right-0 z-[50] flex touch-manipulation"
       role="navigation"
       aria-label="Navigation principale"
       style={{
@@ -1000,11 +1008,12 @@ function ClientMobileTabBar({
       {SIDEBAR_NAV.map(({ id, tabBarLabel, Icon }) => {
         const isOn = active === id;
         return (
-          <button
+          <motion.button
             key={id}
             type="button"
             onClick={() => onChange(id)}
-            className="flex flex-1 flex-col items-center justify-center gap-1 min-h-[56px] min-w-0 mx-0.5 py-1.5 rounded-xl transition-colors duration-200 active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            whileTap={tap}
+            className="mx-0.5 flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl py-1.5 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             style={{
               color: isOn ? D.gold : D.muted,
               background: isOn ? D.goldDim : 'transparent',
@@ -1023,7 +1032,7 @@ function ClientMobileTabBar({
             <span className="text-[11px] font-semibold leading-none text-center px-0.5 truncate w-full max-w-[4.5rem]">
               {tabBarLabel}
             </span>
-          </button>
+          </motion.button>
         );
       })}
     </nav>
@@ -1049,6 +1058,8 @@ function TabExplore({
   onFlashSortChange: (k: FlashSortKey) => void;
   clientEmailForSync?: string | null;
 }) {
+  const { tap, tapSoft } = useClientFramerGestures();
+  const exploreChipsRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
 
@@ -1081,51 +1092,63 @@ function TabExplore({
 
   return (
     <div className="px-2 pt-3 pb-8 sm:px-4 sm:pt-4 md:px-6">
-      {/* Search input — 16px min évite le zoom iOS au focus */}
-      <div
-        className="flex items-center gap-3 touch-manipulation"
-        style={{
-          background: D.card, border: `1px solid ${D.borderMid}`,
-          borderRadius: D.r.full, padding: '12px 16px', marginBottom: 16,
-        }}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={D.muted} strokeWidth="2" strokeLinecap="round" className="shrink-0">
-          <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-        </svg>
-        <input
-          ref={searchInputRef}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Artiste, style, ville…"
-          className="min-w-0 flex-1 bg-transparent border-0 outline-none"
-          style={{
-            fontSize: 16, color: D.text, fontFamily: 'inherit',
-          }}
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={() => setQuery('')}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 rounded-xl active:scale-95 transition-transform"
-            style={{ background: 'none', border: 'none', color: D.muted, fontSize: 20, lineHeight: 1 }}
-            aria-label="Effacer"
-          >
-            ×
-          </button>
-        )}
+      {/* Recherche pleine largeur + raccourci filtres (styles) */}
+      <div className="mb-4 flex min-w-0 items-stretch gap-2.5">
+        <div
+          className="client-ios-search-field flex min-h-[52px] min-w-0 flex-1 items-center gap-3 touch-manipulation px-4"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={D.muted} strokeWidth="2" strokeLinecap="round" className="shrink-0 opacity-60">
+            <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+          </svg>
+          <input
+            ref={searchInputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Artiste, style, ville…"
+            className="min-w-0 flex-1 bg-transparent border-0 outline-none"
+            style={{
+              fontSize: 16, color: D.text, fontFamily: 'inherit',
+            }}
+          />
+          {query && (
+            <motion.button
+              type="button"
+              onClick={() => setQuery('')}
+              whileTap={tapSoft}
+              className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl"
+              style={{ background: 'none', border: 'none', color: D.muted, fontSize: 20, lineHeight: 1 }}
+              aria-label="Effacer"
+            >
+              ×
+            </motion.button>
+          )}
+        </div>
+        <motion.button
+          type="button"
+          whileTap={tap}
+          onClick={() => exploreChipsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })}
+          className="client-ios-search-filter flex h-[52px] w-[52px] shrink-0 items-center justify-center touch-manipulation"
+          style={{ color: D.text }}
+          aria-label="Aller aux filtres par style"
+        >
+          <SlidersHorizontal className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+        </motion.button>
       </div>
 
       {/* Filtres styles — barre frosted (même look que l’accueil) */}
       <div
+        ref={exploreChipsRef}
+        id="client-explore-style-chips"
         className="ios-chip-scroller touch-pan-x -mx-1 px-1 pb-2"
         style={{ marginBottom: 20 }}
       >
         {STYLE_TABS.map((f) => (
-          <button
+          <motion.button
             key={f}
             type="button"
             onClick={() => onDiscoveryStyleFilter(f)}
-            className="shrink-0 touch-manipulation min-h-[36px] flex items-center rounded-full px-3.5 active:scale-[0.98] transition-transform"
+            whileTap={tapSoft}
+            className="flex min-h-[36px] shrink-0 items-center rounded-full px-3.5 touch-manipulation"
             style={{
               fontSize: 13,
               fontWeight: 600,
@@ -1138,7 +1161,7 @@ function TabExplore({
             }}
           >
             {f}
-          </button>
+          </motion.button>
         ))}
       </div>
 
@@ -1149,24 +1172,25 @@ function TabExplore({
         </p>
         <div className="ios-segmented-track" role="tablist" aria-label="Ordre d’affichage des flashs">
           {FLASH_SORT_OPTIONS.map(({ key, label }) => (
-            <button
+            <motion.button
               key={key}
               type="button"
               role="tab"
               aria-pressed={flashSortKey === key}
+              whileTap={tapSoft}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 onFlashSortChange(key);
               }}
-              className="touch-manipulation active:scale-[0.99]"
+              className="touch-manipulation"
               style={{
                 color: flashSortKey === key ? D.text : D.muted,
                 touchAction: 'manipulation',
               }}
             >
               {label}
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
@@ -1220,15 +1244,26 @@ function TabExplore({
       {studios.length > 0 && (
         <div style={{ marginBottom: 32 }}>
           <div className="font-client-app" style={{ fontSize: 17, color: D.text, marginBottom: 14 }}>
-            Studios ({studios.length})
+            Tous les studios ({studios.length})
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {studios.map((s, i) => (
-              <div key={s.id} style={{
-                background: D.card, border: `1px solid ${D.border}`,
-                borderRadius: D.r.lg, padding: '14px 16px',
-                display: 'flex', alignItems: 'center', gap: 14,
-              }}>
+              <motion.button
+                key={s.id}
+                type="button"
+                whileTap={tap}
+                onClick={() => {
+                  const f = s.flash?.[0];
+                  if (f) onFlashClick(f, i, s);
+                  else if (s.slug) clientNavigate(`/studio/${s.slug}`);
+                }}
+                className="w-full border text-left"
+                style={{
+                  background: D.card, border: `1px solid ${D.border}`,
+                  borderRadius: D.r.lg, padding: '14px 16px',
+                  display: 'flex', alignItems: 'center', gap: 14,
+                }}
+              >
                 <div style={{
                   width: 44, height: 44, borderRadius: D.r.full, flexShrink: 0,
                   background: PALETTES[i % PALETTES.length].bg,
@@ -1246,7 +1281,7 @@ function TabExplore({
                 <div style={{ fontSize: 12, color: D.gold, fontWeight: 600 }}>
                   {s.flash.length} flash
                 </div>
-              </div>
+              </motion.button>
             ))}
           </div>
         </div>
@@ -1831,7 +1866,10 @@ function TabRDV({
 
   if (!userEmail.trim()) {
     return (
-      <div className="px-2 pt-3 pb-8 sm:px-4 sm:pt-4 md:px-6">
+      <main
+        id="client-tab-rdv"
+        className="client-rdv-tab mx-auto w-full max-w-2xl px-2 pt-3 pb-8 sm:px-4 sm:pt-4 md:px-6"
+      >
         <div className="mb-5 max-w-lg">
           <p className="text-sm leading-relaxed" style={{ color: D.muted }}>
             Connecte-toi avec le même e-mail que pour tes réservations pour tout afficher ici.
@@ -1865,7 +1903,7 @@ function TabRDV({
             </a>
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -1876,8 +1914,15 @@ function TabRDV({
     return t || 'Projet';
   };
 
+  const nProjects = projectRequests.length;
+  const nBookings = bookings.length;
+  const hasAny = nProjects + nBookings > 0;
+
   return (
-    <div className="px-2 pt-3 pb-8 sm:px-4 sm:pt-4 md:px-6">
+    <main
+      id="client-tab-rdv"
+      className="client-rdv-tab mx-auto w-full max-w-2xl px-2 pt-3 pb-8 sm:px-4 sm:pt-4 md:px-6"
+    >
       <Modal
         isOpen={projectDetail !== null}
         onClose={() => setProjectDetail(null)}
@@ -2066,21 +2111,25 @@ function TabRDV({
         ) : null}
       </Modal>
 
-      <div className="mb-5 sm:mb-6 max-w-lg">
-        <p className="text-sm leading-relaxed" style={{ color: D.muted }}>
-          Tes demandes de projet et tes rendez-vous confirmés sont listés ci-dessous.
+      {!rdvLoading && hasAny && (
+        <p className="mb-3 font-client-app text-[15px] leading-snug" style={{ color: D.muted }}>
+          {nProjects > 0 && nBookings > 0
+            ? 'Demandes de projet d’un côté, créneaux de l’autre — chaque bloc est indépendant.'
+            : nProjects > 0
+              ? 'Suivi de tes demandes auprès des studios (messagerie via le bouton or).'
+              : 'Créneaux demandés auprès des studios (statut et rappel affichés sur chaque ligne).'}
         </p>
-      </div>
+      )}
 
       {rdvLoading ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col overflow-hidden rounded-2xl border" style={{ borderColor: D.border, background: D.card }} aria-busy="true" aria-label="Chargement des réservations">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="min-h-[104px] overflow-hidden rounded-2xl border"
-              style={{ background: D.contentCardBg, borderColor: D.border }}
+              className="border-b p-4 last:border-b-0"
+              style={{ borderColor: D.border }}
             >
-              <div className="flex flex-col gap-3 p-4">
+              <div className="flex min-h-[88px] flex-col gap-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="h-4 w-[45%] max-w-[200px] rounded-md" style={{ background: D.skeleton }} />
                   <div className="h-5 w-20 shrink-0 rounded-full" style={{ background: D.skeleton }} />
@@ -2091,9 +2140,9 @@ function TabRDV({
             </div>
           ))}
         </div>
-      ) : bookings.length === 0 && projectRequests.length === 0 ? (
+      ) : nBookings === 0 && nProjects === 0 ? (
         <div
-          className="rounded-2xl border px-6 py-14 text-center"
+          className="ios-hero-card rounded-2xl border px-6 py-14 text-center"
           style={{ background: D.contentCardBg, borderColor: D.border }}
         >
           <ClientEmptyGlyph>
@@ -2115,122 +2164,162 @@ function TabRDV({
           )}
         </div>
       ) : (
-        <div className="mb-8 flex flex-col gap-6">
-          {projectRequests.length > 0 && (
-            <section aria-labelledby="client-project-messages-heading" className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: D.border, background: D.card }}>
-              <h2
-                id="client-project-messages-heading"
-                className="text-base font-semibold tracking-tight"
-                style={{ color: D.text }}
+        <div className="mb-2 flex flex-col gap-8">
+          {nProjects + nBookings > 0 && nProjects > 0 && nBookings > 0 ? (
+            <p className="sr-only" role="status">
+              {`Résumé : ${nProjects} demande${nProjects > 1 ? 's' : ''} de projet, ${nBookings} rendez-vous.`}
+            </p>
+          ) : null}
+
+          {nProjects > 0 && (
+            <section aria-labelledby="client-project-messages-heading" className="min-w-0">
+              <header className="mb-3 max-w-2xl px-0.5">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h2
+                    id="client-project-messages-heading"
+                    className="font-client-app text-[20px] font-bold leading-tight tracking-[-0.02em] sm:text-[17px] sm:leading-snug"
+                    style={{ color: D.text }}
+                  >
+                    Demandes
+                  </h2>
+                  <span
+                    className="rounded-full px-2 py-0.5 font-client-app text-xs font-semibold tabular-nums"
+                    style={{ color: D.muted, background: 'rgba(60, 60, 67, 0.08)' }}
+                    aria-label={`${nProjects} élément${nProjects > 1 ? 's' : ''}`}
+                  >
+                    {nProjects}
+                  </span>
+                </div>
+                <p className="mt-1 text-[13px] leading-relaxed" style={{ color: D.muted }}>
+                  Ligne = aperçu. Tap pour le détail — le bouton or ouvre la conversation.
+                </p>
+              </header>
+              <ul
+                className="client-rdv-inset m-0 list-none overflow-hidden rounded-2xl border p-0"
+                style={{ borderColor: D.border, background: D.card }}
+                role="list"
               >
-                Demandes auprès des studios
-              </h2>
-              <p className="mt-1 mb-4 text-sm leading-relaxed" style={{ color: D.muted }}>
-                Touche une carte pour le détail. Utilise le bouton doré pour ouvrir la conversation (paiements et messages).
-              </p>
-              <div className="flex flex-col gap-3">
                 {projectRequests.map((p) => {
                   const st = PROJECT_STATUS_LABEL[p.status] ?? { label: p.status, color: D.muted, bg: D.card };
                   const vit = parseVitrineProjectDescription(p.description || '');
                   return (
-                    <div
+                    <li
                       key={p.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setProjectDetail(p)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setProjectDetail(p);
-                        }
-                      }}
-                      className="flex min-h-[108px] cursor-pointer flex-col rounded-2xl border p-4 text-left shadow-sm transition-transform active:scale-[0.99] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                      style={{ background: D.contentCardBg, borderColor: D.border }}
+                      className="border-b last:border-b-0"
+                      style={{ borderColor: D.border, background: D.contentCardBg }}
                     >
-                      <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-                        <div
-                          className="min-w-0 max-w-full flex-1 text-[15px] font-bold leading-snug tracking-tight"
-                          style={{ color: D.text }}
-                        >
-                          {p.studio_name ?? 'Studio'}
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1.5">
-                          <span
-                            className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
-                            style={{ color: st.color, background: st.bg }}
-                          >
-                            {st.label}
-                          </span>
-                          <ChevronRight className="h-4 w-4 opacity-40" aria-hidden />
-                        </div>
-                      </div>
-                      <div className="text-[13px] tabular-nums" style={{ color: D.muted }}>
-                        {p.created_at ? formatDate(p.created_at) : ''}
-                      </div>
-                      {p.description ? (
-                        <div className="mt-2 flex flex-col gap-1.5">
-                          {vit.subjectLabel ? (
-                            <p className="text-[12px] leading-snug" style={{ color: D.text }}>
-                              <span className="font-semibold">Demande : </span>
-                              {vit.subjectLabel}
-                            </p>
-                          ) : null}
-                          {vit.phone ? (
-                            <p className="text-[12px] tabular-nums" style={{ color: D.textSub }}>
-                              <span className="font-medium" style={{ color: D.muted }}>
-                                Tél.{' '}
-                              </span>
-                              {vit.phone}
-                            </p>
-                          ) : null}
-                          {(vit.message || (!vit.subjectLabel && !vit.phone)) ? (
-                            <div className="line-clamp-2 text-[13px] leading-snug" style={{ color: D.textSub }}>
-                              {vit.message || p.description}
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openProjectThread(p.id);
+                      <div
+                        data-rdv-row
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setProjectDetail(p)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setProjectDetail(p);
+                          }
                         }}
-                        className="mt-3 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-transform active:scale-[0.98] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                        style={{ background: D.gold, color: D.onAccent }}
+                        className="cursor-pointer px-4 pb-3 pt-4 text-left touch-manipulation transition-colors active:bg-zinc-900/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/55 focus-visible:ring-inset"
                       >
-                        <MessageCircle className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-                        Conversation avec le studio
-                      </button>
-                    </div>
+                        <div className="flex min-w-0 items-start justify-between gap-2">
+                          <div
+                            className="min-w-0 max-w-full flex-1 text-[15px] font-bold leading-snug tracking-tight"
+                            style={{ color: D.text }}
+                          >
+                            {p.studio_name ?? 'Studio'}
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <span
+                              className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+                              style={{ color: st.color, background: st.bg }}
+                            >
+                              {st.label}
+                            </span>
+                            <ChevronRight className="h-4 w-4 opacity-40" aria-hidden />
+                          </div>
+                        </div>
+                        <div className="mt-0.5 text-[13px] tabular-nums" style={{ color: D.muted }}>
+                          {p.created_at ? formatDate(p.created_at) : ''}
+                        </div>
+                        {p.description ? (
+                          <div className="mt-2 flex flex-col gap-1.5">
+                            {vit.subjectLabel ? (
+                              <p className="text-[12px] leading-snug" style={{ color: D.text }}>
+                                <span className="font-semibold">Demande : </span>
+                                {vit.subjectLabel}
+                              </p>
+                            ) : null}
+                            {vit.phone ? (
+                              <p className="text-[12px] tabular-nums" style={{ color: D.textSub }}>
+                                <span className="font-medium" style={{ color: D.muted }}>
+                                  Tél.{' '}
+                                </span>
+                                {vit.phone}
+                              </p>
+                            ) : null}
+                            {(vit.message || (!vit.subjectLabel && !vit.phone)) ? (
+                              <div className="line-clamp-2 text-[13px] leading-snug" style={{ color: D.textSub }}>
+                                {vit.message || p.description}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="px-4 pb-4">
+                        <button
+                          type="button"
+                          onClick={() => openProjectThread(p.id)}
+                          className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition-transform active:scale-[0.98] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                          style={{ background: D.gold, color: D.onAccent }}
+                        >
+                          <MessageCircle className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                          Conversation avec le studio
+                        </button>
+                      </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             </section>
           )}
 
-          {bookings.length > 0 && (
-            <section aria-labelledby="client-slot-bookings-heading" className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: D.border, background: D.card }}>
-              <h2
-                id="client-slot-bookings-heading"
-                className="text-base font-semibold tracking-tight mb-1"
-                style={{ color: D.text }}
+          {nBookings > 0 && (
+            <section aria-labelledby="client-slot-bookings-heading" className="min-w-0">
+              <header className="mb-3 max-w-2xl px-0.5">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h2
+                    id="client-slot-bookings-heading"
+                    className="font-client-app text-[20px] font-bold leading-tight tracking-[-0.02em] sm:text-[17px] sm:leading-snug"
+                    style={{ color: D.text }}
+                  >
+                    Rendez-vous
+                  </h2>
+                  <span
+                    className="rounded-full px-2 py-0.5 font-client-app text-xs font-semibold tabular-nums"
+                    style={{ color: D.muted, background: 'rgba(60, 60, 67, 0.08)' }}
+                    aria-label={`${nBookings} rendez-vous`}
+                  >
+                    {nBookings}
+                  </span>
+                </div>
+                <p className="mt-1 text-[13px] leading-relaxed" style={{ color: D.muted }}>
+                  Statut, date et heure demandés auprès du studio.
+                </p>
+              </header>
+              <ul
+                className="client-rdv-inset m-0 list-none overflow-hidden rounded-2xl border p-0"
+                style={{ borderColor: D.border, background: D.card }}
+                role="list"
               >
-                Tes rendez-vous
-              </h2>
-              <p className="mb-4 text-sm leading-relaxed" style={{ color: D.muted }}>
-                Dates et créneaux demandés auprès du studio.
-              </p>
-              <div className="flex flex-col gap-3">
                 {bookings.map((b) => {
                   const st = STATUS_LABEL[b.status] ?? { label: b.status, color: D.muted, bg: D.card };
                   return (
-                    <div
+                    <li
                       key={b.id}
-                      className="flex min-h-[108px] flex-col rounded-2xl border p-4 shadow-sm"
-                      style={{ background: D.contentCardBg, borderColor: D.border }}
+                      className="border-b px-4 py-4 last:border-b-0"
+                      style={{ borderColor: D.border, background: D.contentCardBg }}
                     >
-                      <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                      <div className="mb-1 flex flex-wrap items-start justify-between gap-2">
                         <div
                           className="min-w-0 max-w-full flex-1 text-[15px] font-bold leading-snug tracking-tight"
                           style={{ color: D.text }}
@@ -2244,24 +2333,24 @@ function TabRDV({
                           {st.label}
                         </span>
                       </div>
-                      <div className="text-[13px] tabular-nums" style={{ color: D.muted }}>
+                      <p className="text-[14px] font-medium tabular-nums" style={{ color: D.textSub }}>
                         {formatDate(b.requested_date)}
                         {b.requested_time ? ` · ${b.requested_time}` : ''}
-                      </div>
+                      </p>
                       {b.description ? (
-                        <div className="mt-2 line-clamp-2 text-[13px] leading-snug" style={{ color: D.textSub }}>
+                        <p className="mt-2 line-clamp-2 text-[13px] leading-snug" style={{ color: D.textSub }}>
                           {b.description}
-                        </div>
+                        </p>
                       ) : null}
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             </section>
           )}
         </div>
       )}
-    </div>
+    </main>
   );
 }
 
@@ -2692,12 +2781,34 @@ function TabProfile({
   );
 }
 
-function readInitialClientTab(): Tab {
-  if (typeof window === 'undefined') return 'home';
-  const t = new URLSearchParams(window.location.search).get('tab');
-  const allowed: Tab[] = ['home', 'explore', 'favorites', 'map', 'rdv', 'profile'];
-  if (t && (allowed as string[]).includes(t)) return t as Tab;
-  return 'home';
+/** Barre recherche + filtre — style UISearchBar / champs remplis iOS. */
+function ClientDiscoverySearchRow({ onOpenDiscovery }: { onOpenDiscovery: () => void }) {
+  const { tap } = useClientFramerGestures();
+  return (
+    <div className="mb-5 flex min-w-0 items-center gap-2.5" role="search">
+      <motion.button
+        type="button"
+        onClick={onOpenDiscovery}
+        whileTap={tap}
+        className="client-ios-search-field flex min-h-[52px] min-w-0 flex-1 items-center gap-3 touch-manipulation px-4 text-left font-client-app"
+        style={{ color: D.muted }}
+        aria-label="Rechercher — ouvre Explorer"
+      >
+        <Search className="h-4 w-4 shrink-0 opacity-60" strokeWidth={1.75} aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-[16px]">Artiste, style, ville…</span>
+      </motion.button>
+      <motion.button
+        type="button"
+        onClick={onOpenDiscovery}
+        whileTap={tap}
+        className="client-ios-search-filter flex h-[52px] w-[52px] shrink-0 items-center justify-center touch-manipulation"
+        style={{ color: D.text }}
+        aria-label="Filtres — ouvre Explorer"
+      >
+        <SlidersHorizontal className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+      </motion.button>
+    </div>
+  );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2705,7 +2816,7 @@ function readInitialClientTab(): Tab {
 // ══════════════════════════════════════════════════════════════════════════════
 export function ClientDashboard() {
   const toast = useToast();
-  const [tab, setTab]             = useState<Tab>(readInitialClientTab);
+  const [tab, setTab]             = useState<Tab>(() => readClientDashboardTabFromLocation());
   const [userName, setUserName]   = useState('');
   const [userInit, setUserInit]   = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -2733,11 +2844,19 @@ export function ClientDashboard() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastAppliedUserIdRef = useRef<string | null | undefined>(undefined);
 
+  // URL ↔ onglet (partage, retour arrière, signets)
   useEffect(() => {
-    const sp = new URLSearchParams(window.location.search);
-    if (sp.has('tab')) {
-      window.history.replaceState({}, '', '/client/dashboard');
+    const next = pathForClientDashboardTab(tab);
+    const cur = `${window.location.pathname}${window.location.search}`;
+    if (cur !== next) {
+      window.history.replaceState(window.history.state, '', next);
     }
+  }, [tab]);
+
+  useEffect(() => {
+    const onPop = () => setTab(readClientDashboardTabFromLocation());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
   }, []);
 
   // Auth + studio tatoueur (même email qu’inkflow_studios) + profil portail (photo)
@@ -2863,6 +2982,11 @@ export function ClientDashboard() {
     },
     [userId, portalReady, toast]
   );
+
+  const openDiscoveryExplore = useCallback(() => {
+    goTab('explore');
+    setExploreSearchFocusNonce((n) => n + 1);
+  }, [goTab]);
 
   const clientBellNotifications = useMemo((): ClientBellNotification[] => {
     const out: ClientBellNotification[] = [];
@@ -3293,6 +3417,19 @@ export function ClientDashboard() {
     return arr.slice(0, 4);
   }, [styleFiltered]);
 
+  const discoveryAreaLabel = useMemo(
+    () => clientDiscoveryAreaLabel(userPos, studios),
+    [userPos, studios],
+  );
+
+  /** Studios triés par distance pour la liste « Près de toi » (Accueil). */
+  const studiosSortedByDistance = useMemo(() => {
+    if (studios.length === 0) return [];
+    return [...studios].sort(
+      (a, b) => (a.distance_km ?? 9999) - (b.distance_km ?? 9999),
+    );
+  }, [studios]);
+
   /** Favoris flash/studio : sync dès que le client est connecté (sans attendre profil + santé). */
   const clientFavoritesSyncEmail = userId && userEmail?.trim() ? userEmail : null;
 
@@ -3306,6 +3443,7 @@ export function ClientDashboard() {
   /** Bonjour jusqu’en fin d’après-midi, Bonsoir le soir (typo unique Inter via font-client-app ci-dessous). */
   const greeting = hour >= 18 ? 'Bonsoir' : 'Bonjour';
   const prefersReducedMotion = useReducedMotion();
+  const { tap: clientTap, tapSoft: clientTapSoft } = useClientFramerGestures();
 
   return (
     <div
@@ -3434,11 +3572,10 @@ export function ClientDashboard() {
 
         <div className="app-shell-main min-w-0 min-h-0 flex flex-col">
           <header
-            className="app-shell-header safe-top flex flex-col gap-2 shrink-0 border-b py-2.5 sm:py-3"
+            className="app-shell-header client-ios-header safe-top flex flex-col gap-1.5 shrink-0 border-b py-2.5 sm:gap-2 sm:py-3"
             style={{
               borderColor: D.border,
               background: D.headerBg,
-              backdropFilter: D.blur,
               paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))',
               paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))',
             }}
@@ -3446,15 +3583,20 @@ export function ClientDashboard() {
             <div className="flex items-start sm:items-center justify-between gap-2 sm:gap-4 min-w-0">
               <div className="min-w-0 flex-1">
                 <p className="font-client-app text-[12px] sm:text-[13px] font-semibold leading-snug tracking-tight truncate min-w-0">
-                  <span style={{ color: D.muted }}>{greeting}</span>
+                  <span className="text-[11px] font-medium uppercase tracking-[0.12em] opacity-80" style={{ color: D.muted }}>
+                    {greeting}
+                  </span>
                   {firstName ? (
-                    <span style={{ color: D.text }}>{`, ${firstName}`}</span>
+                    <span style={{ color: D.text }}>{` · ${firstName}`}</span>
                   ) : null}
                 </p>
-                <h1 className="text-[clamp(1.05rem,4vw,1.35rem)] sm:text-xl tracking-tight font-client-app leading-tight truncate" style={{ color: D.text }}>
+                <h1
+                  className="mt-0.5 font-client-app font-bold leading-[1.1] tracking-[-0.04em] max-lg:text-[1.6rem] max-lg:leading-tight sm:text-xl lg:max-w-none lg:text-[clamp(1.05rem,3.5vw,1.25rem)] lg:tracking-tight"
+                  style={{ color: D.text }}
+                >
                   {TAB_META[tab].title}
                 </h1>
-                <p className="text-[11px] sm:text-sm mt-0.5 line-clamp-2 sm:line-clamp-1 sm:truncate" style={{ color: D.muted }}>
+                <p className="text-[11px] sm:text-[13px] sm:mt-0.5 line-clamp-2 sm:line-clamp-1 sm:truncate" style={{ color: D.muted }}>
                   {TAB_META[tab].subtitle}
                 </p>
               </div>
@@ -3566,6 +3708,17 @@ export function ClientDashboard() {
               )}
             </div>
             </div>
+            {(tab === 'home' || tab === 'explore') && (
+              <div
+                className="client-ios-loc-pill flex min-w-0 items-center gap-2"
+                style={{ borderTop: `0.5px solid ${D.border}` }}
+              >
+                <MapPin className="h-3.5 w-3.5 shrink-0" style={{ color: D.gold }} strokeWidth={2} aria-hidden />
+                <span className="min-w-0 truncate font-client-app text-[13px] font-semibold" style={{ color: D.textSub }}>
+                  {loading ? 'Chargement…' : discoveryAreaLabel}
+                </span>
+              </div>
+            )}
           </header>
 
           <div
@@ -3642,7 +3795,9 @@ export function ClientDashboard() {
         <div className="client-portal-discovery mx-auto w-full max-w-6xl px-4 pb-6 pt-2 sm:px-5 sm:pb-8 sm:pt-3 md:px-6">
           {authHydrated && !userId ? <ClientGuestAuthCard layout="home" /> : null}
 
-          {/* ARTISTES PROCHES — carte type iOS grouped + header léger blur */}
+          <ClientDiscoverySearchRow onOpenDiscovery={openDiscoveryExplore} />
+
+          {/* RECOMMANDÉ — carrousel studios (réf. « Recommended ») */}
           <section
             aria-labelledby="home-artists-heading"
             className="ios-hero-card mb-7 overflow-hidden rounded-[22px] border sm:mb-8"
@@ -3662,19 +3817,20 @@ export function ClientDashboard() {
                     className="font-client-app text-[1.0625rem] font-bold leading-tight tracking-[-0.02em] sm:text-[1.125rem]"
                     style={{ color: D.text }}
                   >
-                    Artistes proches
+                    Recommandé
                   </h2>
                   <p className="mt-1 text-[13px] font-medium leading-snug sm:text-[13px]" style={{ color: D.muted }}>
-                    Studios autour de toi
+                    Studios et artistes à découvrir
                   </p>
                 </div>
-                <button
+                <motion.button
                   type="button"
                   onClick={() => {
                     goTab('explore');
                     setExploreSearchFocusNonce((n) => n + 1);
                   }}
-                  className="shrink-0 touch-manipulation rounded-full px-4 py-2 text-[13px] font-semibold transition-all active:scale-[0.98] min-h-[40px] sm:min-h-[36px] shadow-sm"
+                  whileTap={clientTapSoft}
+                  className="min-h-[40px] shrink-0 touch-manipulation rounded-full px-4 py-2 text-[13px] font-semibold transition-all sm:min-h-[36px] shadow-sm"
                   style={{
                     background: D.gold,
                     color: D.onAccent,
@@ -3684,7 +3840,7 @@ export function ClientDashboard() {
                   }}
                 >
                   Tout voir
-                </button>
+                </motion.button>
               </div>
             </div>
             <div
@@ -3726,14 +3882,77 @@ export function ClientDashboard() {
             </div>
           </section>
 
+          {/* PRÈS DE TOI — liste compacte (réf. « Nearby ») */}
+          {!loading && studiosSortedByDistance.length > 0 && (
+            <section aria-labelledby="home-nearby-studios" className="mb-7">
+              <h2
+                id="home-nearby-studios"
+                className="mb-3 font-client-app text-[1.0625rem] font-bold leading-tight tracking-[-0.02em] sm:text-lg"
+                style={{ color: D.text }}
+              >
+                Près de toi
+              </h2>
+              <p className="mb-3 text-[13px] font-medium leading-snug" style={{ color: D.muted }}>
+                Studios les plus proches
+              </p>
+              <div
+                className="flex flex-col gap-2.5"
+                style={{
+                  background: D.contentCardBg,
+                  border: `1px solid ${D.border}`,
+                  borderRadius: D.r.xl,
+                  padding: '12px 12px 14px',
+                }}
+              >
+                {studiosSortedByDistance.slice(0, 5).map((s, i) => {
+                  const studioIdx = studios.indexOf(s);
+                  const f = s.flash?.[0];
+                  return (
+                    <motion.button
+                      key={s.id}
+                      type="button"
+                      whileTap={clientTap}
+                      onClick={() => {
+                        if (f) openFlash(f, studioIdx, s);
+                        else if (s.slug) clientNavigate(`/studio/${s.slug}`);
+                      }}
+                      className="flex w-full min-h-[56px] items-center gap-3 rounded-xl border-0 p-2 text-left touch-manipulation"
+                      style={{ background: D.card, color: D.text }}
+                    >
+                      <div
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-extrabold"
+                        style={{
+                          background: PALETTES[i % PALETTES.length].bg,
+                          color: PALETTES[i % PALETTES.length].dot,
+                        }}
+                      >
+                        {initials(s.studio_name)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-bold tracking-tight" style={{ color: D.text }}>
+                          {s.studio_name}
+                        </div>
+                        <div className="truncate text-xs" style={{ color: D.muted }}>
+                          {[discoveryLocationLine(s), distLabel(s.distance_km)].filter(Boolean).join(' · ') || '—'}
+                        </div>
+                      </div>
+                      <ChevronRight className="h-5 w-5 shrink-0 opacity-50" style={{ color: D.muted }} aria-hidden />
+                    </motion.button>
+                  );
+                })}
+            </div>
+            </section>
+          )}
+
           {/* Filtres styles — barre frosted iOS */}
           <div className="ios-chip-scroller mb-5 touch-pan-x">
             {STYLE_TABS.map((f) => (
-              <button
+              <motion.button
                 key={f}
                 type="button"
                 onClick={() => setDiscoveryStyleFilter(f)}
-                className="shrink-0 touch-manipulation active:scale-[0.98] transition-transform min-h-[36px] flex items-center rounded-full px-3.5"
+                whileTap={clientTapSoft}
+                className="flex min-h-[36px] shrink-0 items-center rounded-full px-3.5 touch-manipulation"
                 style={{
                   fontSize: 13,
                   fontWeight: 600,
@@ -3747,7 +3966,7 @@ export function ClientDashboard() {
                 }}
               >
                 {f}
-              </button>
+              </motion.button>
             ))}
           </div>
 
@@ -3758,29 +3977,30 @@ export function ClientDashboard() {
             </p>
             <div className="ios-segmented-track" role="tablist" aria-label="Ordre d’affichage des flashs">
               {FLASH_SORT_OPTIONS.map(({ key, label }) => (
-                <button
+                <motion.button
                   key={key}
                   type="button"
                   role="tab"
                   aria-pressed={flashSortKey === key}
+                  whileTap={clientTapSoft}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     setFlashSortKey(key);
                   }}
-                  className="touch-manipulation active:scale-[0.99]"
+                  className="touch-manipulation"
                   style={{
                     color: flashSortKey === key ? D.text : D.muted,
                     touchAction: 'manipulation',
                   }}
                 >
                   {label}
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
 
-          {/* Pour toi — heuristique distance (sans ML) */}
+          {/* Flashs proches — heuristique distance (sans ML) */}
           {!loading && pourToiFlashes.length > 0 && (
             <section aria-labelledby="home-for-you-heading" className="mb-7">
               <div className="mb-3 flex flex-col gap-0.5 sm:mb-4">
@@ -3789,10 +4009,10 @@ export function ClientDashboard() {
                   className="font-client-app text-[1.0625rem] font-bold leading-tight tracking-[-0.02em] sm:text-lg"
                   style={{ color: D.text }}
                 >
-                  Pour toi
+                  Flashs proches
                 </h2>
                 <p className="text-[13px] font-medium leading-snug sm:text-[13px]" style={{ color: D.muted }}>
-                  Flashs des studios les plus proches
+                  Sélection par distance
                 </p>
               </div>
               <div
@@ -3849,13 +4069,14 @@ export function ClientDashboard() {
                 >
                   À explorer
                 </h2>
-                <button
+                <motion.button
                   type="button"
                   onClick={() => {
                     goTab('explore');
                     setExploreSearchFocusNonce((n) => n + 1);
                   }}
-                  className="shrink-0 touch-manipulation rounded-full px-4 py-2 text-[13px] font-semibold transition-all active:scale-[0.98] min-h-[40px] sm:min-h-[36px] shadow-sm"
+                  whileTap={clientTapSoft}
+                  className="min-h-[40px] shrink-0 touch-manipulation rounded-full px-4 py-2 text-[13px] font-semibold transition-all sm:min-h-[36px] shadow-sm"
                   style={{
                     background: D.gold,
                     color: D.onAccent,
@@ -3865,7 +4086,7 @@ export function ClientDashboard() {
                   }}
                 >
                   Filtres
-                </button>
+                </motion.button>
               </div>
             </div>
 

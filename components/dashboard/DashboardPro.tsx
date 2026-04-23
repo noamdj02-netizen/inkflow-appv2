@@ -42,6 +42,7 @@ import { isModuleEnabled } from '../../lib/dashboardModuleVisibility';
 import { isStudioAvailabilityConfigured } from '../../lib/studioAvailabilityConfigured';
 import { isStudioStripeConnected } from '../../lib/studioPaymentConfigured';
 import { setStripeConnectResume } from '../../lib/stripeConnectResume';
+import { pathForClientDashboardTab } from '../../lib/clientDashboardRoutes';
 
 const FinanceDashboard = lazy(() => import('./FinanceDashboard').then(m => ({ default: m.FinanceDashboard })));
 const DepositsPage = lazy(() => import('./DepositsPage').then(m => ({ default: m.DepositsPage })));
@@ -2151,7 +2152,7 @@ export const DashboardPro: React.FC = () => {
           <div className="relative z-10 mt-auto px-3 py-3 border-t border-zinc-100 dark:border-zinc-800/50 safe-bottom space-y-0.5">
             {/* Espace Client */}
             <a
-              href="/client/dashboard"
+              href={pathForClientDashboardTab('home')}
               target="_blank"
               rel="noreferrer"
               className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all active:scale-[0.98] motion-reduce:active:scale-100 border-l-4 border-l-transparent"

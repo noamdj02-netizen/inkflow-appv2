@@ -3,6 +3,8 @@
  * Tunnel de conversion Mobile-First, Light Mode, optimisé pour le paiement Stripe.
  */
 import React from 'react';
+import { motion } from 'framer-motion';
+import { useClientFramerGestures } from '../../lib/clientFramerGestures';
 import {
   ArrowLeft,
   User,
@@ -41,6 +43,7 @@ interface PublicBookingPageProps {
 }
 
 export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug }) => {
+  const { tap } = useClientFramerGestures();
   const {
     studioId,
     studioInfo,
@@ -95,12 +98,13 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         <p className="text-ink-muted text-center text-sm mb-8 max-w-xs">
           Votre acompte a bien été enregistré. Le studio vous contactera pour confirmer votre rendez-vous.
         </p>
-        <a
+        <motion.a
           href={`/studio/${studioSlug}`}
+          whileTap={tap}
           className="w-full max-w-xs h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors"
         >
           Retour au studio
-        </a>
+        </motion.a>
       </div>
     );
   }
@@ -119,12 +123,13 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
           {paymentError ||
             'Nous vérifions votre paiement. Si vous avez été débité, votre réservation sera confirmée sous peu.'}
         </p>
-        <a
+        <motion.a
           href={`/studio/${studioSlug}`}
+          whileTap={tap}
           className="w-full max-w-xs h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors"
         >
           Retour au studio
-        </a>
+        </motion.a>
       </div>
     );
   }
@@ -191,13 +196,14 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
             className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/25 to-black"
             aria-hidden
           />
-          <a
+          <motion.a
             href={`/studio/${studioSlug}`}
-            className="absolute left-3 top-[max(0.5rem,env(safe-area-inset-top,0px))] z-10 inline-flex min-h-[44px] max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-full bg-black/50 px-3.5 py-2 text-left text-sm font-medium text-white shadow-sm ring-1 ring-white/15 backdrop-blur-md transition-all hover:bg-black/65 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
+            whileTap={tap}
+            className="absolute left-3 top-[max(0.5rem,env(safe-area-inset-top,0px))] z-10 inline-flex min-h-[44px] max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-full bg-black/50 px-3.5 py-2 text-left text-sm font-medium text-white shadow-sm ring-1 ring-white/15 backdrop-blur-md transition-all hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
           >
             <ArrowLeft className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
             <span className="leading-tight">Retour à la vitrine</span>
-          </a>
+          </motion.a>
         </div>
       ) : null}
 
@@ -226,13 +232,14 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
       >
         {!studio.coverImage && (
           <nav className="pb-3" aria-label="Navigation vers la vitrine">
-            <a
+            <motion.a
               href={`/studio/${studioSlug}`}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-1 -ml-1 text-sm font-medium text-ink-muted transition-all hover:text-ink-text active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+              whileTap={tap}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-1 -ml-1 text-sm font-medium text-ink-muted transition-all hover:text-ink-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
             >
               <ArrowLeft className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
               Retour à la vitrine
-            </a>
+            </motion.a>
           </nav>
         )}
         {/* En-tête Tatoueur */}
@@ -878,14 +885,15 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                 Questionnaire de santé complété
               </div>
             )}
-            <button
+            <motion.button
               type="button"
               onClick={handlePay}
               disabled={!canPay || isSubmitting}
               aria-busy={isSubmitting}
+              whileTap={canPay && !isSubmitting ? tap : undefined}
               className={`w-full min-h-[56px] rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
                 canPay && !isSubmitting
-                  ? 'bg-zinc-900 text-white hover:bg-zinc-800 active:scale-[0.99]'
+                  ? 'bg-zinc-900 text-white hover:bg-zinc-800'
                   : 'bg-zinc-200 text-ink-muted cursor-not-allowed'
               }`}
             >
@@ -909,7 +917,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
                     : 'Choisissez un flash'}
                 </>
               )}
-            </button>
+            </motion.button>
             <p className="mt-2 text-center text-[10px] text-zinc-400 flex items-center justify-center gap-1">
               <Lock className="w-3 h-3" strokeWidth={1.5} />
               {paymentsOnline === false

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { useClientFramerGestures } from '../../lib/clientFramerGestures';
 import { StarRating } from './StarRating';
 import { StyleBadge } from './StyleBadge';
 import type { DiscoverStudio } from '../../lib/discover';
@@ -11,6 +13,7 @@ interface ArtistCardProps {
 }
 
 export function ArtistCard({ studio, onClick }: ArtistCardProps) {
+  const { cardTap, cardHover } = useClientFramerGestures();
   const [coverBroken, setCoverBroken] = useState(false);
   const [previewBroken, setPreviewBroken] = useState<Record<number, boolean>>({});
   const hasCover = studio.portfolio_cover_url && !coverBroken;
@@ -23,15 +26,24 @@ export function ArtistCard({ studio, onClick }: ArtistCardProps) {
   };
 
   return (
-    <div
+    <motion.div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
       onClick={handleClick}
+      whileTap={cardTap}
+      whileHover={cardHover}
       style={{
         background: U.surface,
         border: `1px solid ${U.border}`,
         borderRadius: 16,
         overflow: 'hidden',
         cursor: 'pointer',
-        transition: 'border-color 0.2s',
         boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
       }}
       onMouseEnter={(e) => (e.currentTarget.style.borderColor = U.chipActiveBg)}
@@ -122,6 +134,6 @@ export function ArtistCard({ studio, onClick }: ArtistCardProps) {
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

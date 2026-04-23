@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   MapPin, Phone, Mail, Clock, Instagram, ChevronRight, CheckCircle, Star,
   MessageCircle, Share2, Heart, Award, Shield, Users, Camera, X,
@@ -112,6 +113,9 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
   const [studioFavorite, setStudioFavorite] = useState(false);
   const activeTheme = getVitrineTheme(studio?.theme ?? 'light') ?? getVitrineTheme('light')!;
   const primaryColor = activeTheme?.accentColor ?? '#171717';
+  const vitrineReduce = useReducedMotion();
+  const vitrineTap = vitrineReduce ? undefined : { scale: 0.98 };
+  const vitrineTapSoft = vitrineReduce ? undefined : { scale: 0.99 };
 
   const loadVitrine = React.useCallback(() => {
     setLoading(true);
@@ -341,6 +345,24 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     if (studio?.showServicesSection === false) return all.filter((s) => s.id !== 'services');
     return all;
   }, [studio?.showServicesSection]);
+
+  /** Miniatures héro — portfolio + flashs, sans texte sur l’image (réf. fiche « property »). */
+  const { heroThumbnailStrip, heroThumbnailsMore } = useMemo(() => {
+    if (!studioDisplay) {
+      return { heroThumbnailStrip: [] as string[], heroThumbnailsMore: 0 };
+    }
+    const fromPort = (studioDisplay.portfolio ?? [])
+      .map((p) => p.url)
+      .filter((u) => Boolean(u?.trim()));
+    const fromFlash = (studioDisplay.flashDesigns ?? [])
+      .map((f) => f.imageUrl)
+      .filter((u) => Boolean(u?.trim()));
+    const unique = [...new Set([...fromPort, ...fromFlash])];
+    return {
+      heroThumbnailStrip: unique.slice(0, 10),
+      heroThumbnailsMore: Math.max(0, unique.length - 10),
+    };
+  }, [studioDisplay]);
 
   const handleProjectRequestSubmit = async (data: ProjectRequestFormData) => {
     const studioId = projectRequestStudioId ?? (await getStudioIdBySlug(studioSlug));
@@ -661,20 +683,20 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
               ))}
             </nav>
             <div className="flex items-center gap-3">
-              <button type="button" onClick={shareStudio} aria-label="Partager la page" className="hidden md:flex items-center gap-2 px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
+              <motion.button type="button" onClick={shareStudio} aria-label="Partager la page" whileTap={vitrineTap} className="hidden md:flex items-center gap-2 px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
                 <Share2 className="w-5 h-5" aria-hidden />
-              </button>
-              <button type="button" onClick={() => setShowContactForm(true)} className="hidden md:flex items-center gap-2 px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
+              </motion.button>
+              <motion.button type="button" onClick={() => setShowContactForm(true)} whileTap={vitrineTap} className="hidden md:flex items-center gap-2 px-4 py-2 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
                 <MessageCircle className="w-5 h-5" aria-hidden />
                 <span className="text-sm font-medium">Contact</span>
-              </button>
-              <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} data-joyride="vitrine-reserver" className="bg-[var(--vitrine-primary)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900 active:scale-[0.98]">
+              </motion.button>
+              <motion.a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} data-joyride="vitrine-reserver" whileTap={vitrineTap} className="bg-[var(--vitrine-primary)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" aria-hidden />
                 <span>Réserver</span>
-              </a>
-              <button type="button" onClick={() => setShowMobileMenu(!showMobileMenu)} aria-expanded={showMobileMenu} aria-controls="vitrine-mobile-nav" aria-label={showMobileMenu ? 'Fermer le menu' : 'Ouvrir le menu'} className="lg:hidden p-2 text-neutral-700 hover:bg-neutral-100 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
+              </motion.a>
+              <motion.button type="button" onClick={() => setShowMobileMenu(!showMobileMenu)} aria-expanded={showMobileMenu} aria-controls="vitrine-mobile-nav" aria-label={showMobileMenu ? 'Fermer le menu' : 'Ouvrir le menu'} whileTap={vitrineTap} className="lg:hidden p-2 text-neutral-700 hover:bg-neutral-100 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2">
                 {showMobileMenu ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
+              </motion.button>
             </div>
           </div>
           {showMobileMenu && (
@@ -757,21 +779,23 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 </div>
               </div>
               <div className="flex gap-2 sm:gap-3 md:pb-2 flex-shrink-0">
-                <button
+                <motion.button
                   type="button"
                   onClick={shareStudio}
                   aria-label="Partager la vitrine"
-                  className="p-3 sm:p-4 bg-white/20 backdrop-blur-md rounded-xl hover:bg-white/30 transition-all border border-white/30 min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
+                  whileTap={vitrineTap}
+                  className="p-3 sm:p-4 bg-white/20 backdrop-blur-md rounded-xl hover:bg-white/30 transition-all border border-white/30 min-w-[44px] min-h-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
                 >
                   <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" aria-hidden />
-                </button>
-                <button
+                </motion.button>
+                <motion.button
                   type="button"
                   onClick={toggleStudioFavorite}
                   aria-pressed={studioFavorite}
                   aria-label={studioFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                   title={studioFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                  className={`p-3 sm:p-4 backdrop-blur-md rounded-xl transition-all border min-w-[44px] min-h-[44px] flex items-center justify-center active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 ${
+                  whileTap={vitrineTap}
+                  className={`p-3 sm:p-4 backdrop-blur-md rounded-xl transition-all border min-w-[44px] min-h-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 ${
                     studioFavorite
                       ? 'bg-rose-500/35 border-rose-300/60 hover:bg-rose-500/45'
                       : 'bg-white/20 hover:bg-white/30 border-white/30'
@@ -783,12 +807,48 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                     }`}
                     aria-hidden
                   />
-                </button>
+                </motion.button>
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      {heroThumbnailStrip.length > 0 && (
+        <div className="relative z-20 -mt-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 sm:-mt-2">
+          <div
+            className="rounded-2xl border border-neutral-200/90 bg-white/95 shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur-md p-2.5 sm:p-3"
+            data-joyride="vitrine-hero-thumbs"
+          >
+            <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-500 sm:text-[11px]">
+              Aperçu
+            </p>
+            <div
+              className="flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x scroll-pl-0 scroll-pr-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              {heroThumbnailStrip.map((url, i) => (
+                <button
+                  key={`${url}-${i}`}
+                  type="button"
+                  onClick={() => scrollToSection(studioDisplay.flashDesigns?.length ? 'flash' : 'portfolio')}
+                  className="relative h-14 w-14 shrink-0 snap-start overflow-hidden rounded-xl ring-1 ring-black/5 transition-transform hover:opacity-95 sm:h-16 sm:w-16 min-h-[44px] min-w-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2"
+                >
+                  <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                  {i === heroThumbnailStrip.length - 1 && heroThumbnailsMore > 0 && (
+                    <span
+                      className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/45 text-[10px] font-bold text-white sm:text-xs"
+                      aria-hidden
+                    >
+                      +{heroThumbnailsMore}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Banner — masquable via Paramètres > Vitrine > Statistiques */}
       {studioDisplay.showStatsBanner !== false && (
@@ -1021,7 +1081,11 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                   {studioDisplay.flashDesigns.map((flash) => (
-                    <div key={flash.id} className={`group relative aspect-square rounded-lg overflow-hidden ring-1 ring-neutral-200/80 hover:ring-neutral-300 transition-all ${!flash.available ? 'opacity-70' : ''}`}>
+                    <motion.div
+                      key={flash.id}
+                      whileTap={!flash.available || vitrineReduce ? undefined : vitrineTapSoft}
+                      className={`group relative aspect-square rounded-lg overflow-hidden ring-1 ring-neutral-200/80 hover:ring-neutral-300 transition-all ${!flash.available ? 'opacity-70' : ''}`}
+                    >
                       <div className="absolute inset-0 cursor-pointer" onClick={() => setSelectedFlash(flash)}>
                         <img src={flash.imageUrl} alt={flash.title} loading="lazy" className="w-full h-full object-cover object-center group-hover:opacity-95 transition-opacity duration-300" />
 
@@ -1055,13 +1119,14 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                                 {flash.duration && <div className="text-sm opacity-80">~{flash.duration}min</div>}
                               </div>
                               {flash.available ? (
-                                <button
+                                <motion.button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); setSelectedFlash(flash); }}
+                                  whileTap={vitrineTap}
                                   className="px-6 py-3 bg-white text-neutral-900 rounded-lg font-medium hover:bg-neutral-100 transition-colors"
                                 >
                                   Réserver
-                                </button>
+                                </motion.button>
                               ) : (
                                 <div className="px-6 py-3 bg-red-500 text-white rounded-xl font-semibold">Réservé</div>
                               )}
@@ -1069,7 +1134,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </div>
@@ -1084,16 +1149,17 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   icon={Star}
                   action={
                     publicGoogleMapsHref ? (
-                      <a
+                      <motion.a
                         href={publicGoogleMapsHref}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg border border-neutral-300 bg-white text-neutral-900 text-sm font-medium hover:bg-neutral-50 active:scale-[0.98] transition-all"
+                        whileTap={vitrineTap}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg border border-neutral-300 bg-white text-neutral-900 text-sm font-medium hover:bg-neutral-50 transition-all"
                       >
                         <MapPin className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
                         Google Maps
                         <ExternalLink className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden />
-                      </a>
+                      </motion.a>
                     ) : undefined
                   }
                 />
@@ -1360,28 +1426,30 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       </footer>
 
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex gap-2 border-t border-neutral-200/90 bg-[#f7f7f5]/95 backdrop-blur-md px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_rgba(0,0,0,0.08)]"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex gap-2 border-t border-neutral-200/90 bg-[#f7f7f5]/98 backdrop-blur-xl px-3 py-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] supports-[backdrop-filter]:bg-[#f7f7f5]/92"
         aria-label="Actions rapides vitrine"
       >
-        <a
+        <motion.a
           href={`/book/${studioSlug}`}
           onClick={(e) => {
             e.preventDefault();
             navigateTo(`/book/${studioSlug}`);
           }}
-          className="flex-1 inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-[var(--vitrine-primary)] text-white font-semibold text-sm shadow-sm active:scale-[0.98] transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2"
+          whileTap={vitrineTap}
+          className="flex-1 inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-[var(--vitrine-primary)] text-white font-semibold text-sm shadow-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2"
         >
           <Calendar className="w-5 h-5 shrink-0" aria-hidden />
           Réserver
-        </a>
-        <button
+        </motion.a>
+        <motion.button
           type="button"
           onClick={() => setShowContactForm(true)}
-          className="flex-1 inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl border border-neutral-300 bg-white font-semibold text-sm text-neutral-900 active:scale-[0.98] transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2"
+          whileTap={vitrineTap}
+          className="flex-1 inline-flex items-center justify-center gap-2 min-h-[48px] rounded-xl border border-neutral-300 bg-white font-semibold text-sm text-neutral-900 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2"
         >
           <MessageCircle className="w-5 h-5 shrink-0" aria-hidden />
           Contact
-        </button>
+        </motion.button>
       </nav>
 
       {/* Image Lightbox */}

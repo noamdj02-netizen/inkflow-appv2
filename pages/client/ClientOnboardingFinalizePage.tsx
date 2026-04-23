@@ -16,6 +16,7 @@ import {
 } from '../../lib/clientOnboardingGate';
 import { fetchClientHealthProfile, upsertClientHealthProfile } from '../../lib/clientHealthProfile';
 import { CLIENT_DASHBOARD_THEME } from '../../lib/clientDashboardTheme';
+import { pathForClientDashboardTab } from '../../lib/clientDashboardRoutes';
 import { useToast } from '../../contexts/ToastContext';
 
 const D = CLIENT_DASHBOARD_THEME;
@@ -182,7 +183,7 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
       },
     });
     toast.success('Questionnaire enregistré — bienvenue !');
-    window.location.replace('/client/dashboard');
+    window.location.replace(pathForClientDashboardTab('home'));
   };
 
   return (
@@ -202,7 +203,7 @@ export const ClientOnboardingFinalizePage: React.FC = () => {
 
       <header className="px-4 sm:px-6 pt-[max(12px,env(safe-area-inset-top))] pb-2 flex-shrink-0 z-10 border-b border-zinc-200/80">
         <a
-          href="/client/dashboard"
+          href={pathForClientDashboardTab('home')}
           className="inline-flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors min-h-[44px] rounded-xl px-1 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-100 active:scale-[0.98]"
         >
           <ArrowLeft className="w-4 h-4 shrink-0" aria-hidden />

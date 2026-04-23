@@ -3,7 +3,9 @@
  * Image avatar sans texte dessus ; infos en dessous (Inter).
  */
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Heart, MapPin } from 'lucide-react';
+import { useClientFramerGestures } from '../../lib/clientFramerGestures';
 import type { NearbyStudio } from '../../lib/supabaseGeo';
 import { CLIENT_DASHBOARD_THEME, buildClientDesignTokens } from '../../lib/clientDashboardTheme';
 import { useToast } from '../../contexts/ToastContext';
@@ -33,6 +35,7 @@ export const ArtistCardClient: React.FC<ArtistCardClientProps> = ({
   clientEmailForSync,
   onFavoritesDirty,
 }) => {
+  const { tap, cardHover } = useClientFramerGestures();
   const toast = useToast();
   const pal = CLIENT_CARD_PALETTES[index % CLIENT_CARD_PALETTES.length];
   const [broken, setBroken] = useState(false);
@@ -67,7 +70,7 @@ export const ArtistCardClient: React.FC<ArtistCardClientProps> = ({
   };
 
   return (
-    <div
+    <motion.div
       role="button"
       tabIndex={0}
       onClick={onClick}
@@ -77,8 +80,10 @@ export const ArtistCardClient: React.FC<ArtistCardClientProps> = ({
           onClick();
         }
       }}
+      whileTap={tap}
+      whileHover={cardHover}
       aria-label={ariaLabel}
-      className="group flex w-[158px] shrink-0 cursor-pointer flex-col font-client-app touch-manipulation overflow-hidden rounded-[14px] border text-left transition-all duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98] motion-reduce:active:scale-100 sm:w-[168px] sm:hover:-translate-y-px sm:motion-reduce:hover:translate-y-0 sm:hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
+      className="group flex w-[158px] shrink-0 cursor-pointer flex-col font-client-app touch-manipulation overflow-hidden rounded-[14px] border text-left transition-[box-shadow,transform] duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white sm:w-[168px] sm:hover:shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
       style={{
         background: D.contentCardBg,
         borderColor: D.borderMid,
@@ -155,6 +160,6 @@ export const ArtistCardClient: React.FC<ArtistCardClientProps> = ({
           </span>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

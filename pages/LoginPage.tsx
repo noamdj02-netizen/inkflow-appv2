@@ -9,6 +9,7 @@ import { resolvePostLoginPath, shouldRedirectPortalClientFromProDashboard } from
 import { REDIRECT_AFTER_LOGIN_KEY, useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { CLIENT_DASHBOARD_THEME } from '../lib/clientDashboardTheme';
+import { pathForClientDashboardTab } from '../lib/clientDashboardRoutes';
 
 const LOGIN_HERO_PRIMARY = '/images/login-hero.jpg';
 const LOGIN_HERO_ABSOLUTE = `${APP_URL}/images/login-hero.jpg`;
@@ -286,7 +287,7 @@ export const LoginPage: React.FC = () => {
       const path = await resolvePostLoginPath(next);
       if (cancelled) return;
       const target =
-        user && (await shouldRedirectPortalClientFromProDashboard(user)) ? '/client/dashboard' : path;
+        user && (await shouldRedirectPortalClientFromProDashboard(user)) ? pathForClientDashboardTab('home') : path;
       window.history.replaceState({}, '', target);
       window.dispatchEvent(new Event('inkflow-navigate'));
     })();
@@ -308,7 +309,7 @@ export const LoginPage: React.FC = () => {
     <>
     <AnimatePresence>
       {showOnboarding && (
-        <ClientOnboarding onDone={() => { window.location.href = '/client/dashboard'; }} />
+        <ClientOnboarding onDone={() => { window.location.href = pathForClientDashboardTab('home'); }} />
       )}
     </AnimatePresence>
     <motion.div
