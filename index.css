@@ -352,12 +352,12 @@ img, video {
 
 /* ===== Dashboard Overview — canvas type portfolio (Dribbble / Behance : profondeur douce) ===== */
 .dashboard-overview-bg {
-  background-color: #f7f7f8;
+  background-color: #f4f4f5;
   background-image:
-    radial-gradient(ellipse 90% 55% at 12% -15%, rgba(16, 185, 129, 0.09), transparent 52%),
-    radial-gradient(ellipse 70% 45% at 92% 8%, rgba(59, 130, 246, 0.07), transparent 48%),
-    radial-gradient(ellipse 50% 30% at 50% 100%, rgba(244, 244, 245, 0.9), transparent 60%),
-    linear-gradient(180deg, #fafbfc 0%, #f4f4f6 55%, #f0f0f3 100%);
+    radial-gradient(ellipse 95% 58% at 10% -12%, rgba(16, 185, 129, 0.085), transparent 55%),
+    radial-gradient(ellipse 72% 48% at 94% 6%, rgba(59, 130, 246, 0.065), transparent 50%),
+    radial-gradient(ellipse 55% 32% at 50% 100%, rgba(250, 250, 250, 0.95), transparent 62%),
+    linear-gradient(180deg, #fafbfc 0%, #f3f4f6 52%, #eeeff2 100%);
   background-attachment: local;
 }
 :root[data-theme="dark"] .dashboard-overview-bg {
@@ -380,7 +380,7 @@ img, video {
  */
 .prodify-card {
   background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
-  border-radius: 1.125rem;
+  border-radius: 1.25rem;
   border: 1px solid rgba(228, 228, 231, 0.95);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.75) inset,
@@ -398,7 +398,7 @@ img, video {
 :root[data-theme="dark"] .prodify-card {
   background: linear-gradient(180deg, #1c1c1f 0%, #18181b 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1.125rem;
+  border-radius: 1.25rem;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.04) inset,
     0 1px 2px rgba(0, 0, 0, 0.45),

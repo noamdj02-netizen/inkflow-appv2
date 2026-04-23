@@ -540,7 +540,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
   /** Desktop KPI — cartes .prodify-card (relief portfolio, aligné index.css) */
   const desktopKpiShell =
-    'prodify-card p-5 h-full flex flex-col justify-between min-h-[130px] min-w-0';
+    'prodify-card p-5 h-full flex flex-col justify-between min-h-[130px] min-w-0 ring-1 ring-inset ring-zinc-900/[0.04] dark:ring-white/[0.05]';
   const desktopKpiCaption =
     'text-[11px] font-medium text-zinc-500 dark:text-zinc-400 tracking-tight shrink-0';
   const desktopKpiIconBtn =
@@ -990,13 +990,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           </div>
         </div>
 
-        <div className="px-3 min-[400px]:px-4 pt-2">
-          <p className="text-[11px] leading-snug text-zinc-500 dark:text-zinc-400 flex items-start gap-1.5">
-            <Users className="w-3.5 h-3.5 shrink-0 mt-0.5 text-emerald-600/90 dark:text-emerald-400/85" aria-hidden />
-            <span>500+ tatoueurs gèrent résas et vitrine avec InkFlow — comme vous.</span>
-          </p>
-        </div>
-
         {/* Actions rapides — sous 400px : grille 2×2 (cibles 44px+, libellés lisibles) · 400px+ : 4 colonnes */}
         <div className="px-3 min-[400px]:px-4 pt-2 pb-1 sm:pt-3">
           <div className="grid min-w-0 grid-cols-2 gap-2.5 min-[400px]:grid-cols-4 min-[400px]:gap-2.5">
@@ -1388,18 +1381,18 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           DESKTOP LAYOUT — monté uniquement si isMdUp (pas de doublon d’IDs avec la vue mobile)
           ===================================================== */}
       {isMdUp && (
-      <div className="min-h-full w-full max-w-[1680px] mx-auto isolate">
+      <div className="min-h-full w-full max-w-[min(1800px,100%)] mx-auto isolate">
 
         {/* ===== HEADER — typo display + hiérarchie type showcase ===== */}
-        <div className="px-5 sm:px-8 lg:px-10 xl:px-12 pt-7 pb-6">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+        <div className="px-0 pt-5 pb-5 md:pt-6 md:pb-6 2xl:pt-7 2xl:pb-7">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 md:gap-5 2xl:gap-6">
             {/* Left: Greeting + Pills */}
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-zinc-500 dark:text-zinc-400 mb-1.5 tracking-tight first-letter:uppercase">
+              <p className="text-[12px] font-medium text-zinc-500 dark:text-zinc-400 mb-2 tracking-wide first-letter:uppercase">
                 {now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="font-display text-[1.75rem] sm:text-[2rem] lg:text-[2.125rem] font-bold tracking-[-0.04em] text-zinc-900 dark:text-white">
+                <h1 className="font-display text-[1.75rem] sm:text-[2rem] lg:text-[2.125rem] 2xl:text-[2.25rem] font-bold tracking-[-0.04em] text-zinc-900 dark:text-white">
                   {greeting}{firstName ? `, ${firstName}` : ''}
                 </h1>
                 {/* Compact Alert Pills */}
@@ -1419,14 +1412,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   </span>
                 )}
               </div>
-              <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400 max-w-2xl leading-snug flex items-start gap-2">
-                <Users className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600/85 dark:text-emerald-400/90" aria-hidden />
-                <span>Plus de 500 tatoueurs utilisent InkFlow pour leurs réservations et leur vitrine — vous êtes au bon endroit.</span>
-              </p>
             </div>
 
             {/* Right: actions — groupe visuel façon barre d’outils soft */}
-            <div className="flex items-center gap-1.5 flex-wrap rounded-2xl border border-zinc-200/80 bg-white/60 p-1.5 shadow-sm backdrop-blur-sm dark:border-zinc-800/80 dark:bg-zinc-900/40">
+            <div className="flex items-center gap-1.5 flex-wrap rounded-2xl border border-zinc-200/90 bg-white/90 p-1.5 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset,0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-zinc-900/[0.04] backdrop-blur-md dark:border-zinc-800/90 dark:bg-zinc-900/55 dark:ring-white/[0.06] dark:shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_4px_12px_rgba(0,0,0,0.15)]">
               <button
                 onClick={() => setIsEditMode(!isEditMode)}
                 className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-all active:scale-[0.98] ${
@@ -1459,7 +1448,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               )}
               <button
                 onClick={() => { setSelectedFlash(null); setShowBookingModal(true); }}
-                className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-zinc-800 active:scale-[0.98] dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+                className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_2px_4px_rgba(0,0,0,0.12)] transition-all hover:bg-zinc-800 active:scale-[0.98] dark:bg-white dark:text-zinc-900 dark:shadow-sm dark:hover:bg-zinc-100"
               >
                 <Plus className="w-4 h-4" /> Nouveau RDV
               </button>
@@ -1473,7 +1462,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         </div>
 
         {onSetupNavigate && (
-          <div className="px-5 sm:px-8 lg:px-10 xl:px-12 pb-4">
+          <div className="px-0 pb-4">
             <StudioSetupChecklist
               studioSlug={studioSlug}
               flashDesigns={flashDesigns}
@@ -1487,7 +1476,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
         {/* Edit Mode Banner */}
         {isEditMode && (
-          <div className="px-5 sm:px-8 lg:px-10 xl:px-12 mb-4">
+          <div className="px-0 mb-4">
             <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-3 min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-4 min-w-0">
                 <div className="flex items-center gap-3 min-w-0">
@@ -1518,15 +1507,15 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         )}
 
         {/* ===== MAIN GRID ===== */}
-        <div className="px-5 sm:px-8 lg:px-10 xl:px-12 pb-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start [contain:layout]">
+        <div className="px-0 pb-8 md:pb-10 2xl:pb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 lg:gap-8 2xl:gap-9 items-start [contain:layout]">
             
             {/* ====== LEFT COLUMN (8/12) ====== */}
-            <div className="lg:col-span-8 space-y-6 min-w-0">
+            <div className="lg:col-span-8 space-y-5 md:space-y-6 min-w-0">
               
               {/* KPI Row — Sortable */}
               <SortableContext items={layout.kpiOrder} strategy={rectSortingStrategy}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 items-stretch min-w-0 [grid-auto-rows:minmax(0,1fr)]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-3.5 md:gap-4 2xl:gap-4 items-stretch min-w-0 [grid-auto-rows:minmax(0,1fr)]">
                   {layout.kpiOrder.map(widgetId => renderKpiWidget(widgetId))}
                     </div>
               </SortableContext>
@@ -1538,10 +1527,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     if (widgetId === 'revenue-chart') {
                       return (
                         <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
-              <div className="prodify-card rounded-[1.25rem] p-6">
+              <div className="prodify-card rounded-[1.25rem] p-6 ring-1 ring-inset ring-zinc-900/[0.04] dark:ring-white/[0.05]">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 tracking-tight mb-1">Évolution du revenu</p>
+                    <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 tracking-wide uppercase">Évolution du revenu</p>
                                 <div className="flex items-baseline gap-2 flex-wrap">
                                   <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
                                     {euro(periodRevenue ?? totalRevenue)}
@@ -1784,20 +1773,21 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
             {/* ====== RIGHT COLUMN (4/12) ====== */}
             <SortableContext items={layout.rightColumn} strategy={verticalListSortingStrategy}>
-            <div className="lg:col-span-4 space-y-6 min-w-0">
+            <div className="lg:col-span-4 space-y-5 md:space-y-6 min-w-0">
               {layout.rightColumn.map(widgetId => {
                 if (widgetId === 'next-client') {
                   return nextClient ? (
                     <OverviewSortableWidget key={widgetId} id={widgetId} isEditMode={isEditMode} onRemoveWidget={handleRemoveWidget}>
-                <div className="bg-gradient-to-br from-indigo-600 via-blue-600 to-blue-500 rounded-3xl p-6 text-white shadow-2xl shadow-blue-600/30 relative overflow-hidden">
+                <div className="bg-gradient-to-br from-indigo-800 via-blue-800 to-sky-700 rounded-3xl p-6 text-white shadow-[0_20px_50px_-12px_rgba(30,64,175,0.45)] dark:shadow-[0_24px_60px_-16px_rgba(0,0,0,0.65)] relative overflow-hidden">
                   <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl translate-x-1/3 -translate-y-1/3" />
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl -translate-x-1/3 translate-y-1/3" />
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl translate-x-1/4 -translate-y-1/4" />
+                    <div className="absolute bottom-0 left-0 w-28 h-28 bg-cyan-400/10 rounded-full blur-2xl -translate-x-1/3 translate-y-1/3" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
                   </div>
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-5">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/70">Prochain client</span>
-                      <span className="px-2.5 py-1 rounded-full bg-white/20 text-[10px] font-semibold">{nextClient.time || '--:--'}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/80">Prochain client</span>
+                      <span className="px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/15 text-[10px] font-semibold tabular-nums">{nextClient.time || '--:--'}</span>
                     </div>
                     <div className="flex items-center gap-4 mb-6">
                       <img 
@@ -1817,8 +1807,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                            <button onClick={() => setSelectedAppointment(nextClient)} className="flex-1 px-5 py-3.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-black/10 active:scale-[0.98]">Voir le RDV</button>
-                            <button onClick={() => { setSelectedAppointment(nextClient); setActiveTab('messaging'); }} className="p-3.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/20 hover:bg-white/30 transition-colors" title="Envoyer un message"><MessageCircle className="w-5 h-5" /></button>
+                            <button onClick={() => setSelectedAppointment(nextClient)} className="flex-1 min-h-[48px] px-5 py-3 rounded-xl bg-white text-blue-900 text-sm font-bold hover:bg-zinc-50 transition-all shadow-md shadow-blue-900/20 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80">Voir le RDV</button>
+                            <button onClick={() => { setSelectedAppointment(nextClient); setActiveTab('messaging'); }} className="p-3.5 rounded-xl bg-white/12 backdrop-blur-sm border border-white/25 text-white hover:bg-white/20 transition-colors min-h-[48px] min-w-[48px] inline-flex items-center justify-center" title="Envoyer un message" type="button"><MessageCircle className="w-5 h-5" aria-hidden /></button>
                     </div>
                   </div>
                 </div>
