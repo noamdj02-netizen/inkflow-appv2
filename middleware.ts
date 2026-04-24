@@ -12,8 +12,8 @@ const DEFAULT_OG_IMAGE = 'https://ink-flow.me/og-image.png';
 const SOCIAL_BOT_UA =
   /facebookexternalhit|Facebot|Instagram|Twitterbot|LinkedInBot|WhatsApp|Slack|TelegramBot|Discordbot|Pinterest|redditbot|vkShare|Embedly|Quora Link Preview|Slackbot|Discord|Google-Structured-Data-TestingTool|TikTok/i;
 
+/** Matcher Edge : book / studio / p (portfolio court). JSDoc ne doit pas être *dans* cet objet (build Vercel / static-config). */
 export const config = {
-  /** Incl. `/p/:slug` (portfolio court) — mêmes OG que /studio pour les partages Insta / WhatsApp. */
   matcher: ['/book/:path*', '/studio/:path*', '/p/:path*'],
 };
 
