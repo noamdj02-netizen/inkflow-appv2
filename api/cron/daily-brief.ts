@@ -4,17 +4,13 @@
  */
 import { createClient } from '@supabase/supabase-js';
 import { DateTime } from 'luxon';
-
-type Res = { status: (c: number) => { json: (b: unknown) => void; send: (b: string) => void } };
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 function ymd(d: DateTime): string {
   return d.toFormat('yyyy-LL-dd');
 }
 
-export default async function handler(
-  req: { method?: string; headers: { authorization?: string } },
-  res: Res,
-): Promise<void> {
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -26,7 +22,9 @@ export default async function handler(
     return;
   }
 
-  const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
+    .trim()
+    .replace(/\/+$/, '');
   const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (!supabaseUrl || !serviceKey) {
     res.status(500).json({ error: 'Server Supabase not configured' });
@@ -46,13 +44,7 @@ export default async function handler(
     return;
   }
 
-  const [
-    bookingsRes,
-    studiosRes,
-    paidRes,
-    pendingPayRes,
-    pendingPrRes,
-  ] = await Promise.all([
+  const [bookingsRes, studiosRes, paidRes, pendingPayRes, pendingPrRes] = await Promise.all([
     supabase
       .from('inkflow_bookings')
       .select('id', { count: 'exact', head: true })
@@ -113,7 +105,7 @@ export default async function handler(
   if (igToken) {
     try {
       const igRes = await fetch(
-        `https://graph.instagram.com/me/insights?metric=reach,profile_views&period=day&access_token=${encodeURIComponent(igToken)}`,
+        `https://graph.instagram.com/me/insights?metric=reach,profile_views&period=day&access_token=${encodeURIComponent(igToken)}`
       );
       const igData = (await igRes.json()) as {
         data?: { name: string; values?: { value?: number }[] }[];
@@ -134,7 +126,7 @@ export default async function handler(
     alerts.push(`📋 ${pendingProjects} projets sans réponse artiste`);
   }
   if (totalRevenue === 0 && newBookings === 0) {
-    alerts.push("🔴 Aucune activité sur la période — vérifier le flux si inattendu");
+    alerts.push('🔴 Aucune activité sur la période — vérifier le flux si inattendu');
   }
 
   const hasAlerts = alerts.length > 0;
@@ -158,10 +150,9 @@ export default async function handler(
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${serviceKey}`,
-        apikey: (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(
-          /^['"]|['"]$/g,
-          '',
-        ),
+        apikey: (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '')
+          .trim()
+          .replace(/^['"]|['"]$/g, ''),
       },
       body: JSON.stringify({
         studioId,
@@ -194,7 +185,7 @@ export default async function handler(
       alerts: alerts,
       updated_at: new Date().toISOString(),
     },
-    { onConflict: 'date' },
+    { onConflict: 'date' }
   );
   if (up.error) {
     res.status(500).json({ error: up.error.message });

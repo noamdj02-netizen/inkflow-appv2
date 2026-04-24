@@ -3,10 +3,9 @@
  * Proxy vers Supabase Edge Function `project-request-accept` (JWT forward).
  * Variables : SUPABASE_URL ou VITE_SUPABASE_URL sur le projet Vercel.
  */
-export default async function handler(
-  req: { method?: string; query: { id?: string | string[] }; headers: { authorization?: string }; body?: unknown },
-  res: { status: (code: number) => { json: (body: unknown) => void; send: (body: string) => void } },
-): Promise<void> {
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -17,7 +16,9 @@ export default async function handler(
     res.status(400).json({ error: 'Missing project id' });
     return;
   }
-  const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
+    .trim()
+    .replace(/\/+$/, '');
   if (!supabaseUrl) {
     res.status(500).json({ error: 'SUPABASE_URL not configured on server' });
     return;

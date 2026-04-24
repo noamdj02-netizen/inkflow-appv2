@@ -3,20 +3,18 @@
  * JWT fondateur (Authorization: Bearer) + service role : liste des daily_briefs.
  */
 import { createClient } from '@supabase/supabase-js';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { isVercelFounderEmail } from '../lib/vercelFounderAuth';
 
-type Res = { status: (c: number) => { json: (b: unknown) => void } };
-
-export default async function handler(
-  req: { method?: string; headers: { authorization?: string } },
-  res: Res,
-): Promise<void> {
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
 
-  const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
+    .trim()
+    .replace(/\/+$/, '');
   const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   if (!supabaseUrl || !serviceKey) {
     res.status(500).json({ error: 'Server Supabase not configured' });
@@ -49,7 +47,7 @@ export default async function handler(
   const { data, error } = await admin
     .from('daily_briefs')
     .select(
-      'date, revenue, bookings, new_studios, unpaid_deposits, pending_projects, ig_reach, ig_profile_views, alerts, created_at, updated_at',
+      'date, revenue, bookings, new_studios, unpaid_deposits, pending_projects, ig_reach, ig_profile_views, alerts, created_at, updated_at'
     )
     .order('date', { ascending: false })
     .limit(qLimit);
