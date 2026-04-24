@@ -4,13 +4,12 @@
  */
 import { createClient } from '@supabase/supabase-js';
 import { DateTime } from 'luxon';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-function ymd(d: DateTime): string {
+function ymd(d) {
   return d.toFormat('yyyy-LL-dd');
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -99,17 +98,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const unpaidDeposits = pendingPayRes.count ?? 0;
   const pendingProjects = pendingPrRes.count ?? 0;
 
-  let igReach: number | null = null;
-  let igProfileViews: number | null = null;
+  let igReach = null;
+  let igProfileViews = null;
   const igToken = (process.env.INSTAGRAM_ACCESS_TOKEN || '').trim();
   if (igToken) {
     try {
       const igRes = await fetch(
-        `https://graph.instagram.com/me/insights?metric=reach,profile_views&period=day&access_token=${encodeURIComponent(igToken)}`
+        `https://graph.instagram.com/me/insights?metric=reach,profile_views&period=day&access_token=${encodeURIComponent(igToken)}`,
       );
-      const igData = (await igRes.json()) as {
-        data?: { name: string; values?: { value?: number }[] }[];
-      };
+      const igData = await igRes.json();
       igReach = igData?.data?.find((m) => m.name === 'reach')?.values?.[1]?.value ?? null;
       igProfileViews =
         igData?.data?.find((m) => m.name === 'profile_views')?.values?.[1]?.value ?? null;
@@ -118,7 +115,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
   }
 
-  const alerts: string[] = [];
+  const alerts = [];
   if (unpaidDeposits > 5) {
     alerts.push(`⚠️ ${unpaidDeposits} acomptes impayés en attente`);
   }
@@ -164,7 +161,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     });
     if (r.ok) {
       try {
-        const j = (await r.json()) as { sent?: number };
+        const j = await r.json();
         sent = typeof j.sent === 'number' ? j.sent : 0;
       } catch {
         sent = 0;
@@ -185,7 +182,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       alerts: alerts,
       updated_at: new Date().toISOString(),
     },
-    { onConflict: 'date' }
+    { onConflict: 'date' },
   );
   if (up.error) {
     res.status(500).json({ error: up.error.message });

@@ -3,9 +3,7 @@
  * Proxy vers Supabase Edge Function `project-request-accept` (JWT forward).
  * Variables : SUPABASE_URL ou VITE_SUPABASE_URL sur le projet Vercel.
  */
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -24,15 +22,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
   const auth = req.headers.authorization;
-  let bodyObj: Record<string, unknown> = {};
+  let bodyObj = {};
   if (typeof req.body === 'string') {
     try {
-      bodyObj = JSON.parse(req.body || '{}') as Record<string, unknown>;
+      bodyObj = JSON.parse(req.body || '{}');
     } catch {
       bodyObj = {};
     }
   } else if (req.body && typeof req.body === 'object') {
-    bodyObj = req.body as Record<string, unknown>;
+    bodyObj = req.body;
   }
   const target = `${supabaseUrl}/functions/v1/project-request-accept`;
   const r = await fetch(target, {
@@ -44,9 +42,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     body: JSON.stringify({ ...bodyObj, project_request_id: id }),
   });
   const text = await r.text();
-  let parsed: unknown;
+  let parsed;
   try {
-    parsed = JSON.parse(text) as unknown;
+    parsed = JSON.parse(text);
   } catch {
     parsed = { raw: text };
   }

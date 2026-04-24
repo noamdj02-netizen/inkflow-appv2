@@ -3,10 +3,9 @@
  * JWT fondateur (Authorization: Bearer) + service role : liste des daily_briefs.
  */
 import { createClient } from '@supabase/supabase-js';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { isVercelFounderEmail } from '../lib/vercelFounderAuth';
+import { isVercelFounderEmail } from '../lib/vercelFounderAuth.js';
 
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -47,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const { data, error } = await admin
     .from('daily_briefs')
     .select(
-      'date, revenue, bookings, new_studios, unpaid_deposits, pending_projects, ig_reach, ig_profile_views, alerts, created_at, updated_at'
+      'date, revenue, bookings, new_studios, unpaid_deposits, pending_projects, ig_reach, ig_profile_views, alerts, created_at, updated_at',
     )
     .order('date', { ascending: false })
     .limit(qLimit);

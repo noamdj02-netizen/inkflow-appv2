@@ -64,5 +64,12 @@ export default tseslint.config(
       },
     },
   },
+  /** Handlers Vercel en .js (évite l’analyse TS « ColonToken » sur le build cloud). */
+  {
+    files: ['api/**/*.js', 'lib/vercelFounderAuth.js'],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+  },
   eslintConfigPrettier,
 );

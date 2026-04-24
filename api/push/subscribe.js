@@ -2,9 +2,7 @@
  * Vercel Serverless — POST /api/push/subscribe
  * Proxy vers Supabase Edge Function `push-subscribe` (JWT tatoueur + corps { studioId, subscription }).
  */
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -41,9 +39,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     body: bodyStr,
   });
   const text = await r.text();
-  let parsed: unknown;
+  let parsed;
   try {
-    parsed = JSON.parse(text) as unknown;
+    parsed = JSON.parse(text);
   } catch {
     parsed = { raw: text };
   }
