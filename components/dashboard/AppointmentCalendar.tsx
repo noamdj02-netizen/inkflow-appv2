@@ -9,6 +9,8 @@ import { Appointment, Client } from '../../types';
 import { Modal } from '../ui/Modal';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { hapticSuccess } from '../../lib/haptics';
+import { formatHm, parseTimeToMinutes } from '../../lib/appointmentTime';
+import { getClientAvatarForAppointment } from '../../lib/appointmentClientDisplay';
 
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8h à 20h
 const SLOT_PX = 72;
@@ -31,20 +33,6 @@ function toLocalDateStr(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
-}
-
-function parseTimeToMinutes(t: string): number {
-  const parts = t.split(':');
-  const hh = parseInt(parts[0] ?? '0', 10);
-  const mm = parseInt(parts[1] ?? '0', 10);
-  if (Number.isNaN(hh)) return 0;
-  return hh * 60 + (Number.isNaN(mm) ? 0 : mm);
-}
-
-function formatHm(totalMinutes: number): string {
-  const h = Math.floor(totalMinutes / 60) % 24;
-  const m = totalMinutes % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 function getEventColor(status: Appointment['status']): string {
@@ -72,17 +60,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   onAppointmentClick,
   onUpdateAppointment,
 }) => {
-  const clientByEmail = useMemo(() => {
-    const m = new Map<string, Client>();
-    clients.forEach((c) => {
-      if (c.email) m.set(c.email.toLowerCase(), c);
-    });
-    return m;
-  }, [clients]);
-
-  const getAvatar = (apt: Appointment) =>
-    (apt.clientId && clients.find((c) => c.id === apt.clientId)?.avatar) ||
-    clientByEmail.get(apt.clientEmail?.toLowerCase() || '')?.avatar;
+  const getAvatar = (apt: Appointment) => getClientAvatarForAppointment(apt, clients);
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
   const [weekStart, setWeekStart] = useState(() => {
     const d = new Date();

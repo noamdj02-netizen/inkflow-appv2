@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { useTheme } from 'next-themes';
+import { endOfWeek, startOfWeek } from 'date-fns';
 import {
   Calendar,
   Plus,
@@ -17,7 +18,9 @@ import {
   CheckCheck,
   CircleDollarSign,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Appointment, Client } from '../../types';
+import { cn } from '@/lib/utils';
 import { MiniCalendar } from './MiniCalendar';
 import { AppointmentCalendar } from './AppointmentCalendar';
 import { EmptyState } from '../common/EmptyState';
@@ -104,6 +107,93 @@ function needsDepositAttention(apt: Appointment): boolean {
   return apt.status !== 'completed' && apt.status !== 'cancelled';
 }
 
+/** Lundi → dimanche (aligné sur le reste du pro dashboard FR). */
+function getThisWeekYmdBounds(): { start: string; end: string } {
+  const now = new Date();
+  const ws = startOfWeek(now, { weekStartsOn: 1 });
+  const we = endOfWeek(now, { weekStartsOn: 1 });
+  return { start: toDateStr(ws), end: toDateStr(we) };
+}
+
+const kpiTileButtonClass = (active: boolean) =>
+  cn(
+    'flex min-h-[52px] min-w-0 border px-3 py-2.5 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:min-h-[76px] sm:flex-col sm:items-center sm:justify-center sm:px-3 sm:py-2.5 sm:text-center rounded-pro-card',
+    active
+      ? 'border-blue-600 bg-pro-cta text-white shadow-pro dark:border-blue-500 dark:bg-blue-500'
+      : 'border-zinc-200/80 bg-white/95 text-zinc-900 hover:border-blue-200/80 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-100 dark:hover:border-zinc-600',
+  );
+
+type KpiStatTileProps = {
+  isActive: boolean;
+  count: number;
+  label: string;
+  Icon: LucideIcon;
+  onClick: () => void;
+  'aria-pressed'?: boolean;
+};
+
+/** Tuile Aperçu (mobile = ligne libellé+chiffre, sm+ = carte centrée). */
+function KpiStatTile({ isActive, count, label, Icon, onClick, 'aria-pressed': ariaPressed }: KpiStatTileProps) {
+  return (
+    <button
+      type="button"
+      aria-pressed={ariaPressed ?? isActive}
+      onClick={onClick}
+      className={kpiTileButtonClass(isActive)}
+    >
+      <span className="flex w-full flex-row items-center justify-between gap-3 sm:hidden">
+        <span className="flex min-w-0 items-center gap-2.5">
+          <Icon
+            className={cn(
+              'h-5 w-5 shrink-0',
+              isActive ? 'text-white' : 'text-zinc-400 dark:text-zinc-500',
+            )}
+            aria-hidden
+          />
+          <span
+            className={cn(
+              'truncate text-xs font-medium',
+              isActive ? 'text-white' : 'text-zinc-600 dark:text-zinc-300',
+            )}
+          >
+            {label}
+          </span>
+        </span>
+        <span
+          className={cn(
+            'shrink-0 font-display text-2xl font-bold tabular-nums leading-none',
+            isActive ? 'text-white' : 'text-zinc-900 dark:text-white',
+          )}
+        >
+          {count}
+        </span>
+      </span>
+      <span className="hidden w-full flex-col items-center justify-center gap-1 sm:flex">
+        <Icon
+          className={cn('h-4 w-4 shrink-0', isActive ? 'text-white' : 'text-zinc-400 dark:text-zinc-500')}
+          aria-hidden
+        />
+        <span
+          className={cn(
+            'font-display text-xl font-bold tabular-nums leading-none sm:text-2xl',
+            isActive ? 'text-white' : 'text-zinc-900 dark:text-white',
+          )}
+        >
+          {count}
+        </span>
+        <span
+          className={cn(
+            'pro-text-small font-medium leading-tight',
+            isActive ? 'text-white' : 'text-zinc-500 dark:text-zinc-400',
+          )}
+        >
+          {label}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   appointments,
   clients = [],
@@ -187,11 +277,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
     if (dateRangeChip === 'today') {
       list = list.filter((a) => a.date === toDateStr(new Date()));
     } else if (dateRangeChip === 'week') {
-      const s = new Date();
-      s.setDate(s.getDate() - s.getDay());
-      const e = new Date(s);
-      e.setDate(e.getDate() + 6);
-      list = list.filter((a) => a.date >= toDateStr(s) && a.date <= toDateStr(e));
+      const { start, end } = getThisWeekYmdBounds();
+      list = list.filter((a) => a.date >= start && a.date <= end);
     } else if (selectedDate) {
       list = list.filter((a) => a.date === selectedDate);
     }
@@ -209,18 +296,14 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
   const stats = useMemo(() => {
     const today = toDateStr(new Date());
-    const s = new Date();
-    s.setDate(s.getDate() - s.getDay());
-    const e = new Date(s);
-    e.setDate(e.getDate() + 6);
-    const sTs = s.getTime(),
-      eTs = e.getTime();
+    const { start: wStart, end: wEnd } = getThisWeekYmdBounds();
     let todayCount = 0,
       weekCount = 0;
     appointments.forEach((a) => {
-      const t = new Date(`${a.date}T00:00:00`).getTime();
       if (a.date === today) todayCount++;
-      if (t >= sTs && t <= eTs && !['cancelled', 'no_show'].includes(a.status)) weekCount++;
+      if (a.date >= wStart && a.date <= wEnd && !['cancelled', 'no_show'].includes(a.status)) {
+        weekCount++;
+      }
     });
     return {
       todayCount,
@@ -254,13 +337,13 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
   /** Mobile : le bottom nav dit « Agenda » — le h1 porte le contexte (semaine vs mois), pas un 2e « Rendez-vous ». */
   const appointmentsMobileHeadline = planningView === 'month' ? 'Vue mois' : 'Liste & semaine';
 
-  /** Mobile : 1 colonne (lignes pleine largeur) · sm+ : 3 tuiles côte à côte */
+  /** Mobile : 3 lignes (cibles larges) · sm+ : 3 tuiles côte à côte */
   const kpiGridClass = 'grid w-full grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3';
 
   return (
     <section
       ref={setSectionRef}
-      className="flex min-w-0 flex-col gap-4 sm:gap-6 md:gap-8 font-sans"
+      className="flex min-w-0 flex-col gap-4 font-sans sm:gap-6 md:gap-8"
       aria-label="Rendez-vous"
     >
       {onRefresh && (
@@ -272,19 +355,19 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
         </div>
       )}
 
-      {/* Titre + accroche : bandeau héros dans DashboardPro — ici raccourci contexte (mobile) + action */}
+      {/* Sous-titre (mobile) + CTA : le hero titre vit dans DashboardPro */}
       <div className="flex flex-col gap-4 sm:gap-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <p className="min-w-0 text-sm font-semibold text-zinc-800 dark:text-zinc-100 sm:text-base">
+          <p className="pro-text-body min-w-0 font-medium text-zinc-800 dark:text-zinc-100 sm:text-base">
             <span className="sm:hidden">{appointmentsMobileHeadline}</span>
-            <span className="hidden sm:inline text-zinc-500 dark:text-zinc-400 font-normal text-sm">
+            <span className="hidden sm:inline text-zinc-500 dark:text-zinc-400 sm:font-normal">
               Filtre par période et statut, puis liste ou calendrier.
             </span>
           </p>
           <button
             type="button"
             onClick={onNewAppointment}
-            className="inline-flex w-full min-h-[48px] shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 active:scale-[0.98] dark:bg-blue-500 dark:hover:bg-blue-400 dark:focus-visible:ring-offset-black sm:w-auto sm:min-h-[40px] sm:py-2.5"
+            className="inline-flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-pro-btn bg-pro-cta px-4 text-sm font-medium shadow-pro transition-transform hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 active:scale-[0.98] dark:focus-visible:ring-offset-black sm:h-10 sm:w-auto"
             aria-label="Créer un nouveau rendez-vous"
           >
             <Plus className="h-4 w-4" aria-hidden />
@@ -292,18 +375,18 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           </button>
         </div>
 
-        {/* KPI — chiffre dominant + libellé (scan rapide), 3 tuiles fixes, filtres au clic */}
+        {/* KPI : période (lun–dim) + en attente — une tuile = un filtre */}
         <div
-          className="rounded-2xl border border-zinc-200/80 bg-gradient-to-b from-white/95 to-blue-50/40 p-2.5 shadow-sm dark:border-zinc-800 dark:from-zinc-900/60 dark:to-zinc-950/80 dark:shadow-none sm:p-4"
+          className="rounded-pro-card border border-zinc-200/80 bg-gradient-to-b from-white/95 to-blue-50/40 p-2 shadow-pro dark:border-zinc-800 dark:from-zinc-900/60 dark:to-zinc-950/80 dark:shadow-none sm:p-4"
           role="region"
           aria-label="Indicateurs sur la période"
         >
           <div className="mb-2 sm:mb-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 sm:text-[11px]">
+            <p className="pro-text-small font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               Aperçu
             </p>
             <p
-              className="mt-0.5 text-[10px] leading-snug text-zinc-500 dark:text-zinc-400 sm:mt-1 sm:text-[11px]"
+              className="pro-text-small mt-0.5 max-w-prose text-zinc-500 dark:text-zinc-400 sm:mt-1"
               id="kpi-hint"
             >
               <span className="sm:hidden">Tape une ligne pour filtrer la liste.</span>
@@ -313,163 +396,48 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             </p>
           </div>
           <div className={kpiGridClass} aria-describedby="kpi-hint">
-            <button
-              type="button"
-              aria-pressed={dateRangeChip === 'today'}
+            <KpiStatTile
+              isActive={dateRangeChip === 'today'}
+              count={stats.todayCount}
+              label="Aujourd'hui"
+              Icon={CalendarDays}
               onClick={() => {
                 setDateRangeChip('today');
                 setSelectedDate(null);
                 setMiniCalendarMonth(new Date());
               }}
-              className={`flex min-h-[52px] min-w-0 rounded-xl border px-3 py-2.5 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:min-h-[76px] sm:flex-col sm:items-center sm:justify-center sm:px-3 sm:py-2.5 sm:text-center ${
-                dateRangeChip === 'today'
-                  ? 'border-blue-600 bg-blue-600 text-white shadow-sm dark:border-blue-500 dark:bg-blue-500'
-                  : 'border-zinc-200/80 bg-white/95 hover:border-blue-200/80 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/90 dark:hover:border-zinc-600'
-              }`}
-            >
-              <span className="flex w-full flex-row items-center justify-between gap-3 sm:hidden">
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <CalendarDays
-                    className={`h-5 w-5 shrink-0 ${dateRangeChip === 'today' ? 'text-white' : 'text-zinc-400 dark:text-zinc-500'}`}
-                    aria-hidden
-                  />
-                  <span
-                    className={`truncate text-xs font-semibold ${dateRangeChip === 'today' ? 'text-white' : 'text-zinc-600 dark:text-zinc-300'}`}
-                  >
-                    Aujourd&apos;hui
-                  </span>
-                </span>
-                <span
-                  className={`shrink-0 font-display text-2xl font-bold tabular-nums leading-none ${dateRangeChip === 'today' ? 'text-white' : 'text-zinc-900 dark:text-white'}`}
-                >
-                  {stats.todayCount}
-                </span>
-              </span>
-              <span className="hidden w-full flex-col items-center justify-center gap-1 sm:flex">
-                <CalendarDays
-                  className={`h-4 w-4 shrink-0 ${dateRangeChip === 'today' ? 'text-white' : 'text-zinc-400 dark:text-zinc-500'}`}
-                  aria-hidden
-                />
-                <span
-                  className={`font-display text-xl font-bold tabular-nums leading-none sm:text-2xl ${dateRangeChip === 'today' ? 'text-white' : 'text-zinc-900 dark:text-white'}`}
-                >
-                  {stats.todayCount}
-                </span>
-                <span
-                  className={`text-[10px] font-semibold leading-tight sm:text-[11px] ${dateRangeChip === 'today' ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`}
-                >
-                  Aujourd&apos;hui
-                </span>
-              </span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={dateRangeChip === 'week'}
+            />
+            <KpiStatTile
+              isActive={dateRangeChip === 'week'}
+              count={stats.weekCount}
+              label="Cette semaine"
+              Icon={Clock}
               onClick={() => {
                 setDateRangeChip('week');
                 setSelectedDate(null);
               }}
-              className={`flex min-h-[52px] min-w-0 rounded-xl border px-3 py-2.5 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:min-h-[76px] sm:flex-col sm:items-center sm:justify-center sm:px-3 sm:py-2.5 sm:text-center ${
-                dateRangeChip === 'week'
-                  ? 'border-blue-600 bg-blue-600 text-white shadow-sm dark:border-blue-500 dark:bg-blue-500'
-                  : 'border-zinc-200/80 bg-white/95 hover:border-blue-200/80 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/90 dark:hover:border-zinc-600'
-              }`}
-            >
-              <span className="flex w-full flex-row items-center justify-between gap-3 sm:hidden">
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <Clock
-                    className={`h-5 w-5 shrink-0 ${dateRangeChip === 'week' ? 'text-white' : 'text-zinc-400 dark:text-zinc-500'}`}
-                    aria-hidden
-                  />
-                  <span
-                    className={`truncate text-xs font-semibold ${dateRangeChip === 'week' ? 'text-white' : 'text-zinc-600 dark:text-zinc-300'}`}
-                  >
-                    Cette semaine
-                  </span>
-                </span>
-                <span
-                  className={`shrink-0 font-display text-2xl font-bold tabular-nums leading-none ${dateRangeChip === 'week' ? 'text-white' : 'text-zinc-900 dark:text-white'}`}
-                >
-                  {stats.weekCount}
-                </span>
-              </span>
-              <span className="hidden w-full flex-col items-center justify-center gap-1 sm:flex">
-                <Clock
-                  className={`h-4 w-4 shrink-0 ${dateRangeChip === 'week' ? 'text-white' : 'text-zinc-400 dark:text-zinc-500'}`}
-                  aria-hidden
-                />
-                <span
-                  className={`font-display text-xl font-bold tabular-nums leading-none sm:text-2xl ${dateRangeChip === 'week' ? 'text-white' : 'text-zinc-900 dark:text-white'}`}
-                >
-                  {stats.weekCount}
-                </span>
-                <span
-                  className={`text-[10px] font-semibold leading-tight sm:text-[11px] ${dateRangeChip === 'week' ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`}
-                >
-                  Cette semaine
-                </span>
-              </span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={statusFilter === 'pending'}
+            />
+            <KpiStatTile
+              isActive={statusFilter === 'pending'}
+              count={stats.pendingCount}
+              label="En attente"
+              Icon={Users}
               onClick={() => {
                 setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending');
                 setDateRangeChip(null);
                 setSelectedDate(null);
               }}
-              className={`flex min-h-[52px] min-w-0 rounded-xl border px-3 py-2.5 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:min-h-[76px] sm:flex-col sm:items-center sm:justify-center sm:px-3 sm:py-2.5 sm:text-center ${
-                statusFilter === 'pending'
-                  ? 'border-blue-600 bg-blue-600 text-white shadow-sm dark:border-blue-500 dark:bg-blue-500'
-                  : 'border-zinc-200/80 bg-white/95 text-zinc-900 hover:border-blue-200/80 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-100 dark:hover:border-zinc-600'
-              }`}
-            >
-              <span className="flex w-full flex-row items-center justify-between gap-3 sm:hidden">
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <Users
-                    className={`h-5 w-5 shrink-0 ${statusFilter === 'pending' ? 'text-white' : 'text-zinc-400 dark:text-zinc-500'}`}
-                    aria-hidden
-                  />
-                  <span
-                    className={`truncate text-xs font-semibold ${statusFilter === 'pending' ? 'text-white' : 'text-zinc-600 dark:text-zinc-300'}`}
-                  >
-                    En attente
-                  </span>
-                </span>
-                <span
-                  className={`shrink-0 font-display text-2xl font-bold tabular-nums leading-none ${statusFilter === 'pending' ? 'text-white' : 'text-zinc-900 dark:text-white'}`}
-                >
-                  {stats.pendingCount}
-                </span>
-              </span>
-              <span className="hidden w-full flex-col items-center justify-center gap-1 sm:flex">
-                <Users
-                  className={`h-4 w-4 shrink-0 ${statusFilter === 'pending' ? 'text-white' : 'text-zinc-400 dark:text-zinc-500'}`}
-                  aria-hidden
-                />
-                <span
-                  className={`font-display text-xl font-bold tabular-nums leading-none sm:text-2xl ${statusFilter === 'pending' ? 'text-white' : 'text-zinc-900 dark:text-white'}`}
-                >
-                  {stats.pendingCount}
-                </span>
-                <span
-                  className={`text-[10px] font-semibold leading-tight sm:text-[11px] ${statusFilter === 'pending' ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`}
-                >
-                  En attente
-                </span>
-              </span>
-            </button>
+            />
           </div>
         </div>
       </div>
 
       <div className="animate-fade-in motion-reduce:animate-none space-y-4 sm:space-y-6 md:space-y-8">
-        {/* ── Barre d’outils groupée (vue + recherche + filtre) ── */}
-        <div className="flex flex-col gap-2 rounded-2xl border border-zinc-200/70 bg-white/70 p-2 dark:border-zinc-800 dark:bg-zinc-900/50 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:p-3">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-            {/* Vue */}
+        {/* Barre d’outils : colonne = filtres en dessous des contrôles sur mobile ; sm+ = grille 2 col */}
+        <div className="grid grid-cols-1 gap-2 rounded-pro-card border border-zinc-200/70 bg-white/80 p-2 shadow-pro dark:border-zinc-800 dark:bg-zinc-900/50 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3 sm:p-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:min-h-11">
             <div
-              className="inline-flex shrink-0 rounded-2xl border border-zinc-200/60 bg-zinc-100/90 p-1 dark:border-zinc-700/60 dark:bg-zinc-800/90"
+              className="inline-flex shrink-0 rounded-pro-card border border-zinc-200/60 bg-zinc-100/90 p-1 dark:border-zinc-700/60 dark:bg-zinc-800/90"
               role="group"
               aria-label="Changer de vue"
             >
@@ -479,26 +447,27 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                   type="button"
                   onClick={() => setViewMode(m)}
                   aria-pressed={viewMode === m}
-                  className={`min-h-[44px] rounded-[10px] px-4 text-xs font-semibold transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:min-h-9 sm:px-3 ${
+                  className={cn(
+                    'min-h-11 min-w-[4.5rem] rounded-pro-btn px-3 text-xs font-medium transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:min-h-9',
                     viewMode === m
-                      ? 'border border-zinc-200/80 bg-white text-zinc-900 shadow-sm dark:border-zinc-600 dark:bg-zinc-700 dark:text-white'
-                      : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'
-                  }`}
+                      ? 'border border-zinc-200/80 bg-white text-zinc-900 shadow-pro dark:border-zinc-600 dark:bg-zinc-700 dark:text-white'
+                      : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white',
+                  )}
                 >
                   {m === 'list' ? 'Liste' : 'Planning'}
                 </button>
               ))}
             </div>
 
-            {/* Calendrier toggle mobile */}
             <button
               type="button"
               onClick={() => setShowCalendarMobile((v) => !v)}
-              className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border px-2 text-xs font-semibold transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 min-h-11 min-w-11 lg:hidden ${
+              className={cn(
+                'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-pro-btn border px-2 text-xs font-medium transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 lg:hidden',
                 showCalendarMobile
-                  ? 'border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400'
-                  : 'border-zinc-200/80 bg-white text-zinc-600 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400'
-              }`}
+                  ? 'border-blue-200 bg-blue-50 text-pro-accent dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400'
+                  : 'border-zinc-200/80 bg-white text-zinc-600 shadow-pro dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400',
+              )}
               aria-expanded={showCalendarMobile}
               aria-controls="agenda-mini-calendar-panel"
               aria-label={
@@ -509,17 +478,16 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <span className="hidden min-[400px]:inline">Mini cal.</span>
             </button>
 
-            <div className="hidden min-w-2 flex-1 sm:block" />
+            <div className="hidden min-w-[min(1rem,100%)] flex-1 sm:block" aria-hidden />
 
-            {/* Recherche */}
             {showSearch ? (
-              <div className="flex items-center gap-2 flex-1 min-w-0 max-w-[min(100%,14rem)]">
-                <div className="relative flex-1 min-w-0">
+              <div className="flex min-w-0 flex-1 basis-full sm:basis-auto sm:max-w-[14rem] sm:flex-[1] items-center gap-2 sm:min-w-[10rem]">
+                <div className="relative min-w-0 flex-1">
                   <label htmlFor="appointments-list-search" className="sr-only">
                     Filtrer la liste des rendez-vous
                   </label>
                   <Search
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 dark:text-zinc-400 pointer-events-none"
+                    className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-400"
                     aria-hidden
                   />
                   <input
@@ -531,7 +499,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                     placeholder="Client, service…"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full min-h-11 rounded-xl border border-zinc-200 bg-zinc-50 py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 transition-all focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-400"
+                    className="pro-text-body w-full min-h-11 rounded-pro-btn border border-zinc-200 bg-zinc-50 py-2 pl-9 pr-3 text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-400"
                   />
                 </div>
                 <button
@@ -540,17 +508,17 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                     setShowSearch(false);
                     setSearchQuery('');
                   }}
-                  className="min-h-11 min-w-11 shrink-0 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors active:scale-[0.98]"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pro-btn bg-zinc-100 text-zinc-500 transition-colors active:scale-[0.98] hover:text-zinc-900 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:text-white"
                   aria-label="Fermer la recherche"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => setShowSearch(true)}
-                className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200/80 bg-white text-zinc-500 shadow-sm transition-colors hover:text-blue-600 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:text-blue-400"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-pro-btn border border-zinc-200/80 bg-white text-zinc-500 shadow-pro transition-colors hover:text-pro-accent active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:text-blue-400"
                 aria-label="Rechercher un rendez-vous"
               >
                 <Search className="h-4 w-4" />
@@ -558,14 +526,15 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             )}
           </div>
 
-          {/* Filtre statut */}
-          <div className="relative w-full min-w-0 sm:w-auto sm:min-w-[12rem] sm:max-w-[min(100%,20rem)]">
+          <div className="relative min-w-0 sm:min-w-[12rem] sm:max-w-[20rem]">
+            <label htmlFor="appointments-status-filter" className="sr-only">
+              Filtrer par statut
+            </label>
             <select
+              id="appointments-status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              aria-label="Filtrer par statut"
-              className="w-full min-h-11 cursor-pointer appearance-none rounded-xl border border-zinc-200/80 bg-white py-2 pl-3 pr-9 text-xs font-semibold text-zinc-700 shadow-sm transition-all focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
-              id="appointments-status-filter"
+              className="pro-text-small min-h-11 w-full min-w-0 cursor-pointer appearance-none rounded-pro-btn border border-zinc-200/80 bg-white py-2 pl-3 pr-9 font-medium text-zinc-700 shadow-pro transition-all focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
             >
               <option value="all">Tous les statuts</option>
               <option value="pending">En attente</option>
@@ -573,17 +542,17 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               <option value="completed">Terminé</option>
               <option value="cancelled">Annulé</option>
             </select>
-            <SlidersHorizontal className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
+            <SlidersHorizontal className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
           </div>
         </div>
 
         {/* Résumé filtre actif */}
         {activeLabel && (
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-200/70 bg-zinc-50/90 px-3 py-2 dark:border-zinc-700/80 dark:bg-zinc-900/50 sm:px-4">
+          <div className="flex flex-wrap items-center gap-2 rounded-pro-card border border-zinc-200/70 bg-zinc-50/90 px-3 py-2 shadow-pro dark:border-zinc-700/80 dark:bg-zinc-900/50 sm:px-4">
             <Calendar className="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" aria-hidden />
-            <span className="text-xs tabular-nums text-zinc-600 dark:text-zinc-400">
+            <span className="pro-text-small min-w-0 flex-1 tabular-nums text-zinc-600 dark:text-zinc-400">
               {filteredAppointments.length} RDV ·{' '}
-              <span className="font-semibold text-blue-700 dark:text-blue-400">{activeLabel}</span>
+              <span className="font-medium text-pro-accent dark:text-blue-400">{activeLabel}</span>
             </span>
             <button
               type="button"
@@ -592,7 +561,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 setDateRangeChip(null);
                 setStatusFilter('all');
               }}
-              className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-200/70 hover:text-zinc-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+              className="ml-auto inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-pro-btn text-zinc-400 transition-colors hover:bg-zinc-200/70 hover:text-zinc-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
               aria-label="Réinitialiser les filtres"
             >
               <X className="h-4 w-4" />
@@ -637,8 +606,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             </div>
           </aside>
 
-          {/* Zone principale */}
-          <div className="flex-1 min-w-0 space-y-2 sm:space-y-3">
+          <div className="min-w-0 flex-1 space-y-2 sm:space-y-3">
             {viewMode === 'calendar' ? (
               <AppointmentCalendar
                 appointments={filteredAppointments}
@@ -648,7 +616,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 onUpdateAppointment={onUpdateAppointment}
               />
             ) : filteredAppointments.length === 0 ? (
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]">
+              <div className="rounded-pro-card border border-zinc-200/80 bg-white shadow-pro dark:border-zinc-800 dark:bg-zinc-900">
                 <EmptyState
                   icon={Calendar}
                   title="Aucun rendez-vous"
@@ -668,17 +636,21 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             ) : (
               <>
                 {/* Mobile cards */}
-                <div className="space-y-3 md:hidden">
+                <ul className="space-y-3 md:hidden" role="list">
                   {filteredAppointments.map((apt) => {
                     const leftAccent =
                       CARD_LEFT_ACCENT[apt.status] || 'border-l-zinc-300 dark:border-l-zinc-600';
                     const depositDue = needsDepositAttention(apt);
                     return (
+                      <li key={apt.id}>
                       <button
-                        key={apt.id}
                         type="button"
                         onClick={() => onSelectAppointment(apt)}
-                        className={`w-full text-left bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 border-l-4 ${leftAccent} rounded-2xl shadow-[0_1px_6px_-2px_rgba(0,0,0,0.08)] hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-600 active:scale-[0.99] transition-all duration-150 overflow-hidden touch-manipulation`}
+                        className={cn(
+                          'w-full touch-manipulation overflow-hidden rounded-pro-card border border-l-4 border-zinc-200/80 bg-white text-left shadow-pro transition-transform duration-150 hover:border-zinc-300 active:scale-[0.99] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600',
+                          'hover:shadow-pro',
+                          leftAccent,
+                        )}
                       >
                         <div className="flex items-center gap-3 p-4">
                           {/* Avatar */}
@@ -756,18 +728,20 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                           </button>
                         </div>
                       </button>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
 
                 {/* Desktop table */}
-                <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] overflow-hidden">
-                  <div className="px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider">
+                <div className="hidden min-w-0 overflow-hidden rounded-pro-card border border-zinc-200/80 bg-white shadow-pro dark:border-zinc-800 dark:bg-zinc-900 md:block">
+                  <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800 sm:px-5">
+                    <span className="pro-text-small font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-500">
                       {filteredAppointments.length} rendez-vous
                     </span>
                   </div>
-                  <table className="w-full">
+                  <div className="overflow-x-auto">
+                  <table className="w-full min-w-[36rem]">
                     <thead>
                       <tr className="border-b border-zinc-100 dark:border-zinc-800">
                         <th
@@ -924,6 +898,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </>
             )}

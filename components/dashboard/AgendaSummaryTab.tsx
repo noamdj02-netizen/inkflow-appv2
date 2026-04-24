@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useToast } from '../../contexts/ToastContext';
 import {
   addDays,
   addMonths,
@@ -7,6 +8,7 @@ import {
   endOfMonth,
   endOfWeek,
   format,
+  isSameMonth,
   parse,
   startOfDay,
   startOfMonth,
@@ -16,9 +18,18 @@ import {
   subWeeks,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar, ChevronLeft, ChevronRight, Clock, ListOrdered } from 'lucide-react';
-import { Appointment } from '../../types';
+import { Calendar, CalendarPlus, ChevronLeft, ChevronRight, ListOrdered } from 'lucide-react';
+import { Appointment, Client } from '../../types';
 import { cn } from '@/lib/utils';
+import { formatTimeRange } from '../../lib/appointmentTime';
+import { getClientAvatarForAppointment, getClientNameInitials } from '../../lib/appointmentClientDisplay';
+import { downloadICSAll } from '../../lib/googleCalendar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 type SummaryRange = 'day' | 'week' | 'month';
 
@@ -31,6 +42,14 @@ const STATUS_FR: Record<string, string> = {
   no_show: 'Absent',
 };
 
+const LOCATION_FR: Record<Appointment['location'], string> = {
+  arm: 'Bras',
+  leg: 'Jambe',
+  back: 'Dos',
+  chest: 'Torse',
+  other: 'Autre',
+};
+
 function parseYmd(ymd: string): Date {
   return parse(ymd, 'yyyy-MM-dd', new Date());
 }
@@ -39,9 +58,231 @@ function ymd(d: Date): string {
   return format(d, 'yyyy-MM-dd');
 }
 
+/** Libellé de groupe (liste) type « JEUDI 23 AVR. ». */
+function formatDayGroupLabel(dateStr: string, withFullMonth: boolean) {
+  const p = parseYmd(dateStr);
+  const s = withFullMonth
+    ? format(p, 'EEEE d MMMM', { locale: fr })
+    : format(p, 'EEEE d MMM', { locale: fr });
+  return s.toLocaleUpperCase('fr');
+}
+
+/** Abréviations bandeau (2 lettres, style « LU MA … »). */
+const WEEKDAYS_2 = ['LU', 'MA', 'ME', 'JE', 'VE', 'SA', 'DI'] as const;
+
+type SummaryAppointmentCardProps = {
+  apt: Appointment;
+  clients: readonly Client[];
+  onSelect: (apt: Appointment) => void;
+};
+
+const AgendaSummaryAppointmentCard: React.FC<SummaryAppointmentCardProps> = ({
+  apt,
+  clients,
+  onSelect,
+}) => {
+  const cancelled = apt.status === 'cancelled';
+  const avatarUrl = getClientAvatarForAppointment(apt, clients);
+  const initials = getClientNameInitials(apt.clientName);
+  const typeLabel = apt.tattooType === 'flash' ? 'Flash' : 'Projet';
+  const needsDeposit = apt.status === 'confirmed' && !apt.depositPaid;
+
+  return (
+    <li>
+      <Card
+        data-slot="agenda-apt-row"
+        size="sm"
+        className={cn(
+          'ring-1 ring-foreground/5 transition-[transform,box-shadow] duration-200 hover:shadow-md',
+          cancelled && 'opacity-60',
+        )}
+      >
+        <CardContent className="p-0">
+          <button
+            type="button"
+            onClick={() => onSelect(apt)}
+            className="flex w-full min-h-[4rem] touch-manipulation items-stretch gap-3 px-3.5 py-3.5 text-left text-sm font-sans text-foreground transition active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+          >
+            <Avatar className="size-12">
+              {avatarUrl ? <AvatarImage src={avatarUrl} alt="" className="object-cover" /> : null}
+              <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">{initials}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1 py-0.5">
+              <p className="truncate text-sm font-semibold leading-snug tracking-tight sm:text-base">
+                {apt.clientName}
+              </p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <Badge
+                  variant="default"
+                  className="max-w-[6.5rem] truncate font-medium leading-none"
+                >
+                  {typeLabel}
+                </Badge>
+                {apt.service && (
+                  <Badge variant="secondary" className="max-w-[7.5rem] truncate font-medium leading-none">
+                    {apt.service}
+                  </Badge>
+                )}
+                <Badge
+                  variant="outline"
+                  className="max-w-[4.5rem] truncate border-amber-200/80 bg-amber-50/90 font-medium leading-none text-amber-950 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100"
+                >
+                  {LOCATION_FR[apt.location] ?? apt.location}
+                </Badge>
+              </div>
+              <p className="mt-1.5 line-clamp-1 text-xs font-medium leading-tight text-muted-foreground">
+                {cancelled ? (
+                  <span className="text-destructive">{STATUS_FR[apt.status] ?? apt.status}</span>
+                ) : needsDeposit ? (
+                  <span className="text-amber-700 dark:text-amber-300">Acompte dû</span>
+                ) : (
+                  (STATUS_FR[apt.status] ?? apt.status)
+                )}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col items-end justify-center self-stretch text-right">
+              <p className="text-xs font-medium tabular-nums text-foreground/90 sm:text-sm">
+                {formatTimeRange(apt)}
+              </p>
+            </div>
+          </button>
+        </CardContent>
+      </Card>
+    </li>
+  );
+};
+
+type DayStripProps = {
+  weekDays: { d: Date; ymd: string; dayNum: string; wk2: string; isToday: boolean }[];
+  selectedYmd: string;
+  onSelectYmd: (s: string) => void;
+};
+
+function AgendaDayStrip({ weekDays, selectedYmd, onSelectYmd }: DayStripProps) {
+  return (
+    <div
+      className="flex snap-x snap-mandatory justify-between gap-1.5 overflow-x-auto pb-1.5 pt-1 [scrollbar-gutter:stable] [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden"
+      style={{ WebkitOverflowScrolling: 'touch' }}
+      role="listbox"
+      aria-label="Sélection du jour"
+    >
+      {weekDays.map((cell) => {
+        const selected = cell.ymd === selectedYmd;
+        return (
+          <button
+            key={cell.ymd}
+            type="button"
+            role="option"
+            aria-selected={selected}
+            aria-label={`${cell.wk2} ${cell.dayNum}${cell.isToday ? ', aujourd’hui' : ''}`}
+            onClick={() => onSelectYmd(cell.ymd)}
+            className={cn(
+              'flex h-[3.25rem] w-[3.25rem] shrink-0 snap-center flex-col items-center justify-center rounded-full border-2 text-center font-sans transition-[transform,box-shadow,background-color] active:scale-[0.97] min-[400px]:h-14 min-[400px]:w-14 focus-visible:ring-2 focus-visible:ring-ring/50',
+              selected
+                ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/25'
+                : 'border-border bg-card text-foreground shadow-sm',
+              cell.isToday && !selected && 'ring-2 ring-primary/30 ring-offset-2 ring-offset-background',
+            )}
+          >
+            <span
+              className={cn(
+                'text-[9px] font-bold uppercase leading-none tracking-tight',
+                selected ? 'text-primary-foreground/90' : 'text-muted-foreground',
+              )}
+            >
+              {cell.wk2}
+            </span>
+            <span
+              className={cn(
+                'mt-0.5 text-base font-bold tabular-nums leading-none',
+                selected ? 'text-primary-foreground' : 'text-foreground',
+              )}
+            >
+              {cell.dayNum}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+type MonthGridProps = {
+  anchor: Date;
+  todayYmd: string;
+  countByYmd: Map<string, number>;
+  /** Jour en surbrillance (filtre actif) */
+  focusYmd: string | null;
+  onPickDay: (y: string) => void;
+  showAll: boolean;
+};
+
+function AgendaMonthGrid({ anchor, todayYmd, countByYmd, focusYmd, onPickDay, showAll }: MonthGridProps) {
+  const cells = useMemo(() => {
+    const sm = startOfMonth(anchor);
+    const firstOffset = (sm.getDay() + 6) % 7;
+    const gridStart = addDays(sm, -firstOffset);
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = addDays(gridStart, i);
+      const inM = isSameMonth(d, sm);
+      const ds = ymd(d);
+      return { d, inM, ymd: ds, n: countByYmd.get(ds) ?? 0 };
+    });
+  }, [anchor, countByYmd]);
+
+  return (
+    <div
+      className="rounded-2xl border border-border bg-card p-2 text-card-foreground shadow-sm ring-1 ring-foreground/5"
+      role="grid"
+      aria-label="Calendrier du mois"
+    >
+      <div className="mb-1 grid grid-cols-7 gap-0.5 text-center text-[10px] font-semibold text-muted-foreground">
+        {WEEKDAYS_2.map((d) => (
+          <div key={d} className="py-0.5">
+            {d}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((cell) => {
+          const isToday = cell.ymd === todayYmd;
+          const isFocus = !showAll && focusYmd === cell.ymd;
+          return (
+            <button
+              key={cell.ymd}
+              type="button"
+              disabled={!cell.inM}
+              onClick={() => cell.inM && onPickDay(cell.ymd)}
+              className={cn(
+                'relative flex min-h-[40px] flex-col items-center justify-center rounded-xl text-[12px] font-semibold tabular-nums transition-colors',
+                !cell.inM && 'pointer-events-none text-zinc-300 dark:text-zinc-600',
+                cell.inM && 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100/90 dark:hover:bg-zinc-800/80',
+                cell.inM && isFocus && 'bg-primary text-primary-foreground ring-1 ring-primary hover:bg-primary',
+                cell.inM && showAll && isToday && !isFocus && 'ring-1 ring-primary/50',
+              )}
+            >
+              <span>{format(cell.d, 'd')}</span>
+              {cell.inM && cell.n > 0 && (
+                <span
+                  className={cn(
+                    'mt-0.5 h-1.5 w-1.5 rounded-full',
+                    isFocus ? 'bg-primary-foreground' : 'bg-primary',
+                  )}
+                  aria-label={`${cell.n} rendez-vous`}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export interface AgendaSummaryTabProps {
   appointments: Appointment[];
   today: string;
+  clients?: Client[];
   onSelectAppointment: (apt: Appointment) => void;
   onOpenFullPlanning: () => void;
   onNewAppointment: () => void;
@@ -53,27 +294,66 @@ export interface AgendaSummaryTabProps {
 export function AgendaSummaryTab({
   appointments,
   today,
+  clients: clientsProp = [],
   onSelectAppointment,
   onOpenFullPlanning,
   onNewAppointment,
 }: AgendaSummaryTabProps) {
+  const toast = useToast();
+  const clients = clientsProp;
   const [range, setRange] = useState<SummaryRange>('week');
   const [anchor, setAnchor] = useState(() => startOfDay(new Date()));
+  /** Emphase sur le bandeau (vue semaine) */
+  const [weekStripYmd, setWeekStripYmd] = useState<string | null>(null);
+  /** null = afficher tout le mois, sinon filtre un jour */
+  const [monthScope, setMonthScope] = useState<'all' | 'day'>('all');
+  const [monthFilterYmd, setMonthFilterYmd] = useState<string | null>(null);
+
+  const weekStartMonday = useCallback(
+    (d: Date) => startOfWeek(d, { weekStartsOn: 1 }),
+    [],
+  );
+  const weekEndSunday = useCallback((d: Date) => endOfWeek(d, { weekStartsOn: 1 }), []);
+
+  const stripWeekDays = useMemo(() => {
+    const ws = weekStartMonday(anchor);
+    return eachDayOfInterval({ start: ws, end: weekEndSunday(anchor) }).map((d) => {
+      const idx = (d.getDay() + 6) % 7;
+      return {
+        d,
+        ymd: ymd(d),
+        dayNum: format(d, 'd'),
+        wk2: WEEKDAYS_2[idx] ?? '—',
+        isToday: ymd(d) === today,
+      };
+    });
+  }, [anchor, today, weekStartMonday, weekEndSunday]);
+
+  const selectedYmdForStrip = useMemo(() => {
+    if (range === 'day') return ymd(anchor);
+    if (range === 'week') {
+      const ws = ymd(weekStartMonday(anchor));
+      const we = ymd(weekEndSunday(anchor));
+      if (weekStripYmd && weekStripYmd >= ws && weekStripYmd <= we) return weekStripYmd;
+      if (today >= ws && today <= we) return today;
+      return ws;
+    }
+    return ymd(anchor);
+  }, [range, anchor, weekStripYmd, today, weekStartMonday, weekEndSunday]);
 
   const { startStr, endStr, periodLabel, dayHeaders } = useMemo(() => {
     if (range === 'day') {
-      const d = anchor;
-      const s = ymd(d);
+      const s = ymd(anchor);
       return {
         startStr: s,
         endStr: s,
-        periodLabel: format(d, 'EEEE d MMMM yyyy', { locale: fr }),
+        periodLabel: format(anchor, 'EEEE d MMMM yyyy', { locale: fr }),
         dayHeaders: [s],
       };
     }
     if (range === 'week') {
-      const ws = startOfWeek(anchor, { weekStartsOn: 1 });
-      const we = endOfWeek(anchor, { weekStartsOn: 1 });
+      const ws = weekStartMonday(anchor);
+      const we = weekEndSunday(anchor);
       const s = ymd(ws);
       const e = ymd(we);
       return {
@@ -93,24 +373,39 @@ export function AgendaSummaryTab({
       periodLabel: format(sm, 'MMMM yyyy', { locale: fr }),
       dayHeaders: eachDayOfInterval({ start: sm, end: em }).map(ymd),
     };
-  }, [range, anchor]);
+  }, [range, anchor, weekStartMonday, weekEndSunday]);
 
   const inPeriod = useMemo(() => {
     return appointments
       .filter((a) => a.date >= startStr && a.date <= endStr)
       .sort((a, b) => {
-        const c = a.date.localeCompare(b.date);
-        if (c !== 0) return c;
+        const c0 = a.date.localeCompare(b.date);
+        if (c0 !== 0) return c0;
         return a.time.localeCompare(b.time);
       });
   }, [appointments, startStr, endStr]);
 
+  const listToRender = useMemo(() => {
+    if (range === 'month' && monthScope === 'day' && monthFilterYmd) {
+      return inPeriod.filter((a) => a.date === monthFilterYmd);
+    }
+    return inPeriod;
+  }, [range, monthScope, monthFilterYmd, inPeriod]);
+
   const byDay = useMemo(() => {
     const m = new Map<string, Appointment[]>();
-    for (const a of inPeriod) {
+    for (const a of listToRender) {
       const list = m.get(a.date) ?? [];
       list.push(a);
       m.set(a.date, list);
+    }
+    return m;
+  }, [listToRender]);
+
+  const countInMonth = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const a of inPeriod) {
+      m.set(a.date, (m.get(a.date) ?? 0) + 1);
     }
     return m;
   }, [inPeriod]);
@@ -119,220 +414,338 @@ export function AgendaSummaryTab({
   const cancelledInPeriod = inPeriod.filter((a) => a.status === 'cancelled').length;
 
   const goPrev = () => {
-    if (range === 'day') setAnchor((d) => subDays(d, 1));
-    else if (range === 'week') setAnchor((d) => subWeeks(d, 1));
-    else setAnchor((d) => subMonths(d, 1));
+    if (range === 'day') setAnchor((d) => startOfDay(subDays(d, 1)));
+    else if (range === 'week') {
+      setAnchor((d) => startOfDay(subWeeks(d, 1)));
+      setWeekStripYmd(null);
+    } else setAnchor((d) => startOfDay(subMonths(d, 1)));
   };
 
   const goNext = () => {
-    if (range === 'day') setAnchor((d) => addDays(d, 1));
-    else if (range === 'week') setAnchor((d) => addWeeks(d, 1));
-    else setAnchor((d) => addMonths(d, 1));
+    if (range === 'day') setAnchor((d) => startOfDay(addDays(d, 1)));
+    else if (range === 'week') {
+      setAnchor((d) => startOfDay(addWeeks(d, 1)));
+      setWeekStripYmd(null);
+    } else setAnchor((d) => startOfDay(addMonths(d, 1)));
   };
 
   const goToday = () => {
-    setAnchor(startOfDay(new Date()));
+    const t = startOfDay(new Date());
+    setAnchor(t);
+    setWeekStripYmd(ymd(t));
+    if (range === 'month') {
+      setMonthScope('all');
+      setMonthFilterYmd(null);
+    }
+  };
+
+  const handleAddToMyCalendar = useCallback(() => {
+    const toExport = inPeriod
+      .filter((a) => ['pending', 'confirmed', 'in_progress'].includes(a.status))
+      .map((a) => ({
+        id: a.id,
+        clientName: a.clientName,
+        service: a.service || 'Tattoo',
+        date: a.date,
+        time: a.time || '10:00',
+        duration: a.duration || 60,
+        location: a.location,
+        notes: a.notes,
+      }));
+    if (toExport.length === 0) {
+      toast.error('Aucun rendez-vous à exporter pour cette période');
+      return;
+    }
+    downloadICSAll(toExport);
+    toast.success(
+      toExport.length === 1
+        ? '1 rendez-vous exporté (.ics)'
+        : `${toExport.length} rendez-vous exportés (.ics)`,
+    );
+  }, [inPeriod, toast]);
+
+  const handleRangeChange = (r: SummaryRange) => {
+    setRange(r);
+    if (r === 'month') {
+      setMonthScope('all');
+      setMonthFilterYmd(null);
+    } else {
+      setWeekStripYmd(null);
+    }
+  };
+
+  const handleStripSelect = (s: string) => {
+    if (range === 'day') {
+      setAnchor(startOfDay(parseYmd(s)));
+      return;
+    }
+    if (range === 'week') setWeekStripYmd(s);
+  };
+
+  const handleMonthCell = (d: string) => {
+    setMonthFilterYmd(d);
+    setMonthScope('day');
+  };
+
+  const showDayStrip = range === 'day' || range === 'week';
+
+  const renderGroupedList = () => {
+    if (listToRender.length === 0) {
+      return (
+        <Empty className="border-dashed border-border bg-muted/30 py-10">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Calendar strokeWidth={1.5} aria-hidden />
+            </EmptyMedia>
+            <EmptyTitle className="text-base">Aucun rendez-vous sur cette période</EmptyTitle>
+            <EmptyDescription>
+              Passez en semaine ou en mois, ou ouvrez le planning complet pour ajouter un créneau.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent className="flex-row flex-wrap justify-center gap-2 sm:gap-3">
+            <Button type="button" className="min-w-[7rem] font-semibold" onClick={onNewAppointment}>
+              Nouveau RDV
+            </Button>
+            <Button type="button" variant="outline" className="min-w-[7rem] font-semibold" onClick={onOpenFullPlanning}>
+              Planning complet
+            </Button>
+          </EmptyContent>
+        </Empty>
+      );
+    }
+
+    if (range === 'week') {
+      return (
+        <ul className="space-y-5">
+          {dayHeaders.map((dateStr) => {
+            const list = byDay.get(dateStr);
+            if (!list || list.length === 0) return null;
+            const isTodayH = dateStr === today;
+            return (
+              <li key={dateStr}>
+                <p className="mb-2.5 flex flex-wrap items-baseline gap-2 text-[11px] font-bold tracking-wide text-muted-foreground">
+                  <span className={cn(isTodayH ? 'text-primary' : 'text-foreground/80')}>
+                    {formatDayGroupLabel(dateStr, false)}
+                  </span>
+                  {isTodayH && (
+                    <Badge
+                      variant="secondary"
+                      className="h-5 border-primary/20 bg-primary/10 px-1.5 text-[9px] font-bold tracking-wide text-primary"
+                    >
+                      AUJ.
+                    </Badge>
+                  )}
+                </p>
+                <ul className="flex flex-col gap-2.5">
+                  {list.map((apt) => (
+                    <AgendaSummaryAppointmentCard
+                      key={apt.id}
+                      apt={apt}
+                      clients={clients}
+                      onSelect={onSelectAppointment}
+                    />
+                  ))}
+                </ul>
+              </li>
+            );
+          })}
+        </ul>
+      );
+    }
+
+    if (range === 'month' && monthScope === 'all') {
+      return (
+        <ul className="flex flex-col gap-4">
+          {dayHeaders.map((dateStr) => {
+            const list = byDay.get(dateStr);
+            if (!list || list.length === 0) return null;
+            const isTodayH = dateStr === today;
+            return (
+              <li key={dateStr}>
+                <p className="mb-2 flex flex-wrap items-baseline gap-2 text-[11px] font-bold tracking-wide text-muted-foreground">
+                  <span className={cn(isTodayH ? 'text-primary' : 'text-foreground/80')}>
+                    {formatDayGroupLabel(dateStr, true)}
+                  </span>
+                  {isTodayH && (
+                    <Badge
+                      variant="secondary"
+                      className="h-5 border-primary/20 bg-primary/10 px-1.5 text-[9px] font-bold text-primary"
+                    >
+                      AUJ.
+                    </Badge>
+                  )}
+                </p>
+                <ul className="flex flex-col gap-2.5">
+                  {list.map((apt) => (
+                    <AgendaSummaryAppointmentCard
+                      key={apt.id}
+                      apt={apt}
+                      clients={clients}
+                      onSelect={onSelectAppointment}
+                    />
+                  ))}
+                </ul>
+              </li>
+            );
+          })}
+        </ul>
+      );
+    }
+
+    return (
+      <ul className="flex flex-col gap-2.5">
+        {listToRender.map((apt) => (
+          <AgendaSummaryAppointmentCard
+            key={apt.id}
+            apt={apt}
+            clients={clients}
+            onSelect={onSelectAppointment}
+          />
+        ))}
+      </ul>
+    );
   };
 
   return (
-    <div className="min-w-0 max-w-3xl mx-auto pb-6">
+    <div className="min-w-0 max-w-3xl mx-auto pb-6 font-sans text-sm antialiased text-foreground">
       <div
         className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
         role="region"
         aria-label="Période et vue"
       >
-        <div
-          className="flex gap-1 rounded-full bg-zinc-200/70 p-1 dark:bg-zinc-800/90"
-          role="group"
-          aria-label="Période"
+        <ToggleGroup
+          type="single"
+          value={range}
+          onValueChange={(v) => v && handleRangeChange(v as SummaryRange)}
+          className="grid w-full min-w-0 max-w-md grid-cols-3 gap-0.5 rounded-full border border-border bg-muted/90 p-0.5"
+          variant="default"
+          size="default"
         >
-          {(
-            [
-              { id: 'day' as const, label: 'Jour' },
-              { id: 'week' as const, label: 'Semaine' },
-              { id: 'month' as const, label: 'Mois' },
-            ] as const
-          ).map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setRange(opt.id)}
-              className={cn(
-                'flex flex-1 min-h-[40px] items-center justify-center rounded-full px-3 py-2 text-center text-[13px] font-medium transition-colors active:scale-[0.98] sm:flex-initial sm:px-4',
-                range === opt.id
-                  ? 'bg-blue-600 text-white shadow-sm dark:bg-blue-500'
-                  : 'text-zinc-600 dark:text-zinc-400'
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+          <ToggleGroupItem
+            value="day"
+            className="min-h-11 w-full min-w-0 rounded-full border-0 text-[13px] font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+          >
+            Jour
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="week"
+            className="min-h-11 w-full min-w-0 rounded-full border-0 text-[13px] font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+          >
+            Semaine
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="month"
+            className="min-h-11 w-full min-w-0 rounded-full border-0 text-[13px] font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+          >
+            Mois
+          </ToggleGroupItem>
+        </ToggleGroup>
 
-        <div className="flex items-center justify-between gap-2 sm:justify-end">
+        <div className="flex w-full min-w-0 items-center justify-between gap-2 sm:justify-end sm:gap-3">
           <div className="flex items-center gap-1">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="icon"
               onClick={goPrev}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200/90 bg-white text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className="size-10"
               aria-label="Période précédente"
             >
-              <ChevronLeft className="h-5 w-5" strokeWidth={2} aria-hidden />
-            </button>
-            <button
+              <ChevronLeft data-icon="inline-start" strokeWidth={2} aria-hidden />
+            </Button>
+            <Button
               type="button"
+              variant="outline"
+              size="icon"
               onClick={goNext}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200/90 bg-white text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className="size-10"
               aria-label="Période suivante"
             >
-              <ChevronRight className="h-5 w-5" strokeWidth={2} aria-hidden />
-            </button>
+              <ChevronRight data-icon="inline-start" strokeWidth={2} aria-hidden />
+            </Button>
           </div>
-          <button
-            type="button"
-            onClick={goToday}
-            className="shrink-0 rounded-xl border border-zinc-200/90 bg-white px-3 py-2 text-xs font-semibold text-zinc-800 shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-          >
-            Aujourd’hui
-          </button>
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddToMyCalendar}
+              className="h-9 max-w-full shrink gap-1.5 px-2.5 text-xs font-semibold sm:px-3"
+            >
+              <CalendarPlus className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">Ajouter à mon agenda</span>
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={goToday} className="h-9 shrink-0 text-xs font-semibold">
+              Aujourd’hui
+            </Button>
+          </div>
         </div>
       </div>
 
-      <p className="mt-4 text-center text-sm font-medium text-zinc-700 dark:text-zinc-200 capitalize sm:text-left">
+      <p className="mt-3 text-balance text-center text-sm font-semibold text-foreground sm:mt-4 sm:text-left sm:text-base sm:leading-tight">
         {periodLabel}
       </p>
 
-      <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 sm:justify-start">
-        <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100/90 px-2.5 py-1 dark:bg-zinc-800/80">
-          <ListOrdered className="h-3.5 w-3.5" aria-hidden />
+      <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+        <Badge variant="secondary" className="h-auto gap-1.5 border border-border/80 px-2.5 py-1.5 text-xs font-normal text-muted-foreground">
+          <ListOrdered className="text-muted-foreground" aria-hidden />
           {activeCount} rendez-vous sur la période
-        </span>
-        {cancelledInPeriod > 0 && (
-          <span className="text-zinc-400 dark:text-zinc-500">
-            dont {cancelledInPeriod} annulé(s)
-          </span>
-        )}
+          {cancelledInPeriod > 0 && <span className="text-muted-foreground/90">· dont {cancelledInPeriod} annulé(s)</span>}
+        </Badge>
       </div>
 
-      <div className="mt-5 space-y-3">
-        {inPeriod.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200/90 bg-zinc-50/80 px-6 py-12 text-center dark:border-zinc-700 dark:bg-zinc-900/40">
-            <Calendar
-              className="h-10 w-10 text-zinc-300 dark:text-zinc-600"
-              strokeWidth={1.5}
-              aria-hidden
+      <div className="mt-4 flex flex-col gap-4 sm:mt-5">
+        {showDayStrip && (
+          <div className="rounded-2xl border border-border/80 bg-card/80 px-1.5 py-2.5 shadow-sm ring-1 ring-foreground/5">
+            <AgendaDayStrip
+              weekDays={stripWeekDays}
+              selectedYmd={selectedYmdForStrip}
+              onSelectYmd={handleStripSelect}
             />
-            <p className="mt-3 text-sm font-medium text-zinc-700 dark:text-zinc-200">
-              Aucun rendez-vous sur cette période
-            </p>
-            <p className="mt-1 max-w-sm text-xs text-zinc-500 dark:text-zinc-400">
-              Passez en semaine ou en mois, ou ouvrez le planning complet pour ajouter un créneau.
-            </p>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={onNewAppointment}
-                className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 active:scale-[0.99] dark:bg-blue-500 dark:hover:bg-blue-400"
-              >
-                Nouveau RDV
-              </button>
-              <button
-                type="button"
-                onClick={onOpenFullPlanning}
-                className="rounded-xl border border-zinc-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-              >
-                Planning complet
-              </button>
-            </div>
           </div>
-        ) : (
-          dayHeaders.map((dateStr) => {
-            const list = byDay.get(dateStr);
-            if (!list || list.length === 0) {
-              if (range === 'month' || range === 'week') {
-                return null;
-              }
-              return null;
-            }
-            const isTodayHeader = dateStr === today;
-            return (
-              <div key={dateStr}>
-                <div
-                  className={cn(
-                    'mb-2 flex items-center justify-between border-b border-zinc-200/80 pb-1.5 dark:border-zinc-800',
-                    isTodayHeader && 'border-blue-200/80 dark:border-blue-500/30'
-                  )}
-                >
-                  <p
-                    className={cn(
-                      'text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400',
-                      isTodayHeader && 'text-blue-600 dark:text-blue-400'
-                    )}
-                  >
-                    {format(parseYmd(dateStr), 'EEEE d MMMM', { locale: fr })}
-                    {isTodayHeader && ' · aujourd’hui'}
-                  </p>
-                </div>
-                <ul className="space-y-2">
-                  {list.map((apt) => {
-                    const cancelled = apt.status === 'cancelled';
-                    return (
-                      <li key={apt.id}>
-                        <button
-                          type="button"
-                          onClick={() => onSelectAppointment(apt)}
-                          className={cn(
-                            'flex w-full min-h-[56px] items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white px-3 py-2.5 text-left shadow-sm transition-[transform,box-shadow] hover:border-zinc-300 hover:shadow-md active:scale-[0.99] dark:border-zinc-800 dark:bg-zinc-900/80 dark:hover:border-zinc-600',
-                            cancelled && 'opacity-60'
-                          )}
-                        >
-                          <span className="flex h-10 min-w-[3.5rem] flex-col items-center justify-center rounded-xl bg-zinc-100/90 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100">
-                            <Clock
-                              className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400"
-                              strokeWidth={2}
-                              aria-hidden
-                            />
-                            <span className="text-[13px] font-semibold tabular-nums">
-                              {apt.time || '—'}
-                            </span>
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[15px] font-semibold text-zinc-900 dark:text-white">
-                              {apt.clientName}
-                            </span>
-                            <span className="mt-0.5 block truncate text-xs text-zinc-500 dark:text-zinc-400">
-                              {apt.service}
-                            </span>
-                          </span>
-                          <span
-                            className={cn(
-                              'shrink-0 rounded-lg border px-2 py-1 text-[11px] font-semibold',
-                              cancelled
-                                ? 'border-zinc-200/80 bg-zinc-50 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
-                                : 'border-blue-200/80 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200'
-                            )}
-                          >
-                            {STATUS_FR[apt.status] ?? apt.status}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            );
-          })
         )}
 
+        {range === 'month' && (
+          <div className="flex flex-col gap-2">
+            {monthScope === 'day' && (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 rounded-full text-xs font-semibold"
+                  onClick={() => {
+                    setMonthScope('all');
+                    setMonthFilterYmd(null);
+                  }}
+                >
+                  Tout le mois
+                </Button>
+              </div>
+            )}
+            <AgendaMonthGrid
+              anchor={anchor}
+              todayYmd={today}
+              countByYmd={countInMonth}
+              focusYmd={monthFilterYmd}
+              onPickDay={handleMonthCell}
+              showAll={monthScope === 'all'}
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3">{renderGroupedList()}</div>
+
         {inPeriod.length > 0 && (
-          <div className="pt-2">
-            <button
+          <div className="pt-1">
+            <Button
               type="button"
+              variant="outline"
               onClick={onOpenFullPlanning}
-              className="w-full min-h-[48px] rounded-2xl border border-zinc-200/90 bg-zinc-50/90 px-4 py-3 text-sm font-semibold text-zinc-800 shadow-sm transition-colors hover:bg-zinc-100/90 active:scale-[0.99] dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              className="h-auto min-h-12 w-full rounded-2xl py-3 text-sm font-semibold"
             >
               Ouvrir le planning complet (semaine / mois, recherche, calendrier)
-            </button>
+            </Button>
           </div>
         )}
       </div>

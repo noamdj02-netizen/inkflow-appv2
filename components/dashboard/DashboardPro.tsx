@@ -3485,6 +3485,7 @@ export const DashboardPro: React.FC = () => {
                             <Suspense fallback={<DashboardLoadingSkeleton />}>
                               <AgendaSummaryTab
                                 appointments={appointments}
+                                clients={clients}
                                 today={today}
                                 onSelectAppointment={setSelectedAppointment}
                                 onOpenFullPlanning={() => {

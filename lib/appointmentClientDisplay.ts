@@ -1,0 +1,29 @@
+import type { Appointment, Client } from '../types';
+
+/**
+ * Résout l’URL d’avatar client pour un RDV (clientId, puis email).
+ * Aligné sur la logique de `AppointmentCalendar`.
+ */
+export function getClientAvatarForAppointment(
+  apt: Appointment,
+  clients: readonly Client[] = []
+): string | undefined {
+  const byId = apt.clientId && clients.find((c) => c.id === apt.clientId)?.avatar;
+  if (byId) return byId;
+  const email = apt.clientEmail?.toLowerCase() || '';
+  if (!email) return undefined;
+  return clients.find((c) => c.email?.toLowerCase() === email)?.avatar;
+}
+
+export function getClientNameInitials(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return '?';
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const a = parts[0]!.charAt(0);
+    const b = parts[1]!.charAt(0);
+    return (a + b).toUpperCase();
+  }
+  const u = trimmed.toUpperCase();
+  return u.length >= 2 ? u.slice(0, 2) : u.slice(0, 1);
+}
