@@ -15,6 +15,7 @@ import { SEO, createTattooStudioSchema } from '../../components/SEO';
 import { createProjectRequest } from '../../lib/supabaseProjectRequests';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { recordVitrineChannelView } from '../../lib/studioPublicMetrics';
 import { useRealtimeVitrine } from '../../hooks/useRealtimeSync';
 import { useToast } from '../../contexts/ToastContext';
 import type { VitrineData, VitrineFlashDesign } from '../../types/vitrine';
@@ -161,6 +162,17 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       cancelled = true;
     };
   }, [studioSlug]);
+
+  const vitrineViewRecordedRef = useRef(false);
+  useEffect(() => {
+    vitrineViewRecordedRef.current = false;
+  }, [studioSlug]);
+  useEffect(() => {
+    if (!projectRequestStudioId || !isSupabaseConfigured()) return;
+    if (vitrineViewRecordedRef.current) return;
+    vitrineViewRecordedRef.current = true;
+    recordVitrineChannelView(projectRequestStudioId);
+  }, [projectRequestStudioId]);
 
   useEffect(() => {
     let cancelled = false;

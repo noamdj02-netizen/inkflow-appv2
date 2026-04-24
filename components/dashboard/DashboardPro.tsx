@@ -3,7 +3,6 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   LayoutDashboard,
   Calendar,
-  Image,
   Users,
   Settings,
   Plus,
@@ -30,6 +29,7 @@ import {
   Target,
   Clock,
   Sparkles,
+  Zap,
   MapPin,
   FolderOpen,
   Share2,
@@ -239,13 +239,13 @@ const tabs: {
   href?: string;
 }[] = [
   { id: 'overview', label: "Vue d'ensemble", icon: <LayoutDashboard {...iconProps} /> },
-  // { id: 'analytics', label: 'Statistiques', icon: <BarChart3 {...iconProps} /> }, // V2
+  { id: 'analytics', label: 'Statistiques', icon: <BarChart3 {...iconProps} /> },
   { id: 'requests', label: 'Demandes', icon: <ClipboardList {...iconProps} />, badge: 'pending' },
   { id: 'appointments', label: 'Rendez-vous', icon: <Calendar {...iconProps} /> },
-  { id: 'flash', label: 'Galerie Flash', icon: <Image {...iconProps} /> },
+  { id: 'flash', label: 'Galerie Flash', icon: <Zap {...iconProps} /> },
   { id: 'clients', label: 'Clients', icon: <Users {...iconProps} /> },
   { id: 'messaging', label: 'Messagerie', icon: <Inbox {...iconProps} /> },
-  { id: 'portfolio', label: 'Portfolio', icon: <Image {...iconProps} /> },
+  { id: 'portfolio', label: 'Portfolio', icon: <LayoutGrid {...iconProps} /> },
   { id: 'finance', label: 'Finance', icon: <Wallet {...iconProps} /> },
   // { id: 'referral', label: 'Mois offerts', icon: <Gift {...iconProps} />, href: '/referral' }, // V2
   { id: 'settings', label: 'Paramètres', icon: <Settings {...iconProps} /> },
@@ -469,9 +469,9 @@ export const DashboardPro: React.FC = () => {
     vitrine: false,
     settings: false,
   });
-  const [requestsSubTab, setRequestsSubTab] = useState<'rdv' | 'bookings' | 'projects' | 'history'>(
-    'rdv'
-  );
+  const [requestsSubTab, setRequestsSubTab] = useState<
+    'inbox' | 'rdv' | 'bookings' | 'projects' | 'history'
+  >('inbox');
   const [planningView, setPlanningView] = useState<'week' | 'month'>('week');
   const [financeView, setFinanceView] = useState<'revenus' | 'acomptes' | 'stats'>('revenus');
   const [clientsView, setClientsView] = useState<'overview' | 'projects' | 'loyalty'>('overview');
@@ -488,6 +488,7 @@ export const DashboardPro: React.FC = () => {
   const helpContext: InkflowHelpContext = useMemo(() => {
     const map: Partial<Record<TabId, InkflowHelpContext>> = {
       overview: 'overview',
+      analytics: 'analytics',
       requests: 'requests',
       agenda: 'appointments',
       appointments: 'appointments',
@@ -532,7 +533,8 @@ export const DashboardPro: React.FC = () => {
     if (activeTab === 'overview') {
       return {
         title: 'Vue d’ensemble',
-        description: 'Pilotage du jour : indicateurs, raccourcis, demandes et rendez-vous.',
+        description:
+          'Pilotage du jour : indicateurs, raccourcis, demandes et rendez-vous. Menu Planning → Synthèse = vue rapide (jour, semaine, mois) ; Rendez-vous = calendrier détaillé (semaine ou mois).',
       };
     }
     switch (activeTab) {
@@ -543,6 +545,8 @@ export const DashboardPro: React.FC = () => {
         };
       case 'requests': {
         const bySub: Record<typeof requestsSubTab, string> = {
+          inbox:
+            'File d’attente : tout ce qui attend une action, filtrable (Flash, sur-mesure, sources).',
           rdv: 'Demandes liées à l’agenda : créneaux, modifications et rappels.',
           bookings: 'Réservations en ligne et suivi des statuts.',
           projects: 'Devis, projets et dossiers en cours de traitement.',
@@ -768,7 +772,7 @@ export const DashboardPro: React.FC = () => {
   const [welcomeComplete, setWelcomeComplete] = useState(false);
   /** Onglet initial pour Demandes (ex: 'history' quand on clique sur l'alerte RDV sans acompte) */
   const [requestsInitialTab, setRequestsInitialTab] = useState<
-    'rdv' | 'bookings' | 'projects' | 'history' | null
+    'inbox' | 'rdv' | 'bookings' | 'projects' | 'history' | null
   >(null);
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -2321,8 +2325,23 @@ export const DashboardPro: React.FC = () => {
                     activeTab === 'overview' ? SIDEBAR_NAV_ACTIVE : SIDEBAR_NAV_IDLE
                   }`}
                 >
-                  <LayoutGrid className="w-4 h-4 flex-shrink-0" />
+                  <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
                   <span className="flex-1 text-left">Vue d'ensemble</span>
+                </button>
+
+                <button
+                  onClick={() =>
+                    handleSidebarNav(() => {
+                      setActiveTab('analytics');
+                      setSidebarOpen(false);
+                    })
+                  }
+                  className={`${SIDEBAR_NAV_ROW} ${
+                    activeTab === 'analytics' ? SIDEBAR_NAV_ACTIVE : SIDEBAR_NAV_IDLE
+                  }`}
+                >
+                  <BarChart3 className="w-4 h-4 flex-shrink-0" />
+                  <span className="flex-1 text-left">Statistiques</span>
                 </button>
 
                 {/* Finance avec sous-menu */}
@@ -2374,7 +2393,6 @@ export const DashboardPro: React.FC = () => {
                           />
                           Acomptes
                         </button>
-                        {/* V2: Analytics/Statistiques avancées masquées pour le MVP */}
                       </div>
                     )}
                   </div>
@@ -2494,6 +2512,28 @@ export const DashboardPro: React.FC = () => {
                   </button>
                   {expandedMenus.requests && (
                     <div className="mt-0.5 space-y-0.5 overflow-hidden">
+                      <button
+                        onClick={() =>
+                          handleSidebarNav(() => {
+                            setActiveTab('requests');
+                            setRequestsSubTab('inbox');
+                            setSidebarOpen(false);
+                          })
+                        }
+                        className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'requests' && requestsSubTab === 'inbox' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'requests' && requestsSubTab === 'inbox' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                        />
+                        <span className="flex-1 text-left" title="File d’attente unifiée">
+                          File d’attente
+                        </span>
+                        {demandes.total > 0 && (
+                          <span className="min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full">
+                            {demandes.total > 9 ? '9+' : demandes.total}
+                          </span>
+                        )}
+                      </button>
                       <button
                         onClick={() =>
                           handleSidebarNav(() => {
@@ -3189,7 +3229,10 @@ export const DashboardPro: React.FC = () => {
                   }}
                   onNotificationSelect={(n) => {
                     markNotificationAsRead(n.id);
-                    handleSidebarNav(() => setActiveTab('requests'));
+                    handleSidebarNav(() => {
+                      setRequestsSubTab('inbox');
+                      setActiveTab('requests');
+                    });
                   }}
                   onOpenChange={(open) => {
                     if (open) {
@@ -3656,8 +3699,10 @@ export const DashboardPro: React.FC = () => {
                                   setActiveTab('messaging');
                                   return;
                                 }
-                                if (notif.type === 'booking') setActiveTab('requests');
-                                else if (notif.type === 'payment') setActiveTab('finance');
+                                if (notif.type === 'booking') {
+                                  setRequestsSubTab('inbox');
+                                  setActiveTab('requests');
+                                } else if (notif.type === 'payment') setActiveTab('finance');
                                 else setActiveTab('overview');
                               }}
                             />
@@ -5250,7 +5295,7 @@ export const DashboardPro: React.FC = () => {
                     className="flex items-center gap-4 w-full bg-neutral-50 dark:bg-[#27272A] hover:bg-neutral-100 dark:hover:bg-[#3f3f46] rounded-2xl px-5 py-4 border border-neutral-200 dark:border-zinc-600 font-semibold text-neutral-900 dark:text-white min-h-[56px] text-left transition-colors touch-target"
                   >
                     <div className="w-10 h-10 rounded-xl bg-white dark:bg-[#18181B] border border-neutral-200 dark:border-zinc-600 flex items-center justify-center flex-shrink-0">
-                      <Image className="w-5 h-5 text-neutral-700 dark:text-[var(--text-secondary)]" />
+                      <Zap className="w-5 h-5 text-neutral-700 dark:text-[var(--text-secondary)]" />
                     </div>
                     Nouveau Flash
                   </button>
@@ -5265,6 +5310,7 @@ export const DashboardPro: React.FC = () => {
                   <button
                     onClick={() => {
                       setShowFabMenu(false);
+                      setRequestsSubTab('inbox');
                       setActiveTab('requests');
                     }}
                     className="relative flex items-center gap-3 w-full bg-neutral-50 dark:bg-[#27272A] hover:bg-neutral-100 dark:hover:bg-[#3f3f46] rounded-2xl px-4 py-4 border border-neutral-200 dark:border-zinc-600 font-semibold text-neutral-900 dark:text-white min-h-[52px] text-left transition-colors touch-target"
@@ -5420,9 +5466,9 @@ export const DashboardPro: React.FC = () => {
                 setShowFabMenu(false);
               })
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
               activeTab === 'overview'
-                ? 'text-sky-600 dark:text-sky-400'
+                ? 'text-blue-600 dark:text-blue-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
@@ -5453,9 +5499,9 @@ export const DashboardPro: React.FC = () => {
                 setShowFabMenu(false);
               })
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
               activeTab === 'appointments' || activeTab === 'agenda'
-                ? 'text-sky-600 dark:text-sky-400'
+                ? 'text-blue-600 dark:text-blue-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
@@ -5482,13 +5528,14 @@ export const DashboardPro: React.FC = () => {
             type="button"
             onClick={() =>
               handleSidebarNav(() => {
+                setRequestsSubTab('inbox');
                 setActiveTab('requests');
                 setShowFabMenu(false);
               })
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
               activeTab === 'requests'
-                ? 'text-sky-600 dark:text-sky-400'
+                ? 'text-blue-600 dark:text-blue-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
@@ -5522,9 +5569,9 @@ export const DashboardPro: React.FC = () => {
                 setShowFabMenu(false);
               })
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
               activeTab === 'clients'
-                ? 'text-sky-600 dark:text-sky-400'
+                ? 'text-blue-600 dark:text-blue-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
@@ -5556,9 +5603,9 @@ export const DashboardPro: React.FC = () => {
                 setShowFabMenu(false);
               }, true)
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
               activeTab === 'settings'
-                ? 'text-sky-600 dark:text-sky-400'
+                ? 'text-blue-600 dark:text-blue-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
@@ -5606,7 +5653,10 @@ export const DashboardPro: React.FC = () => {
           if (tab === 'overview') setActiveTab('overview');
           else if (tab === 'clients') setActiveTab('clients');
           else if (tab === 'appointments') setActiveTab('appointments');
-          else if (tab === 'requests') setActiveTab('requests');
+          else if (tab === 'requests') {
+            setRequestsSubTab('inbox');
+            setActiveTab('requests');
+          }
         }}
       />
       {selectedAppointment ? (

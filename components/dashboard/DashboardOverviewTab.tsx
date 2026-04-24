@@ -78,8 +78,8 @@ import {
 import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 import type { Appointment, Client, FlashDesign, ProjectRequest } from '../../types';
 import type { DashboardWidget } from './DashboardWidgets';
-import { IconInkCap } from '../icons/InkCraftIcons';
 import { StudioSetupChecklist } from './StudioSetupChecklist';
+import { StudioPresenceMiniCard } from './StudioPresenceMiniCard';
 import { IconBox } from '../ui/IconBox';
 import { LANDING_PRICING_URL } from '../../lib/urls';
 import { Button } from '@/components/ui/button';
@@ -1352,21 +1352,21 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         {!isMdUp && (
           <div className="flex min-w-0 max-w-full flex-col gap-4 overflow-x-hidden bg-transparent pb-[calc(6.75rem+env(safe-area-inset-bottom,0px))] antialiased font-sans [-webkit-font-smoothing:antialiased] sm:gap-5">
             {/* Accueil mobile — référence type CRM (clair, cartes blanches, donut, onglets pilule) */}
-            <div className="px-0 pt-1 pb-1 safe-top">
-              <motion.div className="flex flex-col gap-4" {...iosSpring(0)}>
-                {/* Rangée titre + notifications + profil */}
-                <div className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200/90 bg-white px-3.5 py-3 shadow-[0_1px_3px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:bg-zinc-900">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm dark:bg-blue-500 dark:text-white">
-                      <LayoutDashboard className="h-5 w-5" strokeWidth={2} aria-hidden />
+            <div className="px-0 pt-0.5 pb-0.5 safe-top">
+              <motion.div className="flex flex-col gap-3" {...iosSpring(0)}>
+                {/* Rangée titre + notifications + profil — dense (moins haut) */}
+                <div className="flex items-center justify-between gap-2 rounded-2xl border border-zinc-200/90 bg-white px-3 py-2 shadow-[0_1px_3px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm dark:bg-blue-500 dark:text-white">
+                      <LayoutDashboard className="h-4 w-4" strokeWidth={2} aria-hidden />
                     </div>
                     <div className="min-w-0">
-                      <h1 className="truncate text-[17px] font-bold leading-tight tracking-tight text-zinc-900 dark:text-white">
+                      <h1 className="truncate text-[15px] font-bold leading-tight tracking-tight text-zinc-900 dark:text-white">
                         Vue d&apos;ensemble
                       </h1>
-                      <p className="truncate text-[12px] text-zinc-500 dark:text-zinc-400">
+                      <p className="truncate text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
                         {now.toLocaleDateString('fr-FR', {
-                          weekday: 'long',
+                          weekday: 'short',
                           day: 'numeric',
                           month: 'long',
                         })}
@@ -1375,22 +1375,22 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         <button
                           type="button"
                           onClick={() => setActiveTab('agenda')}
-                          className="mt-2 inline-flex w-full max-w-full items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-left text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-200/80 transition-colors active:scale-[0.99] dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/25 sm:mt-1.5 sm:w-auto"
+                          className="mt-1 inline-flex w-full max-w-full items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-left text-[11px] font-semibold leading-tight text-blue-700 ring-1 ring-inset ring-blue-200/80 transition-colors active:scale-[0.99] dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/25 sm:w-auto"
                         >
-                          <CalendarCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                          <CalendarCheck className="h-3 w-3 shrink-0" aria-hidden />
                           {todayOrTomorrowCount} RDV bientôt
                         </button>
                       )}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1 self-start">
+                  <div className="flex shrink-0 items-center gap-0.5 self-center">
                     <button
                       type="button"
                       onClick={() => setActiveTab('notifications')}
-                      className="relative flex h-11 w-11 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-zinc-100 active:scale-[0.97] dark:text-zinc-300 dark:hover:bg-zinc-800"
+                      className="relative flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-zinc-100 active:scale-[0.97] dark:text-zinc-300 dark:hover:bg-zinc-800"
                       aria-label="Notifications"
                     >
-                      <Bell className="h-5 w-5" strokeWidth={2} aria-hidden />
+                      <Bell className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
                       {pendingDemandesCount + visibleAlerts.length > 0 && (
                         <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-600 px-0.5 text-[10px] font-bold tabular-nums leading-none text-white shadow-sm ring-2 ring-white dark:bg-red-500 dark:ring-zinc-900">
                           {pendingDemandesCount + visibleAlerts.length > 9
@@ -1409,7 +1409,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       }}
                       disabled={avatarUploading}
                       whileTap={prefersReducedMotion ? undefined : { scale: 0.94 }}
-                      className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border-2 border-zinc-200 bg-zinc-100 shadow-sm dark:border-zinc-600 dark:bg-zinc-800"
+                      className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-zinc-200 bg-zinc-100 shadow-sm dark:border-zinc-600 dark:bg-zinc-800"
                       aria-label={onAvatarClick ? 'Changer la photo de profil' : 'Paramètres'}
                     >
                       {user?.avatar ? (
@@ -1565,7 +1565,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
                 {/* Actions rapides — sous le revenu du mois */}
                 <motion.div className="w-full" {...iosSpring(0.04)}>
-                  <div className="rounded-[22px] bg-white/75 p-2 shadow-[0_1px_3px_rgba(15,23,42,0.05),0_4px_14px_-6px_rgba(15,23,42,0.07)] ring-1 ring-zinc-200/75 dark:bg-zinc-900/45 dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.4)] dark:ring-zinc-800/90">
+                  <div className="rounded-[22px] bg-gradient-to-br from-blue-50/95 via-blue-50/85 to-sky-100/70 p-2 shadow-[0_1px_3px_rgba(15,23,42,0.05),0_4px_14px_-6px_rgba(37,99,235,0.12)] ring-1 ring-blue-200/70 dark:from-blue-950/55 dark:via-blue-950/40 dark:to-slate-900/60 dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.45)] dark:ring-blue-800/60">
                     <motion.div
                       className="grid min-w-0 grid-cols-2 gap-2 min-[400px]:grid-cols-4 min-[400px]:gap-2.5"
                       variants={quickGridVariants}
@@ -1880,58 +1880,18 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               </div>
             )}
 
-            {flashDesigns[0] && (
-              <div className="px-0">
-                <div
-                  className={cn(
-                    'flex min-[400px]:gap-4 min-[400px]:p-4',
-                    'items-start gap-3 p-3.5',
-                    crmCard
-                  )}
-                >
-                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-zinc-100 ring-1 ring-inset ring-black/[0.06] dark:bg-zinc-800 dark:ring-white/[0.08] min-[400px]:h-[72px] min-[400px]:w-[72px]">
-                    <img
-                      src={flashDesigns[0].imageUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-md bg-zinc-100 px-2 py-0.5 dark:bg-zinc-800/90">
-                      <IconInkCap
-                        className="h-3.5 w-3.5 shrink-0 text-zinc-500 dark:text-zinc-400"
-                        aria-hidden
-                      />
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-600 dark:text-zinc-400">
-                        Flash du jour
-                      </span>
-                    </div>
-                    <p className="truncate text-sm font-semibold leading-snug text-zinc-900 dark:text-white">
-                      {flashDesigns[0].title}
-                    </p>
-                    <div className="mt-3 flex min-h-[44px] flex-col gap-2 min-[400px]:min-h-0 min-[400px]:flex-row min-[400px]:flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('flash')}
-                        className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-zinc-900 px-3.5 text-xs font-semibold text-white transition-transform touch-manipulation active:scale-[0.98] dark:bg-white dark:text-zinc-900 min-[400px]:min-h-0 min-[400px]:w-auto min-[400px]:py-1.5"
-                      >
-                        Galerie Flash
-                      </button>
-                      {vitrineSlug ? (
-                        <a
-                          href={`/studio/${vitrineSlug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full border border-zinc-200 bg-white px-3.5 text-xs font-medium text-zinc-700 transition-transform touch-manipulation active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-200 min-[400px]:min-h-0 min-[400px]:w-auto min-[400px]:py-1.5"
-                        >
-                          Vitrine publique
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="px-0">
+              <StudioPresenceMiniCard
+                studioId={studioId}
+                studioSlug={vitrineSlug}
+                useSupabase={useSupabase}
+                onOpenAnalytics={() => setActiveTab('analytics')}
+                onOpenFlashAndLinks={() => {
+                  if (onSetupNavigate) onSetupNavigate('settings-vitrine');
+                  else setActiveTab('flash');
+                }}
+              />
+            </div>
 
             {/* Main Content — mêmes jetons cartes CRM */}
             <motion.div className="px-0 flex flex-col gap-4" {...iosSpring(0.12)}>
@@ -2290,6 +2250,15 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         ? ` · ${pendingDemandesCount} demande${pendingDemandesCount > 1 ? 's' : ''} en attente`
                         : ''}
                     </span>
+                  </p>
+                  <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400 max-w-2xl leading-relaxed">
+                    Planning :{' '}
+                    <span className="font-medium text-zinc-600 dark:text-zinc-300">Synthèse</span> =
+                    résumé ;{' '}
+                    <span className="font-medium text-zinc-600 dark:text-zinc-300">
+                      Rendez-vous
+                    </span>{' '}
+                    = calendrier complet.
                   </p>
                 </div>
 
@@ -2765,6 +2734,16 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 {/* ====== RIGHT COLUMN (4/12) ====== */}
                 <SortableContext items={layout.rightColumn} strategy={verticalListSortingStrategy}>
                   <div className="lg:col-span-4 space-y-5 md:space-y-6 min-w-0">
+                    <StudioPresenceMiniCard
+                      studioId={studioId}
+                      studioSlug={vitrineSlug}
+                      useSupabase={useSupabase}
+                      onOpenAnalytics={() => setActiveTab('analytics')}
+                      onOpenFlashAndLinks={() => {
+                        if (onSetupNavigate) onSetupNavigate('settings-vitrine');
+                        else setActiveTab('flash');
+                      }}
+                    />
                     {layout.rightColumn.map((widgetId) => {
                       if (widgetId === 'next-client') {
                         return nextClient ? (

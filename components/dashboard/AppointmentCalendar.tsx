@@ -4,11 +4,13 @@
  * grille horaire, ligne « maintenant », cartes avec plage horaire et avatar.
  */
 import React, { useState, useMemo, useRef } from 'react';
+import { addDays, startOfDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Clock, User, Pencil, XCircle, CheckCircle } from 'lucide-react';
 import { Appointment, Client } from '../../types';
 import { Modal } from '../ui/Modal';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { hapticSuccess } from '../../lib/haptics';
+import { addAgendaNavStep, agendaWeekStart, toLocalYmd } from '../../lib/agendaDates';
 import { formatHm, parseTimeToMinutes } from '../../lib/appointmentTime';
 import { getClientAvatarForAppointment } from '../../lib/appointmentClientDisplay';
 
@@ -25,14 +27,6 @@ interface AppointmentCalendarProps {
   onSlotClick: () => void;
   onAppointmentClick?: (apt: Appointment) => void;
   onUpdateAppointment?: (apt: Appointment, updates: Partial<Appointment>) => void;
-}
-
-/** Date locale YYYY-MM-DD (évite le décalage UTC de toISOString). */
-function toLocalDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
 }
 
 function getEventColor(status: Appointment['status']): string {
@@ -62,28 +56,18 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
 }) => {
   const getAvatar = (apt: Appointment) => getClientAvatarForAppointment(apt, clients);
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
-  const [weekStart, setWeekStart] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - (d.getDay() || 7) + 1); // Lundi
-    return d;
-  });
+  const [weekStart, setWeekStart] = useState(() => agendaWeekStart(new Date()));
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
   const weekDays = useMemo(() => {
-    const days: Date[] = [];
-    const start = new Date(weekStart);
+    const base = startOfDay(weekStart);
     const count = viewMode === 'day' ? 1 : 7;
-    for (let i = 0; i < count; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      days.push(d);
-    }
-    return days;
+    return Array.from({ length: count }, (_, i) => addDays(base, i));
   }, [weekStart, viewMode]);
 
-  const isToday = (d: Date) => toLocalDateStr(d) === toLocalDateStr(new Date());
+  const isToday = (d: Date) => toLocalYmd(d) === toLocalYmd(new Date());
 
   /** Ligne « maintenant » — recalcul à chaque rendu pour suivre l’heure. */
   const nowLineOffsetPx = (() => {
@@ -116,33 +100,22 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
   }, [weekDays]);
 
   const showNowLine =
-    nowLineOffsetPx != null &&
-    weekDays.some((d) => toLocalDateStr(d) === toLocalDateStr(new Date()));
+    nowLineOffsetPx != null && weekDays.some((d) => toLocalYmd(d) === toLocalYmd(new Date()));
 
   const goPrev = () => {
-    const d = new Date(weekStart);
-    if (viewMode === 'day') d.setDate(d.getDate() - 1);
-    else d.setDate(d.getDate() - 7);
-    setWeekStart(d);
+    setWeekStart((prev) => addAgendaNavStep(prev, viewMode === 'day' ? 'day' : 'week', -1));
   };
 
   const goNext = () => {
-    const d = new Date(weekStart);
-    if (viewMode === 'day') d.setDate(d.getDate() + 1);
-    else d.setDate(d.getDate() + 7);
-    setWeekStart(d);
+    setWeekStart((prev) => addAgendaNavStep(prev, viewMode === 'day' ? 'day' : 'week', 1));
   };
 
   const goToday = () => {
     if (viewMode === 'day') {
-      const t = new Date();
-      t.setHours(0, 0, 0, 0);
-      setWeekStart(t);
+      setWeekStart(startOfDay(new Date()));
       return;
     }
-    const d = new Date();
-    d.setDate(d.getDate() - (d.getDay() || 7) + 1);
-    setWeekStart(d);
+    setWeekStart(agendaWeekStart(new Date()));
   };
 
   const handleAppointmentClick = (apt: Appointment, e: React.MouseEvent) => {
@@ -233,7 +206,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
             </div>
             {weekDays.map((day) => (
               <div
-                key={toLocalDateStr(day)}
+                key={toLocalYmd(day)}
                 className={`px-2 py-3 text-center ${
                   isToday(day) ? 'bg-blue-50 dark:bg-blue-500/15' : 'bg-zinc-50 dark:bg-zinc-950/80'
                 }`}
@@ -284,7 +257,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                     {hour}h
                   </div>
                   {weekDays.map((day) => {
-                    const dateStr = toLocalDateStr(day);
+                    const dateStr = toLocalYmd(day);
                     const slotApts = appointments.filter((a) => {
                       if (a.date !== dateStr) return false;
                       const aptHour = parseInt(a.time.split(':')[0], 10);

@@ -88,7 +88,7 @@ export const ClientListMobileRow: React.FC<ClientListMobileRowProps> = ({
         <a
           href={phoneHref(client.phone)}
           onClick={() => hapticSuccess()}
-          className="flex flex-1 min-w-0 items-center justify-center gap-1 bg-sky-600 text-white text-xs font-semibold active:opacity-90"
+          className="flex flex-1 min-w-0 items-center justify-center gap-1 bg-blue-600 text-white text-xs font-semibold active:opacity-90 dark:bg-blue-500"
         >
           <Phone className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
           Appeler

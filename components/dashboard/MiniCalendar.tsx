@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { mondayOffsetFromMonthFirst, toLocalYmd } from '../../lib/agendaDates';
 
-const WEEKDAYS_SHORT = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+/** Colonnes lundi → dimanche (grille alignée sur la semaine FR / ISO). */
+const WEEKDAYS_SHORT = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
 interface MiniCalendarProps {
   selectedDate: string | null;
@@ -13,13 +15,6 @@ interface MiniCalendarProps {
   onToday: () => void;
   className?: string;
   variant?: 'default' | 'dark';
-}
-
-function toDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
 }
 
 export const MiniCalendar: React.FC<MiniCalendarProps> = ({
@@ -34,7 +29,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
   variant = 'default',
 }) => {
   const isDark = variant === 'dark';
-  const todayStr = toDateStr(new Date());
+  const todayStr = toLocalYmd(new Date());
   const isTodaySelected = selectedDate === todayStr || selectedDate === null;
 
   const { weeks, monthLabel } = useMemo(() => {
@@ -42,7 +37,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
     const month = currentMonth.getMonth();
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
-    const startPad = first.getDay();
+    const startPad = mondayOffsetFromMonthFirst(first);
     const daysInMonth = last.getDate();
     const totalCells = startPad + daysInMonth;
     const rows = Math.ceil(totalCells / 7);
@@ -139,7 +134,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
             <div
               key={wd + i}
               className={`py-2 text-[10px] font-semibold uppercase tracking-wider text-center ${
-                i === 0 || i === 6
+                i === 5 || i === 6
                   ? isDark
                     ? 'text-zinc-600'
                     : 'text-slate-400 dark:text-zinc-600'
@@ -160,11 +155,11 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
               if (day === null) return <div key={`e-${ri}-${ci}`} className="aspect-square" />;
 
               const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-              const dateStr = toDateStr(d);
+              const dateStr = toLocalYmd(d);
               const isSelected = selectedDate === dateStr;
               const isToday = dateStr === todayStr;
               const hasAppointments = datesWithAppointments.has(dateStr);
-              const isWeekend = ci === 0 || ci === 6;
+              const isWeekend = ci === 5 || ci === 6;
               const isPast = dateStr < todayStr;
 
               return (

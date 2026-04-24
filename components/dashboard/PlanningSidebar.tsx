@@ -4,6 +4,7 @@
  * Optimisé pour l'affichage desktop.
  */
 import React, { useMemo, useState } from 'react';
+import { addDays, startOfDay } from 'date-fns';
 import {
   ChevronLeft,
   ChevronRight,
@@ -24,17 +25,16 @@ import {
   X,
 } from 'lucide-react';
 import type { Appointment } from '../../types';
+import {
+  agendaWeekStart,
+  mondayOffsetFromMonthFirst,
+  parseLocalYmd,
+  toLocalYmd,
+} from '../../lib/agendaDates';
 
-const WEEKDAYS_SHORT = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+const WEEKDAYS_SHORT = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const WEEKDAYS_FULL = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8h - 19h
-
-function toDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
 interface PlanningSidebarProps {
   appointments: Appointment[];
@@ -69,7 +69,7 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const [hoveredAppointment, setHoveredAppointment] = useState<string | null>(null);
 
-  const todayStr = toDateStr(new Date());
+  const todayStr = toLocalYmd(new Date());
   const displayDate = selectedDate ?? todayStr;
   const isToday = displayDate === todayStr;
 
@@ -94,7 +94,7 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
     const month = currentMonth.getMonth();
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
-    const startPad = first.getDay();
+    const startPad = mondayOffsetFromMonthFirst(first);
     const daysInMonth = last.getDate();
     const totalCells = startPad + daysInMonth;
     const rows = Math.ceil(totalCells / 7);
@@ -166,17 +166,13 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
     };
   }, [appointments, currentMonth]);
 
-  // Vue semaine
+  // Vue semaine (lundi → dimanche, aligné agenda + date-fns)
   const weekDays = useMemo(() => {
-    const d = new Date(displayDate + 'T12:00:00');
-    const day = d.getDay();
-    const monday = new Date(d);
-    monday.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
-
+    const d = startOfDay(parseLocalYmd(displayDate));
+    const monday = agendaWeekStart(d);
     return Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + i);
-      const dateStr = toDateStr(date);
+      const date = addDays(monday, i);
+      const dateStr = toLocalYmd(date);
       const dayApts = appointments
         .filter((a) => a.date === dateStr && !['cancelled', 'no_show'].includes(a.status))
         .sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
@@ -253,7 +249,7 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
                 <div
                   key={wd + i}
                   className={`py-2 text-[10px] font-semibold uppercase tracking-wider text-center ${
-                    i === 0 || i === 6
+                    i === 5 || i === 6
                       ? 'text-zinc-400 dark:text-zinc-600'
                       : 'text-zinc-500 dark:text-zinc-500'
                   }`}
@@ -270,12 +266,12 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
                   if (day === null) return <div key={`e-${ri}-${ci}`} className="aspect-square" />;
 
                   const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-                  const dateStr = toDateStr(d);
+                  const dateStr = toLocalYmd(d);
                   const isSelected = selectedDate === dateStr;
                   const isTodayCell = dateStr === todayStr;
                   const appointmentCount = datesWithAppointments.get(dateStr) || 0;
                   const hasAppointments = appointmentCount > 0;
-                  const isWeekend = ci === 0 || ci === 6;
+                  const isWeekend = ci === 5 || ci === 6;
                   const isPast = dateStr < todayStr;
 
                   return (
@@ -302,13 +298,13 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
                       <span className={isTodayCell && !isSelected ? 'relative' : ''}>
                         {day}
                         {isTodayCell && !isSelected && (
-                          <span className="absolute -bottom-0.5 left-1/2 -tranzinc-x-1/2 w-1 h-1 rounded-full bg-blue-600" />
+                          <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-600" />
                         )}
                       </span>
                       {/* Indicateur de RDV */}
                       {hasAppointments && (
                         <div
-                          className={`absolute bottom-1 left-1/2 -tranzinc-x-1/2 flex items-center gap-0.5 ${isSelected ? 'opacity-80' : ''}`}
+                          className={`absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-0.5 ${isSelected ? 'opacity-80' : ''}`}
                         >
                           {appointmentCount <= 3 ? (
                             Array.from({ length: appointmentCount }).map((_, i) => (

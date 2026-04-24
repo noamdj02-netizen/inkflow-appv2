@@ -39,6 +39,7 @@ import { NotificationPopover, type Notification as ClientBellNotification } from
 import { Skeleton } from '../../components/ui/skeleton';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
+import { recordDiscoverChannelView } from '../../lib/studioPublicMetrics';
 import { LANDING_URL } from '../../lib/urls';
 import { clientNavigate } from '../../lib/clientAppNavigate';
 import {
@@ -481,6 +482,11 @@ function FlashSheet({
   useEffect(() => {
     setStudioRowAvatarBroken(false);
   }, [studio?.id, studio?.avatar_url]);
+
+  useEffect(() => {
+    if (!studio?.id) return;
+    recordDiscoverChannelView(studio.id);
+  }, [studio?.id]);
 
   const goStudio = () => {
     if (!studioSlug) {

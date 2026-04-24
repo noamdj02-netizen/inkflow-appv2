@@ -316,7 +316,7 @@ export const ClientList: React.FC<ClientListProps> = ({
       <div className="flex flex-col gap-3 sm:gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500 sm:hidden mb-0.5">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400 sm:hidden mb-0.5">
               Clients
             </p>
             <h1 className="font-display font-bold tracking-tight text-zinc-900 dark:text-white text-xl leading-snug sm:text-2xl md:text-3xl sm:leading-tight">
@@ -338,7 +338,7 @@ export const ClientList: React.FC<ClientListProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCsvImportModal(true)}
-                className="flex items-center justify-center gap-1.5 sm:gap-2 min-h-[48px] min-w-0 px-3 sm:px-5 py-2.5 rounded-xl text-[13px] sm:text-sm font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 bg-white dark:bg-zinc-900/80 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950"
+                className="flex items-center justify-center gap-1.5 sm:gap-2 min-h-[48px] min-w-0 px-3 sm:px-5 py-2.5 rounded-xl text-[13px] sm:text-sm font-semibold border border-zinc-200 dark:border-zinc-700 text-blue-700 dark:text-blue-300 bg-white dark:bg-zinc-900/80 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:border-blue-200 dark:hover:border-blue-500/35 transition-all active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950"
               >
                 <FileSpreadsheet
                   className="w-[18px] h-[18px] shrink-0"
@@ -355,7 +355,7 @@ export const ClientList: React.FC<ClientListProps> = ({
                 className={`flex items-center justify-center gap-1.5 sm:gap-2 min-h-[48px] min-w-0 px-3 sm:px-5 py-2.5 rounded-xl text-[13px] sm:text-sm font-semibold transition-all active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950 ${
                   clientLimitReached
                     ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed focus-visible:ring-zinc-400/30'
-                    : 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 focus-visible:ring-blue-500/40'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:text-white dark:hover:bg-blue-400 focus-visible:ring-blue-500/50'
                 }`}
               >
                 <UserPlus className="w-[18px] h-[18px] shrink-0" strokeWidth={2} aria-hidden />
@@ -366,10 +366,10 @@ export const ClientList: React.FC<ClientListProps> = ({
         </div>
 
         {useSupabase && onOpenGoogleReviewsSettings && !googlePlaceConfigured && (
-          <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/90 dark:bg-zinc-900/50 p-3.5 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="rounded-2xl border border-blue-200/70 dark:border-blue-500/25 bg-blue-50/60 dark:bg-blue-500/[0.07] p-3.5 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="flex gap-3 min-w-0 items-start">
               <div className="shrink-0 pt-0.5">
-                <IconBox icon={MapPin} variant="inverse" size="md" />
+                <IconBox icon={MapPin} variant="blue" size="md" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-tight">
@@ -387,7 +387,7 @@ export const ClientList: React.FC<ClientListProps> = ({
             <button
               type="button"
               onClick={onOpenGoogleReviewsSettings}
-              className="w-full sm:w-auto shrink-0 min-h-[48px] px-4 py-3 sm:py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950"
+              className="w-full sm:w-auto shrink-0 min-h-[48px] px-4 py-3 sm:py-2.5 rounded-xl bg-blue-600 dark:bg-blue-500 text-white text-sm font-semibold hover:bg-blue-700 dark:hover:bg-blue-400 transition-all active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950"
             >
               Configurer
             </button>
@@ -468,7 +468,7 @@ export const ClientList: React.FC<ClientListProps> = ({
                   onClick={() => setFilterStatus(status)}
                   className={`shrink-0 min-h-[44px] px-3.5 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 ${
                     filterStatus === status
-                      ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                      ? 'bg-blue-600 text-white shadow-sm dark:bg-blue-500'
                       : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
                   }`}
                 >
@@ -495,7 +495,7 @@ export const ClientList: React.FC<ClientListProps> = ({
               </span>
               <IconBox icon={User} variant="surface" size="sm" />
             </div>
-            <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
+            <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">
               {clients.length}
             </div>
           </div>

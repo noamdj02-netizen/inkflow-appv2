@@ -111,6 +111,16 @@
       "sourceType": "github",
       "computedHash": "686dd263804497f05ff8ddb5d83381371bea33241c296c21200733cb898ecd75"
     },
+    "travel-planner": {
+      "source": "ailabs-393/ai-labs-claude-skills",
+      "sourceType": "github",
+      "computedHash": "8320b1c4b544113788926eee4cb7a31ed1f354227d59cd9f880a51a0c02e101d"
+    },
+    "ux-designer": {
+      "source": "aj-geddes/claude-code-bmad-skills",
+      "sourceType": "github",
+      "computedHash": "6743914ac9a5fcb57080d6e4cb26032123314261614e4c5254904aff81aed3b8"
+    },
     "vibe-security": {
       "source": "raroque/vibe-security-skill",
       "sourceType": "github",

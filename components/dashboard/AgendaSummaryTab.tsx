@@ -6,13 +6,10 @@ import {
   addWeeks,
   eachDayOfInterval,
   endOfMonth,
-  endOfWeek,
   format,
   isSameMonth,
-  parse,
   startOfDay,
   startOfMonth,
-  startOfWeek,
   subDays,
   subMonths,
   subWeeks,
@@ -22,13 +19,24 @@ import { Calendar, CalendarPlus, ChevronLeft, ChevronRight, ListOrdered } from '
 import { Appointment, Client } from '../../types';
 import { cn } from '@/lib/utils';
 import { formatTimeRange } from '../../lib/appointmentTime';
-import { getClientAvatarForAppointment, getClientNameInitials } from '../../lib/appointmentClientDisplay';
+import {
+  getClientAvatarForAppointment,
+  getClientNameInitials,
+} from '../../lib/appointmentClientDisplay';
+import { agendaWeekEnd, agendaWeekStart, parseLocalYmd, toLocalYmd } from '../../lib/agendaDates';
 import { downloadICSAll } from '../../lib/googleCalendar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 type SummaryRange = 'day' | 'week' | 'month';
@@ -50,17 +58,9 @@ const LOCATION_FR: Record<Appointment['location'], string> = {
   other: 'Autre',
 };
 
-function parseYmd(ymd: string): Date {
-  return parse(ymd, 'yyyy-MM-dd', new Date());
-}
-
-function ymd(d: Date): string {
-  return format(d, 'yyyy-MM-dd');
-}
-
 /** Libellé de groupe (liste) type « JEUDI 23 AVR. ». */
 function formatDayGroupLabel(dateStr: string, withFullMonth: boolean) {
-  const p = parseYmd(dateStr);
+  const p = parseLocalYmd(dateStr);
   const s = withFullMonth
     ? format(p, 'EEEE d MMMM', { locale: fr })
     : format(p, 'EEEE d MMM', { locale: fr });
@@ -94,7 +94,7 @@ const AgendaSummaryAppointmentCard: React.FC<SummaryAppointmentCardProps> = ({
         size="sm"
         className={cn(
           'ring-1 ring-foreground/5 transition-[transform,box-shadow] duration-200 hover:shadow-md',
-          cancelled && 'opacity-60',
+          cancelled && 'opacity-60'
         )}
       >
         <CardContent className="p-0">
@@ -105,7 +105,9 @@ const AgendaSummaryAppointmentCard: React.FC<SummaryAppointmentCardProps> = ({
           >
             <Avatar className="size-12">
               {avatarUrl ? <AvatarImage src={avatarUrl} alt="" className="object-cover" /> : null}
-              <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">{initials}</AvatarFallback>
+              <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">
+                {initials}
+              </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1 py-0.5">
               <p className="truncate text-sm font-semibold leading-snug tracking-tight sm:text-base">
@@ -119,7 +121,10 @@ const AgendaSummaryAppointmentCard: React.FC<SummaryAppointmentCardProps> = ({
                   {typeLabel}
                 </Badge>
                 {apt.service && (
-                  <Badge variant="secondary" className="max-w-[7.5rem] truncate font-medium leading-none">
+                  <Badge
+                    variant="secondary"
+                    className="max-w-[7.5rem] truncate font-medium leading-none"
+                  >
                     {apt.service}
                   </Badge>
                 )}
@@ -181,13 +186,15 @@ function AgendaDayStrip({ weekDays, selectedYmd, onSelectYmd }: DayStripProps) {
               selected
                 ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/25'
                 : 'border-border bg-card text-foreground shadow-sm',
-              cell.isToday && !selected && 'ring-2 ring-primary/30 ring-offset-2 ring-offset-background',
+              cell.isToday &&
+                !selected &&
+                'ring-2 ring-primary/30 ring-offset-2 ring-offset-background'
             )}
           >
             <span
               className={cn(
                 'text-[9px] font-bold uppercase leading-none tracking-tight',
-                selected ? 'text-primary-foreground/90' : 'text-muted-foreground',
+                selected ? 'text-primary-foreground/90' : 'text-muted-foreground'
               )}
             >
               {cell.wk2}
@@ -195,7 +202,7 @@ function AgendaDayStrip({ weekDays, selectedYmd, onSelectYmd }: DayStripProps) {
             <span
               className={cn(
                 'mt-0.5 text-base font-bold tabular-nums leading-none',
-                selected ? 'text-primary-foreground' : 'text-foreground',
+                selected ? 'text-primary-foreground' : 'text-foreground'
               )}
             >
               {cell.dayNum}
@@ -217,7 +224,14 @@ type MonthGridProps = {
   showAll: boolean;
 };
 
-function AgendaMonthGrid({ anchor, todayYmd, countByYmd, focusYmd, onPickDay, showAll }: MonthGridProps) {
+function AgendaMonthGrid({
+  anchor,
+  todayYmd,
+  countByYmd,
+  focusYmd,
+  onPickDay,
+  showAll,
+}: MonthGridProps) {
   const cells = useMemo(() => {
     const sm = startOfMonth(anchor);
     const firstOffset = (sm.getDay() + 6) % 7;
@@ -225,7 +239,7 @@ function AgendaMonthGrid({ anchor, todayYmd, countByYmd, focusYmd, onPickDay, sh
     return Array.from({ length: 42 }, (_, i) => {
       const d = addDays(gridStart, i);
       const inM = isSameMonth(d, sm);
-      const ds = ymd(d);
+      const ds = toLocalYmd(d);
       return { d, inM, ymd: ds, n: countByYmd.get(ds) ?? 0 };
     });
   }, [anchor, countByYmd]);
@@ -256,9 +270,12 @@ function AgendaMonthGrid({ anchor, todayYmd, countByYmd, focusYmd, onPickDay, sh
               className={cn(
                 'relative flex min-h-[40px] flex-col items-center justify-center rounded-xl text-[12px] font-semibold tabular-nums transition-colors',
                 !cell.inM && 'pointer-events-none text-zinc-300 dark:text-zinc-600',
-                cell.inM && 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100/90 dark:hover:bg-zinc-800/80',
-                cell.inM && isFocus && 'bg-primary text-primary-foreground ring-1 ring-primary hover:bg-primary',
-                cell.inM && showAll && isToday && !isFocus && 'ring-1 ring-primary/50',
+                cell.inM &&
+                  'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100/90 dark:hover:bg-zinc-800/80',
+                cell.inM &&
+                  isFocus &&
+                  'bg-primary text-primary-foreground ring-1 ring-primary hover:bg-primary',
+                cell.inM && showAll && isToday && !isFocus && 'ring-1 ring-primary/50'
               )}
             >
               <span>{format(cell.d, 'd')}</span>
@@ -266,7 +283,7 @@ function AgendaMonthGrid({ anchor, todayYmd, countByYmd, focusYmd, onPickDay, sh
                 <span
                   className={cn(
                     'mt-0.5 h-1.5 w-1.5 rounded-full',
-                    isFocus ? 'bg-primary-foreground' : 'bg-primary',
+                    isFocus ? 'bg-primary-foreground' : 'bg-primary'
                   )}
                   aria-label={`${cell.n} rendez-vous`}
                 />
@@ -309,41 +326,35 @@ export function AgendaSummaryTab({
   const [monthScope, setMonthScope] = useState<'all' | 'day'>('all');
   const [monthFilterYmd, setMonthFilterYmd] = useState<string | null>(null);
 
-  const weekStartMonday = useCallback(
-    (d: Date) => startOfWeek(d, { weekStartsOn: 1 }),
-    [],
-  );
-  const weekEndSunday = useCallback((d: Date) => endOfWeek(d, { weekStartsOn: 1 }), []);
-
   const stripWeekDays = useMemo(() => {
-    const ws = weekStartMonday(anchor);
-    return eachDayOfInterval({ start: ws, end: weekEndSunday(anchor) }).map((d) => {
+    const ws = agendaWeekStart(anchor);
+    return eachDayOfInterval({ start: ws, end: agendaWeekEnd(anchor) }).map((d) => {
       const idx = (d.getDay() + 6) % 7;
       return {
         d,
-        ymd: ymd(d),
+        ymd: toLocalYmd(d),
         dayNum: format(d, 'd'),
         wk2: WEEKDAYS_2[idx] ?? '—',
-        isToday: ymd(d) === today,
+        isToday: toLocalYmd(d) === today,
       };
     });
-  }, [anchor, today, weekStartMonday, weekEndSunday]);
+  }, [anchor, today]);
 
   const selectedYmdForStrip = useMemo(() => {
-    if (range === 'day') return ymd(anchor);
+    if (range === 'day') return toLocalYmd(anchor);
     if (range === 'week') {
-      const ws = ymd(weekStartMonday(anchor));
-      const we = ymd(weekEndSunday(anchor));
+      const ws = toLocalYmd(agendaWeekStart(anchor));
+      const we = toLocalYmd(agendaWeekEnd(anchor));
       if (weekStripYmd && weekStripYmd >= ws && weekStripYmd <= we) return weekStripYmd;
       if (today >= ws && today <= we) return today;
       return ws;
     }
-    return ymd(anchor);
-  }, [range, anchor, weekStripYmd, today, weekStartMonday, weekEndSunday]);
+    return toLocalYmd(anchor);
+  }, [range, anchor, weekStripYmd, today]);
 
   const { startStr, endStr, periodLabel, dayHeaders } = useMemo(() => {
     if (range === 'day') {
-      const s = ymd(anchor);
+      const s = toLocalYmd(anchor);
       return {
         startStr: s,
         endStr: s,
@@ -352,28 +363,28 @@ export function AgendaSummaryTab({
       };
     }
     if (range === 'week') {
-      const ws = weekStartMonday(anchor);
-      const we = weekEndSunday(anchor);
-      const s = ymd(ws);
-      const e = ymd(we);
+      const ws = agendaWeekStart(anchor);
+      const we = agendaWeekEnd(anchor);
+      const s = toLocalYmd(ws);
+      const e = toLocalYmd(we);
       return {
         startStr: s,
         endStr: e,
         periodLabel: `${format(ws, 'd MMM', { locale: fr })} – ${format(we, 'd MMMM yyyy', { locale: fr })}`,
-        dayHeaders: eachDayOfInterval({ start: ws, end: we }).map(ymd),
+        dayHeaders: eachDayOfInterval({ start: ws, end: we }).map(toLocalYmd),
       };
     }
     const sm = startOfMonth(anchor);
     const em = endOfMonth(anchor);
-    const s = ymd(sm);
-    const e = ymd(em);
+    const s = toLocalYmd(sm);
+    const e = toLocalYmd(em);
     return {
       startStr: s,
       endStr: e,
       periodLabel: format(sm, 'MMMM yyyy', { locale: fr }),
-      dayHeaders: eachDayOfInterval({ start: sm, end: em }).map(ymd),
+      dayHeaders: eachDayOfInterval({ start: sm, end: em }).map(toLocalYmd),
     };
-  }, [range, anchor, weekStartMonday, weekEndSunday]);
+  }, [range, anchor]);
 
   const inPeriod = useMemo(() => {
     return appointments
@@ -432,7 +443,7 @@ export function AgendaSummaryTab({
   const goToday = () => {
     const t = startOfDay(new Date());
     setAnchor(t);
-    setWeekStripYmd(ymd(t));
+    setWeekStripYmd(toLocalYmd(t));
     if (range === 'month') {
       setMonthScope('all');
       setMonthFilterYmd(null);
@@ -460,7 +471,7 @@ export function AgendaSummaryTab({
     toast.success(
       toExport.length === 1
         ? '1 rendez-vous exporté (.ics)'
-        : `${toExport.length} rendez-vous exportés (.ics)`,
+        : `${toExport.length} rendez-vous exportés (.ics)`
     );
   }, [inPeriod, toast]);
 
@@ -476,7 +487,7 @@ export function AgendaSummaryTab({
 
   const handleStripSelect = (s: string) => {
     if (range === 'day') {
-      setAnchor(startOfDay(parseYmd(s)));
+      setAnchor(startOfDay(parseLocalYmd(s)));
       return;
     }
     if (range === 'week') setWeekStripYmd(s);
@@ -506,7 +517,12 @@ export function AgendaSummaryTab({
             <Button type="button" className="min-w-[7rem] font-semibold" onClick={onNewAppointment}>
               Nouveau RDV
             </Button>
-            <Button type="button" variant="outline" className="min-w-[7rem] font-semibold" onClick={onOpenFullPlanning}>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-w-[7rem] font-semibold"
+              onClick={onOpenFullPlanning}
+            >
               Planning complet
             </Button>
           </EmptyContent>
@@ -675,7 +691,13 @@ export function AgendaSummaryTab({
               <CalendarPlus className="size-3.5 shrink-0" aria-hidden />
               <span className="truncate">Ajouter à mon agenda</span>
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={goToday} className="h-9 shrink-0 text-xs font-semibold">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={goToday}
+              className="h-9 shrink-0 text-xs font-semibold"
+            >
               Aujourd’hui
             </Button>
           </div>
@@ -687,10 +709,15 @@ export function AgendaSummaryTab({
       </p>
 
       <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-        <Badge variant="secondary" className="h-auto gap-1.5 border border-border/80 px-2.5 py-1.5 text-xs font-normal text-muted-foreground">
+        <Badge
+          variant="secondary"
+          className="h-auto gap-1.5 border border-border/80 px-2.5 py-1.5 text-xs font-normal text-muted-foreground"
+        >
           <ListOrdered className="text-muted-foreground" aria-hidden />
           {activeCount} rendez-vous sur la période
-          {cancelledInPeriod > 0 && <span className="text-muted-foreground/90">· dont {cancelledInPeriod} annulé(s)</span>}
+          {cancelledInPeriod > 0 && (
+            <span className="text-muted-foreground/90">· dont {cancelledInPeriod} annulé(s)</span>
+          )}
         </Badge>
       </div>
 
@@ -742,9 +769,13 @@ export function AgendaSummaryTab({
               type="button"
               variant="outline"
               onClick={onOpenFullPlanning}
-              className="h-auto min-h-12 w-full rounded-2xl py-3 text-sm font-semibold"
+              aria-label="Ouvrir le planning complet : vues semaine et mois, recherche, calendrier"
+              className="flex h-auto min-h-12 w-full flex-col items-stretch justify-center gap-1 rounded-2xl border-blue-200/90 bg-background px-4 py-3 text-left text-sm font-semibold !whitespace-normal text-balance leading-snug text-blue-800 shadow-sm transition-colors hover:bg-blue-50 dark:border-blue-500/40 dark:bg-transparent dark:text-blue-200 dark:hover:bg-blue-500/10"
             >
-              Ouvrir le planning complet (semaine / mois, recherche, calendrier)
+              <span className="text-pretty">Ouvrir le planning complet</span>
+              <span className="text-xs font-medium leading-relaxed text-muted-foreground sm:text-sm">
+                Semaine, mois, recherche, calendrier
+              </span>
             </Button>
           </div>
         )}
