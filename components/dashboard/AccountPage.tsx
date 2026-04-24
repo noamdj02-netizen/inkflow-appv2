@@ -1,9 +1,23 @@
 import React, { useState } from 'react';
 import {
-  ChevronRight, ChevronLeft, User, Mail, Hash, Camera, Trash2,
-  Users, CreditCard, Bell, LogOut, Check, Building2,
+  ChevronRight,
+  ChevronLeft,
+  User,
+  Mail,
+  Hash,
+  Camera,
+  Trash2,
+  Users,
+  CreditCard,
+  Bell,
+  LogOut,
+  Check,
+  Building2,
+  AlertTriangle,
 } from 'lucide-react';
 import { BillingSettings } from './BillingSettings';
+import { useToast } from '../../contexts/ToastContext';
+import { deleteStudioAccountForOwner } from '../../lib/studioDataPortability';
 import type { ArtistAccount } from '../../types';
 
 type AccountView = 'home' | 'profil' | 'facturation';
@@ -40,6 +54,8 @@ interface AccountPageProps {
   trialEndsAt?: string | null;
   /** Recharge le statut studio (après fin d’essai, etc.) */
   onRefreshStudioSubscription?: () => void | Promise<void>;
+  /** Faux si membre invité — la suppression n’est proposée qu’au titulaire. */
+  isStudioOwner?: boolean;
 }
 
 // ─── Row atom ─────────────────────────────────────────────────────────────────
@@ -54,7 +70,16 @@ interface RowProps {
   disabled?: boolean;
 }
 
-const Row: React.FC<RowProps> = ({ icon, label, value, onClick, danger, accent, badge, disabled }) => (
+const Row: React.FC<RowProps> = ({
+  icon,
+  label,
+  value,
+  onClick,
+  danger,
+  accent,
+  badge,
+  disabled,
+}) => (
   <button
     onClick={onClick}
     disabled={disabled}
@@ -62,24 +87,28 @@ const Row: React.FC<RowProps> = ({ icon, label, value, onClick, danger, accent, 
       w-full flex items-center gap-3.5 px-4 py-3.5 text-left
       transition-colors duration-150 active:opacity-70
       disabled:opacity-40 disabled:cursor-not-allowed
-      ${danger
-        ? 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'
-        : accent
-        ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10'
-        : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/60'
+      ${
+        danger
+          ? 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10'
+          : accent
+            ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10'
+            : 'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/60'
       }
     `}
   >
     {/* Icon container */}
-    <span className={`
+    <span
+      className={`
       w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm
-      ${danger
-        ? 'bg-red-100 dark:bg-red-500/15 text-red-500 dark:text-red-400'
-        : accent
-        ? 'bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400'
-        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+      ${
+        danger
+          ? 'bg-red-100 dark:bg-red-500/15 text-red-500 dark:text-red-400'
+          : accent
+            ? 'bg-blue-100 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400'
+            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
       }
-    `}>
+    `}
+    >
       {icon}
     </span>
 
@@ -95,7 +124,9 @@ const Row: React.FC<RowProps> = ({ icon, label, value, onClick, danger, accent, 
 
     {/* Value */}
     {value && !badge && (
-      <span className="text-sm text-zinc-400 dark:text-zinc-500 truncate max-w-[120px]">{value}</span>
+      <span className="text-sm text-zinc-400 dark:text-zinc-500 truncate max-w-[120px]">
+        {value}
+      </span>
     )}
 
     {/* Chevron */}
@@ -144,11 +175,24 @@ const Field: React.FC<{
   inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
   maxLength?: number;
   pattern?: string;
-}> = ({ icon, label, value, onChange, type = 'text', placeholder, hint, inputMode, maxLength, pattern }) => (
+}> = ({
+  icon,
+  label,
+  value,
+  onChange,
+  type = 'text',
+  placeholder,
+  hint,
+  inputMode,
+  maxLength,
+  pattern,
+}) => (
   <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 px-4 py-3.5">
     <div className="flex items-center gap-3 mb-2">
       <span className="text-zinc-400 dark:text-zinc-500">{icon}</span>
-      <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">{label}</label>
+      <label className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+        {label}
+      </label>
     </div>
     <input
       type={type}
@@ -166,26 +210,46 @@ const Field: React.FC<{
 
 // ─── Main component ────────────────────────────────────────────────────────────
 export const AccountPage: React.FC<AccountPageProps> = ({
-  user, studioId,
-  studioName, email, siret,
-  onStudioNameChange, onEmailChange, onSiretChange,
-  saving, saved, onSave,
-  avatarInputRef, avatarUploading, onAvatarClick, onAvatarRemove,
+  user,
+  studioId,
+  studioName,
+  email,
+  siret,
+  onStudioNameChange,
+  onEmailChange,
+  onSiretChange,
+  saving,
+  saved,
+  onSave,
+  avatarInputRef,
+  avatarUploading,
+  onAvatarClick,
+  onAvatarRemove,
   artists,
   onGoToCollaborateurs,
-  onGoToBilling, onGoToNotifications, onLogout,
-  subscriptionStatus, trialEndsAt, onRefreshStudioSubscription,
+  onGoToBilling,
+  onGoToNotifications,
+  onLogout,
+  subscriptionStatus,
+  trialEndsAt,
+  onRefreshStudioSubscription,
+  isStudioOwner = true,
 }) => {
+  const toast = useToast();
   const [view, setView] = useState<AccountView>('home');
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const firstName = user?.name?.split(' ')[0] || user?.studioName || 'Tatoueur';
   const displayName = user?.studioName || user?.name || 'Mon Studio';
   const displayEmail = user?.email || email || '';
 
-  const planLabel = subscriptionStatus === 'active'
-    ? 'Plan Pro actif'
-    : subscriptionStatus === 'trialing'
-    ? 'Période d\'essai'
-    : 'Plan gratuit';
+  const planLabel =
+    subscriptionStatus === 'active'
+      ? 'Plan Pro actif'
+      : subscriptionStatus === 'trialing'
+        ? "Période d'essai"
+        : 'Plan gratuit';
 
   // ── HOME ──────────────────────────────────────────────────────────────────
   if (view === 'home') {
@@ -231,15 +295,18 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           </div>
 
           {/* Plan badge */}
-          <span className={`
+          <span
+            className={`
             px-3 py-1 rounded-full text-xs font-semibold
-            ${subscriptionStatus === 'active'
-              ? 'bg-green-50 dark:bg-green-500/15 text-green-700 dark:text-green-400'
-              : subscriptionStatus === 'trialing'
-              ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400'
-              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+            ${
+              subscriptionStatus === 'active'
+                ? 'bg-green-50 dark:bg-green-500/15 text-green-700 dark:text-green-400'
+                : subscriptionStatus === 'trialing'
+                  ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
             }
-          `}>
+          `}
+          >
             {planLabel}
           </span>
         </div>
@@ -285,6 +352,92 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             danger
           />
         </Section>
+
+        {isStudioOwner && studioId && (
+          <div className="rounded-2xl border border-red-200 dark:border-red-900/60 bg-red-50/80 dark:bg-red-950/20 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-red-900 dark:text-red-200">
+                  Compte &amp; données
+                </p>
+                <p className="text-xs text-red-800/90 dark:text-red-300/90 mt-1 leading-relaxed">
+                  Suppression définitive : studio, clients, messages, acomptes côté app, fichiers
+                  d’illustration liés. Les obligations comptables / Stripe peuvent conserver des
+                  traces (factures, législation). Pas de simple « désactivation ».
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeleteOpen(true);
+                    setDeleteConfirm('');
+                  }}
+                  className="mt-3 w-full sm:w-auto px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-600 text-white hover:bg-red-500 transition-colors min-h-[44px]"
+                >
+                  Supprimer mon compte studio
+                </button>
+                {deleteOpen && (
+                  <div className="mt-4 space-y-2 p-3 rounded-xl bg-white/90 dark:bg-zinc-900/80 border border-red-200/80 dark:border-red-800/40">
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      Tape ton email{' '}
+                      <strong className="text-zinc-900 dark:text-zinc-100">{displayEmail}</strong>{' '}
+                      pour confirmer.
+                    </p>
+                    <input
+                      type="email"
+                      value={deleteConfirm}
+                      onChange={(e) => setDeleteConfirm(e.target.value)}
+                      className="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 px-3 py-2 text-sm"
+                      placeholder="Email du compte"
+                      autoComplete="off"
+                    />
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        type="button"
+                        disabled={deleteBusy}
+                        onClick={async () => {
+                          if (!studioId) return;
+                          setDeleteBusy(true);
+                          const r = await deleteStudioAccountForOwner({
+                            studioId,
+                            confirmEmail: deleteConfirm.trim().toLowerCase(),
+                          });
+                          setDeleteBusy(false);
+                          if ('error' in r) {
+                            toast.error(r.error);
+                            return;
+                          }
+                          toast.success(r.message);
+                          setDeleteOpen(false);
+                          try {
+                            localStorage.removeItem('inkflow_user');
+                            localStorage.removeItem('inkflow_studio_name');
+                            localStorage.removeItem('inkflow_email');
+                            localStorage.removeItem('inkflow_avatar');
+                          } catch {
+                            /* ignore */
+                          }
+                          await onLogout();
+                          window.location.href = '/';
+                        }}
+                        className="flex-1 py-2.5 rounded-lg bg-red-600 text-white text-sm font-semibold disabled:opacity-50"
+                      >
+                        {deleteBusy ? 'Suppression…' : 'Confirmer la suppression définitive'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteOpen(false)}
+                        className="px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 text-sm"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -306,7 +459,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               />
             ) : (
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                <span className="text-xl font-bold text-white">{firstName.slice(0, 1).toUpperCase()}</span>
+                <span className="text-xl font-bold text-white">
+                  {firstName.slice(0, 1).toUpperCase()}
+                </span>
               </div>
             )}
             {avatarUploading && (
@@ -322,7 +477,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             </button>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{displayName}</p>
+            <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
+              {displayName}
+            </p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{displayEmail}</p>
           </div>
           {user?.avatar && (
@@ -374,17 +531,29 @@ export const AccountPage: React.FC<AccountPageProps> = ({
           className={`
             w-full py-4 rounded-2xl text-base font-bold transition-all active:scale-[0.98]
             disabled:opacity-50 disabled:cursor-not-allowed
-            ${saved
-              ? 'bg-green-500 text-white'
-              : 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100'
+            ${
+              saved
+                ? 'bg-green-500 text-white'
+                : 'bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 '
             }
           `}
         >
           {saving ? (
             <span className="flex items-center justify-center gap-2">
               <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
               </svg>
               Enregistrement…
             </span>

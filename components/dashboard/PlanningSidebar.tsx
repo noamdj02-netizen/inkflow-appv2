@@ -4,7 +4,25 @@
  * Optimisé pour l'affichage desktop.
  */
 import React, { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin, User, Plus, Users, DollarSign, TrendingUp, Eye, MoreHorizontal, Phone, Mail, Banknote, CheckCircle2, X } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  Plus,
+  Users,
+  DollarSign,
+  TrendingUp,
+  Eye,
+  MoreHorizontal,
+  Phone,
+  Mail,
+  Banknote,
+  CheckCircle2,
+  X,
+} from 'lucide-react';
 import type { Appointment } from '../../types';
 
 const WEEKDAYS_SHORT = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
@@ -50,7 +68,7 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const [hoveredAppointment, setHoveredAppointment] = useState<string | null>(null);
-  
+
   const todayStr = toDateStr(new Date());
   const displayDate = selectedDate ?? todayStr;
   const isToday = displayDate === todayStr;
@@ -104,9 +122,13 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
   const totalAppointmentsThisMonth = useMemo(() => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    return appointments.filter(a => {
+    return appointments.filter((a) => {
       const d = new Date(a.date);
-      return d.getFullYear() === year && d.getMonth() === month && !['cancelled', 'no_show'].includes(a.status);
+      return (
+        d.getFullYear() === year &&
+        d.getMonth() === month &&
+        !['cancelled', 'no_show'].includes(a.status)
+      );
     }).length;
   }, [appointments, currentMonth]);
 
@@ -114,18 +136,34 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
   const monthStats = useMemo(() => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    const monthApts = appointments.filter(a => {
+    const monthApts = appointments.filter((a) => {
       const d = new Date(a.date);
-      return d.getFullYear() === year && d.getMonth() === month && !['cancelled', 'no_show'].includes(a.status);
+      return (
+        d.getFullYear() === year &&
+        d.getMonth() === month &&
+        !['cancelled', 'no_show'].includes(a.status)
+      );
     });
-    
-    const revenue = monthApts.filter(a => a.status === 'completed').reduce((sum, a) => sum + (a.price || 0), 0);
-    const depositsReceived = monthApts.filter(a => a.depositPaid).reduce((sum, a) => sum + (a.deposit || 0), 0);
-    const uniqueClients = new Set(monthApts.map(a => a.clientId || a.clientEmail || a.clientName)).size;
-    const confirmed = monthApts.filter(a => a.status === 'confirmed').length;
-    const pending = monthApts.filter(a => a.status === 'pending').length;
-    
-    return { revenue, depositsReceived, uniqueClients, confirmed, pending, total: monthApts.length };
+
+    const revenue = monthApts
+      .filter((a) => a.status === 'completed')
+      .reduce((sum, a) => sum + (a.price || 0), 0);
+    const depositsReceived = monthApts
+      .filter((a) => a.depositPaid)
+      .reduce((sum, a) => sum + (a.deposit || 0), 0);
+    const uniqueClients = new Set(monthApts.map((a) => a.clientId || a.clientEmail || a.clientName))
+      .size;
+    const confirmed = monthApts.filter((a) => a.status === 'confirmed').length;
+    const pending = monthApts.filter((a) => a.status === 'pending').length;
+
+    return {
+      revenue,
+      depositsReceived,
+      uniqueClients,
+      confirmed,
+      pending,
+      total: monthApts.length,
+    };
   }, [appointments, currentMonth]);
 
   // Vue semaine
@@ -134,15 +172,15 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
     const day = d.getDay();
     const monday = new Date(d);
     monday.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
-    
+
     return Array.from({ length: 7 }, (_, i) => {
       const date = new Date(monday);
       date.setDate(monday.getDate() + i);
       const dateStr = toDateStr(date);
-      const dayApts = appointments.filter(
-        a => a.date === dateStr && !['cancelled', 'no_show'].includes(a.status)
-      ).sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
-      
+      const dayApts = appointments
+        .filter((a) => a.date === dateStr && !['cancelled', 'no_show'].includes(a.status))
+        .sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
+
       return {
         date: dateStr,
         dayNum: date.getDate(),
@@ -215,7 +253,9 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
                 <div
                   key={wd + i}
                   className={`py-2 text-[10px] font-semibold uppercase tracking-wider text-center ${
-                    i === 0 || i === 6 ? 'text-zinc-400 dark:text-zinc-600' : 'text-zinc-500 dark:text-zinc-500'
+                    i === 0 || i === 6
+                      ? 'text-zinc-400 dark:text-zinc-600'
+                      : 'text-zinc-500 dark:text-zinc-500'
                   }`}
                 >
                   {wd}
@@ -227,9 +267,8 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
             <div className="grid grid-cols-7 gap-1">
               {weeks.flatMap((row, ri) =>
                 row.map((day, ci) => {
-                  if (day === null)
-                    return <div key={`e-${ri}-${ci}`} className="aspect-square" />;
-                  
+                  if (day === null) return <div key={`e-${ri}-${ci}`} className="aspect-square" />;
+
                   const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
                   const dateStr = toDateStr(d);
                   const isSelected = selectedDate === dateStr;
@@ -246,15 +285,16 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
                       onClick={() => onSelectDate(dateStr)}
                       className={`
                         relative aspect-square rounded-xl text-xs font-medium flex flex-col items-center justify-center transition-all
-                        ${isSelected
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                          : isTodayCell
-                            ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold ring-2 ring-blue-500/30'
-                            : isPast
-                              ? 'text-zinc-400 dark:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
-                              : isWeekend
-                                ? 'text-zinc-500 dark:text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800'
-                                : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                        ${
+                          isSelected
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                            : isTodayCell
+                              ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold ring-2 ring-blue-500/30'
+                              : isPast
+                                ? 'text-zinc-400 dark:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                                : isWeekend
+                                  ? 'text-zinc-500 dark:text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+                                  : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                         }
                         ${hasAppointments && !isSelected ? 'font-semibold' : ''}
                       `}
@@ -267,16 +307,20 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
                       </span>
                       {/* Indicateur de RDV */}
                       {hasAppointments && (
-                        <div className={`absolute bottom-1 left-1/2 -tranzinc-x-1/2 flex items-center gap-0.5 ${isSelected ? 'opacity-80' : ''}`}>
+                        <div
+                          className={`absolute bottom-1 left-1/2 -tranzinc-x-1/2 flex items-center gap-0.5 ${isSelected ? 'opacity-80' : ''}`}
+                        >
                           {appointmentCount <= 3 ? (
                             Array.from({ length: appointmentCount }).map((_, i) => (
-                              <span 
-                                key={i} 
-                                className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-500'}`} 
+                              <span
+                                key={i}
+                                className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-500'}`}
                               />
                             ))
                           ) : (
-                            <span className={`text-[8px] font-bold ${isSelected ? 'text-white/80' : 'text-blue-600 dark:text-blue-400'}`}>
+                            <span
+                              className={`text-[8px] font-bold ${isSelected ? 'text-white/80' : 'text-blue-600 dark:text-blue-400'}`}
+                            >
                               {appointmentCount}
                             </span>
                           )}
@@ -388,11 +432,12 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
                 <div className="space-y-2">
                   {dayAppointments.map((apt, index) => {
                     const statusColors = {
-                      confirmed: 'bg-emerald-500',
+                      confirmed: 'bg-blue-500',
                       pending: 'bg-amber-500',
                       completed: 'bg-zinc-400',
                     };
-                    const statusColor = statusColors[apt.status as keyof typeof statusColors] || 'bg-blue-500';
+                    const statusColor =
+                      statusColors[apt.status as keyof typeof statusColors] || 'bg-blue-500';
                     const isHovered = hoveredAppointment === apt.id;
 
                     return (
@@ -402,15 +447,17 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
                         onMouseLeave={() => setHoveredAppointment(null)}
                         onClick={() => onSelectAppointment?.(apt)}
                         className={`relative w-full p-3 rounded-xl cursor-pointer transition-all text-left group ${
-                          isHovered 
-                            ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 shadow-md' 
+                          isHovered
+                            ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 shadow-md'
                             : 'bg-zinc-50 dark:bg-zinc-800/50 border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800'
                         } border`}
                       >
                         <div className="flex items-start gap-3">
                           {/* Timeline indicator */}
                           <div className="flex flex-col items-center pt-0.5">
-                            <div className={`w-2.5 h-2.5 rounded-full ${statusColor} ring-4 ring-white dark:ring-zinc-900 transition-transform ${isHovered ? 'scale-125' : ''}`} />
+                            <div
+                              className={`w-2.5 h-2.5 rounded-full ${statusColor} ring-4 ring-white dark:ring-zinc-900 transition-transform ${isHovered ? 'scale-125' : ''}`}
+                            />
                             {index < dayAppointments.length - 1 && (
                               <div className="w-px flex-1 bg-zinc-200 dark:bg-zinc-700 mt-1 min-h-[20px]" />
                             )}
@@ -438,7 +485,7 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
                             )}
                             <div className="flex items-center gap-3 mt-2">
                               {apt.price > 0 && (
-                                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
                                   <DollarSign className="w-3 h-3" />
                                   {apt.price}€
                                 </span>
@@ -454,21 +501,29 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
 
                           {/* Status badge + Actions */}
                           <div className="flex flex-col items-end gap-2">
-                            <div className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${
-                              apt.status === 'confirmed' 
-                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                            <div
+                              className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${
+                                apt.status === 'confirmed'
+                                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400'
+                                  : apt.status === 'pending'
+                                    ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                                    : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                              }`}
+                            >
+                              {apt.status === 'confirmed'
+                                ? 'Confirmé'
                                 : apt.status === 'pending'
-                                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
-                                  : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                            }`}>
-                              {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'pending' ? 'En attente' : apt.status === 'completed' ? 'Terminé' : apt.status}
+                                  ? 'En attente'
+                                  : apt.status === 'completed'
+                                    ? 'Terminé'
+                                    : apt.status}
                             </div>
-                            
+
                             {/* Actions au hover */}
                             {isHovered && (
                               <div className="flex items-center gap-1 animate-fade-in">
                                 {apt.clientPhone && (
-                                  <a 
+                                  <a
                                     href={`tel:${apt.clientPhone}`}
                                     onClick={(e) => e.stopPropagation()}
                                     className="p-1.5 rounded-lg bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shadow-sm"
@@ -477,8 +532,11 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
                                     <Phone className="w-3 h-3" />
                                   </a>
                                 )}
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); onSelectAppointment?.(apt); }}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSelectAppointment?.(apt);
+                                  }}
                                   className="p-1.5 rounded-lg bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shadow-sm"
                                   title="Voir détails"
                                 >
@@ -509,34 +567,44 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
               {weekDays.map((day) => (
                 <button
                   key={day.date}
-                  onClick={() => { onSelectDate(day.date); setViewMode('day'); }}
+                  onClick={() => {
+                    onSelectDate(day.date);
+                    setViewMode('day');
+                  }}
                   className={`w-full px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${
                     day.isSelected ? 'bg-blue-50 dark:bg-blue-500/10' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold ${
-                        day.isToday 
-                          ? 'bg-blue-600 text-white' 
-                          : day.isSelected 
-                            ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400'
-                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                      }`}>
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold ${
+                          day.isToday
+                            ? 'bg-blue-600 text-white'
+                            : day.isSelected
+                              ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400'
+                              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                        }`}
+                      >
                         {day.dayNum}
                       </div>
                       <div>
-                        <p className={`text-sm font-medium ${
-                          day.isToday || day.isSelected 
-                            ? 'text-blue-700 dark:text-blue-400' 
-                            : 'text-zinc-700 dark:text-zinc-300'
-                        }`}>
+                        <p
+                          className={`text-sm font-medium ${
+                            day.isToday || day.isSelected
+                              ? 'text-blue-700 dark:text-blue-400'
+                              : 'text-zinc-700 dark:text-zinc-300'
+                          }`}
+                        >
                           {day.dayName}
-                          {day.isToday && <span className="ml-2 text-xs text-blue-500">Aujourd'hui</span>}
+                          {day.isToday && (
+                            <span className="ml-2 text-xs text-blue-500">Aujourd'hui</span>
+                          )}
                         </p>
                         {day.appointments.length > 0 && (
                           <p className="text-xs text-zinc-500 dark:text-zinc-500">
-                            {day.appointments[0].time} - {day.appointments[0].clientName.split(' ')[0]}
+                            {day.appointments[0].time} -{' '}
+                            {day.appointments[0].clientName.split(' ')[0]}
                             {day.appointments.length > 1 && ` +${day.appointments.length - 1}`}
                           </p>
                         )}
@@ -544,11 +612,13 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
                     </div>
                     <div className="flex items-center gap-2">
                       {day.appointments.length > 0 ? (
-                        <span className={`px-2 py-0.5 rounded-lg text-xs font-bold ${
-                          day.isToday 
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300'
-                        }`}>
+                        <span
+                          className={`px-2 py-0.5 rounded-lg text-xs font-bold ${
+                            day.isToday
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300'
+                          }`}
+                        >
                           {day.appointments.length}
                         </span>
                       ) : (
@@ -574,12 +644,12 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
             {/* Revenue */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10">
+                  <DollarSign className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <span className="text-xs text-zinc-600 dark:text-zinc-400">Revenus</span>
               </div>
-              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+              <span className="text-sm font-bold text-blue-600 dark:text-blue-400 tabular-nums">
                 {monthStats.revenue.toLocaleString('fr-FR')}€
               </span>
             </div>
@@ -614,16 +684,24 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
             <div className="border-t border-zinc-100 dark:border-zinc-800 pt-3">
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
-                  <p className="text-lg font-bold text-zinc-900 dark:text-white tabular-nums">{monthStats.total}</p>
+                  <p className="text-lg font-bold text-zinc-900 dark:text-white tabular-nums">
+                    {monthStats.total}
+                  </p>
                   <p className="text-[9px] text-zinc-500 dark:text-zinc-500 uppercase">Total</p>
                 </div>
-                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
-                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{monthStats.confirmed}</p>
-                  <p className="text-[9px] text-emerald-700 dark:text-emerald-400 uppercase">Confirmés</p>
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10">
+                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400 tabular-nums">
+                    {monthStats.confirmed}
+                  </p>
+                  <p className="text-[9px] text-blue-700 dark:text-blue-400 uppercase">Confirmés</p>
                 </div>
                 <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10">
-                  <p className="text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums">{monthStats.pending}</p>
-                  <p className="text-[9px] text-amber-700 dark:text-amber-400 uppercase">En attente</p>
+                  <p className="text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+                    {monthStats.pending}
+                  </p>
+                  <p className="text-[9px] text-amber-700 dark:text-amber-400 uppercase">
+                    En attente
+                  </p>
                 </div>
               </div>
             </div>

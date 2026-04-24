@@ -7,8 +7,7 @@ const BORDER = 'rgba(255,255,255,0.1)';
 const MUTED = '#737373';
 
 const ACCENT_MAP = {
-  blue: '#60A5FA',
-  emerald: '#34d399',
+  blue: '#2563eb',
   violet: '#a78bfa',
 } as const;
 
@@ -81,7 +80,9 @@ export const ClientAppMirrorPreview: React.FC<ClientAppMirrorPreviewProps> = ({
               </p>
               <p className="text-lg font-bold text-white truncate max-w-[160px]">{studioName}</p>
               {studioTagline?.trim() ? (
-                <p className="text-[10px] text-white/65 truncate max-w-[200px] mt-0.5">{studioTagline.trim()}</p>
+                <p className="text-[10px] text-white/65 truncate max-w-[200px] mt-0.5">
+                  {studioTagline.trim()}
+                </p>
               ) : null}
             </div>
             {availableNow && (
@@ -107,14 +108,19 @@ export const ClientAppMirrorPreview: React.FC<ClientAppMirrorPreviewProps> = ({
               className="rounded-2xl px-3 py-2 mb-3 text-[10px] leading-snug line-clamp-4"
               style={{ background: SURFACE, border: `1px solid ${BORDER}`, color: MUTED }}
             >
-              <span className="font-bold uppercase tracking-wide text-white/45 block mb-1">À propos</span>
+              <span className="font-bold uppercase tracking-wide text-white/45 block mb-1">
+                À propos
+              </span>
               {studioBioPreview.trim()}
             </div>
           ) : null}
 
           {featured.length > 0 && (
             <div className="mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: MUTED }}>
+              <p
+                className="text-[10px] font-bold uppercase tracking-wider mb-2"
+                style={{ color: MUTED }}
+              >
                 En vedette
               </p>
               <div className="flex gap-2 overflow-x-auto pb-1">
@@ -135,7 +141,10 @@ export const ClientAppMirrorPreview: React.FC<ClientAppMirrorPreviewProps> = ({
             </div>
           )}
 
-          <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: MUTED }}>
+          <p
+            className="text-[10px] font-bold uppercase tracking-wider mb-2"
+            style={{ color: MUTED }}
+          >
             Flashs
           </p>
           <div className="grid grid-cols-2 gap-2">

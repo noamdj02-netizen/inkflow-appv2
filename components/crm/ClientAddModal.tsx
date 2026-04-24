@@ -33,6 +33,8 @@ export const ClientAddModal: React.FC<ClientAddModalProps> = ({
           <label className="block text-sm font-semibold mb-2">Nom</label>
           <input
             type="text"
+            name="name"
+            autoComplete="name"
             value={addForm.name}
             onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
             placeholder="Jean Dupont"
@@ -43,6 +45,8 @@ export const ClientAddModal: React.FC<ClientAddModalProps> = ({
           <label className="block text-sm font-semibold mb-2">Email *</label>
           <input
             type="email"
+            name="email"
+            autoComplete="email"
             value={addForm.email}
             onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
             placeholder="client@exemple.com"
@@ -53,6 +57,9 @@ export const ClientAddModal: React.FC<ClientAddModalProps> = ({
           <label className="block text-sm font-semibold mb-2">Téléphone</label>
           <input
             type="tel"
+            name="phone"
+            inputMode="tel"
+            autoComplete="tel"
             value={addForm.phone}
             onChange={(e) => setAddForm((f) => ({ ...f, phone: e.target.value }))}
             placeholder="+33 6 12 34 56 78"
@@ -63,6 +70,8 @@ export const ClientAddModal: React.FC<ClientAddModalProps> = ({
           <label className="block text-sm font-semibold mb-2">Notes</label>
           <textarea
             rows={3}
+            name="notes"
+            autoComplete="off"
             value={addForm.notes}
             onChange={(e) => setAddForm((f) => ({ ...f, notes: e.target.value }))}
             placeholder="Notes sur ce client…"

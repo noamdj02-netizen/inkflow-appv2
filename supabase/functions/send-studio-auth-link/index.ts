@@ -8,6 +8,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { sendEmail } from "../_shared/resend.ts";
 import { wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
+import { sanitizeRedirectTo } from "../_shared/sanitizeRedirectTo.ts";
+import { tryAuthRateLimitResponse } from "../_shared/upstashRateLimit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -17,22 +19,6 @@ const APP_URL = (Deno.env.get("APP_URL") || Deno.env.get("SITE_URL") || "https:/
 );
 
 const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** Même logique que send-client-magic-link : pas de redirect vers la landing Framer. */
-function sanitizeRedirectTo(input: string, appBase: string): string {
-  const base = appBase.replace(/\/+$/, "");
-  const fallback = `${base}/auth/callback`;
-  try {
-    const u = new URL(input);
-    const host = u.hostname.toLowerCase();
-    if (host === "ink-flow.me" || host === "www.ink-flow.me") {
-      return fallback;
-    }
-  } catch {
-    return fallback;
-  }
-  return input;
-}
 
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
@@ -69,6 +55,18 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: "Adresse e-mail invalide" }), {
         status: 400,
         headers: { "Content-Type": "application/json", ...cors },
+      });
+    }
+
+    const rateLimited = await tryAuthRateLimitResponse(req, email, "studio-auth");
+    if (rateLimited) {
+      return new Response(rateLimited.body, {
+        status: rateLimited.status,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": rateLimited.headers.get("Retry-After") || "3600",
+          ...cors,
+        },
       });
     }
 

@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckCircle2, CircleCheck, X, XCircle } from 'lucide-react';
 import { ClientPreviewPanel, type ClientPreviewData } from './ClientPreviewPanel';
 import { sendAftercareEmail } from '../../lib/sendNotification';
 import type { Appointment } from '../../types';
+import { ConfirmModal } from '../ui/ConfirmModal';
+import { hapticSuccess } from '../../lib/haptics';
 
 interface ClientPreviewDrawerProps {
   isOpen: boolean;
@@ -31,6 +33,8 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
   inkflowMessagingThreadId = null,
   onOpenInkflowDiscussion,
 }) => {
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -45,12 +49,14 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
   const handleConfirm = () => {
     if (appointment && onUpdateAppointment) {
       onUpdateAppointment(appointment.id, { status: 'confirmed' });
+      hapticSuccess();
       onClose();
     }
   };
-  const handleCancel = () => {
+  const doCancel = () => {
     if (appointment && onUpdateAppointment) {
       onUpdateAppointment(appointment.id, { status: 'cancelled' });
+      hapticSuccess();
       onClose();
     }
   };
@@ -58,6 +64,7 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
     if (appointment && onUpdateAppointment) {
       onUpdateAppointment(appointment.id, { status: 'completed' });
       sendAftercareEmail({ appointmentId: appointment.id, studioId });
+      hapticSuccess();
       onClose();
     }
   };
@@ -66,6 +73,19 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
 
   return (
     <>
+      <ConfirmModal
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={() => {
+          setShowCancelConfirm(false);
+          doCancel();
+        }}
+        title="Annuler ce rendez-vous ?"
+        message="Le rendez-vous passera en annulé. Cette action est visible dans l’agenda."
+        confirmLabel="Annuler le rendez-vous"
+        cancelLabel="Retour"
+        variant="warning"
+      />
       <div
         onClick={onClose}
         className={`fixed z-30 transition-opacity duration-300 motion-reduce:transition-none
@@ -90,7 +110,10 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
           className="relative flex items-start justify-between gap-3 px-5 py-4 border-b border-zinc-200/80 dark:border-zinc-800 shrink-0"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
-          <div className="absolute left-1/2 -translate-x-1/2 top-2 w-12 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600 md:hidden" aria-hidden />
+          <div
+            className="absolute left-1/2 -translate-x-1/2 top-2 w-12 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600 md:hidden"
+            aria-hidden
+          />
           <div className="min-w-0 pt-1 md:pt-0 pr-2">
             <h2
               id="client-preview-drawer-title"
@@ -101,7 +124,8 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
             <p className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm mt-1 max-w-[16rem] leading-snug">
               {artistName ? (
                 <>
-                  Rendez-vous avec <span className="text-[var(--text-secondary)] font-medium">{artistName}</span>
+                  Rendez-vous avec{' '}
+                  <span className="text-[var(--text-secondary)] font-medium">{artistName}</span>
                 </>
               ) : (
                 'Détails du rendez-vous et contact'
@@ -147,14 +171,14 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
                   <button
                     type="button"
                     onClick={handleConfirm}
-                    className="flex-1 inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 transition-all active:scale-[0.98]"
+                    className="flex-1 inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 transition-all active:scale-[0.98]"
                   >
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     Confirmer
                   </button>
                   <button
                     type="button"
-                    onClick={handleCancel}
+                    onClick={() => setShowCancelConfirm(true)}
                     className="flex-1 inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98]"
                   >
                     <XCircle className="w-4 h-4 shrink-0" />
@@ -166,7 +190,7 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
                 <button
                   type="button"
                   onClick={handleComplete}
-                  className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:opacity-95 transition-all active:scale-[0.98]"
+                  className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 transition-all active:scale-[0.98]"
                 >
                   <CircleCheck className="w-4 h-4 shrink-0" />
                   Marquer comme terminé

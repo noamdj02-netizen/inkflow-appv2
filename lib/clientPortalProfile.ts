@@ -7,7 +7,10 @@ import { supabase } from './supabase';
 const BUCKET = 'inkflow-assets';
 const CLIENT_AVATAR_PREFIX = 'client-avatars';
 
-export function clientAvatarStoragePath(userId: string, ext: 'jpg' | 'jpeg' | 'png' | 'webp'): string {
+export function clientAvatarStoragePath(
+  userId: string,
+  ext: 'jpg' | 'jpeg' | 'png' | 'webp'
+): string {
   const normalized = ext === 'jpeg' ? 'jpg' : ext;
   return `${CLIENT_AVATAR_PREFIX}/${userId}.${normalized}`;
 }
@@ -25,7 +28,9 @@ export async function fetchPortalAvatarUrl(userId: string): Promise<string | nul
   return data?.portal_avatar_url?.trim() || null;
 }
 
-export function oauthAvatarFromUserMetadata(meta: Record<string, unknown> | undefined): string | null {
+export function oauthAvatarFromUserMetadata(
+  meta: Record<string, unknown> | undefined
+): string | null {
   if (!meta) return null;
   const a = meta.avatar_url;
   const p = meta.picture;
@@ -39,7 +44,9 @@ export function oauthAvatarFromUserMetadata(meta: Record<string, unknown> | unde
  * À appeler côté client connecté uniquement.
  */
 export async function getCurrentClientAvatarUrlForBooking(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user?.id) return null;
   const portal = await fetchPortalAvatarUrl(user.id);
   if (portal) return portal;
@@ -47,7 +54,12 @@ export async function getCurrentClientAvatarUrlForBooking(): Promise<string | nu
 }
 
 function errMsg(e: unknown): string {
-  if (e && typeof e === 'object' && 'message' in e && typeof (e as { message: string }).message === 'string') {
+  if (
+    e &&
+    typeof e === 'object' &&
+    'message' in e &&
+    typeof (e as { message: string }).message === 'string'
+  ) {
     return (e as { message: string }).message;
   }
   return String(e);
@@ -59,7 +71,12 @@ export function formatClientAvatarError(e: unknown): string {
   if (m.includes('jwt') || m.includes('session') || m.includes('expired') || m.includes('401')) {
     return 'Session expirée. Reconnecte-toi puis réessaie.';
   }
-  if (m.includes('row-level security') || m.includes('permission denied') || m.includes('42501') || m.includes('403')) {
+  if (
+    m.includes('row-level security') ||
+    m.includes('permission denied') ||
+    m.includes('42501') ||
+    m.includes('403')
+  ) {
     return 'Droits insuffisants ou session invalide. Déconnecte-toi et reconnecte-toi.';
   }
   if (
@@ -103,7 +120,9 @@ export function isHeicLikeFile(file: File): boolean {
 
 type WH = { w: number; h: number };
 
-async function getBitmapOrImageDimensions(file: File): Promise<{ source: CanvasImageSource; cleanup: () => void; wh: WH }> {
+async function getBitmapOrImageDimensions(
+  file: File
+): Promise<{ source: CanvasImageSource; cleanup: () => void; wh: WH }> {
   if (typeof createImageBitmap === 'function') {
     try {
       const bmp = await createImageBitmap(file);
@@ -150,7 +169,7 @@ async function getBitmapOrImageDimensions(file: File): Promise<{ source: CanvasI
 export async function resizeImageFileToJpegBlob(
   file: File,
   sizePx = 400,
-  quality = 0.88,
+  quality = 0.88
 ): Promise<Blob> {
   const { source, cleanup, wh } = await getBitmapOrImageDimensions(file);
   try {
@@ -231,7 +250,10 @@ export async function compressImageToClientAvatarJpeg(file: File): Promise<Blob>
   throw new Error('image');
 }
 
-export async function uploadClientPortalAvatarJpeg(jpegBlob: Blob, userId: string): Promise<string> {
+export async function uploadClientPortalAvatarJpeg(
+  jpegBlob: Blob,
+  userId: string
+): Promise<string> {
   const path = clientAvatarStoragePath(userId, 'jpg');
   const { error: upErr } = await supabase.storage
     .from(BUCKET)
@@ -247,17 +269,23 @@ export async function uploadClientPortalAvatarJpeg(jpegBlob: Blob, userId: strin
       portal_avatar_url: baseUrl,
       updated_at: new Date().toISOString(),
     },
-    { onConflict: 'user_id' },
+    { onConflict: 'user_id' }
   );
   if (dbErr) {
-    await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
+    await supabase.storage
+      .from(BUCKET)
+      .remove([path])
+      .catch(() => {});
     throw dbErr;
   }
   return `${baseUrl}?t=${Date.now()}`;
 }
 
 /** Si le redimensionnement échoue, envoie un JPEG déjà compatible tel quel (même chemin .jpg). */
-export async function uploadClientPortalAvatarJpegWithFallback(file: File, userId: string): Promise<string> {
+export async function uploadClientPortalAvatarJpegWithFallback(
+  file: File,
+  userId: string
+): Promise<string> {
   const tryBlob = async (blob: Blob) => {
     if (blob.size > MAX_AVATAR_UPLOAD_BYTES) {
       throw new Error('Payload too large after processing');
@@ -278,11 +306,7 @@ export async function uploadClientPortalAvatarJpegWithFallback(file: File, userI
     }
     if (t === 'image/jpeg' || t === 'image/jpg' || t === '') {
       if (file.size > MAX_AVATAR_UPLOAD_BYTES) throw firstErr;
-      try {
-        return await tryBlob(file);
-      } catch (uploadErr) {
-        throw uploadErr;
-      }
+      return await tryBlob(file);
     }
     throw firstErr;
   }
@@ -297,7 +321,7 @@ export async function removeClientPortalAvatar(userId: string): Promise<void> {
       portal_avatar_url: null,
       updated_at: new Date().toISOString(),
     },
-    { onConflict: 'user_id' },
+    { onConflict: 'user_id' }
   );
   if (error) throw error;
 }
@@ -313,7 +337,7 @@ export function avatarUrlForCrm(url: string | null): string | null {
 /** Met à jour les fiches `inkflow_clients` (tous studios) dont l’email = session. */
 export async function syncClientCrmFromPortal(
   displayName: string,
-  avatarPublicUrl: string | null,
+  avatarPublicUrl: string | null
 ): Promise<void> {
   const { error } = await supabase.rpc('sync_client_crm_from_portal', {
     p_display_name: displayName,
@@ -324,7 +348,7 @@ export async function syncClientCrmFromPortal(
 
 export async function trySyncClientCrmProfile(
   displayName: string,
-  avatarDisplayUrl: string | null,
+  avatarDisplayUrl: string | null
 ): Promise<void> {
   try {
     await syncClientCrmFromPortal(displayName, avatarUrlForCrm(avatarDisplayUrl));

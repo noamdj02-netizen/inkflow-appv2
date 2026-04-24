@@ -8,13 +8,16 @@ import { GoogleSignInButton } from '../GoogleSignInButton';
 import { loginSchema } from '../../lib/authValidation';
 import { resolvePostLoginPath } from '../../lib/postLoginRedirect';
 import { getPostSignupDashboardPath } from '../../lib/urls';
+import { verifyTurnstileTokenOrThrow } from '../../lib/verifyTurnstileToken';
+import { AuthTurnstile } from './AuthTurnstile';
 
 /** Mappe les erreurs Supabase Auth vers messages utilisateur */
 function getAuthErrorMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   const lower = msg.toLowerCase();
   if (msg.includes('Invalid login credentials')) return 'Email ou mot de passe incorrect';
-  if (msg.includes('Email not confirmed')) return 'Vérifiez votre boîte mail pour confirmer votre compte';
+  if (msg.includes('Email not confirmed'))
+    return 'Vérifiez votre boîte mail pour confirmer votre compte';
   /* Timeout / lent — avant toute règle qui matche « réseau » dans la même phrase */
   if (msg.includes('expirée') || lower.includes('timeout') || msg.includes('auth_timeout')) {
     return 'Connexion trop lente (délai dépassé). Réessaie sur un autre réseau ou vérifie que le projet Supabase est actif.';
@@ -49,7 +52,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [success, setSuccess]           = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const { login, loginWithGoogle, isGoogleAuthEnabled } = useAuth();
 
   useEffect(() => {
@@ -77,10 +81,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
     }
     setLoading(true);
     try {
+      await verifyTurnstileTokenOrThrow(turnstileToken);
       await login(parsed.data.email, parsed.data.password);
       setSuccess(true);
       const rawFallback =
-        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) ||
+        (typeof sessionStorage !== 'undefined' &&
+          sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)) ||
         '/dashboard';
       try {
         sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
@@ -99,7 +105,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-
       {/* ── Error ── */}
       {error && (
         <div
@@ -117,7 +122,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
           <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
             <Check className="w-3 h-3 text-white" />
           </div>
-          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Connexion réussie !</p>
+          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+            Connexion réussie !
+          </p>
         </div>
       )}
 
@@ -213,6 +220,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
           Mot de passe oublié ?
         </a>
       </div>
+
+      <AuthTurnstile onToken={setTurnstileToken} />
 
       {/* ── CTA — visible sur fond blanc (mode clair) ── */}
       <button

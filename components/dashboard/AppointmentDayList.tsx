@@ -17,7 +17,7 @@ interface AppointmentDayListProps {
 }
 
 function getAvatarUrl(apt: Appointment, clients: Client[]): string | undefined {
-  const client = clients.find(c => c.id === apt.clientId);
+  const client = clients.find((c) => c.id === apt.clientId);
   return client?.avatar;
 }
 
@@ -36,7 +36,7 @@ function getStatusLabel(status: Appointment['status']): string {
 function getStatusBadgeClass(status: Appointment['status']): string {
   switch (status) {
     case 'confirmed':
-      return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+      return 'bg-blue-500/10 text-blue-600 dark:text-blue-400';
     case 'pending':
       return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
     case 'in_progress':
@@ -56,7 +56,9 @@ export const AppointmentDayList: React.FC<AppointmentDayListProps> = ({
   onEdit,
   onMessage,
 }) => {
-  const sorted = [...appointments].sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
+  const sorted = [...appointments].sort((a, b) =>
+    (a.time || '00:00').localeCompare(b.time || '00:00')
+  );
 
   if (sorted.length === 0) {
     return (
@@ -76,7 +78,16 @@ export const AppointmentDayList: React.FC<AppointmentDayListProps> = ({
             role={onSelectAppointment ? 'button' : undefined}
             tabIndex={onSelectAppointment ? 0 : undefined}
             onClick={onSelectAppointment ? () => onSelectAppointment(apt) : undefined}
-            onKeyDown={onSelectAppointment ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectAppointment(apt); } } : undefined}
+            onKeyDown={
+              onSelectAppointment
+                ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelectAppointment(apt);
+                    }
+                  }
+                : undefined
+            }
             className={`group flex items-center gap-4 py-4 px-1 -mx-1 rounded-lg hover:bg-zinc-50/80 dark:hover:bg-zinc-800/30 active:scale-[0.995] transition-all ${onSelectAppointment ? 'cursor-pointer' : ''}`}
           >
             {/* Heure — en gras */}
@@ -116,8 +127,11 @@ export const AppointmentDayList: React.FC<AppointmentDayListProps> = ({
               {onMarkComplete && apt.status !== 'completed' && (
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); onMarkComplete(apt); }}
-                  className="p-2.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center sm:min-w-0 sm:min-h-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkComplete(apt);
+                  }}
+                  className="p-2.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/20 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center sm:min-w-0 sm:min-h-0"
                   title="Marquer comme terminé"
                   aria-label="Marquer comme terminé"
                 >
@@ -127,7 +141,10 @@ export const AppointmentDayList: React.FC<AppointmentDayListProps> = ({
               {onEdit && (
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); onEdit(apt); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(apt);
+                  }}
                   className="p-2.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center sm:min-w-0 sm:min-h-0"
                   title="Modifier"
                   aria-label="Modifier"
@@ -138,7 +155,10 @@ export const AppointmentDayList: React.FC<AppointmentDayListProps> = ({
               {onMessage && (
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); onMessage(apt); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMessage(apt);
+                  }}
                   className="p-2.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/20 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center sm:min-w-0 sm:min-h-0"
                   title="Contacter"
                   aria-label="Contacter le client"

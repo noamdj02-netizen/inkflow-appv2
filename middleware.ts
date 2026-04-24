@@ -1,6 +1,6 @@
 /**
  * Aperçus de liens (Instagram, WhatsApp, etc.) : les crawlers n'exécutent pas le JS de la SPA.
- * On sert le même index.html avec des meta OG remplacées pour /book/:slug et /studio/:slug,
+ * On sert le même index.html avec des meta OG remplacées pour /book/:slug, /studio/:slug et /p/:slug,
  * en s’appuyant sur get_studio_public_by_slug + inkflow_vitrine_data (cover, avatar, texte vitrine).
  */
 import { next } from '@vercel/functions';
@@ -13,7 +13,8 @@ const SOCIAL_BOT_UA =
   /facebookexternalhit|Facebot|Instagram|Twitterbot|LinkedInBot|WhatsApp|Slack|TelegramBot|Discordbot|Pinterest|redditbot|vkShare|Embedly|Quora Link Preview|Slackbot|Discord|Google-Structured-Data-TestingTool|TikTok/i;
 
 export const config = {
-  matcher: ['/book/:path*', '/studio/:path*'],
+  /** Incl. `/p/:slug` (portfolio court) — mêmes OG que /studio pour les partages Insta / WhatsApp. */
+  matcher: ['/book/:path*', '/studio/:path*', '/p/:path*'],
 };
 
 type StudioPublicRow = {
@@ -35,18 +36,10 @@ type VitrineOgJson = {
 };
 
 function getSupabaseRestConfig(): { base: string; key: string } | null {
-  const base = (
-    process.env.SUPABASE_URL ||
-    process.env.VITE_SUPABASE_URL ||
-    ''
-  )
+  const base = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '')
     .trim()
     .replace(/\/+$/, '');
-  const key = (
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY ||
-    ''
-  )
+  const key = (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '')
     .trim()
     .replace(/^['"]|['"]$/g, '');
   if (!base || !key) return null;
@@ -189,7 +182,10 @@ function firstPortfolioUrl(v: VitrineOgJson | null): string {
   const list = v?.portfolio;
   if (!Array.isArray(list)) return '';
   for (const p of list) {
-    const u = p && typeof p === 'object' && 'url' in p ? String((p as { url?: string }).url || '').trim() : '';
+    const u =
+      p && typeof p === 'object' && 'url' in p
+        ? String((p as { url?: string }).url || '').trim()
+        : '';
     if (u && !isTemplateStockImageUrl(u)) return u;
   }
   return '';
@@ -215,13 +211,7 @@ function resolveOgImage(
   const avatarFromVitrine = (vitrine?.avatar || '').trim();
   const firstP = firstPortfolioUrl(vitrine);
 
-  const raw = pick(
-    coverFromVitrine,
-    rowCover,
-    rowAvatar,
-    firstP,
-    avatarFromVitrine
-  );
+  const raw = pick(coverFromVitrine, rowCover, rowAvatar, firstP, avatarFromVitrine);
   return absolutizeImage(raw, origin, fallback);
 }
 
@@ -241,15 +231,20 @@ function resolveDisplayName(
 function resolveOgDescription(
   vitrine: VitrineOgJson | null,
   displayName: string,
-  isBook: boolean
+  isBook: boolean,
+  isPortfolioShort = false
 ): string {
   const desc = (vitrine?.description || '').trim();
   const tag = (vitrine?.tagline || '').trim();
   const text = desc || tag;
   if (text) return text.length > 300 ? `${text.slice(0, 297)}…` : text;
-  return isBook
-    ? `Prenez rendez-vous et réglez l'acompte en ligne chez ${displayName}.`
-    : `Vitrine et réservation en ligne — ${displayName}.`;
+  if (isBook) {
+    return `Prenez rendez-vous et réglez l'acompte en ligne chez ${displayName}.`;
+  }
+  if (isPortfolioShort) {
+    return `Découvrez le travail de ${displayName} et réservez en ligne.`;
+  }
+  return `Vitrine et réservation en ligne — ${displayName}.`;
 }
 
 export default async function middleware(request: Request): Promise<Response> {
@@ -262,27 +257,33 @@ export default async function middleware(request: Request): Promise<Response> {
   const parts = url.pathname.split('/').filter(Boolean);
   const seg0 = parts[0];
   const slug = parts[1];
-  if (!slug || (seg0 !== 'book' && seg0 !== 'studio')) {
+  if (!slug || (seg0 !== 'book' && seg0 !== 'studio' && seg0 !== 'p')) {
     return next();
   }
 
   const cfg = getSupabaseRestConfig();
   const studio = await fetchStudioRow(slug, cfg);
-  const vitrine =
-    studio?.id && cfg ? await fetchVitrineOgJson(studio.id, cfg) : null;
+  const vitrine = studio?.id && cfg ? await fetchVitrineOgJson(studio.id, cfg) : null;
 
   const origin = url.origin;
   const canonical = `${origin}${url.pathname}${url.search}`;
 
   const displayName = resolveDisplayName(vitrine, studio, slug);
   const isBook = seg0 === 'book';
+  const isPortfolioShort = seg0 === 'p';
   const title = isBook
     ? `Réserver chez ${displayName} | InkFlow`
-    : `${displayName} | InkFlow`;
-  const description = resolveOgDescription(vitrine, displayName, isBook);
+    : isPortfolioShort
+      ? `${displayName} — Portfolio | InkFlow`
+      : `${displayName} | InkFlow`;
+  const description = resolveOgDescription(vitrine, displayName, isBook, isPortfolioShort);
 
   const ogImage = resolveOgImage(vitrine, studio, origin, DEFAULT_OG_IMAGE);
-  const ogImageAlt = isBook ? `Réservation tatouage — ${displayName}` : displayName;
+  const ogImageAlt = isBook
+    ? `Réservation tatouage — ${displayName}`
+    : isPortfolioShort
+      ? `Portfolio — ${displayName}`
+      : displayName;
 
   const indexUrl = new URL('/index.html', origin);
   let indexRes: Response;

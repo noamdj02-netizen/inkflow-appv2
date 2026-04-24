@@ -40,7 +40,7 @@ const MSG_CHECKOUT_GENERIC =
 function looksLikeTechnicalError(message: string): boolean {
   const t = message.toLowerCase();
   return /sk_live|sk_test|stripe_secret|supabase|npx\s|edge function|deploy|secret_key|vercel|invalid api key|configuration stripe/i.test(
-    t,
+    t
   );
 }
 
@@ -55,16 +55,18 @@ function userMessageForCheckoutFailure(
     details?: string;
     message?: string;
     code?: string;
-  },
+  }
 ): string {
   const raw = (data.error || data.details || data.message || '').trim();
   const code = data.code;
 
   if (status === 409 && code === 'stripe_connect_required') {
-    return "Les paiements en ligne ne sont pas encore activés pour ce studio. Contactez-le pour régler votre acompte.";
+    return 'Les paiements en ligne ne sont pas encore activés pour ce studio. Contactez-le pour régler votre acompte.';
   }
   if (status === 429) {
-    return raw.includes('minute') || raw.includes('requêtes') ? raw : 'Trop de tentatives. Réessayez dans une minute.';
+    return raw.includes('minute') || raw.includes('requêtes')
+      ? raw
+      : 'Trop de tentatives. Réessayez dans une minute.';
   }
   if (status === 400) {
     return raw || MSG_CHECKOUT_GENERIC;
@@ -91,7 +93,9 @@ const getSupabaseConfig = () => {
 };
 
 /** Appel direct à l'Edge Function pour pouvoir lire le corps d'erreur (message réel) en cas de non-2xx */
-export async function createCheckoutSession(params: CreateCheckoutParams): Promise<CreateCheckoutResult> {
+export async function createCheckoutSession(
+  params: CreateCheckoutParams
+): Promise<CreateCheckoutResult> {
   const { url: baseUrl, key } = getSupabaseConfig();
   if (!baseUrl || !key) {
     return { error: 'Supabase non configuré (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).' };
@@ -118,7 +122,7 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
       if (data?.url) {
         return { url: data.url, ...(data.sessionId ? { sessionId: data.sessionId } : {}) };
       }
-      return { error: data?.error || data?.details || 'La fonction n\'a pas renvoyé de lien.' };
+      return { error: data?.error || data?.details || "La fonction n'a pas renvoyé de lien." };
     }
 
     console.error('[createCheckoutSession] échec', {
@@ -126,7 +130,10 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
       body: data,
     });
 
-    const friendly = userMessageForCheckoutFailure(res.status, data as { error?: string; details?: string; message?: string; code?: string });
+    const friendly = userMessageForCheckoutFailure(
+      res.status,
+      data as { error?: string; details?: string; message?: string; code?: string }
+    );
     return { error: friendly };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -161,10 +168,15 @@ export async function createThemeCheckoutSession(params: {
       },
       body: JSON.stringify(params),
     });
-    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string; message?: string };
+    const data = (await res.json().catch(() => ({}))) as {
+      url?: string;
+      error?: string;
+      details?: string;
+      message?: string;
+    };
     if (res.ok) {
       if (data?.url) return { url: data.url };
-      return { error: data?.error || data?.details || 'La fonction n\'a pas renvoyé de lien.' };
+      return { error: data?.error || data?.details || "La fonction n'a pas renvoyé de lien." };
     }
     const msg = data?.error || data?.details || data?.message || `Erreur ${res.status}`;
     return { error: msg };
@@ -173,7 +185,10 @@ export async function createThemeCheckoutSession(params: {
     if (message === 'Failed to fetch') {
       return { error: 'Connexion instable. Vérifiez le réseau et réessayez.' };
     }
-    return { error: 'Impossible d’ouvrir la page de paiement pour le moment. Réessayez dans quelques minutes.' };
+    return {
+      error:
+        'Impossible d’ouvrir la page de paiement pour le moment. Réessayez dans quelques minutes.',
+    };
   }
 }
 
@@ -187,7 +202,9 @@ interface CreateSubscriptionParams {
 export type CreateSubscriptionResult = { url: string } | { error: string };
 
 /** Crée une session Checkout Stripe pour l'abonnement InkFlow (JWT requis). */
-export async function createSubscription(params: CreateSubscriptionParams): Promise<CreateSubscriptionResult> {
+export async function createSubscription(
+  params: CreateSubscriptionParams
+): Promise<CreateSubscriptionResult> {
   try {
     const { url: baseUrl, key } = getSupabaseConfig();
     if (!baseUrl || !key) {
@@ -207,13 +224,19 @@ export async function createSubscription(params: CreateSubscriptionParams): Prom
       },
       body: JSON.stringify(params),
     });
-    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string };
+    const data = (await res.json().catch(() => ({}))) as {
+      url?: string;
+      error?: string;
+      details?: string;
+    };
     if (res.ok && data?.url) {
       return { url: data.url };
     }
     const raw = (data.error || data.details || '').trim();
     if (res.status === 401) {
-      return { error: 'Session expirée : reconnecte-toi puis réessaie depuis Paramètres > Facturation.' };
+      return {
+        error: 'Session expirée : reconnecte-toi puis réessaie depuis Paramètres > Facturation.',
+      };
     }
     if (res.status === 403 && raw) {
       return { error: raw.length > 280 ? `${raw.slice(0, 277)}…` : raw };
@@ -233,7 +256,9 @@ export async function createSubscription(params: CreateSubscriptionParams): Prom
     if (message === 'Failed to fetch') {
       return { error: 'Connexion instable. Vérifie le réseau et réessaie.' };
     }
-    return { error: 'Impossible de créer la session de paiement. Réessaie dans quelques instants.' };
+    return {
+      error: 'Impossible de créer la session de paiement. Réessaie dans quelques instants.',
+    };
   }
 }
 
@@ -259,7 +284,7 @@ function humanizeStripeConnectError(raw: string): string {
     /\bjwt\s+(has\s+)?expired\b/.test(lower) ||
     /\bjwt\s+malformed\b/.test(lower) ||
     (/\bjwt\b/.test(lower) && /\b(invalid|expired|malformed|revoked)\b/.test(lower)) ||
-    /\baccess[_\s]?token\b/.test(lower) && /\b(invalid|expired)\b/.test(lower) ||
+    (/\baccess[_\s]?token\b/.test(lower) && /\b(invalid|expired)\b/.test(lower)) ||
     /\btoken\s+(has\s+)?expired\b/.test(lower) ||
     lower.includes('invalid_grant') ||
     (lower.includes('refresh') && lower.includes('token') && lower.includes('invalid'));
@@ -289,11 +314,10 @@ async function getFreshAccessTokenForEdgeFn(): Promise<string | null> {
 
 /** Token utilisable pour les Edge Functions (rafraîchit si proche de l’expiration). */
 async function resolveAccessTokenForEdgeFn(): Promise<string | null> {
-  let {
+  const {
     data: { session },
   } = await supabase.auth.getSession();
-  const soon =
-    session?.expires_at != null && session.expires_at * 1000 < Date.now() + 120_000;
+  const soon = session?.expires_at != null && session.expires_at * 1000 < Date.now() + 120_000;
   if (!session?.access_token || soon) {
     return getFreshAccessTokenForEdgeFn();
   }
@@ -317,11 +341,13 @@ async function stripeConnectOnboardingViaFetch(
   key: string,
   fail: (msg: string) => StripeConnectOnboardingResult,
   /** Jeton déjà obtenu dans `startStripeConnectOnboarding` (évite double refresh + incohérences). */
-  seedAccessToken?: string | null,
+  seedAccessToken?: string | null
 ): Promise<StripeConnectOnboardingResult> {
   let accessToken = seedAccessToken ?? (await resolveAccessTokenForEdgeFn());
   if (!accessToken) {
-    return fail('Session expirée ou absente. Reconnectez-vous puis réessayez « Connecter mon compte Stripe ».');
+    return fail(
+      'Session expirée ou absente. Reconnectez-vous puis réessayez « Connecter mon compte Stripe ».'
+    );
   }
 
   const fnUrl = `${baseUrl.replace(/\/$/, '')}/functions/v1/stripe-connect-onboarding`;
@@ -342,7 +368,7 @@ async function stripeConnectOnboardingViaFetch(
       return fail('Réseau indisponible. Vérifiez votre connexion et réessayez.');
     }
 
-    let text = '';
+    let text: string;
     try {
       text = await res.text();
     } catch {
@@ -378,16 +404,16 @@ async function stripeConnectOnboardingViaFetch(
     if (!res.ok) {
       if (res.status === 401) {
         return fail(
-          'Connexion refusée (401). Déconnecte-toi puis reconnecte-toi. Si ça continue : redéploie l’Edge Function « stripe-connect-onboarding » avec verify_jwt désactivé (npm run deploy:function:stripe-connect-onboarding ou supabase/config.toml), puis réessaie.',
+          'Connexion refusée (401). Déconnecte-toi puis reconnecte-toi. Si ça continue : redéploie l’Edge Function « stripe-connect-onboarding » avec verify_jwt désactivé (npm run deploy:function:stripe-connect-onboarding ou supabase/config.toml), puis réessaie.'
         );
       }
       return fail(
-        `Connexion Stripe impossible (erreur ${res.status}). Vérifiez que l’Edge Function stripe-connect-onboarding est déployée, puis rechargez la page.`,
+        `Connexion Stripe impossible (erreur ${res.status}). Vérifiez que l’Edge Function stripe-connect-onboarding est déployée, puis rechargez la page.`
       );
     }
 
     return fail(
-      'Aucun lien Stripe reçu. Vérifiez que l’Edge Function stripe-connect-onboarding est déployée sur votre projet Supabase.',
+      'Aucun lien Stripe reçu. Vérifiez que l’Edge Function stripe-connect-onboarding est déployée sur votre projet Supabase.'
     );
   }
 
@@ -402,25 +428,33 @@ async function stripeConnectOnboardingViaFetch(
  * L’id studio envoyé par l’UI peut diverger de la BDD (nouveau compte, renommage) : on résout toujours
  * l’id réel via `getStudioByEmail` pour éviter « Studio introuvable » côté Edge Function.
  */
-export async function startStripeConnectOnboarding(studioId: string): Promise<StripeConnectOnboardingResult> {
+export async function startStripeConnectOnboarding(
+  studioId: string
+): Promise<StripeConnectOnboardingResult> {
   const { url: baseUrl, key } = getSupabaseConfig();
   if (!baseUrl || !key) return { error: 'Supabase non configuré.' };
 
-  const fail = (msg: string): StripeConnectOnboardingResult => ({ error: humanizeStripeConnectError(msg) });
+  const fail = (msg: string): StripeConnectOnboardingResult => ({
+    error: humanizeStripeConnectError(msg),
+  });
 
   const { data: userData, error: userErr } = await supabase.auth.getUser();
   if (userErr || !userData?.user?.email?.trim()) {
-    return fail('Session expirée ou absente. Reconnectez-vous puis réessayez « Connecter mon compte Stripe ».');
+    return fail(
+      'Session expirée ou absente. Reconnectez-vous puis réessayez « Connecter mon compte Stripe ».'
+    );
   }
 
   const accessToken = await getFreshAccessTokenForEdgeFn();
   if (!accessToken) {
-    return fail('Session expirée ou absente. Reconnectez-vous puis réessayez « Connecter mon compte Stripe ».');
+    return fail(
+      'Session expirée ou absente. Reconnectez-vous puis réessayez « Connecter mon compte Stripe ».'
+    );
   }
 
   if (!isAccessTokenForCurrentSupabaseProject(accessToken)) {
     return fail(
-      'Ta session correspond à un autre projet Supabase que celui configuré dans cette app (fichier .env). Déconnecte-toi, vérifie VITE_SUPABASE_URL, puis reconnecte-toi.',
+      'Ta session correspond à un autre projet Supabase que celui configuré dans cette app (fichier .env). Déconnecte-toi, vérifie VITE_SUPABASE_URL, puis reconnecte-toi.'
     );
   }
 
@@ -428,26 +462,30 @@ export async function startStripeConnectOnboarding(studioId: string): Promise<St
   let studioRow = await getStudioByEmail(email);
   if (!studioRow?.id) {
     const meta = userData.user.user_metadata ?? {};
-    const name =
-      (typeof meta.name === 'string' && meta.name.trim()
+    const name = (
+      typeof meta.name === 'string' && meta.name.trim()
         ? meta.name
         : typeof meta.full_name === 'string' && meta.full_name.trim()
           ? meta.full_name
-          : email.split('@')[0] || 'Utilisateur') as string;
-    const studioName =
-      (typeof meta.studio_name === 'string' && meta.studio_name.trim() ? meta.studio_name : 'Mon studio') as string;
+          : email.split('@')[0] || 'Utilisateur'
+    ) as string;
+    const studioName = (
+      typeof meta.studio_name === 'string' && meta.studio_name.trim()
+        ? meta.studio_name
+        : 'Mon studio'
+    ) as string;
     try {
       await ensureStudio(email, name, studioName);
     } catch {
       return fail(
-        'Espace studio introuvable : recharge la page (F5), attends quelques secondes, puis réessaie « Connecter mon compte Stripe ».',
+        'Espace studio introuvable : recharge la page (F5), attends quelques secondes, puis réessaie « Connecter mon compte Stripe ».'
       );
     }
     studioRow = await getStudioByEmail(email);
   }
   if (!studioRow?.id) {
     return fail(
-      'Studio introuvable : ouvre le tableau de bord une première fois pour enregistrer ton espace, recharge la page, puis réessaie « Connecter mon compte Stripe ».',
+      'Studio introuvable : ouvre le tableau de bord une première fois pour enregistrer ton espace, recharge la page, puis réessaie « Connecter mon compte Stripe ».'
     );
   }
 
@@ -490,7 +528,12 @@ export async function createPortalSession(params: {
       body: JSON.stringify(params),
     });
 
-    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; details?: string; message?: string };
+    const data = (await res.json().catch(() => ({}))) as {
+      url?: string;
+      error?: string;
+      details?: string;
+      message?: string;
+    };
 
     if (res.ok && data?.url) return { url: data.url };
 
@@ -499,15 +542,20 @@ export async function createPortalSession(params: {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return {
-      error: message === 'Failed to fetch'
-        ? 'Impossible de contacter le serveur. Vérifiez votre connexion et que l\'Edge Function create-portal-session est déployée.'
-        : message,
+      error:
+        message === 'Failed to fetch'
+          ? "Impossible de contacter le serveur. Vérifiez votre connexion et que l'Edge Function create-portal-session est déployée."
+          : message,
     };
   }
 }
 
 export type StripeConnectActionsResult =
-  | { ok: true; stripe_connect_charges_enabled?: boolean; stripe_connect_details_submitted?: boolean }
+  | {
+      ok: true;
+      stripe_connect_charges_enabled?: boolean;
+      stripe_connect_details_submitted?: boolean;
+    }
   | { error: string };
 
 export type StripeExpressLoginResult = { url: string } | { error: string };
@@ -515,7 +563,7 @@ export type StripeExpressLoginResult = { url: string } | { error: string };
 export type StripeConnectDisconnectResult = { ok: true } | { error: string };
 
 async function callStripeConnectActions(
-  body: Record<string, unknown>,
+  body: Record<string, unknown>
 ): Promise<{ ok: boolean; data: Record<string, unknown> }> {
   const { url: baseUrl, key } = getSupabaseConfig();
   if (!baseUrl || !key) {
@@ -550,13 +598,17 @@ async function callStripeConnectActions(
 }
 
 /** Met à jour charges_enabled / details_submitted depuis l’API Stripe (webhook parfois en retard). */
-export async function syncStripeConnectStatus(studioId: string): Promise<StripeConnectActionsResult> {
+export async function syncStripeConnectStatus(
+  studioId: string
+): Promise<StripeConnectActionsResult> {
   const { ok, data } = await callStripeConnectActions({ action: 'sync', studioId });
   if (ok && data.ok === true) {
     return {
       ok: true,
       stripe_connect_charges_enabled: data.stripe_connect_charges_enabled as boolean | undefined,
-      stripe_connect_details_submitted: data.stripe_connect_details_submitted as boolean | undefined,
+      stripe_connect_details_submitted: data.stripe_connect_details_submitted as
+        | boolean
+        | undefined,
     };
   }
   const err = typeof data.error === 'string' ? data.error : 'Synchronisation impossible';
@@ -564,7 +616,9 @@ export async function syncStripeConnectStatus(studioId: string): Promise<StripeC
 }
 
 /** Lien à usage unique vers le tableau de bord Express (compte connecté). */
-export async function createStripeExpressLoginLink(studioId: string): Promise<StripeExpressLoginResult> {
+export async function createStripeExpressLoginLink(
+  studioId: string
+): Promise<StripeExpressLoginResult> {
   const { ok, data } = await callStripeConnectActions({ action: 'express_login', studioId });
   if (ok && typeof data.url === 'string' && data.url.startsWith('http')) {
     return { url: data.url };
@@ -574,7 +628,9 @@ export async function createStripeExpressLoginLink(studioId: string): Promise<St
 }
 
 /** Retire la liaison InkFlow ↔ compte Connect (les paiements en ligne s’arrêtent jusqu’à une nouvelle connexion). */
-export async function disconnectStripeConnect(studioId: string): Promise<StripeConnectDisconnectResult> {
+export async function disconnectStripeConnect(
+  studioId: string
+): Promise<StripeConnectDisconnectResult> {
   const { ok, data } = await callStripeConnectActions({ action: 'disconnect', studioId });
   if (ok && data.disconnected === true) {
     return { ok: true };

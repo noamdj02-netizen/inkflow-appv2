@@ -18,7 +18,10 @@ import { getStudioId } from '../../lib/supabase';
 import { getStudioSlug } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
 import { useSupabaseEnabled } from '../../hooks/useSupabaseEnabled';
-import { getVitrineLinkSettingsFromSupabase, saveVitrineLinkSettingsToSupabase } from '../../lib/supabaseDashboard';
+import {
+  getVitrineLinkSettingsFromSupabase,
+  saveVitrineLinkSettingsToSupabase,
+} from '../../lib/supabaseDashboard';
 import { getVitrineShareUrl } from '../../lib/urls';
 
 const STORAGE_KEY = 'inkflow-vitrine-settings';
@@ -33,12 +36,13 @@ interface VitrineSettings {
 }
 
 const defaultSettings: VitrineSettings = {
-  title: "Lien de votre vitrine",
-  description: "Partagez ce lien avec vos clients pour qu'ils découvrent vos flashs, prennent rendez-vous et consultent votre portfolio.",
-  primaryColor: "#2563eb",
-  copyButtonText: "Copier le lien",
-  copiedText: "Copié !",
-  openButtonText: "Ouvrir"
+  title: 'Lien de votre vitrine',
+  description:
+    "Partagez ce lien avec vos clients pour qu'ils découvrent vos flashs, prennent rendez-vous et consultent votre portfolio.",
+  primaryColor: '#2563eb',
+  copyButtonText: 'Copier le lien',
+  copiedText: 'Copié !',
+  openButtonText: 'Ouvrir',
 };
 
 const VITRINE_QR_STEPS: readonly { id: string; label: string; Icon: LucideIcon }[] = [
@@ -78,7 +82,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 
 function isLightColor(hex: string): boolean {
   const { r, g, b } = hexToRgb(hex);
-  return (r * 0.299 + g * 0.587 + b * 0.114) > 186;
+  return r * 0.299 + g * 0.587 + b * 0.114 > 186;
 }
 
 interface VitrineLinkButtonProps {
@@ -95,7 +99,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
   userEmail,
   studioSlug: studioSlugFromDb,
   variant = 'default',
-  showLabel = true
+  showLabel = true,
 }) => {
   const toast = useToast();
   const [copied, setCopied] = useState(false);
@@ -116,19 +120,26 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
   const safeName = (studioName ?? '').toString().trim() || 'mon-studio';
   const studioId = userEmail && safeName ? getStudioId(userEmail, safeName) : null;
 
-  const slug = (studioSlugFromDb != null && studioSlugFromDb !== '') ? studioSlugFromDb : getStudioSlug(studioName ?? safeName);
+  const slug =
+    studioSlugFromDb != null && studioSlugFromDb !== ''
+      ? studioSlugFromDb
+      : getStudioSlug(studioName ?? safeName);
   const vitrineUrl = getVitrineShareUrl(slug);
   const textOnPrimary = isLightColor(settings.primaryColor) ? '#171717' : '#ffffff';
 
   useEffect(() => {
     if (!studioId || !useSupabase) return;
-    getVitrineLinkSettingsFromSupabase(studioId).then((fromDb) => {
-      if (Object.keys(fromDb).length > 0) {
-        const merged = { ...defaultSettings, ...fromDb } as VitrineSettings;
-        setSettings(merged);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-      }
-    }).catch(() => { toast.error('Une erreur est survenue'); });
+    getVitrineLinkSettingsFromSupabase(studioId)
+      .then((fromDb) => {
+        if (Object.keys(fromDb).length > 0) {
+          const merged = { ...defaultSettings, ...fromDb } as VitrineSettings;
+          setSettings(merged);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        }
+      })
+      .catch(() => {
+        toast.error('Une erreur est survenue');
+      });
   }, [studioId, useSupabase]);
 
   useEffect(() => {
@@ -136,12 +147,17 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     if (!studioId || !useSupabase) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      saveVitrineLinkSettingsToSupabase(studioId, settings as unknown as Record<string, unknown>).catch((err) => {
-      toast.error('Erreur de sauvegarde des paramètres');
-    });
+      saveVitrineLinkSettingsToSupabase(
+        studioId,
+        settings as unknown as Record<string, unknown>
+      ).catch((err) => {
+        toast.error('Erreur de sauvegarde des paramètres');
+      });
       saveTimeoutRef.current = null;
     }, 500);
-    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
   }, [settings, studioId, useSupabase]);
 
   useEffect(() => {
@@ -326,7 +342,12 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
           typeof navigator.canShare === 'function' &&
           navigator.canShare({ files: [file] })
         ) {
-          await navigator.share({ files: [file], title: shareTitle, text: shareText, url: vitrineUrl });
+          await navigator.share({
+            files: [file],
+            title: shareTitle,
+            text: shareText,
+            url: vitrineUrl,
+          });
           toast.success('QR partagé');
           return;
         }
@@ -449,7 +470,9 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
       {showQr && (
         <div className="mt-3 flex flex-col items-center gap-4 p-5 bg-white border border-neutral-200 rounded-2xl dark:border-zinc-800 dark:bg-zinc-950/30">
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
-            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide dark:text-zinc-400">QR Code vitrine</p>
+            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide dark:text-zinc-400">
+              QR Code vitrine
+            </p>
             <div className="flex items-center gap-2">
               <div
                 className="flex items-center gap-0.5 rounded-2xl border border-zinc-200/80 bg-zinc-100/80 p-1 dark:border-zinc-800 dark:bg-zinc-900/50"
@@ -496,7 +519,9 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
                 qrPreviewTheme === 'blue' ? 'bg-blue-600' : 'bg-black'
               }`}
             >
-              <p className="font-display text-lg font-black tracking-tight text-white sm:text-xl">INKFLOW</p>
+              <p className="font-display text-lg font-black tracking-tight text-white sm:text-xl">
+                INKFLOW
+              </p>
             </div>
             <div className="relative z-[1] -mt-7 flex flex-col items-center px-3 pb-4 pt-0">
               <div className="rounded-lg border-[6px] border-black bg-white p-1.5 shadow-sm">
@@ -541,7 +566,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
                 {['Mastercard', 'Visa', 'Google Pay', 'Apple Pay'].map((label) => (
                   <span
                     key={label}
-                    className="rounded-md bg-[#e7f4ee] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-700 dark:bg-emerald-950/40 dark:text-emerald-100/90"
+                    className="rounded-md bg-[#e7f4ee] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-700 dark:bg-blue-950/40 dark:text-blue-100/90"
                   >
                     {label}
                   </span>
@@ -577,7 +602,8 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
             </button>
           </div>
           <p className="text-[11px] text-neutral-400 text-center dark:text-zinc-500">
-            Partage : image du QR si le système le permet, sinon lien. PNG 1200×1600 pour l’impression.
+            Partage : image du QR si le système le permet, sinon lien. PNG 1200×1600 pour
+            l’impression.
           </p>
         </div>
       )}

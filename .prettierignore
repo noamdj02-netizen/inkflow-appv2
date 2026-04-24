@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+public
+**/*.min.js
+**/*.min.css
+package-lock.json
+.claude
+.cursor
+.mobile
+mon-app
+video
+inkflow-mobile
+supabase/functions

@@ -32,6 +32,11 @@ dist-ssr
 .env.production
 env.local1
 
+# Dumps Postgres locaux (scripts/backup-postgres.sh)
+backups/
+inkflow-pg-*.sql.gz
+inkflow-pg-*.dump
+
 .vercel
 
 # Cursor (docs)

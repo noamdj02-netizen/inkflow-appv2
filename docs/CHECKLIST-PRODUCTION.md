@@ -2,6 +2,10 @@
 
 Audit appliqué et correctifs réalisés. À valider avant mise en production.
 
+**Backups & reprise (P0.5) :** [BACKUP-RECOVERY-DR.md](BACKUP-RECOVERY-DR.md) — PITR Supabase, export hebdo hors site, test de restauration, runbook incidents.
+
+**Monitoring (P0.6) :** [MONITORING-P0.md](MONITORING-P0.md) — Sentry prod (`VITE_SENTRY_DSN`), alertes e-mail, uptime externe, logs Vercel hebdo.
+
 ---
 
 ## 1. Nettoyage du code ✅
@@ -27,13 +31,13 @@ Audit appliqué et correctifs réalisés. À valider avant mise en production.
 ## 3. Sécurité et variables d’environnement ✅
 
 - **Frontend :** Seules les variables **`VITE_*`** sont utilisées (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GEMINI_API_KEY`). Aucune clé secrète (Stripe, SERVICE_ROLE, Resend) n’est exposée côté client.
-- **Référence :** Voir **`docs/ENV-PRODUCTION.md`** pour la liste détaillée des variables publiques (VITE_*) et des secrets (Edge Functions uniquement).
+- **Référence :** Voir **`docs/ENV-PRODUCTION.md`** pour la liste détaillée des variables publiques (VITE\_\*) et des secrets (Edge Functions uniquement).
 
 ---
 
 ## 4. Stripe (production) ✅
 
-- **Webhook :** La vérification de signature est en place (`verifyStripeSignature`). En production, **`STRIPE_WEBHOOK_SECRET`** est **obligatoire** : s’il est absent, le webhook renvoie **501** (Webhook secret not configured).
+- **Webhook :** Vérification via **`Stripe.webhooks.constructEvent`** (SDK Stripe) + tolérance anti-replay. En production, **`STRIPE_WEBHOOK_SECRET`** est **obligatoire** : s’il est absent, le webhook renvoie **501** (Webhook secret not configured). Voir aussi **`docs/STRIPE-P0-PRODUCTION.md`** (go-live, portail, rejeu, TVA).
 - **URLs :** `create-checkout-session` utilise **`SITE_URL`** pour `success_url` et `cancel_url` (pas de localhost). À configurer en production (ex. `https://inkflow.app`) dans les secrets des Edge Functions.
 
 ---
@@ -64,8 +68,8 @@ Audit appliqué et correctifs réalisés. À valider avant mise en production.
 3. **Build**  
    Lancer `npm run build` (ou `pnpm build`). Si des erreurs TypeScript bloquent, régénérer les types Supabase comme indiqué ci-dessus.
 
-4. **Tests manuels**  
-   - Connexion → dashboard avec données vides ou réelles.  
-   - Création d’une réservation depuis la vitrine → apparition dans le dashboard.  
-   - Génération d’un lien d’acompte → copie du lien sans redirection.  
+4. **Tests manuels**
+   - Connexion → dashboard avec données vides ou réelles.
+   - Création d’une réservation depuis la vitrine → apparition dans le dashboard.
+   - Génération d’un lien d’acompte → copie du lien sans redirection.
    - Rafraîchissement après refus / changement de statut → état persistant.

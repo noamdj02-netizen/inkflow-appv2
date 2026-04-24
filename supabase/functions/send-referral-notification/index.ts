@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
-import { sendEmail } from "../_shared/resend.ts";
+import { sendEmail, htmlToPlainTextFallback } from "../_shared/resend.ts";
+import { listUnsubscribeHeaders } from "../_shared/marketingUnsubscribe.ts";
 import { wrapEmailLayout, escapeHtml } from "../_shared/emailLayout.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
@@ -44,6 +45,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const refEmail = String(referrer.email).trim().toLowerCase();
+    const { data: blocked } = await supabase
+      .from("email_suppressions")
+      .select("email")
+      .eq("email", refEmail)
+      .maybeSingle();
+    if (blocked) {
+      return new Response(JSON.stringify({ success: true, skipped: "suppressed" }), {
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     const safeName = escapeHtml(referrer.name || "Parrain");
     const safeStudioName = escapeHtml(payload.refereeStudioName);
 
@@ -53,6 +66,7 @@ Deno.serve(async (req: Request) => {
       <p style="color:#737373;font-size:13px;margin:0;text-align:center;">Retrouve tes filleuls et ton code parrain sur la page Mois offerts.</p>`;
 
     const html = wrapEmailLayout({
+      preheader: `1 mois offert — ${payload.refereeStudioName} a rejoint InkFlow grâce à toi`,
       tag: "PARRAINAGE RÉUSSI",
       titleBlue: "Parrainage",
       titleBlack: "réussi",
@@ -60,10 +74,13 @@ Deno.serve(async (req: Request) => {
       button: { text: "Voir mes mois offerts", url: `${APP_URL}/referral` },
     });
 
+    const headers = await listUnsubscribeHeaders(refEmail);
     const sent = await sendEmail({
-      to: [referrer.email],
+      to: [refEmail],
       subject: "🎁 Un studio s'est inscrit grâce à toi — 1 mois offert !",
       html,
+      text: htmlToPlainTextFallback(html),
+      headers,
     });
 
     if (!sent) {

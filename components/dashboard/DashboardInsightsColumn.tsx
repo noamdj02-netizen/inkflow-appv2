@@ -3,15 +3,7 @@
  * aperçu chiffré, graphique d’activité, schéma du parcours client, raccourcis.
  */
 import React, { useMemo } from 'react';
-import {
-  Bar,
-  BarChart,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import {
   BarChart3,
   Calendar,
@@ -27,7 +19,15 @@ import {
 import type { Appointment } from '../../types';
 import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 
-type NavTab = 'overview' | 'requests' | 'appointments' | 'flash' | 'finance' | 'messaging' | 'clients' | 'settings';
+type NavTab =
+  | 'overview'
+  | 'requests'
+  | 'appointments'
+  | 'flash'
+  | 'finance'
+  | 'messaging'
+  | 'clients'
+  | 'settings';
 
 export interface DashboardInsightsColumnProps {
   appointments: Appointment[];
@@ -70,9 +70,7 @@ function RdvTooltip({ active, payload }: any) {
   return (
     <div className="rounded-lg border border-zinc-200/90 bg-white px-3 py-2 text-xs shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
       <p className="font-medium text-zinc-900 dark:text-zinc-100">{p.key}</p>
-      <p className="text-zinc-500 dark:text-zinc-400">
-        {p.count} RDV
-      </p>
+      <p className="text-zinc-500 dark:text-zinc-400">{p.count} RDV</p>
     </div>
   );
 }
@@ -112,7 +110,9 @@ export const DashboardInsightsColumn: React.FC<DashboardInsightsColumnProps> = (
             <BarChart3 className="h-4 w-4 text-violet-600 dark:text-violet-400" aria-hidden />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Aperçu</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Aperçu
+            </p>
             <p className="truncate text-sm font-semibold text-zinc-900 dark:text-white">Atelier</p>
           </div>
         </div>
@@ -131,23 +131,31 @@ export const DashboardInsightsColumn: React.FC<DashboardInsightsColumnProps> = (
         <div className="grid grid-cols-3 gap-1.5 rounded-2xl border border-zinc-200/80 bg-white/90 p-2 dark:border-zinc-800 dark:bg-zinc-900/50">
           <div className="rounded-xl bg-zinc-50 px-1 py-2 text-center dark:bg-zinc-800/50">
             <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">Mois</p>
-            <p className="text-lg font-bold tabular-nums text-zinc-900 dark:text-white">{monthStats.total}</p>
+            <p className="text-lg font-bold tabular-nums text-zinc-900 dark:text-white">
+              {monthStats.total}
+            </p>
             <p className="text-[9px] text-zinc-500">RDV</p>
           </div>
-          <div className="rounded-xl bg-emerald-50/80 px-1 py-2 text-center dark:bg-emerald-500/10">
-            <p className="text-[10px] font-medium text-emerald-800 dark:text-emerald-300/90">OK</p>
-            <p className="text-lg font-bold tabular-nums text-emerald-700 dark:text-emerald-400">{monthStats.confirmed}</p>
+          <div className="rounded-xl bg-blue-50/80 px-1 py-2 text-center dark:bg-blue-500/10">
+            <p className="text-[10px] font-medium text-blue-800 dark:text-blue-300/90">OK</p>
+            <p className="text-lg font-bold tabular-nums text-blue-700 dark:text-blue-400">
+              {monthStats.confirmed}
+            </p>
             <p className="text-[9px] text-zinc-500">Confirmés</p>
           </div>
           <div className="rounded-xl bg-amber-50/80 px-1 py-2 text-center dark:bg-amber-500/10">
             <p className="text-[10px] font-medium text-amber-900 dark:text-amber-200/90">Att.</p>
-            <p className="text-lg font-bold tabular-nums text-amber-800 dark:text-amber-300">{monthStats.pending}</p>
+            <p className="text-lg font-bold tabular-nums text-amber-800 dark:text-amber-300">
+              {monthStats.pending}
+            </p>
             <p className="text-[9px] text-zinc-500">En attente</p>
           </div>
         </div>
 
         <div className="rounded-2xl border border-zinc-200/80 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/40">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Revenu (mois)</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Revenu (mois)
+          </p>
           <p className="mt-0.5 text-xl font-bold tabular-nums text-zinc-900 dark:text-white">
             {formatEuroPrivacy(monthlyRevenue, privacyMode)}
           </p>
@@ -155,11 +163,17 @@ export const DashboardInsightsColumn: React.FC<DashboardInsightsColumnProps> = (
 
         {/* Graphique RDV / jour — 7 jours */}
         <div className="rounded-2xl border border-zinc-200/80 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/40">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Activité (7 j.)</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Activité (7 j.)
+          </p>
           <p className="text-xs text-zinc-400 dark:text-zinc-500">Rendez-vous par jour</p>
           <div className="mt-2 h-[140px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 4, right: 4, left: -18, bottom: 0 }} barCategoryGap="12%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 4, right: 4, left: -18, bottom: 0 }}
+                barCategoryGap="12%"
+              >
                 <XAxis
                   dataKey="dayNum"
                   tick={{ fontSize: 10, fill: 'currentColor' }}
@@ -194,7 +208,9 @@ export const DashboardInsightsColumn: React.FC<DashboardInsightsColumnProps> = (
         <div className="rounded-2xl border border-zinc-200/80 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/40">
           <div className="mb-2 flex items-center gap-2">
             <GitBranch className="h-3.5 w-3.5 text-zinc-500" aria-hidden />
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Parcours client</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Parcours client
+            </p>
           </div>
           <ol className="flex flex-col gap-0">
             {[
@@ -207,10 +223,17 @@ export const DashboardInsightsColumn: React.FC<DashboardInsightsColumnProps> = (
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-800 dark:bg-violet-500/20 dark:text-violet-200">
                     {row.step}
                   </div>
-                  {idx < 2 && <div className="w-px flex-1 min-h-[8px] bg-zinc-200 dark:bg-zinc-700" aria-hidden />}
+                  {idx < 2 && (
+                    <div
+                      className="w-px flex-1 min-h-[8px] bg-zinc-200 dark:bg-zinc-700"
+                      aria-hidden
+                    />
+                  )}
                 </div>
                 <div className="min-w-0 pb-2 pt-0.5">
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{row.label}</p>
+                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    {row.label}
+                  </p>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-500">{row.sub}</p>
                 </div>
               </li>
@@ -220,7 +243,9 @@ export const DashboardInsightsColumn: React.FC<DashboardInsightsColumnProps> = (
 
         {/* Raccourcis */}
         <div className="space-y-1.5">
-          <p className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Raccourcis</p>
+          <p className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Raccourcis
+          </p>
           <div className="flex flex-col gap-1">
             <button
               type="button"

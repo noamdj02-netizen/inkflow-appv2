@@ -63,9 +63,12 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
 
   const appointmentsThisMonth = useMemo(() => {
     let count = 0;
-    datesWithAppointments.forEach(dateStr => {
+    datesWithAppointments.forEach((dateStr) => {
       const d = new Date(dateStr);
-      if (d.getFullYear() === currentMonth.getFullYear() && d.getMonth() === currentMonth.getMonth()) {
+      if (
+        d.getFullYear() === currentMonth.getFullYear() &&
+        d.getMonth() === currentMonth.getMonth()
+      ) {
         count++;
       }
     });
@@ -81,9 +84,11 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
       }`}
     >
       {/* Header */}
-      <div className={`px-4 py-3 flex items-center justify-between ${
-        isDark ? 'border-b border-zinc-700' : 'border-b border-slate-100 dark:border-zinc-800'
-      }`}>
+      <div
+        className={`px-4 py-3 flex items-center justify-between ${
+          isDark ? 'border-b border-zinc-700' : 'border-b border-slate-100 dark:border-zinc-800'
+        }`}
+      >
         <button
           type="button"
           onClick={onPrevMonth}
@@ -97,13 +102,17 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
           <ChevronLeft className="w-4 h-4" />
         </button>
         <div className="text-center">
-          <span className={`text-sm font-semibold capitalize ${
-            isDark ? 'text-zinc-100' : 'text-slate-900 dark:text-white'
-          }`}>
+          <span
+            className={`text-sm font-semibold capitalize ${
+              isDark ? 'text-zinc-100' : 'text-slate-900 dark:text-white'
+            }`}
+          >
             {monthLabel}
           </span>
           {appointmentsThisMonth > 0 && (
-            <p className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-slate-500 dark:text-zinc-500'}`}>
+            <p
+              className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-slate-500 dark:text-zinc-500'}`}
+            >
               {appointmentsThisMonth} jours avec RDV
             </p>
           )}
@@ -127,12 +136,16 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
         {/* Weekday headers */}
         <div className="grid grid-cols-7 mb-2">
           {WEEKDAYS_SHORT.map((wd, i) => (
-            <div 
-              key={wd + i} 
+            <div
+              key={wd + i}
               className={`py-2 text-[10px] font-semibold uppercase tracking-wider text-center ${
-                i === 0 || i === 6 
-                  ? isDark ? 'text-zinc-600' : 'text-slate-400 dark:text-zinc-600'
-                  : isDark ? 'text-zinc-500' : 'text-slate-500 dark:text-zinc-500'
+                i === 0 || i === 6
+                  ? isDark
+                    ? 'text-zinc-600'
+                    : 'text-slate-400 dark:text-zinc-600'
+                  : isDark
+                    ? 'text-zinc-500'
+                    : 'text-slate-500 dark:text-zinc-500'
               }`}
             >
               {wd}
@@ -145,7 +158,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
           {weeks.flatMap((row, ri) =>
             row.map((day, ci) => {
               if (day === null) return <div key={`e-${ri}-${ci}`} className="aspect-square" />;
-              
+
               const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
               const dateStr = toDateStr(d);
               const isSelected = selectedDate === dateStr;
@@ -161,23 +174,24 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
                   onClick={() => onSelectDate(dateStr)}
                   className={`
                     relative aspect-square rounded-xl text-xs font-medium flex items-center justify-center transition-all
-                    ${isSelected
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                      : isToday
-                        ? isDark
-                          ? 'bg-emerald-500/20 text-emerald-300 font-bold ring-2 ring-emerald-500/30'
-                          : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold ring-2 ring-blue-500/30'
-                        : isPast
+                    ${
+                      isSelected
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                        : isToday
                           ? isDark
-                            ? 'text-zinc-600 hover:bg-zinc-800/50'
-                            : 'text-slate-400 dark:text-zinc-600 hover:bg-slate-50 dark:hover:bg-zinc-800/50'
-                          : isWeekend
+                            ? 'bg-blue-500/20 text-blue-300 font-bold ring-2 ring-blue-500/30'
+                            : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold ring-2 ring-blue-500/30'
+                          : isPast
                             ? isDark
-                              ? 'text-zinc-500 hover:bg-zinc-800'
-                              : 'text-slate-500 dark:text-zinc-500 hover:bg-slate-50 dark:hover:bg-zinc-800'
-                            : isDark
-                              ? 'text-zinc-300 hover:bg-zinc-800'
-                              : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800'
+                              ? 'text-zinc-600 hover:bg-zinc-800/50'
+                              : 'text-slate-400 dark:text-zinc-600 hover:bg-slate-50 dark:hover:bg-zinc-800/50'
+                            : isWeekend
+                              ? isDark
+                                ? 'text-zinc-500 hover:bg-zinc-800'
+                                : 'text-slate-500 dark:text-zinc-500 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                              : isDark
+                                ? 'text-zinc-300 hover:bg-zinc-800'
+                                : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800'
                     }
                     ${hasAppointments && !isSelected ? 'font-semibold' : ''}
                   `}
@@ -185,15 +199,19 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
                   <span>{day}</span>
                   {/* Appointment indicator */}
                   {hasAppointments && !isSelected && (
-                    <span className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
-                      isDark ? 'bg-emerald-400' : 'bg-blue-500'
-                    }`} />
+                    <span
+                      className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
+                        isDark ? 'bg-blue-400' : 'bg-blue-500'
+                      }`}
+                    />
                   )}
                   {/* Today indicator */}
                   {isToday && !isSelected && (
-                    <span className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full ${
-                      isDark ? 'bg-emerald-500' : 'bg-blue-600'
-                    }`} />
+                    <span
+                      className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full ${
+                        isDark ? 'bg-blue-500' : 'bg-blue-600'
+                      }`}
+                    />
                   )}
                 </button>
               );
@@ -208,10 +226,10 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
           className={`w-full mt-3 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 ${
             isTodaySelected
               ? isDark
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
+                ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20'
                 : 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
               : isDark
-                ? 'text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10'
+                ? 'text-blue-300 border border-blue-500/30 hover:bg-blue-500/10'
                 : 'text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-500/10'
           }`}
         >

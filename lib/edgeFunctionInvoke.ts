@@ -130,7 +130,7 @@ export async function parseFunctionsInvokeErrorFromContext(err: unknown): Promis
 export async function getInvokeFailureMessage(
   err: unknown,
   data: unknown,
-  fallback = 'Échec de l’appel',
+  fallback = 'Échec de l’appel'
 ): Promise<string> {
   if (data && typeof data === 'object') {
     const d = data as { userMessage?: string; error?: string; details?: string; message?: string };
@@ -175,7 +175,7 @@ export function isInvokeUnauthorized(err: unknown): boolean {
  */
 export async function invokeEdgeFunctionViaFetch<TBody extends Record<string, unknown>>(
   functionName: string,
-  body: TBody,
+  body: TBody
 ): Promise<{ data: unknown; error: string | null }> {
   const baseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
   const apikey = getAnonKeyForHeaders();
@@ -207,7 +207,7 @@ export async function invokeEdgeFunctionViaFetch<TBody extends Record<string, un
   };
 
   await supabase.auth.getUser().catch(() => {});
-  let {
+  const {
     data: { session },
   } = await supabase.auth.getSession();
   let token = session?.access_token;
@@ -251,7 +251,8 @@ export async function invokeEdgeFunctionViaFetch<TBody extends Record<string, un
   }
 
   if (res.ok) {
-    const obj = parsed && typeof parsed === 'object' ? (parsed as { success?: boolean; error?: string }) : {};
+    const obj =
+      parsed && typeof parsed === 'object' ? (parsed as { success?: boolean; error?: string }) : {};
     if (obj.success === false && typeof obj.error === 'string' && obj.error.trim()) {
       return { data: parsed, error: obj.error.trim() };
     }

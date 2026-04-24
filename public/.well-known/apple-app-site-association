@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.bundle.id.inkflow",
+        "paths": ["/dashboard*", "/book/*", "/studio/*", "/p/*", "/client/*"]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.bundle.id.inkflow"]
+  }
+}

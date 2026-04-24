@@ -26,6 +26,14 @@ verify_jwt = false
 [functions.send-studio-auth-link]
 verify_jwt = false
 
+# Réinitialisation mot de passe (Resend + Upstash) — appel public avec anon + apikey.
+[functions.send-password-recovery]
+verify_jwt = false
+
+# Vérification Cloudflare Turnstile (anti-bot) avant login / signup côté client.
+[functions.verify-turnstile]
+verify_jwt = false
+
 # google-business-auth : callback OAuth = GET depuis Google (pas de Bearer Supabase). POST dashboard = JWT ES256 peut être rejeté par la passerelle.
 [functions.google-business-auth]
 verify_jwt = false
@@ -69,6 +77,25 @@ verify_jwt = false
 [functions.admin-founder-metrics]
 verify_jwt = false
 
+# RGPD : export / suppression de compte — identité vérifiée dans le handler (getGoTrueUser + studio owner).
+[functions.export-studio-gdpr]
+verify_jwt = false
+
+[functions.delete-studio-account]
+verify_jwt = false
+
 # Séquence onboarding (cron) — secret EDGE_CRON_SECRET ; pas de JWT.
 [functions.onboarding-automation]
+verify_jwt = false
+
+# Webhook Resend (Svix) — signature RESEND_WEBHOOK_SECRET, pas de JWT.
+[functions.resend-webhook]
+verify_jwt = false
+
+# Désinscription marketing (List-Unsubscribe one-click) — GET/POST, pas de JWT.
+[functions.email-marketing-unsubscribe]
+verify_jwt = false
+
+# Cron fidélisation J+1 / J+7 / J+30 — souvent appelé par pg_cron / sans JWT.
+[functions.send-loyalty-emails]
 verify_jwt = false

@@ -1,12 +1,15 @@
 /* eslint-disable no-restricted-globals */
 import { precacheAndRoute } from 'workbox-precaching';
-import { registerRoute } from 'workbox-routing';
-import { CacheFirst, NetworkFirst } from 'workbox-strategies';
+import { registerRoute, setCatchHandler } from 'workbox-routing';
+import { NetworkFirst } from 'workbox-strategies';
 
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Nouveau SW s’active tout de suite après déploi (évite ancienne version en cache)
-self.addEventListener('install', () => self.skipWaiting());
+/** Avec `registerType: 'prompt'`, le client envoie SKIP_WAITING quand l’utilisateur accepte la maj (virtual:pwa-register). */
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
 registerRoute(
@@ -17,6 +20,20 @@ registerRoute(
     plugins: []
   })
 );
+
+setCatchHandler(({ event }) => {
+  if (event.request.destination === 'document') {
+    return caches.match('/offline.html', { ignoreSearch: true }).then((r) => {
+      if (r) return r;
+      return new Response('<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><title>Hors ligne</title></head><body><p>Hors ligne</p></body></html>', {
+        status: 503,
+        statusText: 'Offline',
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    });
+  }
+  return Promise.resolve(Response.error());
+});
 
 // ─── Web Push Notifications (VAPID) — InkFlow prod : https://app.ink-flow.me
 const INKFLOW_APP_ORIGIN = 'https://app.ink-flow.me';

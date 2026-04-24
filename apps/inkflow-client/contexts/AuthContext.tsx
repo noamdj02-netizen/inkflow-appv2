@@ -36,7 +36,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'global' });
   }, []);
 
   const value = useMemo<AuthContextValue>(

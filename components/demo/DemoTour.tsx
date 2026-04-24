@@ -107,8 +107,8 @@ function getTooltipPosition(
 
   const gap = isMobile ? 12 : 16;
   const tooltipH = TOOLTIP_MIN_HEIGHT_ESTIMATE;
-  let top = 0;
-  let arrowPosition: 'bottom' | 'top' | 'left' | 'right' = 'bottom';
+  let top: number;
+  let arrowPosition: 'bottom' | 'top' | 'left' | 'right';
 
   if (placement === 'bottom') {
     top = rect.y + rect.height + gap;
@@ -176,7 +176,10 @@ export const DemoTour: React.FC<DemoTourProps> = ({
     const placement = getTooltipPlacement(rect);
     const pos = getTooltipPosition(rect, placement);
     const vw = window.innerWidth;
-    const width = Math.min(TOOLTIP_MAX_WIDTH, vw - (vw < MOBILE_BREAKPOINT ? TOOLTIP_MOBILE_PADDING * 2 : 32));
+    const width = Math.min(
+      TOOLTIP_MAX_WIDTH,
+      vw - (vw < MOBILE_BREAKPOINT ? TOOLTIP_MOBILE_PADDING * 2 : 32)
+    );
     setTooltipStyle({
       top: pos.top,
       left: pos.left,
@@ -208,7 +211,8 @@ export const DemoTour: React.FC<DemoTourProps> = ({
     }
 
     setVisible(false);
-    const el = step.target === 'body' ? null : document.querySelector(step.target) as HTMLElement | null;
+    const el =
+      step.target === 'body' ? null : (document.querySelector(step.target) as HTMLElement | null);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
@@ -273,7 +277,11 @@ export const DemoTour: React.FC<DemoTourProps> = ({
       >
         <defs>
           <mask id="demo-tour-spotlight-mask">
-            <path fillRule="evenodd" fill="white" d={maskPath || 'M 0 0 L 10000 0 L 10000 10000 L 0 10000 Z'} />
+            <path
+              fillRule="evenodd"
+              fill="white"
+              d={maskPath || 'M 0 0 L 10000 0 L 10000 10000 L 0 10000 Z'}
+            />
           </mask>
         </defs>
         <rect
@@ -334,10 +342,15 @@ export const DemoTour: React.FC<DemoTourProps> = ({
             : {
                 top: '50%',
                 left: '50%',
-                width: Math.min(TOOLTIP_MAX_WIDTH, typeof window !== 'undefined' ? window.innerWidth - 32 : 348),
+                width: Math.min(
+                  TOOLTIP_MAX_WIDTH,
+                  typeof window !== 'undefined' ? window.innerWidth - 32 : 348
+                ),
                 maxWidth: TOOLTIP_MAX_WIDTH,
                 opacity: visible ? 1 : 0,
-                transform: visible ? 'translate(-50%, -50%) translateY(0)' : 'translate(-50%, -50%) translateY(8px)',
+                transform: visible
+                  ? 'translate(-50%, -50%) translateY(0)'
+                  : 'translate(-50%, -50%) translateY(8px)',
                 transition: 'opacity 0.25s ease, transform 0.25s ease',
               }
         }
@@ -352,11 +365,33 @@ export const DemoTour: React.FC<DemoTourProps> = ({
                 width: 12,
                 height: 12,
                 borderWidth: '0 1px 1px 0',
-                transform: tooltipStyle.arrowPosition === 'bottom' ? 'rotate(225deg)' : tooltipStyle.arrowPosition === 'left' ? 'rotate(-135deg)' : 'rotate(45deg)',
-                ...(tooltipStyle.arrowPosition === 'top' && { bottom: '100%', left: 24, marginBottom: -6 }),
-                ...(tooltipStyle.arrowPosition === 'bottom' && { top: '100%', left: 24, marginTop: -6 }),
-                ...(tooltipStyle.arrowPosition === 'left' && { right: '100%', top: 24, marginRight: -6, borderWidth: '1px 0 0 1px' }),
-                ...(tooltipStyle.arrowPosition === 'right' && { left: '100%', top: 24, marginLeft: -6 }),
+                transform:
+                  tooltipStyle.arrowPosition === 'bottom'
+                    ? 'rotate(225deg)'
+                    : tooltipStyle.arrowPosition === 'left'
+                      ? 'rotate(-135deg)'
+                      : 'rotate(45deg)',
+                ...(tooltipStyle.arrowPosition === 'top' && {
+                  bottom: '100%',
+                  left: 24,
+                  marginBottom: -6,
+                }),
+                ...(tooltipStyle.arrowPosition === 'bottom' && {
+                  top: '100%',
+                  left: 24,
+                  marginTop: -6,
+                }),
+                ...(tooltipStyle.arrowPosition === 'left' && {
+                  right: '100%',
+                  top: 24,
+                  marginRight: -6,
+                  borderWidth: '1px 0 0 1px',
+                }),
+                ...(tooltipStyle.arrowPosition === 'right' && {
+                  left: '100%',
+                  top: 24,
+                  marginLeft: -6,
+                }),
               }}
             />
           )}
@@ -368,7 +403,10 @@ export const DemoTour: React.FC<DemoTourProps> = ({
                 <span className="w-6 h-6 rounded-full bg-[#2563eb] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
                   {current}
                 </span>
-                <h3 id="demo-tour-title" className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 truncate">
+                <h3
+                  id="demo-tour-title"
+                  className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 truncate"
+                >
                   {step.title}
                 </h3>
               </div>

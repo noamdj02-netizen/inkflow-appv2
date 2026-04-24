@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import Stripe from "stripe";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 /** SDK Sentry Deno — aligné sur https://supabase.com/docs/guides/functions/examples/sentry-monitoring */
 import * as Sentry from "https://deno.land/x/sentry/index.mjs";
@@ -176,7 +177,8 @@ const PLAN_CLIENTS_CRM: Record<string, number> = {
   enterprise: -1,
 };
 
-const SIGNATURE_TOLERANCE_SEC = 300;
+/** Tolérance anti-replay (secondes), alignée sur la valeur par défaut de `constructEvent`. */
+const WEBHOOK_TOLERANCE_SEC = 300;
 
 function normalizePlan(raw: string | undefined | null): string {
   const p = (raw || "solo").toLowerCase();
@@ -223,126 +225,6 @@ async function syncStudioPlanAndCsvQuota(
   }
 }
 
-interface SignatureVerifyResult {
-  ok: boolean;
-  detail: Record<string, unknown>;
-}
-
-/**
- * Vérifie la signature Stripe (t=, un ou plusieurs v1=).
- * Logs détaillés en cas d’échec (debug sans exposer le secret).
- */
-async function verifyStripeSignature(
-  payload: string,
-  signatureHeader: string,
-  secret: string,
-): Promise<SignatureVerifyResult> {
-  const baseDetail: Record<string, unknown> = {
-    payloadLength: payload.length,
-    headerPresent: Boolean(signatureHeader),
-    headerLength: signatureHeader?.length ?? 0,
-  };
-
-  if (!secret) {
-    console.error("[stripe-webhook][signature] STRIPE_WEBHOOK_SECRET vide — rejet");
-    return { ok: false, detail: { ...baseDetail, reason: "missing_webhook_secret" } };
-  }
-
-  if (!signatureHeader || !signatureHeader.trim()) {
-    console.error("[stripe-webhook][signature] Header stripe-signature absent ou vide", baseDetail);
-    return { ok: false, detail: { ...baseDetail, reason: "missing_signature_header" } };
-  }
-
-  try {
-    const parts = signatureHeader.split(",").map((p) => p.trim());
-    const timestampPart = parts.find((p) => p.startsWith("t="));
-    const v1Parts = parts.filter((p) => p.startsWith("v1="));
-
-    if (!timestampPart) {
-      console.error("[stripe-webhook][signature] Pas de préfixe t= dans le header", {
-        ...baseDetail,
-        partsPreview: parts.slice(0, 6),
-      });
-      return { ok: false, detail: { ...baseDetail, reason: "missing_timestamp" } };
-    }
-
-    if (v1Parts.length === 0) {
-      console.error("[stripe-webhook][signature] Pas de signature v1= dans le header", {
-        ...baseDetail,
-        partsPreview: parts.slice(0, 8),
-      });
-      return { ok: false, detail: { ...baseDetail, reason: "missing_v1_signatures" } };
-    }
-
-    const timestamp = timestampPart.split("=")[1];
-    const tsNum = parseInt(timestamp, 10);
-    if (Number.isNaN(tsNum)) {
-      console.error("[stripe-webhook][signature] Timestamp t= non numérique", { ...baseDetail, timestamp });
-      return { ok: false, detail: { ...baseDetail, reason: "invalid_timestamp" } };
-    }
-
-    const nowSec = Math.floor(Date.now() / 1000);
-    const ageSec = Math.abs(nowSec - tsNum);
-    if (ageSec > SIGNATURE_TOLERANCE_SEC) {
-      console.error("[stripe-webhook][signature] Horodatage hors tolérance (replay / horloge)", {
-        ...baseDetail,
-        timestamp: tsNum,
-        nowSec,
-        ageSec,
-        toleranceSec: SIGNATURE_TOLERANCE_SEC,
-      });
-      return { ok: false, detail: { ...baseDetail, reason: "timestamp_outside_tolerance", ageSec } };
-    }
-
-    const signedPayload = `${timestamp}.${payload}`;
-    const key = await crypto.subtle.importKey(
-      "raw",
-      new TextEncoder().encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    );
-    const sigBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signedPayload));
-    const computedSig = Array.from(new Uint8Array(sigBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
-
-    const v1Sigs = v1Parts.map((p) => p.split("=")[1]).filter(Boolean);
-    let matched = false;
-    for (const expectedSig of v1Sigs) {
-      if (computedSig.length === expectedSig.length && computedSig === expectedSig) {
-        matched = true;
-        break;
-      }
-    }
-
-    if (!matched) {
-      const preview = (s: string) => (s.length > 16 ? `${s.slice(0, 8)}…${s.slice(-6)}` : s);
-      console.error("[stripe-webhook][signature] Aucune v1 ne correspond au HMAC calculé", {
-        ...baseDetail,
-        v1Count: v1Sigs.length,
-        computedSigPreview: preview(computedSig),
-        v1Previews: v1Sigs.map(preview),
-        hint: "Vérifie STRIPE_WEBHOOK_SECRET (dashboard Stripe vs secret Edge), ou payload brut non modifié (pas de JSON.parse avant vérif)",
-      });
-      return {
-        ok: false,
-        detail: {
-          ...baseDetail,
-          reason: "signature_mismatch",
-          computedLen: computedSig.length,
-          expectedLens: v1Sigs.map((s) => s.length),
-        },
-      };
-    }
-
-    console.log("[stripe-webhook][signature] OK", { v1Count: v1Sigs.length, ageSec });
-    return { ok: true, detail: { ...baseDetail, ageSec } };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("[stripe-webhook][signature] Exception lors de la vérification:", msg, baseDetail);
-    return { ok: false, detail: { ...baseDetail, reason: "verify_exception", error: msg } };
-  }
-}
-
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
@@ -363,16 +245,18 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const sigResult = await verifyStripeSignature(body, signature, STRIPE_WEBHOOK_SECRET);
-    if (!sigResult.ok) {
-      console.error("[stripe-webhook] Signature invalide — détail (logs serveur uniquement):", JSON.stringify(sigResult.detail));
-      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+    let event: Stripe.Event;
+    try {
+      event = Stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET, WEBHOOK_TOLERANCE_SEC);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[stripe-webhook] constructEvent:", msg);
+      return new Response(JSON.stringify({ error: "Invalid signature", detail: msg }), {
         status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    const event = JSON.parse(body);
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     console.log("[stripe-webhook] Événement reçu:", event.type, "id:", event.id);
@@ -392,11 +276,19 @@ Deno.serve(async (req: Request) => {
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
-      console.error("[stripe-webhook] Enregistrement événement:", evInsErr.message);
+      console.error("[stripe-webhook] Enregistrement événement (fail-closed, pas de traitement métier):", evInsErr.message);
       captureWebhookDbError("inkflow_stripe_processed_events insert (non-duplicate)", evInsErr, {
         eventId: event.id,
         eventType: event.type,
       });
+      // 503 → Stripe retente ; évite double crédit si l’idempotence n’est pas enregistrée
+      return new Response(
+        JSON.stringify({
+          error: "idempotency_record_failed",
+          message: "Could not record event id; retry will not duplicate if insert succeeds",
+        }),
+        { status: 503, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
     }
 
     switch (event.type) {
@@ -796,6 +688,7 @@ Deno.serve(async (req: Request) => {
               .update({
                 subscription_status: studioStatus,
                 plan_type: plan,
+                subscription_billing_failures: 0,
                 updated_at: new Date().toISOString(),
               })
               .eq("id", studioId)
@@ -867,13 +760,81 @@ Deno.serve(async (req: Request) => {
       }
 
       case "invoice.payment_failed": {
-        const invoice = event.data.object;
-        const subId = invoice.subscription;
+        const invoice = event.data.object as Stripe.Invoice;
+        const subId =
+          typeof invoice.subscription === "string"
+            ? invoice.subscription
+            : (invoice.subscription as Stripe.Subscription | null)?.id;
         if (subId) {
           await supabase
             .from("inkflow_subscriptions")
             .update({ status: "past_due", updated_at: new Date().toISOString() })
             .eq("stripe_subscription_id", subId);
+
+          const { data: subRow } = await supabase
+            .from("inkflow_subscriptions")
+            .select("studio_id")
+            .eq("stripe_subscription_id", subId)
+            .maybeSingle();
+          const studioId = subRow?.studio_id as string | undefined;
+          if (studioId) {
+            const { data: st } = await supabase
+              .from("inkflow_studios")
+              .select("subscription_billing_failures")
+              .eq("id", studioId)
+              .single();
+            const prev = Math.max(0, Number((st as { subscription_billing_failures?: number })?.subscription_billing_failures ?? 0));
+            const next = prev + 1;
+            const newStudioStatus: "past_due" | "suspended" = next >= 3 ? "suspended" : "past_due";
+            const { error: stErr } = await supabase
+              .from("inkflow_studios")
+              .update({
+                subscription_billing_failures: next,
+                subscription_status: newStudioStatus,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", studioId);
+            if (stErr) {
+              console.error("[stripe-webhook] MAJ studio après payment_failed:", stErr.message);
+            } else {
+              console.log(
+                "[stripe-webhook] invoice.payment_failed — studio",
+                studioId,
+                "failures=",
+                next,
+                "status=",
+                newStudioStatus,
+              );
+            }
+          }
+        }
+        break;
+      }
+
+      case "invoice.paid": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const subId =
+          typeof invoice.subscription === "string"
+            ? invoice.subscription
+            : (invoice.subscription as Stripe.Subscription | null)?.id;
+        if (!subId) break;
+        const { data: subRow } = await supabase
+          .from("inkflow_subscriptions")
+          .select("studio_id")
+          .eq("stripe_subscription_id", subId)
+          .maybeSingle();
+        const studioId = subRow?.studio_id as string | undefined;
+        if (studioId) {
+          const { error: stErr } = await supabase
+            .from("inkflow_studios")
+            .update({
+              subscription_billing_failures: 0,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", studioId);
+          if (stErr) {
+            console.error("[stripe-webhook] reset billing failures (invoice.paid):", stErr.message);
+          }
         }
         break;
       }

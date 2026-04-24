@@ -1,3 +1,5 @@
+/// <reference types="vite-plugin-pwa/react" />
+
 declare module 'virtual:pwa-register' {
   export type RegisterSWOptions = {
     immediate?: boolean;

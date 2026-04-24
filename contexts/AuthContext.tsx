@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  ReactNode,
+} from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { ensureStudio, getStudioAvatarUrlByEmail } from '../lib/supabaseDashboard';
@@ -10,8 +18,37 @@ import { requestStudioActivationLink } from '../lib/studioActivationEmail';
 import { useSupabaseEnabled } from '../hooks/useSupabaseEnabled';
 import { DEMO_ACCOUNT_EMAIL } from '../data/demoData';
 import { isInkflowInternalStaffEmail } from '../lib/inkflowInternalStaff';
+import { resetPosthogIdentity } from '../lib/analytics/posthogInit';
 
-function appUserFromSupabase(sessionUser: { id: string; email?: string; user_metadata?: Record<string, unknown> }): User {
+/** sessionStorage : session fermée faute d’e-mail confirmé (garde-fou côté app). */
+export const INKFLOW_EMAIL_UNVERIFIED_KEY = 'inkflow_email_unverified';
+
+/**
+ * Garde-fou si le projet Supabase n’impose plus « confirm email » : session mot de passe
+ * sans `email_confirmed_at` = déconnexion (providers OAuth/Apple ont en général l’e-mail validé).
+ */
+function shouldSignOutUnconfirmedEmailProvider(user: {
+  email_confirmed_at?: string | null;
+  identities?: { provider: string }[] | null;
+}): boolean {
+  if (user.email_confirmed_at) return false;
+  return Boolean((user.identities ?? []).find((i) => i.provider === 'email'));
+}
+
+function rememberUnverifiedRedirectFlag() {
+  if (typeof sessionStorage === 'undefined') return;
+  try {
+    sessionStorage.setItem(INKFLOW_EMAIL_UNVERIFIED_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+function appUserFromSupabase(sessionUser: {
+  id: string;
+  email?: string;
+  user_metadata?: Record<string, unknown>;
+}): User {
   const email = sessionUser.email ?? '';
   const meta = sessionUser.user_metadata ?? {};
   const savedAvatar = typeof window !== 'undefined' ? localStorage.getItem('inkflow_avatar') : null;
@@ -23,7 +60,7 @@ function appUserFromSupabase(sessionUser: { id: string; email?: string; user_met
     studioName: staff ? 'InkFlow' : (meta.studio_name as string) || 'Mon studio',
     isInkflowStaff: staff || undefined,
     role: 'studio_owner',
-    avatar: savedAvatar || undefined
+    avatar: savedAvatar || undefined,
   };
 }
 
@@ -105,42 +142,72 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
     Promise.race([sessionPromise, timeoutPromise])
       .then(async (result: Awaited<typeof sessionPromise>) => {
-        const { data: { session } } = result;
+        const {
+          data: { session },
+        } = result;
         if (session?.user) {
-          const { data: { session: refreshed } } = await supabase.auth.refreshSession().catch(() => ({ data: { session } }));
+          if (shouldSignOutUnconfirmedEmailProvider(session.user)) {
+            await supabase.auth.signOut({ scope: 'global' }).catch(() => {});
+            rememberUnverifiedRedirectFlag();
+            setUser(null);
+            localStorage.removeItem('inkflow_user');
+            return;
+          }
+          const {
+            data: { session: refreshed },
+          } = await supabase.auth.refreshSession().catch(() => ({ data: { session } }));
           const u = refreshed?.user ?? session.user;
+          if (shouldSignOutUnconfirmedEmailProvider(u)) {
+            await supabase.auth.signOut({ scope: 'global' }).catch(() => {});
+            rememberUnverifiedRedirectFlag();
+            setUser(null);
+            localStorage.removeItem('inkflow_user');
+            return;
+          }
           const appUser = appUserFromSupabase(u);
           setUser(appUser);
           localStorage.setItem('inkflow_user', JSON.stringify(appUser));
         }
       })
-      .catch(() => { /* timeout ou erreur : on reste déconnecté */ })
+      .catch(() => {
+        /* timeout ou erreur : on reste déconnecté */
+      })
       .finally(() => {
         clearTimeout(timeoutId);
         setAuthLoading(false);
       });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      const clearStoredUser = () => {
+        setUser(null);
+        localStorage.removeItem('inkflow_user');
+      };
+      const applyUser = (u: (typeof session)['user']): void => {
+        if (shouldSignOutUnconfirmedEmailProvider(u)) {
+          rememberUnverifiedRedirectFlag();
+          clearStoredUser();
+          void supabase.auth.signOut({ scope: 'global' }).catch(() => {});
+          return;
+        }
+        const appUser = appUserFromSupabase(u);
+        setUser(appUser);
+        localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+      };
       if (event === 'INITIAL_SESSION') {
-        // Résolution principale de l'état auth au démarrage — toujours appelé, avec ou sans session
         if (session?.user) {
-          const appUser = appUserFromSupabase(session.user);
-          setUser(appUser);
-          localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+          applyUser(session.user);
         } else {
-          setUser(null);
-          localStorage.removeItem('inkflow_user');
+          clearStoredUser();
         }
         clearTimeout(timeoutId);
         setAuthLoading(false);
         return;
       }
       if (session?.user) {
-        const appUser = appUserFromSupabase(session.user);
-        setUser(appUser);
-        localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+        applyUser(session.user);
       } else {
-        setUser(null);
-        localStorage.removeItem('inkflow_user');
+        clearStoredUser();
       }
     });
 
@@ -148,12 +215,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session?.user) {
-            supabase.auth.refreshSession().then(({ data: { session: refreshed } }) => {
-              const u = refreshed?.user ?? session.user;
-              const appUser = appUserFromSupabase(u);
-              setUser(appUser);
-              localStorage.setItem('inkflow_user', JSON.stringify(appUser));
-            }).catch(() => {});
+            supabase.auth
+              .refreshSession()
+              .then(({ data: { session: refreshed } }) => {
+                const u = refreshed?.user ?? session.user;
+                const appUser = appUserFromSupabase(u);
+                setUser(appUser);
+                localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+              })
+              .catch(() => {});
           }
         });
       }
@@ -194,158 +264,179 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (error) throw new Error(error.message);
   }, [isSupabaseAuthEnabled]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    // Compte démo : connexion immédiate sans Supabase, avec fausses données pour captures d'écran
-    if (email.toLowerCase().trim() === DEMO_ACCOUNT_EMAIL) {
-      const demoUser: User = {
-        id: 'demo-user-1',
-        email: DEMO_ACCOUNT_EMAIL,
-        name: 'Demo Artist',
-        studioName: 'Studio Demo',
-        role: 'studio_owner',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop',
-      };
-      setUser(demoUser);
-      localStorage.setItem('inkflow_user', JSON.stringify(demoUser));
-      return;
-    }
-    if (isSupabaseAuthEnabled) {
-      const LOGIN_TIMEOUT_MS = 25000;
-      const loginPromise = supabase.auth.signInWithPassword({ email, password });
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error('Connexion expirée — le serveur Supabase ne répond pas assez vite.')),
-          LOGIN_TIMEOUT_MS,
-        )
-      );
-      let raceResult: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>;
-      try {
-        raceResult = await Promise.race([loginPromise, timeoutPromise]);
-      } catch (e) {
-        const m = e instanceof Error ? e.message : String(e);
-        if (m.includes('Failed to fetch') || m.toLowerCase().includes('network')) {
-          throw new Error(
-            'Failed to fetch — vérifie la connexion internet et que VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY sont corrects sur Vercel.',
-          );
-        }
-        throw e;
-      }
-      const { data, error } = raceResult;
-      if (error) throw new Error(error.message);
-      if (data?.user) {
-        const appUser = appUserFromSupabase(data.user);
-        setUser(appUser);
-        localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+  const login = useCallback(
+    async (email: string, password: string) => {
+      // Compte démo : connexion immédiate sans Supabase, avec fausses données pour captures d'écran
+      if (email.toLowerCase().trim() === DEMO_ACCOUNT_EMAIL) {
+        const demoUser: User = {
+          id: 'demo-user-1',
+          email: DEMO_ACCOUNT_EMAIL,
+          name: 'Demo Artist',
+          studioName: 'Studio Demo',
+          role: 'studio_owner',
+          avatar:
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop',
+        };
+        setUser(demoUser);
+        localStorage.setItem('inkflow_user', JSON.stringify(demoUser));
         return;
       }
-    }
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const savedAvatar = localStorage.getItem('inkflow_avatar');
-    const mockUser: User = {
-      id: '1',
-      email,
-      name: 'Alexandre Martin',
-      studioName: 'Ink & Art Studio',
-      role: 'studio_owner',
-      avatar: savedAvatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop'
-    };
-    setUser(mockUser);
-    localStorage.setItem('inkflow_user', JSON.stringify(mockUser));
-  }, [isSupabaseAuthEnabled]);
-
-  const signup = useCallback(async (
-    email: string,
-    password: string,
-    name: string,
-    studioName: string,
-    referralCode?: string,
-    options?: { teamInviteStudioLabel?: string | null }
-  ): Promise<{ needsEmailConfirmation: boolean }> => {
-    if (isSupabaseAuthEnabled) {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            studio_name: studioName,
-            referral_code: referralCode || null,
-            studio_invite: options?.teamInviteStudioLabel?.trim() || null,
-          },
-          /** Toujours l'app (ex. app.ink-flow.me/auth/callback), jamais la Site URL landing Framer. */
-          emailRedirectTo: getAuthCallbackRedirectTo(),
-        },
-      });
-      if (error) {
-        throw new Error(mapSignupError(error));
-      }
-      if (!data?.user) {
-        throw new Error(
-          'Réponse serveur incomplète après inscription. Vérifiez la configuration Supabase (Auth) ou réessayez.',
+      if (isSupabaseAuthEnabled) {
+        const LOGIN_TIMEOUT_MS = 25000;
+        const loginPromise = supabase.auth.signInWithPassword({ email, password });
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error('Connexion expirée — le serveur Supabase ne répond pas assez vite.')
+              ),
+            LOGIN_TIMEOUT_MS
+          )
         );
-      }
-      const needsEmailConfirmation = !data.session;
-      if (needsEmailConfirmation) {
-        // Confirmation email requise : la session du parrain (ou autre) peut encore être active.
-        // On se déconnecte pour éviter d'afficher le dashboard du mauvais utilisateur.
-        await supabase.auth.signOut();
-        setUser(null);
-        localStorage.removeItem('inkflow_user');
-        // Le studio sera créé à la première connexion (AuthCallbackPage) avec le referral_code dans user_metadata
-      } else {
-        const appUser = appUserFromSupabase(data.user);
-        setUser(appUser);
-        localStorage.setItem('inkflow_user', JSON.stringify(appUser));
-        const isTeamInvite = Boolean(options?.teamInviteStudioLabel?.trim());
+        let raceResult: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>;
         try {
-          if (isInkflowInternalStaffEmail(email)) {
-            // Pas de fiche studio tatoueur pour les comptes équipe (@ink-flow.me / founder list)
-          } else if (isTeamInvite) {
-            await linkCollaboratorArtistAccountToUser(data.user.id, email);
-          } else {
-            await ensureStudio(email, appUser.name, studioName || appUser.studioName, referralCode);
+          raceResult = await Promise.race([loginPromise, timeoutPromise]);
+        } catch (e) {
+          const m = e instanceof Error ? e.message : String(e);
+          if (m.includes('Failed to fetch') || m.toLowerCase().includes('network')) {
+            throw new Error(
+              'Failed to fetch — vérifie la connexion internet et que VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY sont corrects sur Vercel.'
+            );
           }
-        } catch {
-          // Ne pas bloquer l'inscription si le studio échoue (ex. table pas encore migrée)
+          throw e;
+        }
+        const { data, error } = raceResult;
+        if (error) throw new Error(error.message);
+        if (data?.user) {
+          const appUser = appUserFromSupabase(data.user);
+          setUser(appUser);
+          localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+          return;
         }
       }
-      return { needsEmailConfirmation };
-    }
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const newUser: User = {
-      id: Date.now().toString(),
-      email,
-      name,
-      studioName,
-      role: 'studio_owner'
-    };
-    setUser(newUser);
-    localStorage.setItem('inkflow_user', JSON.stringify(newUser));
-    return { needsEmailConfirmation: false };
-  }, [isSupabaseAuthEnabled]);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const savedAvatar = localStorage.getItem('inkflow_avatar');
+      const mockUser: User = {
+        id: '1',
+        email,
+        name: 'Alexandre Martin',
+        studioName: 'Ink & Art Studio',
+        role: 'studio_owner',
+        avatar:
+          savedAvatar ||
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop',
+      };
+      setUser(mockUser);
+      localStorage.setItem('inkflow_user', JSON.stringify(mockUser));
+    },
+    [isSupabaseAuthEnabled]
+  );
 
-  const resendSignupConfirmation = useCallback(async (email: string) => {
-    if (!isSupabaseAuthEnabled) {
-      throw new Error('Confirmation par e-mail non disponible.');
-    }
-    const trimmed = email.trim();
-    if (!trimmed) throw new Error('Adresse e-mail requise.');
-    /** Lien d’activation envoyé via Resend (API), pas le SMTP Auth — fiabilise la délivrabilité. */
-    await requestStudioActivationLink(trimmed);
-  }, [isSupabaseAuthEnabled]);
+  const signup = useCallback(
+    async (
+      email: string,
+      password: string,
+      name: string,
+      studioName: string,
+      referralCode?: string,
+      options?: { teamInviteStudioLabel?: string | null }
+    ): Promise<{ needsEmailConfirmation: boolean }> => {
+      if (isSupabaseAuthEnabled) {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name,
+              studio_name: studioName,
+              referral_code: referralCode || null,
+              studio_invite: options?.teamInviteStudioLabel?.trim() || null,
+            },
+            /** Toujours l'app (ex. app.ink-flow.me/auth/callback), jamais la Site URL landing Framer. */
+            emailRedirectTo: getAuthCallbackRedirectTo(),
+          },
+        });
+        if (error) {
+          throw new Error(mapSignupError(error));
+        }
+        if (!data?.user) {
+          throw new Error(
+            'Réponse serveur incomplète après inscription. Vérifiez la configuration Supabase (Auth) ou réessayez.'
+          );
+        }
+        const needsEmailConfirmation = !data.session;
+        if (needsEmailConfirmation) {
+          // Confirmation email requise : la session du parrain (ou autre) peut encore être active.
+          // On se déconnecte pour éviter d'afficher le dashboard du mauvais utilisateur.
+          await supabase.auth.signOut({ scope: 'global' });
+          setUser(null);
+          localStorage.removeItem('inkflow_user');
+          // Le studio sera créé à la première connexion (AuthCallbackPage) avec le referral_code dans user_metadata
+        } else {
+          const appUser = appUserFromSupabase(data.user);
+          setUser(appUser);
+          localStorage.setItem('inkflow_user', JSON.stringify(appUser));
+          const isTeamInvite = Boolean(options?.teamInviteStudioLabel?.trim());
+          try {
+            if (isInkflowInternalStaffEmail(email)) {
+              // Pas de fiche studio tatoueur pour les comptes équipe (@ink-flow.me / founder list)
+            } else if (isTeamInvite) {
+              await linkCollaboratorArtistAccountToUser(data.user.id, email);
+            } else {
+              await ensureStudio(
+                email,
+                appUser.name,
+                studioName || appUser.studioName,
+                referralCode
+              );
+            }
+          } catch {
+            // Ne pas bloquer l'inscription si le studio échoue (ex. table pas encore migrée)
+          }
+        }
+        return { needsEmailConfirmation };
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const newUser: User = {
+        id: Date.now().toString(),
+        email,
+        name,
+        studioName,
+        role: 'studio_owner',
+      };
+      setUser(newUser);
+      localStorage.setItem('inkflow_user', JSON.stringify(newUser));
+      return { needsEmailConfirmation: false };
+    },
+    [isSupabaseAuthEnabled]
+  );
+
+  const resendSignupConfirmation = useCallback(
+    async (email: string) => {
+      if (!isSupabaseAuthEnabled) {
+        throw new Error('Confirmation par e-mail non disponible.');
+      }
+      const trimmed = email.trim();
+      if (!trimmed) throw new Error('Adresse e-mail requise.');
+      /** Lien d’activation envoyé via Resend (API), pas le SMTP Auth — fiabilise la délivrabilité. */
+      await requestStudioActivationLink(trimmed);
+    },
+    [isSupabaseAuthEnabled]
+  );
 
   const logout = useCallback(async () => {
     /** Toujours attendre signOut : sinon la redirection coupe l’écriture des jetons → il faut souvent « se déconnecter deux fois ». */
     if (isSupabaseAuthEnabled) {
-      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      await supabase.auth.signOut({ scope: 'global' }).catch(() => {});
     }
+    resetPosthogIdentity();
     setUser(null);
     clearAllInkflowStorage();
     if (typeof window !== 'undefined') window.location.href = LANDING_URL;
   }, [isSupabaseAuthEnabled]);
 
   const updateUser = useCallback((updates: Partial<User>) => {
-    setUser(prev => {
+    setUser((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, ...updates };
       localStorage.setItem('inkflow_user', JSON.stringify(updated));
@@ -366,8 +457,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       isAuthenticated: !!user,
       isGoogleAuthEnabled: isSupabaseAuthEnabled,
     }),
-    [user, authLoading, login, loginWithGoogle, signup, resendSignupConfirmation, logout, updateUser, isSupabaseAuthEnabled]
+    [
+      user,
+      authLoading,
+      login,
+      loginWithGoogle,
+      signup,
+      resendSignupConfirmation,
+      logout,
+      updateUser,
+      isSupabaseAuthEnabled,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+};

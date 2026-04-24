@@ -1,0 +1,19 @@
+---
+description: Rigueur visuelle Pro UI (tokens InkFlow) — ombre, rayons, grille, typo, accent blue-600
+globs: "*.tsx,*.css"
+alwaysApply: false
+---
+
+# Pro UI (rigueur sans « talent »)
+
+Pour le **nouveau code** (et quand on retouche une surface), appliquer les tokens et conventions ci‑dessous. Référence technique : `index.css` (section « PRO UI ») + `tailwind.config.ts` (`shadow-pro`, `rounded-pro-*`, `pro:*`, `pro-text-*`).
+
+1. **Une seule ombre** : `var(--pro-shadow)` ou utilitaires `shadow-pro` (Tailwind) / classe `.shadow-pro`. Ne pas empiler d’autres `box-shadow` pour le même type de surface.
+2. **Rayons par taille d’élément** : bouton `8px` (`rounded-pro-btn`), card `12px` (`rounded-pro-card`), modal `16px` (`rounded-pro-modal`). Pas de valeurs ad hoc (9.5px, 11px, etc.).
+3. **Spacing** : multiples de 4px — `p-pro-1` … `p-pro-7` (4→48px) ou `gap-4`, `gap-6`, etc. Jamais 13, 21, 27.
+4. **Typo** : max **3** niveaux par écran — `pro-text-title`, `pro-text-body`, `pro-text-small` (éviter un 4e `text-sm` + `text-xs` + `text-lg` mélangés sans raison).
+5. **Poids** : `font-pro-regular` (400) + `font-pro-medium` (500) sur les blocs concernés. Pas de chaîne 300/600/700/800 sur la même vue « pro ».
+6. **Un accent marque** : `#2563eb` (blue-600) + texte `#ffffff` sur CTA — `pro-accent`, `bg-pro-cta`, `text-pro-accent`, `bg-primary` / `text-primary-foreground` — **uniquement** CTA principaux et **états sélectionnés** (pas de décoration).
+7. **Grille** : conteneur `pro-container` pour un alignement droit (même `padding-x` qu’en voisine).
+
+Conflit éventuel avec `design-system.mdc` (autres couleurs d’accent) : pour les **nouveaux** écrans produit, prioriser **cette** règle bleu + blanc + tokens `pro:*` / shadcn `primary`.

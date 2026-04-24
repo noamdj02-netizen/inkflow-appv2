@@ -4,7 +4,15 @@
  * UI alignée sur CLIENT_DASHBOARD_THEME (même famille que /client/dashboard).
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Mail, ArrowRight, CheckCircle, Loader2, Lock, User as UserIcon } from 'lucide-react';
+import {
+  ArrowLeft,
+  Mail,
+  ArrowRight,
+  CheckCircle,
+  Loader2,
+  Lock,
+  User as UserIcon,
+} from 'lucide-react';
 import { SEO } from '../../components/SEO';
 import { Logo } from '../../components/Logo';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
@@ -38,7 +46,7 @@ export const ClientPortalLoginPage: React.FC = () => {
   const isSupabaseEnabled = useSupabaseEnabled();
   const fromOnboarding = useMemo(
     () => new URLSearchParams(window.location.search).get('from') === 'onboarding',
-    [],
+    []
   );
   const [email, setEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -117,7 +125,8 @@ export const ClientPortalLoginPage: React.FC = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (cancelled || !session?.user) return;
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') await routeLoggedInUser(session.user);
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')
+        await routeLoggedInUser(session.user);
     });
     return () => {
       cancelled = true;
@@ -133,7 +142,10 @@ export const ClientPortalLoginPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const { data, error: signErr } = await supabase.auth.signInWithPassword({ email: em, password: p });
+      const { data, error: signErr } = await supabase.auth.signInWithPassword({
+        email: em,
+        password: p,
+      });
       if (signErr) throw signErr;
       if (!data.user) return;
       const meta = data.user.user_metadata ?? {};
@@ -198,7 +210,7 @@ export const ClientPortalLoginPage: React.FC = () => {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'global' });
     setPassword('');
     setPassword2('');
     setPwError('');
@@ -331,8 +343,9 @@ export const ClientPortalLoginPage: React.FC = () => {
                           className="mt-3 rounded-2xl border border-blue-200/90 bg-blue-50/95 px-4 py-3 text-sm text-blue-950 leading-snug"
                           role="status"
                         >
-                          Tu viens de la présentation : entre ton e-mail ci-dessous pour recevoir ton lien de
-                          connexion, puis finalise ton profil et ton questionnaire santé.
+                          Tu viens de la présentation : entre ton e-mail ci-dessous pour recevoir
+                          ton lien de connexion, puis finalise ton profil et ton questionnaire
+                          santé.
                         </div>
                       )}
                       <p className="text-sm text-zinc-500 max-w-md mt-3">
@@ -358,8 +371,8 @@ export const ClientPortalLoginPage: React.FC = () => {
                           className="mt-3 rounded-2xl border border-blue-200/90 bg-blue-50/95 px-4 py-3 text-sm text-blue-950 leading-snug"
                           role="status"
                         >
-                          Presque fini : après l’inscription, tu complètes ton profil et la partie santé comme
-                          prévu.
+                          Presque fini : après l’inscription, tu complètes ton profil et la partie
+                          santé comme prévu.
                         </div>
                       )}
                       <p className={`text-sm text-zinc-500 ${fromOnboarding ? 'mt-3' : ''}`}>
@@ -373,7 +386,8 @@ export const ClientPortalLoginPage: React.FC = () => {
                         Confirme ton e-mail
                       </h1>
                       <p className="text-sm text-zinc-500">
-                        Lien d’activation envoyé à <strong className="text-zinc-800">{regEmail}</strong>.
+                        Lien d’activation envoyé à{' '}
+                        <strong className="text-zinc-800">{regEmail}</strong>.
                       </p>
                     </>
                   )}
@@ -384,7 +398,8 @@ export const ClientPortalLoginPage: React.FC = () => {
                     <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-200/80">
                       <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                       <p className="text-sm text-emerald-900">
-                        Clique sur le lien dans l’e-mail. Tu seras redirigé vers l’app pour finaliser ton profil.
+                        Clique sur le lien dans l’e-mail. Tu seras redirigé vers l’app pour
+                        finaliser ton profil.
                       </p>
                     </div>
                     <button
@@ -425,7 +440,9 @@ export const ClientPortalLoginPage: React.FC = () => {
                       className={inputClassNoIcon}
                     />
                     {pwError && (
-                      <p className="text-xs px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">{pwError}</p>
+                      <p className="text-xs px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
+                        {pwError}
+                      </p>
                     )}
                     <button
                       type="submit"
@@ -458,7 +475,9 @@ export const ClientPortalLoginPage: React.FC = () => {
                           className="min-h-[50px] text-[15px] active:scale-[0.98] transition-all"
                           onClick={() => void handleGoogleLogin()}
                           disabled={loading || googleLoading}
-                          label={googleLoading ? 'Redirection vers Google…' : 'Se connecter avec Google'}
+                          label={
+                            googleLoading ? 'Redirection vers Google…' : 'Se connecter avec Google'
+                          }
                         />
                         <div className="relative my-1">
                           <div className="absolute inset-0 flex items-center">
@@ -502,7 +521,9 @@ export const ClientPortalLoginPage: React.FC = () => {
                       />
                     </div>
                     {error && (
-                      <p className="text-xs px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">{error}</p>
+                      <p className="text-xs px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
+                        {error}
+                      </p>
                     )}
                     <button
                       type="submit"
@@ -546,7 +567,10 @@ export const ClientPortalLoginPage: React.FC = () => {
                           Première visite ? Découvre l’app
                         </a>
                         <span className="mx-1.5 text-zinc-300">·</span>
-                        <a href="/" className="font-medium text-zinc-700 underline underline-offset-2 hover:text-zinc-900">
+                        <a
+                          href="/"
+                          className="font-medium text-zinc-700 underline underline-offset-2 hover:text-zinc-900"
+                        >
                           Inkflow Pro
                         </a>
                       </p>
@@ -604,11 +628,15 @@ export const ClientPortalLoginPage: React.FC = () => {
                       className={inputClassNoIcon}
                     />
                     {regError && (
-                      <p className="text-xs px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">{regError}</p>
+                      <p className="text-xs px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
+                        {regError}
+                      </p>
                     )}
                     <button
                       type="submit"
-                      disabled={regLoading || !regName.trim() || !regEmail.trim() || regPw.length < 8}
+                      disabled={
+                        regLoading || !regName.trim() || !regEmail.trim() || regPw.length < 8
+                      }
                       className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-40 active:scale-[0.98] transition-all"
                     >
                       {regLoading ? (

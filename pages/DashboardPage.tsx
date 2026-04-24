@@ -6,10 +6,10 @@ import { pathForClientDashboardTab } from '../lib/clientDashboardRoutes';
 import { StudioPrivacyProvider } from '../contexts/StudioPrivacyContext';
 import { SEO } from '../components/SEO';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { Logo } from '../components/Logo';
+import { DashboardLoadingSkeleton } from '../components/common/LoadingSkeleton';
 
 const DashboardPro = lazy(() =>
-  import('../components/dashboard/DashboardPro').then((m) => ({ default: m.DashboardPro })),
+  import('../components/dashboard/DashboardPro').then((m) => ({ default: m.DashboardPro }))
 );
 
 export const DashboardPage: React.FC = () => {
@@ -19,7 +19,10 @@ export const DashboardPage: React.FC = () => {
   React.useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       try {
-        sessionStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, window.location.pathname + window.location.search);
+        sessionStorage.setItem(
+          REDIRECT_AFTER_LOGIN_KEY,
+          window.location.pathname + window.location.search
+        );
       } catch {
         /* ignore */
       }
@@ -59,24 +62,26 @@ export const DashboardPage: React.FC = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <Logo size="lg" className="rounded-2xl" />
+      <div className="min-h-screen bg-neutral-50 dark:bg-[var(--bg-primary)]">
+        <DashboardLoadingSkeleton />
       </div>
     );
   }
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <Logo size="lg" className="rounded-2xl" />
+      <div className="min-h-screen bg-neutral-50 dark:bg-[var(--bg-primary)]">
+        <DashboardLoadingSkeleton />
       </div>
     );
   }
 
   if (isInkflowInternalStaffEmail(user.email) || user.isInkflowStaff) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex flex-col items-center justify-center gap-3 px-4">
-        <Logo size="lg" className="rounded-2xl" />
+      <div className="min-h-screen bg-neutral-50 dark:bg-[var(--bg-primary)] flex flex-col items-center justify-center gap-3 px-4">
+        <div className="w-full max-w-lg">
+          <DashboardLoadingSkeleton />
+        </div>
         <p className="text-sm text-zinc-500 text-center">Ouverture du tableau fondateur…</p>
       </div>
     );
@@ -84,8 +89,8 @@ export const DashboardPage: React.FC = () => {
 
   if (!allowProDashboard) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <Logo size="lg" className="rounded-2xl" />
+      <div className="min-h-screen bg-neutral-50 dark:bg-[var(--bg-primary)]">
+        <DashboardLoadingSkeleton />
       </div>
     );
   }
@@ -96,8 +101,8 @@ export const DashboardPage: React.FC = () => {
       <StudioPrivacyProvider>
         <Suspense
           fallback={
-            <div className="min-h-screen bg-neutral-50 dark:bg-[var(--bg-primary)] flex items-center justify-center">
-              <Logo size="lg" className="rounded-2xl opacity-90 animate-pulse" />
+            <div className="min-h-screen bg-neutral-50 dark:bg-[var(--bg-primary)]">
+              <DashboardLoadingSkeleton />
             </div>
           }
         >
@@ -106,4 +111,4 @@ export const DashboardPage: React.FC = () => {
       </StudioPrivacyProvider>
     </ErrorBoundary>
   );
-}
+};

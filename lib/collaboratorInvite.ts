@@ -30,8 +30,7 @@ async function resolveAccessToken(): Promise<string | null> {
   let {
     data: { session },
   } = await supabase.auth.getSession();
-  const soon =
-    session?.expires_at != null && session.expires_at * 1000 < Date.now() + 120_000;
+  const soon = session?.expires_at != null && session.expires_at * 1000 < Date.now() + 120_000;
   if (!session?.access_token || soon) {
     const { data, error } = await supabase.auth.refreshSession();
     if (!error && data.session?.access_token) {
@@ -94,7 +93,10 @@ export async function sendCollaboratorInviteEmail(
     );
   };
 
-  const finalizeFailure = (res: Response, parsed: Record<string, unknown>): { ok: false; message: string } => {
+  const finalizeFailure = (
+    res: Response,
+    parsed: Record<string, unknown>
+  ): { ok: false; message: string } => {
     if (parsed.ok === true) {
       return { ok: false, message: "L'invitation n'a pas abouti. Réessayez." };
     }
@@ -145,7 +147,7 @@ export async function sendCollaboratorInviteEmail(
       };
     }
 
-    let text = '';
+    let text: string;
     try {
       text = await res.text();
     } catch {

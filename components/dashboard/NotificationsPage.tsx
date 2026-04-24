@@ -1,5 +1,22 @@
 import React, { useState, useMemo } from 'react';
-import { Bell, BellOff, Check, CheckCheck, Trash2, Calendar, CreditCard, MessageSquare, AlertCircle, Star, Clock, Filter, Search, MailOpen, ChevronRight, Inbox } from 'lucide-react';
+import {
+  Bell,
+  BellOff,
+  Check,
+  CheckCheck,
+  Trash2,
+  Calendar,
+  CreditCard,
+  MessageSquare,
+  AlertCircle,
+  Star,
+  Clock,
+  Filter,
+  Search,
+  MailOpen,
+  ChevronRight,
+  Inbox,
+} from 'lucide-react';
 import type { Notification } from '../../types';
 import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 
@@ -14,7 +31,7 @@ type FilterTab = 'all' | 'unread' | 'booking' | 'payment' | 'reminder';
 
 const NOTIFICATION_ICONS: Record<Notification['type'], React.ReactNode> = {
   booking: <Calendar className="w-5 h-5 text-blue-500" />,
-  payment: <CreditCard className="w-5 h-5 text-emerald-500" />,
+  payment: <CreditCard className="w-5 h-5 text-blue-500" />,
   reminder: <Clock className="w-5 h-5 text-amber-500" />,
   cancellation: <AlertCircle className="w-5 h-5 text-red-500" />,
   review: <Star className="w-5 h-5 text-violet-500" />,
@@ -23,7 +40,7 @@ const NOTIFICATION_ICONS: Record<Notification['type'], React.ReactNode> = {
 
 const NOTIFICATION_COLORS: Record<Notification['type'], string> = {
   booking: 'bg-blue-100 dark:bg-blue-500/20',
-  payment: 'bg-emerald-100 dark:bg-emerald-500/20',
+  payment: 'bg-blue-100 dark:bg-blue-500/20',
   reminder: 'bg-amber-100 dark:bg-amber-500/20',
   cancellation: 'bg-red-100 dark:bg-red-500/20',
   review: 'bg-violet-100 dark:bg-violet-500/20',
@@ -48,22 +65,21 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNotifications, setSelectedNotifications] = useState<Set<string>>(new Set());
 
-  const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
+  const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
 
   const filteredNotifications = useMemo(() => {
     let result = [...notifications];
 
     if (activeFilter === 'unread') {
-      result = result.filter(n => !n.read);
+      result = result.filter((n) => !n.read);
     } else if (activeFilter !== 'all') {
-      result = result.filter(n => n.type === activeFilter);
+      result = result.filter((n) => n.type === activeFilter);
     }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(n => 
-        n.message.toLowerCase().includes(query) ||
-        n.title.toLowerCase().includes(query)
+      result = result.filter(
+        (n) => n.message.toLowerCase().includes(query) || n.title.toLowerCase().includes(query)
       );
     }
 
@@ -71,7 +87,12 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
   }, [notifications, activeFilter, searchQuery]);
 
   const groupedNotifications = useMemo(() => {
-    const groups: { today: Notification[]; yesterday: Notification[]; thisWeek: Notification[]; older: Notification[] } = {
+    const groups: {
+      today: Notification[];
+      yesterday: Notification[];
+      thisWeek: Notification[];
+      older: Notification[];
+    } = {
       today: [],
       yesterday: [],
       thisWeek: [],
@@ -83,7 +104,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
     const yesterdayStart = new Date(todayStart.getTime() - 86400000);
     const weekStart = new Date(todayStart.getTime() - 7 * 86400000);
 
-    filteredNotifications.forEach(n => {
+    filteredNotifications.forEach((n) => {
       const date = new Date(n.createdAt);
       if (date >= todayStart) {
         groups.today.push(n);
@@ -100,16 +121,16 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
   }, [filteredNotifications]);
 
   const handleMarkAllAsRead = () => {
-    notifications.filter(n => !n.read).forEach(n => markNotificationAsRead(n.id));
+    notifications.filter((n) => !n.read).forEach((n) => markNotificationAsRead(n.id));
   };
 
   const handleMarkSelectedAsRead = () => {
-    selectedNotifications.forEach(id => markNotificationAsRead(id));
+    selectedNotifications.forEach((id) => markNotificationAsRead(id));
     setSelectedNotifications(new Set());
   };
 
   const toggleSelection = (id: string) => {
-    setSelectedNotifications(prev => {
+    setSelectedNotifications((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -130,7 +151,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
     if (diffMins < 1) return "À l'instant";
     if (diffMins < 60) return `Il y a ${diffMins} min`;
     if (diffHours < 24) return `Il y a ${diffHours}h`;
-    
+
     return date.toLocaleDateString('fr-FR', {
       day: 'numeric',
       month: 'short',
@@ -141,19 +162,19 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
 
   const renderNotificationGroup = (title: string, items: Notification[]) => {
     if (items.length === 0) return null;
-    
+
     return (
       <div className="mb-6">
         <h3 className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mb-3 px-1">
           {title}
         </h3>
         <div className="space-y-2">
-          {items.map(notif => (
+          {items.map((notif) => (
             <div
               key={notif.id}
               className={`group relative bg-white dark:bg-zinc-900 rounded-2xl border transition-all duration-200 ${
-                !notif.read 
-                  ? 'border-blue-200 dark:border-blue-500/30 shadow-sm shadow-blue-500/5' 
+                !notif.read
+                  ? 'border-blue-200 dark:border-blue-500/30 shadow-sm shadow-blue-500/5'
                   : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'
               }`}
             >
@@ -164,17 +185,21 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
                 }}
                 className="w-full text-left p-4 flex items-start gap-4"
               >
-                <div className={`p-2.5 rounded-xl flex-shrink-0 ${NOTIFICATION_COLORS[notif.type]}`}>
+                <div
+                  className={`p-2.5 rounded-xl flex-shrink-0 ${NOTIFICATION_COLORS[notif.type]}`}
+                >
                   {NOTIFICATION_ICONS[notif.type]}
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className={`text-sm font-semibold truncate ${
-                      !notif.read 
-                        ? 'text-zinc-900 dark:text-white' 
-                        : 'text-zinc-700 dark:text-zinc-300'
-                    }`}>
+                    <p
+                      className={`text-sm font-semibold truncate ${
+                        !notif.read
+                          ? 'text-zinc-900 dark:text-white'
+                          : 'text-zinc-700 dark:text-zinc-300'
+                      }`}
+                    >
                       {notif.title}
                     </p>
                     <span className="text-xs text-zinc-400 dark:text-zinc-500 whitespace-nowrap flex-shrink-0">
@@ -222,11 +247,13 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
             <div>
               <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Notifications</h1>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                {unreadCount > 0 ? `${unreadCount} non lue${unreadCount > 1 ? 's' : ''}` : 'Toutes lues'}
+                {unreadCount > 0
+                  ? `${unreadCount} non lue${unreadCount > 1 ? 's' : ''}`
+                  : 'Toutes lues'}
               </p>
             </div>
           </div>
-          
+
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}
@@ -260,7 +287,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
 
         {/* Filter Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-          {(Object.keys(FILTER_LABELS) as FilterTab[]).map(tab => (
+          {(Object.keys(FILTER_LABELS) as FilterTab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveFilter(tab)}
@@ -272,9 +299,13 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
             >
               {FILTER_LABELS[tab]}
               {tab === 'unread' && unreadCount > 0 && (
-                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                  activeFilter === tab ? 'bg-white/20' : 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400'
-                }`}>
+                <span
+                  className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                    activeFilter === tab
+                      ? 'bg-white/20'
+                      : 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400'
+                  }`}
+                >
                   {unreadCount}
                 </span>
               )}
@@ -293,10 +324,9 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
             {searchQuery ? 'Aucun résultat' : 'Aucune notification'}
           </h3>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto">
-            {searchQuery 
-              ? 'Essayez avec d\'autres termes de recherche'
-              : 'Vous recevrez des notifications pour les nouvelles réservations, paiements et rappels.'
-            }
+            {searchQuery
+              ? "Essayez avec d'autres termes de recherche"
+              : 'Vous recevrez des notifications pour les nouvelles réservations, paiements et rappels.'}
           </p>
         </div>
       ) : (
@@ -316,7 +346,9 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{notifications.length}</p>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+                {notifications.length}
+              </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">Total</p>
             </div>
             <div className="text-center">
@@ -324,14 +356,14 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
               <p className="text-xs text-zinc-500 dark:text-zinc-400">Non lues</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {notifications.filter(n => n.type === 'booking').length}
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {notifications.filter((n) => n.type === 'booking').length}
               </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">Réservations</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                {notifications.filter(n => n.type === 'payment').length}
+                {notifications.filter((n) => n.type === 'payment').length}
               </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">Paiements</p>
             </div>

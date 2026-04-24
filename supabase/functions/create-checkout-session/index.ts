@@ -6,6 +6,11 @@ import { amountsMatchClientAndServer, resolveExpectedCheckoutAmountEur } from ".
 import { resolveAbsoluteSiteBase } from "../_shared/siteUrl.ts";
 import { INKFLOW_PAYMENT_RECORD_STATUS } from "../_shared/inkflowPaymentRecordStatus.ts";
 
+/**
+ * Paiement vitrine (acompte / solde) — Stripe Connect, pas d’abonnement plateforme ici.
+ * TVA / Stripe Tax : activer côté Dashboard + conseil comptable avant d’ajouter
+ * p.ex. `automatic_tax[enabled]=true` au corps `stripeBody` (voir docs/STRIPE-P0-PRODUCTION.md).
+ */
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";

@@ -2,7 +2,7 @@
  * Page de réservation publique — /book/:studioSlug
  * Tunnel de conversion Mobile-First, Light Mode, optimisé pour le paiement Stripe.
  */
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useClientFramerGestures } from '../../lib/clientFramerGestures';
 import {
@@ -31,6 +31,8 @@ import {
   replaceUrlFlashParam,
   PLACEMENT_OTHER_VALUE,
 } from '../../hooks/useBookingFlow';
+import { AnalyticsEvents, captureEvent } from '../../lib/analytics/capture';
+import { LANDING_URL } from '../../lib/urls';
 
 const WEEKDAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 const MONTHS = [
@@ -85,6 +87,26 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     canPay,
     handlePay,
   } = useBookingFlow(studioSlug);
+
+  const depositAnalyticsSent = useRef(false);
+
+  useEffect(() => {
+    captureEvent(AnalyticsEvents.BOOK_PAGE_VIEWED, {
+      studio_slug: studioSlug,
+      funnel: 'client_booking',
+    });
+  }, [studioSlug]);
+
+  useEffect(() => {
+    if (paymentVerified !== true || depositAnalyticsSent.current) return;
+    depositAnalyticsSent.current = true;
+    const sid = studioId && studioId !== 'loading' ? studioId : undefined;
+    captureEvent(AnalyticsEvents.CLIENT_BOOKING_DEPOSIT_SUCCEEDED, {
+      studio_slug: studioSlug,
+      studio_id: sid,
+      funnel: 'client_booking',
+    });
+  }, [paymentVerified, studioId, studioSlug]);
 
   // ── Écrans de résultat paiement ──────────────────────────────────────────────
 
@@ -150,8 +172,37 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
   if (supabaseEnabled && studioId === null) {
     return (
-      <div className="landing-scroll safe-top min-h-screen bg-ink-bg flex items-center justify-center p-4">
-        <p className="text-ink-muted">Studio introuvable.</p>
+      <div className="landing-scroll safe-top min-h-screen bg-ink-bg flex flex-col items-center justify-center p-6">
+        <SEO
+          title="Lien de réservation introuvable | InkFlow"
+          description="Ce lien de réservation n’est plus valide ou le studio n’existe pas."
+          canonical={`/book/${studioSlug}`}
+          noindex
+        />
+        <div className="w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-6">
+          <AlertCircle className="w-8 h-8 text-zinc-500" strokeWidth={2} aria-hidden />
+        </div>
+        <h1 className="text-xl font-bold text-ink-text mb-2 text-center">Studio introuvable</h1>
+        <p className="text-ink-muted text-center text-sm mb-8 max-w-sm">
+          Le lien que vous avez ouvert ne correspond à aucun studio InkFlow. Vérifiez l’URL ou demandez un
+          nouveau lien à votre tatoueur.
+        </p>
+        <div className="flex w-full max-w-xs flex-col gap-3">
+          <motion.a
+            href={LANDING_URL}
+            whileTap={tap}
+            className="h-14 flex items-center justify-center rounded-xl border border-ink-border bg-white text-ink-text font-semibold hover:bg-zinc-50 transition-colors"
+          >
+            Découvrir InkFlow
+          </motion.a>
+          <motion.a
+            href="/signup"
+            whileTap={tap}
+            className="h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors"
+          >
+            Créer un compte tatoueur
+          </motion.a>
+        </div>
       </div>
     );
   }

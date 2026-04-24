@@ -20,16 +20,18 @@ async function resolveStudioIdForVitrine(userEmail: string, studioName: string):
 const STORAGE_PREFIX = 'inkflow-vitrine-';
 
 export function getVitrineSlug(studioName: string): string {
-  return (studioName || 'mon-studio')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-') || 'mon-studio';
+  return (
+    (studioName || 'mon-studio')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-') || 'mon-studio'
+  );
 }
 
-function useSupabase(): boolean {
+function isSupabaseEnvConfigured(): boolean {
   const url = import.meta.env.VITE_SUPABASE_URL;
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
   return !!(url && key && url.length > 10);
@@ -49,16 +51,25 @@ export function getVitrineData(slug: string, userEmail?: string, studioName?: st
 }
 
 /** Persistance locale uniquement. La sync Supabase passe par `saveVitrineDataAsync` (résout le bon `studio_id`). */
-export function setVitrineData(slug: string, data: VitrineData, _userEmail?: string, _studioName?: string): void {
+export function setVitrineData(
+  slug: string,
+  data: VitrineData,
+  _userEmail?: string,
+  _studioName?: string
+): void {
   if (typeof window === 'undefined') return;
   const key = `${STORAGE_PREFIX}${slug}`;
   localStorage.setItem(key, JSON.stringify({ ...data, slug }));
 }
 
-export async function getVitrineDataAsync(slug: string, userEmail: string, studioName: string): Promise<VitrineData> {
+export async function getVitrineDataAsync(
+  slug: string,
+  userEmail: string,
+  studioName: string
+): Promise<VitrineData> {
   const slugNorm = normalizePublicStudioSlug(slug);
   const defaultData = defaultVitrineData(slugNorm);
-  if (!useSupabase()) return getVitrineData(slugNorm);
+  if (!isSupabaseEnvConfigured()) return getVitrineData(slugNorm);
   try {
     const studioId = await resolveStudioIdForVitrine(userEmail, studioName);
     const fromDb = await getVitrineDataFromSupabase(studioId, defaultData);
@@ -72,11 +83,16 @@ export async function getVitrineDataAsync(slug: string, userEmail: string, studi
   }
 }
 
-export async function saveVitrineDataAsync(slug: string, data: VitrineData, userEmail: string, studioName: string): Promise<void> {
+export async function saveVitrineDataAsync(
+  slug: string,
+  data: VitrineData,
+  userEmail: string,
+  studioName: string
+): Promise<void> {
   const slugNorm = normalizePublicStudioSlug(slug);
   const payload = { ...data, slug: slugNorm };
   setVitrineData(slugNorm, payload, userEmail, studioName);
-  if (useSupabase()) {
+  if (isSupabaseEnvConfigured()) {
     const studioId = await resolveStudioIdForVitrine(userEmail, studioName);
     await saveVitrineDataToSupabase(studioId, payload);
   }
@@ -99,10 +115,14 @@ export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineDa
   const defaultData = defaultVitrineData(normalized);
   const key = `${STORAGE_PREFIX}${normalized}`;
   const localRaw = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
-  if (!useSupabase()) {
+  if (!isSupabaseEnvConfigured()) {
     if (localRaw) {
       try {
-        return { ...defaultData, ...(JSON.parse(localRaw) as object), slug: normalized } as VitrineData;
+        return {
+          ...defaultData,
+          ...(JSON.parse(localRaw) as object),
+          slug: normalized,
+        } as VitrineData;
       } catch {
         return defaultData;
       }
@@ -151,7 +171,11 @@ export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineDa
   } catch (e) {
     if (localRaw) {
       try {
-        return { ...defaultData, ...(JSON.parse(localRaw) as object), slug: normalized } as VitrineData;
+        return {
+          ...defaultData,
+          ...(JSON.parse(localRaw) as object),
+          slug: normalized,
+        } as VitrineData;
       } catch {
         return defaultData;
       }

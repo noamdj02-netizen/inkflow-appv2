@@ -3,6 +3,7 @@
     "lib": ["deno.window"]
   },
   "imports": {
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.95.3"
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.95.3",
+    "stripe": "https://esm.sh/stripe@17.4.0?target=deno"
   }
 }

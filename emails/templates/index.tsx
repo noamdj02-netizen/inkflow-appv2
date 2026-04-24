@@ -54,7 +54,12 @@ export interface BookingPendingEmailProps {
   paymentUrl: string;
 }
 
-export function BookingPendingEmail({ flashTitle, date, depositAmount, paymentUrl }: BookingPendingEmailProps) {
+export function BookingPendingEmail({
+  flashTitle,
+  date,
+  depositAmount,
+  paymentUrl,
+}: BookingPendingEmailProps) {
   return (
     <EmailBase
       preview="Action requise — finalisez votre réservation dans les 12h"
@@ -148,7 +153,12 @@ export interface PaymentConfirmedEmailProps {
   bookingUrl: string;
 }
 
-export function PaymentConfirmedEmail({ depositAmount, studioName, date, bookingUrl }: PaymentConfirmedEmailProps) {
+export function PaymentConfirmedEmail({
+  depositAmount,
+  studioName,
+  date,
+  bookingUrl,
+}: PaymentConfirmedEmailProps) {
   return (
     <EmailBase
       preview={`Acompte de ${depositAmount} € reçu — RDV confirmé`}
@@ -181,7 +191,13 @@ const reminderLabels: Record<ReminderDelay, string> = {
   '2h': 'dans 2 heures',
 };
 
-export function ReminderEmail({ studioName, date, address, bookingUrl, delay }: ReminderEmailProps) {
+export function ReminderEmail({
+  studioName,
+  date,
+  address,
+  bookingUrl,
+  delay,
+}: ReminderEmailProps) {
   return (
     <EmailBase
       preview={`Rappel — votre séance chez ${studioName} est ${reminderLabels[delay]}`}
@@ -262,6 +278,38 @@ export function NewBookingStudioEmail({
       ]}
       ctaLabel="Gérer la demande"
       ctaHref={dashboardUrl}
+    />
+  );
+}
+
+/**
+ * Email facture / reçu (acompte, solde) — à aligner sur `send-deposit` / `send-payment-confirmation` si bascule en React Email côté build.
+ */
+export interface InvoiceEmailProps {
+  studioName: string;
+  amountLabel: string;
+  contextLine: string;
+  receiptUrl: string;
+}
+
+export function InvoiceEmail({
+  studioName,
+  amountLabel,
+  contextLine,
+  receiptUrl,
+}: InvoiceEmailProps) {
+  return (
+    <EmailBase
+      preview={`Reçu ${amountLabel} — ${studioName}`}
+      title="Ton paiement a bien été enregistré."
+      bodyText={contextLine}
+      recap={[
+        { label: 'Studio', value: studioName },
+        { label: 'Montant', value: amountLabel },
+      ]}
+      ctaLabel="Voir le détail / le reçu"
+      ctaHref={receiptUrl}
+      footerNote="Conserve cet email pour ta comptabilité. Aucun paiement n’est dû de plus."
     />
   );
 }

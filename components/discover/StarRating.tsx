@@ -26,8 +26,8 @@ export function StarRating({ avg, count, size = 'sm' }: StarRatingProps) {
           </span>
         ))}
       </div>
-      <span style={{ fontSize: 11, color: '#6b6b6b' }}>
-        {avg > 0 ? `${avg.toFixed(1)} (${count})` : 'Pas encore d\'avis'}
+      <span className="text-[11px] text-zinc-600 dark:text-zinc-400">
+        {avg > 0 ? `${avg.toFixed(1)} (${count})` : "Pas encore d'avis"}
       </span>
     </div>
   );

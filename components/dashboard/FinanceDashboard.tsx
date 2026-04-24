@@ -16,7 +16,15 @@ import {
 import { Appointment } from '../../types';
 import { InvoiceButton } from './InvoiceButton';
 import { useAuth } from '../../contexts/AuthContext';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { Modal } from '../ui/Modal';
 import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -25,14 +33,36 @@ import { createStripeExpressLoginLink } from '../../lib/stripeClient';
 
 type BilanPeriod = 'today' | 'week' | 'month';
 
-const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+const MONTH_LABELS = [
+  'Jan',
+  'Fév',
+  'Mar',
+  'Avr',
+  'Mai',
+  'Jun',
+  'Jul',
+  'Août',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Déc',
+];
 
 function getDateRange(period: BilanPeriod): { start: string; end: string; label: string } {
   const now = new Date();
   const toStr = (d: Date) => d.toISOString().split('T')[0];
   if (period === 'today') {
     const today = toStr(now);
-    return { start: today, end: today, label: now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) };
+    return {
+      start: today,
+      end: today,
+      label: now.toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }),
+    };
   }
   if (period === 'week') {
     const day = now.getDay();
@@ -64,7 +94,13 @@ interface FinanceBilanModalProps {
   privacyMode: boolean;
 }
 
-function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacyMode }: FinanceBilanModalProps) {
+function FinanceBilanModal({
+  isOpen,
+  onClose,
+  appointments,
+  cashEntries,
+  privacyMode,
+}: FinanceBilanModalProps) {
   const [period, setPeriod] = useState<BilanPeriod>('today');
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { start, end, label } = getDateRange(period);
@@ -73,9 +109,7 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
 
   const periodAppointments = useMemo(
     () =>
-      appointments.filter(
-        (a) => inRange(a.date) && (a.status === 'completed' || a.depositPaid)
-      ),
+      appointments.filter((a) => inRange(a.date) && (a.status === 'completed' || a.depositPaid)),
     [appointments, start, end]
   );
   const periodCash = useMemo(
@@ -94,9 +128,7 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
   const restPaid = periodAppointments
     .filter((a) => a.status === 'completed')
     .reduce((s, a) => s + (a.price - a.deposit), 0);
-  const clientCount = new Set(
-    periodAppointments.map((a) => a.clientId || a.clientName)
-  ).size;
+  const clientCount = new Set(periodAppointments.map((a) => a.clientId || a.clientName)).size;
   const totalMinutes = periodAppointments
     .filter((a) => a.status === 'completed' && typeof a.duration === 'number')
     .reduce((s, a) => s + a.duration, 0);
@@ -176,7 +208,7 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
 
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text('Chiffre d\'affaires:', margin, yPos);
+      doc.text("Chiffre d'affaires:", margin, yPos);
       doc.setFont('helvetica', 'normal');
       doc.text(privacyMode ? '••••' : `${totalCA}€`, pageWidth - margin, yPos, { align: 'right' });
       yPos += 7;
@@ -188,7 +220,9 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
       doc.setFont('helvetica', 'bold');
       doc.text('Acomptes reçus:', margin, yPos);
       doc.setFont('helvetica', 'normal');
-      doc.text(privacyMode ? '••••' : `${depositsReceived}€`, pageWidth - margin, yPos, { align: 'right' });
+      doc.text(privacyMode ? '••••' : `${depositsReceived}€`, pageWidth - margin, yPos, {
+        align: 'right',
+      });
       yPos += 7;
       doc.setFont('helvetica', 'bold');
       doc.text('Reste à payer encaissé:', margin, yPos);
@@ -200,7 +234,12 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
         doc.setFont('helvetica', 'bold');
         doc.text('Temps passé:', margin, yPos);
         doc.setFont('helvetica', 'normal');
-        doc.text(`${hoursTattooed}h${minsTattooed > 0 ? ` ${minsTattooed} min` : ''}`, pageWidth - margin, yPos, { align: 'right' });
+        doc.text(
+          `${hoursTattooed}h${minsTattooed > 0 ? ` ${minsTattooed} min` : ''}`,
+          pageWidth - margin,
+          yPos,
+          { align: 'right' }
+        );
         yPos += 12;
       }
 
@@ -223,8 +262,18 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...textColor);
-        const colW = [(pageWidth - 2 * margin) * 0.25, (pageWidth - 2 * margin) * 0.3, (pageWidth - 2 * margin) * 0.25, (pageWidth - 2 * margin) * 0.2];
-        const colX = [margin, margin + colW[0], margin + colW[0] + colW[1], margin + colW[0] + colW[1] + colW[2]];
+        const colW = [
+          (pageWidth - 2 * margin) * 0.25,
+          (pageWidth - 2 * margin) * 0.3,
+          (pageWidth - 2 * margin) * 0.25,
+          (pageWidth - 2 * margin) * 0.2,
+        ];
+        const colX = [
+          margin,
+          margin + colW[0],
+          margin + colW[0] + colW[1],
+          margin + colW[0] + colW[1] + colW[2],
+        ];
         doc.text('Date / Heure', colX[0], yPos);
         doc.text('Client', colX[1], yPos);
         doc.text('Service', colX[2], yPos);
@@ -241,7 +290,9 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
           doc.text(line.length > 18 ? line.slice(0, 15) + '…' : line, colX[0], yPos);
           doc.text(t.label.length > 22 ? t.label.slice(0, 19) + '…' : t.label, colX[1], yPos);
           doc.text(t.sub.length > 18 ? t.sub.slice(0, 15) + '…' : t.sub, colX[2], yPos);
-          doc.text(privacyMode ? '••••' : `${t.amount}€`, pageWidth - margin, yPos, { align: 'right' });
+          doc.text(privacyMode ? '••••' : `${t.amount}€`, pageWidth - margin, yPos, {
+            align: 'right',
+          });
           yPos += 6;
         }
       }
@@ -252,7 +303,9 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...lightText);
       doc.text(`Date d'émission: ${new Date().toLocaleDateString('fr-FR')}`, margin, yPos);
-      doc.text('InkFlow - Bilan généré automatiquement', pageWidth - margin, yPos, { align: 'right' });
+      doc.text('InkFlow - Bilan généré automatiquement', pageWidth - margin, yPos, {
+        align: 'right',
+      });
 
       const fileName = start === end ? `Bilan-${start}.pdf` : `Bilan-${start}-${end}.pdf`;
       doc.save(fileName);
@@ -261,7 +314,20 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [label, totalCA, clientCount, depositsReceived, restPaid, totalMinutes, hoursTattooed, minsTattooed, transactions, start, end, privacyMode]);
+  }, [
+    label,
+    totalCA,
+    clientCount,
+    depositsReceived,
+    restPaid,
+    totalMinutes,
+    hoursTattooed,
+    minsTattooed,
+    transactions,
+    start,
+    end,
+    privacyMode,
+  ]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Bilan & Rapports" size="lg">
@@ -277,32 +343,50 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
                   : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-500/30'
               }`}
             >
-              {p === 'today' ? 'Aujourd\'hui' : p === 'week' ? 'Cette semaine' : 'Ce mois'}
+              {p === 'today' ? "Aujourd'hui" : p === 'week' ? 'Cette semaine' : 'Ce mois'}
             </button>
           ))}
         </div>
 
         <div id="bilan-print-content" className="space-y-6">
           <div className="border-b border-neutral-200 dark:border-neutral-700 pb-4">
-            <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Bilan du {label}</h2>
+            <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
+              Bilan du {label}
+            </h2>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="dashboard-widget-card p-4">
-              <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Chiffre d'affaires</div>
-              <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 tabular-nums">{formatEuroPrivacy(totalCA, privacyMode)}</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+                Chiffre d'affaires
+              </div>
+              <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 tabular-nums">
+                {formatEuroPrivacy(totalCA, privacyMode)}
+              </div>
             </div>
             <div className="dashboard-widget-card p-4">
-              <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Nombre de clients</div>
-              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{clientCount}</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+                Nombre de clients
+              </div>
+              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                {clientCount}
+              </div>
             </div>
             <div className="dashboard-widget-card p-4">
-              <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Acomptes reçus</div>
-              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{formatEuroPrivacy(depositsReceived, privacyMode)}</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+                Acomptes reçus
+              </div>
+              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                {formatEuroPrivacy(depositsReceived, privacyMode)}
+              </div>
             </div>
             <div className="dashboard-widget-card p-4">
-              <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Reste à payer encaissé</div>
-              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">{formatEuroPrivacy(restPaid, privacyMode)}</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+                Reste à payer encaissé
+              </div>
+              <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                {formatEuroPrivacy(restPaid, privacyMode)}
+              </div>
             </div>
           </div>
 
@@ -316,29 +400,50 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
           )}
 
           <div>
-            <h3 className="font-semibold text-neutral-800 dark:text-neutral-200 mb-3">Transactions de la période</h3>
+            <h3 className="font-semibold text-neutral-800 dark:text-neutral-200 mb-3">
+              Transactions de la période
+            </h3>
             <div className="border border-neutral-200 dark:border-neutral-700 rounded-xl overflow-x-auto">
               {transactions.length === 0 ? (
-                <div className="py-8 text-center text-neutral-400 dark:text-neutral-500 text-sm">Aucune transaction</div>
+                <div className="py-8 text-center text-neutral-400 dark:text-neutral-500 text-sm">
+                  Aucune transaction
+                </div>
               ) : (
                 <table className="w-full text-sm min-w-[480px]">
                   <thead>
                     <tr className="bg-zinc-50 dark:bg-zinc-500/10 border-b border-neutral-200 dark:border-neutral-700">
-                      <th className="text-left px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">Heure</th>
-                      <th className="text-left px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">Client</th>
-                      <th className="text-left px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">Service</th>
-                      <th className="text-right px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">Montant</th>
+                      <th className="text-left px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">
+                        Heure
+                      </th>
+                      <th className="text-left px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">
+                        Client
+                      </th>
+                      <th className="text-left px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">
+                        Service
+                      </th>
+                      <th className="text-right px-4 py-3 font-semibold text-neutral-900 dark:text-neutral-100 whitespace-nowrap">
+                        Montant
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {transactions.map((t) => (
-                      <tr key={t.id} className="border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-500/5">
+                      <tr
+                        key={t.id}
+                        className="border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-500/5"
+                      >
                         <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">
                           {t.date} {t.time ? `• ${t.time}` : ''}
                         </td>
-                        <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">{t.label}</td>
-                        <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{t.sub}</td>
-                        <td className="px-4 py-3 text-right font-bold text-neutral-900 dark:text-neutral-100">{formatEuroPrivacy(t.amount, privacyMode)}</td>
+                        <td className="px-4 py-3 font-medium text-neutral-900 dark:text-neutral-100">
+                          {t.label}
+                        </td>
+                        <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">
+                          {t.sub}
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-neutral-900 dark:text-neutral-100">
+                          {formatEuroPrivacy(t.amount, privacyMode)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -355,9 +460,13 @@ function FinanceBilanModal({ isOpen, onClose, appointments, cashEntries, privacy
             className="flex-1 min-h-[48px] py-2.5 bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 dark:hover:bg-zinc-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGeneratingPdf ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Génération...</>
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" /> Génération...
+              </>
             ) : (
-              <><Download className="w-5 h-5" /> Télécharger PDF</>
+              <>
+                <Download className="w-5 h-5" /> Télécharger PDF
+              </>
             )}
           </button>
           <button
@@ -420,7 +529,11 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
   const [cashEntries, setCashEntries] = useState<CashEntry[]>(() => loadCashEntries(userId));
   const [showAddCash, setShowAddCash] = useState(false);
   const [showBilan, setShowBilan] = useState(false);
-  const [newCash, setNewCash] = useState({ date: new Date().toISOString().split('T')[0], amount: '', label: '' });
+  const [newCash, setNewCash] = useState({
+    date: new Date().toISOString().split('T')[0],
+    amount: '',
+    label: '',
+  });
   const [stripeDashboardBusy, setStripeDashboardBusy] = useState(false);
 
   const saveCash = useCallback(
@@ -578,8 +691,12 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Finance</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Gérez vos revenus, acomptes et encaissements</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">
+            Finance
+          </h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-1">
+            Gérez vos revenus, acomptes et encaissements
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -617,7 +734,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
           </button>
           <button
             onClick={() => setShowAddCash(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all active:scale-[0.98]"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 font-medium  transition-all active:scale-[0.98]"
           >
             <Banknote className="w-4 h-4" />
             Ajouter espèces
@@ -629,56 +746,80 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Total global</span>
-            <div className="p-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              Total global
+            </span>
+            <div className="p-2 rounded-xl bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{formatEuroPrivacy(totalGlobal, privacyMode)}</div>
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
+            {formatEuroPrivacy(totalGlobal, privacyMode)}
+          </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">RDV + espèces</p>
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Revenus RDV</span>
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              Revenus RDV
+            </span>
             <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <CreditCard className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">{formatEuroPrivacy(totalRevenue, privacyMode)}</div>
+          <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
+            {formatEuroPrivacy(totalRevenue, privacyMode)}
+          </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Carte / virement</p>
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Espèces</span>
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              Espèces
+            </span>
             <div className="p-2 rounded-xl bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400">
               <Banknote className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">{formatEuroPrivacy(totalCash, privacyMode)}</div>
+          <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">
+            {formatEuroPrivacy(totalCash, privacyMode)}
+          </div>
           {todayCash > 0 && (
             <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-              {privacyMode ? '+•••• aujourd\'hui' : `+${todayCash.toLocaleString('fr-FR')}€ aujourd'hui`}
+              {privacyMode
+                ? "+•••• aujourd'hui"
+                : `+${todayCash.toLocaleString('fr-FR')}€ aujourd'hui`}
             </p>
           )}
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Acomptes reçus</span>
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              Acomptes reçus
+            </span>
             <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400">
               <Receipt className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">{formatEuroPrivacy(totalDeposits, privacyMode)}</div>
+          <div className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">
+            {formatEuroPrivacy(totalDeposits, privacyMode)}
+          </div>
         </div>
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5 col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">En attente</span>
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              En attente
+            </span>
             <div className="p-2 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400 tabular-nums">{formatEuroPrivacy(pendingDeposits, privacyMode)}</div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{completedCount} RDV terminés</p>
+          <div className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400 tabular-nums">
+            {formatEuroPrivacy(pendingDeposits, privacyMode)}
+          </div>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+            {completedCount} RDV terminés
+          </p>
         </div>
       </div>
 
@@ -686,8 +827,12 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-2xl p-5 sm:p-6 border border-zinc-200 dark:border-zinc-800">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-white">Évolution des revenus</h3>
-            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg">6 mois</span>
+            <h3 className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-white">
+              Évolution des revenus
+            </h3>
+            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg">
+              6 mois
+            </span>
           </div>
           <div className="relative">
             <ResponsiveContainer width="100%" height={220}>
@@ -732,7 +877,9 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             </ResponsiveContainer>
             {privacyMode && (
               <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-zinc-100/90 dark:bg-zinc-900/85 backdrop-blur-[2px] pointer-events-none">
-                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Graphique masqué</span>
+                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
+                  Graphique masqué
+                </span>
               </div>
             )}
           </div>
@@ -742,8 +889,12 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
           <div className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-base text-zinc-900 dark:text-white">Caisse espèces</h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Encaissements récents</p>
+              <h3 className="font-semibold text-base text-zinc-900 dark:text-white">
+                Caisse espèces
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Encaissements récents
+              </p>
             </div>
             <button
               onClick={() => setShowAddCash(true)}
@@ -773,11 +924,17 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                       className="flex items-center justify-between px-5 py-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 group transition-colors"
                     >
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">{e.label}</div>
-                        <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{e.date}</div>
+                        <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">
+                          {e.label}
+                        </div>
+                        <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                          {e.date}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-green-600 dark:text-green-400">+{formatEuroPrivacy(e.amount, privacyMode)}</span>
+                        <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+                          +{formatEuroPrivacy(e.amount, privacyMode)}
+                        </span>
                         <button
                           onClick={() => removeCashEntry(e.id)}
                           className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-500/10 text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition-all"
@@ -798,8 +955,12 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
       <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         <div className="px-5 sm:px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-white">Dernières transactions</h3>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Historique des paiements récents</p>
+            <h3 className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-white">
+              Dernières transactions
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              Historique des paiements récents
+            </p>
           </div>
         </div>
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -812,11 +973,16 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
             </div>
           ) : (
             transactions.map((t) => (
-              <div key={t.id} className="flex items-center justify-between px-5 sm:px-6 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+              <div
+                key={t.id}
+                className="flex items-center justify-between px-5 sm:px-6 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+              >
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      t.type === 'cash' ? 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                      t.type === 'cash'
+                        ? 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400'
+                        : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
                     }`}
                   >
                     {t.type === 'cash' ? (
@@ -826,7 +992,9 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                     )}
                   </div>
                   <div>
-                    <div className="font-semibold text-neutral-900 dark:text-neutral-100">{t.label}</div>
+                    <div className="font-semibold text-neutral-900 dark:text-neutral-100">
+                      {t.label}
+                    </div>
                     <div className="text-sm text-neutral-600 dark:text-neutral-400">
                       {t.sub} • {t.date}
                       {t.type === 'cash' && (
@@ -838,12 +1006,11 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="font-bold text-neutral-900 dark:text-neutral-100">{formatEuroPrivacy(t.amount, privacyMode)}</span>
+                  <span className="font-bold text-neutral-900 dark:text-neutral-100">
+                    {formatEuroPrivacy(t.amount, privacyMode)}
+                  </span>
                   {t.type === 'rdv' && t.appointment && user && (
-                    <InvoiceButton
-                      appointment={t.appointment}
-                      artist={user}
-                    />
+                    <InvoiceButton appointment={t.appointment} artist={user} />
                   )}
                 </div>
               </div>
@@ -871,7 +1038,9 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Date</label>
+              <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                Date
+              </label>
               <input
                 type="date"
                 value={newCash.date}
@@ -880,7 +1049,9 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Montant (€)</label>
+              <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                Montant (€)
+              </label>
               <input
                 type="number"
                 step="0.01"
@@ -892,7 +1063,9 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">Libellé (optionnel)</label>
+              <label className="block text-sm font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                Libellé (optionnel)
+              </label>
               <input
                 type="text"
                 placeholder="Ex: Caisse du jour, Dépot client…"

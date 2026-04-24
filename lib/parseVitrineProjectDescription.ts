@@ -30,11 +30,9 @@ function normalizePhoneDigits(s: string): string {
 }
 
 /** Même ligne : numéro puis texte message */
-const INLINE_TEL_MSG =
-  /^((?:\+|00)\d[\d\s.\u00A0-]{6,}\d|0\d[\d\s.\u00A0-]{7,}\d)\s+(.+)$/is;
+const INLINE_TEL_MSG = /^((?:\+|00)\d[\d\s.\u00A0-]{6,}\d|0\d[\d\s.\u00A0-]{7,}\d)\s+(.+)$/is;
 /** Ligne seule : uniquement le numéro */
-const LINE_ONLY_TEL =
-  /^((?:\+|00)\d[\d\s.\u00A0-]{6,}\d|0\d[\d\s.\u00A0-]{7,}\d)\s*$/i;
+const LINE_ONLY_TEL = /^((?:\+|00)\d[\d\s.\u00A0-]{6,}\d|0\d[\d\s.\u00A0-]{7,}\d)\s*$/i;
 
 /**
  * Découpe une description projet vitrine pour l’affichage client (libellés clairs).
@@ -58,7 +56,7 @@ export function parseVitrineProjectDescription(raw: string): ParsedVitrineProjec
   const telIdx = rest.search(/Téléphone:\s*/i);
   if (telIdx >= 0) {
     const beforeTel = rest.slice(0, telIdx);
-    let after = rest.slice(telIdx).replace(/^Téléphone:\s*/i, '');
+    const after = rest.slice(telIdx).replace(/^Téléphone:\s*/i, '');
     const nl = after.search(/\r?\n/);
 
     if (nl >= 0) {

@@ -26,7 +26,12 @@ function buildReminderHtml(apt: Record<string, unknown>, studioName: string, rem
       <p style="color:#525252;font-size:15px;line-height:1.6;margin:0 0 16px;">Rappel : ton rendez-vous chez <strong>${safeStudio}</strong> est prévu <strong>${escapeHtml(timeLabel)}</strong>.</p>
       ${emailInfoBox(infoContent)}
       <p style="color:#737373;font-size:13px;margin:0;text-align:center;">En cas d'empêchement, contacte le studio au plus vite.</p>`;
-  return wrapEmailLayout({ tag: "RAPPEL RDV", title: `Rappel RDV ${timeLabel}`, bodyHtml });
+  return wrapEmailLayout({
+    preheader: `Rappel : ta séance chez ${String(studioName)} — ${timeLabel}`,
+    tag: "RAPPEL RDV",
+    title: `Rappel RDV ${timeLabel}`,
+    bodyHtml,
+  });
 }
 
 function getReminderSubject(reminderType: string, studioName: string): string {

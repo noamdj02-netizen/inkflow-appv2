@@ -360,7 +360,7 @@ function MapHero({
       marker.on('click', () => onDotClick(s));
       return marker;
     });
-  }, [studiosWithCoords, onDotClick]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [studiosWithCoords, onDotClick]);  
 
   // Update user position marker
   useEffect(() => {
@@ -2399,7 +2399,7 @@ function TabProfile({
   }, [userName]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'global' });
     window.location.href = '/client';
   };
 
@@ -2894,7 +2894,7 @@ export function ClientDashboard() {
       setUserInit(initials(name) || u.email?.[0]?.toUpperCase() || '?');
       setUserEmail(u.email ?? '');
 
-      let portalUrl: string | null = null;
+      let portalUrl: string | null;
       try {
         portalUrl = await fetchPortalAvatarUrl(u.id);
       } catch {
@@ -3538,7 +3538,7 @@ export function ClientDashboard() {
               <button
                 type="button"
                 onClick={async () => {
-                  await supabase.auth.signOut();
+                  await supabase.auth.signOut({ scope: 'global' });
                   window.location.href = '/client';
                 }}
                 className="w-full flex items-center gap-2.5 px-3 py-3 min-h-[44px] rounded-xl text-sm font-medium transition-all active:scale-[0.98]"

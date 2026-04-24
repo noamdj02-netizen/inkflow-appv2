@@ -4,7 +4,7 @@
  */
 import { getGoTrueUser, createSupabaseUserClient } from "../_shared/supabaseAuth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
-import { sendEmail, addPreviewBccToPayload } from "../_shared/resend.ts";
+import { sendEmail } from "../_shared/resend.ts";
 import { wrapEmailLayout, escapeHtml, getEmailNavigationBaseUrls } from "../_shared/emailLayout.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -193,13 +193,11 @@ Deno.serve(async (req: Request) => {
 
   const subject = `${studioName} — créneau proposé pour ton projet · InkFlow`;
 
-  const payload = addPreviewBccToPayload({
+  const sent = await sendEmail({
     to: [row.client_email],
     subject,
     html,
   });
-
-  const sent = await sendEmail(payload as Parameters<typeof sendEmail>[0]);
   if (!sent) {
     return jsonResponse(
       {

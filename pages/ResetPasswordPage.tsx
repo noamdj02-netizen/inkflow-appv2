@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { supabase } from '../lib/supabase';
-import { getPasswordRecoveryRedirectTo } from '../lib/urls';
+import { requestPasswordRecoveryEmail } from '../lib/requestPasswordRecoveryEmail';
 import { resetPasswordSchema } from '../lib/authValidation';
 
 export const ResetPasswordPage: React.FC = () => {
@@ -18,8 +18,13 @@ export const ResetPasswordPage: React.FC = () => {
       window.location.replace(`/auth/update-password${hash}`);
       return;
     }
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY' && window.location.pathname.replace(/\/$/, '') === '/reset-password') {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (
+        event === 'PASSWORD_RECOVERY' &&
+        window.location.pathname.replace(/\/$/, '') === '/reset-password'
+      ) {
         window.location.replace('/auth/update-password');
       }
     });
@@ -36,9 +41,7 @@ export const ResetPasswordPage: React.FC = () => {
     }
     setLoading(true);
     try {
-      const redirectTo = getPasswordRecoveryRedirectTo();
-      const { error: err } = await supabase.auth.resetPasswordForEmail(parsed.data.email, { redirectTo });
-      if (err) throw err;
+      await requestPasswordRecoveryEmail(parsed.data.email);
       setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');
@@ -56,9 +59,13 @@ export const ResetPasswordPage: React.FC = () => {
           </div>
           <h1 className="text-xl font-bold text-neutral-900 mb-2">Email envoyé</h1>
           <p className="text-neutral-600 text-sm mb-6">
-            Si un compte existe pour {email}, vous recevrez un lien pour réinitialiser votre mot de passe.
+            Si un compte existe pour {email}, vous recevrez un lien pour réinitialiser votre mot de
+            passe.
           </p>
-          <a href="/login" className="inline-block px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors">
+          <a
+            href="/login"
+            className="inline-block px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors"
+          >
             Retour à la connexion
           </a>
         </div>
@@ -69,7 +76,10 @@ export const ResetPasswordPage: React.FC = () => {
   return (
     <div className="landing-scroll bg-neutral-50 min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <a href="/login" className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-6">
+        <a
+          href="/login"
+          className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900 mb-6"
+        >
           <ArrowLeft className="w-5 h-5" />
           Retour
         </a>

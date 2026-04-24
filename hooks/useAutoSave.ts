@@ -11,6 +11,8 @@ interface UseAutoSaveReturn {
   saving: boolean;
   saved: boolean;
   error: Error | null;
+  /** Horodatage (ms) du dernier enregistrement réussi — pour afficher « Enregistré à … ». */
+  lastSavedAt: number | null;
   /** Force an immediate save (e.g. for manual "Save" button clicks). */
   saveNow: () => void;
 }
@@ -35,6 +37,7 @@ export function useAutoSave<T>(
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -52,6 +55,7 @@ export function useAutoSave<T>(
       await saveFnRef.current(d);
       dirtyRef.current = false;
       setSaved(true);
+      setLastSavedAt(Date.now());
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaved(false), 1500);
     } catch (err) {
@@ -61,19 +65,22 @@ export function useAutoSave<T>(
     }
   }, []);
 
-  const scheduleOrSave = useCallback((d: T, immediate: boolean) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    dirtyRef.current = true;
+  const scheduleOrSave = useCallback(
+    (d: T, immediate: boolean) => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      dirtyRef.current = true;
 
-    if (immediate || debounceMs === 0) {
-      executeSave(d);
-    } else {
-      timerRef.current = setTimeout(() => {
-        timerRef.current = null;
+      if (immediate || debounceMs === 0) {
         executeSave(d);
-      }, debounceMs);
-    }
-  }, [debounceMs, executeSave]);
+      } else {
+        timerRef.current = setTimeout(() => {
+          timerRef.current = null;
+          executeSave(d);
+        }, debounceMs);
+      }
+    },
+    [debounceMs, executeSave]
+  );
 
   // Watch data changes
   useEffect(() => {
@@ -102,5 +109,5 @@ export function useAutoSave<T>(
     executeSave(dataRef.current);
   }, [executeSave]);
 
-  return { saving, saved, error, saveNow };
+  return { saving, saved, error, lastSavedAt, saveNow };
 }

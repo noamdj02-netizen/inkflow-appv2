@@ -9,7 +9,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { createSupabaseUserClient } from "../_shared/supabaseAuth.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
-import { sendEmail } from "../_shared/resend.ts";
+import { sendEmail, htmlToPlainTextFallback } from "../_shared/resend.ts";
 import { htmlWelcomeImmediate } from "../_shared/onboardingEmailDark.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -84,6 +84,7 @@ Deno.serve(async (req: Request) => {
     to: [u.email],
     subject: "Ton studio InkFlow est prêt — bookable en 10 min",
     html,
+    text: htmlToPlainTextFallback(html),
   });
 
   if (!sent) {

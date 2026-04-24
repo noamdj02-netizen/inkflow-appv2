@@ -14,14 +14,20 @@ import {
   Unplug,
 } from 'lucide-react';
 import { getStudioId, supabase } from '../../lib/supabase';
-import { getPaymentSettingsFromSupabase, savePaymentSettingsToSupabase } from '../../lib/supabaseDashboard';
+import {
+  getPaymentSettingsFromSupabase,
+  savePaymentSettingsToSupabase,
+} from '../../lib/supabaseDashboard';
 import {
   startStripeConnectOnboarding,
   syncStripeConnectStatus,
   createStripeExpressLoginLink,
   disconnectStripeConnect,
 } from '../../lib/stripeClient';
-import { maybeStartStripeConnectResumePoll, registerStripeConnectResumePoll } from '../../lib/stripeConnectResume';
+import {
+  maybeStartStripeConnectResumePoll,
+  registerStripeConnectResumePoll,
+} from '../../lib/stripeConnectResume';
 import { useToast } from '../../contexts/ToastContext';
 import { useAutoSave } from '../../hooks/useAutoSave';
 import { Modal } from '../ui/Modal';
@@ -34,7 +40,11 @@ interface PaymentSettings {
   requireDeposit: boolean;
 }
 
-const defaultSettings: PaymentSettings = { depositPercentage: 30, stripeConnected: false, requireDeposit: true };
+const defaultSettings: PaymentSettings = {
+  depositPercentage: 30,
+  stripeConnected: false,
+  requireDeposit: true,
+};
 
 interface PaymentsSettingsProps {
   userEmail?: string;
@@ -74,21 +84,29 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
 
   useEffect(() => {
     if (!studioId || !useSupabase) return;
-    getPaymentSettingsFromSupabase(studioId).then((fromDb) => {
-      if (Object.keys(fromDb).length > 0) {
-        const merged = { ...defaultSettings, ...fromDb } as PaymentSettings;
-        setSettings(merged);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-      }
-    }).catch(() => { toast.error('Une erreur est survenue'); });
+    getPaymentSettingsFromSupabase(studioId)
+      .then((fromDb) => {
+        if (Object.keys(fromDb).length > 0) {
+          const merged = { ...defaultSettings, ...fromDb } as PaymentSettings;
+          setSettings(merged);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        }
+      })
+      .catch(() => {
+        toast.error('Une erreur est survenue');
+      });
   }, [studioId, useSupabase]);
 
-  const { saving, saved, saveNow } = useAutoSave(settings, async (s) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-    if (studioId && useSupabase) {
-      await savePaymentSettingsToSupabase(studioId, s as unknown as Record<string, unknown>);
-    }
-  }, { debounceMs: 500 });
+  const { saving, saved, saveNow } = useAutoSave(
+    settings,
+    async (s) => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+      if (studioId && useSupabase) {
+        await savePaymentSettingsToSupabase(studioId, s as unknown as Record<string, unknown>);
+      }
+    },
+    { debounceMs: 500 }
+  );
 
   const save = () => {
     saveNow();
@@ -158,7 +176,9 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
       toast.error(result.error);
       return;
     }
-    toast.success('Redirection vers Stripe pour enregistrer ton compte et recevoir les encaissements…');
+    toast.success(
+      'Redirection vers Stripe pour enregistrer ton compte et recevoir les encaissements…'
+    );
     window.location.href = result.url;
   };
 
@@ -219,27 +239,31 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
               <CreditCard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="flex-1 min-w-0 space-y-2">
-              <div className="font-semibold text-[var(--text-primary)]">Recevoir les acomptes sur ton Stripe</div>
+              <div className="font-semibold text-[var(--text-primary)]">
+                Recevoir les acomptes sur ton Stripe
+              </div>
               {connectLoading ? (
                 <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                   <Loader2 className="w-4 h-4 animate-spin" /> Chargement du statut…
                 </div>
               ) : chargesEnabled ? (
                 <p className="text-sm text-[var(--text-secondary)]">
-                  Compte Stripe Connect actif : les paiements clients sont versés sur ton compte Stripe (moins la commission
-                  éventuelle InkFlow). Le tableau de bord InkFlow se met à jour comme avant.
+                  Compte Stripe Connect actif : les paiements clients sont versés sur ton compte
+                  Stripe (moins la commission éventuelle InkFlow). Le tableau de bord InkFlow se met
+                  à jour comme avant.
                 </p>
               ) : connectAccountId ? (
                 <p className="text-sm text-[var(--text-secondary)]">
-                  Onboarding en cours ou en vérification chez Stripe. Termine les étapes ou attends la validation (souvent
-                  quelques minutes).
+                  Onboarding en cours ou en vérification chez Stripe. Termine les étapes ou attends
+                  la validation (souvent quelques minutes).
                 </p>
               ) : (
                 <>
                   <p className="text-sm text-[var(--text-secondary)]">
-                    Connecte un compte Stripe Express pour encaisser les acomptes directement sur ton IBAN. Tant que Stripe
-                    n’est pas actif, la page publique <span className="font-medium text-[var(--text-primary)]">/book</span> de
-                    ton studio affiche un bandeau et le bouton « payer l’acompte » reste désactivé.
+                    Connecte un compte Stripe Express pour encaisser les acomptes directement sur
+                    ton IBAN. Tant que Stripe n’est pas actif, la page publique{' '}
+                    <span className="font-medium text-[var(--text-primary)]">/book</span> de ton
+                    studio affiche un bandeau et le bouton « payer l’acompte » reste désactivé.
                   </p>
                   <a
                     href="https://dashboard.stripe.com/register"
@@ -273,7 +297,9 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
                   className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98] transition-all min-h-[44px]"
                 >
                   {connectBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  {connectAccountId ? "Continuer l'activation Stripe" : 'Connecter mon compte Stripe'}
+                  {connectAccountId
+                    ? "Continuer l'activation Stripe"
+                    : 'Connecter mon compte Stripe'}
                 </button>
               )}
             </div>
@@ -283,15 +309,19 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
           {!connectLoading && connectAccountId && (
             <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-3">
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-emerald-500/10 shrink-0">
-                  <LayoutDashboard className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
+                  <LayoutDashboard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
-                  <div className="font-semibold text-[var(--text-primary)]">Ton espace Stripe (compte connecté)</div>
+                  <div className="font-semibold text-[var(--text-primary)]">
+                    Ton espace Stripe (compte connecté)
+                  </div>
                   <p className="text-sm text-[var(--text-secondary)]">
-                    Stripe n’autorise pas d’intégrer leur interface en pleine page dans InkFlow. Ce bouton ouvre ton{' '}
-                    <strong className="text-[var(--text-primary)]">tableau de bord Express</strong> (paiements, virements,
-                    infos légales) dans un nouvel onglet — c’est l’expérience officielle Stripe.
+                    Stripe n’autorise pas d’intégrer leur interface en pleine page dans InkFlow. Ce
+                    bouton ouvre ton{' '}
+                    <strong className="text-[var(--text-primary)]">tableau de bord Express</strong>{' '}
+                    (paiements, virements, infos légales) dans un nouvel onglet — c’est l’expérience
+                    officielle Stripe.
                   </p>
                 </div>
               </div>
@@ -300,9 +330,13 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
                   type="button"
                   onClick={() => void handleOpenExpressDashboard()}
                   disabled={expressOpening || !studioId}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:opacity-90 disabled:opacity-60 active:scale-[0.98] transition-all min-h-[44px]"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400  disabled:opacity-60 active:scale-[0.98] transition-all min-h-[44px]"
                 >
-                  {expressOpening ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+                  {expressOpening ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ExternalLink className="w-4 h-4" />
+                  )}
                   Ouvrir mon tableau de bord Stripe
                 </button>
                 <button
@@ -311,7 +345,11 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
                   disabled={refreshBusy || !studioId}
                   className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-60 active:scale-[0.98] transition-all min-h-[44px]"
                 >
-                  {refreshBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  {refreshBusy ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
                   Actualiser le statut
                 </button>
                 <button
@@ -337,53 +375,92 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
                 <HelpCircle className="w-4 h-4 text-blue-500" />
                 Comment créer et connecter mon compte Stripe ?
               </span>
-              {showStripeGuide ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {showStripeGuide ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
             </button>
             {showStripeGuide && (
               <div className="px-4 pb-4 pt-0 space-y-4 border-t border-[var(--border)]">
                 <p className="text-sm text-[var(--text-secondary)] pt-3">
-                  Stripe est la plateforme de paiement utilisée par InkFlow pour encaisser les acomptes. C&apos;est gratuit de créer un compte.
+                  Stripe est la plateforme de paiement utilisée par InkFlow pour encaisser les
+                  acomptes. C&apos;est gratuit de créer un compte.
                 </p>
                 <ol className="space-y-3 text-sm">
                   <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center">1</span>
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center">
+                      1
+                    </span>
                     <div>
-                      <strong className="text-[var(--text-primary)]">Créer un compte</strong> — Allez sur{' '}
-                      <a href="https://dashboard.stripe.com/register" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline">stripe.com</a> et inscrivez-vous avec votre email.
+                      <strong className="text-[var(--text-primary)]">Créer un compte</strong> —
+                      Allez sur{' '}
+                      <a
+                        href="https://dashboard.stripe.com/register"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 dark:text-blue-400 underline"
+                      >
+                        stripe.com
+                      </a>{' '}
+                      et inscrivez-vous avec votre email.
                     </div>
                   </li>
                   <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center">2</span>
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center">
+                      2
+                    </span>
                     <div>
-                      <strong className="text-[var(--text-primary)]">Compléter votre profil</strong> — Renseignez les infos de votre activité (nom du studio, SIRET, IBAN pour recevoir les virements).
+                      <strong className="text-[var(--text-primary)]">Compléter votre profil</strong>{' '}
+                      — Renseignez les infos de votre activité (nom du studio, SIRET, IBAN pour
+                      recevoir les virements).
                     </div>
                   </li>
                   <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center">3</span>
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center">
+                      3
+                    </span>
                     <div>
-                      <strong className="text-[var(--text-primary)]">Activer votre compte</strong> — Stripe vérifie votre identité (pièce d&apos;identité, justificatif de domicile). Comptez 1 à 2 jours ouvrés.
+                      <strong className="text-[var(--text-primary)]">Activer votre compte</strong> —
+                      Stripe vérifie votre identité (pièce d&apos;identité, justificatif de
+                      domicile). Comptez 1 à 2 jours ouvrés.
                     </div>
                   </li>
                   <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center">4</span>
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center">
+                      4
+                    </span>
                     <div>
-                      <strong className="text-[var(--text-primary)]">Connecter à InkFlow</strong> — Une fois activé, cliquez sur &quot;Connecter&quot; ci-dessus pour lier votre compte Stripe à InkFlow.
+                      <strong className="text-[var(--text-primary)]">Connecter à InkFlow</strong> —
+                      Une fois activé, cliquez sur &quot;Connecter&quot; ci-dessus pour lier votre
+                      compte Stripe à InkFlow.
                     </div>
                   </li>
                 </ol>
                 <div className="flex flex-wrap gap-2 pt-2">
-                  <a href="https://dashboard.stripe.com/register" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors">
+                  <a
+                    href="https://dashboard.stripe.com/register"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+                  >
                     Créer mon compte Stripe
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
-                  <a href="https://stripe.com/docs/connect/account-types" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors">
+                  <a
+                    href="https://stripe.com/docs/connect/account-types"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+                  >
                     En savoir plus sur Stripe
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                 </div>
                 <p className="text-xs text-[var(--text-tertiary)] flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5 text-emerald-500" />
-                  Stripe prélève environ 1,5 % + 0,25 € par transaction. Les virements vers votre compte sont effectués sous 2 à 7 jours ouvrés.
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-500" />
+                  Stripe prélève environ 1,5 % + 0,25 € par transaction. Les virements vers votre
+                  compte sont effectués sous 2 à 7 jours ouvrés.
                 </p>
               </div>
             )}
@@ -399,10 +476,14 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
             min="0"
             max="100"
             value={settings.depositPercentage}
-            onChange={(e) => setSettings(s => ({ ...s, depositPercentage: Number(e.target.value) || 0 }))}
+            onChange={(e) =>
+              setSettings((s) => ({ ...s, depositPercentage: Number(e.target.value) || 0 }))
+            }
             className="w-full max-w-[200px] px-4 py-3 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           />
-          <p className="text-sm text-[var(--text-tertiary)] mt-1">Ex: 30% sur un tatouage de 150€ = 45€ d'acompte</p>
+          <p className="text-sm text-[var(--text-tertiary)] mt-1">
+            Ex: 30% sur un tatouage de 150€ = 45€ d'acompte
+          </p>
         </div>
 
         <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--border)]">
@@ -410,12 +491,14 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
             <Shield className="w-5 h-5 text-[var(--text-secondary)]" />
             <div>
               <div className="font-semibold text-[var(--text-primary)]">Exiger un acompte</div>
-              <div className="text-sm text-[var(--text-secondary)]">Les réservations nécessitent un acompte pour être confirmées</div>
+              <div className="text-sm text-[var(--text-secondary)]">
+                Les réservations nécessitent un acompte pour être confirmées
+              </div>
             </div>
           </div>
           <button
             type="button"
-            onClick={() => setSettings(s => ({ ...s, requireDeposit: !s.requireDeposit }))}
+            onClick={() => setSettings((s) => ({ ...s, requireDeposit: !s.requireDeposit }))}
             className={`relative w-12 h-7 rounded-full transition-colors ${settings.requireDeposit ? 'bg-blue-600' : 'bg-[var(--border)]'}`}
           >
             <span
@@ -425,8 +508,11 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
           </button>
         </div>
 
-        <button onClick={save} disabled={saving}
-          className={`px-6 py-3 rounded-xl font-semibold transition-colors touch-target disabled:opacity-50 ${saved ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600'}`}>
+        <button
+          onClick={save}
+          disabled={saving}
+          className={`px-6 py-3 rounded-xl font-semibold transition-colors touch-target disabled:opacity-50 ${saved ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600'}`}
+        >
           {saving ? 'Enregistrement…' : saved ? 'Enregistré !' : 'Enregistrer'}
         </button>
       </div>
@@ -440,12 +526,12 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
         <div className="space-y-4 text-[var(--text-secondary)] text-sm">
           <p>
             InkFlow arrêtera d’utiliser ce compte Connect : les paiements en ligne depuis{' '}
-            <span className="font-medium text-[var(--text-primary)]">/book</span> seront désactivés jusqu’à une nouvelle
-            connexion.
+            <span className="font-medium text-[var(--text-primary)]">/book</span> seront désactivés
+            jusqu’à une nouvelle connexion.
           </p>
           <p className="text-xs text-[var(--text-tertiary)]">
-            Ton compte peut toujours exister chez Stripe ; tu pourras le reconnecter ou en lier un autre via « Connecter mon
-            compte Stripe ».
+            Ton compte peut toujours exister chez Stripe ; tu pourras le reconnecter ou en lier un
+            autre via « Connecter mon compte Stripe ».
           </p>
           <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end pt-2">
             <button

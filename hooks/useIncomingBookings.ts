@@ -24,28 +24,35 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean, d
   const toast = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  /** Erreur chargement initial / refetch — UI inline + Réessayer préférée au seul toast */
+  const [loadError, setLoadError] = useState<string | null>(null);
   const initialLoadDone = useRef(false);
 
   const load = useCallback(async () => {
     if (!studioId) {
       setBookings([]);
+      setLoadError(null);
       setLoading(false);
       initialLoadDone.current = true;
       return;
     }
     if (demoMode) {
       setBookings(getInkflowDemoProBookings(studioId));
+      setLoadError(null);
       setLoading(false);
       initialLoadDone.current = true;
       return;
     }
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await getBookingsFromSupabase(studioId);
       setBookings(data);
     } catch (err) {
       console.error('[useIncomingBookings] load error:', err);
-      toast.error('Impossible de charger les demandes de réservation');
+      const msg =
+        err instanceof Error ? err.message : 'Impossible de charger les demandes de réservation';
+      setLoadError(msg);
       setBookings([]);
     } finally {
       setLoading(false);
@@ -82,7 +89,8 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean, d
           try {
             const newBooking = mapBookingFromDb(payload.new as Record<string, unknown>);
             setBookings((prev) => {
-              if (prev.some((b) => b.id === newBooking.id)) return prev.map((b) => (b.id === newBooking.id ? newBooking : b));
+              if (prev.some((b) => b.id === newBooking.id))
+                return prev.map((b) => (b.id === newBooking.id ? newBooking : b));
               return [newBooking, ...prev];
             });
             if (initialLoadDone.current) {
@@ -127,20 +135,18 @@ export function useIncomingBookings(studioId: string | null, enabled: boolean, d
     };
   }, [enabled, studioId, toast, demoMode]);
 
-  const updateStatus = useCallback(async (id: string, status: BookingStatus) => {
-    if (demoMode) {
-      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
-      return;
-    }
-    try {
+  const updateStatus = useCallback(
+    async (id: string, status: BookingStatus) => {
+      if (demoMode) {
+        setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
+        return;
+      }
       await updateBookingStatusInSupabase(id, status);
       setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
-      // Re-fetch from DB pour garantir la persistance (au cas où le realtime serait en retard ou désactivé)
       if (studioId) load();
-    } catch (e) {
-      throw e;
-    }
-  }, [studioId, load, demoMode]);
+    },
+    [studioId, load, demoMode]
+  );
 
-  return { bookings, loading, updateStatus, refetch: load };
+  return { bookings, loading, loadError, updateStatus, refetch: load };
 }

@@ -1,9 +1,14 @@
 import React, { useCallback, useState } from 'react';
 import { Download, Database, Loader2 } from 'lucide-react';
 import type { Appointment, Client } from '../../types';
-import { buildAppointmentsCsvRows, buildClientsCsvRows, downloadTextFile } from '../../lib/studioDataExport';
+import {
+  buildAppointmentsCsvRows,
+  buildClientsCsvRows,
+  downloadTextFile,
+} from '../../lib/studioDataExport';
 import { useToast } from '../../contexts/ToastContext';
 import { getAppointmentsFromSupabase, getClientsFromSupabase } from '../../lib/supabaseDashboard';
+import { exportStudioDataJson } from '../../lib/studioDataPortability';
 
 interface StudioDataExportCardProps {
   studioId: string;
@@ -20,7 +25,7 @@ export const StudioDataExportCard: React.FC<StudioDataExportCardProps> = ({
   appointments,
 }) => {
   const toast = useToast();
-  const [busy, setBusy] = useState<'clients' | 'appointments' | null>(null);
+  const [busy, setBusy] = useState<'clients' | 'appointments' | 'json' | null>(null);
 
   const exportClients = useCallback(async () => {
     setBusy('clients');
@@ -41,6 +46,28 @@ export const StudioDataExportCard: React.FC<StudioDataExportCardProps> = ({
       setBusy(null);
     }
   }, [studioId, studioSlug, toast]);
+
+  const exportJson = useCallback(async () => {
+    setBusy('json');
+    try {
+      const r = await exportStudioDataJson(studioId);
+      if ('error' in r) {
+        toast.error(r.error);
+        return;
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(r.blob);
+      a.download = r.filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast.success('Export JSON téléchargé (portabilité RGPD)');
+    } catch (e) {
+      console.error(e);
+      toast.error("Impossible de générer l'export JSON");
+    } finally {
+      setBusy(null);
+    }
+  }, [studioId, toast]);
 
   const exportAppointments = useCallback(async () => {
     setBusy('appointments');
@@ -71,14 +98,29 @@ export const StudioDataExportCard: React.FC<StudioDataExportCardProps> = ({
           <Database className="w-5 h-5 text-zinc-700 dark:text-zinc-300" aria-hidden />
         </div>
         <div className="min-w-0">
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Export de vos données</h3>
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
+            Export de vos données
+          </h3>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Fichiers CSV (UTF-8) pour sauvegarde ou traitement comptable externe. Les fichiers restent sur votre appareil.
-            Au clic, les données sont rechargées depuis le serveur avant l’export.
+            CSV pour compta ; <strong>export JSON complet</strong> du dossier studio (portabilité
+            RGPD). Les fichiers restent sur l’appareil — données rechargées côté serveur au clic.
           </p>
         </div>
       </div>
-      <div className="p-6 flex flex-col sm:flex-row gap-3">
+      <div className="p-6 flex flex-col sm:flex-wrap sm:flex-row gap-3">
+        <button
+          type="button"
+          onClick={exportJson}
+          disabled={isBusy}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-violet-200 dark:border-violet-800 text-sm font-semibold text-violet-800 dark:text-violet-200 bg-violet-50 dark:bg-violet-950/40 hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none min-h-[44px] sm:min-w-[200px]"
+        >
+          {busy === 'json' ? (
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+          ) : (
+            <Database className="w-4 h-4" aria-hidden />
+          )}
+          Tout (JSON)
+        </button>
         <button
           type="button"
           onClick={exportClients}

@@ -3,12 +3,20 @@ import { useClientManifest } from './hooks/useClientManifest';
 import { ThemeProvider } from 'next-themes';
 import { LANDING_URL } from './lib/urls';
 import { SEO } from './components/SEO';
-import { Analytics } from '@vercel/analytics/react';
+import { VercelAnalyticsOptIn } from './components/VercelAnalyticsOptIn';
+import { PostHogOptIn } from './components/PostHogOptIn';
+import { ProductAnalyticsIdentity } from './components/analytics/ProductAnalyticsIdentity';
+import { ProductNpsPrompt } from './components/ProductNpsPrompt';
 import { AuthProvider, useAuth, REDIRECT_AFTER_LOGIN_KEY } from './contexts/AuthContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { SupabaseSyncProvider } from './contexts/SupabaseSyncContext';
-import { Logo } from './components/Logo';
+import {
+  AuthRouteLoadingSkeleton,
+  LoginRedirectSkeleton,
+  PublicPageLoadingSkeleton,
+} from './components/common/LoadingSkeleton';
+import { OfflineBanner } from './components/common/OfflineBanner';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CookieConsent } from './components/CookieConsent';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
@@ -21,45 +29,112 @@ import { ReferralPage } from './pages/ReferralPage';
 import { ReservationSuccessPage } from './pages/public/ReservationSuccessPage';
 
 const LandingEnhanceAI = lazy(() =>
-  import('./components/landing/LandingEnhanceAI').then((m) => ({ default: m.LandingEnhanceAI })),
+  import('./components/landing/LandingEnhanceAI').then((m) => ({ default: m.LandingEnhanceAI }))
 );
 const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
-const SignupPage = lazy(() => import('./pages/SignupPage').then((m) => ({ default: m.SignupPage })));
+const SignupPage = lazy(() =>
+  import('./pages/SignupPage').then((m) => ({ default: m.SignupPage }))
+);
 const ClientPortalLoginPage = lazy(() =>
-  import('./pages/client/ClientPortalLoginPage').then((m) => ({ default: m.ClientPortalLoginPage })),
+  import('./pages/client/ClientPortalLoginPage').then((m) => ({ default: m.ClientPortalLoginPage }))
 );
 const ClientWelcomeOnboardingPage = lazy(() =>
-  import('./pages/client/ClientWelcomeOnboardingPage').then((m) => ({ default: m.ClientWelcomeOnboardingPage })),
+  import('./pages/client/ClientWelcomeOnboardingPage').then((m) => ({
+    default: m.ClientWelcomeOnboardingPage,
+  }))
 );
-const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
-const PublicStudioPagePro = lazy(() => import('./pages/public/PublicStudioPagePro').then(m => ({ default: m.PublicStudioPagePro })));
-const PublicBookingPage = lazy(() => import('./pages/public/PublicBookingPage').then(m => ({ default: m.PublicBookingPage })));
-const ConsentPage = lazy(() => import('./pages/public/ConsentPage').then(m => ({ default: m.ConsentPage })));
-const PublicMessagePage = lazy(() => import('./pages/public/PublicMessagePage').then(m => ({ default: m.PublicMessagePage })));
-const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
-const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage').then(m => ({ default: m.TermsOfServicePage })));
-const AidePage = lazy(() => import('./pages/AidePage').then(m => ({ default: m.AidePage })));
-const DashboardDemoPage = lazy(() => import('./pages/DashboardDemoPage').then(m => ({ default: m.DashboardDemoPage })));
-const FeatureDetailPage = lazy(() => import('./pages/features/FeatureDetailPage').then(m => ({ default: m.FeatureDetailPage })));
-const InstagramCallbackPage = lazy(() => import('./pages/InstagramCallbackPage').then(m => ({ default: m.InstagramCallbackPage })));
-const AddToHomeScreenPage = lazy(() => import('./pages/AddToHomeScreenPage').then(m => ({ default: m.AddToHomeScreenPage })));
-const DebugExperiencePage = lazy(() => import('./pages/admin/DebugExperiencePage').then(m => ({ default: m.DebugExperiencePage })));
+const DashboardPage = lazy(() =>
+  import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
+);
+const PublicStudioPagePro = lazy(() =>
+  import('./pages/public/PublicStudioPagePro').then((m) => ({ default: m.PublicStudioPagePro }))
+);
+const PublicBookingPage = lazy(() =>
+  import('./pages/public/PublicBookingPage').then((m) => ({ default: m.PublicBookingPage }))
+);
+const ConsentPage = lazy(() =>
+  import('./pages/public/ConsentPage').then((m) => ({ default: m.ConsentPage }))
+);
+const PublicMessagePage = lazy(() =>
+  import('./pages/public/PublicMessagePage').then((m) => ({ default: m.PublicMessagePage }))
+);
+const PrivacyPolicyPage = lazy(() =>
+  import('./pages/legal/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage }))
+);
+const TermsOfServicePage = lazy(() =>
+  import('./pages/legal/TermsOfServicePage').then((m) => ({ default: m.TermsOfServicePage }))
+);
+const LegalNoticePage = lazy(() =>
+  import('./pages/legal/LegalNoticePage').then((m) => ({ default: m.LegalNoticePage }))
+);
+const AidePage = lazy(() => import('./pages/AidePage').then((m) => ({ default: m.AidePage })));
+const ChangelogPage = lazy(() =>
+  import('./pages/ChangelogPage').then((m) => ({ default: m.ChangelogPage }))
+);
+const DashboardDemoPage = lazy(() =>
+  import('./pages/DashboardDemoPage').then((m) => ({ default: m.DashboardDemoPage }))
+);
+const FeatureDetailPage = lazy(() =>
+  import('./pages/features/FeatureDetailPage').then((m) => ({ default: m.FeatureDetailPage }))
+);
+const InstagramCallbackPage = lazy(() =>
+  import('./pages/InstagramCallbackPage').then((m) => ({ default: m.InstagramCallbackPage }))
+);
+const AddToHomeScreenPage = lazy(() =>
+  import('./pages/AddToHomeScreenPage').then((m) => ({ default: m.AddToHomeScreenPage }))
+);
+const DebugExperiencePage = lazy(() =>
+  import('./pages/admin/DebugExperiencePage').then((m) => ({ default: m.DebugExperiencePage }))
+);
 const FounderDashboardPage = lazy(() =>
-  import('./pages/admin/FounderDashboardPage').then((m) => ({ default: m.FounderDashboardPage })),
+  import('./pages/admin/FounderDashboardPage').then((m) => ({ default: m.FounderDashboardPage }))
 );
-const DailyBriefPage = lazy(() => import('./pages/admin/DailyBriefPage').then((m) => ({ default: m.DailyBriefPage })));
-const ClientVitrineEmbedPage = lazy(() => import('./pages/client/ClientStudioEmbedPage').then(m => ({ default: m.ClientVitrineEmbedPage })));
-const ClientFlashToolsEmbedPage = lazy(() => import('./pages/client/ClientStudioEmbedPage').then(m => ({ default: m.ClientFlashToolsEmbedPage })));
-const ClientDashboard = lazy(() => import('./pages/public/ClientDashboard').then(m => ({ default: m.ClientDashboard })));
-const ClientHealthOnboardingPage = lazy(() => import('./pages/client/ClientHealthOnboardingPage').then(m => ({ default: m.ClientHealthOnboardingPage })));
+const DailyBriefPage = lazy(() =>
+  import('./pages/admin/DailyBriefPage').then((m) => ({ default: m.DailyBriefPage }))
+);
+const AgendaDeepLinkPage = lazy(() =>
+  import('./pages/AgendaDeepLinkPage').then((m) => ({ default: m.AgendaDeepLinkPage }))
+);
+const ClientVitrineEmbedPage = lazy(() =>
+  import('./pages/client/ClientStudioEmbedPage').then((m) => ({
+    default: m.ClientVitrineEmbedPage,
+  }))
+);
+const ClientFlashToolsEmbedPage = lazy(() =>
+  import('./pages/client/ClientStudioEmbedPage').then((m) => ({
+    default: m.ClientFlashToolsEmbedPage,
+  }))
+);
+const ClientDashboard = lazy(() =>
+  import('./pages/public/ClientDashboard').then((m) => ({ default: m.ClientDashboard }))
+);
+const ClientHealthOnboardingPage = lazy(() =>
+  import('./pages/client/ClientHealthOnboardingPage').then((m) => ({
+    default: m.ClientHealthOnboardingPage,
+  }))
+);
 const ClientOnboardingFinalizePage = lazy(() =>
-  import('./pages/client/ClientOnboardingFinalizePage').then((m) => ({ default: m.ClientOnboardingFinalizePage }))
+  import('./pages/client/ClientOnboardingFinalizePage').then((m) => ({
+    default: m.ClientOnboardingFinalizePage,
+  }))
 );
-const ArtistPage = lazy(() => import('./pages/vitrine/ArtistPage').then(m => ({ default: m.ArtistPage })));
-const FlashPage = lazy(() => import('./pages/vitrine/FlashPage').then(m => ({ default: m.FlashPage })));
-const DiscoverHomePage = lazy(() => import('./pages/discover/DiscoverHomePage').then(m => ({ default: m.DiscoverHomePage })));
-const DiscoverCityPage = lazy(() => import('./pages/discover/DiscoverCityPage').then(m => ({ default: m.DiscoverCityPage })));
-const DiscoverCityStylePage = lazy(() => import('./pages/discover/DiscoverCityStylePage').then(m => ({ default: m.DiscoverCityStylePage })));
+const ArtistPage = lazy(() =>
+  import('./pages/vitrine/ArtistPage').then((m) => ({ default: m.ArtistPage }))
+);
+const FlashPage = lazy(() =>
+  import('./pages/vitrine/FlashPage').then((m) => ({ default: m.FlashPage }))
+);
+const DiscoverHomePage = lazy(() =>
+  import('./pages/discover/DiscoverHomePage').then((m) => ({ default: m.DiscoverHomePage }))
+);
+const DiscoverCityPage = lazy(() =>
+  import('./pages/discover/DiscoverCityPage').then((m) => ({ default: m.DiscoverCityPage }))
+);
+const DiscoverCityStylePage = lazy(() =>
+  import('./pages/discover/DiscoverCityStylePage').then((m) => ({
+    default: m.DiscoverCityStylePage,
+  }))
+);
 
 interface Route {
   path: string | RegExp;
@@ -83,7 +158,9 @@ function normalizePathnameForTheme(pathname: string): string {
  * Évite que les `!important` dark (`index.css`) n’écrasent l’app client / vitrine.
  */
 const InkflowThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [pathname, setPathname] = useState(() => normalizePathnameForTheme(window.location.pathname));
+  const [pathname, setPathname] = useState(() =>
+    normalizePathnameForTheme(window.location.pathname)
+  );
   useEffect(() => {
     const sync = () => setPathname(normalizePathnameForTheme(window.location.pathname));
     window.addEventListener('popstate', sync);
@@ -108,18 +185,7 @@ const InkflowThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 };
 
-const FullScreenSpinner: React.FC = () => (
-  <div className="min-h-screen bg-black flex flex-col items-center justify-center">
-    <Logo size="lg" className="rounded-2xl" />
-    <div
-      className="w-[200px] h-1 mt-5 mx-auto rounded-full bg-white/15 overflow-hidden"
-      role="progressbar"
-      aria-label="Chargement"
-    >
-      <div className="loader-bar-inner h-full w-[40%] rounded-full bg-gradient-to-r from-white to-amber-400/90" />
-    </div>
-  </div>
-);
+const FullScreenSpinner: React.FC = () => <AuthRouteLoadingSkeleton />;
 
 /** Retour Stripe Connect : si SITE_URL pointe vers / au lieu de /dashboard, on corrige au chargement. */
 function initialRouterPath(): string {
@@ -148,7 +214,8 @@ const Router: React.FC = () => {
   useClientManifest(currentPath.startsWith('/client'));
 
   useEffect(() => {
-    const handleLocationChange = () => setCurrentPath(window.location.pathname + window.location.search);
+    const handleLocationChange = () =>
+      setCurrentPath(window.location.pathname + window.location.search);
     window.addEventListener('popstate', handleLocationChange);
     window.addEventListener('inkflow-navigate', handleLocationChange);
 
@@ -203,30 +270,65 @@ const Router: React.FC = () => {
     { path: '/login', component: LoginPage },
     { path: '/signup', component: SignupPage },
     { path: /^\/installer\/?$/, component: AddToHomeScreenPage },
-    { path: /^\/invite\/([a-zA-Z0-9]+)\/?$/, component: InviteRedirectPage, getProps: (m) => ({ code: m[1] }) },
+    {
+      path: /^\/invite\/([a-zA-Z0-9]+)\/?$/,
+      component: InviteRedirectPage,
+      getProps: (m) => ({ code: m[1] }),
+    },
     { path: '/reset-password', component: ResetPasswordPage },
     { path: '/demo', component: DashboardDemoPage },
     { path: '/dashboard-demo', component: DashboardDemoPage },
-    { path: /^\/(vue-ensemble|demandes|rendez-vous|galerie-flash|clients|messagerie|portfolio|finance|parametres)\/?$/, component: FeatureDetailPage, getProps: (m) => ({ slug: m[1] }) },
+    {
+      path: /^\/(vue-ensemble|demandes|rendez-vous|galerie-flash|clients|messagerie|portfolio|finance|parametres)\/?$/,
+      component: FeatureDetailPage,
+      getProps: (m) => ({ slug: m[1] }),
+    },
     { path: '/dashboard', component: DashboardPage, requiresAuth: true, needsSupabaseSync: true },
+    /** Deep link agenda (login → retour sur le jour demandé) */
+    { path: '/agenda', component: AgendaDeepLinkPage },
     /** Slash final optionnel — évite 404 si l’URL est /auth/callback/client/ */
     { path: /^\/auth\/callback\/client\/?$/, component: AuthCallbackPage },
     { path: /^\/auth\/callback\/?$/, component: AuthCallbackPage },
     { path: /^\/instagram\/callback\/?$/, component: InstagramCallbackPage },
     { path: /^\/auth\/update-password\/?$/, component: UpdatePasswordPage },
     // Vitrine publique : accessible sans connexion (slash final optionnel)
-    { path: /^\/studio\/([a-z0-9-]+)\/?$/, component: PublicStudioPagePro, getProps: (m) => ({ studioSlug: m[1] }) },
-    { path: /^\/book\/([a-z0-9-]+)\/?$/, component: PublicBookingPage, getProps: (m) => ({ studioSlug: m[1] }) },
-    { path: /^\/consent\/([a-z0-9_-]+)$/, component: ConsentPage, getProps: (m) => ({ consentId: m[1] }) },
-    { path: /^\/messages\/([a-z0-9_.-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) },
-    { path: /^\/c\/([a-z0-9_.-]+)$/, component: PublicMessagePage, getProps: (m) => ({ threadId: m[1] }) },
+    {
+      path: /^\/studio\/([a-z0-9-]+)\/?$/,
+      component: PublicStudioPagePro,
+      getProps: (m) => ({ studioSlug: m[1] }),
+    },
+    {
+      path: /^\/book\/([a-z0-9-]+)\/?$/,
+      component: PublicBookingPage,
+      getProps: (m) => ({ studioSlug: m[1] }),
+    },
+    {
+      path: /^\/consent\/([a-z0-9_-]+)$/,
+      component: ConsentPage,
+      getProps: (m) => ({ consentId: m[1] }),
+    },
+    {
+      path: /^\/messages\/([a-z0-9_.-]+)$/,
+      component: PublicMessagePage,
+      getProps: (m) => ({ threadId: m[1] }),
+    },
+    {
+      path: /^\/c\/([a-z0-9_.-]+)$/,
+      component: PublicMessagePage,
+      getProps: (m) => ({ threadId: m[1] }),
+    },
     { path: '/reservation-succes', component: ReservationSuccessPage },
     { path: '/politique-confidentialite', component: PrivacyPolicyPage },
     { path: '/privacy', component: PrivacyPolicyPage },
     { path: '/privacy-policy', component: PrivacyPolicyPage },
     { path: '/conditions-utilisation', component: TermsOfServicePage },
     { path: '/terms', component: TermsOfServicePage },
+    { path: '/cgv', component: TermsOfServicePage },
+    { path: '/mentions-legales', component: LegalNoticePage },
+    { path: '/legal', component: LegalNoticePage },
     { path: '/aide', component: AidePage },
+    { path: '/changelog', component: ChangelogPage },
+    { path: '/quoi-de-neuf', component: ChangelogPage },
     { path: '/referral', component: ReferralPage, requiresAuth: true },
     { path: '/admin/debug-experience', component: DebugExperiencePage, requiresAuth: true },
     { path: '/admin/daily-brief', component: DailyBriefPage, requiresAuth: true },
@@ -247,11 +349,27 @@ const Router: React.FC = () => {
     { path: /^\/client\/dashboard\/?$/, component: ClientDashboard },
     // ── Discover — directory public ─────────────────────────────────────────
     { path: '/discover', component: DiscoverHomePage },
-    { path: /^\/discover\/([a-z0-9-]+)\/([a-z0-9-]+)\/?$/, component: DiscoverCityStylePage, getProps: (m) => ({ citySlug: m[1], styleSlug: m[2] }) },
-    { path: /^\/discover\/([a-z0-9-]+)\/?$/, component: DiscoverCityPage, getProps: (m) => ({ citySlug: m[1] }) },
+    {
+      path: /^\/discover\/([a-z0-9-]+)\/([a-z0-9-]+)\/?$/,
+      component: DiscoverCityStylePage,
+      getProps: (m) => ({ citySlug: m[1], styleSlug: m[2] }),
+    },
+    {
+      path: /^\/discover\/([a-z0-9-]+)\/?$/,
+      component: DiscoverCityPage,
+      getProps: (m) => ({ citySlug: m[1] }),
+    },
     // ── Pages vitrines publiques (artistes & flashs) ────────────────────────
-    { path: /^\/artist\/([a-z0-9-]+)\/?$/, component: ArtistPage, getProps: (m) => ({ artistSlug: m[1] }) },
-    { path: /^\/flash\/([a-z0-9-]+)\/?$/, component: FlashPage, getProps: (m) => ({ flashSlug: m[1] }) },
+    {
+      path: /^\/artist\/([a-z0-9-]+)\/?$/,
+      component: ArtistPage,
+      getProps: (m) => ({ artistSlug: m[1] }),
+    },
+    {
+      path: /^\/flash\/([a-z0-9-]+)\/?$/,
+      component: FlashPage,
+      getProps: (m) => ({ flashSlug: m[1] }),
+    },
   ];
 
   const matchRoute = () => {
@@ -288,11 +406,7 @@ const Router: React.FC = () => {
       /* quota / privé */
     }
     window.location.href = '/login';
-    return (
-      <div className="min-h-screen bg-[#0d0d0d] flex items-center justify-center">
-        <Logo size="lg" className="rounded-2xl" />
-      </div>
-    );
+    return <LoginRedirectSkeleton />;
   }
 
   const Component = route.component;
@@ -305,9 +419,13 @@ const Router: React.FC = () => {
         <div className="min-h-screen bg-neutral-50 dark:bg-[var(--bg-primary)] flex items-center justify-center p-6">
           <div className="max-w-md w-full text-center">
             <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-2xl" aria-hidden>⚠️</span>
+              <span className="text-2xl" aria-hidden>
+                ⚠️
+              </span>
             </div>
-            <h1 className="text-xl font-bold text-[var(--text-primary)] mb-2">Une erreur s&apos;est produite</h1>
+            <h1 className="text-xl font-bold text-[var(--text-primary)] mb-2">
+              Une erreur s&apos;est produite
+            </h1>
             <p className="text-[var(--text-secondary)] text-sm mb-6">
               Cette page n&apos;a pas pu s&apos;afficher. Réessayez ou retournez à l&apos;accueil.
             </p>
@@ -341,14 +459,19 @@ const Router: React.FC = () => {
     </ErrorBoundary>
   );
 
-  const PageWithGuard = route.needsSupabaseSync
-    ? <SupabaseSyncProvider>{pageContent}</SupabaseSyncProvider>
-    : pageContent;
+  const PageWithGuard = route.needsSupabaseSync ? (
+    <SupabaseSyncProvider>{pageContent}</SupabaseSyncProvider>
+  ) : (
+    pageContent
+  );
+
+  const showGlobalOfflineBanner = currentPath !== '/dashboard' && !currentPath.startsWith('/admin');
 
   return (
-    <Suspense fallback={<FullScreenSpinner />}>
-      {PageWithGuard}
-    </Suspense>
+    <>
+      {showGlobalOfflineBanner ? <OfflineBanner /> : null}
+      <Suspense fallback={<FullScreenSpinner />}>{PageWithGuard}</Suspense>
+    </>
   );
 };
 
@@ -363,8 +486,13 @@ const NotFoundPage: React.FC = () => (
     />
     <div className="text-center">
       <h1 className="text-6xl font-bold mb-4">404</h1>
-      <p className="text-xl text-neutral-600 mb-8">Soit la page a bougé, soit l&apos;URL est fausse.</p>
-      <a href={LANDING_URL} className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800 transition-colors">
+      <p className="text-xl text-neutral-600 mb-8">
+        Soit la page a bougé, soit l&apos;URL est fausse.
+      </p>
+      <a
+        href={LANDING_URL}
+        className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-xl font-semibold hover:bg-neutral-800 transition-colors"
+      >
         Retour à l'accueil
       </a>
     </div>
@@ -372,13 +500,7 @@ const NotFoundPage: React.FC = () => (
 );
 
 const LandingPage: React.FC = () => (
-  <Suspense
-    fallback={
-      <div className="min-h-screen min-h-[100dvh] bg-white flex items-center justify-center">
-        <Logo size="lg" className="rounded-2xl opacity-90 animate-pulse" />
-      </div>
-    }
-  >
+  <Suspense fallback={<PublicPageLoadingSkeleton />}>
     <LandingEnhanceAI />
   </Suspense>
 );
@@ -440,7 +562,9 @@ const App: React.FC = () => {
               <ToastProvider>
                 <LanguageProvider>
                   <UnhandledRejectionHandler />
+                  <ProductAnalyticsIdentity />
                   <Router />
+                  <ProductNpsPrompt />
                   <CookieConsent />
                   <PWAUpdatePrompt />
                 </LanguageProvider>
@@ -449,7 +573,8 @@ const App: React.FC = () => {
           </AuthProvider>
         </div>
       </InkflowThemeProvider>
-      <Analytics />
+      <PostHogOptIn />
+      <VercelAnalyticsOptIn />
     </ErrorBoundary>
   );
 };

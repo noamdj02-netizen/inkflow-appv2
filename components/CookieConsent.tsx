@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { INKFLOW_COOKIE_CONSENT_KEY, type CookieConsentValue } from '../lib/cookieConsentStorage';
 
-const STORAGE_KEY = 'inkflow_cookie_consent';
-
-export type CookieConsentValue = 'all' | 'essential';
+export type { CookieConsentValue };
 
 export const CookieConsent: React.FC = () => {
   const [visible, setVisible] = useState(false);
@@ -16,7 +15,7 @@ export const CookieConsent: React.FC = () => {
   useEffect(() => {
     if (!mounted) return;
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(INKFLOW_COOKIE_CONSENT_KEY);
       if (!stored) {
         // Délai 2.5s pour laisser l'utilisateur voir le contenu avant la bannière
         const t = setTimeout(() => setVisible(true), 2500);
@@ -30,8 +29,13 @@ export const CookieConsent: React.FC = () => {
 
   const saveAndHide = (value: CookieConsentValue) => {
     try {
-      localStorage.setItem(STORAGE_KEY, value);
+      localStorage.setItem(INKFLOW_COOKIE_CONSENT_KEY, value);
       setVisible(false);
+      try {
+        window.dispatchEvent(new Event('inkflow-cookie-consent'));
+      } catch {
+        /* ignore */
+      }
     } catch {
       setVisible(false);
     }
@@ -48,7 +52,10 @@ export const CookieConsent: React.FC = () => {
       <div className="bg-white dark:bg-[var(--bg-secondary)] border border-neutral-200 dark:border-neutral-700/60 rounded-xl md:rounded-2xl shadow-lg overflow-hidden">
         <div className="p-4 sm:p-5">
           <p className="text-sm text-[var(--text-primary)] leading-relaxed mb-4">
-            On utilise des cookies pour mesurer l&apos;usage et garder la session propre.{' '}
+            Cookies : session, préférences, et (si tu acceptes) statistiques — Vercel Analytics et,
+            si configuré, PostHog (produit, funnels, optionnellement session replay) — hébergement
+            EU possible. Pas de Google Analytics par défaut. Les outils d&apos;analyse se chargent
+            seulement si tu cliques sur « Accepter tout ».{' '}
             <a
               href="https://ink-flow.me/politique-confidentialite"
               className="text-blue-600 dark:text-blue-400 hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-[var(--bg-primary)] rounded"

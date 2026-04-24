@@ -9,6 +9,8 @@ interface ModalProps {
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   showClose?: boolean;
+  /** Ex. bouton retour (mobile) à gauche du titre — ne remplace pas le titre */
+  headerStart?: React.ReactNode;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -17,7 +19,8 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   size = 'md',
-  showClose = true
+  showClose = true,
+  headerStart,
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -25,7 +28,9 @@ export const Modal: React.FC<ModalProps> = ({
     } else {
       document.body.style.overflow = 'unset';
     }
-    return () => { document.body.style.overflow = 'unset'; };
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isOpen]);
 
   useEffect(() => {
@@ -43,11 +48,16 @@ export const Modal: React.FC<ModalProps> = ({
     md: 'max-w-2xl',
     lg: 'max-w-4xl',
     xl: 'max-w-6xl',
-    full: 'max-w-full mx-4'
+    full: 'max-w-full mx-4',
   };
 
   const modalContent = (
-    <div className="fixed inset-0 z-[9999] overflow-y-auto overflow-x-hidden overscroll-contain" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div
+      className="fixed inset-0 z-[9999] overflow-y-auto overflow-x-hidden overscroll-contain"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
       {/* Fond semi-opaque sans blur (évite bugs iOS/PWA où le blur reste bloqué) */}
       <div className="fixed inset-0 bg-black/60" onClick={onClose} aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-3 sm:p-6 safe-top safe-bottom pointer-events-none">
@@ -57,14 +67,42 @@ export const Modal: React.FC<ModalProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between gap-2 p-4 sm:p-6 border-b border-[var(--border)] flex-shrink-0 min-w-0">
-            <h2 id="modal-title" className="text-base sm:text-2xl font-bold text-[var(--text-primary)] truncate">{title}</h2>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              {headerStart}
+              <h2
+                id="modal-title"
+                className="text-base sm:text-2xl font-bold text-[var(--text-primary)] truncate min-w-0"
+              >
+                {title}
+              </h2>
+            </div>
             {showClose && (
-              <button onClick={onClose} className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-[var(--bg-hover)] rounded-xl transition-all active:scale-95 flex-shrink-0 touch-manipulation text-[var(--text-primary)]" aria-label="Fermer">
+              <button
+                onClick={onClose}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-[var(--bg-hover)] rounded-xl transition-all active:scale-95 flex-shrink-0 touch-manipulation text-[var(--text-primary)]"
+                aria-label="Fermer"
+              >
                 <X className="w-5 h-5" />
               </button>
             )}
           </div>
-          <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex-1 min-h-0 min-w-0 [overflow-wrap:anywhere]">{children}</div>
+          <div
+            className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex-1 min-h-0 min-w-0 [overflow-wrap:anywhere] inkflow-modal-body"
+            onFocusCapture={(e) => {
+              const t = e.target;
+              if (
+                t instanceof HTMLInputElement ||
+                t instanceof HTMLTextAreaElement ||
+                t instanceof HTMLSelectElement
+              ) {
+                requestAnimationFrame(() => {
+                  t.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                });
+              }
+            }}
+          >
+            {children}
+          </div>
         </div>
       </div>
     </div>

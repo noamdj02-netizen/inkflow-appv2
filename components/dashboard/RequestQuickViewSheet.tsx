@@ -1,6 +1,21 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, MapPin, Ruler, Euro, Calendar, Mail, Sparkles, FileText, CheckCircle, XCircle, Clock, AtSign, MessageCircle, CreditCard } from 'lucide-react';
+import {
+  X,
+  MapPin,
+  Ruler,
+  Euro,
+  Calendar,
+  Mail,
+  Sparkles,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  AtSign,
+  MessageCircle,
+  CreditCard,
+} from 'lucide-react';
 import type { ProjectRequest, Booking } from '../../types';
 import { instagramMessageUrl } from '../../lib/instagramUtils';
 import { buildMailtoHref, handleMailtoClick } from '../../lib/mailto';
@@ -35,9 +50,15 @@ interface RequestQuickViewSheetProps {
 }
 
 const PLACEMENT_LABELS: Record<string, string> = {
-  arm: 'Bras', leg: 'Jambe', back: 'Dos', chest: 'Poitrine',
-  shoulder: 'Épaule', wrist: 'Poignet', ankle: 'Cheville',
-  'avant-bras': 'Avant-bras', 'avant bras': 'Avant-bras',
+  arm: 'Bras',
+  leg: 'Jambe',
+  back: 'Dos',
+  chest: 'Poitrine',
+  shoulder: 'Épaule',
+  wrist: 'Poignet',
+  ankle: 'Cheville',
+  'avant-bras': 'Avant-bras',
+  'avant bras': 'Avant-bras',
 };
 
 function formatPlacement(p: string | undefined | null): string {
@@ -120,10 +141,10 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
           lg:right-0 lg:top-0 lg:bottom-0 lg:h-[100dvh] lg:max-h-[100dvh] lg:rounded-none lg:border-l lg:border-t-0
           ${isOpen ? 'max-lg:translate-y-0 lg:translate-x-0' : 'max-lg:translate-y-full lg:translate-x-full'}`}
       >
-        <div
-          className="flex items-center justify-between px-4 sm:px-5 pt-[max(12px,env(safe-area-inset-top,0px))] pb-3 sm:pb-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-zinc-50 dark:bg-zinc-900/80"
-        >
-          <h2 className="font-bold text-base sm:text-lg text-zinc-900 dark:text-white pr-2">Aperçu rapide</h2>
+        <div className="flex items-center justify-between px-4 sm:px-5 pt-[max(12px,env(safe-area-inset-top,0px))] pb-3 sm:pb-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-zinc-50 dark:bg-zinc-900/80">
+          <h2 className="font-bold text-base sm:text-lg text-zinc-900 dark:text-white pr-2">
+            Aperçu rapide
+          </h2>
           <button
             onClick={onClose}
             className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 dark:text-zinc-400"
@@ -153,7 +174,9 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
           </div>
           <div className="p-4 sm:p-5 space-y-4 sm:space-y-5">
             <div className="min-w-0">
-              <h3 className="font-semibold text-lg sm:text-xl text-zinc-900 dark:text-white break-words">{clientName}</h3>
+              <h3 className="font-semibold text-lg sm:text-xl text-zinc-900 dark:text-white break-words">
+                {clientName}
+              </h3>
               <div className="flex items-start gap-2 mt-1 text-sm text-zinc-500 dark:text-zinc-400 min-w-0">
                 <Mail className="w-4 h-4 shrink-0 mt-0.5" />
                 <span className="break-all sm:break-words min-w-0">{clientEmail}</span>
@@ -193,7 +216,11 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
             {/* Badges */}
             <div className="flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
-                {requestType === 'flash' ? <Sparkles className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
+                {requestType === 'flash' ? (
+                  <Sparkles className="w-3.5 h-3.5" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5" />
+                )}
                 {requestType === 'flash' ? 'Flash' : 'Custom'}
               </span>
               {displayPlacement && (
@@ -209,7 +236,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
                 </span>
               )}
               {budget && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
                   <Euro className="w-3.5 h-3.5" />
                   {budget}
                 </span>
@@ -218,33 +245,53 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
 
             {/* Synthèse rapide */}
             <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/60 p-4 space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">Synthèse</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                Synthèse
+              </h4>
               <ul className="text-sm text-zinc-900 dark:text-white space-y-1.5 list-disc list-inside">
-                <li>Type : {requestType === 'flash' ? 'Flash / prédessiné' : 'Projet sur mesure'}</li>
+                <li>
+                  Type : {requestType === 'flash' ? 'Flash / prédessiné' : 'Projet sur mesure'}
+                </li>
                 {displayPlacement && <li>Emplacement : {displayPlacement}</li>}
                 {displaySize && <li>Taille indiquée : {displaySize}</li>}
                 {budget && <li>Budget annoncé : {budget}</li>}
-                <li>{refImages.length} visuel{refImages.length > 1 ? 's' : ''} de référence</li>
-                <li>Texte projet : ~{description.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean).length} mots</li>
+                <li>
+                  {refImages.length} visuel{refImages.length > 1 ? 's' : ''} de référence
+                </li>
+                <li>
+                  Texte projet : ~
+                  {description.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean).length} mots
+                </li>
               </ul>
             </div>
 
             {/* Description */}
             <div>
-              <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">Description complète</h4>
-              <p className="text-sm text-zinc-900 dark:text-white leading-relaxed whitespace-pre-wrap">{description}</p>
+              <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">
+                Description complète
+              </h4>
+              <p className="text-sm text-zinc-900 dark:text-white leading-relaxed whitespace-pre-wrap">
+                {description}
+              </p>
             </div>
 
             {/* Disponibilités client */}
             {(requestedDate || requestedTime) && (
               <div>
-                <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">Disponibilités</h4>
+                <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">
+                  Disponibilités
+                </h4>
                 <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2 text-sm text-zinc-900 dark:text-white">
                   <span className="flex items-start gap-2 min-w-0">
                     <Calendar className="w-4 h-4 shrink-0 mt-0.5" />
                     {requestedDate && (
                       <span className="break-words">
-                        {new Date(requestedDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                        {new Date(requestedDate).toLocaleDateString('fr-FR', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
                       </span>
                     )}
                   </span>
@@ -261,10 +308,19 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
             {/* Galerie refs (si plusieurs) */}
             {refImages.length > 1 && (
               <div>
-                <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">Autres références</h4>
+                <h4 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2">
+                  Autres références
+                </h4>
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {refImages.slice(1, 5).map((url, i) => (
-                    <img key={i} src={url} alt={`Ref ${i + 2}`} loading="lazy" decoding="async" className="w-16 h-16 rounded-lg object-cover shrink-0" />
+                    <img
+                      key={i}
+                      src={url}
+                      alt={`Ref ${i + 2}`}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-16 h-16 rounded-lg object-cover shrink-0"
+                    />
                   ))}
                 </div>
               </div>
@@ -272,7 +328,9 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
 
             {/* Actions (alignées liste Vitrine : décider puis contact messagerie si besoin) */}
             <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4">
-              <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase">Actions</p>
+              <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase">
+                Actions
+              </p>
               {vitrinePending && (
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 px-0.5">
@@ -287,7 +345,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
                           await onConfirmVitrineBooking(item);
                           onClose();
                         }}
-                        className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-sm"
+                        className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all shadow-sm"
                       >
                         <CheckCircle className="w-5 h-5 shrink-0 stroke-[1.75]" />
                         Confirmer le RDV
@@ -339,7 +397,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
                         onAcceptProject(pr);
                         onClose();
                       }}
-                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 text-white font-semibold shadow-sm hover:bg-emerald-700 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
+                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
                     >
                       <CheckCircle className="w-5 h-5 shrink-0 stroke-[1.75]" />
                       Accepter le projet

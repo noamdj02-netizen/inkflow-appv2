@@ -59,7 +59,7 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
           setPlanningHint(
             usedFallback
               ? 'Planning partiel : créneaux indicatifs. Tu peux quand même envoyer la proposition au client.'
-              : null,
+              : null
           );
         }
       })
@@ -104,7 +104,10 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
       toast.info('Mode démo — acceptation désactivée.');
       return;
     }
-    const { proposed_slot, slot_expires_at } = buildProjectAcceptTimestamps(selectedYmd, selectedSlot);
+    const { proposed_slot, slot_expires_at } = buildProjectAcceptTimestamps(
+      selectedYmd,
+      selectedSlot
+    );
     setSubmitting(true);
     try {
       const result = await acceptProjectRequest(projectRequest.id, {
@@ -135,7 +138,7 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Accepter un projet" size="md">
       <div className="mx-auto w-full max-w-lg space-y-6 text-[var(--text-primary)]">
         {/* Client — carte légère, accent gauche */}
-        <div className="rounded-2xl border border-zinc-200/90 border-l-4 border-l-emerald-500 bg-zinc-50/90 py-4 pl-4 pr-4 shadow-sm dark:border-zinc-800 dark:border-l-emerald-500 dark:bg-zinc-900/40">
+        <div className="rounded-2xl border border-zinc-200/90 border-l-4 border-l-blue-500 bg-zinc-50/90 py-4 pl-4 pr-4 shadow-sm dark:border-zinc-800 dark:border-l-blue-500 dark:bg-zinc-900/40">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-500">
             Client
           </p>
@@ -155,7 +158,9 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
               <Info className="h-4 w-4" aria-hidden />
             </div>
             <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-              Choisis un créneau aligné sur ton agenda. Le client reçoit un <span className="font-medium text-zinc-800 dark:text-zinc-200">e-mail InkFlow</span> avec la date proposée et un message optionnel. La proposition expire{' '}
+              Choisis un créneau aligné sur ton agenda. Le client reçoit un{' '}
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">e-mail InkFlow</span>{' '}
+              avec la date proposée et un message optionnel. La proposition expire{' '}
               <span className="inline-flex items-center rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
                 72 h
               </span>{' '}
@@ -184,7 +189,8 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
 
         {!loading && availability && dateOptions.length === 0 && (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Aucune date libre dans la fenêtre actuelle. Élargis tes disponibilités dans les paramètres, puis réessaie.
+            Aucune date libre dans la fenêtre actuelle. Élargis tes disponibilités dans les
+            paramètres, puis réessaie.
           </p>
         )}
 
@@ -195,7 +201,10 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <span id="accept-pr-date" className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                <span
+                  id="accept-pr-date"
+                  className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                >
                   <Calendar className="h-4 w-4 text-sky-600 dark:text-sky-400" aria-hidden />
                   Date
                 </span>
@@ -218,7 +227,10 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
                 </select>
               </div>
               <div className="space-y-2">
-                <span id="accept-pr-slot" className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                <span
+                  id="accept-pr-slot"
+                  className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                >
                   <Clock className="h-4 w-4 text-sky-600 dark:text-sky-400" aria-hidden />
                   Créneau
                 </span>
@@ -241,7 +253,10 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
         )}
 
         <div className="space-y-2">
-          <label htmlFor="accept-pr-message" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <label
+            htmlFor="accept-pr-message"
+            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+          >
             Message au client{' '}
             <span className="font-normal text-zinc-500 dark:text-zinc-500">(optionnel)</span>
           </label>
@@ -267,7 +282,7 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
             type="button"
             disabled={submitting || demoMode || !selectedYmd || !selectedSlot}
             onClick={() => void handleSubmit()}
-            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-emerald-700 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:w-auto sm:min-w-[220px]"
+            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-blue-700 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:w-auto sm:min-w-[220px]"
           >
             {submitting ? (
               <Loader2 className="w-5 h-5 animate-spin" aria-hidden />

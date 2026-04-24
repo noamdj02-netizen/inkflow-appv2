@@ -1,8 +1,23 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import {
-  Receipt, CheckCircle, Clock, AlertCircle, Send, Search,
-  Calendar, User, CreditCard, ChevronRight, Phone, ExternalLink,
-  Loader2, Copy, Link2, Check, DollarSign, Banknote
+  Receipt,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Send,
+  Search,
+  Calendar,
+  User,
+  CreditCard,
+  ChevronRight,
+  Phone,
+  ExternalLink,
+  Loader2,
+  Copy,
+  Link2,
+  Check,
+  DollarSign,
+  Banknote,
 } from 'lucide-react';
 import { Appointment } from '../../types';
 import { Modal } from '../ui/Modal';
@@ -26,7 +41,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
 }) => {
   const toast = useToast();
   const { privacyMode } = useStudioPrivacy();
-  
+
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDeposit, setSelectedDeposit] = useState<Appointment | null>(null);
@@ -57,8 +72,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
   }, [appointments]);
 
   const filteredDeposits = useMemo(() => {
-    let list: Appointment[] = [];
-    
+    let list: Appointment[];
     switch (activeTab) {
       case 'received':
         list = depositsData.received;
@@ -91,7 +105,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
 
   const generatePaymentLink = useCallback(async () => {
     if (!appointmentToSend || !studioId) return;
-    
+
     setIsSendingLink(true);
     try {
       const result = await createCheckoutSession({
@@ -123,28 +137,35 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
     }
   }, [generatedPaymentUrl, toast]);
 
-  const handleMarkAsPaid = useCallback(async (apt: Appointment) => {
-    if (!studioId) return;
-    
-    setIsMarkingPaid(apt.id);
-    try {
-      await markDepositAsPaid(apt.id, studioId);
-      toast.success(privacyMode ? 'Acompte marqué comme payé' : `Acompte de ${apt.deposit}€ marqué comme payé`);
-      onDepositUpdated?.();
-    } catch (error) {
-      console.error('Erreur mise à jour:', error);
-      toast.error('Impossible de marquer comme payé');
-    } finally {
-      setIsMarkingPaid(null);
-    }
-  }, [studioId, toast, onDepositUpdated, privacyMode]);
+  const handleMarkAsPaid = useCallback(
+    async (apt: Appointment) => {
+      if (!studioId) return;
+
+      setIsMarkingPaid(apt.id);
+      try {
+        await markDepositAsPaid(apt.id, studioId);
+        toast.success(
+          privacyMode ? 'Acompte marqué comme payé' : `Acompte de ${apt.deposit}€ marqué comme payé`
+        );
+        onDepositUpdated?.();
+      } catch (error) {
+        console.error('Erreur mise à jour:', error);
+        toast.error('Impossible de marquer comme payé');
+      } finally {
+        setIsMarkingPaid(null);
+      }
+    },
+    [studioId, toast, onDepositUpdated, privacyMode]
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Acomptes</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">
+            Acomptes
+          </h1>
           <p className="text-zinc-500 dark:text-zinc-400 mt-1">Suivez vos acomptes clients</p>
         </div>
       </div>
@@ -153,52 +174,69 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Acomptes reçus</span>
-            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              Acomptes reçus
+            </span>
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <Receipt className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+          <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">
             {formatEuroPrivacy(depositsData.totalReceived, privacyMode)}
           </div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{depositsData.received.length} reçus</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+            {depositsData.received.length} reçus
+          </p>
         </div>
 
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">En attente</span>
-            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              En attente
+            </span>
+            <div className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+          <div className="text-xl sm:text-2xl font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">
             {formatEuroPrivacy(depositsData.totalPending, privacyMode)}
           </div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{depositsData.pending.length} en attente</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+            {depositsData.pending.length} en attente
+          </p>
         </div>
 
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Total attendu</span>
-            <div className="p-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              Total attendu
+            </span>
+            <div className="p-2 rounded-xl bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
             {formatEuroPrivacy(depositsData.totalExpected, privacyMode)}
           </div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{depositsData.all.length} acomptes</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+            {depositsData.all.length} acomptes
+          </p>
         </div>
 
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5 col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">Taux de paiement</span>
+            <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              Taux de paiement
+            </span>
             <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <Banknote className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">
-            {depositsData.all.length > 0 ? Math.round((depositsData.received.length / depositsData.all.length) * 100) : 0}%
+            {depositsData.all.length > 0
+              ? Math.round((depositsData.received.length / depositsData.all.length) * 100)
+              : 0}
+            %
           </div>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">des acomptes payés</p>
         </div>
@@ -258,11 +296,13 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
               >
                 {/* Left: Client info */}
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                    apt.depositPaid 
-                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' 
-                      : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                  }`}>
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      apt.depositPaid
+                        ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400'
+                        : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                    }`}
+                  >
                     {apt.depositPaid ? (
                       <CheckCircle className="w-5 h-5" />
                     ) : (
@@ -270,9 +310,15 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">{apt.clientName}</p>
+                    <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                      {apt.clientName}
+                    </p>
                     <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">
-                      {apt.service} • {new Date(apt.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      {apt.service} •{' '}
+                      {new Date(apt.date).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
                     </p>
                   </div>
                 </div>
@@ -280,14 +326,18 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
                 {/* Right: Amount + Actions */}
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className={`font-bold tabular-nums ${
-                      apt.depositPaid 
-                        ? 'text-emerald-600 dark:text-emerald-400' 
-                        : 'text-zinc-900 dark:text-zinc-100'
-                    }`}>
+                    <p
+                      className={`font-bold tabular-nums ${
+                        apt.depositPaid
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-zinc-900 dark:text-zinc-100'
+                      }`}
+                    >
                       {formatEuroPrivacy(apt.deposit, privacyMode)}
                     </p>
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500">sur {formatEuroPrivacy(apt.price, privacyMode)}</p>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                      sur {formatEuroPrivacy(apt.price, privacyMode)}
+                    </p>
                   </div>
 
                   {!apt.depositPaid && (
@@ -302,7 +352,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
                       <button
                         onClick={() => handleMarkAsPaid(apt)}
                         disabled={isMarkingPaid === apt.id}
-                        className="p-2 rounded-lg text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400 transition-colors disabled:opacity-50"
+                        className="p-2 rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:hover:text-blue-400 transition-colors disabled:opacity-50"
                         title="Marquer payé"
                       >
                         {isMarkingPaid === apt.id ? (
@@ -336,7 +386,9 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
             {/* Client summary */}
             <div className="flex items-center justify-between p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/50">
               <div>
-                <p className="font-semibold text-zinc-900 dark:text-white">{appointmentToSend.clientName}</p>
+                <p className="font-semibold text-zinc-900 dark:text-white">
+                  {appointmentToSend.clientName}
+                </p>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
                   {new Date(appointmentToSend.date).toLocaleDateString('fr-FR')}
                 </p>
@@ -348,21 +400,21 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
 
             {generatedPaymentUrl ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
                   <CheckCircle className="w-5 h-5" />
                   <span className="font-medium">Lien généré !</span>
                 </div>
-                
+
                 <div className="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                   <p className="text-sm text-zinc-600 dark:text-zinc-400 truncate font-mono">
                     {generatedPaymentUrl}
                   </p>
                 </div>
-                
+
                 <div className="flex gap-2">
                   <button
                     onClick={copyPaymentLink}
-                    className="flex-1 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 transition-colors flex items-center justify-center gap-2"
                   >
                     <Copy className="w-4 h-4" />
                     Copier
@@ -381,7 +433,7 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
               <button
                 onClick={generatePaymentLink}
                 disabled={isSendingLink}
-                className="w-full py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isSendingLink ? (
                   <>

@@ -51,7 +51,7 @@ const STATUS_LABELS: Record<Appointment['status'], string> = {
 
 const STATUS_BADGE_CLASS: Record<Appointment['status'], string> = {
   pending: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
-  confirmed: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+  confirmed: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
   in_progress: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
   completed: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 border-zinc-500/30',
   cancelled: 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30',
@@ -80,8 +80,7 @@ const SIZE_LABELS: Record<Appointment['size'], string> = {
 };
 
 /** Glyphes d’appoint : teinte secondaire unique + trait légèrement fin (proche SF Symbol à côté du corps de texte). */
-const ICON_ROW =
-  'w-4 h-4 shrink-0 mt-0.5 text-zinc-500 dark:text-zinc-400 stroke-[1.75]';
+const ICON_ROW = 'w-4 h-4 shrink-0 mt-0.5 text-zinc-500 dark:text-zinc-400 stroke-[1.75]';
 const ICON_ROW_SM = 'w-3.5 h-3.5 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]';
 const ICON_STAT = 'w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]';
 
@@ -206,14 +205,18 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
           <div className="flex items-start gap-2">
             <Calendar className={ICON_ROW} />
             <div className="min-w-0">
-              <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">Date & heure</p>
+              <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">
+                Date & heure
+              </p>
               <p className="font-medium text-[var(--text-primary)] capitalize">{whenLabel}</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
             <Sparkles className={ICON_ROW} />
             <div className="min-w-0">
-              <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">Prestation</p>
+              <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">
+                Prestation
+              </p>
               <p className="font-medium text-[var(--text-primary)]">{appointment.service || '—'}</p>
               <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                 {appointment.tattooType === 'flash' ? 'Flash' : 'Projet sur mesure'}
@@ -224,14 +227,20 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
             <div className="flex items-start gap-2">
               <Clock className={ICON_ROW} />
               <div>
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">Durée</p>
-                <p className="font-medium text-[var(--text-primary)]">{formatDurationMinutes(appointment.duration)}</p>
+                <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">
+                  Durée
+                </p>
+                <p className="font-medium text-[var(--text-primary)]">
+                  {formatDurationMinutes(appointment.duration)}
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-2">
               <MapPin className={ICON_ROW} />
               <div className="min-w-0">
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">Emplacement</p>
+                <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">
+                  Emplacement
+                </p>
                 <p className="font-medium text-[var(--text-primary)] truncate">
                   {LOCATION_LABELS[appointment.location]} · {SIZE_LABELS[appointment.size]}
                 </p>
@@ -250,9 +259,11 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               <span className="font-semibold text-[var(--text-primary)]">
                 {appointment.deposit}€
                 {appointment.depositPaid ? (
-                  <span className="ml-1 text-emerald-600 dark:text-emerald-400 font-medium">(payé)</span>
+                  <span className="ml-1 text-blue-600 dark:text-blue-400 font-medium">(payé)</span>
                 ) : (
-                  <span className="ml-1 text-amber-600 dark:text-amber-400 font-medium">(à payer)</span>
+                  <span className="ml-1 text-amber-600 dark:text-amber-400 font-medium">
+                    (à payer)
+                  </span>
                 )}
               </span>
             </div>
@@ -274,11 +285,15 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               {avatarUrl ? (
                 <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-zinc-700 dark:text-zinc-200 font-bold text-xl">{avatarLetter}</span>
+                <span className="text-zinc-700 dark:text-zinc-200 font-bold text-xl">
+                  {avatarLetter}
+                </span>
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-lg text-[var(--text-primary)] truncate">{appointment.clientName}</h3>
+              <h3 className="font-bold text-lg text-[var(--text-primary)] truncate">
+                {appointment.clientName}
+              </h3>
               <p className="text-xs text-[var(--text-secondary)] mt-0.5">{crmSubtitle}</p>
               {tagPreview.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -316,13 +331,17 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                 {formatVisitDate(client.firstVisit) && (
                   <span>
                     1<sup>ère</sup> visite :{' '}
-                    <strong className="text-[var(--text-primary)] font-medium">{formatVisitDate(client.firstVisit)}</strong>
+                    <strong className="text-[var(--text-primary)] font-medium">
+                      {formatVisitDate(client.firstVisit)}
+                    </strong>
                   </span>
                 )}
                 {formatVisitDate(client.lastVisit) && (
                   <span>
                     Dernière visite :{' '}
-                    <strong className="text-[var(--text-primary)] font-medium">{formatVisitDate(client.lastVisit)}</strong>
+                    <strong className="text-[var(--text-primary)] font-medium">
+                      {formatVisitDate(client.lastVisit)}
+                    </strong>
                   </span>
                 )}
               </div>
@@ -338,14 +357,20 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--bg-hover)]">
               <Calendar className={ICON_STAT} />
               <div>
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">RDV (total)</p>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{client?.appointmentsCount ?? 1}</p>
+                <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">
+                  RDV (total)
+                </p>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  {client?.appointmentsCount ?? 1}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--bg-hover)]">
               <Euro className={ICON_STAT} />
               <div>
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">Dépensé (CRM)</p>
+                <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">
+                  Dépensé (CRM)
+                </p>
                 <p className="text-sm font-semibold text-[var(--text-primary)]">
                   {client ? `${client.totalSpent}€` : `${appointment.price}€ (ce RDV)`}
                 </p>
@@ -357,26 +382,29 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
 
       {/* Discussion app client (espace client / compte synchronisé) */}
       {showInkflowClientDiscussion && onOpenInkflowDiscussion && (
-        <div className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden border-l-4 border-l-emerald-500">
-          <div className="px-4 py-3 border-b border-[var(--border)] bg-emerald-500/5 dark:bg-emerald-500/10">
+        <div className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden border-l-4 border-l-blue-500">
+          <div className="px-4 py-3 border-b border-[var(--border)] bg-blue-500/5 dark:bg-blue-500/10">
             <span className="font-semibold text-sm text-[var(--text-primary)] flex items-center gap-2">
-              <MessageCircle className="w-4 h-4 shrink-0 text-emerald-700 dark:text-emerald-400 stroke-[1.75]" />
+              <MessageCircle className="w-4 h-4 shrink-0 text-blue-700 dark:text-blue-400 stroke-[1.75]" />
               Discussion InkFlow
             </span>
           </div>
           <div className="p-4 space-y-3">
             <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-              Ce client est passé par <strong className="text-[var(--text-primary)]">l&apos;app client InkFlow</strong> — vous pouvez continuer l&apos;échange dans la messagerie intégrée.
+              Ce client est passé par{' '}
+              <strong className="text-[var(--text-primary)]">l&apos;app client InkFlow</strong> —
+              vous pouvez continuer l&apos;échange dans la messagerie intégrée.
             </p>
             {!inkflowMessagingThreadId && (
               <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed">
-                Aucun fil encore détecté pour cet e-mail : ouvrez la messagerie pour écrire au client ou retrouver la conversation.
+                Aucun fil encore détecté pour cet e-mail : ouvrez la messagerie pour écrire au
+                client ou retrouver la conversation.
               </p>
             )}
             <button
               type="button"
               onClick={onOpenInkflowDiscussion}
-              className="flex w-full items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:opacity-95 active:scale-[0.98] transition-all touch-manipulation"
+              className="flex w-full items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400  active:scale-[0.98] transition-all touch-manipulation"
             >
               <MessageCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />
               {inkflowMessagingThreadId ? 'Ouvrir la discussion' : 'Aller à la messagerie'}
@@ -388,7 +416,9 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
       {/* Contact */}
       <div className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden">
         <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-secondary)]/50">
-          <span className="font-semibold text-sm text-[var(--text-primary)]">Contacter le client</span>
+          <span className="font-semibold text-sm text-[var(--text-primary)]">
+            Contacter le client
+          </span>
         </div>
         <div className="p-4 space-y-3">
           <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">
@@ -397,13 +427,15 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                 En complément, joignez le client par{' '}
                 <strong className="text-[var(--text-secondary)]">e-mail</strong>,{' '}
                 <strong className="text-[var(--text-secondary)]">téléphone</strong> ou{' '}
-                <strong className="text-[var(--text-secondary)]">Instagram</strong>. Les demandes vitrine hors app passent surtout par ces canaux.
+                <strong className="text-[var(--text-secondary)]">Instagram</strong>. Les demandes
+                vitrine hors app passent surtout par ces canaux.
               </>
             ) : (
               <>
                 Échangez par <strong className="text-[var(--text-secondary)]">e-mail</strong>,{' '}
                 <strong className="text-[var(--text-secondary)]">téléphone</strong> ou{' '}
-                <strong className="text-[var(--text-secondary)]">Instagram</strong> — la messagerie intégrée Inkflow n’est pas utilisée pour les demandes.
+                <strong className="text-[var(--text-secondary)]">Instagram</strong> — la messagerie
+                intégrée Inkflow n’est pas utilisée pour les demandes.
               </>
             )}
           </p>

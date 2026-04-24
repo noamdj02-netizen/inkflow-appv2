@@ -3,7 +3,7 @@
  * Affiche le contact, les stats, la carte à tampons, les notes et l'historique RDV.
  */
 import React from 'react';
-import { Mail, Phone, Tag, StickyNote, HeartPulse } from 'lucide-react';
+import { Mail, Phone, Tag, StickyNote, HeartPulse, ChevronLeft } from 'lucide-react';
 import type { Client } from '../../types';
 import { Modal } from '../ui/Modal';
 import { formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
@@ -59,6 +59,8 @@ interface ClientDetailModalProps {
   notes: string;
   setNotes: (v: string) => void;
   onBlurNotes: () => void;
+  /** État auto-sauvegarde des notes (fiche client) */
+  notesSaveStatus?: { saving: boolean; lastSavedAt: number | null };
   useSupabase?: boolean;
   stampStudioId?: string | null;
   stampSettings: StampLoyaltySettings;
@@ -77,6 +79,7 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
   notes,
   setNotes,
   onBlurNotes,
+  notesSaveStatus,
   useSupabase,
   stampStudioId,
   stampSettings,
@@ -84,7 +87,22 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
   privacyMode,
 }) => {
   return (
-    <Modal isOpen onClose={onClose} title={client.name} size="lg">
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={client.name}
+      size="lg"
+      headerStart={
+        <button
+          type="button"
+          onClick={onClose}
+          className="md:hidden -ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          aria-label="Retour"
+        >
+          <ChevronLeft className="h-5 w-5" strokeWidth={2} aria-hidden />
+        </button>
+      }
+    >
       <div className="space-y-6 min-w-0">
         {/* Avatar + statut + tags */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -106,10 +124,10 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
                 {client.status === 'vip'
                   ? 'VIP'
                   : client.status === 'active'
-                  ? 'Actif'
-                  : client.status === 'inactive'
-                  ? 'Inactif'
-                  : client.status}
+                    ? 'Actif'
+                    : client.status === 'inactive'
+                      ? 'Inactif'
+                      : client.status}
               </span>
               {client.tags.map((tag) => (
                 <span
@@ -208,11 +226,7 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
           if (!unwrapped) return null;
           const { source, syncedAt, data } = unwrapped;
           const entries = Object.entries(data).filter(
-            ([k, v]) =>
-              k !== 'certifiedAccurate' &&
-              v !== null &&
-              v !== undefined &&
-              v !== '',
+            ([k, v]) => k !== 'certifiedAccurate' && v !== null && v !== undefined && v !== ''
           );
           if (entries.length === 0) return null;
           return (
@@ -264,10 +278,21 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
             placeholder="Notes de session, conseils cicatrisation, préférences…"
             className="w-full px-4 py-3 min-h-[120px] border border-neutral-200 dark:border-zinc-700 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-900"
           />
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-            {useSupabase
-              ? 'Sauvegardées automatiquement.'
-              : 'Sauvegardées localement dans votre navigateur.'}
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            {notesSaveStatus?.saving ? (
+              <span className="text-zinc-600 dark:text-zinc-300">Enregistrement…</span>
+            ) : notesSaveStatus?.lastSavedAt != null ? (
+              <span>
+                Enregistré à{' '}
+                {new Date(notesSaveStatus.lastSavedAt).toLocaleTimeString('fr-FR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            ) : null}
+            <span className="text-neutral-400 dark:text-neutral-500">
+              {useSupabase ? 'Sauvegarde automatique.' : 'Stockage local dans le navigateur.'}
+            </span>
           </p>
         </div>
 

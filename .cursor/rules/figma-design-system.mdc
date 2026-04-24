@@ -1,0 +1,100 @@
+---
+description: Règles Figma MCP — implémentation des maquettes, tokens, structure des composants InkFlow (React, Tailwind, shadcn) ; accueil mobile Dashboard Pro (réf. CRM).
+globs: "**/components/**,**/pages/**,index.css,tailwind.config.ts,components/dashboard/DashboardOverviewTab.tsx,components/dashboard/DashboardPro.tsx"
+alwaysApply: false
+---
+
+# Figma → code — InkFlow
+
+Règles pour intégrer des designs Figma ou reverser le code vers Figma (MCP), en cohérence avec ce dépôt.
+
+## Stack
+
+- **Framework** : React 19 + Vite, routes dans `App.tsx` / `pages/`.
+- **Style** : Tailwind v4 via `@import "tailwindcss"` dans `index.css` + thème shadcn (`@import "shadcn/tailwind.css"`).
+- **Composants UI** : `components/ui/*` (shadcn) ; utilitaires `cn()` depuis `@/lib/utils`.
+- **Alias** : `@/*` pointe sur la racine du projet (`tsconfig.json`).
+- **Tokens globaux** : variables `:root` dans `index.css` (ex. `--bg-primary`, `--border`, `--text-primary`, thème clair/sombre via `data-theme` sur `documentElement`).
+- **Pro UI (dashboard tatoueur)** : préfixes Tailwind `pro-*` (`rounded-pro-card`, `px-pro-2`, `shadow-pro`, `font-pro-medium`), couleurs `pro.accent` / `pro.accent-fg` dans `tailwind.config.ts`. Voir `.cursor/rules/pro-ui-rigor.mdc` si présent.
+- **Icônes** : `lucide-react` (même sémantique partout) ; pas d’icône fantôme si Figma en fournit une — utiliser le mapping lucide.
+- **Dashboard Pro** : `components/dashboard/`, layout shell `.app-shell`, `.app-shell-content`, arrière-plans `dashboard-overview-bg` / `dashboard-pages-bg` dans `index.css`.
+- **Assets** : `public/` (images, favicon) ; import statique `new URL()` ou chemins `/...` selon le contexte Vite.
+
+## Où placer le code
+
+- **Nouveaux blocs marketing / landing** : `components/` + pages sous `pages/` ou `components/pages/`.
+- **Espace pro (dashboard tatoueur)** : `components/dashboard/`, règles design inkflow côté produit : `.cursor/rules/founder-dashboard.mdc`, `design-system.mdc` (brand), `inkflow-saas-conventions.mdc`.
+- **Modales** : `components/ui/Modal.tsx` ou `components/ui/ConfirmModal.tsx` selon le cas.
+- **Ne pas** introduire de hex bruts si un token `var(--...)` ou classe `bg-zinc-*` / `pro` existe déjà.
+
+## Figma MCP — flux imposé (ne pas raccourcir)
+
+1. Pour un nœud précis : **`get_design_context`** (ou **`get_metadata`** si trop volumineux, puis cibler des nœuds).
+2. **`get_screenshot`** pour référence visuelle.
+3. Télécharger les assets indiqués ; si le MCP renvoie une URL `localhost` pour une image, l’utiliser telle quelle.
+4. Traduire la sortie (souvent React + Tailwind générique) vers **ce repo** : composants shadcn, `cn()`, tokens, patterns dashboard.
+5. Vérifier visuellement (screenshot vs rendu).
+
+Pour **pousser une page web vers Figma** (capture) :
+
+- Le projet inclut le script Figma dans `index.html` : `https://mcp.figma.com/mcp/html-to-design/capture.js` (utile pour les sessions de capture).
+- Ouvrir l’URL locale avec le hash `figmacapture=…` fourni par l’agent (voir outil `generate_figma_design`).
+- Après capture, préférer raffiner avec **`use_figma` + `search_design_system`** si le fichier cible a une librairie publiée.
+
+## Ce qu’il ne faut pas faire
+
+- IMPORTANT : ne pas laisser des couleurs arbitraires en dur si `index.css` / `tailwind` expose l’équivalent.
+- IMPORTANT : ne pas dupliquer `Modal` / `Button` shadcn — réutiliser `components/ui/`.
+- Ne pas ajouter de dépendance icône uniquement pour Figma : privilégier `lucide-react`.
+
+## Cohérence marque (InkFlow)
+
+- Référence : `.cursor/rules/design-system.mdc` (palette, Inter, interdictions charte).
+- **Conflit** éventuel zinc / Plus Jakarta côté dashboard : suivre `inkflow-saas-conventions` + maquettes produit (dashboard ≠ landing marketing pur).
+
+## Accessibilité & mobile
+
+- Cibles tactiles **≥ 44×44px** sur le dashboard.
+- **Safe area** : `env(safe-area-inset-*)` déjà utilisés sur le shell et la bottom nav.
+- Vue d’ensemble mobile : `DashboardOverviewTab.tsx` (bloc héros, raccourcis, alertes) — conserver `dashboard-overview-bg` sur le conteneur scroll.
+
+## Dashboard Pro — Accueil mobile (cible visuelle type CRM)
+
+Référence produit : écrans type **CRM** (accueil avec sous-vues, métriques, listes, détail) — appliquer l’**esprit** (hiérarchie, air, cartes) sans copier une marque tierce. L’implémentation InkFlow reste **shadcn + tokens** (pas de couleur « navy » arbitraire : utiliser `primary`, `zinc-900` / CTA, `pro` si déjà en place sur le module).
+
+### Principes d’air et de structure
+
+- **Marges écran** : côté contenu accueil, cohérent avec le shell (ex. `px-4` / padding défini sur `.app-shell-content` en overview) — ne pas tasser les cartes en `px-0` sauf héros pleine largeur.
+- **Espacement vertical** : `flex flex-col` + `gap-4` / `gap-5` (éviter `space-y-*` sur les nouveaux blocs — alignement shadcn).
+- **Cartes** : `rounded-2xl` / `rounded-3xl`, bordure légère (`ring-1` / `border` zinc), ombre discrète ; regrouper les actions rapides dans un **puits** (fond + ring) plutôt que 4 tuiles flottantes isolées si la maquette l’impose.
+- **CTA principal** (ex. « Nouveau RDV ») : `Button` shadcn, contraste élevé ; pleine largeur sur mobile si la maquette le duplique au-dessus de la **bottom nav** (laisser `padding-bottom` au scroll pour ne pas recouvrir le FAB / nav).
+- **Listes** (futur ou sections « prochains RDV ») : lignes en **card** ou **liste avec séparateurs** ; avatar + texte + **Badge** de statut alignés ; groupement par date possible (`text-xs font-medium text-muted-foreground` sur l’en-tête de groupe).
+
+### Composants shadcn à privilégier (ne pas réinventer)
+
+| Bloc Figma (référence) | Composant / pattern InkFlow |
+|------------------------|-----------------------------|
+| Segmented / pill tabs (Home / My tier / …) | `Tabs` shadcn avec `TabsList` en `rounded-full` / `p-1` + `TabsTrigger` pill ; ou boutons `variant="outline"` dans un conteneur `rounded-2xl bg-muted/50` |
+| Métrique + filtre (dropdown) | `Card` + en-tête avec `Button` `variant="ghost"` ou `Select` + KPI en typo `font-display` / tabular-nums |
+| Tendance (+20 %) | `Badge` variant secondaire + icône `lucide-react` ; couleur sémantique (emerald) via classes du thème, pas de vert hex seul |
+| Donut + légende | Composant chart existant (`RevenueChart` / futur `Chart` shadcn) ; légende = `flex flex-col gap-2` avec pastilles `rounded-full size-2` |
+| Statuts (New, In progress) | `Badge` — jamais un simple `span` coloré ad hoc |
+| Barre de recherche + filtre | `Input` shadcn + `Button` `size="icon-sm"` (lucide `Search` / `SlidersHorizontal`) ; ajouter `InputGroup` via CLI shadcn seulement si on standardise le pattern |
+| Bandeaux d’alerte | `Alert` + variantes `warning` / `info` / `critical` (`components/ui/alert.tsx`) |
+| Action destructive / confirmation | `AlertDialog` si ajouté ; sinon `ConfirmModal` existant |
+
+### Fichiers à modifier en priorité (accueil)
+
+- `components/dashboard/DashboardOverviewTab.tsx` — layout mobile `!isMdUp`, héros, raccourcis, alertes, KPI, Flash du jour.
+- `components/dashboard/DashboardPro.tsx` — `app-shell-content`, bandeaux globaux, bottom nav.
+- `index.css` — `.dashboard-overview-bg`, éventuels ajustements de grain / gradient (légers).
+
+### Figma → code (rappel)
+
+- Si la maquette vient d’un fichier Figma : exécuter `get_design_context` + `get_screenshot` sur les frames **375** ou **430** largeur ; mapper les styles au thème shadcn / variables `index.css`, pas le Tailwind brut fourni par défaut.
+- Conserver le **thème clair** du dashboard côté accueil mobile si `ThemeProvider` force le pro en dark : respecter `dashboard-pro-shell` / `data-theme` existants.
+
+### IMPORTANT — à ne pas faire
+
+- Ne pas introduire une nouvelle palette « bleu marine » en dur pour coller à une capture : utiliser **tokens** (`bg-primary`, `text-primary-foreground`, ou zinc/pro selon l’écran).
+- Ne pas dupliquer les **Tabs** : un seul niveau de pilules visible ; sous-onglets (ex. My statistic / My points) = second `Tabs` **dans** la carte, pas deux barres concurrentes dans le header.

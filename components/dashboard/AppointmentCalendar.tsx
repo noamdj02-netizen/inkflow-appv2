@@ -7,6 +7,8 @@ import React, { useState, useMemo, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Clock, User, Pencil, XCircle, CheckCircle } from 'lucide-react';
 import { Appointment, Client } from '../../types';
 import { Modal } from '../ui/Modal';
+import { ConfirmModal } from '../ui/ConfirmModal';
+import { hapticSuccess } from '../../lib/haptics';
 
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8h à 20h
 const SLOT_PX = 72;
@@ -52,7 +54,7 @@ function getEventColor(status: Appointment['status']): string {
     case 'pending':
       return 'bg-amber-100 dark:bg-amber-500/20 border-amber-200 dark:border-amber-500/40 text-amber-900 dark:text-amber-100';
     case 'in_progress':
-      return 'bg-emerald-100 dark:bg-emerald-500/20 border-emerald-200 dark:border-emerald-500/40 text-emerald-900 dark:text-emerald-100';
+      return 'bg-blue-100 dark:bg-blue-500/20 border-blue-200 dark:border-blue-500/40 text-blue-900 dark:text-blue-100';
     case 'completed':
       return 'bg-zinc-100 dark:bg-zinc-500/20 border-zinc-200 dark:border-zinc-500/40 text-zinc-800 dark:text-zinc-200';
     case 'cancelled':
@@ -88,6 +90,7 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
     return d;
   });
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
   const weekDays = useMemo(() => {
@@ -236,7 +239,8 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
           if (touchStartX.current === null) return;
           const dx = e.changedTouches[0].clientX - touchStartX.current;
           if (Math.abs(dx) > 50) {
-            dx < 0 ? goNext() : goPrev();
+            if (dx < 0) goNext();
+            else goPrev();
           }
           touchStartX.current = null;
         }}
@@ -253,21 +257,23 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
               <div
                 key={toLocalDateStr(day)}
                 className={`px-2 py-3 text-center ${
-                  isToday(day)
-                    ? 'bg-emerald-50 dark:bg-emerald-500/15'
-                    : 'bg-zinc-50 dark:bg-zinc-950/80'
+                  isToday(day) ? 'bg-blue-50 dark:bg-blue-500/15' : 'bg-zinc-50 dark:bg-zinc-950/80'
                 }`}
               >
                 <div
                   className={`text-[11px] font-semibold uppercase tracking-wide ${
-                    isToday(day) ? 'text-emerald-700 dark:text-emerald-300' : 'text-zinc-500 dark:text-zinc-400'
+                    isToday(day)
+                      ? 'text-blue-700 dark:text-blue-300'
+                      : 'text-zinc-500 dark:text-zinc-400'
                   }`}
                 >
                   {WEEKDAYS_SHORT[day.getDay()]}
                 </div>
                 <div
                   className={`text-lg font-bold tabular-nums ${
-                    isToday(day) ? 'text-emerald-800 dark:text-emerald-200' : 'text-zinc-900 dark:text-white'
+                    isToday(day)
+                      ? 'text-blue-800 dark:text-blue-200'
+                      : 'text-zinc-900 dark:text-white'
                   }`}
                 >
                   {day.getDate()}
@@ -319,7 +325,9 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                           }
                         }}
                         className={`border-l border-zinc-100/90 bg-white p-1.5 transition-colors hover:bg-zinc-50/80 dark:border-zinc-800/90 dark:bg-zinc-900 dark:hover:bg-zinc-800/50 ${
-                          isToday(day) ? 'ring-inset ring-1 ring-emerald-500/15 dark:ring-emerald-500/20' : ''
+                          isToday(day)
+                            ? 'ring-inset ring-1 ring-blue-500/15 dark:ring-blue-500/20'
+                            : ''
                         }`}
                         style={{ minHeight: SLOT_PX }}
                       >
@@ -342,13 +350,23 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                                   {formatHm(endM)}
                                 </span>
                               </div>
-                              <div className="truncate text-sm font-semibold leading-tight">{apt.clientName}</div>
-                              <div className="mt-0.5 truncate text-[11px] opacity-90">{apt.service}</div>
+                              <div className="truncate text-sm font-semibold leading-tight">
+                                {apt.clientName}
+                              </div>
+                              <div className="mt-0.5 truncate text-[11px] opacity-90">
+                                {apt.service}
+                              </div>
                               <div className="mt-2 flex items-center justify-between gap-2">
-                                <span className="text-[10px] font-medium opacity-75">{apt.duration} min</span>
+                                <span className="text-[10px] font-medium opacity-75">
+                                  {apt.duration} min
+                                </span>
                                 <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full border border-black/10 bg-white/80 dark:bg-zinc-800 dark:border-white/10">
                                   {avatar ? (
-                                    <img src={avatar} alt="" className="h-full w-full object-cover" />
+                                    <img
+                                      src={avatar}
+                                      alt=""
+                                      className="h-full w-full object-cover"
+                                    />
                                   ) : (
                                     <span className="flex h-full w-full items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-300">
                                       {apt.clientName.charAt(0).toUpperCase()}
@@ -369,12 +387,46 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
         </div>
       </div>
 
+      <ConfirmModal
+        isOpen={showCancelConfirm && !!selectedAppointment}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={() => {
+          if (selectedAppointment && onUpdateAppointment) {
+            onUpdateAppointment(selectedAppointment, { status: 'cancelled' });
+            hapticSuccess();
+            setSelectedAppointment(null);
+          }
+          setShowCancelConfirm(false);
+        }}
+        title="Annuler ce rendez-vous ?"
+        message="Le rendez-vous passera en annulé dans l’agenda."
+        confirmLabel="Annuler le rendez-vous"
+        cancelLabel="Retour"
+        variant="warning"
+      />
+
       {/* Modal détail événement */}
       <Modal
         isOpen={!!selectedAppointment}
-        onClose={() => setSelectedAppointment(null)}
+        onClose={() => {
+          setSelectedAppointment(null);
+          setShowCancelConfirm(false);
+        }}
         title={selectedAppointment?.clientName ?? ''}
         size="sm"
+        headerStart={
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedAppointment(null);
+              setShowCancelConfirm(false);
+            }}
+            className="md:hidden -ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            aria-label="Retour"
+          >
+            <ChevronLeft className="h-5 w-5" strokeWidth={2} aria-hidden />
+          </button>
+        }
       >
         {selectedAppointment && (
           <div className="space-y-5">
@@ -413,35 +465,45 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                     : selectedAppointment.status}
             </span>
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
-              {onUpdateAppointment && selectedAppointment.status !== 'completed' && selectedAppointment.status !== 'cancelled' && (
-                <div className="flex gap-2 order-2 sm:order-1">
-                  {selectedAppointment.status === 'pending' && (
+              {onUpdateAppointment &&
+                selectedAppointment.status !== 'completed' &&
+                selectedAppointment.status !== 'cancelled' && (
+                  <div className="flex gap-2 order-2 sm:order-1">
+                    {selectedAppointment.status === 'pending' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onUpdateAppointment(selectedAppointment, { status: 'confirmed' });
+                          hapticSuccess();
+                          setSelectedAppointment(null);
+                        }}
+                        className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle className="w-4 h-4" /> Confirmer
+                      </button>
+                    )}
+                    {selectedAppointment.status === 'confirmed' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onUpdateAppointment(selectedAppointment, { status: 'completed' });
+                          hapticSuccess();
+                          setSelectedAppointment(null);
+                        }}
+                        className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle className="w-4 h-4" /> Terminé
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => { onUpdateAppointment(selectedAppointment, { status: 'confirmed' }); setSelectedAppointment(null); }}
-                      className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 flex items-center justify-center gap-2"
+                      onClick={() => setShowCancelConfirm(true)}
+                      className="min-h-[44px] px-4 py-2.5 rounded-xl border-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center gap-2"
                     >
-                      <CheckCircle className="w-4 h-4" /> Confirmer
+                      <XCircle className="w-4 h-4" /> Annuler
                     </button>
-                  )}
-                  {selectedAppointment.status === 'confirmed' && (
-                    <button
-                      type="button"
-                      onClick={() => { onUpdateAppointment(selectedAppointment, { status: 'completed' }); setSelectedAppointment(null); }}
-                      className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle className="w-4 h-4" /> Terminé
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => { onUpdateAppointment(selectedAppointment, { status: 'cancelled' }); setSelectedAppointment(null); }}
-                    className="min-h-[44px] px-4 py-2.5 rounded-xl border-2 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center gap-2"
-                  >
-                    <XCircle className="w-4 h-4" /> Annuler
-                  </button>
-                </div>
-              )}
+                  </div>
+                )}
               <button
                 type="button"
                 onClick={() => {

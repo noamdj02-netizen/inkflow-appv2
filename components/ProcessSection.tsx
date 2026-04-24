@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { UserPlus, Settings, Rocket, CheckCircle2, Mail, Copy, Bell } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { PublicPictureImage } from './common/PublicPictureImage';
 
 // Mini previews visuels pour chaque étape
 const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ type, t }) => {
@@ -53,7 +54,10 @@ const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ typ
         </div>
         <div className="flex gap-1">
           {['ig', 'wa', '📱'].map((l, i) => (
-            <div key={i} className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-[8px]">
+            <div
+              key={i}
+              className="w-5 h-5 rounded bg-neutral-100 flex items-center justify-center text-[8px]"
+            >
               {l}
             </div>
           ))}
@@ -64,7 +68,7 @@ const StepPreview: React.FC<{ type: string; t: (k: string) => string }> = ({ typ
   if (type === 'receive') {
     return (
       <div className="w-full h-full relative overflow-hidden">
-        <img
+        <PublicPictureImage
           src="/images/hero-dashboard-mockup.png"
           alt="Dashboard InkFlow"
           className="w-full h-full object-cover object-top"
@@ -99,16 +103,37 @@ const itemVariants = {
 export const ProcessSection: React.FC = () => {
   const { t } = useLanguage();
   const steps = [
-    { icon: UserPlus, titleKey: 'process.step1.title', descKey: 'process.step1.desc', durationKey: 'process.step1.duration', preview: 'signup' as const },
-    { icon: Settings, titleKey: 'process.step2.title', descKey: 'process.step2.desc', durationKey: 'process.step2.duration', preview: 'config' as const },
-    { icon: Rocket, titleKey: 'process.step3.title', descKey: 'process.step3.desc', durationKey: 'process.step3.duration', preview: 'share' as const },
-    { icon: CheckCircle2, titleKey: 'process.step4.title', descKey: 'process.step4.desc', durationKey: 'process.step4.duration', preview: 'receive' as const },
+    {
+      icon: UserPlus,
+      titleKey: 'process.step1.title',
+      descKey: 'process.step1.desc',
+      durationKey: 'process.step1.duration',
+      preview: 'signup' as const,
+    },
+    {
+      icon: Settings,
+      titleKey: 'process.step2.title',
+      descKey: 'process.step2.desc',
+      durationKey: 'process.step2.duration',
+      preview: 'config' as const,
+    },
+    {
+      icon: Rocket,
+      titleKey: 'process.step3.title',
+      descKey: 'process.step3.desc',
+      durationKey: 'process.step3.duration',
+      preview: 'share' as const,
+    },
+    {
+      icon: CheckCircle2,
+      titleKey: 'process.step4.title',
+      descKey: 'process.step4.desc',
+      durationKey: 'process.step4.duration',
+      preview: 'receive' as const,
+    },
   ];
   return (
-    <section
-      id="process"
-      className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
-    >
+    <section id="process" className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Fond subtil */}
       <div className="absolute inset-0 bg-gradient-to-b from-white via-neutral-50/30 to-white pointer-events-none" />
 
@@ -134,14 +159,8 @@ export const ProcessSection: React.FC = () => {
           {steps.map((step, index) => {
             const Icon = step.icon;
             return (
-              <motion.div
-                key={index}
-                variants={itemVariants}
-                className="group relative"
-              >
-                <div
-                  className="h-full rounded-2xl p-6 sm:p-6 border border-white/40 bg-white/60 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(31,38,135,0.06)] hover:shadow-xl hover:border-white/60 transition-all duration-300"
-                >
+              <motion.div key={index} variants={itemVariants} className="group relative">
+                <div className="h-full rounded-2xl p-6 sm:p-6 border border-white/40 bg-white/60 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(31,38,135,0.06)] hover:shadow-xl hover:border-white/60 transition-all duration-300">
                   {/* Preview visuel */}
                   <div className="relative mb-6">
                     <div className="aspect-[4/3] max-h-[140px] rounded-xl overflow-hidden bg-neutral-100/80 border border-neutral-200/60">
@@ -151,7 +170,9 @@ export const ProcessSection: React.FC = () => {
                       <span className="text-sm font-bold">{index + 1}</span>
                     </div>
                     <div className="absolute bottom-2 left-2 px-2 py-1 rounded-lg bg-white/90 backdrop-blur-sm border border-white/60 shadow-sm">
-                      <span className="text-xs font-semibold text-neutral-600">{t(step.durationKey)}</span>
+                      <span className="text-xs font-semibold text-neutral-600">
+                        {t(step.durationKey)}
+                      </span>
                     </div>
                   </div>
 
@@ -162,9 +183,7 @@ export const ProcessSection: React.FC = () => {
                     </div>
                     <h3 className="text-lg font-bold text-neutral-900">{t(step.titleKey)}</h3>
                   </div>
-                  <p className="text-neutral-600 leading-relaxed text-sm">
-                    {t(step.descKey)}
-                  </p>
+                  <p className="text-neutral-600 leading-relaxed text-sm">{t(step.descKey)}</p>
                 </div>
 
                 {/* Ligne de connexion (desktop) */}
@@ -177,10 +196,7 @@ export const ProcessSection: React.FC = () => {
         </div>
 
         {/* CTA + Lien démo */}
-        <motion.div
-          variants={itemVariants}
-          className="text-center mt-16 sm:mt-20"
-        >
+        <motion.div variants={itemVariants} className="text-center mt-16 sm:mt-20">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <motion.a
               href="/signup"
@@ -197,9 +213,7 @@ export const ProcessSection: React.FC = () => {
               {t('process.cta2')}
             </a>
           </div>
-          <p className="text-sm text-neutral-500 mt-4">
-            {t('process.trial')}
-          </p>
+          <p className="text-sm text-neutral-500 mt-4">{t('process.trial')}</p>
         </motion.div>
       </motion.div>
     </section>

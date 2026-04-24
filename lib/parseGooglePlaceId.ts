@@ -10,11 +10,7 @@ const CHIJ_IN_TEXT = /(ChIJ[A-Za-z0-9_-]{10,200})/g;
 
 export function looksLikeShortMapsShareLink(s: string): boolean {
   const t = s.trim().toLowerCase();
-  return (
-    t.includes('share.google/') ||
-    t.includes('maps.app.goo.gl') ||
-    t.includes('goo.gl/maps')
-  );
+  return t.includes('share.google/') || t.includes('maps.app.goo.gl') || t.includes('goo.gl/maps');
 }
 
 /**
@@ -28,8 +24,12 @@ export function normalizeMapsPasteInput(raw: string): string {
   if (urlMatch) {
     s = urlMatch[0].replace(/[.,);'"\]]+$/u, '').trim();
   }
-  s = s.replace(/\r?\n/g, '').replace(/\u00a0/g, ' ').replace(/\s{2,}/g, ' ').trim();
-  s = s.replace(/^[<"'[\(]+|[>")\]',.;:]+$/u, '').trim();
+  s = s
+    .replace(/\r?\n/g, '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  s = s.replace(/^[<"'\u005b(]+|[>")\]',.;:]+$/u, '').trim();
   return s;
 }
 

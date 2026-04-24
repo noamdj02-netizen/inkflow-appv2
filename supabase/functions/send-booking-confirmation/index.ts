@@ -145,6 +145,9 @@ function buildRdvConfirmeHtml(payload: Payload): string {
   `;
 
   return wrapEmailLayout({
+    preheader: hasPaymentLink
+      ? `Un clic pour finaliser l’acompte chez ${payload.studioName} — le créneau t’attend 12h`
+      : `RDV enregistré chez ${payload.studioName} — reçu et prochaine étape`,
     tag: hasPaymentLink ? "PAIEMENT" : "CONFIRMATION DE RDV",
     title: hasPaymentLink ? "Finalisez votre réservation" : "Votre rendez-vous est confirmé",
     subtitle: hasPaymentLink

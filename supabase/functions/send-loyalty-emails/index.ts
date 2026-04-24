@@ -19,14 +19,13 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
-import { addPreviewBccToPayload } from "../_shared/resend.ts";
+import { sendEmail as sendResendEmail, htmlToPlainTextFallback } from "../_shared/resend.ts";
+import { listUnsubscribeHeaders } from "../_shared/marketingUnsubscribe.ts";
 import { escapeHtml, wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
-const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
 const APP_URL = (Deno.env.get("APP_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
 
 /** Date du RDV (colonne `date` YYYY-MM-DD) = aujourd’hui UTC − N jours — évite le décalage jour J+7/J+30 selon le fuseau du serveur. */
@@ -48,6 +47,7 @@ function buildJ1Html(clientName: string, service: string, studioName: string): s
     </ul>
   `;
   return wrapEmailLayout({
+    preheader: `Les 5 règles pour cicatriser — ${studioName}`,
     tag: "SOINS J+1",
     titleBlue: "Prends soin",
     titleBlack: "de ton tatouage 🌿",
@@ -75,6 +75,7 @@ function buildJ7Html(clientName: string, service: string, studioName: string): s
     </p>
   `;
   return wrapEmailLayout({
+    preheader: `1 semaine après ta séance — suivi cicatrisation — ${studioName}`,
     tag: "SUIVI J+7",
     titleBlue: "1 semaine",
     titleBlack: "déjà — comment ça cicatrise ?",
@@ -92,6 +93,7 @@ function buildJ7Html(clientName: string, service: string, studioName: string): s
 function buildJ30Html(clientName: string, service: string, studioName: string, vitrineSlug: string): string {
   const vitrineUrl = vitrineSlug ? `${APP_URL}/p/${vitrineSlug}` : APP_URL;
   return wrapEmailLayout({
+    preheader: `30 jours après ton tatouage — ${studioName}`,
     tag: "FIDÉLITÉ J+30",
     titleBlue: "1 mois",
     titleBlack: "déjà — ton tattoo 🎉",
@@ -102,18 +104,6 @@ function buildJ30Html(clientName: string, service: string, studioName: string, v
     bodyHtml: `<p style="${EMAIL_STYLES.textMuted};text-align:center;">Pense à protéger ton tatouage du soleil avec un SPF 50+ ☀️</p>`,
     button: { text: `Voir la vitrine — ${studioName}`, url: vitrineUrl },
   });
-}
-
-async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify(addPreviewBccToPayload({ from: RESEND_FROM, to: [to], subject, html })),
-  });
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`Resend ${res.status}: ${txt}`);
-  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -159,6 +149,17 @@ Deno.serve(async (req: Request) => {
 
       if (!clientEmail) continue;
 
+      const { data: blocked } = await supabase
+        .from("email_suppressions")
+        .select("email")
+        .eq("email", clientEmail.trim().toLowerCase())
+        .maybeSingle();
+      if (blocked) {
+        console.log(`send-loyalty-emails: skip suppressed ${clientEmail}`);
+        results.push({ id: apt.id, wave: wave.label, status: "skipped", reason: "suppressed" });
+        continue;
+      }
+
       try {
         let subject = "";
         let html = "";
@@ -174,7 +175,17 @@ Deno.serve(async (req: Request) => {
           html = buildJ30Html(clientName, service, studioName, vitrineSlug);
         }
 
-        await sendEmail(clientEmail, subject, html);
+        const headers = await listUnsubscribeHeaders(clientEmail);
+        const sent = await sendResendEmail({
+          to: [clientEmail],
+          subject,
+          html,
+          text: htmlToPlainTextFallback(html),
+          headers,
+        });
+        if (!sent) {
+          throw new Error("Resend send failed");
+        }
 
         await supabase
           .from("inkflow_appointments")

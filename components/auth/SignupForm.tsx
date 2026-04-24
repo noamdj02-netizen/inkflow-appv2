@@ -13,6 +13,8 @@ import { supabase } from '../../lib/supabase';
 import { REDIRECT_AFTER_LOGIN_KEY } from '../../contexts/AuthContext';
 import { markJustSignedUp, markWelcomeRequired } from '../../lib/welcomeStorage';
 import { requestStudioActivationLink } from '../../lib/studioActivationEmail';
+import { verifyTurnstileTokenOrThrow } from '../../lib/verifyTurnstileToken';
+import { AuthTurnstile } from './AuthTurnstile';
 
 const inputBase =
   'w-full pl-12 pr-4 py-3.5 min-h-[48px] text-base border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-zinc-400 dark:placeholder:text-zinc-500 transition-all';
@@ -39,6 +41,7 @@ export const SignupForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [inviteStudioLabel, setInviteStudioLabel] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const { signup, loginWithGoogle, isGoogleAuthEnabled } = useAuth();
 
   useEffect(() => {
@@ -81,6 +84,7 @@ export const SignupForm: React.FC = () => {
     }
     setLoading(true);
     try {
+      await verifyTurnstileTokenOrThrow(turnstileToken);
       const postAuthPath = getPostSignupDashboardPath(window.location.search);
       try {
         sessionStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, postAuthPath);
@@ -131,7 +135,10 @@ export const SignupForm: React.FC = () => {
           setGoogleLoading(true);
           try {
             try {
-              sessionStorage.setItem(REDIRECT_AFTER_LOGIN_KEY, getPostSignupDashboardPath(window.location.search));
+              sessionStorage.setItem(
+                REDIRECT_AFTER_LOGIN_KEY,
+                getPostSignupDashboardPath(window.location.search)
+              );
             } catch {
               /* ignore */
             }
@@ -166,11 +173,14 @@ export const SignupForm: React.FC = () => {
           className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800"
           role="status"
         >
-          <Building2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" aria-hidden />
+          <Building2
+            className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5"
+            aria-hidden
+          />
           <p className="text-sm text-emerald-900 dark:text-emerald-100">
             Invitation pour rejoindre l&apos;équipe de{' '}
-            <span className="font-semibold">{inviteStudioLabel}</span>. Finalisez votre compte avec l&apos;adresse email
-            indiquée ci-dessous.
+            <span className="font-semibold">{inviteStudioLabel}</span>. Finalisez votre compte avec
+            l&apos;adresse email indiquée ci-dessous.
           </p>
         </div>
       )}
@@ -187,18 +197,33 @@ export const SignupForm: React.FC = () => {
       {success && (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 animate-in fade-in duration-300">
           <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <svg
+              className="w-4 h-4 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
             </svg>
           </div>
-          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">Compte créé ! Redirection…</p>
+          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+            Compte créé ! Redirection…
+          </p>
         </div>
       )}
 
       {oauthBlock}
 
       <div>
-        <label htmlFor="signup-email" className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2">
+        <label
+          htmlFor="signup-email"
+          className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
+        >
           E-mail professionnel
         </label>
         <div className="relative">
@@ -223,7 +248,10 @@ export const SignupForm: React.FC = () => {
       </div>
 
       <div>
-        <label htmlFor="signup-name" className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2">
+        <label
+          htmlFor="signup-name"
+          className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
+        >
           Nom complet
         </label>
         <div className="relative">
@@ -244,7 +272,10 @@ export const SignupForm: React.FC = () => {
       </div>
 
       <div>
-        <label htmlFor="signup-studioName" className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2">
+        <label
+          htmlFor="signup-studioName"
+          className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
+        >
           Nom du studio
         </label>
         <div className="relative">
@@ -262,11 +293,16 @@ export const SignupForm: React.FC = () => {
             disabled={loading}
           />
         </div>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5">Visible sur votre page vitrine — modifiable plus tard.</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5">
+          Visible sur votre page vitrine — modifiable plus tard.
+        </p>
       </div>
 
       <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
-        <label htmlFor="signup-password" className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2">
+        <label
+          htmlFor="signup-password"
+          className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
+        >
           Mot de passe
         </label>
         <div className="relative">
@@ -299,7 +335,10 @@ export const SignupForm: React.FC = () => {
       </div>
 
       <div>
-        <label htmlFor="signup-confirmPassword" className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2">
+        <label
+          htmlFor="signup-confirmPassword"
+          className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
+        >
           Confirmer le mot de passe
         </label>
         <div className="relative">
@@ -320,7 +359,9 @@ export const SignupForm: React.FC = () => {
             type="button"
             onClick={() => setShowConfirmPassword((v) => !v)}
             className="absolute right-1 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl"
-            aria-label={showConfirmPassword ? 'Masquer la confirmation' : 'Afficher la confirmation'}
+            aria-label={
+              showConfirmPassword ? 'Masquer la confirmation' : 'Afficher la confirmation'
+            }
           >
             {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
@@ -328,8 +369,12 @@ export const SignupForm: React.FC = () => {
       </div>
 
       <div>
-        <label htmlFor="signup-referralCode" className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2">
-          Code de parrainage <span className="font-normal text-zinc-500 dark:text-zinc-400">(optionnel)</span>
+        <label
+          htmlFor="signup-referralCode"
+          className="block text-sm font-semibold text-zinc-900 dark:text-zinc-200 mb-2"
+        >
+          Code de parrainage{' '}
+          <span className="font-normal text-zinc-500 dark:text-zinc-400">(optionnel)</span>
         </label>
         <div className="relative">
           <Gift
@@ -349,6 +394,8 @@ export const SignupForm: React.FC = () => {
           />
         </div>
       </div>
+
+      <AuthTurnstile onToken={setTurnstileToken} />
 
       <label className="flex items-start gap-3 min-h-[44px] cursor-pointer py-1">
         <input

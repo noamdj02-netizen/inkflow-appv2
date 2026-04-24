@@ -13,7 +13,12 @@ export interface DashboardTabHeroProps {
  * Bandeau héros partagé entre les onglets Dashboard Pro (hors vue d’ensemble, qui a son propre hero).
  * Même langage visuel que le hero mobile overview : cartouche, grain optionnel, texte lisible.
  */
-export function DashboardTabHero({ title, description, coverImageUrl, className }: DashboardTabHeroProps) {
+export function DashboardTabHero({
+  title,
+  description,
+  coverImageUrl,
+  className,
+}: DashboardTabHeroProps) {
   const hasCover = Boolean(coverImageUrl?.trim());
 
   return (
@@ -37,7 +42,7 @@ export function DashboardTabHero({ title, description, coverImageUrl, className 
             aria-hidden
           />
           <div
-            className="pointer-events-none absolute -left-6 -top-4 size-[7rem] rounded-full bg-emerald-400/15 blur-3xl dark:bg-emerald-500/12"
+            className="pointer-events-none absolute -left-6 -top-4 size-[7rem] rounded-full bg-blue-400/15 blur-3xl dark:bg-blue-500/12"
             aria-hidden
           />
           <div
@@ -52,13 +57,23 @@ export function DashboardTabHero({ title, description, coverImageUrl, className 
           aria-hidden
         />
       )}
-      <div className="dashboard-pro-ios-hero-film pointer-events-none absolute inset-0 z-[1] rounded-2xl opacity-70" aria-hidden />
-      <div className={cn('relative z-10 px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-5', hasCover && 'text-white')}>
+      <div
+        className="dashboard-pro-ios-hero-film pointer-events-none absolute inset-0 z-[1] rounded-2xl opacity-70"
+        aria-hidden
+      />
+      <div
+        className={cn(
+          'relative z-10 px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-5',
+          hasCover && 'text-white'
+        )}
+      >
         <h1
           id="dashboard-tab-hero-title"
           className={cn(
             'text-[clamp(1.25rem,4vw,1.85rem)] font-bold tracking-[-0.03em] leading-tight font-display',
-            hasCover ? 'text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.35)]' : 'text-zinc-900 dark:text-white'
+            hasCover
+              ? 'text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.35)]'
+              : 'text-zinc-900 dark:text-white'
           )}
         >
           {title}

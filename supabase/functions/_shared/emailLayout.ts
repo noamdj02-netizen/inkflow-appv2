@@ -97,6 +97,11 @@ export function getDefaultEmailHeroBanner(): { imageUrl: string; linkUrl: string
 }
 
 export interface EmailLayoutOptions {
+  /**
+   * Preheader (aperçu dans la liste Gmail / Apple Mail) — invisible dans le corps grâce au bloc caché.
+   * Différent du sujet ; 40–100 caractères recommandés.
+   */
+  preheader?: string;
   /** Partie gauche du titre sur deux lignes (même couleur que le reste — plus d’accent or) */
   titleBlue?: string;
   /** Partie principale du titre (noir) */
@@ -122,8 +127,16 @@ export interface EmailLayoutOptions {
 /**
  * Wordmark + contenu sur fond crème + footer.
  */
+/** Bloc preheader + entités invisibles pour empêcher Gmail d’afficher le reste du HTML comme aperçu. */
+function preheaderBlock(text: string): string {
+  const safe = escapeHtml(text);
+  const pad = "&#847;&zwnj;&nbsp;".repeat(12);
+  return `<div style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;max-height:0;max-width:0;">${safe}${pad}</div>`;
+}
+
 export function wrapEmailLayout(options: EmailLayoutOptions): string {
   const {
+    preheader,
     titleBlue,
     titleBlack,
     title,
@@ -246,7 +259,7 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
     <tr>
       <td align="center" style="padding:0 16px 8px;">
         <p style="margin:0;font-size:13px;color:${TEXT_MUTED};line-height:1.5;font-family:${FONT_EMAIL};">© ${year} InkFlow. Tous droits réservés.</p>
-        <p style="margin:8px 0 0;font-size:12px;color:${TEXT_MUTED};line-height:1.45;font-family:${FONT_EMAIL};">Gérer mes préférences · Se désabonner</p>
+        <p style="margin:8px 0 0;font-size:12px;color:${TEXT_MUTED};line-height:1.45;font-family:${FONT_EMAIL};">E-mails de suivi : désinscription via l’en-tête (Gmail) ou contact@ink-flow.me</p>
       </td>
     </tr>
     <tr>
@@ -276,7 +289,10 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
           </tr>`
     : "";
 
+  const preheaderHtml = preheader ? preheaderBlock(preheader) : "";
+
   const mainBlockHtml = `
+                    ${preheaderHtml}
                     ${tagHtml}
                     ${greetingHtml}
                     ${headlineHtml}

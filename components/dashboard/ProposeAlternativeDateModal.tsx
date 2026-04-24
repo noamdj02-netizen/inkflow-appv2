@@ -65,11 +65,7 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
   const [selectedYmd, setSelectedYmd] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<string>('');
 
-  const clientName = item
-    ? item._type === 'project'
-      ? item.clientName
-      : item.clientName
-    : '';
+  const clientName = item ? (item._type === 'project' ? item.clientName : item.clientName) : '';
   const clientEmail = item ? (item._type === 'project' ? item.clientEmail : item.clientEmail) : '';
   const previousContext = item ? previousContextFromItem(item) : undefined;
 
@@ -147,7 +143,9 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
       return;
     }
     if (!clientEmail?.trim()) {
-      toast.error('Le client n’a pas d’e-mail sur cette demande — utilise Instagram ou la messagerie.');
+      toast.error(
+        'Le client n’a pas d’e-mail sur cette demande — utilise Instagram ou la messagerie.'
+      );
       return;
     }
     setSending(true);
@@ -162,21 +160,21 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
         replyToEmail: replyToEmail ?? undefined,
       });
       if (!result.ok) {
-        toast.error(result.error || "L'e-mail n'a pas pu être envoyé (Resend, JWT ou fonction non déployée).");
+        toast.error(
+          result.error || "L'e-mail n'a pas pu être envoyé (Resend, JWT ou fonction non déployée)."
+        );
         return;
       }
-      toast.success('E-mail de proposition envoyé au client (il peut répondre directement au studio).');
+      toast.success(
+        'E-mail de proposition envoyé au client (il peut répondre directement au studio).'
+      );
       onClose();
     } finally {
       setSending(false);
     }
   };
 
-  const threadIdForItem = item
-    ? item._type === 'project'
-      ? `pr_${item.id}`
-      : item.id
-    : '';
+  const threadIdForItem = item ? (item._type === 'project' ? `pr_${item.id}` : item.id) : '';
 
   const handleInstagram = async () => {
     if (!instagramHandle?.trim()) return;
@@ -215,17 +213,21 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
     <Modal isOpen={isOpen} onClose={onClose} title="Proposer une autre date" size="lg">
       <div className="space-y-5 text-[var(--text-primary)]">
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-4 space-y-2">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">Gestion des reports simplifiée</p>
+          <p className="text-sm font-semibold text-[var(--text-primary)]">
+            Gestion des reports simplifiée
+          </p>
           <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-            Choisis un créneau aligné sur ton planning, puis envoie l’e-mail InkFlow, ou copie le même texte vers
-            Instagram ou la messagerie intégrée.
+            Choisis un créneau aligné sur ton planning, puis envoie l’e-mail InkFlow, ou copie le
+            même texte vers Instagram ou la messagerie intégrée.
           </p>
           <ul className="text-xs text-[var(--text-tertiary)] space-y-1 list-disc list-inside">
             <li>
-              <strong className="text-[var(--text-secondary)]">E-mail</strong> — envoi automatique (Resend) avec réponse au studio.
+              <strong className="text-[var(--text-secondary)]">E-mail</strong> — envoi automatique
+              (Resend) avec réponse au studio.
             </li>
             <li>
-              <strong className="text-[var(--text-secondary)]">Instagram / Messagerie</strong> — le texte est copié, puis ouverture du DM ou du fil InkFlow pour coller.
+              <strong className="text-[var(--text-secondary)]">Instagram / Messagerie</strong> — le
+              texte est copié, puis ouverture du DM ou du fil InkFlow pour coller.
             </li>
           </ul>
         </div>
@@ -235,12 +237,14 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
             <Loader2 className="w-4 h-4 animate-spin" /> Chargement de ton planning…
           </div>
         )}
-        {planningHint && <p className="text-sm text-amber-700 dark:text-amber-300">{planningHint}</p>}
+        {planningHint && (
+          <p className="text-sm text-amber-700 dark:text-amber-300">{planningHint}</p>
+        )}
 
         {!loading && availability && dateOptions.length === 0 && (
           <p className="text-sm text-[var(--text-secondary)]">
-            Aucune date libre dans la fenêtre actuelle. Ajuste tes dispos dans Paramètres ou envoie quand même un e-mail en
-            expliquant la situation au client.
+            Aucune date libre dans la fenêtre actuelle. Ajuste tes dispos dans Paramètres ou envoie
+            quand même un e-mail en expliquant la situation au client.
           </p>
         )}
 
@@ -285,7 +289,9 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
 
         {igMessage && (
           <div>
-            <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase mb-2">Aperçu message (Instagram)</p>
+            <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase mb-2">
+              Aperçu message (Instagram)
+            </p>
             <pre className="text-xs whitespace-pre-wrap rounded-xl border border-[var(--border)] bg-zinc-50 dark:bg-zinc-900/50 p-3 max-h-36 overflow-y-auto text-[var(--text-secondary)]">
               {igMessage}
             </pre>
@@ -297,7 +303,7 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
             type="button"
             disabled={sending || !selectedYmd || !selectedSlot || !clientEmail?.trim()}
             onClick={() => void handleSendEmail()}
-            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold px-4 py-2.5 active:scale-[0.98] transition-all disabled:opacity-50"
+            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 font-semibold px-4 py-2.5 active:scale-[0.98] transition-all disabled:opacity-50"
           >
             <Mail className="w-4 h-4 shrink-0" />
             {sending ? 'Envoi…' : 'Envoyer l’e-mail au client'}
@@ -308,7 +314,7 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
                 type="button"
                 disabled={!selectedSlot}
                 onClick={() => void handleMessagerieInkFlow()}
-                className="min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold px-4 py-2.5 shadow-sm active:scale-[0.98] transition-all disabled:opacity-50"
+                className="min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 font-semibold px-4 py-2.5 shadow-sm active:scale-[0.98] transition-all disabled:opacity-50"
               >
                 <MessageCircle className="w-4 h-4 shrink-0" />
                 Messagerie InkFlow
@@ -327,7 +333,8 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
               </button>
             ) : onOpenInkflowDiscussion ? null : (
               <p className="text-xs text-[var(--text-tertiary)] sm:col-span-2">
-                Aucun Instagram détecté sur la demande — ajoute @ dans le brief client ou utilise la messagerie.
+                Aucun Instagram détecté sur la demande — ajoute @ dans le brief client ou utilise la
+                messagerie.
               </p>
             )}
           </div>
@@ -337,7 +344,9 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
           {replyToEmail ? (
             <span className="font-medium text-[var(--text-secondary)]">{replyToEmail}</span>
           ) : (
-            <span className="text-amber-700 dark:text-amber-300">connecte une boîte pro dans ton compte pour activer « Répondre au tatoueur »</span>
+            <span className="text-amber-700 dark:text-amber-300">
+              connecte une boîte pro dans ton compte pour activer « Répondre au tatoueur »
+            </span>
           )}
           .
         </p>
