@@ -12,7 +12,9 @@ export type IconBoxVariant =
   | 'green'
   | 'blue'
   | 'emerald'
-  | 'orange';
+  | 'orange'
+  | 'amber'
+  | 'sky';
 
 const variantClass: Record<IconBoxVariant, string> = {
   surface:
@@ -27,6 +29,9 @@ const variantClass: Record<IconBoxVariant, string> = {
     'bg-emerald-50 dark:bg-emerald-500/12 border border-emerald-200/70 dark:border-emerald-500/25 text-emerald-600 dark:text-emerald-400',
   orange:
     'bg-orange-50 dark:bg-orange-500/12 border border-orange-200/70 dark:border-orange-500/25 text-orange-600 dark:text-orange-400',
+  amber:
+    'bg-amber-50 dark:bg-amber-500/12 border border-amber-200/70 dark:border-amber-500/25 text-amber-600 dark:text-amber-400',
+  sky: 'bg-sky-50 dark:bg-sky-500/12 border border-sky-200/70 dark:border-sky-500/25 text-sky-600 dark:text-sky-400',
 };
 
 const sizeClass: Record<'sm' | 'md', { box: string; icon: string }> = {

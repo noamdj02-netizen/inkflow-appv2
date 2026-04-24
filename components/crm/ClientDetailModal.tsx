@@ -138,6 +138,12 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
                 </span>
               ))}
             </div>
+            {client.tags?.includes('Flash vitrine') && (
+              <p className="mt-2 text-xs leading-snug text-zinc-500 dark:text-zinc-400 [text-wrap:pretty]">
+                Fiche liée à un achat flash sur la vitrine. Le questionnaire santé (ci-dessous) et
+                les prochains RDV s’enrichissent automatiquement quand c’est dispo.
+              </p>
+            )}
           </div>
         </div>
 

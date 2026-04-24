@@ -472,6 +472,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   studioId,
   useSupabase = false,
   recentDeposits = [],
+  overviewHeaderBgUrl = null,
   onAvatarClick,
   avatarUploading = false,
   flashDesigns = [],
@@ -959,6 +960,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     return h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
   })();
 
+  /** Photo de couverture vitrine (Paramètres) — bandeau accueil mobile */
+  const overviewCover = overviewHeaderBgUrl?.trim() || null;
+
   /** Desktop KPI — cartes .prodify-card (relief portfolio, aligné index.css) */
   const desktopKpiShell =
     'prodify-card p-5 h-full flex flex-col justify-between min-h-[130px] min-w-0 ring-1 ring-inset ring-zinc-900/[0.04] dark:ring-white/[0.05]';
@@ -970,6 +974,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   /** Cartes & listes — mêmes jetons que revenu / stats (vue mobile CRM) */
   const crmCard =
     'rounded-2xl border border-zinc-200/90 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:bg-zinc-900';
+  /** Accueil mobile : surfaces alignées (relief discret, rayon 16px) */
+  const mobileHomeSurface =
+    'rounded-2xl border border-zinc-200/85 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_6px_22px_-6px_rgba(15,23,42,0.09)] ring-1 ring-zinc-950/[0.04] dark:border-zinc-700/70 dark:bg-zinc-900/95 dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.55)] dark:ring-1 dark:ring-inset dark:ring-white/[0.07]';
+  const mobileQuickActionBar =
+    'rounded-2xl border border-blue-200/70 bg-gradient-to-b from-sky-50/95 via-blue-50/90 to-sky-100/70 p-2 shadow-sm shadow-slate-400/10 ring-1 ring-blue-200/50 dark:border-blue-500/20 dark:from-blue-950/50 dark:via-blue-950/40 dark:to-zinc-900 dark:shadow-none dark:ring-1 dark:ring-inset dark:ring-white/[0.08]';
+  const mobileQuickActionTile =
+    'flex min-h-[44px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-zinc-200/80 bg-white/95 px-0.5 py-2 shadow-sm ring-1 ring-black/[0.06] active:scale-[0.98] active:opacity-95 motion-reduce:active:scale-100 dark:border-zinc-700/60 dark:bg-zinc-900/92 dark:shadow dark:ring-0 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/55 focus-visible:ring-offset-2 focus-visible:ring-offset-sky-50 dark:focus-visible:ring-sky-400/50 dark:focus-visible:ring-offset-zinc-900 [@media(hover:hover)]:hover:border-zinc-300/90 dark:[@media(hover:hover)]:hover:border-zinc-500';
   const crmCardHeader =
     'px-4 py-3 flex items-baseline justify-between border-b border-zinc-200/80 dark:border-zinc-800';
   const crmSectionTitle = 'text-[16px] font-bold tracking-tight text-zinc-900 dark:text-white';
@@ -1355,44 +1366,80 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             <div className="px-0 pt-0.5 pb-0.5 safe-top">
               <motion.div className="flex flex-col gap-3" {...iosSpring(0)}>
                 {/* Rangée titre + notifications + profil — dense (moins haut) */}
-                <div className="flex items-center justify-between gap-2 rounded-2xl border border-zinc-200/90 bg-white px-3 py-2 shadow-[0_1px_3px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:bg-zinc-900">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm dark:bg-blue-500 dark:text-white">
-                      <LayoutDashboard className="h-4 w-4" strokeWidth={2} aria-hidden />
+                <div
+                  className={cn(
+                    mobileHomeSurface,
+                    'relative isolate flex min-h-[4.5rem] items-center justify-between gap-2 overflow-hidden px-3 py-2.5',
+                    overviewCover &&
+                      'border-white/20 bg-transparent shadow-[0_8px_30px_-12px_rgba(0,0,0,0.35)] ring-1 ring-white/15 dark:border-zinc-600/40 dark:shadow-[0_8px_32px_-10px_rgba(0,0,0,0.7)] dark:ring-zinc-500/20'
+                  )}
+                >
+                  {overviewCover ? (
+                    <div
+                      className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-2xl"
+                      aria-hidden
+                    >
+                      <img
+                        src={overviewCover}
+                        alt=""
+                        className="h-full w-full object-cover object-center"
+                        loading="lazy"
+                        decoding="async"
+                      />
                     </div>
-                    <div className="min-w-0">
-                      <h1 className="truncate text-[15px] font-bold leading-tight tracking-tight text-zinc-900 dark:text-white">
-                        Vue d&apos;ensemble
-                      </h1>
-                      <p className="truncate text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
-                        {now.toLocaleDateString('fr-FR', {
-                          weekday: 'short',
-                          day: 'numeric',
-                          month: 'long',
-                        })}
-                      </p>
-                      {todayOrTomorrowCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('agenda')}
-                          className="mt-1 inline-flex w-full max-w-full items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-left text-[11px] font-semibold leading-tight text-blue-700 ring-1 ring-inset ring-blue-200/80 transition-colors active:scale-[0.99] dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/25 sm:w-auto"
-                        >
-                          <CalendarCheck className="h-3 w-3 shrink-0" aria-hidden />
-                          {todayOrTomorrowCount} RDV bientôt
-                        </button>
+                  ) : null}
+                  <div className="relative z-[1] min-w-0 flex-1">
+                    <h1
+                      className={cn(
+                        'truncate text-[15px] font-bold leading-tight tracking-tight text-zinc-900 dark:text-white',
+                        overviewCover &&
+                          'text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_0_20px_rgba(0,0,0,0.35)]'
                       )}
-                    </div>
+                    >
+                      Vue d&apos;ensemble
+                    </h1>
+                    <p
+                      className={cn(
+                        'truncate text-[11px] leading-snug text-zinc-500 dark:text-zinc-400',
+                        overviewCover && 'text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.75)]'
+                      )}
+                    >
+                      {now.toLocaleDateString('fr-FR', {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'long',
+                      })}
+                    </p>
+                    {todayOrTomorrowCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('agenda')}
+                        className="mt-0.5 inline-flex w-auto max-w-full min-w-0 items-center gap-0.5 self-start rounded-full border border-white/20 bg-blue-600 px-1.5 py-0.5 text-left text-[10px] font-medium leading-none text-white shadow-sm transition-colors hover:bg-blue-700 active:scale-[0.99] active:bg-blue-800 dark:border-white/15 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-500"
+                      >
+                        <CalendarCheck
+                          className="size-2.5 shrink-0 text-white"
+                          strokeWidth={2}
+                          aria-hidden
+                        />
+                        {todayOrTomorrowCount} RDV bientôt
+                      </button>
+                    )}
                   </div>
-                  <div className="flex shrink-0 items-center gap-0.5 self-center">
+                  <div className="relative z-[1] flex shrink-0 items-center gap-0.5 self-center">
                     <button
                       type="button"
                       onClick={() => setActiveTab('notifications')}
-                      className="relative flex h-10 w-10 items-center justify-center rounded-xl text-zinc-600 transition-colors hover:bg-zinc-100 active:scale-[0.97] dark:text-zinc-300 dark:hover:bg-zinc-800"
+                      className={cn(
+                        'relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors active:scale-[0.97]',
+                        overviewCover
+                          ? 'text-white hover:bg-white/15 active:bg-white/10 [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]'
+                          : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                      )}
                       aria-label="Notifications"
                     >
-                      <Bell className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+                      <Bell className="relative z-0 h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
                       {pendingDemandesCount + visibleAlerts.length > 0 && (
-                        <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-600 px-0.5 text-[10px] font-bold tabular-nums leading-none text-white shadow-sm ring-2 ring-white dark:bg-red-500 dark:ring-zinc-900">
+                        <span className="absolute -right-px -top-px z-[1] flex h-3.5 min-w-0 items-center justify-center rounded-full border border-white/90 bg-red-600 px-1 text-[9px] font-bold leading-none text-white tabular-nums shadow-sm dark:border-zinc-900 dark:bg-red-500">
                           {pendingDemandesCount + visibleAlerts.length > 9
                             ? '9+'
                             : pendingDemandesCount + visibleAlerts.length}
@@ -1409,7 +1456,12 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       }}
                       disabled={avatarUploading}
                       whileTap={prefersReducedMotion ? undefined : { scale: 0.94 }}
-                      className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-zinc-200 bg-zinc-100 shadow-sm dark:border-zinc-600 dark:bg-zinc-800"
+                      className={cn(
+                        'relative h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 bg-zinc-100 shadow-sm dark:bg-zinc-800',
+                        overviewCover
+                          ? 'border-white/90 ring-2 ring-black/25'
+                          : 'border-zinc-200 dark:border-zinc-600'
+                      )}
                       aria-label={onAvatarClick ? 'Changer la photo de profil' : 'Paramètres'}
                     >
                       {user?.avatar ? (
@@ -1440,14 +1492,14 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
                 {/* Sous-navigation pilule (réf. Home / My Tier / Activities) */}
                 <div
-                  className="flex gap-1 rounded-full bg-zinc-200/70 p-1 dark:bg-zinc-800/90"
+                  className="flex gap-1 rounded-full bg-zinc-200/75 p-1 ring-1 ring-inset ring-zinc-900/[0.06] dark:bg-black/25 dark:ring-zinc-700/50"
                   role="tablist"
                   aria-label="Raccourcis accueil"
                 >
                   <span
                     role="tab"
                     aria-selected
-                    className="flex flex-1 items-center justify-center rounded-full bg-white py-2.5 text-center text-[13px] font-semibold text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-white"
+                    className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-white py-2 text-center text-[13px] font-semibold text-zinc-900 shadow-sm ring-1 ring-zinc-900/[0.04] dark:bg-zinc-800 dark:text-white dark:ring-1 dark:ring-inset dark:ring-white/10"
                   >
                     Accueil
                   </span>
@@ -1455,7 +1507,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     type="button"
                     role="tab"
                     onClick={() => setActiveTab('requests')}
-                    className="flex flex-1 items-center justify-center rounded-full py-2.5 text-center text-[13px] font-medium text-zinc-600 transition-colors active:scale-[0.98] dark:text-zinc-400"
+                    className="flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-full py-2 text-center text-[13px] font-medium text-zinc-600 transition-colors active:scale-[0.98] dark:text-zinc-500"
                   >
                     Demandes
                   </button>
@@ -1463,111 +1515,17 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     type="button"
                     role="tab"
                     onClick={() => setActiveTab('agenda')}
-                    className="flex flex-1 items-center justify-center rounded-full py-2.5 text-center text-[13px] font-medium text-zinc-600 transition-colors active:scale-[0.98] dark:text-zinc-400"
+                    className="flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-full py-2 text-center text-[13px] font-medium text-zinc-600 transition-colors active:scale-[0.98] dark:text-zinc-500"
                   >
                     Agenda
                   </button>
                 </div>
 
-                {/* Carte métrique principale (revenu du mois + tendance) */}
-                <div className={cn(crmCard, 'p-4')}>
-                  <p className="text-[13px] font-semibold text-zinc-900 dark:text-white">
-                    Revenu du mois
-                  </p>
-                  <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400">
-                    {crmMonthRangeLabel}
-                  </p>
-                  <div className="mt-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
-                    <div className="flex min-w-0 flex-1 flex-wrap items-end gap-2">
-                      <p className="text-[32px] font-bold leading-none tabular-nums tracking-tight text-zinc-900 dark:text-white">
-                        {privacyMode ? '••••' : `${monthlyRevenue.toLocaleString('fr-FR')} €`}
-                      </p>
-                      {trendRevenue !== null && (
-                        <span className="inline-flex items-center gap-0.5 rounded-full bg-zinc-200/90 px-2.5 py-1 text-[12px] font-semibold tabular-nums text-zinc-800 dark:bg-zinc-600/30 dark:text-zinc-200">
-                          {trendRevenue >= 0 ? (
-                            <TrendingUp className="h-3.5 w-3.5" aria-hidden />
-                          ) : (
-                            <TrendingDown className="h-3.5 w-3.5" aria-hidden />
-                          )}
-                          {trendRevenue >= 0 ? '+' : ''}
-                          {trendRevenue}% vs mois dernier
-                        </span>
-                      )}
-                    </div>
-                    {(rdvAlertUnpaidCount > 0 || rdvAlertBientotCount > 0) && !privacyMode && (
-                      <div
-                        className="flex max-w-[48%] shrink-0 flex-col items-end gap-0.5 text-right"
-                        role="status"
-                        aria-label="Rappels rendez-vous"
-                      >
-                        {rdvAlertUnpaidCount > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => onAlertNavigate?.({ id: 'unpaid', type: 'warning' })}
-                            className="text-[10px] font-semibold leading-snug text-blue-600 underline decoration-blue-600/30 underline-offset-2 transition-colors hover:text-blue-700 dark:text-blue-400 dark:decoration-blue-400/40 dark:hover:text-blue-300"
-                          >
-                            {rdvAlertUnpaidCount} sans acompte
-                          </button>
-                        )}
-                        {rdvAlertBientotCount > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => onAlertNavigate?.({ id: '24h', type: 'info' })}
-                            className="text-[10px] font-semibold leading-snug text-blue-600 underline decoration-blue-600/30 underline-offset-2 transition-colors hover:text-blue-700 dark:text-blue-400 dark:decoration-blue-400/40 dark:hover:text-blue-300"
-                          >
-                            {rdvAlertBientotCount} auj. ou demain
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-4 flex min-h-0 flex-col gap-2 sm:flex-row sm:items-stretch">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('finance')}
-                      className="group flex min-h-[48px] min-w-0 flex-1 items-center gap-3 rounded-2xl border border-blue-100/90 bg-white px-3.5 py-2.5 text-left shadow-sm ring-1 ring-blue-500/[0.06] transition-[transform,box-shadow,background-color,border-color] hover:border-blue-200 hover:bg-blue-50/60 hover:shadow-md active:scale-[0.99] dark:border-blue-500/20 dark:bg-zinc-900/40 dark:ring-white/[0.04] dark:hover:border-blue-500/35 dark:hover:bg-blue-500/10"
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm dark:bg-blue-500">
-                        <Wallet className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[13px] font-semibold leading-snug text-zinc-900 dark:text-white">
-                          Acomptes &amp; encaissements
-                        </span>
-                        <span className="mt-0.5 block text-[11px] font-medium text-blue-600 dark:text-blue-400">
-                          Finance
-                        </span>
-                      </span>
-                      <ChevronRight
-                        className="h-4 w-4 shrink-0 text-zinc-400 transition-colors group-hover:text-blue-500 dark:text-zinc-500"
-                        strokeWidth={2}
-                        aria-hidden
-                      />
-                    </button>
-                    {stripeConnectAccountId && useSupabase && (
-                      <button
-                        type="button"
-                        onClick={() => void openStripeExpressDashboard()}
-                        disabled={stripeExpressOpening}
-                        title="Tableau de bord Stripe (Express)"
-                        className="inline-flex min-h-[48px] shrink-0 items-center justify-center gap-2 self-stretch rounded-2xl border border-blue-200/90 bg-white px-4 py-2.5 text-[12px] font-semibold text-blue-600 shadow-sm transition-[transform,background-color] hover:bg-blue-50 active:scale-[0.99] disabled:opacity-60 dark:border-blue-500/30 dark:bg-zinc-900/40 dark:text-blue-400 dark:hover:bg-blue-500/10 sm:min-w-[5.5rem]"
-                      >
-                        {stripeExpressOpening ? (
-                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                        ) : (
-                          <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />
-                        )}
-                        <span className="max-[380px]:sr-only">Stripe</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Actions rapides — sous le revenu du mois */}
+                {/* Actions rapides — sous Accueil / Demandes / Agenda (une rangée, cibles 44pt) */}
                 <motion.div className="w-full" {...iosSpring(0.04)}>
-                  <div className="rounded-[22px] bg-gradient-to-br from-blue-50/95 via-blue-50/85 to-sky-100/70 p-2 shadow-[0_1px_3px_rgba(15,23,42,0.05),0_4px_14px_-6px_rgba(37,99,235,0.12)] ring-1 ring-blue-200/70 dark:from-blue-950/55 dark:via-blue-950/40 dark:to-slate-900/60 dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.45)] dark:ring-blue-800/60">
+                  <div className={mobileQuickActionBar}>
                     <motion.div
-                      className="grid min-w-0 grid-cols-2 gap-2 min-[400px]:grid-cols-4 min-[400px]:gap-2.5"
+                      className="grid min-w-0 grid-cols-4 gap-2"
                       variants={quickGridVariants}
                       initial="hidden"
                       animate="visible"
@@ -1581,15 +1539,19 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         variants={quickTileVariants}
                         whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
                         transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                        className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white/95 px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/85 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black [@media(hover:hover)]:hover:border-zinc-300/90 dark:[@media(hover:hover)]:hover:border-zinc-600"
+                        aria-label="Nouveau rendez-vous"
+                        className={mobileQuickActionTile}
                       >
                         <Plus
-                          className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300"
+                          className="h-[18px] w-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
                           strokeWidth={2}
                           aria-hidden
                         />
-                        <span className="px-0.5 text-center text-[11px] font-medium leading-tight text-zinc-600 dark:text-zinc-400 min-[400px]:text-[10px]">
-                          Nouveau RDV
+                        <span
+                          className="px-0.5 text-center text-[10px] font-semibold leading-tight text-zinc-600 dark:text-zinc-300"
+                          aria-hidden
+                        >
+                          Nouv. RDV
                         </span>
                       </motion.button>
                       <motion.button
@@ -1598,14 +1560,14 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         variants={quickTileVariants}
                         whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
                         transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                        className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white/95 px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/85 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black [@media(hover:hover)]:hover:border-zinc-300/90 dark:[@media(hover:hover)]:hover:border-zinc-600"
+                        className={mobileQuickActionTile}
                       >
                         <Zap
-                          className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300"
+                          className="h-[18px] w-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
                           strokeWidth={2}
                           aria-hidden
                         />
-                        <span className="text-center text-[11px] font-medium leading-tight text-zinc-600 dark:text-zinc-400 min-[400px]:text-[10px]">
+                        <span className="text-center text-[10px] font-semibold leading-tight text-zinc-600 dark:text-zinc-300">
                           Flash
                         </span>
                       </motion.button>
@@ -1617,28 +1579,31 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           variants={quickTileVariants}
                           whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
                           transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                          className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white/95 px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/85 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black [@media(hover:hover)]:hover:border-zinc-300/90 dark:[@media(hover:hover)]:hover:border-zinc-600"
+                          className={mobileQuickActionTile}
                         >
                           <ExternalLink
-                            className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300"
+                            className="h-[18px] w-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
                             strokeWidth={2}
                             aria-hidden
                           />
-                          <span className="text-center text-[11px] font-medium leading-tight text-zinc-600 dark:text-zinc-400 min-[400px]:text-[10px]">
+                          <span className="text-center text-[10px] font-semibold leading-tight text-zinc-600 dark:text-zinc-300">
                             Vitrine
                           </span>
                         </motion.a>
                       ) : (
                         <motion.div
                           variants={quickTileVariants}
-                          className="flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/80 px-1 py-2.5 opacity-60 pointer-events-none dark:border-zinc-700 dark:bg-zinc-900/40 min-[400px]:min-h-[52px]"
+                          className={cn(
+                            mobileQuickActionTile,
+                            'border-dashed border-zinc-300/90 bg-zinc-100/80 opacity-60 pointer-events-none dark:border-zinc-600 dark:bg-zinc-900/50'
+                          )}
                         >
                           <ExternalLink
-                            className="h-5 w-5 shrink-0 text-zinc-400"
+                            className="h-[18px] w-[18px] shrink-0 text-zinc-400 dark:text-zinc-500"
                             strokeWidth={2}
                             aria-hidden
                           />
-                          <span className="text-center text-[11px] font-medium leading-tight text-zinc-400 min-[400px]:text-[10px]">
+                          <span className="text-center text-[10px] font-semibold leading-tight text-zinc-400 dark:text-zinc-500">
                             Vitrine
                           </span>
                         </motion.div>
@@ -1654,22 +1619,22 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                             ? `Demandes, ${pendingDemandesCount} en attente`
                             : 'Demandes'
                         }
-                        className="relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200/90 bg-white/95 px-1 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:border-zinc-800 dark:bg-zinc-900/85 dark:shadow-none min-[400px]:min-h-[52px] motion-reduce:active:scale-100 active:scale-[0.98] active:opacity-95 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F2F7] dark:focus-visible:ring-offset-black [@media(hover:hover)]:hover:border-zinc-300/90 dark:[@media(hover:hover)]:hover:border-zinc-600"
+                        className={cn(mobileQuickActionTile, 'relative')}
                       >
                         {pendingDemandesCount > 0 && (
                           <span
                             aria-hidden
-                            className="absolute right-1 top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-600 px-0.5 text-[10px] font-bold tabular-nums leading-none text-white shadow-sm ring-2 ring-white dark:bg-red-500 dark:ring-zinc-900"
+                            className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-0.5 text-[9px] font-bold tabular-nums leading-none text-white shadow-sm ring-2 ring-white dark:bg-red-500 dark:ring-zinc-900"
                           >
                             {pendingDemandesCount > 9 ? '9+' : pendingDemandesCount}
                           </span>
                         )}
                         <Inbox
-                          className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300"
+                          className="h-[18px] w-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
                           strokeWidth={2}
                           aria-hidden
                         />
-                        <span className="text-center text-[11px] font-medium leading-tight text-zinc-600 dark:text-zinc-400 min-[400px]:text-[10px]">
+                        <span className="text-center text-[10px] font-semibold leading-tight text-zinc-600 dark:text-zinc-300">
                           Demandes
                         </span>
                       </motion.button>
@@ -1677,18 +1642,130 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   </div>
                 </motion.div>
 
+                {/* Carte métrique principale (revenu + rappels lisibles + zone Finance plate) */}
+                <div className={cn(mobileHomeSurface, 'p-4')}>
+                  <div className="flex min-w-0 items-end justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-zinc-900 dark:text-white">
+                        Revenu du mois
+                      </p>
+                      <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400/95">
+                        {crmMonthRangeLabel}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-right text-[32px] font-bold leading-none tabular-nums tracking-tight text-zinc-900 dark:text-white">
+                      {privacyMode ? '••••' : `${monthlyRevenue.toLocaleString('fr-FR')} €`}
+                    </p>
+                  </div>
+                  <div className="mt-3 flex flex-col gap-2.5">
+                    {trendRevenue !== null && (
+                      <div className="flex min-w-0 flex-wrap items-end gap-2">
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-zinc-100 px-2.5 py-1 text-[12px] font-semibold tabular-nums text-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-200">
+                          {trendRevenue >= 0 ? (
+                            <TrendingUp className="h-3.5 w-3.5" aria-hidden />
+                          ) : (
+                            <TrendingDown className="h-3.5 w-3.5" aria-hidden />
+                          )}
+                          {trendRevenue >= 0 ? '+' : ''}
+                          {trendRevenue}% vs mois dernier
+                        </span>
+                      </div>
+                    )}
+                    {(rdvAlertUnpaidCount > 0 || rdvAlertBientotCount > 0) && !privacyMode && (
+                      <div
+                        className="flex flex-wrap gap-1"
+                        role="status"
+                        aria-label="Rappels rendez-vous"
+                      >
+                        {rdvAlertUnpaidCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => onAlertNavigate?.({ id: 'unpaid', type: 'warning' })}
+                            className="inline-flex min-h-0 min-w-0 max-w-full items-center gap-0.5 rounded-full bg-blue-50/95 px-1.5 py-0.5 text-left text-[10px] font-medium leading-tight text-blue-950 ring-1 ring-blue-200/90 transition [transition-property:transform,background-color] active:scale-[0.99] dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
+                          >
+                            <AlertCircle
+                              className="h-3 w-3 shrink-0 text-blue-600 dark:text-sky-400"
+                              strokeWidth={2}
+                              aria-hidden
+                            />
+                            <span className="min-w-0 [text-wrap:balance]">
+                              {rdvAlertUnpaidCount} sans acompte
+                            </span>
+                          </button>
+                        )}
+                        {rdvAlertBientotCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => onAlertNavigate?.({ id: '24h', type: 'info' })}
+                            className="inline-flex min-h-0 min-w-0 max-w-full items-center gap-0.5 rounded-full bg-sky-50 px-1.5 py-0.5 text-left text-[10px] font-medium leading-tight text-sky-950 ring-1 ring-sky-200/90 transition [transition-property:transform,background-color] active:scale-[0.99] dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
+                          >
+                            <Clock
+                              className="h-3 w-3 shrink-0 text-sky-600 dark:text-cyan-300"
+                              strokeWidth={2}
+                              aria-hidden
+                            />
+                            <span className="min-w-0 [text-wrap:balance]">
+                              {rdvAlertBientotCount} auj. ou demain
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-4 space-y-2 border-t border-zinc-100 pt-4 dark:border-zinc-700/60">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('finance')}
+                      className="group flex w-full min-h-12 min-w-0 items-center gap-3 rounded-xl bg-zinc-50/95 px-3 py-2.5 text-left transition [transition-property:transform,background-color] active:scale-[0.99] dark:bg-zinc-800/40 dark:hover:bg-zinc-800/60"
+                    >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm dark:bg-blue-500">
+                        <Wallet className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[13px] font-semibold leading-snug text-zinc-900 dark:text-white">
+                          Acomptes &amp; encaissements
+                        </span>
+                        <span className="mt-0.5 block text-[11px] font-medium text-blue-600 dark:text-blue-400">
+                          Finance
+                        </span>
+                      </span>
+                      <ChevronRight
+                        className="h-4 w-4 shrink-0 text-zinc-400 transition-colors group-active:text-blue-500 dark:text-zinc-500"
+                        strokeWidth={2}
+                        aria-hidden
+                      />
+                    </button>
+                    {stripeConnectAccountId && useSupabase && (
+                      <button
+                        type="button"
+                        onClick={() => void openStripeExpressDashboard()}
+                        disabled={stripeExpressOpening}
+                        title="Tableau de bord Stripe (Express)"
+                        className="flex w-full min-h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-200/90 bg-transparent px-3 py-2.5 text-[12px] font-semibold text-zinc-700 transition active:scale-[0.99] disabled:opacity-60 dark:border-zinc-600/90 dark:text-zinc-200 dark:hover:bg-zinc-800/30"
+                      >
+                        {stripeExpressOpening ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        ) : (
+                          <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />
+                        )}
+                        Tableau de bord Stripe
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {/* Bloc statistiques : toggle + période + donut */}
-                <div className={cn(crmCard, 'p-4')}>
+                <div className={cn(mobileHomeSurface, 'p-4')}>
                   <div className="flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
-                    <div className="flex flex-1 gap-1 rounded-full bg-zinc-100 p-0.5 dark:bg-zinc-800/80">
+                    <div className="flex flex-1 gap-1 rounded-full bg-zinc-100/90 p-0.5 ring-1 ring-inset ring-zinc-900/[0.04] dark:bg-black/35 dark:ring-zinc-700/45">
                       <button
                         type="button"
                         onClick={() => setInsightView('rdv')}
                         className={cn(
                           'flex-1 rounded-full py-2 text-center text-[12px] font-semibold transition-colors',
                           insightView === 'rdv'
-                            ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-white'
-                            : 'text-zinc-500 dark:text-zinc-400'
+                            ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white dark:ring-1 dark:ring-inset dark:ring-white/12'
+                            : 'text-zinc-500 dark:text-zinc-500'
                         )}
                       >
                         RDV
@@ -1699,27 +1776,27 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         className={cn(
                           'flex-1 rounded-full py-2 text-center text-[12px] font-semibold transition-colors',
                           insightView === 'demandes'
-                            ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-white'
-                            : 'text-zinc-500 dark:text-zinc-400'
+                            ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white dark:ring-1 dark:ring-inset dark:ring-white/12'
+                            : 'text-zinc-500 dark:text-zinc-500'
                         )}
                       >
                         Demandes
                       </button>
                     </div>
                     <div className="flex items-center gap-1 self-end min-[400px]:self-auto">
-                      <span className="text-[12px] text-zinc-500 dark:text-zinc-400">Période</span>
-                      <div className="relative">
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Période</span>
+                      <div className="relative max-w-[min(100%,8.5rem)]">
                         <select
                           value={insightPeriod}
                           onChange={(e) => setInsightPeriod(e.target.value as 'week' | 'month')}
-                          className="h-9 appearance-none rounded-lg border border-zinc-200 bg-white py-0 pl-2.5 pr-8 text-[13px] font-medium text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                          className="h-6 w-full min-h-0 max-w-full appearance-none rounded border border-zinc-200 bg-white py-0 pl-1 pr-5 text-[11px] font-medium leading-none text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                           aria-label="Période des statistiques"
                         >
                           <option value="week">7 jours</option>
                           <option value="month">Mois en cours</option>
                         </select>
                         <ChevronDown
-                          className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
+                          className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-500"
                           aria-hidden
                         />
                       </div>
@@ -1943,8 +2020,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   type="button"
                   onClick={() => setActiveTab('requests')}
                   className={cn(
-                    crmCard,
-                    'w-full border-l-4 border-l-zinc-500 pl-3.5 p-3 flex items-center gap-3 text-left active:scale-[0.99] transition-transform touch-manipulation min-h-[52px] dark:border-l-zinc-500'
+                    mobileHomeSurface,
+                    'w-full border-l-4 border-l-amber-500/90 pl-3.5 p-3 flex items-center gap-3 text-left active:scale-[0.99] transition-transform touch-manipulation min-h-[52px] dark:border-l-amber-500/80'
                   )}
                   aria-label={`Voir les ${pendingDemandesCount} demande${pendingDemandesCount > 1 ? 's' : ''} en attente`}
                 >
@@ -1972,7 +2049,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               )}
 
               {/* KPIs — encart « Ce mois » (même peau que revenu / stats) */}
-              <div className={cn(crmCard, 'p-4')}>
+              <div className={cn(mobileHomeSurface, 'p-4')}>
                 <div className="flex flex-col gap-2 min-[380px]:flex-row min-[380px]:items-end min-[380px]:justify-between min-[380px]:gap-3 sm:pb-0">
                   <div className="min-w-0">
                     <h2 className="text-[13px] font-semibold text-zinc-900 dark:text-white">
@@ -2193,46 +2270,47 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           <div className="min-h-full w-full max-w-[min(1800px,100%)] mx-auto isolate">
             {/* ===== HEADER — typo display + hiérarchie type showcase ===== */}
             <div className="px-0 pt-5 pb-5 md:pt-6 md:pb-6 2xl:pt-7 2xl:pb-7">
-              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 md:gap-5 2xl:gap-6">
-                {/* Left: Greeting + Pills */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-medium text-zinc-500 dark:text-zinc-400 mb-2 tracking-wide first-letter:uppercase">
-                    {now.toLocaleDateString('fr-FR', {
-                      weekday: 'long',
-                      day: 'numeric',
-                      month: 'long',
-                    })}
-                  </p>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {pageTitleInShell ? (
-                      <h2 className="font-display text-[1.75rem] sm:text-[2rem] lg:text-[2.125rem] 2xl:text-[2.25rem] font-bold tracking-[-0.04em] text-zinc-900 dark:text-white">
-                        {greeting}
-                        {firstName ? `, ${firstName}` : ''}
-                      </h2>
-                    ) : (
-                      <h1 className="font-display text-[1.75rem] sm:text-[2rem] lg:text-[2.125rem] 2xl:text-[2.25rem] font-bold tracking-[-0.04em] text-zinc-900 dark:text-white">
-                        {greeting}
-                        {firstName ? `, ${firstName}` : ''}
-                      </h1>
-                    )}
-                    {/* Compact Alert Pills */}
-                    {unpaidCount > 0 && (
-                      <button
-                        onClick={() => setActiveTab('requests')}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"
-                      >
-                        <AlertCircle className="w-4 h-4 shrink-0" strokeWidth={2} />
-                        {unpaidCount} sans acompte
-                      </button>
-                    )}
-                    {todayOrTomorrowCount > 0 && (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs font-medium">
-                        <CalendarCheck className="w-4 h-4 shrink-0" strokeWidth={2} />
-                        {todayOrTomorrowCount} RDV bientôt
-                      </span>
-                    )}
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-6 2xl:gap-7">
+                {/* Left: Greeting + Pills + méta (colonne, rythme vertical unifié) */}
+                <div className="flex min-w-0 flex-1 flex-col gap-3 sm:gap-3.5">
+                  <div className="min-w-0 space-y-2">
+                    <p className="text-[12px] font-medium leading-none tracking-wide text-zinc-500 first-letter:uppercase dark:text-zinc-400">
+                      {now.toLocaleDateString('fr-FR', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                      })}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+                      {pageTitleInShell ? (
+                        <h2 className="font-display text-[1.75rem] font-bold tracking-[-0.04em] text-zinc-900 dark:text-white sm:text-[2rem] lg:text-[2.125rem] 2xl:text-[2.25rem]">
+                          {greeting}
+                          {firstName ? `, ${firstName}` : ''}
+                        </h2>
+                      ) : (
+                        <h1 className="font-display text-[1.75rem] font-bold tracking-[-0.04em] text-zinc-900 dark:text-white sm:text-[2rem] lg:text-[2.125rem] 2xl:text-[2.25rem]">
+                          {greeting}
+                          {firstName ? `, ${firstName}` : ''}
+                        </h1>
+                      )}
+                      {unpaidCount > 0 && (
+                        <button
+                          onClick={() => setActiveTab('requests')}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20"
+                        >
+                          <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={2} />
+                          {unpaidCount} sans acompte
+                        </button>
+                      )}
+                      {todayOrTomorrowCount > 0 && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-500/10 dark:text-blue-400">
+                          <CalendarCheck className="h-4 w-4 shrink-0" strokeWidth={2} />
+                          {todayOrTomorrowCount} RDV bientôt
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 max-w-2xl leading-relaxed">
+                  <p className="text-sm leading-snug text-zinc-500 dark:text-zinc-400 max-w-2xl">
                     {user?.studioName && (
                       <span className="font-medium text-zinc-700 dark:text-zinc-300">
                         {user.studioName}
@@ -2251,7 +2329,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         : ''}
                     </span>
                   </p>
-                  <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400 max-w-2xl leading-relaxed">
+                  <p className="max-w-2xl border-t border-zinc-200/70 pt-3 text-xs leading-relaxed text-zinc-500 dark:border-zinc-700/80 dark:text-zinc-500">
                     Planning :{' '}
                     <span className="font-medium text-zinc-600 dark:text-zinc-300">Synthèse</span> =
                     résumé ;{' '}
@@ -2262,8 +2340,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   </p>
                 </div>
 
-                {/* Right: actions — groupe visuel façon barre d’outils soft */}
-                <div className="flex items-center gap-1.5 flex-wrap rounded-2xl border border-zinc-200/90 bg-white/90 p-1.5 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset,0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-zinc-900/[0.04] backdrop-blur-md dark:border-zinc-800/90 dark:bg-zinc-900/55 dark:ring-white/[0.06] dark:shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_4px_12px_rgba(0,0,0,0.15)]">
+                {/* Right: barre d’outils — alignée au bloc titre en lg+ */}
+                <div className="flex w-full min-w-0 shrink-0 flex-wrap items-center gap-1.5 rounded-2xl border border-zinc-200/90 bg-white/90 p-1.5 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset,0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-zinc-900/[0.04] backdrop-blur-md dark:border-zinc-800/90 dark:bg-zinc-900/55 dark:ring-white/[0.06] dark:shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_4px_12px_rgba(0,0,0,0.15)] sm:w-full lg:w-auto">
                   <button
                     onClick={() => setIsEditMode(!isEditMode)}
                     className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-all active:scale-[0.98] ${

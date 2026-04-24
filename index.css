@@ -576,16 +576,17 @@ video {
   position: relative;
   z-index: 1;
 }
+/* Thème nuit : canvas neutre (zinc) — halos discrets, lisibilité > effet « néon » */
 :root[data-theme='dark'] .dashboard-overview-bg {
-  background-color: #030303;
+  background-color: #09090b;
   background-image:
-    radial-gradient(ellipse 85% 50% at 15% -10%, rgba(16, 185, 129, 0.14), transparent 52%),
-    radial-gradient(ellipse 65% 42% at 95% 5%, rgba(59, 130, 246, 0.1), transparent 48%),
-    linear-gradient(180deg, #050506 0%, #000000 100%);
+    radial-gradient(ellipse 100% 55% at 50% -18%, rgba(255, 255, 255, 0.045), transparent 52%),
+    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(59, 130, 246, 0.04), transparent 45%),
+    linear-gradient(180deg, #0c0c0e 0%, #08080a 38%, #000000 100%);
 }
 :root[data-theme='dark'] .dashboard-overview-bg::after {
-  opacity: 0.055;
-  mix-blend-mode: soft-light;
+  opacity: 0.04;
+  mix-blend-mode: overlay;
 }
 
 /* Mobile Dashboard Pro — héros « iOS / premium UI » : ombre en relief + grain local (luminosité, pas le layout) */

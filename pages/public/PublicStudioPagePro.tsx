@@ -25,8 +25,21 @@ import { LANDING_URL, LANDING_TERMS_URL, LANDING_PRIVACY_URL, safeExternalHttpUr
 import { getVitrineTheme } from '../../lib/themes';
 import { StudioThemeRouter } from '../../components/studio-themes/StudioThemeRouter';
 import { GoogleReviews } from '../../components/vitrine/GoogleReviews';
+import { VitrineScrollReveal } from '../../components/vitrine/VitrineScrollReveal';
 import { fetchPublicGoogleReviews, fetchBusinessPublicReviews } from '../../lib/googlePlaces';
 import type { GoogleReviewsPayload } from '../../types/googlePlaces';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 const STRUCTURAL_THEMES = ['classic', 'split', 'vintage'] as const;
 
 const ICON_MAP = { sparkles: Sparkles, award: Award, star: Star, camera: Camera, shield: Shield, heart: Heart, users: Users };
@@ -358,24 +371,6 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     return all;
   }, [studio?.showServicesSection]);
 
-  /** Miniatures héro — portfolio + flashs, sans texte sur l’image (réf. fiche « property »). */
-  const { heroThumbnailStrip, heroThumbnailsMore } = useMemo(() => {
-    if (!studioDisplay) {
-      return { heroThumbnailStrip: [] as string[], heroThumbnailsMore: 0 };
-    }
-    const fromPort = (studioDisplay.portfolio ?? [])
-      .map((p) => p.url)
-      .filter((u) => Boolean(u?.trim()));
-    const fromFlash = (studioDisplay.flashDesigns ?? [])
-      .map((f) => f.imageUrl)
-      .filter((u) => Boolean(u?.trim()));
-    const unique = [...new Set([...fromPort, ...fromFlash])];
-    return {
-      heroThumbnailStrip: unique.slice(0, 10),
-      heroThumbnailsMore: Math.max(0, unique.length - 10),
-    };
-  }, [studioDisplay]);
-
   const handleProjectRequestSubmit = async (data: ProjectRequestFormData) => {
     const studioId = projectRequestStudioId ?? (await getStudioIdBySlug(studioSlug));
     if (!studioId) {
@@ -645,6 +640,97 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     slug: studioSlug,
   });
 
+  const vitrineBookingCard = (
+    <Card
+      size="sm"
+      className="gap-0 border border-neutral-200/80 bg-white text-neutral-900 shadow-sm ring-0 rounded-2xl py-0 sm:max-w-none"
+    >
+      <CardHeader className="border-0 pt-4 pb-2 sm:pt-6 sm:pb-3 md:px-8 md:pt-8">
+        <CardTitle className="text-xl sm:text-2xl font-bold text-neutral-900">Réserver</CardTitle>
+        <CardDescription className="text-sm text-neutral-800">
+          Réservez votre session en quelques clics
+        </CardDescription>
+        <CardAction>
+          <Badge
+            className={cn(
+              'h-6 gap-1.5 border-0 pl-1.5 text-xs font-semibold',
+              isOpen() ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'
+            )}
+          >
+            <span
+              className={cn(
+                'size-2 shrink-0 rounded-full',
+                isOpen() ? 'animate-pulse bg-emerald-500' : 'bg-red-500'
+              )}
+              aria-hidden
+            />
+            {isOpen() ? 'Ouvert' : 'Fermé'}
+          </Badge>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 pt-0 pb-6 sm:px-4 md:px-8">
+        <Button
+          asChild
+          size="lg"
+          className="h-auto min-h-11 w-full rounded-lg border-0 bg-[var(--vitrine-primary)] py-3.5 text-base font-semibold text-white hover:opacity-90"
+        >
+          <a
+            href={`/book/${studioSlug}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigateTo(`/book/${studioSlug}`);
+            }}
+          >
+            Prendre rendez-vous
+          </a>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-auto min-h-11 w-full rounded-lg border-neutral-300 py-3 text-base font-medium"
+          onClick={() => setShowProjectRequestForm(true)}
+        >
+          Demande de projet
+        </Button>
+        <Button
+          type="button"
+          className="h-auto min-h-11 w-full rounded-lg border-0 bg-neutral-900 py-3 text-base font-medium text-white hover:bg-neutral-800"
+          onClick={openBookingForm}
+        >
+          Créneau sur mesure
+        </Button>
+        <ul className="mt-1 flex list-none flex-col gap-3 p-0" role="list">
+          {[
+            { icon: CheckCircle, text: 'Confirmation instantanée', color: 'text-neutral-600' },
+            { icon: Shield, text: 'Paiement sécurisé', color: 'text-neutral-600' },
+            { icon: Calendar, text: 'Rappels automatiques', color: 'text-neutral-600' },
+            { icon: Award, text: 'Retouche incluse', color: 'text-neutral-600' },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <li key={item.text} className="flex items-center gap-3">
+                <Icon className={cn('size-5 shrink-0', item.color)} aria-hidden />
+                <span className="text-sm font-medium text-neutral-800">{item.text}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
+      <CardFooter className="flex flex-col gap-1 border-t border-neutral-200 py-4 text-center text-sm text-neutral-800 sm:px-4 md:px-8">
+        <p>Besoin d&apos;aide ?</p>
+        <Button
+          type="button"
+          variant="link"
+          className="h-auto p-0 text-base font-semibold text-neutral-900 underline-offset-2 hover:underline"
+          onClick={() => setShowContactForm(true)}
+        >
+          Contactez-nous
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+
   return (
     <div
       ref={landingScrollRef}
@@ -737,37 +823,57 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       <main id="contenu-vitrine" tabIndex={-1} className="outline-none">
 
       {/* Hero Cover */}
-      <section aria-labelledby="vitrine-studio-title" className="relative h-[65vh] sm:h-[70vh] md:h-[80vh] overflow-hidden mt-16 sm:mt-20" data-joyride="vitrine-hero">
+      <section aria-labelledby="vitrine-studio-title" className="relative min-h-[66dvh] h-[min(68dvh,32rem)] sm:h-[70vh] md:min-h-0 md:h-[80vh] overflow-hidden mt-16 sm:mt-20" data-joyride="vitrine-hero">
         <div
           aria-hidden
           className={`absolute inset-0 bg-cover bg-center ${heroCover ? '' : 'bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900'}`}
           style={heroCover ? { backgroundImage: `url(${heroCover})` } : undefined}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" aria-hidden />
-        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-12 safe-bottom">
+        {/* Mobile : dégradé plus doux pour voir la photo ; md+ : assombrissement fort pour le texte sur grand hero */}
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/32 to-black/[0.06] md:from-black/[0.94] md:via-black/60 md:to-black/20"
+          aria-hidden
+        />
+        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-12 max-md:pb-[max(1.25rem,env(safe-area-inset-bottom))] safe-bottom">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-end gap-4 sm:gap-8">
-              <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6 min-w-0">
+            <motion.div
+              className="flex flex-col md:flex-row md:items-end gap-4 sm:gap-8"
+              initial={vitrineReduce ? false : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={
+                vitrineReduce
+                  ? { duration: 0 }
+                  : { duration: 0.45, ease: [0.22, 1, 0.36, 1] }
+              }
+            >
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6 min-w-0 max-md:gap-5">
                 {heroAvatar ? (
-                  <img src={heroAvatar} alt={`Photo du studio ${studioName}`} className="w-20 h-20 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white shadow-2xl object-cover flex-shrink-0" />
+                  <img
+                    src={heroAvatar}
+                    alt={`Photo du studio ${studioName}`}
+                    className="w-24 h-24 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white/95 shadow-2xl object-cover flex-shrink-0 max-md:ring-2 max-md:ring-white/20"
+                  />
                 ) : (
                   <div
-                    className="w-20 h-20 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white/40 shadow-2xl flex-shrink-0 flex items-center justify-center bg-white/10 text-white text-xl sm:text-3xl md:text-4xl font-bold"
+                    className="w-24 h-24 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white/40 shadow-2xl flex-shrink-0 flex items-center justify-center bg-white/10 text-white text-2xl sm:text-3xl md:text-4xl font-bold max-md:ring-2 max-md:ring-white/15"
                     aria-hidden
                   >
                     {studioName.slice(0, 2).toUpperCase()}
                   </div>
                 )}
-                <div className="flex-1 text-white pb-0 sm:pb-2 min-w-0">
-                  <div className="inline-flex items-center gap-2 bg-green-500/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4">
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full animate-pulse motion-reduce:animate-none" aria-hidden />
-                    {isOpen() ? 'Ouvert maintenant' : 'Fermé'}
-                  </div>
-                  <h1 id="vitrine-studio-title" className="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-2 sm:mb-3 drop-shadow-lg leading-tight">{studioDisplay.name?.trim() || studioName}</h1>
+                <div className="flex-1 text-white pb-0 sm:pb-2 min-w-0 max-md:pt-0.5">
+                  <h1
+                    id="vitrine-studio-title"
+                    className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-extrabold sm:font-bold mb-2 sm:mb-3 leading-[1.1] sm:leading-tight text-balance max-md:tracking-[-0.02em] max-md:[text-shadow:0_3px_28px_rgba(0,0,0,0.55),0_1px_2px_rgba(0,0,0,0.4)] drop-shadow-lg"
+                  >
+                    {studioDisplay.name?.trim() || studioName}
+                  </h1>
                   {studioDisplay.tagline?.trim() ? (
-                    <p className="text-base sm:text-xl md:text-2xl opacity-95 mb-4 sm:mb-6 drop-shadow">{studioDisplay.tagline}</p>
+                    <p className="text-base sm:text-xl md:text-2xl text-white/95 max-md:leading-relaxed text-pretty mb-4 sm:mb-6 max-md:[text-shadow:0_2px_16px_rgba(0,0,0,0.5)]">
+                      {studioDisplay.tagline}
+                    </p>
                   ) : null}
-                  <div className="flex flex-wrap gap-2 sm:gap-3">
+                  <div className="flex flex-wrap gap-2 sm:gap-3 max-md:gap-2.5">
                     {(studioDisplay.rating > 0 || studioDisplay.reviewCount > 0) && (
                       <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 text-sm sm:text-base">
                         <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-yellow-400 text-yellow-400 flex-shrink-0" />
@@ -776,9 +882,9 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                       </div>
                     )}
                     {studioDisplay.address?.trim() ? (
-                      <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 text-sm sm:text-base">
+                      <div className="flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-white/30 text-sm sm:text-base min-w-0 max-md:max-w-full max-md:flex-1 max-md:min-w-[min(100%,20rem)]">
                         <MapPin className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                        <span className="truncate max-w-[140px] sm:max-w-none">{studioDisplay.address}</span>
+                        <span className="truncate sm:max-w-none">{studioDisplay.address}</span>
                       </div>
                     ) : null}
                     {studioDisplay.yearsExperience > 0 ? (
@@ -790,77 +896,66 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2 sm:gap-3 md:pb-2 flex-shrink-0">
-                <motion.button
-                  type="button"
-                  onClick={shareStudio}
-                  aria-label="Partager la vitrine"
-                  whileTap={vitrineTap}
-                  className="p-3 sm:p-4 bg-white/20 backdrop-blur-md rounded-xl hover:bg-white/30 transition-all border border-white/30 min-w-[44px] min-h-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
+              <div className="flex w-full min-w-0 max-w-full flex-shrink-0 self-stretch border-t border-white/10 pt-4 max-md:mt-1 md:max-w-md md:shrink-0 md:ml-auto md:border-0 md:pt-0 md:mt-0 md:items-end md:self-end md:pb-2">
+                <div
+                  className="flex w-full min-w-0 flex-row flex-nowrap items-center justify-start gap-1.5 sm:gap-2 md:justify-end"
+                  role="group"
+                  aria-label="Réservation, partage et favoris"
                 >
-                  <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" aria-hidden />
-                </motion.button>
-                <motion.button
-                  type="button"
-                  onClick={toggleStudioFavorite}
-                  aria-pressed={studioFavorite}
-                  aria-label={studioFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                  title={studioFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                  whileTap={vitrineTap}
-                  className={`p-3 sm:p-4 backdrop-blur-md rounded-xl transition-all border min-w-[44px] min-h-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 ${
-                    studioFavorite
-                      ? 'bg-rose-500/35 border-rose-300/60 hover:bg-rose-500/45'
-                      : 'bg-white/20 hover:bg-white/30 border-white/30'
-                  }`}
-                >
-                  <Heart
-                    className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                      studioFavorite ? 'fill-rose-300 text-rose-50' : 'text-white fill-transparent'
+                  <motion.a
+                    href={`/book/${studioSlug}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigateTo(`/book/${studioSlug}`);
+                    }}
+                    data-joyride="vitrine-hero-cta"
+                    whileTap={vitrineTap}
+                    className="inline-flex min-w-0 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[var(--vitrine-primary)] px-3 sm:px-4 py-2 sm:py-2.5 text-sm font-medium text-white shadow-pro max-md:shadow-[0_8px_28px_-4px_rgba(0,0,0,0.5)] sm:shadow-lg sm:shadow-black/25 max-md:ring-1 max-md:ring-inset max-md:ring-white/20 transition [transform:translateZ(0)] hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 min-h-[44px] cursor-pointer"
+                  >
+                    <Calendar className="h-4 w-4 flex-shrink-0" strokeWidth={2} aria-hidden />
+                    Réserver
+                  </motion.a>
+                  <motion.button
+                    type="button"
+                    onClick={shareStudio}
+                    aria-label="Partager la vitrine"
+                    whileTap={vitrineTap}
+                    className="p-2.5 sm:p-3 bg-white/20 backdrop-blur-md rounded-xl hover:bg-white/30 transition-all border border-white/30 min-w-[44px] min-h-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 shrink-0"
+                  >
+                    <Share2 className="w-5 h-5 sm:w-5 sm:h-5 text-white" aria-hidden />
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    onClick={toggleStudioFavorite}
+                    aria-pressed={studioFavorite}
+                    aria-label={studioFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    title={studioFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    whileTap={vitrineTap}
+                    className={`p-2.5 sm:p-3 backdrop-blur-md rounded-xl transition-all border min-w-[44px] min-h-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 shrink-0 ${
+                      studioFavorite
+                        ? 'bg-rose-500/35 border-rose-300/60 hover:bg-rose-500/45'
+                        : 'bg-white/20 hover:bg-white/30 border-white/30'
                     }`}
-                    aria-hidden
-                  />
-                </motion.button>
+                  >
+                    <Heart
+                      className={`w-5 h-5 sm:w-5 sm:h-5 ${
+                        studioFavorite ? 'fill-rose-300 text-rose-50' : 'text-white fill-transparent'
+                      }`}
+                      aria-hidden
+                    />
+                  </motion.button>
+                </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {heroThumbnailStrip.length > 0 && (
-        <div className="relative z-20 -mt-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 sm:-mt-2">
-          <div
-            className="rounded-2xl border border-neutral-200/90 bg-white/95 shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur-md p-2.5 sm:p-3"
-            data-joyride="vitrine-hero-thumbs"
-          >
-            <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-500 sm:text-[11px]">
-              Aperçu
-            </p>
-            <div
-              className="flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x scroll-pl-0 scroll-pr-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              style={{ WebkitOverflowScrolling: 'touch' }}
-            >
-              {heroThumbnailStrip.map((url, i) => (
-                <button
-                  key={`${url}-${i}`}
-                  type="button"
-                  onClick={() => scrollToSection(studioDisplay.flashDesigns?.length ? 'flash' : 'portfolio')}
-                  className="relative h-14 w-14 shrink-0 snap-start overflow-hidden rounded-xl ring-1 ring-black/5 transition-transform hover:opacity-95 sm:h-16 sm:w-16 min-h-[44px] min-w-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2"
-                >
-                  <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
-                  {i === heroThumbnailStrip.length - 1 && heroThumbnailsMore > 0 && (
-                    <span
-                      className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/45 text-[10px] font-bold text-white sm:text-xs"
-                      aria-hidden
-                    >
-                      +{heroThumbnailsMore}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Réservation : max-lg — sous le hero (desktop : colonne latérale) */}
+      <div className="lg:hidden relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-6 pt-2 pb-0">
+        <VitrineScrollReveal index={0}>{vitrineBookingCard}</VitrineScrollReveal>
+      </div>
 
       {/* Stats Banner — masquable via Paramètres > Vitrine > Statistiques */}
       {studioDisplay.showStatsBanner !== false && (
@@ -869,7 +964,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
           <div className="absolute top-0 left-1/4 w-64 h-64 bg-white rounded-full blur-3xl motion-reduce:blur-none" />
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-white rounded-full blur-3xl motion-reduce:blur-none" />
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <VitrineScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10" index={0}>
           <div className="flex md:grid flex-nowrap md:grid-cols-4 overflow-x-auto md:overflow-visible gap-4 md:gap-6 pb-2 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0 snap-x snap-mandatory scrollbar-hide">
             <div className="flex-shrink-0 min-w-[120px] md:min-w-0 snap-center text-center">
               <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-0.5 sm:mb-1">{studioDisplay.totalTattoos}+</div>
@@ -888,7 +983,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
               <div className="text-xs sm:text-sm text-neutral-300">Artistes experts</div>
             </div>
           </div>
-        </div>
+        </VitrineScrollReveal>
       </div>
       )}
 
@@ -898,6 +993,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
           <div className="lg:col-span-2 space-y-10 sm:space-y-16 relative z-10">
             {/* About */}
             <section id="about" className="scroll-mt-24 sm:scroll-mt-32">
+              <VitrineScrollReveal index={1}>
               <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
                 <VitrineSectionHeading eyebrow="Le studio" title="À propos" icon={Sparkles} />
                 <p className="text-neutral-600 text-base sm:text-lg leading-relaxed mb-6 sm:mb-8 max-w-3xl">{studioDisplay.description}</p>
@@ -934,11 +1030,13 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   })}
                 </div>
               </div>
+              </VitrineScrollReveal>
             </section>
 
             {/* Services — masquable via Paramètres > Vitrine > Services */}
             {studioDisplay.showServicesSection !== false && (
             <section id="services" className="scroll-mt-24 sm:scroll-mt-32">
+              <VitrineScrollReveal index={2}>
               <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
                 <VitrineSectionHeading eyebrow="Prestations" title="Services" icon={Award} />
                 <div className="space-y-4 sm:space-y-5">
@@ -980,11 +1078,13 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   })}
                 </div>
               </div>
+              </VitrineScrollReveal>
             </section>
             )}
 
             {/* Artistes — contenu Paramètres > Vitrine (JSON) ; les pages tatoueur dédiées : /artist/:slug */}
             <section id="artists" className="scroll-mt-24 sm:scroll-mt-32">
+              <VitrineScrollReveal index={3}>
               <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
                 <VitrineSectionHeading eyebrow="Équipe" title="Artistes" icon={Users} />
                 <div className="space-y-8">
@@ -1022,10 +1122,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   ))}
                 </div>
               </div>
+              </VitrineScrollReveal>
             </section>
 
             {/* Portfolio */}
             <section id="portfolio" className="scroll-mt-24 sm:scroll-mt-32" data-joyride="vitrine-portfolio">
+              <VitrineScrollReveal index={4}>
               <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
                 <VitrineSectionHeading eyebrow="Galerie" title="Portfolio" icon={Camera} />
                 {studioDisplay.portfolio.length === 0 ? (
@@ -1074,10 +1176,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   </a>
                 </div>
               </div>
+              </VitrineScrollReveal>
             </section>
 
             {/* Flash */}
             <section id="flash" className="scroll-mt-24 sm:scroll-mt-32" data-joyride="vitrine-flash">
+              <VitrineScrollReveal index={5}>
               <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 sm:mb-10 border-b border-neutral-200/70 pb-5 sm:pb-6">
                   <div>
@@ -1150,10 +1254,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   ))}
                 </div>
               </div>
+              </VitrineScrollReveal>
             </section>
 
             {/* Testimonials */}
             <section id="testimonials" className="scroll-mt-24 sm:scroll-mt-32">
+              <VitrineScrollReveal index={6}>
               <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
                 <VitrineSectionHeading
                   eyebrow="Témoignages"
@@ -1228,10 +1334,12 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   </div>
                 </div>
               </div>
+              </VitrineScrollReveal>
             </section>
 
             {/* FAQ */}
             <section id="faq" className="scroll-mt-24 sm:scroll-mt-32">
+              <VitrineScrollReveal index={7}>
               <div className="bg-white rounded-xl p-6 sm:p-8 md:p-10 border border-neutral-200/80 shadow-sm">
                 <VitrineSectionHeading eyebrow="FAQ" title="Questions fréquentes" icon={AlertCircle} />
                 <p className="text-neutral-500 text-sm sm:text-base mb-8 sm:mb-10 -mt-4">Avant votre première séance.</p>
@@ -1249,62 +1357,17 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   ))}
                 </div>
               </div>
+              </VitrineScrollReveal>
             </section>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6 lg:space-y-6 lg:self-start" data-joyride="vitrine-coordonnees">
-            <div className="flex flex-col bg-white rounded-xl p-4 sm:p-6 md:p-8 border border-neutral-200/80 shadow-sm">
-              <div className="mb-4 sm:mb-6">
-                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">Réserver</h3>
-                  {isOpen() ? (
-                    <span className="flex items-center gap-2 text-green-600 text-sm font-semibold">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      Ouvert
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2 text-red-600 text-sm font-semibold">
-                      <div className="w-2 h-2 bg-red-500 rounded-full" />
-                      Fermé
-                    </span>
-                  )}
-                </div>
-                <p className="text-neutral-800 text-sm">Réservez votre session en quelques clics</p>
-              </div>
-              <a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} className="block w-full bg-[var(--vitrine-primary)] text-white text-center py-3.5 rounded-lg font-semibold text-base hover:opacity-90 transition-opacity mb-3 cursor-pointer">
-                Prendre rendez-vous
-              </a>
-              <button type="button" onClick={() => setShowProjectRequestForm(true)} className="block w-full bg-white border border-neutral-300 text-neutral-900 text-center py-3 rounded-lg font-medium hover:bg-neutral-50 transition-colors mb-2">
-                Demande de projet
-              </button>
-              <button type="button" onClick={openBookingForm} className="block w-full bg-neutral-900 text-white text-center py-3 rounded-lg font-medium hover:bg-neutral-800 transition-colors mb-6">
-                Créneau sur mesure
-              </button>
-              <div className="space-y-3 mb-6">
-                {[
-                  { icon: CheckCircle, text: "Confirmation instantanée", color: "text-neutral-600" },
-                  { icon: Shield, text: "Paiement sécurisé", color: "text-neutral-600" },
-                  { icon: Calendar, text: "Rappels automatiques", color: "text-neutral-600" },
-                  { icon: Award, text: "Retouche incluse", color: "text-neutral-600" }
-                ].map((item, idx) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={idx} className="flex items-center gap-3">
-                      <Icon className={`w-5 h-5 ${item.color} flex-shrink-0`} />
-                      <span className="text-sm text-neutral-800 font-medium">{item.text}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="pt-6 border-t border-neutral-200 text-center text-sm text-neutral-800">
-                <p>Besoin d'aide ?</p>
-                <button onClick={() => setShowContactForm(true)} className="text-neutral-900 font-semibold hover:underline">
-                  Contactez-nous
-                </button>
-              </div>
-            </div>
+            <VitrineScrollReveal className="hidden lg:block" index={1}>
+              {vitrineBookingCard}
+            </VitrineScrollReveal>
 
+            <VitrineScrollReveal index={2}>
             <div className="bg-white rounded-xl p-6 sm:p-8 border border-neutral-200/80 shadow-sm">
               <h3 className="text-lg font-semibold text-neutral-900 mb-5">Coordonnées</h3>
               <div className="space-y-5">
@@ -1350,7 +1413,9 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 </div>
               </div>
             </div>
+            </VitrineScrollReveal>
 
+            <VitrineScrollReveal index={3}>
             <div className="bg-white rounded-xl p-6 sm:p-8 border border-neutral-200/80 shadow-sm">
               <h3 className="text-lg font-semibold text-neutral-900 mb-5 flex items-center gap-2">
                 <Clock className="w-5 h-5 text-neutral-500" strokeWidth={1.75} />
@@ -1373,6 +1438,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 })}
               </div>
             </div>
+            </VitrineScrollReveal>
           </div>
         </div>
       </div>

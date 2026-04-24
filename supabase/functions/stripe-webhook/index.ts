@@ -1,10 +1,17 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import Stripe from "stripe";
+import Stripe from "npm:stripe";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 /** SDK Sentry Deno — aligné sur https://supabase.com/docs/guides/functions/examples/sentry-monitoring */
 import * as Sentry from "https://deno.land/x/sentry/index.mjs";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { applyPaidCheckoutDbState } from "../_shared/applyPaidCheckoutDbState.ts";
+import {
+  appendFlashVitrineNote,
+  type AppointmentRowForCrm,
+  buildFlashTattooEntry,
+  mergeFlashVitrineTags,
+  mergeTattooHistory,
+} from "../_shared/flashCrmEnrichment.ts";
 
 const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET") || "";
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
@@ -413,17 +420,35 @@ Deno.serve(async (req: Request) => {
           service: string;
         };
         let aptForEmail: AptEmailRow | null = null;
+        /** Ligne RDV complète (flash vitrine → historique CRM + e-mails) */
+        let aptRowForCrm: AppointmentRowForCrm | null = null;
         let studioForEmail: { city: string | null; siret: string | null; slug: string } | null = null;
+
+        const flashIdMeta =
+          typeof session.metadata?.flash_id === "string" ? session.metadata.flash_id.trim() : "";
+        const isFlashVitrineCheckout = Boolean(flashIdMeta);
 
         let clientPhone: string | null = null;
         if (effectiveAppointmentId) {
           const { data: apt } = await supabase
             .from("inkflow_appointments")
-            .select("price, deposit, date, time, duration, service, client_phone")
+            .select(
+              "id, price, deposit, date, time, duration, service, client_phone, location, size",
+            )
             .eq("id", effectiveAppointmentId)
             .single();
           if (apt) {
             aptForEmail = apt as AptEmailRow;
+            aptRowForCrm = {
+              id: String(apt.id),
+              date: String(apt.date),
+              time: String(apt.time || ""),
+              service: String(apt.service || ""),
+              price: apt.price != null ? Number(apt.price) : null,
+              duration: apt.duration != null ? Number(apt.duration) : null,
+              location: apt.location != null ? String(apt.location) : null,
+              size: apt.size != null ? String(apt.size) : null,
+            };
             const total = Number(apt.price) || 0;
             amountRemaining = Math.max(0, total - amountPaid);
             clientPhone = (apt as { client_phone?: string | null }).client_phone ?? null;
@@ -452,10 +477,33 @@ Deno.serve(async (req: Request) => {
             // Cherche un client existant pour ce studio+email
             const { data: existingClient } = await supabase
               .from("inkflow_clients")
-              .select("id, appointments_count, total_spent, first_visit")
+              .select("id, appointments_count, total_spent, first_visit, tags, notes, tattoos")
               .eq("studio_id", studioId)
               .eq("email", clientEmail)
               .maybeSingle();
+
+            const flashCrmPatch =
+              isFlashVitrineCheckout
+                ? {
+                    tags: mergeFlashVitrineTags(existingClient?.tags),
+                    notes: appendFlashVitrineNote(
+                      (existingClient?.notes as string | null) ?? null,
+                      {
+                        serviceName,
+                        amountEur: amountPaid,
+                        sessionId: session.id,
+                      },
+                    ),
+                    ...(aptRowForCrm
+                      ? {
+                          tattoos: mergeTattooHistory(
+                            existingClient?.tattoos,
+                            buildFlashTattooEntry(aptRowForCrm, amountPaid),
+                          ),
+                        }
+                      : {}),
+                  }
+                : {};
 
             if (existingClient) {
               // Mise à jour : last_visit, total_spent, appointments_count
@@ -470,6 +518,7 @@ Deno.serve(async (req: Request) => {
                   status: "active",
                   updated_at: now,
                   ...crmHealthPatch,
+                  ...(isFlashVitrineCheckout ? flashCrmPatch : {}),
                 })
                 .eq("id", existingClient.id);
 
@@ -484,6 +533,25 @@ Deno.serve(async (req: Request) => {
             } else {
               // Création nouvelle fiche client
               const newClientId = `client_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+              const newClientFlash =
+                isFlashVitrineCheckout
+                  ? {
+                      tags: mergeFlashVitrineTags(null),
+                      notes: appendFlashVitrineNote(null, {
+                        serviceName,
+                        amountEur: amountPaid,
+                        sessionId: session.id,
+                      }),
+                      ...(aptRowForCrm
+                        ? {
+                            tattoos: mergeTattooHistory(
+                              null,
+                              buildFlashTattooEntry(aptRowForCrm, amountPaid),
+                            ),
+                          }
+                        : {}),
+                    }
+                  : {};
               await supabase.from("inkflow_clients").insert({
                 id: newClientId,
                 studio_id: studioId,
@@ -498,6 +566,7 @@ Deno.serve(async (req: Request) => {
                 created_at: now,
                 updated_at: now,
                 ...crmHealthPatch,
+                ...(isFlashVitrineCheckout ? newClientFlash : {}),
               });
 
               // Lier le RDV au nouveau client

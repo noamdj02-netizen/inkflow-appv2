@@ -106,7 +106,7 @@ export const ClientList: React.FC<ClientListProps> = ({
   onRefresh,
   onUpdateClient,
 }) => {
-  const { containerRef, pullDistance, refreshing } = usePullToRefresh(onRefresh, {
+  const { containerRef } = usePullToRefresh(onRefresh, {
     getScrollParent: () => containerRef.current?.closest('.app-shell-content') ?? null,
     disabled: !onRefresh,
   });
@@ -304,14 +304,6 @@ export const ClientList: React.FC<ClientListProps> = ({
 
   return (
     <div ref={setListRootRef} className="flex min-w-0 flex-col gap-4 sm:gap-6 lg:gap-8">
-      {onRefresh && (
-        <div
-          className="md:hidden flex h-5 items-center justify-center text-[11px] font-medium text-zinc-500 dark:text-zinc-400"
-          style={{ opacity: Math.min(1, (pullDistance / 64) * 0.9 + (refreshing ? 0.2 : 0)) }}
-        >
-          {refreshing ? 'Actualisation…' : pullDistance > 12 ? 'Relâchez pour actualiser' : ''}
-        </div>
-      )}
       {/* Header — mobile : pas de double « Clients » (bottom nav) ; h1 = contexte liste */}
       <div className="flex flex-col gap-3 sm:gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -493,9 +485,9 @@ export const ClientList: React.FC<ClientListProps> = ({
               <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
                 Total clients
               </span>
-              <IconBox icon={User} variant="surface" size="sm" />
+              <IconBox icon={User} variant="blue" size="sm" />
             </div>
-            <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">
+            <div className="text-xl sm:text-2xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50">
               {clients.length}
             </div>
           </div>
@@ -504,9 +496,9 @@ export const ClientList: React.FC<ClientListProps> = ({
               <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
                 VIP
               </span>
-              <IconBox icon={Tag} variant="purple" size="sm" />
+              <IconBox icon={Tag} variant="amber" size="sm" />
             </div>
-            <div className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">
+            <div className="text-xl sm:text-2xl font-bold tabular-nums tracking-tight text-amber-700 dark:text-amber-300">
               {clients.filter((c) => c.status === 'vip').length}
             </div>
           </div>
@@ -515,9 +507,9 @@ export const ClientList: React.FC<ClientListProps> = ({
               <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
                 Revenus
               </span>
-              <IconBox icon={Wallet} variant="green" size="sm" />
+              <IconBox icon={Wallet} variant="emerald" size="sm" />
             </div>
-            <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 tabular-nums">
+            <div className="text-xl sm:text-2xl font-bold tabular-nums tracking-tight text-emerald-700 dark:text-emerald-300">
               {formatEuroPrivacy(
                 clients.reduce((sum, c) => sum + c.totalSpent, 0),
                 privacyMode
@@ -529,9 +521,9 @@ export const ClientList: React.FC<ClientListProps> = ({
               <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
                 RDV totaux
               </span>
-              <IconBox icon={CalendarDays} variant="blue" size="sm" />
+              <IconBox icon={CalendarDays} variant="sky" size="sm" />
             </div>
-            <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">
+            <div className="text-xl sm:text-2xl font-bold tabular-nums tracking-tight text-sky-700 dark:text-sky-300">
               {clients.reduce((sum, c) => sum + c.appointmentsCount, 0)}
             </div>
           </div>
