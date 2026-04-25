@@ -48,8 +48,8 @@ self.addEventListener('push', (event) => {
   }
   const options = {
     body: payload.body,
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/pwa-192x192.png',
+    badge: '/pwa-192x192.png',
     tag: payload.tag || 'inkflow-notification',
     data: payload.data || {},
     requireInteraction: !!payload.requireInteraction,

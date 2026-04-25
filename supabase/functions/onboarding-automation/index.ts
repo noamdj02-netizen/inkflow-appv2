@@ -22,7 +22,7 @@ import {
   htmlReminderFlash,
   htmlReminderProfile,
   htmlReminderStripe,
-} from "../_shared/onboardingEmailDark.ts";
+} from "../_shared/onboardingEmailLight.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -215,7 +215,7 @@ Deno.serve(async (req: Request) => {
     };
 
     try {
-      // Bienvenue immédiat : Edge `send-tattooer-welcome` + template dark (`onboarding_welcome_sent_at`).
+      // Bienvenue immédiat : Edge `send-tattooer-welcome` + e-mail clair (`onboarding_welcome_sent_at`).
 
       // Étape « première réservation »
       if (bookings >= 1 && !settings.onboarding_first_booking_celebration_sent_at) {

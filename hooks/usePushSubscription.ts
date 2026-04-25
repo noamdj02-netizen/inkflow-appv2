@@ -6,10 +6,18 @@
 import { useState, useCallback } from 'react';
 import { syncPushSubscriptionToServer } from '../lib/registerPushSubscription';
 import { getVapidPublicKey, urlBase64ToUint8Array } from '../lib/pushSubscriptionShared';
+import { isLikelyIos, isStandalonePwa } from '../lib/pushClientContext';
 
 const VAPID_PUBLIC_KEY = getVapidPublicKey();
 
-export type PushSupportReason = 'ok' | 'no_vapid' | 'no_sw' | 'no_https' | 'no_push_api';
+export type PushSupportReason =
+  | 'ok'
+  | 'no_vapid'
+  | 'no_sw'
+  | 'no_https'
+  | 'no_push_api'
+  /** iOS Safari : Web Push uniquement depuis l’app installée sur l’écran d’accueil */
+  | 'ios_need_homescreen';
 
 export interface UsePushSubscriptionResult {
   subscribe: () => Promise<boolean>;
@@ -24,7 +32,10 @@ function getSupportReason(): PushSupportReason {
   if (typeof window === 'undefined') return 'no_sw';
   if (location.protocol !== 'https:' && location.hostname !== 'localhost') return 'no_https';
   if (!('serviceWorker' in navigator)) return 'no_sw';
-  if (!('PushManager' in window)) return 'no_push_api';
+  if (!('PushManager' in window)) {
+    if (isLikelyIos() && !isStandalonePwa()) return 'ios_need_homescreen';
+    return 'no_push_api';
+  }
   if (!VAPID_PUBLIC_KEY) return 'no_vapid';
   return 'ok';
 }
@@ -33,7 +44,7 @@ export function usePushSubscription(studioId: string | null): UsePushSubscriptio
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | null>(
-    typeof Notification !== 'undefined' ? Notification.permission : null,
+    typeof Notification !== 'undefined' ? Notification.permission : null
   );
 
   const supportReason = getSupportReason();
@@ -59,7 +70,9 @@ export function usePushSubscription(studioId: string | null): UsePushSubscriptio
       try {
         applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
       } catch {
-        setError('Clé VAPID invalide. Vérifie le format (base64 URL-safe) dans VITE_VAPID_PUBLIC_KEY.');
+        setError(
+          'Clé VAPID invalide. Vérifie le format (base64 URL-safe) dans VITE_VAPID_PUBLIC_KEY.'
+        );
         return false;
       }
       const sub = await reg.pushManager.subscribe({

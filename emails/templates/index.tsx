@@ -1,9 +1,12 @@
 /**
- * Templates email InkFlow — 12 variantes (react-email).
- * DA identique à `supabase-auth-confirm-signup.html` (EmailBase) et aux Edge Functions (`wrapEmailLayout`).
+ * Templates email InkFlow — 13 variantes (react-email).
+ * DA alignée sur `supabase-auth-confirm-signup.html` (Inter + Outfit) ; **InviteUserEmail** = maquette Figma (Inter partout, header 221/40, CTA 100px, pas d’image).
+ * Miroir Supabase Auth : `InviteUserEmail` ↔ `emails/supabase-auth-invite-user.html` (mêmes variables Go).
  */
 
-import { EmailBase } from '../EmailBase';
+import { Text } from '@react-email/components';
+
+import { EmailBase, styles } from '../EmailBase';
 
 export interface WelcomeEmailProps {
   studioName: string;
@@ -26,6 +29,58 @@ export function WelcomeEmail({ studioName, plan, slug, confirmUrl }: WelcomeEmai
       ctaLabel="Confirmer mon email"
       ctaHref={confirmUrl}
       footerNote="Si tu n'es pas à l'origine de cette inscription, tu peux ignorer cet email."
+    />
+  );
+}
+
+/** Même contenu / DA que `emails/supabase-auth-invite-user.html` ({{ .SiteURL }}, {{ .Token }}, {{ .ConfirmationURL }}). */
+export interface InviteUserEmailProps {
+  siteUrl: string;
+  confirmationUrl: string;
+  token: string;
+}
+
+export function InviteUserEmail({ siteUrl, confirmationUrl, token }: InviteUserEmailProps) {
+  const codeLine = `Tu peux aussi utiliser le code à usage unique : ${token}`;
+
+  return (
+    <EmailBase
+      figmaInviteLayout
+      preview="Tu es invité sur InkFlow — accepte ton accès"
+      title="Tu es invité sur InkFlow"
+      bodyContent={
+        <>
+          <Text style={styles.bodyTextInvite}>
+            Tu as été invité à créer ton compte sur InkFlow (lié à {siteUrl}).
+          </Text>
+          <Text style={styles.bodyTextInvite}>
+            Clique sur le bouton pour accepter l'invitation et définir ton accès.
+          </Text>
+          <Text style={{ ...styles.bodyTextInvite, fontWeight: 700 }}>{codeLine}</Text>
+          <Text style={styles.bodyTextInvite}>
+            Important : si tu n'attendais pas cette invitation, ignore ce message.
+          </Text>
+        </>
+      }
+      showTagline={false}
+      ctaLabel="Accepter l'invitation"
+      ctaHref={confirmationUrl}
+      ctaStyle="invitation"
+      customFooter={
+        <>
+          <Text style={styles.footerNoteInvite}>
+            Si le bouton ne s'affiche pas, copie-colle ce lien dans ton navigateur :
+            <br />
+            {confirmationUrl}
+          </Text>
+          <Text style={styles.signoffInvite}>
+            À très vite,
+            <br />
+            L'équipe InkFlow
+          </Text>
+          <Text style={styles.helpLineInvite}>Des questions ? Visite ink-flow.me</Text>
+        </>
+      }
     />
   );
 }

@@ -10,7 +10,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { createSupabaseUserClient } from "../_shared/supabaseAuth.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { sendEmail, htmlToPlainTextFallback } from "../_shared/resend.ts";
-import { htmlWelcomeImmediate } from "../_shared/onboardingEmailDark.ts";
+import { htmlWelcomeImmediate } from "../_shared/onboardingEmailLight.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";

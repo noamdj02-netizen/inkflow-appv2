@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { getGoTrueUser } from "../_shared/supabaseAuth.ts";
 import { sendEmail } from "../_shared/resend.ts";
-import { wrapEmailLayout, escapeHtml, emailInfoBox, getDefaultEmailHeroBanner } from "../_shared/emailLayout.ts";
+import { EMAIL_STYLES, emailInfoBox, escapeHtml, wrapEmailLayout } from "../_shared/emailLayout.ts";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -150,23 +150,23 @@ Deno.serve(async (req: Request) => {
     loginParams.set("email", collaboratorEmail);
     const loginUrl = `${APP_URL}/login?${loginParams.toString()}`;
 
-    const bodyHtml = `<p style="color:#171717;font-size:16px;line-height:1.55;margin:0 0 12px;">Bonjour <strong>${safeName}</strong>,</p>
-      <p style="color:#525252;font-size:15px;line-height:1.6;margin:0 0 16px;">Vous avez été invité(e) à rejoindre l'équipe du studio <strong>${safeStudio}</strong> sur InkFlow.</p>
+    const bodyHtml = `<p style="${EMAIL_STYLES.text}">Bonjour <strong>${safeName}</strong>,</p>
+      <p style="${EMAIL_STYLES.textMuted}">Tu as été invité·e à rejoindre l'équipe du studio <strong>${safeStudio}</strong> sur InkFlow.</p>
       ${emailInfoBox(
-      `<p style="color:#737373;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 8px;">Adresse à utiliser</p>
-        <p style="color:#171717;font-size:16px;font-weight:600;margin:0;"><a href="mailto:${safeEmail}" style="color:#0b5394;text-decoration:none;">${safeEmail}</a></p>
-        <p style="color:#525252;font-size:14px;line-height:1.5;margin:12px 0 0;">Créez votre compte ou connectez-vous avec cette adresse pour accéder au tableau de bord.</p>`,
+      `<p style="${EMAIL_STYLES.label}">Adresse à utiliser</p>
+        <p style="color:#363c3b;font-size:16px;font-weight:600;margin:0;font-family:Outfit, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;"><a href="mailto:${safeEmail}" style="color:#0b5394;text-decoration:none;">${safeEmail}</a></p>
+        <p style="${EMAIL_STYLES.textMuted}">Crée ton compte ou connecte-toi avec cette adresse pour accéder au tableau de bord.</p>`,
     )}
-      <p style="color:#737373;font-size:13px;line-height:1.5;margin:0;">Si vous n'attendiez pas cette invitation, vous pouvez ignorer ce message.</p>`;
+      <p style="${EMAIL_STYLES.small}">Si tu n'attendais pas cette invitation, tu peux ignorer ce message.</p>`;
 
     const html = wrapEmailLayout({
-      titleBlue: "Invitation",
-      titleBlack: "équipe",
+      preheader: `Invitation — ${studioDisplayName} sur InkFlow`,
+      title: "Tu rejoins l'équipe",
       subtitle: studioDisplayName,
       bodyHtml,
-      heroBanner: getDefaultEmailHeroBanner(),
+      hideAppPromo: true,
       button: { text: "Créer mon compte InkFlow", url: signupUrl },
-      buttonSubtext: "Déjà un compte ? Utilisez la connexion avec la même adresse email.",
+      buttonSubtext: "Déjà un compte ? Utilise la connexion avec la même adresse email.",
       linkHint: { label: "Connexion (compte existant)", url: loginUrl },
     });
 

@@ -1,7 +1,7 @@
 /**
  * Layout partagé InkFlow — même DA que `emails/supabase-auth-confirm-signup.html` :
- * fond #f6f6f6, carte #ffffff 600px, wordmark INKFLOW Inter 900 #000, corps Inter,
- * CTA principal #0b5394 (pilule). Typo **Inter** partout. Aligné sur `emails/EmailBase.tsx`.
+ * fond #f6f6f6, carte #ffffff 600px, wordmark INKFLOW **Inter** 900, corps & titres **Outfit**,
+ * CTA principal #0b5394 (pilule). Aligné sur `emails/EmailBase.tsx`.
  * Utiliser wrapEmailLayout() pour tous les e-mails Resend (Edge Functions).
  */
 
@@ -67,11 +67,6 @@ export function getEmailNavigationBaseUrls(): {
   };
 }
 
-/** Logo PNG optionnel (sous le wordmark si besoin futur) */
-function getEmailLogoUrl(): string {
-  return `${getAppUrl()}/logo-inkflow.png`;
-}
-
 export function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -81,12 +76,14 @@ export function escapeHtml(str: string): string {
     .replace(/'/g, "&#39;");
 }
 
-/** Typo unique e-mails (Inter uniquement) */
-const FONT_EMAIL = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+/** Wordmark INKFLOW — Inter 900 (aligné auth HTML) */
+const FONT_WORDMARK = "Inter, Helvetica, Arial, sans-serif";
+/** Corps, titres, CTA — Outfit (aligné auth HTML) */
+const FONT_BODY =
+  "Outfit, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
 
-/** Bannière pleine largeur (optionnelle) — même ratio que confirm signup / reset password */
-export const DEFAULT_EMAIL_HERO_IMAGE =
-  "https://images.unsplash.com/photo-1552627019-947c3789ffb5?ixlib=rb-4.1.0&auto=format&fit=crop&crop=entropy&w=1600&h=640&q=88";
+/** Bannière pleine largeur — aligné `emails/EmailBase` DEFAULT_HERO (`public/images/email-confirm-banner.jpg`) */
+export const DEFAULT_EMAIL_HERO_IMAGE = "https://ink-flow.me/images/email-confirm-banner.jpg";
 
 /** Hero par défaut : image tatouage + clic vers l’app (e-mails transactionnels Resend). */
 export function getDefaultEmailHeroBanner(): { imageUrl: string; linkUrl: string } {
@@ -162,47 +159,47 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
   const safeIntro = introLine ? escapeHtml(introLine) : "";
 
   const tagHtml = tag
-    ? `<p style="margin:0 0 12px;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:${TEXT_MUTED};font-family:${FONT_EMAIL};">${escapeHtml(tag)}</p>
+    ? `<p style="margin:0 0 12px;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:${TEXT_MUTED};font-family:${FONT_BODY};">${escapeHtml(tag)}</p>
        <div style="height:1px;background:${DIVIDER};margin:0 0 20px;"></div>`
     : "";
 
   const headlineHtml = hasTwoTone
-    ? `<h1 style="margin:0 0 8px;font-size:32px;font-weight:400;line-height:1.2;font-family:${FONT_EMAIL};color:${TITLE};">
+    ? `<h1 style="margin:0 0 8px;font-size:32px;font-weight:400;line-height:1.2;font-family:${FONT_BODY};color:${TITLE};">
          <span style="color:${TITLE};">${safeTitleBlue}</span>
          <span style="color:${TITLE};"> ${safeTitleBlack}</span>
        </h1>`
-    : `<h1 style="margin:0 0 8px;font-size:32px;font-weight:400;line-height:1.2;font-family:${FONT_EMAIL};color:${TITLE};">${safeTitleBlack}</h1>`;
+    : `<h1 style="margin:0 0 8px;font-size:32px;font-weight:400;line-height:1.2;font-family:${FONT_BODY};color:${TITLE};">${safeTitleBlack}</h1>`;
 
   const subtitleHtml = safeSubtitle
-    ? `<p style="margin:0 0 24px;font-size:18px;color:${TEXT_BODY};line-height:1.55;font-family:${FONT_EMAIL};">${safeSubtitle}</p>`
+    ? `<p style="margin:0 0 24px;font-size:18px;color:${TEXT_BODY};line-height:1.55;font-family:${FONT_BODY};">${safeSubtitle}</p>`
     : "";
 
   const greetingHtml =
     safeGreeting || safeIntro
       ? `<div style="margin:0 0 24px;">
-          ${safeGreeting ? `<p style="margin:0 0 8px;font-size:20px;color:${TITLE};line-height:1.5;font-family:${FONT_EMAIL};">Bonjour <strong>${safeGreeting}</strong>,</p>` : ""}
-          ${safeIntro ? `<p style="margin:0;font-size:18px;color:${TEXT_BODY};line-height:1.55;font-family:${FONT_EMAIL};">${safeIntro}</p>` : ""}
+          ${safeGreeting ? `<p style="margin:0 0 8px;font-size:20px;color:${TITLE};line-height:1.5;font-family:${FONT_BODY};">Bonjour <strong>${safeGreeting}</strong>,</p>` : ""}
+          ${safeIntro ? `<p style="margin:0;font-size:18px;color:${TEXT_BODY};line-height:1.55;font-family:${FONT_BODY};">${safeIntro}</p>` : ""}
         </div>`
       : "";
 
   const secondaryBtnHtml = secondaryButton
     ? `<div style="text-align:left;margin:12px 0 0;">
-        <a href="${escapeHtml(secondaryButton.url)}" style="display:inline-block;background:#ffffff;color:${CTA_BG}!important;text-decoration:none;padding:10px 20px;border-radius:30px;font-size:16px;font-weight:600;font-family:${FONT_EMAIL};line-height:22px;border:2px solid ${CTA_BG};">${escapeHtml(secondaryButton.text)}</a>
+        <a href="${escapeHtml(secondaryButton.url)}" style="display:inline-block;background:#ffffff;color:${CTA_BG}!important;text-decoration:none;padding:10px 20px;border-radius:30px;font-size:16px;font-weight:600;font-family:${FONT_BODY};line-height:22px;border:2px solid ${CTA_BG};">${escapeHtml(secondaryButton.text)}</a>
       </div>`
     : "";
 
   const buttonHtml = button
     ? `<div style="text-align:left;margin:28px 0 12px;">
-        <a href="${escapeHtml(button.url)}" style="display:inline-block;background:${CTA_BG};color:${CTA_TEXT}!important;text-decoration:none;padding:12px 24px;border-radius:30px;font-size:18px;font-weight:600;font-family:${FONT_EMAIL};line-height:24px;">${escapeHtml(button.text)}</a>
+        <a href="${escapeHtml(button.url)}" style="display:inline-block;background:${CTA_BG};color:${CTA_TEXT}!important;text-decoration:none;padding:12px 24px;border-radius:30px;font-size:18px;font-weight:600;font-family:${FONT_BODY};line-height:24px;">${escapeHtml(button.text)}</a>
         ${secondaryBtnHtml}
-        ${safeButtonSubtext ? `<p style="margin:14px 0 0;font-size:14px;color:${TEXT_MUTED};font-family:${FONT_EMAIL};line-height:1.45;">${safeButtonSubtext}</p>` : ""}
+        ${safeButtonSubtext ? `<p style="margin:14px 0 0;font-size:14px;color:${TEXT_MUTED};font-family:${FONT_BODY};line-height:1.45;">${safeButtonSubtext}</p>` : ""}
       </div>`
     : secondaryBtnHtml
       ? `<div style="text-align:left;margin:28px 0 12px;">${secondaryBtnHtml}</div>`
       : "";
 
   const linkHintHtml = linkHint
-    ? `<p style="color:${TEXT_MUTED};font-size:14px;margin-top:20px;line-height:1.5;font-family:${FONT_EMAIL};">
+    ? `<p style="color:${TEXT_MUTED};font-size:14px;margin-top:20px;line-height:1.5;font-family:${FONT_BODY};">
         ${escapeHtml(linkHint.label)}<br/>
         <a href="${escapeHtml(linkHint.url)}" style="color:${LINK_ACCENT};word-break:break-all;">${escapeHtml(linkHint.url)}</a>
       </p>`
@@ -211,7 +208,6 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
   const appUrl = getAppUrl();
   const siteUrl = getSiteUrl();
   const clientDashboardUrl = `${appUrl}/client/dashboard?tab=rdv`;
-  const logoUrl = getEmailLogoUrl();
 
   const appCardHtml = hideAppPromo
     ? ""
@@ -219,24 +215,17 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0 0;background:${CARD_PROMO_BG};border-radius:12px;overflow:hidden;border:1px solid ${DIVIDER};">
     <tr>
       <td style="padding:24px 28px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:12px;"><tr>
-          <td style="vertical-align:middle;padding-right:12px;">
-            <img src="${escapeHtml(logoUrl)}" width="48" height="auto" alt="" style="display:block;border:0;" />
-          </td>
-          <td style="vertical-align:middle;">
-            <p style="margin:0;font-size:17px;font-weight:700;color:${TITLE};font-family:${FONT_EMAIL};">Liens rapides InkFlow</p>
-          </td>
-        </tr></table>
-        <p style="margin:0 0 16px;font-size:14px;color:${TEXT_BODY};line-height:1.55;font-family:${FONT_EMAIL};">Découvre InkFlow sur le site, connecte-toi à l&apos;app pour gérer ton studio, ou ouvre ton espace client — tout depuis un clic.</p>
+        <p style="margin:0 0 12px;font-size:17px;font-weight:700;color:${TITLE};font-family:${FONT_BODY};">Liens rapides InkFlow</p>
+        <p style="margin:0 0 16px;font-size:14px;color:${TEXT_BODY};line-height:1.55;font-family:${FONT_BODY};">Découvre InkFlow sur le site, connecte-toi à l&apos;app pour gérer ton studio, ou ouvre ton espace client — tout depuis un clic.</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="padding:0 0 10px;">
-            <a href="${escapeHtml(siteUrl)}" style="display:block;text-align:center;padding:12px 16px;background:${CTA_BG};color:${CTA_TEXT}!important;text-decoration:none;border-radius:12px;font-size:14px;font-weight:600;font-family:${FONT_EMAIL};">Ouvrir l&apos;application</a>
+            <a href="${escapeHtml(siteUrl)}" style="display:block;text-align:center;padding:12px 16px;background:${CTA_BG};color:${CTA_TEXT}!important;text-decoration:none;border-radius:12px;font-size:14px;font-weight:600;font-family:${FONT_BODY};">Ouvrir l&apos;application</a>
           </td></tr>
           <tr><td style="padding:0 0 10px;">
-            <a href="${escapeHtml(clientDashboardUrl)}" style="display:block;text-align:center;padding:12px 16px;background:#ffffff;color:${CTA_BG}!important;text-decoration:none;border-radius:12px;font-size:14px;font-weight:600;font-family:${FONT_EMAIL};border:2px solid ${CTA_BG};">Espace client — Mes rendez-vous</a>
+            <a href="${escapeHtml(clientDashboardUrl)}" style="display:block;text-align:center;padding:12px 16px;background:#ffffff;color:${CTA_BG}!important;text-decoration:none;border-radius:12px;font-size:14px;font-weight:600;font-family:${FONT_BODY};border:2px solid ${CTA_BG};">Espace client — Mes rendez-vous</a>
           </td></tr>
           <tr><td style="padding:0;">
-            <a href="${escapeHtml(appUrl)}" style="display:block;text-align:center;padding:11px 16px;background:${RECAP_BG};color:${TITLE}!important;text-decoration:none;border-radius:12px;font-size:13px;font-weight:600;border:1px solid ${DIVIDER};font-family:${FONT_EMAIL};">Connexion app InkFlow</a>
+            <a href="${escapeHtml(appUrl)}" style="display:block;text-align:center;padding:11px 16px;background:${RECAP_BG};color:${TITLE}!important;text-decoration:none;border-radius:12px;font-size:13px;font-weight:600;border:1px solid ${DIVIDER};font-family:${FONT_BODY};">Connexion app InkFlow</a>
           </td></tr>
         </table>
       </td>
@@ -249,22 +238,22 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:36px;border-top:1px solid ${DIVIDER};">
     <tr>
       <td align="center" style="padding:20px 0 12px;">
-        <a href="${escapeHtml(INKFLOW_INSTAGRAM)}" style="display:inline-block;margin:0 8px;color:${LINK_ACCENT};font-size:13px;font-weight:600;text-decoration:none;font-family:${FONT_EMAIL};">Instagram</a>
+        <a href="${escapeHtml(INKFLOW_INSTAGRAM)}" style="display:inline-block;margin:0 8px;color:${LINK_ACCENT};font-size:13px;font-weight:600;text-decoration:none;font-family:${FONT_BODY};">Instagram</a>
         <span style="color:${DIVIDER};">·</span>
-        <a href="${escapeHtml(siteUrl)}" style="display:inline-block;margin:0 8px;color:${TEXT_MUTED};font-size:13px;text-decoration:none;font-family:${FONT_EMAIL};">Site web</a>
+        <a href="${escapeHtml(siteUrl)}" style="display:inline-block;margin:0 8px;color:${TEXT_MUTED};font-size:13px;text-decoration:none;font-family:${FONT_BODY};">Site web</a>
         <span style="color:${DIVIDER};">·</span>
-        <a href="mailto:contact@ink-flow.me" style="display:inline-block;margin:0 8px;color:${TEXT_MUTED};font-size:13px;text-decoration:none;font-family:${FONT_EMAIL};">Support</a>
+        <a href="mailto:contact@ink-flow.me" style="display:inline-block;margin:0 8px;color:${TEXT_MUTED};font-size:13px;text-decoration:none;font-family:${FONT_BODY};">Support</a>
       </td>
     </tr>
     <tr>
       <td align="center" style="padding:0 16px 8px;">
-        <p style="margin:0;font-size:13px;color:${TEXT_MUTED};line-height:1.5;font-family:${FONT_EMAIL};">© ${year} InkFlow. Tous droits réservés.</p>
-        <p style="margin:8px 0 0;font-size:12px;color:${TEXT_MUTED};line-height:1.45;font-family:${FONT_EMAIL};">E-mails de suivi : désinscription via l’en-tête (Gmail) ou contact@ink-flow.me</p>
+        <p style="margin:0;font-size:13px;color:${TEXT_MUTED};line-height:1.5;font-family:${FONT_BODY};">© ${year} InkFlow. Tous droits réservés.</p>
+        <p style="margin:8px 0 0;font-size:12px;color:${TEXT_MUTED};line-height:1.45;font-family:${FONT_BODY};">E-mails de suivi : désinscription via l’en-tête (Gmail) ou contact@ink-flow.me</p>
       </td>
     </tr>
     <tr>
       <td align="center" style="padding:0 16px 24px;">
-        <p style="margin:0;font-size:11px;color:${TEXT_MUTED};font-family:${FONT_EMAIL};">Paris, France</p>
+        <p style="margin:0;font-size:11px;color:${TEXT_MUTED};font-family:${FONT_BODY};">Paris, France</p>
       </td>
     </tr>
   </table>`;
@@ -273,9 +262,9 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
           <tr>
             <td align="center" style="padding:40px 40px 8px;">
               <a href="${escapeHtml(appUrl)}" style="text-decoration:none;color:${WORDMARK};">
-                <p style="margin:0;font-size:36px;font-weight:900;letter-spacing:-0.03em;line-height:1.15;font-family:${FONT_EMAIL};color:${WORDMARK};">INKFLOW</p>
+                <p style="margin:0;font-size:36px;font-weight:900;letter-spacing:-0.03em;line-height:1.15;font-family:${FONT_WORDMARK};color:${WORDMARK};">INKFLOW</p>
               </a>
-              <p style="margin:8px 0 0;font-size:11px;color:${TEXT_MUTED};line-height:16px;font-family:${FONT_EMAIL};">Le studio dans ta poche.</p>
+              <p style="margin:8px 0 0;font-size:11px;color:${TEXT_MUTED};line-height:16px;font-family:${FONT_BODY};">Le studio dans ta poche.</p>
             </td>
           </tr>`;
 
@@ -311,9 +300,9 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
 </head>
-<body style="margin:0;padding:0;font-family:${FONT_EMAIL};background:${BG_PAGE};color:${TEXT_BODY};">
+<body style="margin:0;padding:0;font-family:${FONT_BODY};background:${BG_PAGE};color:${TEXT_BODY};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG_PAGE};padding:32px 16px 48px;">
     <tr>
       <td align="center">
@@ -335,14 +324,14 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
 
 /** Encadré récap (aligné EmailBase recapRow) */
 export function emailInfoBox(html: string): string {
-  return `<div style="background:${RECAP_BG};border-radius:8px;padding:14px 16px;margin:24px 0;border:1px solid ${DIVIDER};font-family:${FONT_EMAIL};">
+  return `<div style="background:${RECAP_BG};border-radius:8px;padding:14px 16px;margin:24px 0;border:1px solid ${DIVIDER};font-family:${FONT_BODY};">
     ${html}
   </div>`;
 }
 
 export const EMAIL_STYLES = {
-  text: `color:${TEXT_BODY};font-size:16px;line-height:1.6;margin:0 0 16px;font-family:${FONT_EMAIL};`,
-  textMuted: `color:${TEXT_MUTED};font-size:15px;line-height:1.6;margin:0 0 20px;font-family:${FONT_EMAIL};`,
-  small: `color:${TEXT_MUTED};font-size:13px;line-height:1.5;margin-top:16px;font-family:${FONT_EMAIL};`,
-  label: `color:${TEXT_MUTED};font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 8px;font-family:${FONT_EMAIL};`,
+  text: `color:${TEXT_BODY};font-size:16px;line-height:1.6;margin:0 0 16px;font-family:${FONT_BODY};`,
+  textMuted: `color:${TEXT_MUTED};font-size:15px;line-height:1.6;margin:0 0 20px;font-family:${FONT_BODY};`,
+  small: `color:${TEXT_MUTED};font-size:13px;line-height:1.5;margin-top:16px;font-family:${FONT_BODY};`,
+  label: `color:${TEXT_MUTED};font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 8px;font-family:${FONT_BODY};`,
 } as const;

@@ -4,6 +4,7 @@
  *
  * Les Edge Functions Supabase utilisent plutôt `wrapEmailLayout` (HTML) ; ce module sert
  * aux envois depuis l’app Node (scripts, futurs endpoints).
+ * Prévisualisation : `npm run email:dev` → http://localhost:3001 (`emails/`).
  */
 
 import { Resend } from 'resend';
@@ -12,6 +13,7 @@ import React from 'react';
 
 import {
   WelcomeEmail,
+  InviteUserEmail,
   MagicLinkEmail,
   BookingPendingEmail,
   BookingConfirmedEmail,
@@ -24,6 +26,7 @@ import {
   NewBookingStudioEmail,
   ReferralEmail,
   type WelcomeEmailProps,
+  type InviteUserEmailProps,
   type MagicLinkEmailProps,
   type BookingPendingEmailProps,
   type BookingConfirmedEmailProps,
@@ -55,6 +58,11 @@ async function send(to: string, subject: string, html: string): Promise<SendResu
 export async function sendWelcome(to: string, props: WelcomeEmailProps) {
   const html = await render(<WelcomeEmail {...props} />);
   return send(to, 'Bienvenue sur InkFlow — confirme ton adresse email', html);
+}
+
+export async function sendInviteUser(to: string, props: InviteUserEmailProps) {
+  const html = await render(<InviteUserEmail {...props} />);
+  return send(to, 'Invitation InkFlow', html);
 }
 
 export async function sendMagicLink(to: string, props: MagicLinkEmailProps) {

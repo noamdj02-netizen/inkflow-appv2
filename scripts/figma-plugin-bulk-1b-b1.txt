@@ -1,0 +1,19 @@
+function collectBodyTextsInOrder(body) { const o = []; for (const ch of body.children) { if (ch.type === "TEXT") o.push(ch); if (ch.type === "FRAME" && ch.name === "CTA") { for (const c of ch.children) if (c.type === "TEXT") o.push(c); } } return o; }
+async function interB() { for (const f of [{ family: "Inter", style: "Black" }, { family: "Inter", style: "Extra Bold" }]) { try { await figma.loadFontAsync(f); return f; } catch (e) {} } await figma.loadFontAsync({ family: "Inter", style: "Bold" }); return { family: "Inter", style: "Bold" }; }
+async function styleWM(frame, inter, fontOut) { const all = []; (function w(n) { if (n.type === "TEXT") all.push(n); if ("children" in n) n.children.forEach(w); })(frame); for (const t of all) { await figma.loadFontAsync(t.fontName); const isWm = t.characters.replace(/\s/g, "") === "INKFLOW" || t.name === "INKFLOW"; t.fontName = isWm ? inter : fontOut; if (isWm) t.letterSpacing = { unit: "PERCENT", value: -3 }; } }
+async function apply(dup, spec, inter, fontOut) { const body = dup.children[0].children[2]; const nodes = collectBodyTextsInOrder(body); const t = [spec.t0, spec.t1, spec.t2, spec.t3, spec.t4, spec.cta, spec.fall, spec.sign, spec.help]; for (let j = 0; j < 5; j++) { if (nodes[j] && t[j]) { await figma.loadFontAsync(nodes[j].fontName); nodes[j].characters = t[j]; nodes[j].fontName = fontOut; if (j === 0) nodes[j].fontSize = 32; } } if (nodes[5] && t[5]) { const c = nodes[5]; await figma.loadFontAsync(c.fontName); c.characters = t[5]; c.fontName = fontOut; c.fontSize = 20; const ctaF = c.parent; if (ctaF && ctaF.type === "FRAME") ctaF.resize(Math.max(400, c.width + 48), ctaF.height); } for (let j = 6; j <= 8; j++) { if (nodes[j] && t[j] !== undefined) { await figma.loadFontAsync(nodes[j].fontName); nodes[j].characters = t[j] || "—"; nodes[j].fontName = fontOut; if (j === 6) nodes[j].fontSize = 14; } } await styleWM(dup, inter, fontOut); }
+const START_X = 4540, START_Y = 0, COLS = 3, W = 600, GAP = 80, BASE = 9, ROW_H = 1280;
+const fontOut = { family: "Outfit", style: "Regular" };
+await figma.loadFontAsync(fontOut);
+const inter = await interB();
+const base = await figma.getNodeByIdAsync("272:2");
+if (!base) throw new Error("Node 272:2");
+const parent = base.parent;
+const DATA = [
+{ name: "REACT — Soins J+1 (fidélité)", t0: "Prends soin de ton tatouage.", t1: "Merci (Studio Lune). Conseils pour les premiers jours :", t2: "· Eau tiède matin & soir\n· Crème fine\n· Pas soleil / piscine 3 sem.\n· Ne pas gratter", t3: "—", t4: "—", cta: "Répondre à l'e-mail", fall: "https://ink-flow.me/aide", sign: "Studio Lune", help: "Aide" },
+{ name: "REACT — Tattoo 1 mois", t0: "Ton tattoo a 1 mois.", t1: "Retouche ou nouveau flash ? Découvre les derniers flashs sur la vitrine Studio Lune.", t2: "—", t3: "—", t4: "—", cta: "Voir les flashs", fall: "https://ink-flow.me/atelier-lune/flashs", sign: "InkFlow", help: "Vitrine" },
+{ name: "REACT — Nouveau RDV (notif studio)", t0: "Nouvelle demande de RDV.", t1: "Nouvelle réservation depuis la vitrine. Ouvrez le dashboard pour valider ou refuser.", t2: "Client : Alex Martin\nSerpent J — 200 €\n3 juin 2026, 10h", t3: "—", t4: "—", cta: "Gérer la demande", fall: "https://app.ink-flow.me/dashboard?tab=demandes", sign: "InkFlow", help: "Dashboard" }
+];
+const createdNodeIds = [];
+for (let i = 0; i < DATA.length; i++) { const d = DATA[i]; const dup = base.clone(); dup.name = d.name; const g = BASE + i; dup.x = START_X + (g % COLS) * (W + GAP); dup.y = START_Y + Math.floor(g / COLS) * ROW_H; parent.appendChild(dup); createdNodeIds.push(dup.id); await apply(dup, d, inter, fontOut); }
+return { createdNodeIds, mutatedNodeIds: createdNodeIds, count: DATA.length, batch: "1b-b1" };

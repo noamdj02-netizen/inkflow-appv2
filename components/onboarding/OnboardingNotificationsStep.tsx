@@ -20,7 +20,8 @@ export const OnboardingNotificationsStep: React.FC<OnboardingNotificationsStepPr
   onComplete,
 }) => {
   const toast = useToast();
-  const { subscribe, isSupported, permission, loading, error, supportReason } = usePushSubscription(studioId);
+  const { subscribe, isSupported, permission, loading, error, supportReason } =
+    usePushSubscription(studioId);
 
   const handleEnable = async () => {
     const ok = await subscribe();
@@ -49,7 +50,12 @@ export const OnboardingNotificationsStep: React.FC<OnboardingNotificationsStepPr
     >
       <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
         <div className="lg:hidden flex-shrink-0 h-28 sm:h-36 relative overflow-hidden safe-top">
-          <img src={heroImg} alt="" className="absolute inset-0 w-full h-full object-cover object-center" loading="eager" />
+          <img
+            src={heroImg}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover object-center"
+            loading="eager"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-black via-transparent to-transparent" />
         </div>
 
@@ -65,12 +71,16 @@ export const OnboardingNotificationsStep: React.FC<OnboardingNotificationsStepPr
               <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
             </div>
 
-            <h1 id="notif-title" className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
+            <h1
+              id="notif-title"
+              className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5"
+            >
               Reste informé
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-5 sm:mb-6">
-              Active les notifications pour être alerté des nouvelles demandes de rendez-vous et des paiements d’acompte, même
-              quand l’app n’est pas ouverte (selon ton navigateur / appareil).
+              Active les notifications pour être alerté des nouvelles demandes de rendez-vous et des
+              paiements d’acompte, même quand l’app n’est pas ouverte (selon ton navigateur /
+              appareil).
             </p>
 
             <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/40 p-4 sm:p-5 space-y-4">
@@ -85,10 +95,14 @@ export const OnboardingNotificationsStep: React.FC<OnboardingNotificationsStepPr
                       <Smartphone className="w-4 h-4 shrink-0 mt-0.5" />
                       {supportReason === 'no_vapid'
                         ? 'Les notifications push ne sont pas configurées sur ce serveur. Tu pourras les activer plus tard dans Paramètres.'
-                        : 'Sur certains navigateurs, installe InkFlow en application (PWA) depuis le menu du navigateur pour recevoir les alertes.'}
+                        : supportReason === 'ios_need_homescreen'
+                          ? 'Sur iPhone / iPad, ajoute InkFlow à l’écran d’accueil (Partager → Ajouter…), ouvre l’app depuis l’icône, puis active les notifications ici ou dans Paramètres.'
+                          : 'Sur certains navigateurs, installe InkFlow en application (PWA) depuis le menu du navigateur pour recevoir les alertes.'}
                     </p>
                   ) : permission === 'granted' ? (
-                    <p className="text-sm text-emerald-600 dark:text-emerald-400">Notifications déjà autorisées pour ce site.</p>
+                    <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                      Notifications déjà autorisées pour ce site.
+                    </p>
                   ) : (
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                       Une fenêtre du navigateur peut demander ton autorisation — c’est normal.
@@ -104,7 +118,11 @@ export const OnboardingNotificationsStep: React.FC<OnboardingNotificationsStepPr
                   disabled={loading}
                   className="w-full min-h-[48px] inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 active:scale-[0.98] transition-all"
                 >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bell className="w-5 h-5" />}
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Bell className="w-5 h-5" />
+                  )}
                   Activer les notifications
                 </button>
               )}
@@ -139,12 +157,19 @@ export const OnboardingNotificationsStep: React.FC<OnboardingNotificationsStepPr
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <img src={heroImg} alt="" className="absolute inset-0 w-full min-h-full object-cover object-bottom" loading="eager" />
+        <img
+          src={heroImg}
+          alt=""
+          className="absolute inset-0 w-full min-h-full object-cover object-bottom"
+          loading="eager"
+        />
         <div className="absolute bottom-0 left-0 right-0 z-10 px-10 pb-10 pt-16 pointer-events-none">
           <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
             Ne rate rien.
           </h2>
-          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">Demandes et encaissements en temps réel.</p>
+          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
+            Demandes et encaissements en temps réel.
+          </p>
         </div>
       </motion.div>
     </motion.div>
