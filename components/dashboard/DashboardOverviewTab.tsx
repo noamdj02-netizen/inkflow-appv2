@@ -2329,15 +2329,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         : ''}
                     </span>
                   </p>
-                  <p className="max-w-2xl border-t border-zinc-200/70 pt-3 text-xs leading-relaxed text-zinc-500 dark:border-zinc-700/80 dark:text-zinc-500">
-                    Planning :{' '}
-                    <span className="font-medium text-zinc-600 dark:text-zinc-300">Synthèse</span> =
-                    résumé ;{' '}
-                    <span className="font-medium text-zinc-600 dark:text-zinc-300">
-                      Rendez-vous
-                    </span>{' '}
-                    = calendrier complet.
-                  </p>
                 </div>
 
                 {/* Right: barre d’outils — alignée au bloc titre en lg+ */}
