@@ -4,6 +4,7 @@ import type { Client } from '../../types';
 import { getClientStatusColor, getClientCardLeftAccent } from './clientListUtils';
 import { formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 import { hapticSuccess } from '../../lib/haptics';
+import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
 
 function phoneHref(raw: string): string {
   const d = (raw || '').replace(/\s/g, '').replace(/^0/, '+33');
@@ -138,13 +139,12 @@ export const ClientListMobileRow: React.FC<ClientListMobileRowProps> = ({
       >
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-            {client.avatar ? (
-              <img src={client.avatar} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-blue-600 dark:text-blue-400 font-bold text-lg">
-                {client.name.charAt(0).toUpperCase()}
-              </span>
-            )}
+            <ClientPhotoAvatar
+              name={client.name}
+              src={client.avatar}
+              className="h-full w-full"
+              textClassName="text-lg font-bold text-blue-600 dark:text-blue-400"
+            />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">

@@ -4,6 +4,28 @@
 
 @layer base {
   :root {
+    /**
+     * Typographie fluide — harmonie entre viewports (aligné charte / Figma IF.)
+     * clamp(min, préféré vw, max) — interlignages légèrement plus grands sur petit écran
+     */
+    --text-ink-display: clamp(3.5rem, 2.2rem + 5.5vw, 11rem);
+    --leading-ink-display: 0.9;
+    --text-ink-h1: clamp(2rem, 1.35rem + 2vw, 3rem);
+    --leading-ink-h1: 1.05;
+    --text-ink-h2: clamp(1.5rem, 1.15rem + 1.1vw, 2rem);
+    --leading-ink-h2: 1.12;
+    --text-ink-h3: clamp(1.125rem, 1rem + 0.45vw, 1.375rem);
+    --leading-ink-h3: 1.25;
+    --text-ink-lead: clamp(1.0625rem, 1rem + 0.25vw, 1.25rem);
+    --leading-ink-lead: 1.55;
+    --text-ink-body: clamp(1rem, 0.95rem + 0.2vw, 1.125rem);
+    --leading-ink-body: 1.6;
+    --text-ink-caption: clamp(0.6875rem, 0.65rem + 0.15vw, 0.75rem);
+    --leading-ink-caption: 1.4;
+    --text-ink-detail: clamp(0.8125rem, 0.78rem + 0.12vw, 0.9375rem);
+    --leading-ink-detail: 1.55;
+    --tracking-ink-tight: -0.02em;
+
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --primary: 222.2 47.4% 11.2%;
@@ -33,5 +55,59 @@
   }
   body {
     @apply bg-background text-foreground;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p,
+  li,
+  blockquote {
+    text-wrap: pretty;
+  }
+}
+
+@layer utilities {
+  /** Conteneur de texte marketing : largeur lisible + espacement vertical cohérent */
+  .ink-prose-flow {
+    font-size: var(--text-ink-body);
+    line-height: var(--leading-ink-body);
+  }
+
+  .ink-prose-flow > * + * {
+    margin-top: clamp(0.75rem, 0.5rem + 1vw, 1.25rem);
+  }
+
+  .ink-prose-flow h1 {
+    font-size: var(--text-ink-h1);
+    line-height: var(--leading-ink-h1);
+    letter-spacing: var(--tracking-ink-tight);
+  }
+
+  .ink-prose-flow h2 {
+    font-size: var(--text-ink-h2);
+    line-height: var(--leading-ink-h2);
+    letter-spacing: var(--tracking-ink-tight);
+  }
+
+  .ink-prose-flow h3 {
+    font-size: var(--text-ink-h3);
+    line-height: var(--leading-ink-h3);
+  }
+
+  .ink-prose-flow .ink-lead {
+    font-size: var(--text-ink-lead);
+    line-height: var(--leading-ink-lead);
+  }
+
+  .ink-prose-flow .ink-detail,
+  .ink-detail-block {
+    font-size: var(--text-ink-detail);
+    line-height: var(--leading-ink-detail);
   }
 }

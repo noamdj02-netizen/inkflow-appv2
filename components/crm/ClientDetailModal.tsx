@@ -10,6 +10,7 @@ import { formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 import { ClientStampCard } from './ClientStampCard';
 import { getClientStatusColor } from './clientListUtils';
 import type { StampLoyaltySettings } from '../../lib/stampLoyalty';
+import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
 
 const HEALTH_FIELD_LABELS: Record<string, string> = {
   clientName: 'Nom',
@@ -107,13 +108,12 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
         {/* Avatar + statut + tags */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-            {client.avatar ? (
-              <img src={client.avatar} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
-                {client.name.charAt(0).toUpperCase()}
-              </span>
-            )}
+            <ClientPhotoAvatar
+              name={client.name}
+              src={client.avatar}
+              className="h-full w-full"
+              textClassName="text-2xl font-bold text-blue-600 dark:text-blue-400"
+            />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap gap-2 items-center">

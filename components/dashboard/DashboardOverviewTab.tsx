@@ -89,6 +89,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '../../lib/supabase';
 import { createStripeExpressLoginLink } from '../../lib/stripeClient';
 import { useToast } from '../../contexts/ToastContext';
+import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
 
 const MS_PER_DAY = 86400000;
 
@@ -437,6 +438,10 @@ export interface DashboardOverviewTabProps {
   onOpenBilling?: () => void;
   /** `true` quand le bandeau héros (DashboardPro) porte le titre de page « Vue d’ensemble » (md+) — le salut desktop passe en `h2` pour l’accessibilité */
   pageTitleInShell?: boolean;
+  /**
+   * Compte démo : quand l’API renvoie 0 vues / 0 ouvertures, afficher des chiffres d’exemple sur la carte Visibilité.
+   */
+  usePlaceholderForPublicVisibility?: boolean;
 }
 
 export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
@@ -483,6 +488,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   trialEndsAt,
   onOpenBilling,
   pageTitleInShell = false,
+  usePlaceholderForPublicVisibility = false,
 }) => {
   const { privacyMode } = useStudioPrivacy();
   const euro = (n: number) => formatEuroPrivacy(n, privacyMode);
@@ -1012,12 +1018,28 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   /** Métadonnées sous le chiffre — pastille type footnote iOS */
   const iosKpiMetaPill =
     'inline-flex items-center rounded-full bg-zinc-100/95 dark:bg-zinc-800/90 px-2 py-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-300';
+  /** Prévision / montant en attente — ambre (attention) */
   const iosKpiMetaPillSky =
-    'inline-flex items-center rounded-full bg-zinc-200/90 dark:bg-zinc-600/30 px-2 py-1 text-[11px] font-medium text-zinc-800 dark:text-zinc-200';
+    'inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/20 px-2 py-1 text-[11px] font-medium text-amber-900 dark:text-amber-200';
+  /** Acomptes « En attente » — ambre */
   const iosKpiMetaPillViolet =
-    'inline-flex items-center rounded-full bg-zinc-200/90 dark:bg-zinc-600/30 px-2 py-1 text-[11px] font-medium text-zinc-800 dark:text-zinc-200';
+    'inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/20 px-2 py-1 text-[11px] font-medium text-amber-900 dark:text-amber-200';
+  /** Compteur VIP — violet (segment premium) */
   const iosKpiMetaPillAmber =
-    'inline-flex items-center gap-1.5 rounded-full bg-zinc-200/90 dark:bg-zinc-600/30 px-2 py-1 text-[11px] font-medium text-zinc-800 dark:text-zinc-200';
+    'inline-flex items-center gap-1.5 rounded-full bg-violet-100 dark:bg-violet-500/20 px-2 py-1 text-[11px] font-medium text-violet-900 dark:text-violet-200';
+  /** Pastilles KPI desktop (text-[10px] bold) — cohérents avec le thème zinc du dashboard */
+  const kpiPillSm =
+    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold w-fit';
+  const kpiPillPending = `${kpiPillSm} bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200`;
+  const kpiPillNeutral = `${kpiPillSm} bg-zinc-200/90 text-zinc-800 dark:bg-zinc-600/30 dark:text-zinc-200`;
+  const kpiPillVipPill = `${kpiPillSm} bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200`;
+  const kpiPillGrowthPill = `${kpiPillSm} bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200`;
+  const kpiPillDeclinePill = `${kpiPillSm} bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200`;
+  const kpiPillSubtle = `${kpiPillSm} bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400`;
+  const iosKpiMetaPillTrendUp =
+    'inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-500/20 px-2 py-1 text-[11px] font-medium text-emerald-900 dark:text-emerald-200';
+  const iosKpiMetaPillTrendDown =
+    'inline-flex items-center rounded-full bg-rose-100 dark:bg-rose-500/20 px-2 py-1 text-[11px] font-medium text-rose-900 dark:text-rose-200';
 
   const renderKpiWidget = (widgetId: string) => {
     switch (widgetId) {
@@ -1078,7 +1100,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   <div className={`${isMdUp ? 'mt-2' : 'mt-1'} flex flex-col gap-1`}>
                     {monthlyForecast > 0 &&
                       (isMdUp ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200/90 dark:bg-zinc-600/30 text-zinc-800 dark:text-zinc-200 w-fit">
+                        <span className={kpiPillPending}>
                           {privacyMode ? '••••' : `+${monthlyForecast.toLocaleString('fr-FR')}€`} en
                           attente
                         </span>
@@ -1092,20 +1114,24 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     <div className="flex items-end min-h-[20px]">
                       {trendRevenue !== null ? (
                         isMdUp ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200/90 dark:bg-zinc-600/30 text-zinc-800 dark:text-zinc-200">
+                          <span
+                            className={trendRevenue >= 0 ? kpiPillGrowthPill : kpiPillDeclinePill}
+                          >
                             {trendRevenue >= 0 ? '↑' : '↓'} {Math.abs(trendRevenue)}% vs mois
                             dernier
                           </span>
                         ) : (
-                          <p className="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium bg-zinc-200/90 text-zinc-800 dark:bg-zinc-600/30 dark:text-zinc-200">
+                          <p
+                            className={
+                              trendRevenue >= 0 ? iosKpiMetaPillTrendUp : iosKpiMetaPillTrendDown
+                            }
+                          >
                             {trendRevenue >= 0 ? '↑' : '↓'} {Math.abs(trendRevenue)}% vs mois
                             dernier
                           </p>
                         )
                       ) : isMdUp ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-                          Ce mois
-                        </span>
+                        <span className={kpiPillSubtle}>Ce mois</span>
                       ) : (
                         <p className={iosKpiMetaPill}>Ce mois</p>
                       )}
@@ -1173,9 +1199,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   </p>
                   {isMdUp ? (
                     <div className="mt-2 min-h-[24px] flex items-end">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200/90 dark:bg-zinc-600/30 text-zinc-800 dark:text-zinc-200">
-                        En attente
-                      </span>
+                      <span className={kpiPillPending}>En attente</span>
                     </div>
                   ) : (
                     <p className={`mt-1 ${iosKpiMetaPillViolet}`}>En attente</p>
@@ -1238,9 +1262,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   {vipClients > 0 ? (
                     isMdUp ? (
                       <div className="mt-2 min-h-[24px] flex items-end">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200/90 dark:bg-zinc-600/30 text-zinc-800 dark:text-zinc-200">
+                        <span className={kpiPillVipPill}>
                           <Star
-                            className="w-3 h-3 text-zinc-500 dark:text-zinc-400 shrink-0"
+                            className="w-3 h-3 text-violet-600 dark:text-violet-300 shrink-0"
                             aria-hidden
                           />
                           {vipClients} VIP
@@ -1249,7 +1273,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     ) : (
                       <p className={`mt-1 ${iosKpiMetaPillAmber}`}>
                         <Star
-                          className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0"
+                          className="w-3.5 h-3.5 text-violet-600 dark:text-violet-300 shrink-0"
                           aria-hidden
                         />
                         {vipClients} VIP
@@ -1257,9 +1281,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     )
                   ) : isMdUp ? (
                     <div className="mt-2 min-h-[24px] flex items-end">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200/90 dark:bg-zinc-600/30 text-zinc-800 dark:text-zinc-200">
-                        Total
-                      </span>
+                      <span className={kpiPillNeutral}>Total</span>
                     </div>
                   ) : (
                     <p className={`mt-1 ${iosKpiMetaPill}`}>Total</p>
@@ -1324,20 +1346,26 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   >
                     {trendAppointments !== null ? (
                       isMdUp ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200/90 dark:bg-zinc-600/30 text-zinc-800 dark:text-zinc-200">
+                        <span
+                          className={
+                            trendAppointments >= 0 ? kpiPillGrowthPill : kpiPillDeclinePill
+                          }
+                        >
                           {trendAppointments >= 0 ? '↑' : '↓'} {Math.abs(trendAppointments)}% vs
                           dernier mois
                         </span>
                       ) : (
-                        <p className="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium bg-zinc-200/90 text-zinc-800 dark:bg-zinc-600/30 dark:text-zinc-200">
+                        <p
+                          className={
+                            trendAppointments >= 0 ? iosKpiMetaPillTrendUp : iosKpiMetaPillTrendDown
+                          }
+                        >
                           {trendAppointments >= 0 ? '↑' : '↓'} {Math.abs(trendAppointments)}% vs
                           mois dernier
                         </p>
                       )
                     ) : isMdUp ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-200/90 dark:bg-zinc-600/30 text-zinc-800 dark:text-zinc-200">
-                        Ce mois
-                      </span>
+                      <span className={kpiPillSubtle}>Ce mois</span>
                     ) : (
                       <p className={iosKpiMetaPill}>Ce mois</p>
                     )}
@@ -1962,6 +1990,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 studioId={studioId}
                 studioSlug={vitrineSlug}
                 useSupabase={useSupabase}
+                usePlaceholderWhenEmpty={usePlaceholderForPublicVisibility}
                 onOpenAnalytics={() => setActiveTab('analytics')}
                 onOpenFlashAndLinks={() => {
                   if (onSetupNavigate) onSetupNavigate('settings-vitrine');
@@ -2223,18 +2252,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         onClick={() => setActiveTab('clients')}
                         className="w-full flex items-center gap-3 px-4 py-3 min-h-[52px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left"
                       >
-                        <div className="w-10 h-10 rounded-xl bg-zinc-200/80 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          {client.avatar ? (
-                            <img
-                              src={client.avatar}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-zinc-600 dark:text-zinc-300 text-sm font-semibold">
-                              {client.name?.charAt(0)}
-                            </span>
-                          )}
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-200/80 dark:bg-zinc-700">
+                          <ClientPhotoAvatar
+                            name={client.name}
+                            src={client.avatar}
+                            className="h-full w-full"
+                            textClassName="text-sm font-semibold text-zinc-600 dark:text-zinc-300"
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
@@ -2270,69 +2294,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           <div className="min-h-full w-full max-w-[min(1800px,100%)] mx-auto isolate">
             {/* ===== HEADER — typo display + hiérarchie type showcase ===== */}
             <div className="px-0 pt-5 pb-5 md:pt-6 md:pb-6 2xl:pt-7 2xl:pb-7">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-6 2xl:gap-7">
-                {/* Left: Greeting + Pills + méta (colonne, rythme vertical unifié) */}
-                <div className="flex min-w-0 flex-1 flex-col gap-3 sm:gap-3.5">
-                  <div className="min-w-0 space-y-2">
-                    <p className="text-[12px] font-medium leading-none tracking-wide text-zinc-500 first-letter:uppercase dark:text-zinc-400">
-                      {now.toLocaleDateString('fr-FR', {
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long',
-                      })}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-                      {pageTitleInShell ? (
-                        <h2 className="font-display text-[1.75rem] font-bold tracking-[-0.04em] text-zinc-900 dark:text-white sm:text-[2rem] lg:text-[2.125rem] 2xl:text-[2.25rem]">
-                          {greeting}
-                          {firstName ? `, ${firstName}` : ''}
-                        </h2>
-                      ) : (
-                        <h1 className="font-display text-[1.75rem] font-bold tracking-[-0.04em] text-zinc-900 dark:text-white sm:text-[2rem] lg:text-[2.125rem] 2xl:text-[2.25rem]">
-                          {greeting}
-                          {firstName ? `, ${firstName}` : ''}
-                        </h1>
-                      )}
-                      {unpaidCount > 0 && (
-                        <button
-                          onClick={() => setActiveTab('requests')}
-                          className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20"
-                        >
-                          <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={2} />
-                          {unpaidCount} sans acompte
-                        </button>
-                      )}
-                      {todayOrTomorrowCount > 0 && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-500/10 dark:text-blue-400">
-                          <CalendarCheck className="h-4 w-4 shrink-0" strokeWidth={2} />
-                          {todayOrTomorrowCount} RDV bientôt
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-sm leading-snug text-zinc-500 dark:text-zinc-400 max-w-2xl">
-                    {user?.studioName && (
-                      <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                        {user.studioName}
-                      </span>
-                    )}
-                    {user?.studioName && (
-                      <span className="text-zinc-400 dark:text-zinc-500" aria-hidden>
-                        {' '}
-                        ·{' '}
-                      </span>
-                    )}
-                    <span>
-                      {todayAppointments.length} RDV aujourd’hui
-                      {pendingDemandesCount > 0
-                        ? ` · ${pendingDemandesCount} demande${pendingDemandesCount > 1 ? 's' : ''} en attente`
-                        : ''}
-                    </span>
-                  </p>
-                </div>
-
-                {/* Right: barre d’outils — alignée au bloc titre en lg+ */}
-                <div className="flex w-full min-w-0 shrink-0 flex-wrap items-center gap-1.5 rounded-2xl border border-zinc-200/90 bg-white/90 p-1.5 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset,0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-zinc-900/[0.04] backdrop-blur-md dark:border-zinc-800/90 dark:bg-zinc-900/55 dark:ring-white/[0.06] dark:shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_4px_12px_rgba(0,0,0,0.15)] sm:w-full lg:w-auto">
+              <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-center lg:justify-start lg:gap-6 2xl:gap-7">
+                {/* Raccourcis : la salutation / date / stats sont dans le bandeau héros (textes animés + chiffres d’activité). */}
+                <div className="flex w-full min-w-0 shrink-0 flex-wrap items-center justify-start gap-1.5 rounded-2xl border border-zinc-200/90 bg-white/90 p-1.5 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset,0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-zinc-900/[0.04] backdrop-blur-md dark:border-zinc-800/90 dark:bg-zinc-900/55 dark:ring-white/[0.06] dark:shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_4px_12px_rgba(0,0,0,0.15)]">
                   <button
                     onClick={() => setIsEditMode(!isEditMode)}
                     className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-all active:scale-[0.98] ${
@@ -2807,6 +2771,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       studioId={studioId}
                       studioSlug={vitrineSlug}
                       useSupabase={useSupabase}
+                      usePlaceholderWhenEmpty={usePlaceholderForPublicVisibility}
                       onOpenAnalytics={() => setActiveTab('analytics')}
                       onOpenFlashAndLinks={() => {
                         if (onSetupNavigate) onSetupNavigate('settings-vitrine');
@@ -2971,18 +2936,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                             onClick={() => setActiveTab('clients')}
                                             className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors text-left"
                                           >
-                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-700 dark:to-zinc-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                              {client.avatar ? (
-                                                <img
-                                                  src={client.avatar}
-                                                  alt=""
-                                                  className="w-full h-full object-cover"
-                                                />
-                                              ) : (
-                                                <span className="text-zinc-600 dark:text-zinc-300 text-sm font-semibold">
-                                                  {client.name?.charAt(0)}
-                                                </span>
-                                              )}
+                                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-700 dark:to-zinc-600">
+                                              <ClientPhotoAvatar
+                                                name={client.name}
+                                                src={client.avatar}
+                                                className="h-full w-full"
+                                                textClassName="text-sm font-semibold text-zinc-600 dark:text-zinc-300"
+                                              />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                               <div className="flex items-center gap-1.5">

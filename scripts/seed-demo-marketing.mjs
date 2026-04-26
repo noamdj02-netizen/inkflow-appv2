@@ -3,7 +3,7 @@
  * Peuple le studio noamdj02@gmail.com avec des fausses données valorisantes
  * pour captures d'écran et vidéos promotionnelles.
  *
- * Inclut : clients avec photos de profil, RDV, chiffres réalistes.
+ * Inclut : clients avec avatars (Unsplash, portraits) + chiffres en paliers (mockup crédible).
  * Marqueur : préfixe "demo_" dans les IDs
  * Nettoyage : node scripts/seed-demo-marketing.mjs --clean
  *
@@ -44,34 +44,85 @@ if (!url || !serviceKey) {
 
 const supabase = createClient(url, serviceKey);
 
-// Clients avec photos de profil (pravatar.cc — images réalistes)
+// Portraits Unsplash (400×400, recadrage visage) — https://unsplash.com/fr/s/photos/avatar
+const unsplashFace = (photoSlug) =>
+  `https://images.unsplash.com/${photoSlug}?w=400&h=400&fit=crop&crop=faces&auto=format&q=86`;
+
 const FAKE_CLIENTS = [
-  { name: 'Sophie Martin', email: 'sophie.martin@email.com', avatar: 'https://i.pravatar.cc/150?img=1' },
-  { name: 'Thomas Dubois', email: 'thomas.dubois@email.com', avatar: 'https://i.pravatar.cc/150?img=3' },
-  { name: 'Emma Lemaire', email: 'emma.lemaire@email.com', avatar: 'https://i.pravatar.cc/150?img=5' },
-  { name: 'Lucas Bernard', email: 'lucas.bernard@email.com', avatar: 'https://i.pravatar.cc/150?img=11' },
-  { name: 'Chloé Petit', email: 'chloe.petit@email.com', avatar: 'https://i.pravatar.cc/150?img=9' },
-  { name: 'Hugo Moreau', email: 'hugo.moreau@email.com', avatar: 'https://i.pravatar.cc/150?img=12' },
-  { name: 'Léa Laurent', email: 'lea.laurent@email.com', avatar: 'https://i.pravatar.cc/150?img=16' },
-  { name: 'Nathan Simon', email: 'nathan.simon@email.com', avatar: 'https://i.pravatar.cc/150?img=15' },
-  { name: 'Manon Michel', email: 'manon.michel@email.com', avatar: 'https://i.pravatar.cc/150?img=20' },
-  { name: 'Enzo Lefebvre', email: 'enzo.lefebvre@email.com', avatar: 'https://i.pravatar.cc/150?img=14' },
-  { name: 'Julie Roux', email: 'julie.roux@email.com', avatar: 'https://i.pravatar.cc/150?img=23' },
-  { name: 'Louis David', email: 'louis.david@email.com', avatar: 'https://i.pravatar.cc/150?img=33' },
-  { name: 'Camille Bertrand', email: 'camille.bertrand@email.com', avatar: 'https://i.pravatar.cc/150?img=25' },
-  { name: 'Raphaël Garnier', email: 'raphael.garnier@email.com', avatar: 'https://i.pravatar.cc/150?img=34' },
-  { name: 'Océane Faure', email: 'oceane.faure@email.com', avatar: 'https://i.pravatar.cc/150?img=26' },
-  { name: 'Arthur Mercier', email: 'arthur.mercier@email.com', avatar: 'https://i.pravatar.cc/150?img=35' },
-  { name: 'Inès Rousseau', email: 'ines.rousseau@email.com', avatar: 'https://i.pravatar.cc/150?img=28' },
-  { name: 'Jules Vincent', email: 'jules.vincent@email.com', avatar: 'https://i.pravatar.cc/150?img=36' },
-  { name: 'Margot Fournier', email: 'margot.fournier@email.com', avatar: 'https://i.pravatar.cc/150?img=32' },
-  { name: 'Marie Dupont', email: 'marie.dupont@email.com', avatar: 'https://i.pravatar.cc/150?img=41' },
-  { name: 'Paul Leroy', email: 'paul.leroy@email.com', avatar: 'https://i.pravatar.cc/150?img=44' },
-  { name: 'Clara Garnier', email: 'clara.garnier@email.com', avatar: 'https://i.pravatar.cc/150?img=45' },
-  { name: 'Léo Bonnet', email: 'leo.bonnet@email.com', avatar: 'https://i.pravatar.cc/150?img=47' },
-  { name: 'Zoé Lambert', email: 'zoe.lambert@email.com', avatar: 'https://i.pravatar.cc/150?img=48' },
-  { name: 'Adam Fontaine', email: 'adam.fontaine@email.com', avatar: 'https://i.pravatar.cc/150?img=51' },
+  { name: 'Sophie Martin', email: 'sophie.martin@email.com', avatar: unsplashFace('photo-1494790108377-be9c29b29330') },
+  { name: 'Thomas Dubois', email: 'thomas.dubois@email.com', avatar: unsplashFace('photo-1507003211169-0a1dd7228f2d') },
+  { name: 'Emma Lemaire', email: 'emma.lemaire@email.com', avatar: unsplashFace('photo-1500648767791-00dcc994a43e') },
+  { name: 'Lucas Bernard', email: 'lucas.bernard@email.com', avatar: unsplashFace('photo-1534528741775-53994a69daeb') },
+  { name: 'Chloé Petit', email: 'chloe.petit@email.com', avatar: unsplashFace('photo-1508214751196-bcfd4ca60f91') },
+  { name: 'Hugo Moreau', email: 'hugo.moreau@email.com', avatar: unsplashFace('photo-1521572267360-ee0c29002914') },
+  { name: 'Léa Laurent', email: 'lea.laurent@email.com', avatar: unsplashFace('photo-1527980965255-d3b416303d12') },
+  { name: 'Nathan Simon', email: 'nathan.simon@email.com', avatar: unsplashFace('photo-1438761681033-6461ffad8d80') },
+  { name: 'Manon Michel', email: 'manon.michel@email.com', avatar: unsplashFace('photo-1524504388940-b1c1722653e1') },
+  { name: 'Enzo Lefebvre', email: 'enzo.lefebvre@email.com', avatar: unsplashFace('photo-1506794778202-cad84cf45f1d') },
+  { name: 'Julie Roux', email: 'julie.roux@email.com', avatar: unsplashFace('photo-1472099645785-5658abf4ff4e') },
+  { name: 'Louis David', email: 'louis.david@email.com', avatar: unsplashFace('photo-1519345182560-3f2917c472ef') },
+  { name: 'Camille Bertrand', email: 'camille.bertrand@email.com', avatar: unsplashFace('photo-1517841905240-472988babdf9') },
+  { name: 'Raphaël Garnier', email: 'raphael.garnier@email.com', avatar: unsplashFace('photo-1539578705396-6b6a182fe6f4') },
+  { name: 'Océane Faure', email: 'oceane.faure@email.com', avatar: unsplashFace('photo-1521119989653-a83eee488004') },
+  { name: 'Arthur Mercier', email: 'arthur.mercier@email.com', avatar: unsplashFace('photo-1544005313-94ddf0286df2') },
+  { name: 'Inès Rousseau', email: 'ines.rousseau@email.com', avatar: unsplashFace('photo-1507591064344-4c6ce0b0e8a4') },
+  { name: 'Jules Vincent', email: 'jules.vincent@email.com', avatar: unsplashFace('photo-1487412720507-e7ab37603c6f') },
+  { name: 'Margot Fournier', email: 'margot.fournier@email.com', avatar: unsplashFace('photo-1502823403499-6ccfcf4fb453') },
+  { name: 'Marie Dupont', email: 'marie.dupont@email.com', avatar: unsplashFace('photo-1580489944761-15a19d654956') },
+  { name: 'Paul Leroy', email: 'paul.leroy@email.com', avatar: unsplashFace('photo-1566492031773-4f4c3a73b0f7') },
+  { name: 'Clara Garnier', email: 'clara.garnier@email.com', avatar: unsplashFace('photo-1619895862022-09114b41f16f') },
+  { name: 'Léo Bonnet', email: 'leo.bonnet@email.com', avatar: unsplashFace('photo-1628157588553-5eeea01af4c2') },
+  { name: 'Zoé Lambert', email: 'zoe.lambert@email.com', avatar: unsplashFace('photo-1607746882042-944635dfe10c') },
+  { name: 'Adam Fontaine', email: 'adam.fontaine@email.com', avatar: unsplashFace('photo-1599566150163-38294d4cc2d5') },
 ];
+
+/** Chiffres cohérents (mockup) : gros comptes + milieu de gamme + nouveaux */
+function clientStatsForDemo(i, today) {
+  if (i < 5) {
+    const aptCount = 7 + (i % 4);
+    const totalSpent = 1850 + i * 210 + (i % 3) * 80;
+    return {
+      aptCount,
+      totalSpent,
+      first_visit: addDays(today, -(140 + i * 11)),
+      last_visit: addDays(today, -(2 + (i % 5))),
+      status: 'vip',
+      tags: ['VIP', 'Fidèle'],
+    };
+  }
+  if (i < 15) {
+    const aptCount = 2 + (i % 4);
+    const totalSpent = 240 + (i % 7) * 95 + (i % 2) * 40;
+    return {
+      aptCount,
+      totalSpent,
+      first_visit: addDays(today, -(100 - i * 2)),
+      last_visit: addDays(today, -(1 + (i % 20))),
+      status: 'active',
+      tags: aptCount >= 3 ? ['Régulier'] : ['Nouveau'],
+    };
+  }
+  if (i < 22) {
+    const aptCount = 1 + (i % 3);
+    const totalSpent = 70 + (i % 5) * 45;
+    return {
+      aptCount,
+      totalSpent,
+      first_visit: addDays(today, -(45 - i)),
+      last_visit: addDays(today, -(i % 18)),
+      status: 'active',
+      tags: ['Nouveau'],
+    };
+  }
+  return {
+    aptCount: i % 2,
+    totalSpent: (i % 2) * 40 + 20,
+    first_visit: addDays(today, -7 + (i % 4)),
+    last_visit: (i % 2) === 0 ? addDays(today, -1) : null,
+    status: 'active',
+    tags: ['Prospect'],
+  };
+}
 
 const SERVICES = [
   'Flash Lune — 150€',
@@ -183,16 +234,11 @@ async function main() {
   const now = new Date().toISOString();
   const today = now.split('T')[0];
 
-  // === 0. CLIENTS — avec photos de profil et stats réalistes ===
+  // === 0. CLIENTS — Unsplash + stats en paliers (crédible en mockup)
   const clients = [];
   for (let i = 0; i < FAKE_CLIENTS.length; i++) {
     const c = FAKE_CLIENTS[i];
-    const aptCount = randomInt(1, 8);
-    const totalSpent = randomInt(80, 2000);
-    const firstVisit = addDays(today, -randomInt(30, 180));
-    const lastVisit = addDays(today, -randomInt(0, 90));
-    const status = totalSpent >= 800 ? 'vip' : aptCount >= 3 ? 'active' : 'active';
-    const tags = totalSpent >= 1000 ? ['VIP', 'Fidèle'] : aptCount >= 2 ? ['Régulier'] : ['Nouveau'];
+    const s = clientStatsForDemo(i, today);
 
     clients.push({
       id: `${ID_PREFIX}cl_${i + 1}`,
@@ -201,12 +247,12 @@ async function main() {
       email: c.email,
       phone: phoneFormat(),
       avatar_url: c.avatar,
-      total_spent: totalSpent,
-      appointments_count: aptCount,
-      first_visit: firstVisit,
-      last_visit: lastVisit,
-      status,
-      tags,
+      total_spent: s.totalSpent,
+      appointments_count: s.aptCount,
+      first_visit: s.first_visit,
+      last_visit: s.last_visit,
+      status: s.status,
+      tags: s.tags,
       tattoos: [],
       updated_at: now,
     });

@@ -13,6 +13,7 @@ import { hapticSuccess } from '../../lib/haptics';
 import { addAgendaNavStep, agendaWeekStart, toLocalYmd } from '../../lib/agendaDates';
 import { formatHm, parseTimeToMinutes } from '../../lib/appointmentTime';
 import { getClientAvatarForAppointment } from '../../lib/appointmentClientDisplay';
+import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
 
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8h à 20h
 const SLOT_PX = 72;
@@ -311,18 +312,13 @@ export const AppointmentCalendar: React.FC<AppointmentCalendarProps> = ({
                                 <span className="text-[10px] font-medium opacity-75">
                                   {apt.duration} min
                                 </span>
-                                <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full border border-black/10 bg-white/80 dark:bg-zinc-800 dark:border-white/10">
-                                  {avatar ? (
-                                    <img
-                                      src={avatar}
-                                      alt=""
-                                      className="h-full w-full object-cover"
-                                    />
-                                  ) : (
-                                    <span className="flex h-full w-full items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-300">
-                                      {apt.clientName.charAt(0).toUpperCase()}
-                                    </span>
-                                  )}
+                                <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/10 bg-white/80 dark:border-white/10 dark:bg-zinc-800">
+                                  <ClientPhotoAvatar
+                                    name={apt.clientName}
+                                    src={avatar}
+                                    className="h-full w-full"
+                                    textClassName="text-[10px] font-bold leading-none text-zinc-600 dark:text-zinc-300"
+                                  />
                                 </div>
                               </div>
                             </button>

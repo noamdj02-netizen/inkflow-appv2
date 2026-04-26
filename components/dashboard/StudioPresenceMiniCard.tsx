@@ -18,6 +18,8 @@ export interface StudioPresenceMiniCardProps {
   studioId: string | null | undefined;
   studioSlug?: string | null;
   useSupabase?: boolean;
+  /** Si true, remplace chaque cumul API à 0 par un chiffre d’exemple (démo / pas encore de trafic sur ce canal). */
+  usePlaceholderWhenEmpty?: boolean;
   /** Statistiques complètes + galerie / liens */
   onOpenAnalytics: () => void;
   onOpenFlashAndLinks: () => void;
@@ -28,10 +30,15 @@ function formatInt(n: number): string {
   return new Intl.NumberFormat('fr-FR').format(Math.max(0, Math.floor(n)));
 }
 
+/** Cumuls d’exemple quand l’API renvoie 0 pour le canal concerné (mode démo). */
+const PLACEHOLDER_VITRINE_VIEWS = 1284;
+const PLACEHOLDER_APP_VIEWS = 67;
+
 export const StudioPresenceMiniCard: React.FC<StudioPresenceMiniCardProps> = ({
   studioId,
   studioSlug,
   useSupabase = false,
+  usePlaceholderWhenEmpty = false,
   onOpenAnalytics,
   onOpenFlashAndLinks,
   className,
@@ -73,6 +80,10 @@ export const StudioPresenceMiniCard: React.FC<StudioPresenceMiniCardProps> = ({
 
   const vViews = metrics?.vitrine_views ?? 0;
   const dViews = metrics?.discover_profile_views ?? 0;
+  const demoFill = usePlaceholderWhenEmpty && !loading;
+  const vDisplay = demoFill && vViews === 0 ? PLACEHOLDER_VITRINE_VIEWS : vViews;
+  const dDisplay = demoFill && dViews === 0 ? PLACEHOLDER_APP_VIEWS : dViews;
+  const showExampleDisclaimer = demoFill && (vViews === 0 || dViews === 0);
   const discoverable = metrics?.is_discoverable ?? false;
   const ig = metrics?.instagram;
   const igDisplay = ig ? (ig.startsWith('@') ? ig : `@${ig.replace(/^@+/, '')}`) : null;
@@ -116,7 +127,7 @@ export const StudioPresenceMiniCard: React.FC<StudioPresenceMiniCardProps> = ({
               Vitrine web
             </p>
             <p className="mt-0.5 text-xl font-semibold tabular-nums text-zinc-900 dark:text-white">
-              {formatInt(vViews)}
+              {formatInt(vDisplay)}
             </p>
             <p className="text-[10px] text-zinc-500">vues (cumul)</p>
           </div>
@@ -125,11 +136,18 @@ export const StudioPresenceMiniCard: React.FC<StudioPresenceMiniCardProps> = ({
               App client
             </p>
             <p className="mt-0.5 text-xl font-semibold tabular-nums text-zinc-900 dark:text-white">
-              {formatInt(dViews)}
+              {formatInt(dDisplay)}
             </p>
             <p className="text-[10px] text-zinc-500">ouvertures fiche</p>
           </div>
         </div>
+      )}
+
+      {showExampleDisclaimer && (
+        <p className="mb-0.5 text-[9px] leading-snug text-zinc-400 dark:text-zinc-500" role="note">
+          Chiffres d&apos;exemple — vos vrais cumuls s&apos;afficheront dès le premier trafic
+          mesuré.
+        </p>
       )}
 
       <div className="mt-3 flex flex-wrap gap-1.5">

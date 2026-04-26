@@ -54,14 +54,14 @@ export default function StyleguidePage() {
           </div>
 
           <h1
-            className="font-black leading-[0.9] tracking-tight"
-            style={{ fontSize: 'clamp(56px, 14vw, 176px)' }}
+            className="text-ink-display font-black text-balance"
+            style={{ color: INK.text }}
           >
             INK<span style={{ color: INK.accent }}>FLOW</span>
           </h1>
 
           <p
-            className="mt-8 max-w-xl text-lg leading-relaxed sm:text-xl"
+            className="text-ink-lead mt-8 max-w-xl text-balance"
             style={{ color: INK.text }}
           >
             Charte graphique officielle. Dark only. Une seule couleur vive :
@@ -82,7 +82,10 @@ export default function StyleguidePage() {
 
       {/* ─────────────── PALETTE ─────────────── */}
       <Section index="01" title="Palette">
-        <p className="mb-10 max-w-2xl" style={{ color: INK.muted }}>
+        <p
+          className="text-ink-body mb-10 max-w-2xl text-pretty"
+          style={{ color: INK.muted }}
+        >
           Six tokens. Rien d&apos;autre. Toute couleur hors palette est un bug
           design à escalader.
         </p>
@@ -124,46 +127,49 @@ export default function StyleguidePage() {
 
       {/* ─────────────── TYPOGRAPHIE ─────────────── */}
       <Section index="02" title="Typographie">
-        <p className="mb-10 max-w-2xl" style={{ color: INK.muted }}>
+        <p
+          className="text-ink-body mb-10 max-w-2xl text-pretty"
+          style={{ color: INK.muted }}
+        >
           Une seule famille : Inter. Les titres sont en Black (900) avec un
           tracking serré pour maximiser la présence. Le corps reste en Regular.
         </p>
 
         <div className="space-y-8">
           <TypeRow
-            label="Display · 900 · tracking-tight"
-            meta="clamp(56px, 14vw, 176px)"
+            label="Display · 900 · text-ink-display"
+            meta="clamp fluide (voir globals.css)"
             sample="Studio."
-            sampleClassName="font-black leading-[0.9] tracking-tight"
-            sampleStyle={{ fontSize: 'clamp(56px, 14vw, 176px)' }}
+            sampleClassName="text-ink-display font-black"
+            sampleStyle={{ color: INK.text }}
           />
           <TypeRow
-            label="H1 · 900"
-            meta="48px / 1.05"
+            label="H1 · 900 · text-ink-h1"
+            meta="clamp fluide"
             sample="Réserve ta session."
-            sampleClassName="font-black tracking-tight"
-            sampleStyle={{ fontSize: 48, lineHeight: 1.05 }}
+            sampleClassName="text-ink-h1 font-black"
+            sampleStyle={{ color: INK.text }}
           />
           <TypeRow
-            label="H2 · 800"
-            meta="32px / 1.1"
+            label="H2 · 800 · text-ink-h2"
+            meta="clamp fluide"
             sample="Clients récurrents"
-            sampleClassName="font-extrabold tracking-tight"
-            sampleStyle={{ fontSize: 32, lineHeight: 1.1 }}
+            sampleClassName="text-ink-h2 font-extrabold"
+            sampleStyle={{ color: INK.text }}
           />
           <TypeRow
-            label="H3 · 700"
-            meta="22px / 1.25"
+            label="H3 · 700 · text-ink-h3"
+            meta="clamp fluide"
             sample="Prochain rendez-vous"
-            sampleClassName="font-bold"
-            sampleStyle={{ fontSize: 22, lineHeight: 1.25 }}
+            sampleClassName="text-ink-h3 font-bold"
+            sampleStyle={{ color: INK.text }}
           />
           <TypeRow
-            label="Body · 400"
-            meta="16px / 1.55"
+            label="Body · 400 · text-ink-body"
+            meta="clamp fluide + text-pretty"
             sample="Premier passage sur l'avant-bras gauche. Prévoir 3h de session, pause snack à mi-parcours. Le client a confirmé le paiement de l'acompte le 18 avril."
-            sampleClassName="font-normal"
-            sampleStyle={{ fontSize: 16, lineHeight: 1.55, color: INK.text }}
+            sampleClassName="text-ink-body text-pretty font-normal"
+            sampleStyle={{ color: INK.text }}
           />
           <TypeRow
             label="Caption · 500 · uppercase · tracking-widest"
@@ -171,6 +177,13 @@ export default function StyleguidePage() {
             sample="22 AVR · 14:30 · STUDIO PARIS"
             sampleClassName="font-medium uppercase tracking-widest"
             sampleStyle={{ fontSize: 12, lineHeight: 1.4, color: INK.muted }}
+          />
+          <TypeRow
+            label="Détail / légende · text-ink-detail"
+            meta="Lisible sur mobile, pas plus large que le corps"
+            sample="Détail : pense en étapes 1-2-3. Même légende sur le carrousel. Ton studio, factuel."
+            sampleClassName="text-ink-detail text-pretty font-normal"
+            sampleStyle={{ color: INK.muted }}
           />
         </div>
 
@@ -535,7 +548,7 @@ function Section({
           >
             {index}
           </span>
-          <h2 className="text-3xl font-black tracking-tight sm:text-5xl">
+          <h2 className="text-ink-h2 font-black text-balance">
             {title}
           </h2>
         </div>

@@ -6,6 +6,8 @@
 import React from 'react';
 import { Check, Pencil, MessageCircle } from 'lucide-react';
 import type { Appointment, Client } from '../../types';
+import { getClientAvatarForAppointment } from '../../lib/appointmentClientDisplay';
+import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
 
 interface AppointmentDayListProps {
   appointments: Appointment[];
@@ -14,11 +16,6 @@ interface AppointmentDayListProps {
   onMarkComplete?: (apt: Appointment) => void;
   onEdit?: (apt: Appointment) => void;
   onMessage?: (apt: Appointment) => void;
-}
-
-function getAvatarUrl(apt: Appointment, clients: Client[]): string | undefined {
-  const client = clients.find((c) => c.id === apt.clientId);
-  return client?.avatar;
 }
 
 function getStatusLabel(status: Appointment['status']): string {
@@ -71,7 +68,6 @@ export const AppointmentDayList: React.FC<AppointmentDayListProps> = ({
   return (
     <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
       {sorted.map((apt) => {
-        const avatarUrl = getAvatarUrl(apt, clients);
         return (
           <div
             key={apt.id}
@@ -98,14 +94,13 @@ export const AppointmentDayList: React.FC<AppointmentDayListProps> = ({
             </div>
 
             {/* Avatar */}
-            <div className="w-10 h-10 flex-shrink-0 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-700 ring-2 ring-white dark:ring-zinc-800">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-sm font-bold text-zinc-600 dark:text-zinc-300">
-                  {apt.clientName?.charAt(0)?.toUpperCase() || '?'}
-                </div>
-              )}
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-200 ring-2 ring-white dark:bg-zinc-700 dark:ring-zinc-800">
+              <ClientPhotoAvatar
+                name={apt.clientName || 'Client'}
+                src={getClientAvatarForAppointment(apt, clients)}
+                className="h-full w-full"
+                textClassName="text-sm font-bold text-zinc-600 dark:text-zinc-300"
+              />
             </div>
 
             {/* Nom client */}

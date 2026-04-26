@@ -146,7 +146,7 @@ const LazyClientPreviewDrawer = lazy(() =>
 import { DashboardWidgets, AddWidgetModal, WidgetCard } from './DashboardWidgets';
 import { useDashboardWidgets } from '../../hooks/useDashboardWidgets';
 import { DashboardOverviewTab } from './DashboardOverviewTab';
-import { DashboardTabHero } from './DashboardTabHero';
+import { DashboardTabHero, type DashboardOverviewHeroMeta } from './DashboardTabHero';
 import { PlanningSidebar } from './PlanningSidebar';
 import { WaitlistManager } from './WaitlistManager';
 import { LoyaltyManager, type LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
@@ -2021,6 +2021,48 @@ export const DashboardPro: React.FC = () => {
 
   const firstName = user?.name?.split(' ')[0] || user?.studioName || '';
 
+  /** Salutation + compteurs dans le bandeau héros (aligné sur la logique Vue d’ensemble). */
+  const overviewHeroMeta = useMemo((): DashboardOverviewHeroMeta | null => {
+    if (activeTab !== 'overview' || !isMdUp) return null;
+    const n = new Date();
+    const h = n.getHours();
+    const greeting = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
+    const dateLabel = n.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
+    const todayOrTomorrowCount = appointments.filter(
+      (a) =>
+        (a.date === today || a.date === tomorrow) && ['pending', 'confirmed'].includes(a.status)
+    ).length;
+    const overviewUnpaid = appointments.filter(
+      (a) => !a.deposit && a.status !== 'cancelled'
+    ).length;
+    return {
+      dateLabel,
+      greeting,
+      firstName: firstName || '',
+      todayOrTomorrowCount,
+      unpaidCount: overviewUnpaid,
+      todayRdvCount: todayAppointments.length,
+      pendingDemandesCount: demandes.total,
+      studioName: user?.studioName ?? null,
+      onOpenAgenda: () => setActiveTab('agenda'),
+      onOpenRequests: () => setActiveTab('requests'),
+    };
+  }, [
+    activeTab,
+    isMdUp,
+    appointments,
+    today,
+    tomorrow,
+    firstName,
+    demandes.total,
+    user?.studioName,
+    todayAppointments.length,
+  ]);
+
   const alerts = useMemo(() => {
     const a: { id: string; type: 'warning' | 'info'; msg: string; cta: string }[] = [];
     if (unpaidCount > 0)
@@ -3481,6 +3523,7 @@ export const DashboardPro: React.FC = () => {
                             activeTab === 'overview' ? DASHBOARD_OVERVIEW_HERO_TIPS : undefined
                           }
                           rotatingIntervalMs={DASHBOARD_OVERVIEW_HERO_ROTATE_MS}
+                          overviewMeta={overviewHeroMeta}
                         />
                       )}
                       {activeTab === 'overview' && (
@@ -3488,6 +3531,7 @@ export const DashboardPro: React.FC = () => {
                           <DashboardTabErrorBoundary sectionLabel="La vue d’ensemble n’a pas pu être chargée.">
                             <DashboardOverviewTab
                               pageTitleInShell={Boolean(!loading && isMdUp)}
+                              usePlaceholderForPublicVisibility={demoAccountMode}
                               now={now}
                               firstName={firstName}
                               user={user}

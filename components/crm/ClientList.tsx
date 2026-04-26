@@ -39,6 +39,7 @@ import { EmptyState } from '../common/EmptyState';
 import { ClientAddModal } from './ClientAddModal';
 import { IconBox, inlineIconClass } from '../ui/IconBox';
 import { ClientListMobileRow } from './ClientListMobileRow';
+import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
 
 const NOTES_KEY = (clientId: string) => `inkflow-notes-${clientId}`;
 
@@ -608,17 +609,12 @@ export const ClientList: React.FC<ClientListProps> = ({
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                              {client.avatar ? (
-                                <img
-                                  src={client.avatar}
-                                  alt=""
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <span className="text-blue-600 dark:text-blue-400 font-bold">
-                                  {client.name.charAt(0).toUpperCase()}
-                                </span>
-                              )}
+                              <ClientPhotoAvatar
+                                name={client.name}
+                                src={client.avatar}
+                                className="h-full w-full"
+                                textClassName="text-[13px] font-bold text-blue-600 dark:text-blue-400"
+                              />
                             </div>
                             <div>
                               <div className="font-semibold text-[var(--text-primary)]">

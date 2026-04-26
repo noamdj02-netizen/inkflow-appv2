@@ -45,6 +45,8 @@ import { buildMailtoHref, handleMailtoClick } from '../../lib/mailto';
 import { ProposeAlternativeDateModal } from './ProposeAlternativeDateModal';
 import { AcceptProjectModal } from './AcceptProjectModal';
 import { hapticSuccess } from '../../lib/haptics';
+import { trimAvatarUrl } from '../../lib/appointmentClientDisplay';
+import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
 
 /** Sous-onglet Demandes — « inbox » = file d’attente unifiée (option A). */
 export type RequestsSubTabId = 'inbox' | 'rdv' | 'bookings' | 'projects' | 'history';
@@ -156,23 +158,13 @@ const AgendaRequestCardView: React.FC<AgendaRequestCardViewProps> = ({
     className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm border-l-4 ${SOURCE_ACCENT.agenda} p-5 sm:p-6 flex flex-col gap-4 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/25 transition-colors`}
   >
     <div className="flex flex-col sm:flex-row sm:items-start gap-4 min-w-0">
-      <div className="w-12 h-12 rounded-xl bg-zinc-200/90 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0 overflow-hidden ring-1 ring-zinc-300/80 dark:ring-zinc-600/80">
-        {(() => {
-          const avatar = getAvatar(apt.clientEmail, apt.clientId, apt.clientName);
-          return avatar ? (
-            <img
-              src={avatar}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <span className="text-zinc-700 dark:text-zinc-200 font-bold text-lg">
-              {apt.clientName.charAt(0).toUpperCase()}
-            </span>
-          );
-        })()}
+      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-200/90 ring-1 ring-zinc-300/80 dark:bg-zinc-800 dark:ring-zinc-600/80">
+        <ClientPhotoAvatar
+          name={apt.clientName}
+          src={getAvatar(apt.clientEmail, apt.clientId, apt.clientName)}
+          className="h-full w-full"
+          textClassName="text-lg font-bold text-zinc-700 dark:text-zinc-200"
+        />
       </div>
       <div className="flex-1 min-w-0">
         <div className="font-semibold text-lg text-zinc-900 dark:text-white">{apt.clientName}</div>
@@ -305,15 +297,18 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   const getAvatar = (email?: string, clientId?: string, name?: string) => {
     if (clientId) {
       const c = clients.find((x) => x.id === clientId);
-      if (c?.avatar) return c.avatar;
+      const u = trimAvatarUrl(c?.avatar);
+      if (u) return u;
     }
     if (email) {
       const c = clientByEmail.get(email.toLowerCase());
-      if (c?.avatar) return c.avatar;
+      const u = trimAvatarUrl(c?.avatar);
+      if (u) return u;
     }
     if (name) {
       const c = clientByName.get(name.toLowerCase().trim());
-      if (c?.avatar) return c.avatar;
+      const u = trimAvatarUrl(c?.avatar);
+      if (u) return u;
     }
     return undefined;
   };
@@ -1260,7 +1255,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                           {inboxBookList.map((bk) => {
                             const thumbUrl = (bk.referenceImages && bk.referenceImages[0]) || null;
                             const crmAvatar = getAvatar(bk.clientEmail, undefined, bk.clientName);
-                            const displayThumb = bk.clientAvatarUrl || crmAvatar || thumbUrl;
+                            const displayThumb =
+                              trimAvatarUrl(bk.clientAvatarUrl) || crmAvatar || thumbUrl;
                             const isProfileThumb = Boolean(bk.clientAvatarUrl || crmAvatar);
                             const reqType = inferRequestType(bk.description);
                             const placement = bk.placement;
@@ -1792,7 +1788,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     filteredBookings.map((bk) => {
                       const thumbUrl = (bk.referenceImages && bk.referenceImages[0]) || null;
                       const crmAvatar = getAvatar(bk.clientEmail, undefined, bk.clientName);
-                      const displayThumb = bk.clientAvatarUrl || crmAvatar || thumbUrl;
+                      const displayThumb =
+                        trimAvatarUrl(bk.clientAvatarUrl) || crmAvatar || thumbUrl;
                       const isProfileThumb = Boolean(bk.clientAvatarUrl || crmAvatar);
                       const reqType = inferRequestType(bk.description);
                       const placement = bk.placement;
@@ -2221,23 +2218,13 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm border-l-4 ${SOURCE_ACCENT.agenda} p-5 sm:p-6 flex flex-col gap-4 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/25 transition-colors`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-start gap-4 min-w-0">
-                        <div className="w-12 h-12 rounded-xl bg-zinc-200/90 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0 overflow-hidden ring-1 ring-zinc-300/80 dark:ring-zinc-600/80">
-                          {(() => {
-                            const avatar = getAvatar(apt.clientEmail, apt.clientId, apt.clientName);
-                            return avatar ? (
-                              <img
-                                src={avatar}
-                                alt=""
-                                loading="lazy"
-                                decoding="async"
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-zinc-700 dark:text-zinc-200 font-bold text-lg">
-                                {apt.clientName.charAt(0).toUpperCase()}
-                              </span>
-                            );
-                          })()}
+                        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-200/90 ring-1 ring-zinc-300/80 dark:bg-zinc-800 dark:ring-zinc-600/80">
+                          <ClientPhotoAvatar
+                            name={apt.clientName}
+                            src={getAvatar(apt.clientEmail, apt.clientId, apt.clientName)}
+                            className="h-full w-full"
+                            textClassName="text-lg font-bold text-zinc-700 dark:text-zinc-200"
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-lg text-zinc-900 dark:text-white">

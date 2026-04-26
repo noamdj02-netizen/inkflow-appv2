@@ -25,6 +25,8 @@ import { MiniCalendar } from './MiniCalendar';
 import { AppointmentCalendar } from './AppointmentCalendar';
 import { EmptyState } from '../common/EmptyState';
 import { downloadICS, getGoogleCalendarAddUrl } from '../../lib/googleCalendar';
+import { getClientAvatarForAppointment } from '../../lib/appointmentClientDisplay';
+import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
 
 type ViewMode = 'list' | 'calendar';
 type StatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled';
@@ -224,17 +226,6 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
     },
     [containerRef]
   );
-  const clientByEmail = useMemo(() => {
-    const m = new Map<string, Client>();
-    clients.forEach((c) => {
-      if (c.email) m.set(c.email.toLowerCase(), c);
-    });
-    return m;
-  }, [clients]);
-  const getAvatar = (apt: Appointment) =>
-    (apt.clientId && clients.find((c) => c.id === apt.clientId)?.avatar) ||
-    clientByEmail.get(apt.clientEmail?.toLowerCase() || '')?.avatar;
-
   const { resolvedTheme } = useTheme();
   const [viewMode, setViewMode] = useState<ViewMode>(
     planningView === 'month' ? 'calendar' : 'list'
@@ -663,18 +654,13 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                         >
                           <div className="flex items-center gap-3 p-4">
                             {/* Avatar */}
-                            <div className="relative w-12 h-12 rounded-2xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm ring-1 ring-zinc-200/60 dark:ring-zinc-600/60">
-                              {getAvatar(apt) ? (
-                                <img
-                                  src={getAvatar(apt)}
-                                  alt=""
-                                  className="absolute inset-0 w-full h-full object-cover"
-                                />
-                              ) : (
-                                <span className="text-zinc-700 dark:text-zinc-200 font-bold text-base">
-                                  {apt.clientName.charAt(0).toUpperCase()}
-                                </span>
-                              )}
+                            <div className="relative w-12 h-12 rounded-2xl bg-zinc-200 dark:bg-zinc-700 flex flex-shrink-0 items-center justify-center overflow-hidden shadow-sm ring-1 ring-zinc-200/60 dark:ring-zinc-600/60">
+                              <ClientPhotoAvatar
+                                name={apt.clientName}
+                                src={getClientAvatarForAppointment(apt, clients)}
+                                className="absolute inset-0 h-full w-full"
+                                textClassName="text-base font-bold text-zinc-700 dark:text-zinc-200"
+                              />
                             </div>
                             {/* Infos */}
                             <div className="flex-1 min-w-0">
@@ -795,18 +781,13 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                           >
                             <td className="px-5 py-3.5">
                               <div className="flex items-center gap-3">
-                                <div className="relative w-9 h-9 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
-                                  {getAvatar(apt) ? (
-                                    <img
-                                      src={getAvatar(apt)}
-                                      alt=""
-                                      className="absolute inset-0 w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <span className="text-zinc-700 dark:text-zinc-200 font-semibold text-sm">
-                                      {apt.clientName.charAt(0).toUpperCase()}
-                                    </span>
-                                  )}
+                                <div className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-200 shadow-sm dark:bg-zinc-700">
+                                  <ClientPhotoAvatar
+                                    name={apt.clientName}
+                                    src={getClientAvatarForAppointment(apt, clients)}
+                                    className="absolute inset-0 h-full w-full"
+                                    textClassName="text-sm font-semibold text-zinc-700 dark:text-zinc-200"
+                                  />
                                 </div>
                                 <div>
                                   <div className="text-sm font-semibold text-zinc-900 dark:text-white">
