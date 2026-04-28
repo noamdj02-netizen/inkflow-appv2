@@ -5,11 +5,24 @@ import { buildFlashSlug } from './flashSlug';
 const db: any = supabase;
 import { sendReferralNotification } from './sendNotification';
 import type { VitrineData } from '../types/vitrine';
-import type { Appointment, Client, FlashDesign, LoyaltyEntry, LoyaltyTier, Notification, ProjectRequest, ProjectRequestStatus, WaitlistEntry } from '../types';
+import type {
+  Appointment,
+  Client,
+  FlashDesign,
+  LoyaltyEntry,
+  LoyaltyTier,
+  Notification,
+  ProjectRequest,
+  ProjectRequestStatus,
+  WaitlistEntry,
+} from '../types';
 import type { LoyaltySettings } from '../components/dashboard/LoyaltyManager';
 import type { DashboardWidget } from '../components/dashboard/DashboardWidgets';
 import type { StudioDashboardPreferences } from '../types/studioPreferences';
-import { DEFAULT_STUDIO_DASHBOARD_PREFERENCES, STUDIO_PREFERENCES_SCHEMA_VERSION } from '../types/studioPreferences';
+import {
+  DEFAULT_STUDIO_DASHBOARD_PREFERENCES,
+  STUDIO_PREFERENCES_SCHEMA_VERSION,
+} from '../types/studioPreferences';
 import {
   isLegacyTemplateFingerprintStats,
   isTemplateStockImageUrl,
@@ -17,13 +30,15 @@ import {
 } from './vitrineTemplateGuards';
 
 export function getStudioSlug(studioName: string): string {
-  return (studioName || 'mon-studio')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-') || 'mon-studio';
+  return (
+    (studioName || 'mon-studio')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-') || 'mon-studio'
+  );
 }
 
 /** Slug URL vitrine (/studio/:slug) — toujours comparer en minuscules (évite les ratés RPC si la casse diverge). */
@@ -60,7 +75,6 @@ async function fetchStudioPublicRowBySlug(slug: string): Promise<{
     typeof (raw as { id?: unknown }).id === 'string' &&
     (raw as { id: string }).id.length > 0;
   if (import.meta.env.DEV) {
-    // eslint-disable-next-line no-console
     console.log('[Inkflow] get_studio_public_by_slug', {
       rawSlug: slug,
       normalizedSlug: normalized,
@@ -78,9 +92,7 @@ async function fetchStudioPublicRowBySlug(slug: string): Promise<{
 
 /** Suffixe déterministe à partir de l'id pour rendre un slug unique */
 function uniqueSlugSuffix(id: string): string {
-  const hash = Math.abs(
-    Array.from(id).reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0)
-  );
+  const hash = Math.abs(Array.from(id).reduce((h, c) => (h << 5) - h + c.charCodeAt(0), 0));
   return hash.toString(36).slice(0, 8);
 }
 
@@ -159,7 +171,9 @@ export async function ensureStudio(
     };
     if (referredBy) payload.referred_by = referredBy;
 
-    const { error } = await (supabase as any).from('inkflow_studios').upsert(payload, { onConflict: 'id' });
+    const { error } = await (supabase as any)
+      .from('inkflow_studios')
+      .upsert(payload, { onConflict: 'id' });
     if (!error) {
       if (referredBy) {
         const { error: refErr } = await supabase.from('inkflow_referrals').insert({
@@ -206,7 +220,9 @@ export async function getStudioByEmail(email: string): Promise<{
   const emailNorm = (email || '').trim().toLowerCase();
   if (!emailNorm) return null;
 
-  const { data, error } = await supabase.rpc('get_studio_by_email_with_data', { p_email: emailNorm });
+  const { data, error } = await supabase.rpc('get_studio_by_email_with_data', {
+    p_email: emailNorm,
+  });
   const row = Array.isArray(data) ? data[0] : data;
   if (!error && row?.id) {
     return {
@@ -222,7 +238,9 @@ export async function getStudioByEmail(email: string): Promise<{
   // Fallback si la RPC n'existe pas encore (migration non appliquée)
   const { data: fallback, error: fallbackError } = await supabase
     .from('inkflow_studios')
-    .select('id, slug, subscription_status, trial_ends_at, siret, plan_type, csv_import_slots_remaining')
+    .select(
+      'id, slug, subscription_status, trial_ends_at, siret, plan_type, csv_import_slots_remaining'
+    )
     .ilike('email', emailNorm)
     .order('updated_at', { ascending: false })
     .limit(1)
@@ -235,7 +253,8 @@ export async function getStudioByEmail(email: string): Promise<{
     trial_ends_at: fallback.trial_ends_at as string | null | undefined,
     siret: (fallback.siret as string | null) ?? null,
     plan_type: (fallback as { plan_type?: string }).plan_type,
-    csv_import_slots_remaining: (fallback as { csv_import_slots_remaining?: number | null }).csv_import_slots_remaining,
+    csv_import_slots_remaining: (fallback as { csv_import_slots_remaining?: number | null })
+      .csv_import_slots_remaining,
   };
 }
 
@@ -343,10 +362,15 @@ export async function getReferralsForReferrer(studioId: string): Promise<Referra
     .in('id', refereeIds);
   const nameByRefereeId = new Map<string, string>();
   (studios ?? []).forEach((s) => {
-    const name = (s as { studio_name?: string; name?: string }).studio_name ?? (s as { studio_name?: string; name?: string }).name ?? null;
+    const name =
+      (s as { studio_name?: string; name?: string }).studio_name ??
+      (s as { studio_name?: string; name?: string }).name ??
+      null;
     if (name) nameByRefereeId.set((s as { id: string }).id, name);
   });
-  return (referrals as { id: string; referee_id: string; status: string; created_at: string }[]).map((r) => ({
+  return (
+    referrals as { id: string; referee_id: string; status: string; created_at: string }[]
+  ).map((r) => ({
     id: r.id,
     refereeStudioName: nameByRefereeId.get(r.referee_id) ?? null,
     status: r.status,
@@ -355,8 +379,15 @@ export async function getReferralsForReferrer(studioId: string): Promise<Referra
 }
 
 // Vitrine data
-export async function getVitrineDataFromSupabase(studioId: string, defaultData: VitrineData): Promise<VitrineData> {
-  const { data, error } = await supabase.from('inkflow_vitrine_data').select('data').eq('studio_id', studioId).single();
+export async function getVitrineDataFromSupabase(
+  studioId: string,
+  defaultData: VitrineData
+): Promise<VitrineData> {
+  const { data, error } = await supabase
+    .from('inkflow_vitrine_data')
+    .select('data')
+    .eq('studio_id', studioId)
+    .single();
   if (error || !data?.data) return defaultData;
   return { ...defaultData, ...(data.data as object), slug: defaultData.slug } as VitrineData;
 }
@@ -397,15 +428,20 @@ export async function getStudioPublicBySlug(slug: string): Promise<{
 }
 
 /** Récupère les données vitrine par slug (pour la page publique /studio/:slug). Inclut le thème et SIRET du studio. */
-export async function getVitrineDataBySlugFromSupabase(slug: string, defaultData: VitrineData): Promise<VitrineData> {
+export async function getVitrineDataBySlugFromSupabase(
+  slug: string,
+  defaultData: VitrineData
+): Promise<VitrineData> {
   const normalized = normalizePublicStudioSlug(slug);
   const studio = await getStudioPublicBySlug(normalized);
   if (!studio) {
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
-      console.log('[Inkflow] getVitrineDataBySlugFromSupabase: aucune ligne studio pour le slug (RPC vide ou erreur déjà loguée)', {
-        normalizedSlug: normalized,
-      });
+      console.log(
+        '[Inkflow] getVitrineDataBySlugFromSupabase: aucune ligne studio pour le slug (RPC vide ou erreur déjà loguée)',
+        {
+          normalizedSlug: normalized,
+        }
+      );
     }
     return { ...defaultData, slug: normalized };
   }
@@ -465,26 +501,40 @@ export async function getVitrineDataBySlugFromSupabase(slug: string, defaultData
   return next;
 }
 
-export async function saveVitrineDataToSupabase(studioId: string, data: VitrineData): Promise<void> {
-  const { error } = await db.from('inkflow_vitrine_data').upsert(
-    { studio_id: studioId, data, updated_at: new Date().toISOString() },
-    { onConflict: 'studio_id' }
-  );
+export async function saveVitrineDataToSupabase(
+  studioId: string,
+  data: VitrineData
+): Promise<void> {
+  const { error } = await db
+    .from('inkflow_vitrine_data')
+    .upsert(
+      { studio_id: studioId, data, updated_at: new Date().toISOString() },
+      { onConflict: 'studio_id' }
+    );
   if (error) throw error;
 }
 
 // Widgets (maybeSingle évite 406 quand aucune ligne n'existe encore)
 export async function getWidgetsFromSupabase(studioId: string): Promise<DashboardWidget[]> {
-  const { data, error } = await supabase.from('inkflow_widgets').select('widgets').eq('studio_id', studioId).maybeSingle();
+  const { data, error } = await supabase
+    .from('inkflow_widgets')
+    .select('widgets')
+    .eq('studio_id', studioId)
+    .maybeSingle();
   if (error || !data?.widgets) return [];
   return data.widgets as unknown as DashboardWidget[];
 }
 
-export async function saveWidgetsToSupabase(studioId: string, widgets: DashboardWidget[]): Promise<void> {
-  const { error } = await db.from('inkflow_widgets').upsert(
-    { studio_id: studioId, widgets, updated_at: new Date().toISOString() },
-    { onConflict: 'studio_id' }
-  );
+export async function saveWidgetsToSupabase(
+  studioId: string,
+  widgets: DashboardWidget[]
+): Promise<void> {
+  const { error } = await db
+    .from('inkflow_widgets')
+    .upsert(
+      { studio_id: studioId, widgets, updated_at: new Date().toISOString() },
+      { onConflict: 'studio_id' }
+    );
   if (error) throw error;
 }
 
@@ -492,7 +542,9 @@ export async function saveWidgetsToSupabase(studioId: string, widgets: Dashboard
 export async function getWidgetOrderFromSupabase(studioId: string): Promise<string[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('inkflow_widgets') as any)
-    .select('widget_order').eq('studio_id', studioId).maybeSingle();
+    .select('widget_order')
+    .eq('studio_id', studioId)
+    .maybeSingle();
   if (error || !data?.widget_order) return [];
   const arr: unknown = data.widget_order;
   if (!Array.isArray(arr)) return [];
@@ -500,18 +552,30 @@ export async function getWidgetOrderFromSupabase(studioId: string): Promise<stri
 }
 
 export async function saveWidgetOrderToSupabase(studioId: string, order: string[]): Promise<void> {
-  const { data: existing } = await supabase.from('inkflow_widgets').select('widgets').eq('studio_id', studioId).maybeSingle();
+  const { data: existing } = await supabase
+    .from('inkflow_widgets')
+    .select('widgets')
+    .eq('studio_id', studioId)
+    .maybeSingle();
   const widgets = (existing?.widgets as unknown[]) ?? [];
-  const { error } = await db.from('inkflow_widgets').upsert(
-    { studio_id: studioId, widgets, widget_order: order, updated_at: new Date().toISOString() },
-    { onConflict: 'studio_id' }
-  );
+  const { error } = await db
+    .from('inkflow_widgets')
+    .upsert(
+      { studio_id: studioId, widgets, widget_order: order, updated_at: new Date().toISOString() },
+      { onConflict: 'studio_id' }
+    );
   if (error) throw error;
 }
 
 // Vitrine link settings
-export async function getVitrineLinkSettingsFromSupabase(studioId: string): Promise<Record<string, unknown>> {
-  const { data, error } = await supabase.from('inkflow_vitrine_link_settings').select('settings').eq('studio_id', studioId).single();
+export async function getVitrineLinkSettingsFromSupabase(
+  studioId: string
+): Promise<Record<string, unknown>> {
+  const { data, error } = await supabase
+    .from('inkflow_vitrine_link_settings')
+    .select('settings')
+    .eq('studio_id', studioId)
+    .single();
   if (error || !data?.settings) return {};
   return data.settings as Record<string, unknown>;
 }
@@ -523,41 +587,66 @@ export async function getVitrineLinkSettingsBySlug(slug: string): Promise<Record
   return getVitrineLinkSettingsFromSupabase(studioId);
 }
 
-export async function saveVitrineLinkSettingsToSupabase(studioId: string, settings: Record<string, unknown>): Promise<void> {
-  const { error } = await db.from('inkflow_vitrine_link_settings').upsert(
-    { studio_id: studioId, settings, updated_at: new Date().toISOString() },
-    { onConflict: 'studio_id' }
-  );
+export async function saveVitrineLinkSettingsToSupabase(
+  studioId: string,
+  settings: Record<string, unknown>
+): Promise<void> {
+  const { error } = await db
+    .from('inkflow_vitrine_link_settings')
+    .upsert(
+      { studio_id: studioId, settings, updated_at: new Date().toISOString() },
+      { onConflict: 'studio_id' }
+    );
   if (error) throw error;
 }
 
 // Payment settings
-export async function getPaymentSettingsFromSupabase(studioId: string): Promise<Record<string, unknown>> {
-  const { data, error } = await supabase.from('inkflow_payment_settings').select('settings').eq('studio_id', studioId).single();
+export async function getPaymentSettingsFromSupabase(
+  studioId: string
+): Promise<Record<string, unknown>> {
+  const { data, error } = await supabase
+    .from('inkflow_payment_settings')
+    .select('settings')
+    .eq('studio_id', studioId)
+    .single();
   if (error || !data?.settings) return {};
   return data.settings as Record<string, unknown>;
 }
 
-export async function savePaymentSettingsToSupabase(studioId: string, settings: Record<string, unknown>): Promise<void> {
-  const { error } = await db.from('inkflow_payment_settings').upsert(
-    { studio_id: studioId, settings, updated_at: new Date().toISOString() },
-    { onConflict: 'studio_id' }
-  );
+export async function savePaymentSettingsToSupabase(
+  studioId: string,
+  settings: Record<string, unknown>
+): Promise<void> {
+  const { error } = await db
+    .from('inkflow_payment_settings')
+    .upsert(
+      { studio_id: studioId, settings, updated_at: new Date().toISOString() },
+      { onConflict: 'studio_id' }
+    );
   if (error) throw error;
 }
 
 // Care templates
 export async function getCareTemplatesFromSupabase(studioId: string): Promise<unknown[]> {
-  const { data, error } = await supabase.from('inkflow_care_templates').select('templates').eq('studio_id', studioId).single();
+  const { data, error } = await supabase
+    .from('inkflow_care_templates')
+    .select('templates')
+    .eq('studio_id', studioId)
+    .single();
   if (error || !data?.templates) return [];
   return data.templates as unknown[];
 }
 
-export async function saveCareTemplatesToSupabase(studioId: string, templates: unknown[]): Promise<void> {
-  const { error } = await db.from('inkflow_care_templates').upsert(
-    { studio_id: studioId, templates, updated_at: new Date().toISOString() },
-    { onConflict: 'studio_id' }
-  );
+export async function saveCareTemplatesToSupabase(
+  studioId: string,
+  templates: unknown[]
+): Promise<void> {
+  const { error } = await db
+    .from('inkflow_care_templates')
+    .upsert(
+      { studio_id: studioId, templates, updated_at: new Date().toISOString() },
+      { onConflict: 'studio_id' }
+    );
   if (error) throw error;
 }
 
@@ -586,7 +675,12 @@ export function mapClientFromDb(row: Record<string, unknown>): Client {
 const DEFAULT_LIST_LIMIT = 500;
 
 export async function getClientsFromSupabase(studioId: string): Promise<Client[]> {
-  const { data, error } = await supabase.from('inkflow_clients').select('*').eq('studio_id', studioId).order('updated_at', { ascending: false }).limit(DEFAULT_LIST_LIMIT);
+  const { data, error } = await supabase
+    .from('inkflow_clients')
+    .select('*')
+    .eq('studio_id', studioId)
+    .order('updated_at', { ascending: false })
+    .limit(DEFAULT_LIST_LIMIT);
   if (error) throw error;
   return (data || []).map(mapClientFromDb);
 }
@@ -608,9 +702,10 @@ export async function saveClientToSupabase(studioId: string, client: Client): Pr
     tattoos: client.tattoos as unknown as import('../types/database').Json,
     notes: client.notes || null,
     portal_user_id: client.portalUserId ?? null,
-    health_profile_snapshot: (client.healthProfileSnapshot ??
-      null) as import('../types/database').Json | null,
-    updated_at: new Date().toISOString()
+    health_profile_snapshot: (client.healthProfileSnapshot ?? null) as
+      | import('../types/database').Json
+      | null,
+    updated_at: new Date().toISOString(),
   };
   const { error } = await supabase.from('inkflow_clients').upsert(row, { onConflict: 'id' });
   if (error) throw error;
@@ -625,7 +720,10 @@ export async function deleteClientFromSupabase(clientId: string): Promise<void> 
 const CLIENT_BULK_INSERT_CHUNK = 80;
 
 /** Insertion groupée (import CSV). Chunk pour limiter la taille des requêtes. */
-export async function bulkInsertClientsToSupabase(studioId: string, clients: Client[]): Promise<void> {
+export async function bulkInsertClientsToSupabase(
+  studioId: string,
+  clients: Client[]
+): Promise<void> {
   if (clients.length === 0) return;
   const now = new Date().toISOString();
   for (let i = 0; i < clients.length; i += CLIENT_BULK_INSERT_CHUNK) {
@@ -646,7 +744,9 @@ export async function bulkInsertClientsToSupabase(studioId: string, clients: Cli
       tattoos: c.tattoos as unknown as import('../types/database').Json,
       notes: c.notes ?? null,
       portal_user_id: c.portalUserId ?? null,
-      health_profile_snapshot: (c.healthProfileSnapshot ?? null) as import('../types/database').Json | null,
+      health_profile_snapshot: (c.healthProfileSnapshot ?? null) as
+        | import('../types/database').Json
+        | null,
       updated_at: now,
     }));
     const { error } = await supabase.from('inkflow_clients').insert(rows);
@@ -680,7 +780,10 @@ export async function getWaitlistFromSupabase(studioId: string): Promise<Waitlis
   return (data || []).map(mapWaitlistEntryFromDb);
 }
 
-export async function addWaitlistEntryToSupabase(studioId: string, entry: Omit<WaitlistEntry, 'id' | 'studioId' | 'createdAt'>): Promise<WaitlistEntry> {
+export async function addWaitlistEntryToSupabase(
+  studioId: string,
+  entry: Omit<WaitlistEntry, 'id' | 'studioId' | 'createdAt'>
+): Promise<WaitlistEntry> {
   const id = `wl_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   const now = new Date().toISOString();
   const row = {
@@ -717,16 +820,22 @@ export async function deleteWaitlistEntryFromSupabase(id: string): Promise<void>
 
 // Client notes
 export async function getClientNotesFromSupabase(clientId: string): Promise<string> {
-  const { data, error } = await supabase.from('inkflow_client_notes').select('notes').eq('client_id', clientId).single();
+  const { data, error } = await supabase
+    .from('inkflow_client_notes')
+    .select('notes')
+    .eq('client_id', clientId)
+    .single();
   if (error || !data) return '';
   return (data.notes as string) || '';
 }
 
 export async function saveClientNotesToSupabase(clientId: string, notes: string): Promise<void> {
-  const { error } = await supabase.from('inkflow_client_notes').upsert(
-    { client_id: clientId, notes, updated_at: new Date().toISOString() },
-    { onConflict: 'client_id' }
-  );
+  const { error } = await supabase
+    .from('inkflow_client_notes')
+    .upsert(
+      { client_id: clientId, notes, updated_at: new Date().toISOString() },
+      { onConflict: 'client_id' }
+    );
   if (error) throw error;
 }
 
@@ -745,6 +854,7 @@ export function mapAppointmentFromDb(row: Record<string, unknown>): Appointment 
     price: Number(row.price) || 0,
     deposit: Number(row.deposit) || 0,
     depositPaid: Boolean(row.deposit_paid),
+    balancePaidAt: (row.balance_paid_at as string) || null,
     status: (row.status as Appointment['status']) || 'pending',
     tattooType: (row.tattoo_type as Appointment['tattooType']) || 'custom',
     flashId: row.flash_id as string | undefined,
@@ -753,12 +863,18 @@ export function mapAppointmentFromDb(row: Record<string, unknown>): Appointment 
     consentFormSigned: Boolean(row.consent_form_signed),
     projectRequestId: (row.project_request_id as string) || null,
     createdAt: (row.created_at as string) || new Date().toISOString(),
-    updatedAt: (row.updated_at as string) || new Date().toISOString()
+    updatedAt: (row.updated_at as string) || new Date().toISOString(),
   };
 }
 
 export async function getAppointmentsFromSupabase(studioId: string): Promise<Appointment[]> {
-  const { data, error } = await supabase.from('inkflow_appointments').select('*').eq('studio_id', studioId).order('date', { ascending: true }).order('time', { ascending: true }).limit(DEFAULT_LIST_LIMIT);
+  const { data, error } = await supabase
+    .from('inkflow_appointments')
+    .select('*')
+    .eq('studio_id', studioId)
+    .order('date', { ascending: true })
+    .order('time', { ascending: true })
+    .limit(DEFAULT_LIST_LIMIT);
   if (error) throw error;
   return (data || []).map(mapAppointmentFromDb);
 }
@@ -790,14 +906,19 @@ export async function saveAppointmentToSupabase(studioId: string, apt: Appointme
   const { error } = await supabase.from('inkflow_appointments').upsert(row, { onConflict: 'id' });
   if (error) {
     if (error.code === '23505' && error.message?.includes('idx_appointments_slot_unique')) {
-      throw new Error('Ce créneau vient juste d\'être pris par un autre client. Veuillez en choisir un autre.');
+      throw new Error(
+        "Ce créneau vient juste d'être pris par un autre client. Veuillez en choisir un autre."
+      );
     }
     throw error;
   }
 }
 
 /** Si la session Stripe n’a pas pu être créée, supprime le RDV pending (même e-mail que le formulaire). */
-export async function abandonPublicCheckoutAppointment(appointmentId: string, clientEmail: string): Promise<void> {
+export async function abandonPublicCheckoutAppointment(
+  appointmentId: string,
+  clientEmail: string
+): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.rpc as any)('abandon_public_checkout_appointment', {
     p_id: appointmentId,
@@ -844,7 +965,8 @@ export async function ensurePlaceholderAppointmentForProject(
   const now = new Date().toISOString();
   const { date: slotDate, time: slotTime } = await findNextAvailableSlotForStudio(studioId);
   const aptId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-  const serviceName = pr.description.length > 50 ? `${pr.description.slice(0, 47)}...` : pr.description;
+  const serviceName =
+    pr.description.length > 50 ? `${pr.description.slice(0, 47)}...` : pr.description;
   const apt: Appointment = {
     id: aptId,
     clientId: '',
@@ -879,9 +1001,9 @@ export async function deleteAppointmentFromSupabase(aptId: string): Promise<void
 export async function markDepositAsPaid(aptId: string, studioId: string): Promise<void> {
   const { error } = await supabase
     .from('inkflow_appointments')
-    .update({ 
+    .update({
       deposit_paid: true,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     })
     .eq('id', aptId)
     .eq('studio_id', studioId);
@@ -913,12 +1035,20 @@ export function mapFlashFromDb(row: Record<string, unknown>): FlashDesign {
 }
 
 export async function getFlashDesignsFromSupabase(studioId: string): Promise<FlashDesign[]> {
-  const { data, error } = await supabase.from('inkflow_flash_designs').select('*').eq('studio_id', studioId).order('created_at', { ascending: false }).limit(DEFAULT_LIST_LIMIT);
+  const { data, error } = await supabase
+    .from('inkflow_flash_designs')
+    .select('*')
+    .eq('studio_id', studioId)
+    .order('created_at', { ascending: false })
+    .limit(DEFAULT_LIST_LIMIT);
   if (error) throw error;
   return (data || []).map(mapFlashFromDb);
 }
 
-export async function saveFlashDesignToSupabase(studioId: string, flash: FlashDesign): Promise<void> {
+export async function saveFlashDesignToSupabase(
+  studioId: string,
+  flash: FlashDesign
+): Promise<void> {
   const slug =
     flash.slug && String(flash.slug).trim() !== ''
       ? String(flash.slug).trim().toLowerCase()
@@ -963,18 +1093,26 @@ export function mapNotificationFromDb(row: Record<string, unknown>): Notificatio
     message: row.message as string,
     read: Boolean(row.read),
     createdAt: (row.created_at as string) || new Date().toISOString(),
-    actionUrl: row.action_url as string | undefined
+    actionUrl: row.action_url as string | undefined,
   };
 }
 
 export async function getNotificationsFromSupabase(studioId: string): Promise<Notification[]> {
-  const { data, error } = await supabase.from('inkflow_notifications').select('*').eq('studio_id', studioId).order('created_at', { ascending: false }).limit(50);
+  const { data, error } = await supabase
+    .from('inkflow_notifications')
+    .select('*')
+    .eq('studio_id', studioId)
+    .order('created_at', { ascending: false })
+    .limit(50);
   if (error) throw error;
   return (data || []).map(mapNotificationFromDb);
 }
 
 export async function markNotificationReadInSupabase(notificationId: string): Promise<void> {
-  const { error } = await supabase.from('inkflow_notifications').update({ read: true }).eq('id', notificationId);
+  const { error } = await supabase
+    .from('inkflow_notifications')
+    .update({ read: true })
+    .eq('id', notificationId);
   if (error) throw error;
 }
 
@@ -989,7 +1127,8 @@ function parseProjectReferenceImages(row: Record<string, unknown>): string[] {
     if (typeof raw === 'string' && raw.trim()) {
       try {
         const p = JSON.parse(raw) as unknown;
-        if (Array.isArray(p)) return p.map(String).filter((u) => u.length > 0 && /^https?:\/\//i.test(u));
+        if (Array.isArray(p))
+          return p.map(String).filter((u) => u.length > 0 && /^https?:\/\//i.test(u));
       } catch {
         /* ignore */
       }
@@ -1054,14 +1193,26 @@ export async function updateProjectRequestStatus(
 }
 
 /** Préférences dashboard / modules (JSONB sur inkflow_studios) */
-export async function getDashboardPreferencesFromSupabase(studioId: string): Promise<StudioDashboardPreferences> {
-  const { data, error } = await supabase.from('inkflow_studios').select('dashboard_preferences').eq('id', studioId).maybeSingle();
+export async function getDashboardPreferencesFromSupabase(
+  studioId: string
+): Promise<StudioDashboardPreferences> {
+  const { data, error } = await supabase
+    .from('inkflow_studios')
+    .select('dashboard_preferences')
+    .eq('id', studioId)
+    .maybeSingle();
   if (error || !data?.dashboard_preferences) {
-    return { ...DEFAULT_STUDIO_DASHBOARD_PREFERENCES, schema_version: STUDIO_PREFERENCES_SCHEMA_VERSION };
+    return {
+      ...DEFAULT_STUDIO_DASHBOARD_PREFERENCES,
+      schema_version: STUDIO_PREFERENCES_SCHEMA_VERSION,
+    };
   }
   const raw = data.dashboard_preferences as Record<string, unknown>;
   if (!raw || typeof raw !== 'object') {
-    return { ...DEFAULT_STUDIO_DASHBOARD_PREFERENCES, schema_version: STUDIO_PREFERENCES_SCHEMA_VERSION };
+    return {
+      ...DEFAULT_STUDIO_DASHBOARD_PREFERENCES,
+      schema_version: STUDIO_PREFERENCES_SCHEMA_VERSION,
+    };
   }
   return {
     ...DEFAULT_STUDIO_DASHBOARD_PREFERENCES,
@@ -1070,7 +1221,10 @@ export async function getDashboardPreferencesFromSupabase(studioId: string): Pro
   } as StudioDashboardPreferences;
 }
 
-export async function saveDashboardPreferencesToSupabase(studioId: string, prefs: StudioDashboardPreferences): Promise<void> {
+export async function saveDashboardPreferencesToSupabase(
+  studioId: string,
+  prefs: StudioDashboardPreferences
+): Promise<void> {
   const { error } = await db
     .from('inkflow_studios')
     .update({
@@ -1132,10 +1286,14 @@ export async function fetchLoyaltyEntriesFromSupabase(studioId: string): Promise
     .eq('studio_id', studioId)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return (data || []).map((row) => mapLoyaltyRowToEntry(row as Parameters<typeof mapLoyaltyRowToEntry>[0]));
+  return (data || []).map((row) =>
+    mapLoyaltyRowToEntry(row as Parameters<typeof mapLoyaltyRowToEntry>[0])
+  );
 }
 
-export async function fetchPointsLoyaltySettingsFromSupabase(studioId: string): Promise<LoyaltySettings> {
+export async function fetchPointsLoyaltySettingsFromSupabase(
+  studioId: string
+): Promise<LoyaltySettings> {
   const { data, error } = await supabase
     .from('inkflow_studios')
     .select('*')
@@ -1158,14 +1316,25 @@ export async function fetchPointsLoyaltySettingsFromSupabase(studioId: string): 
   return {
     ...DEFAULT_POINTS_LOYALTY_SETTINGS,
     enabled: typeof o.enabled === 'boolean' ? o.enabled : DEFAULT_POINTS_LOYALTY_SETTINGS.enabled,
-    pointsPerEuro: typeof o.pointsPerEuro === 'number' ? o.pointsPerEuro : DEFAULT_POINTS_LOYALTY_SETTINGS.pointsPerEuro,
-    referralBonus: typeof o.referralBonus === 'number' ? o.referralBonus : DEFAULT_POINTS_LOYALTY_SETTINGS.referralBonus,
+    pointsPerEuro:
+      typeof o.pointsPerEuro === 'number'
+        ? o.pointsPerEuro
+        : DEFAULT_POINTS_LOYALTY_SETTINGS.pointsPerEuro,
+    referralBonus:
+      typeof o.referralBonus === 'number'
+        ? o.referralBonus
+        : DEFAULT_POINTS_LOYALTY_SETTINGS.referralBonus,
     tierThresholds,
-    rewards: Array.isArray(o.rewards) ? (o.rewards as LoyaltySettings['rewards']) : DEFAULT_POINTS_LOYALTY_SETTINGS.rewards,
+    rewards: Array.isArray(o.rewards)
+      ? (o.rewards as LoyaltySettings['rewards'])
+      : DEFAULT_POINTS_LOYALTY_SETTINGS.rewards,
   };
 }
 
-export async function savePointsLoyaltySettingsToSupabase(studioId: string, settings: LoyaltySettings): Promise<void> {
+export async function savePointsLoyaltySettingsToSupabase(
+  studioId: string,
+  settings: LoyaltySettings
+): Promise<void> {
   const { error } = await supabase
     .from('inkflow_studios')
     .update({
@@ -1180,7 +1349,10 @@ export async function savePointsLoyaltySettingsToSupabase(studioId: string, sett
  * Remplace toutes les lignes `inkflow_loyalty` du studio (MVP : peu de lignes).
  * Respecte la contrainte FK sur `client_id` : les entrées orphelines échoueront côté insert.
  */
-export async function syncLoyaltyEntriesToSupabase(studioId: string, entries: LoyaltyEntry[]): Promise<void> {
+export async function syncLoyaltyEntriesToSupabase(
+  studioId: string,
+  entries: LoyaltyEntry[]
+): Promise<void> {
   const now = new Date().toISOString();
   const rows = entries.map((e) => ({
     id: e.id,
@@ -1194,7 +1366,10 @@ export async function syncLoyaltyEntriesToSupabase(studioId: string, entries: Lo
     created_at: e.createdAt || now,
     updated_at: now,
   }));
-  const { error: delErr } = await supabase.from('inkflow_loyalty').delete().eq('studio_id', studioId);
+  const { error: delErr } = await supabase
+    .from('inkflow_loyalty')
+    .delete()
+    .eq('studio_id', studioId);
   if (delErr) throw delErr;
   if (rows.length === 0) return;
   const { error: insErr } = await supabase.from('inkflow_loyalty').insert(rows);

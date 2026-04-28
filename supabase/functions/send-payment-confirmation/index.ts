@@ -23,7 +23,7 @@ interface Payload {
   depositOnRecord?: number;
   paymentDate: string;
   serviceName: string;
-  type: "deposit" | "full_payment";
+  type: "deposit" | "full_payment" | "balance";
   stripeSessionId?: string;
   stripeReceiptUrl?: string;
   appointmentId?: string;
@@ -79,8 +79,15 @@ function buildPaymentConfirmationHtml(payload: Payload): string {
   });
 
   const isDeposit = payload.type === "deposit";
+  const isBalance = payload.type === "balance";
   const hasRdv = Boolean(payload.rdvDate && payload.appointmentId);
-  const title = hasRdv ? "Rendez-vous confirmé" : isDeposit ? "Acompte reçu" : "Paiement confirmé";
+  const title = hasRdv
+    ? "Rendez-vous confirmé"
+    : isDeposit
+      ? "Acompte reçu"
+      : isBalance
+        ? "Solde reçu"
+        : "Paiement confirmé";
 
   const total =
     payload.totalAmount != null && !Number.isNaN(payload.totalAmount)
@@ -109,7 +116,11 @@ function buildPaymentConfirmationHtml(payload: Payload): string {
           </table>`
       : "";
 
-  const invoiceTitle = isDeposit ? "Reçu d’acompte (récapitulatif)" : "Reçu de paiement (récapitulatif)";
+  const invoiceTitle = isDeposit
+    ? "Reçu d’acompte (récapitulatif)"
+    : isBalance
+      ? "Reçu de solde (récapitulatif)"
+      : "Reçu de paiement (récapitulatif)";
   const invoiceBlock = `
           <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin:0 0 24px;background:#F4F4F5;border:1px solid #E4E4E7;border-radius:8px;">
             <tr><td style="padding:20px 24px;">
@@ -248,8 +259,10 @@ Deno.serve(async (req: Request) => {
     const subject = hasRdv
       ? `RDV confirmé — ${payload.studioName}`
       : payload.type === "deposit"
-      ? `Acompte reçu — ${payload.studioName}`
-      : `Paiement confirmé — ${payload.studioName}`;
+        ? `Acompte reçu — ${payload.studioName}`
+        : payload.type === "balance"
+          ? `Solde reçu — ${payload.studioName}`
+          : `Paiement confirmé — ${payload.studioName}`;
 
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",

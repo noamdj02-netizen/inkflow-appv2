@@ -19,6 +19,7 @@ ALTER TABLE public.daily_briefs ENABLE ROW LEVEL SECURITY;
 
 -- Aucun accès direct client : la page consomme GET /api/daily-brief (service role).
 -- Optionnel : lecture pour JWT fondateur (même logique e-mails @ink-flow.me / @inkflow.me).
+DROP POLICY IF EXISTS "daily_briefs_deny_all" ON public.daily_briefs;
 CREATE POLICY "daily_briefs_deny_all"
   ON public.daily_briefs
   FOR ALL

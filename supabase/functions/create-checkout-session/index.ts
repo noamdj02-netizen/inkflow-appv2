@@ -37,7 +37,7 @@ interface CheckoutPayload {
   clientName: string;
   clientEmail: string;
   serviceName: string;
-  type: "deposit" | "full_payment";
+  type: "deposit" | "full_payment" | "balance";
   placement?: string;
   clientNotes?: string;
   clientInstagram?: string;
@@ -111,11 +111,18 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    const checkoutType: "deposit" | "full_payment" | "balance" =
+      payload.type === "full_payment"
+        ? "full_payment"
+        : payload.type === "balance"
+          ? "balance"
+          : "deposit";
+
     const expected = await resolveExpectedCheckoutAmountEur(supabase, {
       studioId: payload.studioId,
       appointmentId: payload.appointmentId,
       flashId: payload.flashId,
-      type: payload.type === "full_payment" ? "full_payment" : "deposit",
+      type: checkoutType,
     });
 
     if (!expected.ok) {
@@ -202,7 +209,9 @@ Deno.serve(async (req: Request) => {
       "cancel_url": cancelUrl,
       "customer_email": payload.clientEmail,
       "line_items[0][price_data][currency]": "eur",
-      "line_items[0][price_data][product_data][name]": `${payload.type === "deposit" ? "Acompte" : "Paiement"} - ${payload.serviceName}`,
+      "line_items[0][price_data][product_data][name]": `${
+        payload.type === "deposit" ? "Acompte" : payload.type === "balance" ? "Solde" : "Paiement"
+      } - ${payload.serviceName}`,
       "line_items[0][price_data][product_data][description]": lineDescription.slice(0, 500),
       "line_items[0][price_data][unit_amount]": String(amountCents),
       "line_items[0][quantity]": "1",

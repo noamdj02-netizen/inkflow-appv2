@@ -51,6 +51,9 @@ import {
   HelpCircle,
   MoreHorizontal,
   type LucideIcon,
+  Package,
+  LineChart,
+  Percent,
 } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
@@ -74,6 +77,7 @@ import { AppointmentCalendar } from './AppointmentCalendar';
 import { MiniCalendar } from './MiniCalendar';
 import { CareSheetsSettings } from './CareSheetsSettings';
 import { PaymentsSettings } from './PaymentsSettings';
+import { FinanceDisplaySettings } from './FinanceDisplaySettings';
 import { BillingSettings } from './BillingSettings';
 import { PaywallView } from './PaywallView';
 import { AvailabilitySettings } from '../settings/AvailabilitySettings';
@@ -108,6 +112,12 @@ const FinanceDashboard = lazy(() =>
 );
 const DepositsPage = lazy(() =>
   import('./DepositsPage').then((m) => ({ default: m.DepositsPage }))
+);
+const FinancePilotagePanel = lazy(() =>
+  import('./FinancePilotagePanel').then((m) => ({ default: m.FinancePilotagePanel }))
+);
+const StockAndTraceabilityPanel = lazy(() =>
+  import('./StockAndTraceabilityPanel').then((m) => ({ default: m.StockAndTraceabilityPanel }))
 );
 const AnalyticsDashboard = lazy(() =>
   import('../analytics/AnalyticsDashboard').then((m) => ({ default: m.AnalyticsDashboard }))
@@ -145,6 +155,7 @@ const LazyClientPreviewDrawer = lazy(() =>
 );
 import { DashboardWidgets, AddWidgetModal, WidgetCard } from './DashboardWidgets';
 import { useDashboardWidgets } from '../../hooks/useDashboardWidgets';
+import { SessionCloseoutSheet } from './SessionCloseoutSheet';
 import { DashboardOverviewTab } from './DashboardOverviewTab';
 import { DashboardTabHero, type DashboardOverviewHeroMeta } from './DashboardTabHero';
 import { PlanningSidebar } from './PlanningSidebar';
@@ -220,6 +231,7 @@ type TabId =
   | 'overview'
   | 'analytics'
   | 'requests'
+  | 'stock'
   | 'agenda'
   | 'appointments'
   | 'flash'
@@ -245,6 +257,7 @@ const tabs: {
   { id: 'overview', label: "Vue d'ensemble", icon: <LayoutDashboard {...iconProps} /> },
   { id: 'analytics', label: 'Statistiques', icon: <BarChart3 {...iconProps} /> },
   { id: 'requests', label: 'Demandes', icon: <ClipboardList {...iconProps} />, badge: 'pending' },
+  { id: 'stock', label: 'Stock & lots', icon: <Package {...iconProps} /> },
   { id: 'appointments', label: 'Rendez-vous', icon: <Calendar {...iconProps} /> },
   { id: 'flash', label: 'Galerie Flash', icon: <Zap {...iconProps} /> },
   { id: 'clients', label: 'Clients', icon: <Users {...iconProps} /> },
@@ -268,6 +281,7 @@ type SettingsTabId =
   | 'general'
   | 'modules'
   | 'payments'
+  | 'finance_display'
   | 'billing'
   | 'care'
   | 'consent'
@@ -304,6 +318,12 @@ const SETTINGS_TAB_META: Record<
     Icon: CreditCard,
     description:
       'Connexion Stripe, acomptes, liens de paiement et règles financières liées aux réservations.',
+  },
+  finance_display: {
+    label: 'Affichage & fiscalité (estimations)',
+    Icon: Percent,
+    description:
+      'Même contenu que Finance → Pilotage : base HT/TTC, TVA, pilotage AE et opt-in comparateur (raccourci paramètres).',
   },
   billing: {
     label: 'Abonnement',
@@ -369,6 +389,7 @@ const SETTINGS_MAIN_TABS: { id: SettingsTabId; label: string }[] = [
   { id: 'general', label: 'Général' },
   { id: 'modules', label: 'Modules' },
   { id: 'payments', label: 'Paiements' },
+  { id: 'finance_display', label: 'Fiscalité (estim.)' },
   { id: 'billing', label: 'Abonnement' },
   { id: 'care', label: 'Soins post-tattoo' },
   { id: 'consent', label: 'Consentement' },
@@ -477,7 +498,7 @@ export const DashboardPro: React.FC = () => {
     'inbox' | 'rdv' | 'bookings' | 'projects' | 'history'
   >('inbox');
   const [planningView, setPlanningView] = useState<'week' | 'month'>('week');
-  const [financeView, setFinanceView] = useState<'revenus' | 'acomptes' | 'stats'>('revenus');
+  const [financeView, setFinanceView] = useState<'revenus' | 'acomptes' | 'pilotage'>('revenus');
   const [clientsView, setClientsView] = useState<'overview' | 'projects' | 'loyalty'>('overview');
   const [showWidgetModal, setShowWidgetModal] = useState(false);
   const [customWidgets, setCustomWidgets] = useDashboardWidgets(studioId, useSupabase ?? false, {
@@ -494,6 +515,7 @@ export const DashboardPro: React.FC = () => {
       overview: 'overview',
       analytics: 'analytics',
       requests: 'requests',
+      stock: 'general',
       agenda: 'appointments',
       appointments: 'appointments',
       flash: 'flash',
@@ -605,11 +627,18 @@ export const DashboardPro: React.FC = () => {
           title: 'Portfolio',
           description: 'Médias et réalisations affichés sur votre page publique.',
         };
+      case 'stock':
+        return {
+          title: 'Stock & lots',
+          description:
+            'Consommables, comparatif fournisseurs, mouvements et traçabilité (QR / lots) pour ton activité.',
+        };
       case 'finance': {
         const byFin: Record<typeof financeView, string> = {
           revenus: 'Revenus, encaissements et tendance globale.',
           acomptes: 'Acomptes reçus, en attente et relances.',
-          stats: 'Indicateurs financiers et ventilation par période.',
+          pilotage:
+            'Pilotage auto-entrepreneur : réglages HT/TTC, plafond, charges, démarches (non comptable).',
         };
         return { title: 'Finance', description: byFin[financeView] };
       }
@@ -720,6 +749,42 @@ export const DashboardPro: React.FC = () => {
     if (activeTab === 'overview') void refetchStudioSetupChecklistFlags();
   }, [activeTab, refetchStudioSetupChecklistFlags]);
 
+  useEffect(() => {
+    if (activeTab !== 'stock') {
+      setStockTraceAppointmentId(null);
+      setStockTraceClientId(null);
+    }
+  }, [activeTab]);
+
+  const handleAppointmentIdUpdate = useCallback(
+    (aptId: string, updates: Partial<Appointment>) => {
+      const apt = appointments.find((a) => a.id === aptId);
+      const willComplete = updates.status === 'completed' && apt?.status !== 'completed';
+      updateAppointment(aptId, updates);
+      if (willComplete && apt) {
+        setSessionCloseoutAppointment({ ...apt, ...updates });
+      }
+    },
+    [appointments, updateAppointment]
+  );
+
+  const handleOverviewUpdateAppointment = useCallback(
+    (apt: Appointment, updates: Partial<Appointment>) => {
+      handleAppointmentIdUpdate(apt.id, updates);
+    },
+    [handleAppointmentIdUpdate]
+  );
+
+  const goToStockTraceFromCloseout = useCallback(
+    (appointmentId: string, clientId: string | null) => {
+      setStockTraceAppointmentId(appointmentId);
+      setStockTraceClientId(clientId && clientId.length > 0 ? clientId : null);
+      setActiveTab('stock');
+      setSidebarOpen(false);
+    },
+    []
+  );
+
   // New feature states — portfolio synced with vitrine (single source of truth)
   const [vitrineData, setVitrineData] = useState<VitrineData | null>(null);
   const [vitrineLoading, setVitrineLoading] = useState(false);
@@ -781,6 +846,11 @@ export const DashboardPro: React.FC = () => {
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [sessionCloseoutAppointment, setSessionCloseoutAppointment] = useState<Appointment | null>(
+    null
+  );
+  const [stockTraceAppointmentId, setStockTraceAppointmentId] = useState<string | null>(null);
+  const [stockTraceClientId, setStockTraceClientId] = useState<string | null>(null);
   /** Évite de rouvrir le tiroir en boucle si l’URL contient encore ?appointment= */
   const appointmentEmailLinkHandledRef = React.useRef<string | null>(null);
   const [overviewCalendarMonth, setOverviewCalendarMonth] = useState(() => new Date());
@@ -839,7 +909,10 @@ export const DashboardPro: React.FC = () => {
     return SETTINGS_MAIN_TABS.filter((tab) => {
       if (
         isCollaboratorUser &&
-        (tab.id === 'billing' || tab.id === 'modules' || tab.id === 'payments')
+        (tab.id === 'billing' ||
+          tab.id === 'modules' ||
+          tab.id === 'payments' ||
+          tab.id === 'finance_display')
       ) {
         return false;
       }
@@ -1519,6 +1592,7 @@ export const DashboardPro: React.FC = () => {
       'overview',
       'analytics',
       'requests',
+      'stock',
       'agenda',
       'appointments',
       'flash',
@@ -1534,8 +1608,12 @@ export const DashboardPro: React.FC = () => {
     if (tabParam && allowed.includes(tabParam as TabId)) {
       const next = new URLSearchParams(window.location.search);
       const dateForAgenda = next.get('date');
+      const stockApt = next.get('appointmentId')?.trim() || next.get('appointment')?.trim() || '';
+      const stockClient = next.get('clientId')?.trim() || '';
       next.delete('tab');
       next.delete('date');
+      next.delete('appointmentId');
+      next.delete('clientId');
       const q = next.toString();
       window.history.replaceState({}, '', q ? `/dashboard?${q}` : '/dashboard');
       setActiveTab(tabParam as TabId);
@@ -1545,6 +1623,10 @@ export const DashboardPro: React.FC = () => {
         /^\d{4}-\d{2}-\d{2}$/.test(dateForAgenda)
       ) {
         setAgendaUrlInitialDate(dateForAgenda);
+      }
+      if (tabParam === 'stock' && (stockApt || stockClient)) {
+        setStockTraceAppointmentId(stockApt || null);
+        setStockTraceClientId(stockClient || null);
       }
     }
   }, []);
@@ -2517,6 +2599,19 @@ export const DashboardPro: React.FC = () => {
                           />
                           Acomptes
                         </button>
+                        <button
+                          onClick={() =>
+                            handleSidebarNav(() => {
+                              setActiveTab('finance');
+                              setFinanceView('pilotage');
+                              setSidebarOpen(false);
+                            })
+                          }
+                          className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'finance' && financeView === 'pilotage' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
+                        >
+                          <LineChart className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                          Pilotage AE
+                        </button>
                       </div>
                     )}
                   </div>
@@ -2748,6 +2843,22 @@ export const DashboardPro: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleSidebarNav(() => {
+                      setActiveTab('stock');
+                      setSidebarOpen(false);
+                    })
+                  }
+                  className={`${SIDEBAR_NAV_ROW} ${
+                    activeTab === 'stock' ? SIDEBAR_NAV_ACTIVE : SIDEBAR_NAV_IDLE
+                  }`}
+                >
+                  <Package className="w-4 h-4 flex-shrink-0" />
+                  <span className="flex-1 text-left">Stock & lots</span>
+                </button>
 
                 <button
                   type="button"
@@ -3574,7 +3685,7 @@ export const DashboardPro: React.FC = () => {
                                 }
                               }}
                               setSelectedAppointment={setSelectedAppointment}
-                              onUpdateAppointment={updateAppointment}
+                              onUpdateAppointment={handleOverviewUpdateAppointment}
                               setShowBookingModal={setShowBookingModal}
                               setSelectedFlash={setSelectedFlash}
                               setShowWidgetModal={setShowWidgetModal}
@@ -3623,7 +3734,7 @@ export const DashboardPro: React.FC = () => {
                                 onSubTabChange={setRequestsSubTab}
                                 appointments={appointments}
                                 clients={clients}
-                                onUpdateAppointment={updateAppointment}
+                                onUpdateAppointment={handleAppointmentIdUpdate}
                                 onAddAppointment={addAppointment}
                                 projectRequests={projectRequests}
                                 onUpdateProjectRequest={updateProjectRequestStatus}
@@ -3688,7 +3799,7 @@ export const DashboardPro: React.FC = () => {
                                 }}
                                 onSelectAppointment={setSelectedAppointment}
                                 onUpdateAppointment={(apt, updates) =>
-                                  updateAppointment(apt.id, updates)
+                                  handleAppointmentIdUpdate(apt.id, updates)
                                 }
                                 planningView={planningView}
                                 onRefresh={retry}
@@ -3939,6 +4050,21 @@ export const DashboardPro: React.FC = () => {
                         </div>
                       )}
 
+                      {activeTab === 'stock' && (
+                        <div className="min-w-0">
+                          <DashboardTabErrorBoundary sectionLabel="Le stock n’a pas pu être chargé.">
+                            <Suspense fallback={<DashboardLoadingSkeleton />}>
+                              <StockAndTraceabilityPanel
+                                studioId={studioId}
+                                useSupabase={useSupabase ?? false}
+                                appointmentId={stockTraceAppointmentId}
+                                clientId={stockTraceClientId}
+                              />
+                            </Suspense>
+                          </DashboardTabErrorBoundary>
+                        </div>
+                      )}
+
                       {activeTab === 'finance' && (
                         <div className="min-w-0">
                           <DashboardTabErrorBoundary sectionLabel="La finance n’a pas pu être chargée.">
@@ -3948,6 +4074,12 @@ export const DashboardPro: React.FC = () => {
                                   appointments={appointments}
                                   studioId={studioId}
                                   onDepositUpdated={retry}
+                                />
+                              ) : financeView === 'pilotage' ? (
+                                <FinancePilotagePanel
+                                  appointments={appointments}
+                                  studioId={studioId}
+                                  useSupabase={useSupabase ?? false}
                                 />
                               ) : (
                                 <FinanceDashboard
@@ -4158,7 +4290,7 @@ export const DashboardPro: React.FC = () => {
                                     {
                                       label: 'Finance',
                                       color: 'blue',
-                                      items: ['payments', 'billing'],
+                                      items: ['payments', 'finance_display', 'billing'],
                                     },
                                     {
                                       label: 'Vitrine & Communication',
@@ -4684,6 +4816,12 @@ export const DashboardPro: React.FC = () => {
                                   studioId={studioId}
                                   userEmail={user?.email}
                                   studioName={user?.studioName}
+                                />
+                              )}
+                              {settingsTab === 'finance_display' && (
+                                <FinanceDisplaySettings
+                                  studioId={studioId}
+                                  useSupabase={useSupabase ?? false}
                                 />
                               )}
                               {settingsTab === 'billing' && (
@@ -5418,7 +5556,7 @@ export const DashboardPro: React.FC = () => {
         </>
       )}
 
-      {/* ====== MOBILE BOTTOM NAVIGATION BAR (style iOS: 5 onglets + pastille active layoutId) ====== */}
+      {/* ====== MOBILE BOTTOM NAVIGATION BAR (Accueil, Agenda, FAB, Stock, Clients, Réglages) ====== */}
       <nav
         className="bottom-nav md:hidden"
         role="navigation"
@@ -5497,6 +5635,38 @@ export const DashboardPro: React.FC = () => {
             options={mobileFabActionOptions}
             mainButtonLabel="Actions rapides"
           />
+
+          <button
+            type="button"
+            onClick={() =>
+              handleSidebarNav(() => {
+                setActiveTab('stock');
+              })
+            }
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+              activeTab === 'stock'
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+            }`}
+          >
+            {activeTab === 'stock' && (
+              <motion.div
+                layoutId="dashboard-mobile-bottom-nav-pill"
+                className="absolute inset-0 rounded-2xl bg-zinc-200/95 shadow-sm ring-1 ring-black/[0.04] dark:bg-white/[0.08] dark:ring-white/[0.08]"
+                transition={mobileBottomNavPillTransition}
+              />
+            )}
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
+              <Package
+                className="h-[23px] w-[23px] shrink-0"
+                strokeWidth={activeTab === 'stock' ? 2.35 : 1.65}
+                aria-hidden
+              />
+              <span className="max-w-full truncate text-[11px] font-semibold leading-none tracking-tight">
+                Stock
+              </span>
+            </span>
+          </button>
 
           <button
             type="button"
@@ -5594,6 +5764,15 @@ export const DashboardPro: React.FC = () => {
           }
         }}
       />
+      <SessionCloseoutSheet
+        isOpen={Boolean(sessionCloseoutAppointment)}
+        onClose={() => setSessionCloseoutAppointment(null)}
+        appointment={sessionCloseoutAppointment}
+        studioId={studioId}
+        studioSlug={studioSlug}
+        stripeConnectReady={paymentsSetupComplete === true}
+        onGoToStockTrace={goToStockTraceFromCloseout}
+      />
       {selectedAppointment ? (
         <Suspense fallback={null}>
           <LazyClientPreviewDrawer
@@ -5603,7 +5782,7 @@ export const DashboardPro: React.FC = () => {
             studioId={studioId || ''}
             artistName={user?.name || 'Artiste'}
             appointment={selectedAppointment}
-            onUpdateAppointment={updateAppointment}
+            onUpdateAppointment={handleAppointmentIdUpdate}
             showInkflowClientDiscussion={previewHasInkflowClientAccount}
             inkflowMessagingThreadId={previewInkflowMessagingThreadId}
             onOpenInkflowDiscussion={

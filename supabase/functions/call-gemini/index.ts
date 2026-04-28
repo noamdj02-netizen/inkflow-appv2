@@ -128,12 +128,21 @@ Deno.serve(async (req: Request) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 25000);
 
+    const mime =
+      typeof body.responseMimeType === "string" ? body.responseMimeType.trim() : "";
+    const jsonMode = mime === "application/json";
+    const generationConfig: Record<string, unknown> = {
+      temperature: jsonMode ? 0.15 : 0.7,
+      maxOutputTokens: jsonMode ? 8192 : 1024,
+    };
+    if (mime.length > 0) generationConfig.responseMimeType = mime;
+
     const res = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1024, responseMimeType: body.responseMimeType },
+        generationConfig,
       }),
       signal: controller.signal,
     });

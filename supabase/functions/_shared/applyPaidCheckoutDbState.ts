@@ -53,16 +53,17 @@ export async function applyPaidCheckoutDbState(
   const studioId = session.metadata?.studio_id || session.metadata?.studioId;
   const appointmentIdRaw = session.metadata?.appointment_id;
   const appointmentId = typeof appointmentIdRaw === "string" ? appointmentIdRaw.trim() : "";
-  const type = (session.metadata?.type || "deposit") as "deposit" | "full_payment";
+  const type = (session.metadata?.type || "deposit") as "deposit" | "full_payment" | "balance";
   const amountPaid = (session.amount_total || 0) / 100;
   const pi = paymentIntentId(session);
+  const nowIso = new Date().toISOString();
 
   await supabase
     .from("inkflow_payments")
     .update({
       status: INKFLOW_PAYMENT_RECORD_STATUS.COMPLETED,
       stripe_payment_intent: pi,
-      updated_at: new Date().toISOString(),
+      updated_at: nowIso,
     })
     .eq("stripe_session_id", session.id);
 
@@ -70,12 +71,17 @@ export async function applyPaidCheckoutDbState(
     if (type === "deposit") {
       await supabase
         .from("inkflow_appointments")
-        .update({ deposit_paid: true, status: "confirmed", updated_at: new Date().toISOString() })
+        .update({ deposit_paid: true, status: "confirmed", updated_at: nowIso })
+        .eq("id", appointmentId);
+    } else if (type === "balance") {
+      await supabase
+        .from("inkflow_appointments")
+        .update({ balance_paid_at: nowIso, updated_at: nowIso })
         .eq("id", appointmentId);
     } else {
       await supabase
         .from("inkflow_appointments")
-        .update({ deposit_paid: true, updated_at: new Date().toISOString() })
+        .update({ deposit_paid: true, updated_at: nowIso })
         .eq("id", appointmentId);
     }
   }

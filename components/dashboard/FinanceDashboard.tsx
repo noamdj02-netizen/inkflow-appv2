@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   DollarSign,
   TrendingUp,
@@ -30,6 +30,10 @@ import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivac
 import { useToast } from '../../contexts/ToastContext';
 import { buildFinanceLedgerCsv, downloadTextFile } from '../../lib/studioDataExport';
 import { createStripeExpressLoginLink } from '../../lib/stripeClient';
+import { getStudioFinancePrefsFromSupabase } from '../../lib/supabaseFinanceInventory';
+import { interpretAmountHTTTC } from '../../lib/financeDisplay';
+import type { StudioFinancePrefs } from '../../types/studioFinancePrefs';
+import { DEFAULT_STUDIO_FINANCE_PREFS } from '../../types/studioFinancePrefs';
 
 type BilanPeriod = 'today' | 'week' | 'month';
 
@@ -535,6 +539,27 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
     label: '',
   });
   const [stripeDashboardBusy, setStripeDashboardBusy] = useState(false);
+  const [financePrefs, setFinancePrefs] = useState<StudioFinancePrefs>(
+    DEFAULT_STUDIO_FINANCE_PREFS
+  );
+
+  useEffect(() => {
+    if (!studioId || !useSupabase) {
+      setFinancePrefs(DEFAULT_STUDIO_FINANCE_PREFS);
+      return;
+    }
+    let cancelled = false;
+    getStudioFinancePrefsFromSupabase(studioId)
+      .then((p) => {
+        if (!cancelled) setFinancePrefs(p);
+      })
+      .catch(() => {
+        if (!cancelled) setFinancePrefs(DEFAULT_STUDIO_FINANCE_PREFS);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [studioId, useSupabase]);
 
   const saveCash = useCallback(
     (entries: CashEntry[]) => {
@@ -589,6 +614,12 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
   const completedCount = appointments.filter((a) => a.status === 'completed').length;
 
   const totalGlobal = totalRevenue + totalCash;
+
+  const caEquiv = useMemo(
+    () =>
+      interpretAmountHTTTC(totalGlobal, financePrefs.amount_input_basis, financePrefs.vat_rate_bps),
+    [totalGlobal, financePrefs.amount_input_basis, financePrefs.vat_rate_bps]
+  );
 
   const chartData = useMemo(() => {
     const now = new Date();
@@ -697,6 +728,18 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
           <p className="text-zinc-500 dark:text-zinc-400 mt-1">
             Gérez vos revenus, acomptes et encaissements
           </p>
+          {useSupabase && studioId ? (
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2 max-w-xl leading-snug">
+              Saisie en {financePrefs.amount_input_basis.toUpperCase()} (paramètres) — équivalent HT{' '}
+              {privacyMode
+                ? '••••'
+                : `${caEquiv.ht.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €`}{' '}
+              · TTC{' '}
+              {privacyMode
+                ? '••••'
+                : `${caEquiv.ttc.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €`}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <button

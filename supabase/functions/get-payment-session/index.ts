@@ -53,7 +53,12 @@ async function tryRecoverMissingPaymentRow(
   const amountEur = (stripeSession.amount_total || 0) / 100;
   const appointmentId = typeof meta.appointment_id === "string" ? meta.appointment_id.trim() : null;
   const projectRequestId = typeof meta.project_request_id === "string" ? meta.project_request_id.trim() : null;
-  const type = meta.type === "full_payment" ? "full_payment" : "deposit";
+  const type =
+    meta.type === "full_payment"
+      ? "full_payment"
+      : meta.type === "balance"
+        ? "balance"
+        : "deposit";
   const { error: insErr } = await supabase.from("inkflow_payments").insert({
     id: `pay_rec_${Date.now()}`,
     studio_id: studioId,

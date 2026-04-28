@@ -13,6 +13,7 @@ CREATE INDEX IF NOT EXISTS idx_studio_public_metrics_updated
 
 ALTER TABLE public.inkflow_studio_public_metrics ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "studio_public_metrics_deny_direct" ON public.inkflow_studio_public_metrics;
 CREATE POLICY "studio_public_metrics_deny_direct"
   ON public.inkflow_studio_public_metrics
   FOR ALL

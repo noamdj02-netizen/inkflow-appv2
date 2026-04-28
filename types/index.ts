@@ -26,6 +26,8 @@ export interface Appointment {
   price: number;
   deposit: number;
   depositPaid: boolean;
+  /** Horodatage encaissement solde (Stripe Checkout type balance), si présent en base. */
+  balancePaidAt?: string | null;
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
   notes?: string;
   tattooType: 'custom' | 'flash';
@@ -261,7 +263,13 @@ export interface Payment {
 export type SubscriptionPlan = 'solo' | 'pro' | 'studio' | 'enterprise';
 
 /** Statut d'abonnement studio */
-export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'cancelled' | 'incomplete' | 'restricted';
+export type SubscriptionStatus =
+  | 'trialing'
+  | 'active'
+  | 'past_due'
+  | 'cancelled'
+  | 'incomplete'
+  | 'restricted';
 
 /** Clés des fonctionnalités gérées par le plan (Stripe) */
 export type PlanFeatureKey =
@@ -377,4 +385,7 @@ export type {
   SidebarGroupId,
   StudioSidebarItemConfig,
 } from './studioPreferences';
-export { STUDIO_PREFERENCES_SCHEMA_VERSION, DEFAULT_STUDIO_DASHBOARD_PREFERENCES } from './studioPreferences';
+export {
+  STUDIO_PREFERENCES_SCHEMA_VERSION,
+  DEFAULT_STUDIO_DASHBOARD_PREFERENCES,
+} from './studioPreferences';

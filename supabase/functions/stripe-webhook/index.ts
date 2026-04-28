@@ -395,8 +395,10 @@ Deno.serve(async (req: Request) => {
           break;
         }
 
-        const type = (session.metadata?.type || "deposit") as "deposit" | "full_payment";
+        const type = (session.metadata?.type || "deposit") as "deposit" | "full_payment" | "balance";
         const amountPaid = (session.amount_total || 0) / 100;
+        const paymentLabelFr =
+          type === "deposit" ? "Acompte" : type === "balance" ? "Solde" : "Paiement";
         const clientEmail = session.customer_email || session.metadata?.client_email || "";
         const clientName = session.metadata?.client_name || "Client";
         const serviceName = session.metadata?.service_name || "Service";
@@ -433,7 +435,7 @@ Deno.serve(async (req: Request) => {
           const { data: apt } = await supabase
             .from("inkflow_appointments")
             .select(
-              "id, price, deposit, date, time, duration, service, client_phone, location, size",
+              "id, price, deposit, deposit_paid, date, time, duration, service, client_phone, location, size",
             )
             .eq("id", effectiveAppointmentId)
             .single();
@@ -450,7 +452,18 @@ Deno.serve(async (req: Request) => {
               size: apt.size != null ? String(apt.size) : null,
             };
             const total = Number(apt.price) || 0;
-            amountRemaining = Math.max(0, total - amountPaid);
+            const dep = apt.deposit != null ? Number(apt.deposit) : 0;
+            const depAlready = apt.deposit_paid === true ? dep : 0;
+            if (type === "deposit") {
+              amountRemaining = Math.max(0, Math.round((total - amountPaid) * 100) / 100);
+            } else if (type === "balance") {
+              amountRemaining = Math.max(
+                0,
+                Math.round((total - depAlready - amountPaid) * 100) / 100,
+              );
+            } else {
+              amountRemaining = Math.max(0, Math.round((total - amountPaid) * 100) / 100);
+            }
             clientPhone = (apt as { client_phone?: string | null }).client_phone ?? null;
           }
         }
@@ -608,7 +621,7 @@ Deno.serve(async (req: Request) => {
             studio_id: studioId,
             type: "payment",
             title: "Paiement recu",
-            message: `${type === "deposit" ? "Acompte" : "Paiement"} de ${amountPaid.toFixed(2)}EUR recu de ${clientName}`,
+            message: `${paymentLabelFr} de ${amountPaid.toFixed(2)}EUR recu de ${clientName}`,
             read: false,
             action_url: "/dashboard",
           });
@@ -623,7 +636,12 @@ Deno.serve(async (req: Request) => {
               },
               body: JSON.stringify({
                 studioId,
-                title: type === "deposit" ? "Acompte reçu" : "Paiement reçu",
+                title:
+                  type === "deposit"
+                    ? "Acompte reçu"
+                    : type === "balance"
+                      ? "Solde reçu"
+                      : "Paiement reçu",
                 body: `${clientName} a payé ${amountPaid.toFixed(2)}€`,
                 url: "/dashboard?tab=finance",
                 tag: "inkflow-payment",

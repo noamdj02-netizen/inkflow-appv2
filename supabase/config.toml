@@ -99,3 +99,11 @@ verify_jwt = false
 # Cron fidélisation J+1 / J+7 / J+30 — souvent appelé par pg_cron / sans JWT.
 [functions.send-loyalty-emails]
 verify_jwt = false
+
+# Trigger pg_net (sans JWT) — push clôture après RDV completed.
+[functions.post-appointment-closeout]
+verify_jwt = false
+
+# Cron pg_net : rappel si créneau dépassé sans clôture (confirmed / in_progress).
+[functions.remind-slot-closeout-nudge]
+verify_jwt = false

@@ -85,6 +85,7 @@
     "framer-motion": "^12.34.3",
     "ical.js": "^2.2.1",
     "jspdf": "^4.2.1",
+    "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.563.0",
     "luxon": "^3.7.2",

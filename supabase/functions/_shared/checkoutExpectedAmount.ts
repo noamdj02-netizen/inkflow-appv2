@@ -3,7 +3,7 @@
  */
 import { type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 
-export type CheckoutType = "deposit" | "full_payment";
+export type CheckoutType = "deposit" | "full_payment" | "balance";
 
 export interface ExpectedAmountInput {
   studioId: string;
@@ -19,6 +19,9 @@ function round2(n: number): number {
 function cents(n: number): number {
   return Math.round(n * 100);
 }
+
+/** Aligné sur create-checkout-session : pas de session Stripe en dessous de 1 €. */
+const MIN_CHECKOUT_EUR = 1;
 
 export async function resolveExpectedCheckoutAmountEur(
   supabase: SupabaseClient,
@@ -51,13 +54,28 @@ export async function resolveExpectedCheckoutAmountEur(
       return { ok: true, amountEur: round2(Number(d)) };
     }
 
+    if (input.type === "balance") {
+      const price = apt.price != null ? Number(apt.price) : 0;
+      const deposit = apt.deposit != null ? Number(apt.deposit) : 0;
+      const paidDeposit = apt.deposit_paid === true ? deposit : 0;
+      const remaining = Math.max(0, round2(price - paidDeposit));
+      if (remaining < MIN_CHECKOUT_EUR) {
+        return {
+          ok: false,
+          error: "Aucun solde à encaisser pour ce rendez-vous (déjà réglé ou montant nul).",
+          status: 409,
+        };
+      }
+      return { ok: true, amountEur: remaining };
+    }
+
     const price = apt.price != null ? Number(apt.price) : 0;
     if (price > 0) {
       return { ok: true, amountEur: round2(price) };
     }
     return {
       ok: false,
-      error: "Montant du solde indisponible pour ce rendez-vous.",
+      error: "Montant du paiement indisponible pour ce rendez-vous.",
       status: 409,
     };
   }

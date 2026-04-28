@@ -359,7 +359,10 @@ export type Database = {
       inkflow_appointments: {
         Row: {
           apple_event_uid: string | null;
+          balance_paid_at: string | null;
           balance_reminder_sent_at: string | null;
+          closeout_push_sent_at: string | null;
+          post_slot_nudge_sent_at: string | null;
           calendar_synced_at: string | null;
           client_email: string;
           client_id: string | null;
@@ -392,7 +395,10 @@ export type Database = {
         };
         Insert: {
           apple_event_uid?: string | null;
+          balance_paid_at?: string | null;
           balance_reminder_sent_at?: string | null;
+          closeout_push_sent_at?: string | null;
+          post_slot_nudge_sent_at?: string | null;
           calendar_synced_at?: string | null;
           client_email: string;
           client_id?: string | null;
@@ -425,7 +431,10 @@ export type Database = {
         };
         Update: {
           apple_event_uid?: string | null;
+          balance_paid_at?: string | null;
           balance_reminder_sent_at?: string | null;
+          closeout_push_sent_at?: string | null;
+          post_slot_nudge_sent_at?: string | null;
           calendar_synced_at?: string | null;
           client_email?: string;
           client_id?: string | null;
@@ -473,6 +482,48 @@ export type Database = {
           },
           {
             foreignKeyName: 'inkflow_appointments_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_appointment_costs: {
+        Row: {
+          amount_cents: number;
+          appointment_id: string | null;
+          created_at: string;
+          id: string;
+          label: string;
+          studio_id: string;
+        };
+        Insert: {
+          amount_cents: number;
+          appointment_id?: string | null;
+          created_at?: string;
+          id?: string;
+          label?: string;
+          studio_id: string;
+        };
+        Update: {
+          amount_cents?: number;
+          appointment_id?: string | null;
+          created_at?: string;
+          id?: string;
+          label?: string;
+          studio_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_appointment_costs_appointment_id_fkey';
+            columns: ['appointment_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_appointments';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_appointment_costs_studio_id_fkey';
             columns: ['studio_id'];
             isOneToOne: false;
             referencedRelation: 'inkflow_studios';
@@ -1167,6 +1218,429 @@ export type Database = {
             foreignKeyName: 'inkflow_consent_forms_studio_id_fkey';
             columns: ['studio_id'];
             isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_consumable_lots: {
+        Row: {
+          appointment_id: string | null;
+          client_id: string | null;
+          created_at: string;
+          expiry_date: string | null;
+          id: string;
+          lot_number: string;
+          product_label: string | null;
+          raw_barcode: string | null;
+          studio_id: string;
+          supplier_name: string | null;
+        };
+        Insert: {
+          appointment_id?: string | null;
+          client_id?: string | null;
+          created_at?: string;
+          expiry_date?: string | null;
+          id?: string;
+          lot_number: string;
+          product_label?: string | null;
+          raw_barcode?: string | null;
+          studio_id: string;
+          supplier_name?: string | null;
+        };
+        Update: {
+          appointment_id?: string | null;
+          client_id?: string | null;
+          created_at?: string;
+          expiry_date?: string | null;
+          id?: string;
+          lot_number?: string;
+          product_label?: string | null;
+          raw_barcode?: string | null;
+          studio_id?: string;
+          supplier_name?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_consumable_lots_appointment_id_fkey';
+            columns: ['appointment_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_appointments';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_consumable_lots_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_consumable_lots_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_consumable_prices: {
+        Row: {
+          created_at: string;
+          id: string;
+          notes: string | null;
+          pack_size: number;
+          price_cents: number;
+          product_id: string;
+          studio_id: string;
+          supplier_id: string;
+          valid_from: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          notes?: string | null;
+          pack_size?: number;
+          price_cents: number;
+          product_id: string;
+          studio_id: string;
+          supplier_id: string;
+          valid_from?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          notes?: string | null;
+          pack_size?: number;
+          price_cents?: number;
+          product_id?: string;
+          studio_id?: string;
+          supplier_id?: string;
+          valid_from?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_consumable_prices_product_id_fkey';
+            columns: ['product_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_consumable_products';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_consumable_prices_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_consumable_prices_supplier_id_fkey';
+            columns: ['supplier_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_consumable_suppliers';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_consumable_products: {
+        Row: {
+          brand: string | null;
+          category: string;
+          created_at: string;
+          id: string;
+          name: string;
+          qty_on_hand: number;
+          sku: string | null;
+          studio_id: string;
+          unit: string;
+          updated_at: string;
+        };
+        Insert: {
+          brand?: string | null;
+          category?: string;
+          created_at?: string;
+          id?: string;
+          name: string;
+          qty_on_hand?: number;
+          sku?: string | null;
+          studio_id: string;
+          unit?: string;
+          updated_at?: string;
+        };
+        Update: {
+          brand?: string | null;
+          category?: string;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          qty_on_hand?: number;
+          sku?: string | null;
+          studio_id?: string;
+          unit?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_consumable_products_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_consumable_suppliers: {
+        Row: {
+          created_at: string;
+          default_shipping_fee_cents: number;
+          free_shipping_threshold_cents: number | null;
+          id: string;
+          name: string;
+          studio_id: string;
+          website: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          default_shipping_fee_cents?: number;
+          free_shipping_threshold_cents?: number | null;
+          id?: string;
+          name: string;
+          studio_id: string;
+          website?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          default_shipping_fee_cents?: number;
+          free_shipping_threshold_cents?: number | null;
+          id?: string;
+          name?: string;
+          studio_id?: string;
+          website?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_consumable_suppliers_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_supplier_catalog_items: {
+        Row: {
+          brand: string | null;
+          category: string;
+          created_at: string;
+          ean: string | null;
+          id: string;
+          is_active: boolean;
+          linked_product_id: string | null;
+          list_price_cents: number | null;
+          name: string;
+          notes: string | null;
+          pack_size: number;
+          price_cents: number;
+          product_url: string | null;
+          promo_ends_at: string | null;
+          promo_label: string | null;
+          promo_price_cents: number | null;
+          promo_starts_at: string | null;
+          sku: string | null;
+          studio_id: string;
+          supplier_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          brand?: string | null;
+          category?: string;
+          created_at?: string;
+          ean?: string | null;
+          id?: string;
+          is_active?: boolean;
+          linked_product_id?: string | null;
+          list_price_cents?: number | null;
+          name: string;
+          notes?: string | null;
+          pack_size?: number;
+          price_cents: number;
+          product_url?: string | null;
+          promo_ends_at?: string | null;
+          promo_label?: string | null;
+          promo_price_cents?: number | null;
+          promo_starts_at?: string | null;
+          sku?: string | null;
+          studio_id: string;
+          supplier_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          brand?: string | null;
+          category?: string;
+          created_at?: string;
+          ean?: string | null;
+          id?: string;
+          is_active?: boolean;
+          linked_product_id?: string | null;
+          list_price_cents?: number | null;
+          name?: string;
+          notes?: string | null;
+          pack_size?: number;
+          price_cents?: number;
+          product_url?: string | null;
+          promo_ends_at?: string | null;
+          promo_label?: string | null;
+          promo_price_cents?: number | null;
+          promo_starts_at?: string | null;
+          sku?: string | null;
+          studio_id?: string;
+          supplier_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_supplier_catalog_items_linked_product_id_fkey';
+            columns: ['linked_product_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_consumable_products';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_supplier_catalog_items_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_supplier_catalog_items_supplier_id_fkey';
+            columns: ['supplier_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_consumable_suppliers';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_price_contributions: {
+        Row: {
+          category_slug: string;
+          contributed_at: string;
+          id: string;
+          label_normalized: string;
+          pack_size: number;
+          price_cents: number;
+          studio_id: string;
+          supplier_label: string | null;
+        };
+        Insert: {
+          category_slug: string;
+          contributed_at?: string;
+          id?: string;
+          label_normalized: string;
+          pack_size?: number;
+          price_cents: number;
+          studio_id: string;
+          supplier_label?: string | null;
+        };
+        Update: {
+          category_slug?: string;
+          contributed_at?: string;
+          id?: string;
+          label_normalized?: string;
+          pack_size?: number;
+          price_cents?: number;
+          studio_id?: string;
+          supplier_label?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_price_contributions_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_stock_movements: {
+        Row: {
+          appointment_id: string | null;
+          created_at: string;
+          delta_qty: number;
+          id: string;
+          meta: Json;
+          product_id: string;
+          reason: string | null;
+          source: string;
+          studio_id: string;
+        };
+        Insert: {
+          appointment_id?: string | null;
+          created_at?: string;
+          delta_qty: number;
+          id?: string;
+          meta?: Json;
+          product_id: string;
+          reason?: string | null;
+          source?: string;
+          studio_id: string;
+        };
+        Update: {
+          appointment_id?: string | null;
+          created_at?: string;
+          delta_qty?: number;
+          id?: string;
+          meta?: Json;
+          product_id?: string;
+          reason?: string | null;
+          source?: string;
+          studio_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_stock_movements_appointment_id_fkey';
+            columns: ['appointment_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_appointments';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_stock_movements_product_id_fkey';
+            columns: ['product_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_consumable_products';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_stock_movements_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_studio_finance_prefs: {
+        Row: {
+          settings: Json;
+          studio_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          settings?: Json;
+          studio_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          settings?: Json;
+          studio_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_studio_finance_prefs_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: true;
             referencedRelation: 'inkflow_studios';
             referencedColumns: ['id'];
           },
