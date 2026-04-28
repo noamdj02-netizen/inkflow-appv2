@@ -37,7 +37,11 @@ interface FounderAdminOverviewProps {
 
 function maskEuro(reveal: boolean, value: number): string {
   if (!reveal) return '•••• €';
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
 export function FounderAdminOverview({
@@ -46,11 +50,17 @@ export function FounderAdminOverview({
   period,
   onPeriodChange,
 }: FounderAdminOverviewProps): React.ReactElement {
-  const trend = useMemo(() => signupsTrendPercent(data.activity.signupsByDay), [data.activity.signupsByDay]);
-  const mrrSpark = useMemo(() => buildMrrSparkline(data.kpis.mrrEstimatedEur), [data.kpis.mrrEstimatedEur]);
+  const trend = useMemo(
+    () => signupsTrendPercent(data.activity.signupsByDay),
+    [data.activity.signupsByDay]
+  );
+  const mrrSpark = useMemo(
+    () => buildMrrSparkline(data.kpis.mrrEstimatedEur),
+    [data.kpis.mrrEstimatedEur]
+  );
   const arrSpark = useMemo(
     () => buildMrrSparkline(data.kpis.mrrEstimatedEur * 12),
-    [data.kpis.mrrEstimatedEur],
+    [data.kpis.mrrEstimatedEur]
   );
 
   const alerts: FounderAlertItem[] = useMemo(() => {
@@ -89,7 +99,7 @@ export function FounderAdminOverview({
         slug: r.slug,
         bookings: r.bookings30d,
       })),
-    [data.growth.topStudios],
+    [data.growth.topStudios]
   );
 
   const periodLabel = PERIOD_OPTIONS.find((p) => p.value === period)?.label ?? period;
@@ -98,18 +108,20 @@ export function FounderAdminOverview({
     <div className="mb-8 space-y-6 founder-print-hide">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="mb-1 flex items-center gap-2 font-sans text-2xl font-bold tracking-tight">
-            <span className="bg-gradient-to-r from-[var(--admin-accent)] to-[var(--admin-accent-light)] bg-clip-text text-transparent">
-              InkFlow Admin
-            </span>
+          <h2 className="mb-1 font-sans text-2xl font-bold tracking-tight text-[var(--admin-text)]">
+            InkFlow Admin
           </h2>
-          <p className="text-sm text-[var(--admin-text-muted)]">Vue d&apos;ensemble (données Edge — mêmes KPIs que ci-dessous)</p>
+          <p className="text-sm text-[var(--admin-text-muted)]">
+            Vue d&apos;ensemble · données Edge — mêmes KPIs que les sections détaillées · 2026
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select
             value={period}
-            onChange={(e) => onPeriodChange(e.target.value as (typeof PERIOD_OPTIONS)[number]['value'])}
-            className="cursor-pointer rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-2 text-sm transition-colors hover:border-[var(--admin-accent)]/30 focus:outline-none focus:ring-2 focus:ring-[var(--admin-accent)]/20"
+            onChange={(e) =>
+              onPeriodChange(e.target.value as (typeof PERIOD_OPTIONS)[number]['value'])
+            }
+            className="cursor-pointer rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-2 text-sm text-[var(--admin-text)] transition-colors hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-400/40"
           >
             {PERIOD_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -139,21 +151,29 @@ export function FounderAdminOverview({
           icon={Users}
           label="Studios actifs (7j)"
           value={data.kpis.studiosActive7d}
-          sparklineData={[0, 0, 0, data.kpis.studiosActive7d, data.kpis.studiosActive7d, data.kpis.studiosActive7d, data.kpis.studiosActive7d]}
+          sparklineData={[
+            0,
+            0,
+            0,
+            data.kpis.studiosActive7d,
+            data.kpis.studiosActive7d,
+            data.kpis.studiosActive7d,
+            data.kpis.studiosActive7d,
+          ]}
         />
         <MetricCard
           icon={DollarSign}
           label="Acomptes écosystème (mois)"
           value={maskEuro(revealSensitive, data.kpis.depositsMonthEur)}
           sparklineData={revealSensitive ? buildMrrSparkline(data.kpis.depositsMonthEur) : []}
-          accentColor="#F59E0B"
+          accentColor="var(--admin-chart-line)"
         />
         <MetricCard
           icon={UserX}
           label="Churn abonnements (mois)"
           value={data.growth.churnSubscriptionsMonth}
           sparklineData={[data.growth.churnSubscriptionsMonth, data.growth.churnSubscriptionsMonth]}
-          accentColor="#10B981"
+          accentColor="var(--admin-chart-muted)"
         />
 
         <div className="lg:col-span-full">
@@ -162,11 +182,13 @@ export function FounderAdminOverview({
 
         <div className="lg:col-span-3">
           <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6">
-            <h3 className="mb-2 text-sm font-semibold text-[var(--admin-text)]">Détail métriques</h3>
+            <h3 className="mb-2 text-sm font-semibold text-[var(--admin-text)]">
+              Détail métriques
+            </h3>
             <p className="text-sm leading-relaxed text-[var(--admin-text-muted)]">
-              Les graphiques détaillés, exports CSV et alertes complètes suivent dans les sections ci-dessous. La période
-              ci-dessus est indicative pour le style dashboard importé ; les agrégats restent alignés sur les définitions Edge
-              (Paris / UTC selon métrique).
+              Les graphiques détaillés, exports CSV et alertes complètes suivent dans les sections
+              ci-dessous. La période ci-dessus est indicative pour le style dashboard importé ; les
+              agrégats restent alignés sur les définitions Edge (Paris / UTC selon métrique).
             </p>
           </div>
         </div>

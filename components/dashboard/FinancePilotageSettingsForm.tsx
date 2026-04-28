@@ -187,6 +187,86 @@ export const FinancePilotageSettingsForm: React.FC<FinancePilotageSettingsFormPr
         </label>
       </section>
 
+      <section className="space-y-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+          Profil fiscal (indicatif)
+        </h2>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Pour les estimations et les rappels URSSAF — aucune donnée envoyée aux administrations
+          depuis InkFlow.
+        </p>
+        <label className={`block space-y-1.5 ${baseInput}`}>
+          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            Fréquence de déclaration
+          </span>
+          <select
+            value={prefs.declaration_frequency}
+            disabled={inputsDisabled}
+            onChange={(e) =>
+              setPrefs((p) => ({
+                ...p,
+                declaration_frequency: e.target
+                  .value as StudioFinancePrefs['declaration_frequency'],
+              }))
+            }
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm text-zinc-900 dark:text-white"
+          >
+            <option value="trimestrial">Trimestrielle (indication)</option>
+            <option value="monthly">Mensuelle (indication)</option>
+          </select>
+        </label>
+        <label className={`flex items-center gap-3 ${baseInput}`}>
+          <input
+            type="checkbox"
+            disabled={inputsDisabled}
+            checked={prefs.versement_liberatoire}
+            onChange={(e) => setPrefs((p) => ({ ...p, versement_liberatoire: e.target.checked }))}
+            className="rounded border-zinc-300 w-4 h-4"
+          />
+          <span className="text-sm text-zinc-800 dark:text-zinc-200">
+            Versement libératoire (estimation d’impôt sur les cartes si cochée)
+          </span>
+        </label>
+        <label className={`block space-y-1.5 ${baseInput}`}>
+          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            Taux VL (bps — 170 ≈ 1,70 %)
+          </span>
+          <input
+            type="number"
+            min={0}
+            max={1000}
+            step={10}
+            disabled={inputsDisabled || !prefs.versement_liberatoire}
+            value={prefs.vl_rate_bps}
+            onChange={(e) =>
+              setPrefs((p) => ({
+                ...p,
+                vl_rate_bps: Math.max(0, parseInt(e.target.value, 10) || 0),
+              }))
+            }
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm text-zinc-900 dark:text-white"
+          />
+        </label>
+        <label className={`block space-y-1.5 ${baseInput}`}>
+          <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Mention TVA</span>
+          <select
+            value={prefs.regime_tva}
+            disabled={inputsDisabled}
+            onChange={(e) =>
+              setPrefs((p) => ({
+                ...p,
+                regime_tva: e.target.value as StudioFinancePrefs['regime_tva'],
+              }))
+            }
+            className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm text-zinc-900 dark:text-white"
+          >
+            <option value="franchise">Franchise en base</option>
+            <option value="reel_simplifie">TVA réelle simplifiée</option>
+            <option value="reel_normal">TVA réelle normale</option>
+          </select>
+        </label>
+      </section>
+
       <section className="space-y-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
           Comparateur prix (opt-in)

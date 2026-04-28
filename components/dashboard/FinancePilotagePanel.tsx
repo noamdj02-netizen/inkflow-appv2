@@ -1,22 +1,24 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  CalendarClock,
+  ChevronDown,
   ClipboardList,
   ExternalLink,
+  FileDown,
+  FileText,
   Loader2,
   PenLine,
   Plus,
+  Scale,
   SlidersHorizontal,
   TrendingUp,
 } from 'lucide-react';
 import type { Appointment } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import {
-  estimateNetAfterSocialCharges,
-  formatEUR,
-  interpretAmountHTTTC,
-} from '../../lib/financeDisplay';
+import { formatEUR, interpretAmountHTTTC } from '../../lib/financeDisplay';
+import { computePilotageFiscalSnapshot } from '../../lib/fiscal';
 import { FINANCE_LEGAL_DISCLAIMER_FR } from '../../lib/frenchMicroEnterpriseConstants';
 import {
   FREELANCE_FR_OFFICIAL_LINKS,
@@ -25,17 +27,46 @@ import {
   type FreelanceOfficialLinkGroup,
 } from '../../lib/freelanceFranceOfficialLinks';
 import {
+  computePilotageMonthTotals,
+  downloadPilotageMonthCsv,
+  downloadPilotageMonthPdf,
+} from '../../lib/pilotageExport';
+import {
   fetchAppointmentCosts,
   getStudioFinancePrefsFromSupabase,
   insertAppointmentCost,
   saveStudioFinancePrefsToSupabase,
   type AppointmentCostRow,
 } from '../../lib/supabaseFinanceInventory';
-import type { StudioFinancePrefs } from '../../types/studioFinancePrefs';
-import { DEFAULT_STUDIO_FINANCE_PREFS } from '../../types/studioFinancePrefs';
+import {
+  DEFAULT_STUDIO_FINANCE_PREFS,
+  type StudioFinancePrefs,
+} from '../../types/studioFinancePrefs';
 import { FinancePilotageSettingsForm } from './FinancePilotageSettingsForm';
+import { FiscalDeclarationCalendar } from './fiscal/FiscalDeclarationCalendar';
+import { FiscalLexiconHelp } from './fiscal/FiscalLexiconHelp';
+import { FiscalMonthlyChecklist } from './fiscal/FiscalMonthlyChecklist';
+import { FiscalOnboardingWizard } from './fiscal/FiscalOnboardingWizard';
+import { currentMonthKey } from './fiscal/fiscalChecklistItems';
 
 const CASH_STORAGE_PREFIX = 'inkflow_finance_cash_';
+const RECONCILE_DECLARED_PREFIX = 'inkflow_pilotage_reconcile_declared_v1_';
+
+function loadReconcileDeclaredStr(userKey: string, monthKey: string): string {
+  try {
+    return localStorage.getItem(RECONCILE_DECLARED_PREFIX + userKey + '_' + monthKey) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function saveReconcileDeclaredStr(userKey: string, monthKey: string, value: string): void {
+  try {
+    localStorage.setItem(RECONCILE_DECLARED_PREFIX + userKey + '_' + monthKey, value);
+  } catch {
+    /* ignore quota */
+  }
+}
 
 interface CashEntry {
   id: string;
@@ -79,6 +110,16 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
   const [newCostEur, setNewCostEur] = useState('');
   const [addingCost, setAddingCost] = useState(false);
   const [prefsSaving, setPrefsSaving] = useState(false);
+  const [showFiscalOnboarding, setShowFiscalOnboarding] = useState(false);
+  const fiscalWizardDismissedSession = useRef(false);
+  const [checklistPendingCount, setChecklistPendingCount] = useState<number | null>(null);
+  const monthKey = useMemo(() => currentMonthKey(), []);
+  const [reconcileDeclaredStr, setReconcileDeclaredStr] = useState('');
+  const [exportBusy, setExportBusy] = useState(false);
+
+  useEffect(() => {
+    setReconcileDeclaredStr(loadReconcileDeclaredStr(userKey, monthKey));
+  }, [userKey, monthKey]);
 
   useEffect(() => {
     setCashEntries(loadCashEntries(userKey));
@@ -113,6 +154,20 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
       cancelled = true;
     };
   }, [studioId, useSupabase, toast]);
+
+  useEffect(() => {
+    if (
+      prefsLoading ||
+      fiscalWizardDismissedSession.current ||
+      !studioId ||
+      !useSupabase ||
+      prefs.fiscal_onboarding_done
+    ) {
+      setShowFiscalOnboarding(false);
+      return;
+    }
+    setShowFiscalOnboarding(true);
+  }, [prefsLoading, studioId, useSupabase, prefs.fiscal_onboarding_done]);
 
   const reloadCosts = useCallback(async () => {
     if (!studioId || !useSupabase) return;
@@ -151,13 +206,145 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
     prefs.vat_rate_bps
   );
   const caForSocial = ttc;
-  const netEst = estimateNetAfterSocialCharges(caForSocial, prefs.ae_cotisation_rate_bps);
+  const fiscalSnapshot = useMemo(
+    () =>
+      computePilotageFiscalSnapshot(
+        caForSocial,
+        prefs.ae_cotisation_rate_bps,
+        prefs.versement_liberatoire,
+        prefs.vl_rate_bps
+      ),
+    [caForSocial, prefs.ae_cotisation_rate_bps, prefs.versement_liberatoire, prefs.vl_rate_bps]
+  );
+  const netEst = fiscalSnapshot.netEstimeEUR;
   const plafond = Math.max(1, prefs.ae_plafond_ca_eur);
   const progressPct = Math.min(100, Math.round((caForSocial / plafond) * 1000) / 10);
 
   const totalChargesCents = useMemo(() => costs.reduce((s, c) => s + c.amount_cents, 0), [costs]);
   const totalChargesEur = totalChargesCents / 100;
   const marginPedagogique = round2(caForSocial - totalChargesEur);
+
+  const cashForPilotageExport = useMemo(
+    () => cashEntries.map((e) => ({ date: e.date, amount: e.amount, label: e.label })),
+    [cashEntries]
+  );
+
+  const pilotageMonthTotals = useMemo(
+    () => computePilotageMonthTotals(appointments, cashForPilotageExport, monthKey),
+    [appointments, cashForPilotageExport, monthKey]
+  );
+
+  const reconcileDeclaredEur = useMemo(() => {
+    const n = parseFloat(reconcileDeclaredStr.replace(',', '.'));
+    return Number.isFinite(n) ? n : null;
+  }, [reconcileDeclaredStr]);
+
+  const reconcileInkflowMonthEur = useMemo(() => {
+    return round2(pilotageMonthTotals.inkflowCompletedSum + pilotageMonthTotals.cashSum);
+  }, [pilotageMonthTotals.cashSum, pilotageMonthTotals.inkflowCompletedSum]);
+
+  const reconcileDeltaEur = useMemo(() => {
+    if (reconcileDeclaredEur === null) return null;
+    return round2(reconcileDeclaredEur - reconcileInkflowMonthEur);
+  }, [reconcileDeclaredEur, reconcileInkflowMonthEur]);
+
+  const saveReminderDates = useCallback(async () => {
+    if (!studioId || !useSupabase) {
+      toast.error('Connecte-toi avec Supabase pour enregistrer les rappels');
+      return;
+    }
+    setPrefsSaving(true);
+    try {
+      await saveStudioFinancePrefsToSupabase(studioId, prefs);
+      toast.success('Dates de rappel enregistrées');
+    } catch {
+      toast.error('Erreur à l’enregistrement');
+    } finally {
+      setPrefsSaving(false);
+    }
+  }, [studioId, useSupabase, prefs, toast]);
+
+  const onReconcileStrChange = useCallback(
+    (v: string) => {
+      setReconcileDeclaredStr(v);
+      saveReconcileDeclaredStr(userKey, monthKey, v);
+    },
+    [userKey, monthKey]
+  );
+
+  const handleExportPilotageCsv = useCallback(() => {
+    const prefsSummary = `preset ${prefs.ae_social_preset}; base ${prefs.amount_input_basis}`;
+    downloadPilotageMonthCsv(
+      `inkflow-pilotage-${monthKey}.csv`,
+      appointments,
+      cashForPilotageExport,
+      monthKey,
+      prefsSummary
+    );
+    toast.success('CSV téléchargé');
+  }, [
+    appointments,
+    cashForPilotageExport,
+    monthKey,
+    prefs.ae_social_preset,
+    prefs.amount_input_basis,
+    toast,
+  ]);
+
+  const handleExportPilotagePdf = useCallback(async () => {
+    setExportBusy(true);
+    try {
+      await downloadPilotageMonthPdf({
+        studioName: user?.studioName?.trim() || 'Studio',
+        exporterLabel: user?.email ?? undefined,
+        monthKey,
+        year,
+        generatedAtLabel: new Date().toLocaleString('fr-FR', {
+          dateStyle: 'long',
+          timeStyle: 'short',
+        }),
+        prefs,
+        totals: pilotageMonthTotals,
+        caAggregateBrutYtd: caAggregate,
+        htYtd: ht,
+        ttcYtd: ttc,
+        caAggregateYtdTtc: caForSocial,
+        fiscalCotisationsEur: fiscalSnapshot.cotisationsEUR,
+        impotVlEur: fiscalSnapshot.impotVL_EUR,
+        netEstYtd: netEst,
+        totalChargesEur,
+        marginPedagogique,
+        progressPct,
+        appointments,
+        cashEntries: cashForPilotageExport,
+      });
+      toast.success('PDF téléchargé');
+    } catch {
+      toast.error('Impossible de générer le PDF');
+    } finally {
+      setExportBusy(false);
+    }
+  }, [
+    user?.studioName,
+    user?.email,
+    year,
+    monthKey,
+    prefs,
+    pilotageMonthTotals,
+    appointments,
+    cashForPilotageExport,
+    caAggregate,
+    ht,
+    ttc,
+    caForSocial,
+    fiscalSnapshot.cotisationsEUR,
+    fiscalSnapshot.impotVL_EUR,
+    netEst,
+    totalChargesEur,
+    marginPedagogique,
+    progressPct,
+    toast,
+  ]);
 
   const addCost = useCallback(async () => {
     if (!studioId || !useSupabase) {
@@ -200,6 +387,61 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
       setPrefsSaving(false);
     }
   }, [studioId, useSupabase, prefs, toast]);
+
+  const persistWizardMerged = useCallback(
+    async (merged: StudioFinancePrefs) => {
+      setPrefs(merged);
+      if (!studioId || !useSupabase) {
+        toast.error('Connecte-toi avec Supabase pour enregistrer');
+        return;
+      }
+      try {
+        await saveStudioFinancePrefsToSupabase(studioId, merged);
+        toast.success('Profil fiscal enregistré');
+        setShowFiscalOnboarding(false);
+      } catch {
+        toast.error('Erreur à l’enregistrement');
+      }
+    },
+    [studioId, useSupabase, toast]
+  );
+
+  const pilotageNextActions = useMemo(
+    () =>
+      computePilotageNextActionsBullets({
+        year,
+        monthKey,
+        caForSocial,
+        progressPct,
+        checklistPending: checklistPendingCount,
+        urssafDue: prefs.pilotage_next_urssaf_due_date,
+        fiscalDue: prefs.pilotage_next_fiscal_due_date,
+      }),
+    [
+      year,
+      monthKey,
+      caForSocial,
+      progressPct,
+      checklistPendingCount,
+      prefs.pilotage_next_fiscal_due_date,
+      prefs.pilotage_next_urssaf_due_date,
+    ]
+  );
+
+  const deadlineBannerLines = useMemo(() => {
+    const lines: string[] = [];
+    const du = daysFromTodayIso(prefs.pilotage_next_urssaf_due_date);
+    const df = daysFromTodayIso(prefs.pilotage_next_fiscal_due_date);
+    if (du !== null && du >= 0 && du <= 14) {
+      lines.push(
+        `Échéance URSSAF (rappel perso) dans ${du} jour(s) — ouvre ton espace pour le montant définitif.`
+      );
+    }
+    if (df !== null && df >= 0 && df <= 14) {
+      lines.push(`Échéance fiscale / déclaration (rappel perso) dans ${df} jour(s).`);
+    }
+    return lines;
+  }, [prefs.pilotage_next_fiscal_due_date, prefs.pilotage_next_urssaf_due_date]);
 
   const paymentsContextMessage = useMemo(() => {
     if (caForSocial <= 0) {
@@ -247,42 +489,60 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
         </p>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 border-l-4 border-l-indigo-500">
-        <div className="mb-4">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-            <h3 className="font-semibold text-zinc-900 dark:text-white">Réglages du pilotage</h3>
+      <section
+        aria-label="Ce mois-ci, par où commencer"
+        className="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-sm ring-1 ring-zinc-950/5 dark:border-zinc-800 dark:bg-zinc-900/40 dark:ring-white/5 sm:p-6"
+      >
+        <div className="flex flex-col gap-4 border-b border-zinc-100 pb-4 dark:border-zinc-800/80 sm:flex-row sm:items-start sm:gap-4">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950/50">
+            <ClipboardList className="size-5 text-zinc-700 dark:text-zinc-300" aria-hidden />
           </div>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-2xl">
-            Base HT/TTC, TVA, cotisations et plafond : ils alimentent les cartes suivantes.{' '}
-            <span className="text-zinc-600 dark:text-zinc-300">
-              Enregistre pour synchroniser le studio.
-            </span>
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Ce mois-ci
+            </p>
+            <h3 className="mt-1 font-display text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
+              Par où commencer
+            </h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+              Trois repères selon tes chiffres InkFlow — les obligations réelles sont sur URSSAF et
+              les impôts.
+            </p>
+          </div>
         </div>
-        {!useSupabase || !studioId ? (
-          <div className="rounded-xl border border-amber-200/80 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 mb-4">
-            Connecte un studio avec Supabase pour enregistrer ces réglages. Les montants ci‑dessous
-            partent des valeurs par défaut jusqu’à synchro.
-          </div>
-        ) : null}
-        <FinancePilotageSettingsForm
-          prefs={prefs}
-          setPrefs={setPrefs}
-          onSave={savePilotagePrefs}
-          saving={prefsSaving}
-          inputsDisabled={!useSupabase || !studioId}
-          saveDisabled={!useSupabase || !studioId}
-          hideLegalDisclaimer
-        />
-      </div>
+        <ol className="mt-5 flex list-none flex-col gap-3">
+          {pilotageNextActions.map((line, idx) => (
+            <li
+              key={`${idx}-${line.slice(0, 48)}`}
+              className="flex gap-3 text-sm leading-snug text-zinc-800 dark:text-zinc-200"
+            >
+              <span
+                className="flex size-7 shrink-0 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-[11px] font-semibold tabular-nums text-zinc-700 dark:border-zinc-600 dark:bg-zinc-950/60 dark:text-zinc-300"
+                aria-hidden
+              >
+                {idx + 1}
+              </span>
+              <span className="min-w-0 pt-0.5">{line}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 border-l-4 border-l-emerald-500">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            CA encaissé (ta base : {prefs.amount_input_basis.toUpperCase()})
-          </p>
-          <p className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-white mt-2">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              CA encaissé (ta base : {prefs.amount_input_basis.toUpperCase()})
+            </p>
+            <FiscalLexiconHelp label="Aide encaissement CA" title="Chiffre d’affaires encaissé">
+              <p>
+                Somme approximative issue de tes RDV marqués comme terminés dans InkFlow, plus les
+                montants saisis en espèces comme revenus dans l’onglet Revenus — ce n’est pas un
+                livre de comptabilité certifié.
+              </p>
+            </FiscalLexiconHelp>
+          </div>
+          <p className="mt-2 font-sans text-2xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-white">
             {formatEUR(caAggregate)}
           </p>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
@@ -290,15 +550,32 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
           </p>
         </div>
         <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 border-l-4 border-l-blue-500">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Net estimé après cotisations (sur TTC)
-          </p>
-          <p className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-white mt-2">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Net estimé (cotisations + impôt VL éventuel)
+            </p>
+            <FiscalLexiconHelp label="Aide net estimé" title="Net « poche » indicatif">
+              <p>
+                On retire d’abord les cotisations sociales sur le montant utilisé comme base (ici le
+                TTC). Si tu as « versement libératoire » activé dans les réglages, une estimation
+                d’impôt est aussi retranchée. Les taux peuvent changer selon ton activité.
+              </p>
+            </FiscalLexiconHelp>
+          </div>
+          <p className="mt-2 font-sans text-2xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-white">
             {formatEUR(netEst)}
           </p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Taux appliqué : {(prefs.ae_cotisation_rate_bps / 100).toFixed(2)} % — estimation
-            uniquement.
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 space-y-0.5">
+            <span>
+              Cotisations estimées : {formatEUR(fiscalSnapshot.cotisationsEUR)} · Taux cotisations{' '}
+              {(prefs.ae_cotisation_rate_bps / 100).toFixed(2)} %
+            </span>
+            {prefs.versement_liberatoire && fiscalSnapshot.impotVL_EUR > 0 ? (
+              <span className="block">
+                Impôt estimé (versement libératoire) : {formatEUR(fiscalSnapshot.impotVL_EUR)} ·
+                taux VL {(prefs.vl_rate_bps / 100).toFixed(2)} %
+              </span>
+            ) : null}
           </p>
         </div>
       </div>
@@ -312,7 +589,13 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
         </div>
         <div className="h-3 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${progressPct >= 90 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+            className={`h-full rounded-full transition-all ${
+              progressPct >= 90
+                ? 'bg-red-500'
+                : progressPct >= 80
+                  ? 'bg-amber-500'
+                  : 'bg-emerald-500'
+            }`}
             style={{ width: `${Math.min(100, progressPct)}%` }}
           />
         </div>
@@ -322,13 +605,194 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
           </span>
           <span>{progressPct} %</span>
         </div>
-        {progressPct >= 85 ? (
+        {progressPct >= 80 ? (
           <p className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300 mt-3">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            Tu approches du plafond indicatif : vérifie ta situation avec un professionnel.
+            {progressPct >= 90
+              ? 'Plafond AE très proche : fais valider la suite avec un conseil.'
+              : 'Tu dépasses 80 % du plafond indicatif : anticipe ta situation.'}
           </p>
         ) : null}
       </div>
+
+      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 space-y-5 border-l-4 border-l-violet-500">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <CalendarClock className="w-5 h-5 text-violet-600 dark:text-violet-400 shrink-0" />
+              <h3 className="font-semibold text-zinc-900 dark:text-white">
+                Rappels d’échéances (perso)
+              </h3>
+            </div>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-xl">
+              Saisis les prochaines dates visibles sur tes courriers ou portails (URSSAF, impôts).
+              Ce sont des repères locaux — pas des échéances officielles calculées par InkFlow.
+            </p>
+          </div>
+          {useSupabase && studioId ? (
+            <button
+              type="button"
+              onClick={() => void saveReminderDates()}
+              disabled={prefsSaving}
+              className="shrink-0 inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-900 dark:text-white active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {prefsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              Enregistrer les dates
+            </button>
+          ) : null}
+        </div>
+        {!useSupabase || !studioId ? (
+          <p className="text-sm text-zinc-500">Connecte Supabase pour sauvegarder ces rappels.</p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Prochaine échéance URSSAF (indicatif)
+              </span>
+              <input
+                type="date"
+                value={prefs.pilotage_next_urssaf_due_date ?? ''}
+                onChange={(e) =>
+                  setPrefs((p) => ({
+                    ...p,
+                    pilotage_next_urssaf_due_date: e.target.value ? e.target.value : null,
+                  }))
+                }
+                className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm"
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                Échéance fiscale / déclaration (indicatif)
+              </span>
+              <input
+                type="date"
+                value={prefs.pilotage_next_fiscal_due_date ?? ''}
+                onChange={(e) =>
+                  setPrefs((p) => ({
+                    ...p,
+                    pilotage_next_fiscal_due_date: e.target.value ? e.target.value : null,
+                  }))
+                }
+                className="w-full rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm"
+              />
+            </label>
+          </div>
+        )}
+        {deadlineBannerLines.length > 0 ? (
+          <div className="rounded-xl border border-amber-200/80 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3 space-y-1">
+            {deadlineBannerLines.map((line) => (
+              <p key={line} className="text-sm text-amber-900 dark:text-amber-200 flex gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden />
+                {line}
+              </p>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 space-y-4 border-l-4 border-l-amber-500">
+        <div className="flex items-start gap-2">
+          <Scale className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <h3 className="font-semibold text-zinc-900 dark:text-white">Réconciliation rapide</h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+              Compare le total InkFlow du mois ({monthKey}) à un montant que tu vois sur ton relevé
+              bancaire ou Stripe. L’écart aide à repérer un oubli de saisie — pas un contrôle
+              comptable.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 text-sm">
+          <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/40 p-3">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Total InkFlow (mois)</p>
+            <p className="font-sans text-lg font-semibold tabular-nums tracking-tight text-zinc-900 dark:text-white">
+              {formatEUR(reconcileInkflowMonthEur)}
+            </p>
+            <p className="text-xs text-zinc-500 mt-1">
+              RDV terminés + espèces — détail exportable en CSV ci-dessous.
+            </p>
+          </div>
+          <div className="rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/40 p-3">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Estimation encaissements « en ligne » (RDV avec solde repéré)
+            </p>
+            <p className="font-sans text-lg font-semibold tabular-nums tracking-tight text-zinc-900 dark:text-white">
+              {formatEUR(pilotageMonthTotals.completedWithOnlineBalanceSum)}
+            </p>
+          </div>
+        </div>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+            Montant observé sur relevé (€)
+          </span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={reconcileDeclaredStr}
+            onChange={(e) => onReconcileStrChange(e.target.value)}
+            placeholder="ex. 1840,50"
+            className="w-full max-w-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 font-sans text-sm tabular-nums tracking-tight"
+          />
+        </label>
+        {reconcileDeltaEur !== null ? (
+          <p
+            className={`text-sm font-medium ${Math.abs(reconcileDeltaEur) < 0.02 ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-800 dark:text-amber-300'}`}
+          >
+            Écart (relevé − InkFlow) : {reconcileDeltaEur >= 0 ? '+' : ''}
+            {formatEUR(reconcileDeltaEur)}
+            {Math.abs(reconcileDeltaEur) >= 1
+              ? ' — vérifie les saisies ou les frais prélevés par la banque.'
+              : null}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 space-y-4 border-l-4 border-l-slate-500">
+        <div className="flex items-start gap-2">
+          <FileText className="w-5 h-5 text-slate-600 dark:text-slate-400 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-semibold text-zinc-900 dark:text-white">
+              Exports compta (mois courant)
+            </h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+              Rapport PDF multipage (synthèse année, zoom mois, paramètres, annexe mouvements,
+              mentions) ou grand livre CSV pour tableur — à croiser avec tes sources officielles.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={handleExportPilotageCsv}
+            className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold active:scale-[0.98] transition-all"
+          >
+            <FileDown className="w-4 h-4" />
+            CSV {monthKey}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleExportPilotagePdf()}
+            disabled={exportBusy}
+            className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-900 dark:text-white active:scale-[0.98] transition-all disabled:opacity-50"
+          >
+            {exportBusy ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <FileText className="w-4 h-4" />
+            )}
+            Télécharger le PDF
+          </button>
+        </div>
+      </div>
+
+      <FiscalDeclarationCalendar frequency={prefs.declaration_frequency} />
+
+      <FiscalMonthlyChecklist
+        studioId={studioId}
+        useSupabase={useSupabase}
+        onPendingCountChange={setChecklistPendingCount}
+      />
 
       <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 space-y-6 border-l-4 border-l-sky-500">
         <div>
@@ -355,34 +819,6 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
           </p>
         </div>
 
-        <div className="rounded-xl border border-emerald-200/70 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 p-4">
-          <div className="flex items-start gap-2 mb-3">
-            <ClipboardList className="w-5 h-5 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                Checklist atelier (organisation)
-              </p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Habitudes utiles au quotidien — à compléter selon ton contrat, ton assureur et les
-                règles qui t’engagent.
-              </p>
-            </div>
-          </div>
-          <ul className="space-y-2.5 text-sm text-zinc-700 dark:text-zinc-300">
-            {TATTOO_STUDIO_HABIT_REMINDERS_FR.map((line) => (
-              <li key={line} className="flex gap-2">
-                <span
-                  className="text-emerald-600 dark:text-emerald-400 shrink-0 select-none"
-                  aria-hidden
-                >
-                  ·
-                </span>
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
         <div className="space-y-4">
           <p className="text-sm font-semibold text-zinc-900 dark:text-white">
             Fiscalité, cotisations & impôts
@@ -396,6 +832,40 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
           </p>
           <OfficialLinkGroupList groups={TATTOO_ENTREPRENEUR_FR_RESOURCES} />
         </div>
+      </div>
+
+      <div
+        id="pilotage-bonnes-pratiques-atelier"
+        className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 space-y-4 border-l-4 border-l-emerald-500 scroll-mt-24"
+      >
+        <div className="flex items-start gap-2">
+          <ClipboardList className="w-5 h-5 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+              Séparée de la checklist fiscale
+            </p>
+            <h3 className="font-semibold text-zinc-900 dark:text-white text-lg mt-1">
+              Bonnes pratiques atelier (organisation)
+            </h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-2xl">
+              Rappels pour le fonctionnement quotidien du studio — indépendants des échéances URSSAF
+              et du bloc « checklist fiscale & admin » plus haut.
+            </p>
+          </div>
+        </div>
+        <ul className="space-y-2.5 text-sm text-zinc-700 dark:text-zinc-300">
+          {TATTOO_STUDIO_HABIT_REMINDERS_FR.map((line) => (
+            <li key={line} className="flex gap-2">
+              <span
+                className="text-emerald-600 dark:text-emerald-400 shrink-0 select-none"
+                aria-hidden
+              >
+                ·
+              </span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 space-y-4">
@@ -466,9 +936,175 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
           </>
         )}
       </div>
+
+      <details className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/40 border-l-4 border-l-zinc-400 open:bg-white dark:open:bg-zinc-900/50">
+        <summary className="flex cursor-pointer select-none items-start gap-3 list-none rounded-2xl p-5 sm:p-6 min-h-[44px] text-left [&::-webkit-details-marker]:hidden active:scale-[0.99] transition-all">
+          <FileText className="w-5 h-5 text-zinc-500 shrink-0 mt-0.5" />
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold text-zinc-900 dark:text-white block">
+              Facturation électronique / Factur‑X & PDP (vision générale)
+            </span>
+            <span className="text-sm text-zinc-500 dark:text-zinc-400 block mt-0.5">
+              Cadre légal en évolution — InkFlow ne produit pas encore de flux Factur‑X ni d’envoi
+              vers une plateforme de dématérialisation (PDP). Utilise ce PDF et le CSV comme
+              brouillons, puis fais valider ta conformité auprès d’un conseil et des portails
+              officiels.
+            </span>
+          </span>
+          <ChevronDown
+            className="w-5 h-5 shrink-0 text-zinc-400 transition-transform group-open:rotate-180"
+            aria-hidden
+          />
+        </summary>
+        <div className="px-5 sm:px-6 pb-6 pt-0 space-y-3 text-sm text-zinc-600 dark:text-zinc-400 border-t border-zinc-200/80 dark:border-zinc-800 leading-relaxed">
+          <p>
+            La réforme de la facturation électronique et les obligations de transmission (PDP,
+            formats structurés, etc.) dépendent de ton assujettissement et des calendriers publics.
+            Les exports InkFlow restent des aides de travail, pas des envois réglementaires.
+          </p>
+          <p>
+            Pour les mentions obligatoires sur tes factures PDF habituelles, réfère-toi au service
+            public et à ton expert : SIRET, TVA, conditions de vente, etc.
+          </p>
+          <a
+            href="https://www.impots.gouv.fr/professionnel"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sky-700 dark:text-sky-400 font-medium hover:underline"
+          >
+            impots.gouv.fr — espace pro
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
+      </details>
+
+      <details className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 border-l-4 border-l-indigo-500 open:bg-white dark:open:bg-zinc-900/50">
+        <summary className="flex cursor-pointer select-none items-center gap-3 list-none rounded-2xl p-5 sm:p-6 min-h-[44px] text-left [&::-webkit-details-marker]:hidden">
+          <SlidersHorizontal className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold text-zinc-900 dark:text-white block">
+              Paramètres avancés du pilotage
+            </span>
+            <span className="text-sm text-zinc-500 dark:text-zinc-400 block mt-0.5">
+              Base HT/TTC, TVA, cotisations, plafond, fréquence de déclaration — à ajuster quand ta
+              situation change.
+            </span>
+          </span>
+          <ChevronDown
+            className="w-5 h-5 shrink-0 text-zinc-400 transition-transform group-open:rotate-180"
+            aria-hidden
+          />
+        </summary>
+        <div className="px-5 sm:px-6 pb-6 pt-0 space-y-4 border-t border-zinc-200/80 dark:border-zinc-800">
+          {!useSupabase || !studioId ? (
+            <div className="rounded-xl border border-amber-200/80 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
+              Connecte un studio avec Supabase pour enregistrer ces réglages. Les montants utilisent
+              les valeurs par défaut jusqu’à synchro.
+            </div>
+          ) : null}
+          <FinancePilotageSettingsForm
+            prefs={prefs}
+            setPrefs={setPrefs}
+            onSave={savePilotagePrefs}
+            saving={prefsSaving}
+            inputsDisabled={!useSupabase || !studioId}
+            saveDisabled={!useSupabase || !studioId}
+            hideLegalDisclaimer
+          />
+        </div>
+      </details>
+
+      <FiscalOnboardingWizard
+        isOpen={showFiscalOnboarding}
+        onDismiss={() => {
+          fiscalWizardDismissedSession.current = true;
+          setShowFiscalOnboarding(false);
+        }}
+        prefs={prefs}
+        setPrefs={setPrefs}
+        onPersist={persistWizardMerged}
+      />
     </div>
   );
 };
+
+interface PilotageNextActionsInput {
+  year: number;
+  monthKey: string;
+  caForSocial: number;
+  progressPct: number;
+  checklistPending: number | null;
+  urssafDue: string | null;
+  fiscalDue: string | null;
+}
+
+/** Jusqu’à trois messages prioritaires pour guider sans dupliquer le reste de la page. */
+function computePilotageNextActionsBullets(o: PilotageNextActionsInput): string[] {
+  const candidates: string[] = [];
+
+  const du = daysFromTodayIso(o.urssafDue);
+  const df = daysFromTodayIso(o.fiscalDue);
+  if (du !== null && du >= 0 && du <= 7) {
+    candidates.push(
+      `Rappel URSSAF (perso) sous ${du <= 1 ? '24 h' : `${du} j`} : ouvre ton espace pour le montant exact.`
+    );
+  }
+  if (df !== null && df >= 0 && df <= 7) {
+    candidates.push(
+      `Rappel fiscal / déclaration (perso) dans moins d’une semaine — vérifie impots.gouv ou ton conseil.`
+    );
+  }
+
+  if (o.caForSocial <= 0) {
+    candidates.push(
+      `Aucun encaissement suivi dans InkFlow en ${o.year} : termine des RDV à l’agenda ou saisis des espèces dans Revenus pour nourrir ces cartes.`
+    );
+  }
+
+  if (o.progressPct >= 90) {
+    candidates.push(
+      `Ton plafond micro-BIC/auto-entrepreneur est très proche (~${o.progressPct} %) — fais clarifier avant d’investir lourdement (seuil, conseil, autre statut).`
+    );
+  } else if (o.progressPct >= 80) {
+    candidates.push(
+      `Tu dépasses 80 % du plafond indicatif (~${o.progressPct} %) : anticipe tes options (acomptes, accompagnement, situation légale).`
+    );
+  } else if (o.progressPct >= 65) {
+    candidates.push(
+      `Environ ${o.progressPct} % du plafond est utilisé : garde tes justificatifs et surveille l’évolution avant fin d’année.`
+    );
+  }
+
+  if (o.checklistPending !== null && o.checklistPending > 0) {
+    candidates.push(
+      `Il reste ${o.checklistPending} point${o.checklistPending > 1 ? 's' : ''} sur la checklist fiscale (${o.monthKey}) — bloc « Checklist fiscale & admin » plus bas dans la page.`
+    );
+  }
+
+  const defaults = [
+    `Les montants et dates officiels viennent toujours d’URSSAF, des impôts et de tes courriers — ce pilotage ne remplace pas ces sources.`,
+    `Quand ta situation change (TVA, versement libératoire, plafond), ouvre « Paramètres avancés » et enregistre pour recalculer les estimations.`,
+  ];
+
+  let i = 0;
+  while (candidates.length < 3 && i < defaults.length) {
+    candidates.push(defaults[i]);
+    i += 1;
+  }
+
+  return candidates.slice(0, 3);
+}
+
+function daysFromTodayIso(isoDate: string | null): number | null {
+  if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return null;
+  const target = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(target.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const t = new Date(target);
+  t.setHours(0, 0, 0, 0);
+  return Math.round((t.getTime() - today.getTime()) / 86400000);
+}
 
 function OfficialLinkGroupList({ groups }: { groups: FreelanceOfficialLinkGroup[] }) {
   return (

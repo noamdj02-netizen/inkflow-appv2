@@ -2580,6 +2580,9 @@ summary {
   --admin-text-muted: #a0a0a0;
   --admin-accent: #c9a96e;
   --admin-accent-light: #f5d98b;
+  --admin-chart-line: #c9a96e;
+  --admin-chart-fill: #a18048;
+  --admin-chart-muted: #737373;
   --admin-success: #10b981;
   --admin-warning: #f59e0b;
   --admin-danger: #dc2626;
@@ -2593,9 +2596,12 @@ summary {
   --admin-border: #e5e5e5;
   --admin-text: #0d0d0d;
   --admin-text-muted: #737373;
-  /* Aligné sur le branding client (CLIENT_DASHBOARD_THEME.accent — bleu primaire) */
-  --admin-accent: #2563eb;
-  --admin-accent-light: #60a5fa;
+  /* Neutre éditorial (évite le duo bleu « dashboard IA ») ; accent fin = zinc */
+  --admin-accent: #27272a;
+  --admin-accent-light: #52525b;
+  --admin-chart-line: #3f3f46;
+  --admin-chart-fill: #52525b;
+  --admin-chart-muted: #a1a1aa;
 }
 
 @theme inline {

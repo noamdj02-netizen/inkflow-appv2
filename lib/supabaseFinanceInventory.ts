@@ -30,6 +30,48 @@ export async function saveStudioFinancePrefsToSupabase(
   if (error) throw error;
 }
 
+export interface FiscalChecklistRow {
+  id: string;
+  studio_id: string;
+  month: string;
+  item_key: string;
+  checked: boolean;
+  checked_at: string | null;
+  created_at: string;
+}
+
+export async function fetchFiscalChecklistForMonth(
+  studioId: string,
+  monthYYYYMM: string
+): Promise<FiscalChecklistRow[]> {
+  const { data, error } = await supabase
+    .from('inkflow_fiscal_checklist')
+    .select('id, studio_id, month, item_key, checked, checked_at, created_at')
+    .eq('studio_id', studioId)
+    .eq('month', monthYYYYMM);
+  if (error) throw error;
+  return (data ?? []) as FiscalChecklistRow[];
+}
+
+export async function setFiscalChecklistItem(
+  studioId: string,
+  monthYYYYMM: string,
+  itemKey: string,
+  checked: boolean
+): Promise<void> {
+  const { error } = await supabase.from('inkflow_fiscal_checklist').upsert(
+    {
+      studio_id: studioId,
+      month: monthYYYYMM,
+      item_key: itemKey,
+      checked,
+      checked_at: checked ? new Date().toISOString() : null,
+    } as Record<string, unknown>,
+    { onConflict: 'studio_id,month,item_key' }
+  );
+  if (error) throw error;
+}
+
 export interface ConsumableProductRow {
   id: string;
   studio_id: string;

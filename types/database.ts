@@ -531,6 +531,44 @@ export type Database = {
           },
         ];
       };
+      inkflow_fiscal_checklist: {
+        Row: {
+          checked: boolean;
+          checked_at: string | null;
+          created_at: string;
+          id: string;
+          item_key: string;
+          month: string;
+          studio_id: string;
+        };
+        Insert: {
+          checked?: boolean;
+          checked_at?: string | null;
+          created_at?: string;
+          id?: string;
+          item_key: string;
+          month: string;
+          studio_id: string;
+        };
+        Update: {
+          checked?: boolean;
+          checked_at?: string | null;
+          created_at?: string;
+          id?: string;
+          item_key?: string;
+          month?: string;
+          studio_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_fiscal_checklist_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       inkflow_artist_accounts: {
         Row: {
           active: boolean | null;

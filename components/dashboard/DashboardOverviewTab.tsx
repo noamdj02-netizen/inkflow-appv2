@@ -1393,7 +1393,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             {/* Accueil mobile — référence type CRM (clair, cartes blanches, donut, onglets pilule) */}
             <div className="px-0 pt-0.5 pb-0.5 safe-top">
               <motion.div className="flex flex-col gap-3" {...iosSpring(0)}>
-                {/* Rangée titre + notifications + profil — dense (moins haut) */}
+                {/* Rangée titre + profil — dense (moins haut) */}
                 <div
                   className={cn(
                     mobileHomeSurface,
@@ -1454,26 +1454,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     )}
                   </div>
                   <div className="relative z-[1] flex shrink-0 items-center gap-0.5 self-center">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('notifications')}
-                      className={cn(
-                        'relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors active:scale-[0.97]',
-                        overviewCover
-                          ? 'text-white hover:bg-white/15 active:bg-white/10 [text-shadow:0_1px_3px_rgba(0,0,0,0.7)]'
-                          : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
-                      )}
-                      aria-label="Notifications"
-                    >
-                      <Bell className="relative z-0 h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
-                      {pendingDemandesCount + visibleAlerts.length > 0 && (
-                        <span className="absolute -right-px -top-px z-[1] flex h-3.5 min-w-0 items-center justify-center rounded-full border border-white/90 bg-red-600 px-1 text-[9px] font-bold leading-none text-white tabular-nums shadow-sm dark:border-zinc-900 dark:bg-red-500">
-                          {pendingDemandesCount + visibleAlerts.length > 9
-                            ? '9+'
-                            : pendingDemandesCount + visibleAlerts.length}
-                        </span>
-                      )}
-                    </button>
                     <motion.button
                       type="button"
                       onClick={(e) => {

@@ -977,6 +977,13 @@ export const DashboardPro: React.FC = () => {
         badgeCount: demandes.total,
       },
       {
+        label: 'Stock & lots',
+        onClick: () => {
+          handleSidebarNav(() => setActiveTab('stock'));
+        },
+        Icon: <Package className="h-4 w-4" aria-hidden />,
+      },
+      {
         label: 'Messagerie',
         onClick: () => {
           handleSidebarNav(() => setActiveTab('messaging'));
@@ -5556,7 +5563,7 @@ export const DashboardPro: React.FC = () => {
         </>
       )}
 
-      {/* ====== MOBILE BOTTOM NAVIGATION BAR (Accueil, Agenda, FAB, Stock, Clients, Réglages) ====== */}
+      {/* ====== MOBILE BOTTOM NAVIGATION BAR (Accueil, Agenda, FAB, Clients, Réglages) — Stock dans Actions rapides ====== */}
       <nav
         className="bottom-nav md:hidden"
         role="navigation"
@@ -5630,43 +5637,11 @@ export const DashboardPro: React.FC = () => {
 
           <FloatingActionMenu
             variant="bottomNav"
-            isNavActive={activeTab === 'requests'}
+            isNavActive={activeTab === 'requests' || activeTab === 'stock'}
             fabBadgeCount={demandes.total}
             options={mobileFabActionOptions}
             mainButtonLabel="Actions rapides"
           />
-
-          <button
-            type="button"
-            onClick={() =>
-              handleSidebarNav(() => {
-                setActiveTab('stock');
-              })
-            }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
-              activeTab === 'stock'
-                ? 'text-blue-600 dark:text-blue-400'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-            }`}
-          >
-            {activeTab === 'stock' && (
-              <motion.div
-                layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-2xl bg-zinc-200/95 shadow-sm ring-1 ring-black/[0.04] dark:bg-white/[0.08] dark:ring-white/[0.08]"
-                transition={mobileBottomNavPillTransition}
-              />
-            )}
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
-              <Package
-                className="h-[23px] w-[23px] shrink-0"
-                strokeWidth={activeTab === 'stock' ? 2.35 : 1.65}
-                aria-hidden
-              />
-              <span className="max-w-full truncate text-[11px] font-semibold leading-none tracking-tight">
-                Stock
-              </span>
-            </span>
-          </button>
 
           <button
             type="button"

@@ -1,5 +1,13 @@
 import React from 'react';
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { TrendingUp } from 'lucide-react';
 
 export interface SignupPoint {
@@ -25,7 +33,7 @@ export function ActivityChart({ signupsByDay, period }: ActivityChartProps): Rea
     <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6">
       <div className="mb-6 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--admin-text)]">
-          <TrendingUp className="h-5 w-5 text-[var(--admin-accent)]" />
+          <TrendingUp className="h-5 w-5 text-[var(--admin-text-muted)]" aria-hidden />
           Inscriptions studios ({period})
         </h2>
         <div className="flex items-center gap-2 text-sm">
@@ -38,7 +46,11 @@ export function ActivityChart({ signupsByDay, period }: ActivityChartProps): Rea
           <LineChart data={chartData} margin={{ top: 5, right: 12, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--admin-border)" opacity={0.35} />
             <XAxis dataKey="date" stroke="var(--admin-text-muted)" style={{ fontSize: 11 }} />
-            <YAxis stroke="var(--admin-text-muted)" style={{ fontSize: 11 }} allowDecimals={false} />
+            <YAxis
+              stroke="var(--admin-text-muted)"
+              style={{ fontSize: 11 }}
+              allowDecimals={false}
+            />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'var(--admin-card)',
@@ -52,9 +64,9 @@ export function ActivityChart({ signupsByDay, period }: ActivityChartProps): Rea
               type="monotone"
               dataKey="inscriptions"
               name="Inscriptions"
-              stroke="var(--admin-accent)"
+              stroke="var(--admin-chart-line)"
               strokeWidth={2}
-              dot={{ fill: 'var(--admin-accent)', r: 3 }}
+              dot={{ fill: 'var(--admin-chart-line)', r: 3 }}
               activeDot={{ r: 5 }}
             />
           </LineChart>

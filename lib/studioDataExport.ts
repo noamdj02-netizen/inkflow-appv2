@@ -99,8 +99,17 @@ export function buildFinanceLedgerCsv(
   return lines.join('\r\n');
 }
 
-export function downloadTextFile(filename: string, content: string, mime = 'text/csv;charset=utf-8'): void {
+export function downloadTextFile(
+  filename: string,
+  content: string,
+  mime = 'text/csv;charset=utf-8'
+): void {
   const blob = new Blob(['\ufeff', content], { type: mime });
+  downloadBlobAsFile(filename, blob);
+}
+
+/** Télécharge un Blob (PDF, CSV custom, etc.) sans `window.open` — évite blocage popup / async. */
+export function downloadBlobAsFile(filename: string, blob: Blob): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -109,5 +118,5 @@ export function downloadTextFile(filename: string, content: string, mime = 'text
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 2500);
 }
