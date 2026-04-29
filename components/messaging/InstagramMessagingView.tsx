@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Instagram, Send, ArrowLeft } from 'lucide-react';
+import { Instagram, Send, ArrowLeft, ExternalLink } from 'lucide-react';
 import {
-  getInstagramStatus,
   getInstagramConversations,
   getInstagramMessages,
   sendInstagramMessage,
@@ -11,6 +10,32 @@ import {
 
 interface InstagramMessagingViewProps {
   studioId: string;
+}
+
+function ParticipantAvatar(props: {
+  name: string;
+  photoUrl?: string | null;
+  size: 'list' | 'header';
+}) {
+  const { name, photoUrl, size } = props;
+  const initial = name?.[0]?.toUpperCase() || '?';
+  const sizeClass = size === 'list' ? 'w-10 h-10 text-base' : 'w-9 h-9 text-sm';
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt=""
+        className={`${sizeClass} rounded-full object-cover flex-shrink-0 border border-[var(--border)]`}
+      />
+    );
+  }
+  return (
+    <div
+      className={`${sizeClass} rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold flex-shrink-0`}
+    >
+      {initial}
+    </div>
+  );
 }
 
 export const InstagramMessagingView: React.FC<InstagramMessagingViewProps> = ({ studioId }) => {
@@ -48,7 +73,12 @@ export const InstagramMessagingView: React.FC<InstagramMessagingViewProps> = ({ 
     setInput('');
     setMessages((prev) => [
       ...prev,
-      { id: `temp_${Date.now()}`, text, direction: 'outbound', timestamp: new Date().toISOString() },
+      {
+        id: `temp_${Date.now()}`,
+        text,
+        direction: 'outbound',
+        timestamp: new Date().toISOString(),
+      },
     ]);
     setSending(true);
     try {
@@ -93,10 +123,13 @@ export const InstagramMessagingView: React.FC<InstagramMessagingViewProps> = ({ 
           </div>
           <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="p-6 text-center text-[var(--text-tertiary)] text-sm">Chargement...</div>
+              <div className="p-6 text-center text-[var(--text-tertiary)] text-sm">
+                Chargement...
+              </div>
             ) : conversations.length === 0 ? (
               <div className="p-6 text-center text-[var(--text-tertiary)] text-sm">
-                Aucune conversation. Les messages apparaîtront quand un client t&apos;enverra un DM sur Instagram.
+                Aucune conversation. Les messages apparaîtront quand un client t&apos;enverra un DM
+                sur Instagram.
               </div>
             ) : (
               conversations.map((conv) => (
@@ -107,17 +140,23 @@ export const InstagramMessagingView: React.FC<InstagramMessagingViewProps> = ({ 
                     selectedConv?.id === conv.id ? 'bg-blue-50 dark:bg-blue-500/10' : ''
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold flex-shrink-0">
-                    {conv.participantName?.[0]?.toUpperCase() || '?'}
-                  </div>
+                  <ParticipantAvatar
+                    name={conv.participantName || conv.participantId}
+                    photoUrl={conv.participantAvatar}
+                    size="list"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-sm truncate text-[var(--text-primary)]">
                         {conv.participantName || conv.participantId}
                       </span>
-                      <span className="text-xs text-[var(--text-tertiary)] flex-shrink-0">{formatTime(conv.lastAt)}</span>
+                      <span className="text-xs text-[var(--text-tertiary)] flex-shrink-0">
+                        {formatTime(conv.lastAt)}
+                      </span>
                     </div>
-                    <p className="text-xs text-[var(--text-secondary)] truncate">{conv.lastMessage || '—'}</p>
+                    <p className="text-xs text-[var(--text-secondary)] truncate">
+                      {conv.lastMessage || '—'}
+                    </p>
                   </div>
                   {conv.unread > 0 && (
                     <span className="w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
@@ -140,15 +179,32 @@ export const InstagramMessagingView: React.FC<InstagramMessagingViewProps> = ({ 
               >
                 <ArrowLeft className="w-5 h-5 text-[var(--text-secondary)]" />
               </button>
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-sm">
-                {selectedConv.participantName?.[0]?.toUpperCase() || '?'}
-              </div>
+              <ParticipantAvatar
+                name={selectedConv.participantName || selectedConv.participantId}
+                photoUrl={selectedConv.participantAvatar}
+                size="header"
+              />
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate text-[var(--text-primary)]">
-                  {selectedConv.participantName || selectedConv.participantId}
-                </p>
+                {selectedConv.participantProfileUrl ? (
+                  <a
+                    href={selectedConv.participantProfileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Ouvrir le profil Instagram (${selectedConv.participantName || selectedConv.participantId})`}
+                    className="inline-flex min-h-[44px] items-center gap-2 font-semibold text-sm text-[var(--text-primary)] hover:text-blue-600 dark:hover:text-blue-400 active:scale-[0.98] transition-all"
+                  >
+                    <span className="truncate">
+                      {selectedConv.participantName || selectedConv.participantId}
+                    </span>
+                    <ExternalLink className="w-4 h-4 flex-shrink-0 opacity-70" aria-hidden />
+                  </a>
+                ) : (
+                  <p className="font-semibold text-sm truncate text-[var(--text-primary)] min-h-[44px] flex items-center">
+                    {selectedConv.participantName || selectedConv.participantId}
+                  </p>
+                )}
                 <p className="text-xs text-[var(--text-tertiary)] flex items-center gap-1">
-                  <Instagram className="w-3 h-3" /> Instagram Direct
+                  <Instagram className="w-3 h-3" aria-hidden /> Instagram Direct
                 </p>
               </div>
             </div>
@@ -169,7 +225,9 @@ export const InstagramMessagingView: React.FC<InstagramMessagingViewProps> = ({ 
                     <p className="leading-relaxed">{msg.text}</p>
                     <span
                       className={`text-xs mt-1 block ${
-                        msg.direction === 'outbound' ? 'text-white/70' : 'text-[var(--text-tertiary)]'
+                        msg.direction === 'outbound'
+                          ? 'text-white/70'
+                          : 'text-[var(--text-tertiary)]'
                       }`}
                     >
                       {formatTime(msg.timestamp)}

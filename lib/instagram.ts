@@ -33,7 +33,9 @@ async function invokeInstagram<T>(body: Record<string, unknown>): Promise<T> {
   const data = (await res.json().catch(() => ({}))) as T & { error?: string; details?: string };
   if (!res.ok) {
     const msg = data?.error
-      ? (data.details ? `${data.error}: ${data.details}` : data.error)
+      ? data.details
+        ? `${data.error}: ${data.details}`
+        : data.error
       : res.statusText || 'Service Instagram temporairement indisponible.';
     throw new Error(msg);
   }
@@ -50,6 +52,10 @@ export interface InstagramConversation {
   participantId: string;
   participantName: string;
   participantAvatar: string | null;
+  /** Lien instagram.com/[username]/ si résolu depuis l’API Meta */
+  participantProfileUrl?: string | null;
+  /** Pseudo sans @ résolu depuis Graph (optionnel) */
+  participantUsername?: string | null;
   lastMessage: string;
   lastAt: string;
   unread: number;
@@ -69,12 +75,19 @@ export async function getInstagramStatus(studioId: string): Promise<InstagramSta
 
 export async function getInstagramAuthUrl(studioId: string): Promise<string> {
   const data = await invokeInstagram<{ authUrl: string }>({ action: 'initiate', studioId });
-  if (!data?.authUrl) throw new Error('URL d\'autorisation non disponible');
+  if (!data?.authUrl) throw new Error("URL d'autorisation non disponible");
   return data.authUrl;
 }
 
-export async function exchangeInstagramCode(studioId: string, code: string): Promise<{ redirectUrl: string }> {
-  const data = await invokeInstagram<{ redirectUrl: string }>({ action: 'callback', studioId, code });
+export async function exchangeInstagramCode(
+  studioId: string,
+  code: string
+): Promise<{ redirectUrl: string }> {
+  const data = await invokeInstagram<{ redirectUrl: string }>({
+    action: 'callback',
+    studioId,
+    code,
+  });
   if (!data?.redirectUrl) throw new Error('Redirection non disponible');
   return data;
 }
@@ -83,13 +96,25 @@ export async function disconnectInstagram(studioId: string): Promise<void> {
   await invokeInstagram<{ success?: boolean }>({ action: 'disconnect', studioId });
 }
 
-export async function getInstagramConversations(studioId: string): Promise<InstagramConversation[]> {
-  const data = await invokeInstagram<InstagramConversation[]>({ action: 'conversations', studioId });
+export async function getInstagramConversations(
+  studioId: string
+): Promise<InstagramConversation[]> {
+  const data = await invokeInstagram<InstagramConversation[]>({
+    action: 'conversations',
+    studioId,
+  });
   return data ?? [];
 }
 
-export async function getInstagramMessages(studioId: string, participantId: string): Promise<InstagramMessage[]> {
-  const data = await invokeInstagram<InstagramMessage[]>({ action: 'messages', studioId, participantId });
+export async function getInstagramMessages(
+  studioId: string,
+  participantId: string
+): Promise<InstagramMessage[]> {
+  const data = await invokeInstagram<InstagramMessage[]>({
+    action: 'messages',
+    studioId,
+    participantId,
+  });
   return data ?? [];
 }
 

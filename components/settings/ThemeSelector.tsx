@@ -1,17 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  Palette,
-  Sparkles,
-  Lock,
-  Eye,
-  Check,
-  X,
-  ExternalLink,
-  LayoutTemplate,
-} from 'lucide-react';
+import { Palette, Sparkles, Lock, Eye, Check, X, ExternalLink, LayoutTemplate } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { VITRINE_THEMES, VITRINE_THEMES_SELECTOR, type VitrineTheme } from '../../lib/themes';
-import { getStudioVitrineTheme, getStudioUnlockedThemes, updateStudioVitrineTheme } from '../../lib/supabaseDashboard';
+import {
+  getStudioVitrineTheme,
+  getStudioUnlockedThemes,
+  updateStudioVitrineTheme,
+} from '../../lib/supabaseDashboard';
 import { createThemeCheckoutSession } from '../../lib/stripeClient';
 
 interface ThemeSelectorProps {
@@ -25,10 +20,15 @@ interface ThemeSelectorProps {
 const ThemePreviewCard: React.FC<{ theme: VitrineTheme }> = ({ theme }) => {
   const p = theme.preview;
   const isLight =
-    p.bg.includes('fafaf9') || p.bg.includes('F5F5DC') || p.bg.includes('white') || p.bg.includes('amber');
+    p.bg.includes('fafaf9') ||
+    p.bg.includes('F5F5DC') ||
+    p.bg.includes('white') ||
+    p.bg.includes('amber');
 
   return (
-    <div className={`w-full h-full ${p.bg} flex flex-col items-center pt-4 px-3 gap-2 overflow-hidden`}>
+    <div
+      className={`w-full h-full ${p.bg} flex flex-col items-center pt-4 px-3 gap-2 overflow-hidden`}
+    >
       <div className={`w-8 h-8 rounded-full ${p.accent} flex items-center justify-center shrink-0`}>
         <div className={`w-4 h-4 rounded-full ${isLight ? 'bg-white/60' : 'bg-black/30'}`} />
       </div>
@@ -76,7 +76,10 @@ const PreviewModal: React.FC<{
   const isPremiumLocked = theme.premium && !isUnlocked;
   const p = theme.preview;
   const isLight =
-    p.bg.includes('fafaf9') || p.bg.includes('F5F5DC') || p.bg.includes('white') || p.bg.includes('amber');
+    p.bg.includes('fafaf9') ||
+    p.bg.includes('F5F5DC') ||
+    p.bg.includes('white') ||
+    p.bg.includes('amber');
 
   return (
     <div
@@ -93,7 +96,10 @@ const PreviewModal: React.FC<{
       >
         <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-[var(--border)] shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div id={titleId} className="font-display font-semibold text-base sm:text-lg text-[var(--text-primary)] truncate">
+            <div
+              id={titleId}
+              className="font-display font-semibold text-base sm:text-lg text-[var(--text-primary)] truncate"
+            >
               {theme.name}
             </div>
             {theme.premium && (
@@ -114,7 +120,9 @@ const PreviewModal: React.FC<{
           </button>
         </div>
 
-        <div className={`w-full min-h-[220px] sm:h-72 ${p.bg} relative flex justify-center overflow-y-auto overflow-x-hidden`}>
+        <div
+          className={`w-full min-h-[220px] sm:h-72 ${p.bg} relative flex justify-center overflow-y-auto overflow-x-hidden`}
+        >
           <div className="w-full max-w-sm sm:w-72 py-6 sm:pt-8 flex flex-col items-center gap-3 px-4">
             <div className={`w-16 h-16 rounded-full ${p.accent} flex items-center justify-center`}>
               <div className={`w-8 h-8 rounded-full ${isLight ? 'bg-white/60' : 'bg-black/30'}`} />
@@ -139,13 +147,17 @@ const PreviewModal: React.FC<{
           {isPremiumLocked && (
             <div className="absolute inset-0 bg-black flex flex-col items-center justify-center gap-3 p-4">
               <Lock className="w-10 h-10 sm:w-12 sm:h-12 text-white" aria-hidden />
-              <p className="text-white font-semibold text-sm text-center">Thème premium — 2,99 € (paiement unique)</p>
+              <p className="text-white font-semibold text-sm text-center">
+                Thème premium — 2,99 € (paiement unique)
+              </p>
             </div>
           )}
         </div>
 
         <div className="px-4 sm:px-5 py-4 border-t border-[var(--border)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0 bg-[var(--bg-card-secondary)]/30">
-          <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{theme.description}</p>
+          <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+            {theme.description}
+          </p>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:shrink-0">
             {isActive ? (
               <span className="min-h-[44px] inline-flex items-center justify-center gap-2 px-4 rounded-xl bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-sm font-semibold border border-emerald-500/25">
@@ -180,7 +192,11 @@ const PreviewModal: React.FC<{
   );
 };
 
-export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmail, publicVitrineUrl }) => {
+export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
+  studioId,
+  userEmail,
+  publicVitrineUrl,
+}) => {
   const toast = useToast();
   const [currentThemeId, setCurrentThemeId] = useState<string>('light');
   const [unlockedThemes, setUnlockedThemes] = useState<string[]>([]);
@@ -215,9 +231,11 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
   }, [fetchData]);
 
   /** Toujours avant tout return — ne pas placer après `if (loading)` (règles des hooks). */
-  const hasUnlockedTheme = (theme: VitrineTheme) => !theme.premium || unlockedThemes.includes(theme.id);
+  const hasUnlockedTheme = (theme: VitrineTheme) =>
+    !theme.premium || unlockedThemes.includes(theme.id);
 
-  const currentThemeName = VITRINE_THEMES.find((t) => t.id === currentThemeId)?.name ?? currentThemeId;
+  const currentThemeName =
+    VITRINE_THEMES.find((t) => t.id === currentThemeId)?.name ?? currentThemeId;
 
   const handleApplyTheme = async (theme: VitrineTheme) => {
     if (theme.premium && !hasUnlockedTheme(theme)) {
@@ -282,19 +300,16 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ studioId, userEmai
             Thème de la vitrine
           </h3>
           <p className="text-zinc-500 dark:text-zinc-400 text-sm sm:text-base max-w-2xl">
-            Aperçu en grand, puis application en un geste. D’autres styles de vitrine arriveront plus tard.
+            Choisis un style puis applique avec aperçu en grand ; les modèles premium se débloquent
+            avec l&apos;offre correspondante.
           </p>
 
           <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-500">
             Thème actuel :{' '}
-            <span className="font-semibold text-zinc-900 dark:text-zinc-200">{currentThemeName}</span>
+            <span className="font-semibold text-zinc-900 dark:text-zinc-200">
+              {currentThemeName}
+            </span>
           </p>
-          {currentThemeId !== 'light' && (
-            <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200/90 rounded-xl border border-amber-200/80 dark:border-amber-800/60 bg-amber-50/90 dark:bg-amber-950/40 px-3 py-2 max-w-2xl">
-              Un ancien thème est encore enregistré. Appliquez <strong className="font-semibold">Minimalist Light</strong>{' '}
-              ci-dessous pour aligner la vitrine sur le thème proposé aujourd’hui.
-            </p>
-          )}
         </div>
         {publicVitrineUrl ? (
           <a
@@ -401,8 +416,12 @@ const ThemeCard: React.FC<{
         <div className="flex items-start gap-2">
           <LayoutTemplate className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" aria-hidden />
           <div className="min-w-0">
-            <h4 className="font-semibold text-sm text-zinc-900 dark:text-white truncate">{theme.name}</h4>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 mt-0.5">{theme.description}</p>
+            <h4 className="font-semibold text-sm text-zinc-900 dark:text-white truncate">
+              {theme.name}
+            </h4>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 mt-0.5">
+              {theme.description}
+            </p>
           </div>
         </div>
 

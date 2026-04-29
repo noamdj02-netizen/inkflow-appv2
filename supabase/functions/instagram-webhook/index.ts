@@ -46,6 +46,7 @@ Deno.serve(async (req: Request) => {
                 studio_id: conn.studio_id,
                 ig_account_id: igAccountId,
                 from_id: msg.sender?.id,
+                to_id: igAccountId,
                 message_id: msg.message?.mid,
                 text: msg.message.text,
                 direction: "inbound",
