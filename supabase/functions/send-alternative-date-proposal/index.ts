@@ -135,7 +135,7 @@ Deno.serve(async (req: Request) => {
         </td></tr>
       </table>
       <p style="color:#525252;font-size:14px;line-height:1.6;margin:0 0 8px;">Tu peux <strong>confirmer ou proposer un autre créneau</strong> en répondant à ce message (ton retour part vers le studio).</p>
-      <p style="color:#666666;font-size:13px;line-height:1.5;margin:0;">Tu peux aussi ouvrir InkFlow : bouton ci-dessous pour voir tes rendez-vous dans l&apos;espace client.</p>`;
+      <p style="color:#666666;font-size:13px;line-height:1.5;margin:0;">Tu peux aussi ouvrir InkFlow : bouton ci-dessous pour parcourir les studios et tes liens utiles.</p>`;
 
     const { clientDashboardUrl } = getEmailNavigationBaseUrls();
     const replyTo = payload.replyToEmail?.trim();
@@ -151,12 +151,12 @@ Deno.serve(async (req: Request) => {
       title: "Autre date proposée",
       subtitle: "Le studio te propose un nouveau créneau — réponds par mail ou depuis l’app.",
       bodyHtml,
-      button: { text: "Ouvrir mon espace client", url: clientDashboardUrl },
+      button: { text: "Découvrir les studios", url: clientDashboardUrl },
       ...(mailtoStudio
         ? { secondaryButton: { text: "Répondre au studio (e-mail)", url: mailtoStudio } }
         : {}),
       buttonSubtext:
-        "Le bouton bleu ouvre l’espace client. « Répondre » dans ta messagerie envoie ta réponse directement au studio.",
+        "Le bouton bleu ouvre l’annuaire InkFlow. « Répondre » dans ta messagerie envoie ta réponse directement au studio.",
     });
 
     const subject = `Proposition de date — ${payload.studioName.trim()}`;

@@ -47,8 +47,7 @@ function setLink(rel: string, href: string) {
 
 export const SEO: React.FC<SEOProps> = ({
   title = 'InkFlow - Logiciel de gestion pour tatoueurs',
-  description =
-    'Logiciel de gestion pour tatoueurs et studios en France : agenda partagé, réservations en ligne, acomptes Stripe (EUR), CRM clients, vitrine et galerie flash. Essai gratuit 14 jours, sans carte.',
+  description = 'Logiciel de gestion pour tatoueurs et studios en France : agenda partagé, réservations en ligne, acomptes Stripe (EUR), CRM clients, vitrine et galerie flash. Essai gratuit 14 jours, sans carte.',
   canonical,
   ogImage = DEFAULT_OG_IMAGE,
   ogImageAlt = 'InkFlow — logiciel de gestion pour tatoueurs et studios',
@@ -59,7 +58,10 @@ export const SEO: React.FC<SEOProps> = ({
 }) => {
   const fullTitle = title.includes('InkFlow') ? title : `${title} | InkFlow`;
   /** Landing (/) : canonical = SITE_URL (Framer) pour éviter doublon. Pages app : canonical = APP_URL. */
-  const fullCanonical = !canonical || canonical === '/' ? SITE_URL : `${APP_URL.replace(/\/$/, '')}${canonical.startsWith('/') ? canonical : `/${canonical}`}`;
+  const fullCanonical =
+    !canonical || canonical === '/'
+      ? SITE_URL
+      : `${APP_URL.replace(/\/$/, '')}${canonical.startsWith('/') ? canonical : `/${canonical}`}`;
   const absoluteOgImage = toAbsoluteUrl(ogImage, DEFAULT_OG_IMAGE);
   const JSONLD_ID = 'inkflow-jsonld';
 
@@ -108,7 +110,17 @@ export const SEO: React.FC<SEOProps> = ({
       const existing = document.getElementById(JSONLD_ID);
       if (existing) existing.remove();
     }
-  }, [fullTitle, description, fullCanonical, absoluteOgImage, ogImageAlt, ogType, noindex, keywords, schema]);
+  }, [
+    fullTitle,
+    description,
+    fullCanonical,
+    absoluteOgImage,
+    ogImageAlt,
+    ogType,
+    noindex,
+    keywords,
+    schema,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -187,23 +199,23 @@ export const faqPageSchemaFr: object = {
       name: "Qu'est-ce que l'assistant IA Inkflow ?",
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Il propose des brouillons et des créneaux quand une demande arrive. Vous relisez, vous envoyez. Rien ne part sans votre accord.",
+        text: 'Il propose des brouillons et des créneaux quand une demande arrive. Vous relisez, vous envoyez. Rien ne part sans votre accord.',
       },
     },
     {
       '@type': 'Question',
-      name: 'Comment fonctionnent les paiements Stripe ?',
+      name: 'Comment fonctionnent les paiements Stripe et PayPal ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Inkflow s'intègre directement avec Stripe. Vos clients paient l'acompte en ligne lors de la réservation. Les fonds arrivent sur votre compte Stripe en quelques jours. Aucune configuration complexe.",
+        text: "Inkflow utilise Stripe Checkout. Vos clients paient l'acompte en ligne lors de la réservation, par carte et PayPal si PayPal est activé dans votre compte Stripe. Les fonds arrivent sur votre compte Stripe en quelques jours.",
       },
     },
     {
       '@type': 'Question',
-      name: 'Quelle est la différence entre le plan Solo et Studio ?',
+      name: 'Quelle est la différence entre Solo, Pro et Studio ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Le plan Solo est conçu pour les tatoueurs indépendants (1 artiste, 100 clients CRM). Le plan Studio inclut plusieurs artistes, des clients CRM illimités et des statistiques avancées par artiste.',
+        text: 'Solo couvre les indépendants (1 artiste, 100 clients CRM). Pro ajoute 3 artistes, 300 clients CRM, stats avancées et thèmes premium. Studio passe à 5 artistes, clients CRM illimités et API.',
       },
     },
     {
@@ -301,7 +313,9 @@ export function createTattooStudioSchema(studio: {
   slug?: string;
 }): object {
   const appBase = APP_URL.replace(/\/$/, '');
-  const base = studio.slug ? `${appBase}/studio/${studio.slug}` : `${appBase}/studio/${studio.name.toLowerCase().replace(/\s+/g, '-')}`;
+  const base = studio.slug
+    ? `${appBase}/studio/${studio.slug}`
+    : `${appBase}/studio/${studio.name.toLowerCase().replace(/\s+/g, '-')}`;
   return {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',

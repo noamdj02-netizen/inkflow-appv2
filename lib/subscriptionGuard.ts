@@ -1,9 +1,17 @@
 import { supabase } from './supabase';
 import type { Subscription, SubscriptionPlan } from '../types';
-import { PLAN_CONFIG, canAccessFeature as canAccessFeaturePlan, hasReachedLimit as hasReachedLimitPlan, getPlanLimit } from './subscriptionPlans';
+import {
+  PLAN_CONFIG,
+  canAccessFeature as canAccessFeaturePlan,
+  hasReachedLimit as hasReachedLimitPlan,
+  getPlanLimit,
+} from './subscriptionPlans';
 
 /** @deprecated Préférer getPlanConfig() et getPlanLimit() depuis subscriptionPlans. Conservé pour compatibilité. */
-const PLAN_LIMITS: Record<SubscriptionPlan, { maxArtists: number; maxClients: number; features: string[] }> = {
+const PLAN_LIMITS: Record<
+  SubscriptionPlan,
+  { maxArtists: number; maxClients: number; features: string[] }
+> = {
   solo: {
     maxArtists: PLAN_CONFIG.solo.limits.artists,
     maxClients: PLAN_CONFIG.solo.limits.clients_crm,
@@ -12,17 +20,48 @@ const PLAN_LIMITS: Record<SubscriptionPlan, { maxArtists: number; maxClients: nu
   pro: {
     maxArtists: PLAN_CONFIG.pro.limits.artists,
     maxClients: PLAN_CONFIG.pro.limits.clients_crm,
-    features: ['bookings', 'payments', 'flash_gallery', 'crm_basic', 'analytics_basic', 'multi_artist', 'analytics_full'],
+    features: [
+      'bookings',
+      'payments',
+      'flash_gallery',
+      'crm_basic',
+      'analytics_basic',
+      'multi_artist',
+      'analytics_full',
+    ],
   },
   studio: {
     maxArtists: PLAN_CONFIG.studio.limits.artists,
-    maxClients: PLAN_CONFIG.studio.limits.clients_crm === -1 ? -1 : PLAN_CONFIG.studio.limits.clients_crm,
-    features: ['bookings', 'payments', 'flash_gallery', 'crm_full', 'analytics_full', 'multi_artist', 'messaging', 'loyalty', 'ai_assistant'],
+    maxClients:
+      PLAN_CONFIG.studio.limits.clients_crm === -1 ? -1 : PLAN_CONFIG.studio.limits.clients_crm,
+    features: [
+      'bookings',
+      'payments',
+      'flash_gallery',
+      'crm_full',
+      'analytics_full',
+      'multi_artist',
+      'messaging',
+      'loyalty',
+      'ai_assistant',
+    ],
   },
   enterprise: {
     maxArtists: -1,
     maxClients: -1,
-    features: ['bookings', 'payments', 'flash_gallery', 'crm_full', 'analytics_full', 'multi_artist', 'messaging', 'loyalty', 'ai_assistant', 'white_label', 'api_access'],
+    features: [
+      'bookings',
+      'payments',
+      'flash_gallery',
+      'crm_full',
+      'analytics_full',
+      'multi_artist',
+      'messaging',
+      'loyalty',
+      'ai_assistant',
+      'white_label',
+      'api_access',
+    ],
   },
 };
 
@@ -44,7 +83,9 @@ function mapSubscription(row: Record<string, unknown>): Subscription {
 export async function getSubscription(studioId: string): Promise<Subscription | null> {
   const { data, error } = await supabase
     .from('inkflow_subscriptions')
-    .select('*')
+    .select(
+      'id,studio_id,stripe_subscription_id,stripe_customer_id,plan,status,current_period_start,current_period_end,cancel_at_period_end,created_at'
+    )
     .eq('studio_id', studioId)
     .in('status', ['active', 'trialing'])
     .order('created_at', { ascending: false })
@@ -94,10 +135,15 @@ export async function endStudioTrialEarly(studioId: string): Promise<void> {
   if (error) throw error;
   if (!data?.length) {
     throw new Error(
-      'Impossible de mettre fin à l’essai : le statut a peut‑être déjà changé. Recharge la page.',
+      'Impossible de mettre fin à l’essai : le statut a peut‑être déjà changé. Recharge la page.'
     );
   }
 }
 
 // Réexport des helpers basés sur les plans (Stripe)
-export { canAccessFeature, hasReachedLimit, getPlanLimit, getPlanConfig } from './subscriptionPlans';
+export {
+  canAccessFeature,
+  hasReachedLimit,
+  getPlanLimit,
+  getPlanConfig,
+} from './subscriptionPlans';

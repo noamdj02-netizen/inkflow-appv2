@@ -27,7 +27,6 @@ import {
   isSubscriptionActive,
 } from '../../lib/subscriptionGuard';
 import { createSubscription, createPortalSession } from '../../lib/stripeClient';
-import { getStripeBillingLink } from '../../lib/stripePaymentLinks';
 import { TrialCountdown } from '../TrialCountdown';
 import { useToast } from '../../contexts/ToastContext';
 import type { Subscription, SubscriptionPlan } from '../../types';
@@ -57,7 +56,8 @@ const plans: {
     id: 'solo',
     name: 'Solo',
     description: 'Pour les artistes indépendants',
-    details: '1 artiste, 100 clients, réservations et paiements en ligne, vitrine personnalisée.',
+    details:
+      '1 artiste, 100 clients CRM, réservation en ligne, Stripe + PayPal via Stripe, galerie et vitrine.',
     priceMonthly: 29,
     priceAnnual: 24,
     icon: <Zap className="w-5 h-5" />,
@@ -67,7 +67,8 @@ const plans: {
     id: 'pro',
     name: 'Pro',
     description: 'Pour les studios en croissance',
-    details: "Jusqu'à 3 artistes, 300 clients, statistiques basiques, support prioritaire.",
+    details:
+      "Tout le cœur InkFlow : réservations, Stripe + PayPal via Stripe, galerie, vitrine, CRM jusqu'à 300 clients et 3 artistes.",
     priceMonthly: 49,
     priceAnnual: 39,
     popular: true,
@@ -78,7 +79,8 @@ const plans: {
     id: 'studio',
     name: 'Studio',
     description: 'Pour les grands studios',
-    details: '5+ artistes, clients illimités, messagerie interne, assistant IA, support dédié.',
+    details:
+      '5 artistes inclus, clients CRM illimités, messagerie interne, assistant IA, API et support dédié.',
     priceMonthly: 99,
     priceAnnual: 79,
     icon: <Crown className="w-5 h-5" />,
@@ -95,7 +97,7 @@ const features = [
     icon: <Calendar className="w-4 h-4" />,
   },
   {
-    name: 'Paiements Stripe',
+    name: 'Paiements Stripe + PayPal',
     solo: true,
     pro: true,
     studio: true,
@@ -132,7 +134,7 @@ const features = [
   {
     name: 'Statistiques',
     solo: false,
-    pro: 'Basiques',
+    pro: 'Avancées',
     studio: 'Avancées',
     icon: <BarChart3 className="w-4 h-4" />,
   },
@@ -201,7 +203,6 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
     if (plan !== 'solo' && plan !== 'pro' && plan !== 'studio') return;
     setSubscribing(plan);
     const interval = isAnnual ? 'annual' : 'monthly';
-    const directLink = getStripeBillingLink(plan, interval);
     const result = await createSubscription({
       studioId,
       email: userEmail,
@@ -210,11 +211,6 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
     });
     if ('url' in result) {
       window.location.href = result.url;
-      return;
-    }
-    if (directLink) {
-      window.location.href = directLink;
-      setSubscribing(null);
       return;
     }
     toast.error(result.error);

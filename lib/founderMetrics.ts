@@ -53,13 +53,18 @@ export interface FounderMetricsPayload {
 
 function founderEmailsFromEnv(): Set<string> {
   const raw = (import.meta.env.VITE_FOUNDER_ADMIN_EMAILS as string | undefined) ?? '';
-  return new Set(raw.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean));
+  return new Set(
+    raw
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean)
+  );
 }
 
 /**
  * Autorise l’UI `/admin` côté client.
  * - E-mails **@ink-flow.me** / **@inkflow.me** : toujours autorisés (équipe produit, sans copier dans VITE).
- * - Si `VITE_FOUNDER_ADMIN_EMAILS` est **vide** : pas de blocage client — l’Edge tranche.
+ * - Si `VITE_FOUNDER_ADMIN_EMAILS` est **vide** : seuls les domaines équipe passent côté client.
  * - Si renseignée : e-mail listé **ou** domaine équipe ci-dessus.
  * - **Dev local uniquement** : `VITE_ADMIN_DEV_OPEN=true` → tout compte connecté peut ouvrir l’UI (les données restent filtrées par l’Edge). Inactif en build production (`import.meta.env.DEV` est false).
  */
@@ -70,7 +75,7 @@ export function isFounderAllowlistedEmail(email: string | undefined | null): boo
   }
   if (isInkflowInternalStaffEmail(email)) return true;
   const raw = (import.meta.env.VITE_FOUNDER_ADMIN_EMAILS as string | undefined) ?? '';
-  if (!raw.trim()) return true;
+  if (!raw.trim()) return false;
   return founderEmailsFromEnv().has(email.trim().toLowerCase());
 }
 
@@ -105,7 +110,9 @@ export async function fetchFounderMetrics(accessToken: string): Promise<FounderM
 }
 
 /** Tolère d’anciennes réponses Edge avant extension des KPIs. */
-export function normalizeFounderMetricsPayload(raw: Partial<FounderMetricsPayload>): FounderMetricsPayload {
+export function normalizeFounderMetricsPayload(
+  raw: Partial<FounderMetricsPayload>
+): FounderMetricsPayload {
   const k = (raw.kpis ?? {}) as Partial<FounderMetricsPayload['kpis']>;
   const h = raw.health;
   return {
@@ -150,7 +157,11 @@ export function normalizeFounderMetricsPayload(raw: Partial<FounderMetricsPayloa
   };
 }
 
-export function downloadCsv(filename: string, headers: string[], rows: (string | number | null | undefined)[][]): void {
+export function downloadCsv(
+  filename: string,
+  headers: string[],
+  rows: (string | number | null | undefined)[][]
+): void {
   const esc = (cell: string | number | null | undefined) => {
     const s = cell == null ? '' : String(cell);
     if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;

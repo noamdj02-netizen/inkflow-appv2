@@ -5,8 +5,7 @@ import { REDIRECT_AFTER_LOGIN_KEY } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { sendTattooerWelcomeEmailIfNeeded } from '../lib/sendNotification';
 import { ensureStudio } from '../lib/supabaseDashboard';
-import { resolvePostLoginPath } from '../lib/postLoginRedirect';
-import { CLIENT_ONBOARDING_FINALIZE_PATH } from '../lib/clientOnboardingGate';
+import { resolvePostLoginPath, shouldSkipTattooerStudioBootstrap } from '../lib/postLoginRedirect';
 import { markJustSignedUp, markWelcomeRequired } from '../lib/welcomeStorage';
 import { isInkflowInternalStaffEmail } from '../lib/inkflowInternalStaff';
 
@@ -29,7 +28,7 @@ export const AuthCallbackPage: React.FC = () => {
     /**
      * Magic link Supabase : les tokens arrivent dans le hash (#access_token=…).
      * Le paramètre redirect_to en query est souvent perdu après redirection.
-     * URL dédiée /auth/callback/client → renvoie vers /client (mot de passe puis welcome ou dashboard).
+     * URL dédiée /auth/callback/client → renvoie vers /discover (portail client web retiré).
      */
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const linkType = hashParams.get('type');
@@ -40,8 +39,10 @@ export const AuthCallbackPage: React.FC = () => {
     const isClientCallback = pathname === '/auth/callback/client';
     const redirectToParam = params.get('redirect_to');
     const fromStorage =
-      typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY) : null;
-    const defaultPath = isClientCallback ? CLIENT_ONBOARDING_FINALIZE_PATH : '/dashboard';
+      typeof sessionStorage !== 'undefined'
+        ? sessionStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)
+        : null;
+    const defaultPath = isClientCallback ? '/mon-compte' : '/dashboard';
     const rawRedirect = redirectToParam || fromStorage || defaultPath;
     try {
       sessionStorage.removeItem(REDIRECT_AFTER_LOGIN_KEY);
@@ -54,7 +55,9 @@ export const AuthCallbackPage: React.FC = () => {
 
     const resolveSession = async () => {
       for (let i = 0; i < 8; i++) {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (session?.user) return session;
         await new Promise((r) => setTimeout(r, 100 + i * 50));
       }
@@ -76,12 +79,11 @@ export const AuthCallbackPage: React.FC = () => {
       const name = (meta.name as string) || u.email?.split('@')[0] || 'User';
       const studioName = (meta.studio_name as string) || 'Mon studio';
       const referralCode = (meta.referral_code as string) || undefined;
-      const isClientFlow = isClientCallback || redirectUrl.includes('/client');
+      const isClientFlow = shouldSkipTattooerStudioBootstrap(redirectUrl, isClientCallback);
       /** Parcours bienvenue tatoueur — pas pour les comptes équipe @ink-flow.me / founder. */
       if (!isClientFlow && !isInkflowInternalStaffEmail(u.email)) {
         const createdMs = u.created_at ? new Date(u.created_at).getTime() : 0;
-        const isVeryNewAccount =
-          createdMs > 0 && Date.now() - createdMs < 5 * 60 * 1000;
+        const isVeryNewAccount = createdMs > 0 && Date.now() - createdMs < 5 * 60 * 1000;
         if (linkType === 'signup' || isVeryNewAccount) {
           markJustSignedUp();
           const scope = u.email?.trim().toLowerCase() || u.id;

@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, CircleCheck, X, XCircle } from 'lucide-react';
+import {
+  CalendarDays,
+  CheckCircle2,
+  CircleCheck,
+  Phone,
+  ReceiptText,
+  X,
+  XCircle,
+} from 'lucide-react';
 import { ClientPreviewPanel, type ClientPreviewData } from './ClientPreviewPanel';
 import { sendAftercareEmail } from '../../lib/sendNotification';
 import type { Appointment } from '../../types';
@@ -19,6 +27,8 @@ interface ClientPreviewDrawerProps {
   showInkflowClientDiscussion?: boolean;
   inkflowMessagingThreadId?: string | null;
   onOpenInkflowDiscussion?: () => void;
+  onOpenCloseout?: (appointment: Appointment) => void;
+  onOpenAgenda?: () => void;
 }
 
 export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
@@ -32,6 +42,8 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
   showInkflowClientDiscussion = false,
   inkflowMessagingThreadId = null,
   onOpenInkflowDiscussion,
+  onOpenCloseout,
+  onOpenAgenda,
 }) => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
@@ -68,8 +80,31 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
       onClose();
     }
   };
+  const handleStartSession = () => {
+    if (appointment && onUpdateAppointment) {
+      onUpdateAppointment(appointment.id, { status: 'in_progress' });
+      hapticSuccess();
+    }
+  };
+  const handleOpenCloseout = () => {
+    if (!appointment || !onOpenCloseout) return;
+    onOpenCloseout(appointment);
+    onClose();
+  };
+  const handleOpenAgenda = () => {
+    if (!onOpenAgenda) return;
+    onOpenAgenda();
+    onClose();
+  };
 
   const showAppointmentActions = Boolean(appointment && onUpdateAppointment);
+  const phoneDisplay = (
+    appointment?.clientPhone ||
+    data.appointment.clientPhone ||
+    data.client?.phone ||
+    ''
+  ).trim();
+  const telHref = phoneDisplay ? `tel:${phoneDisplay.replace(/\s/g, '')}` : '';
 
   return (
     <>
@@ -187,15 +222,79 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
                 </div>
               )}
               {appointment.status === 'confirmed' && (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleStartSession}
+                    className="flex-1 inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 transition-all active:scale-[0.98]"
+                  >
+                    <CircleCheck className="w-4 h-4 shrink-0" />
+                    Démarrer
+                  </button>
+                  {onOpenCloseout && (
+                    <button
+                      type="button"
+                      onClick={handleOpenCloseout}
+                      className="flex-1 inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 transition-all active:scale-[0.98]"
+                    >
+                      <ReceiptText className="w-4 h-4 shrink-0" />
+                      Solde
+                    </button>
+                  )}
+                </div>
+              )}
+              {appointment.status === 'in_progress' && (
+                <button
+                  type="button"
+                  onClick={handleOpenCloseout}
+                  disabled={!onOpenCloseout}
+                  className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-400 transition-all active:scale-[0.98]"
+                >
+                  <ReceiptText className="w-4 h-4 shrink-0" />
+                  Clôturer / encaisser
+                </button>
+              )}
+              {appointment.status === 'completed' && (
                 <button
                   type="button"
                   onClick={handleComplete}
                   className="w-full inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 transition-all active:scale-[0.98]"
                 >
                   <CircleCheck className="w-4 h-4 shrink-0" />
-                  Marquer comme terminé
+                  Renvoyer l’aftercare
                 </button>
               )}
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {telHref ? (
+                  <a
+                    href={telHref}
+                    className="inline-flex items-center justify-center gap-2 min-h-[42px] rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-800 dark:text-zinc-200 active:scale-[0.98] transition-all"
+                    aria-label={`Appeler ${phoneDisplay}`}
+                  >
+                    <Phone className="w-4 h-4 shrink-0" />
+                    {phoneDisplay}
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex items-center justify-center gap-2 min-h-[42px] rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-400 dark:text-zinc-500 opacity-60"
+                  >
+                    <Phone className="w-4 h-4 shrink-0" />
+                    Pas de numéro
+                  </button>
+                )}
+                {onOpenAgenda && (
+                  <button
+                    type="button"
+                    onClick={handleOpenAgenda}
+                    className="inline-flex items-center justify-center gap-2 min-h-[42px] rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-800 dark:text-zinc-200 active:scale-[0.98] transition-all"
+                  >
+                    <CalendarDays className="w-4 h-4 shrink-0" />
+                    Agenda
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>

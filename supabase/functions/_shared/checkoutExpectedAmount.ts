@@ -33,7 +33,7 @@ export async function resolveExpectedCheckoutAmountEur(
   if (aptId) {
     const { data: apt, error } = await supabase
       .from("inkflow_appointments")
-      .select("id, studio_id, deposit, price, deposit_paid")
+      .select("id, studio_id, deposit, price, deposit_paid, balance_paid_at")
       .eq("id", aptId)
       .eq("studio_id", input.studioId)
       .maybeSingle();
@@ -55,6 +55,14 @@ export async function resolveExpectedCheckoutAmountEur(
     }
 
     if (input.type === "balance") {
+      const balPaid = apt.balance_paid_at;
+      if (balPaid != null && String(balPaid).trim() !== "") {
+        return {
+          ok: false,
+          error: "Solde déjà enregistré comme payé pour ce rendez-vous.",
+          status: 409,
+        };
+      }
       const price = apt.price != null ? Number(apt.price) : 0;
       const deposit = apt.deposit != null ? Number(apt.deposit) : 0;
       const paidDeposit = apt.deposit_paid === true ? deposit : 0;

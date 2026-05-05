@@ -710,42 +710,54 @@ export type Database = {
       inkflow_bookings: {
         Row: {
           client_avatar_url: string | null;
+          client_phone: string | null;
           client_email: string;
           client_name: string;
+          client_recap_token: string | null;
           created_at: string | null;
           description: string;
           id: string;
+          recap_appointment_id: string | null;
           reference_images: Json | null;
           requested_date: string;
           requested_time: string | null;
+          sms_confirmation_opt_in: boolean;
           status: string;
           studio_id: string;
           updated_at: string | null;
         };
         Insert: {
           client_avatar_url?: string | null;
+          client_phone?: string | null;
           client_email: string;
           client_name: string;
+          client_recap_token?: string | null;
           created_at?: string | null;
           description: string;
           id: string;
+          recap_appointment_id?: string | null;
           reference_images?: Json | null;
           requested_date: string;
           requested_time?: string | null;
+          sms_confirmation_opt_in?: boolean;
           status?: string;
           studio_id: string;
           updated_at?: string | null;
         };
         Update: {
           client_avatar_url?: string | null;
+          client_phone?: string | null;
           client_email?: string;
           client_name?: string;
+          client_recap_token?: string | null;
           created_at?: string | null;
           description?: string;
           id?: string;
+          recap_appointment_id?: string | null;
           reference_images?: Json | null;
           requested_date?: string;
           requested_time?: string | null;
+          sms_confirmation_opt_in?: boolean;
           status?: string;
           studio_id?: string;
           updated_at?: string | null;
@@ -2025,18 +2037,21 @@ export type Database = {
       inkflow_native_device_tokens: {
         Row: {
           platform: string;
+          studio_id: string | null;
           token: string;
           updated_at: string;
           user_id: string;
         };
         Insert: {
           platform?: string;
+          studio_id?: string | null;
           token: string;
           updated_at?: string;
           user_id: string;
         };
         Update: {
           platform?: string;
+          studio_id?: string | null;
           token?: string;
           updated_at?: string;
           user_id?: string;
@@ -3375,6 +3390,7 @@ export type Database = {
           thread_id: string;
         }[];
       };
+      get_booking_client_recap: { Args: { p_token: string }; Returns: Json };
       get_client_unread_message_count: {
         Args: { p_client_email: string };
         Returns: number;

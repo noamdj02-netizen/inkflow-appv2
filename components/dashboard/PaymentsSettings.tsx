@@ -140,7 +140,7 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
       }
       const { data, error } = await supabase
         .from('inkflow_studios')
-        .select('*')
+        .select('stripe_connect_account_id,stripe_connect_charges_enabled')
         .eq('id', studioId)
         .maybeSingle();
       if (!error && data) {

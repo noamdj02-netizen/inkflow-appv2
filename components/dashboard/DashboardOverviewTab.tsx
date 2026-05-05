@@ -76,6 +76,7 @@ import {
   type DashboardLayout,
 } from '../../lib/dashboardWidgetOrder';
 import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
+import { useBreakpointMd } from '../../hooks/useMediaQuery';
 import type { Appointment, Client, FlashDesign, ProjectRequest } from '../../types';
 import type { DashboardWidget } from './DashboardWidgets';
 import { StudioSetupChecklist } from './StudioSetupChecklist';
@@ -83,7 +84,15 @@ import { StudioPresenceMiniCard } from './StudioPresenceMiniCard';
 import { IconBox } from '../ui/IconBox';
 import { LANDING_PRICING_URL } from '../../lib/urls';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { supabase } from '../../lib/supabase';
@@ -438,6 +447,8 @@ export interface DashboardOverviewTabProps {
   onOpenBilling?: () => void;
   /** `true` quand le bandeau héros (DashboardPro) porte le titre de page « Vue d’ensemble » (md+) — le salut desktop passe en `h2` pour l’accessibilité */
   pageTitleInShell?: boolean;
+  /** Contenu mobile placé juste après le héros pour garder le visuel d’accueil en premier. */
+  mobileAfterHero?: React.ReactNode;
   /**
    * Compte démo : quand l’API renvoie 0 vues / 0 ouvertures, afficher des chiffres d’exemple sur la carte Visibilité.
    */
@@ -488,6 +499,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   trialEndsAt,
   onOpenBilling,
   pageTitleInShell = false,
+  mobileAfterHero,
   usePlaceholderForPublicVisibility = false,
 }) => {
   const { privacyMode } = useStudioPrivacy();
@@ -555,9 +567,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   }, [studioSubscriptionStatus, trialDaysRemaining]);
 
   /** Évite les IDs sortables dupliqués (un seul arbre KPI / widgets draggables selon la largeur) */
-  const [isMdUp, setIsMdUp] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
-  );
+  const isMdUp = useBreakpointMd();
   const [rightPanelTab, setRightPanelTab] = useState<'clients' | 'deposits'>('clients');
   const [isEditMode, setIsEditMode] = useState(false);
   /** Bloc statistiques type CRM (donut) : RDV vs demandes, période */
@@ -606,12 +616,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     toast.success('Ouvre l’onglet Stripe — connecte-toi si demandé.');
   }, [studioId, stripeExpressOpening, toast, onSetupNavigate]);
 
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)');
-    const apply = () => setIsMdUp(mq.matches);
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
   const vitrineSlug =
     studioSlug != null && studioSlug !== ''
       ? studioSlug
@@ -664,6 +668,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     start.setDate(start.getDate() - 6);
     return `${start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`;
   }, [today]);
+
+  const safeMonthlyRevenue = Number.isFinite(monthlyRevenue) ? monthlyRevenue : 0;
+  const safeMonthlyForecast = Number.isFinite(monthlyForecast) ? monthlyForecast : 0;
+  const safePendingDeposits = Number.isFinite(pendingDeposits) ? pendingDeposits : 0;
 
   const insightDonutData = useMemo(() => {
     const inRange = (dateStr: string) => {
@@ -736,12 +744,17 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   );
   const trendRevenue =
     lastMonthRevenue > 0
-      ? Math.round(((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
+      ? Math.round(((safeMonthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
       : null;
   const trendAppointments =
     lastMonthAppointments > 0
       ? Math.round(((appointmentsThisMonth - lastMonthAppointments) / lastMonthAppointments) * 100)
       : null;
+  const completedAppointmentsThisMonth = appointments.filter(
+    (a) => a.date.startsWith(currentMonthStr) && a.status === 'completed'
+  ).length;
+  const averageTicketThisMonth =
+    appointmentsThisMonth > 0 ? Math.round(safeMonthlyRevenue / appointmentsThisMonth) : 0;
 
   const handlePeriodChange = useCallback((total: number, trend: number | null) => {
     setPeriodRevenue(total);
@@ -979,16 +992,16 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   /** Cartes KPI mobile : fond « secondary grouped » + bandeau sémantique (équivalent tint iOS) */
   /** Cartes & listes — mêmes jetons que revenu / stats (vue mobile CRM) */
   const crmCard =
-    'rounded-2xl border border-zinc-200/90 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:bg-zinc-900';
-  /** Accueil mobile : surfaces alignées (relief discret, rayon 16px) */
+    'rounded-3xl border border-zinc-200/80 bg-white/95 shadow-sm ring-0 dark:border-zinc-800 dark:bg-zinc-900/70';
+  /** Accueil mobile : surfaces alignées avec le cockpit du jour */
   const mobileHomeSurface =
-    'rounded-2xl border border-zinc-200/85 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_6px_22px_-6px_rgba(15,23,42,0.09)] ring-1 ring-zinc-950/[0.04] dark:border-zinc-700/70 dark:bg-zinc-900/95 dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.55)] dark:ring-1 dark:ring-inset dark:ring-white/[0.07]';
+    'rounded-3xl border border-zinc-200/80 bg-white/95 shadow-sm ring-0 dark:border-zinc-800 dark:bg-zinc-900/70';
   const mobileQuickActionBar =
-    'rounded-2xl border border-blue-200/70 bg-gradient-to-b from-sky-50/95 via-blue-50/90 to-sky-100/70 p-2 shadow-sm shadow-slate-400/10 ring-1 ring-blue-200/50 dark:border-blue-500/20 dark:from-blue-950/50 dark:via-blue-950/40 dark:to-zinc-900 dark:shadow-none dark:ring-1 dark:ring-inset dark:ring-white/[0.08]';
+    'rounded-3xl border border-zinc-200/80 bg-white/95 p-2 shadow-sm ring-0 dark:border-zinc-800 dark:bg-zinc-900/70';
   const mobileQuickActionTile =
-    'flex min-h-[44px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-zinc-200/80 bg-white/95 px-0.5 py-2 shadow-sm ring-1 ring-black/[0.06] active:scale-[0.98] active:opacity-95 motion-reduce:active:scale-100 dark:border-zinc-700/60 dark:bg-zinc-900/92 dark:shadow dark:ring-0 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/55 focus-visible:ring-offset-2 focus-visible:ring-offset-sky-50 dark:focus-visible:ring-sky-400/50 dark:focus-visible:ring-offset-zinc-900 [@media(hover:hover)]:hover:border-zinc-300/90 dark:[@media(hover:hover)]:hover:border-zinc-500';
+    'flex min-h-[54px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200 bg-zinc-50/80 px-1 py-2 shadow-none active:scale-[0.98] active:opacity-95 motion-reduce:active:scale-100 dark:border-zinc-800 dark:bg-zinc-950/40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/55 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-blue-400/50 dark:focus-visible:ring-offset-zinc-900 [@media(hover:hover)]:hover:bg-white dark:[@media(hover:hover)]:hover:bg-zinc-900';
   const crmCardHeader =
-    'px-4 py-3 flex items-baseline justify-between border-b border-zinc-200/80 dark:border-zinc-800';
+    'px-4 py-3 flex items-baseline justify-between border-b border-zinc-200/70 dark:border-zinc-800';
   const crmSectionTitle = 'text-[16px] font-bold tracking-tight text-zinc-900 dark:text-white';
   const crmListLink = 'text-[13px] font-medium text-zinc-800 dark:text-zinc-200';
   const crmMuted = 'text-[12px] text-zinc-500 dark:text-zinc-400';
@@ -1009,9 +1022,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   /** Chiffres KPI mobile — grands chiffres tabulaires, lisibles (Dynamic Type–friendly) */
   const iosKpiMetricWrap = 'mt-0.5 inline-flex items-baseline gap-0.5 flex-wrap min-w-0';
   const iosKpiMetricValue =
-    'text-[28px] min-[400px]:text-[32px] font-semibold tabular-nums tracking-[-0.03em] text-zinc-900 dark:text-white leading-none';
+    'text-[28px] min-[400px]:text-[32px] font-semibold tabular-nums tracking-[-0.03em] text-numeric leading-none';
   const iosKpiMetricSuffix =
-    'text-[14px] min-[400px]:text-[15px] font-medium text-zinc-400 dark:text-zinc-500 leading-none tabular-nums select-none';
+    'text-[14px] min-[400px]:text-[15px] font-medium text-numeric-muted leading-none tabular-nums select-none';
   /** 44×44 pt zone tactile (HIG) */
   const iosKpiIconBtn =
     'shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl bg-zinc-100/95 dark:bg-zinc-800/95 active:scale-[0.97] active:opacity-80 transition-all motion-reduce:active:scale-100';
@@ -1082,33 +1095,35 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   <p
                     className={
                       isMdUp
-                        ? 'text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2'
+                        ? 'text-2xl font-bold text-numeric tabular-nums tracking-tight mt-2'
                         : iosKpiMetricWrap
                     }
                   >
                     {isMdUp ? (
-                      <>{euro(monthlyRevenue)}</>
+                      <>{euro(safeMonthlyRevenue)}</>
                     ) : (
                       <>
                         <span className={iosKpiMetricValue}>
-                          {privacyMode ? '••••' : monthlyRevenue.toLocaleString('fr-FR')}
+                          {privacyMode ? '••••' : safeMonthlyRevenue.toLocaleString('fr-FR')}
                         </span>
                         {!privacyMode && <span className={iosKpiMetricSuffix}>€</span>}
                       </>
                     )}
                   </p>
                   <div className={`${isMdUp ? 'mt-2' : 'mt-1'} flex flex-col gap-1`}>
-                    {monthlyForecast > 0 &&
+                    {safeMonthlyForecast > 0 &&
                       (isMdUp ? (
                         <span className={kpiPillPending}>
-                          {privacyMode ? '••••' : `+${monthlyForecast.toLocaleString('fr-FR')}€`} en
-                          attente
+                          {privacyMode
+                            ? '••••'
+                            : `+${safeMonthlyForecast.toLocaleString('fr-FR')}€`}{' '}
+                          en attente
                         </span>
                       ) : (
                         <p className={iosKpiMetaPillSky}>
                           {privacyMode
                             ? '•••• prévisionnel'
-                            : `+${monthlyForecast.toLocaleString('fr-FR')}€ prévisionnel`}
+                            : `+${safeMonthlyForecast.toLocaleString('fr-FR')}€ prévisionnel`}
                         </p>
                       ))}
                     <div className="flex items-end min-h-[20px]">
@@ -1182,16 +1197,16 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   <p
                     className={
                       isMdUp
-                        ? 'text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2'
+                        ? 'text-2xl font-bold text-numeric tabular-nums tracking-tight mt-2'
                         : iosKpiMetricWrap
                     }
                   >
                     {isMdUp ? (
-                      <>{euro(pendingDeposits)}</>
+                      <>{euro(safePendingDeposits)}</>
                     ) : (
                       <>
                         <span className={iosKpiMetricValue}>
-                          {privacyMode ? '••••' : pendingDeposits.toLocaleString('fr-FR')}
+                          {privacyMode ? '••••' : safePendingDeposits.toLocaleString('fr-FR')}
                         </span>
                         {!privacyMode && <span className={iosKpiMetricSuffix}>€</span>}
                       </>
@@ -1249,7 +1264,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   <p
                     className={
                       isMdUp
-                        ? 'text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2'
+                        ? 'text-2xl font-bold text-numeric tabular-nums tracking-tight mt-2'
                         : iosKpiMetricWrap
                     }
                   >
@@ -1331,7 +1346,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   <p
                     className={
                       isMdUp
-                        ? 'text-2xl font-bold text-zinc-900 dark:text-white tabular-nums tracking-tight mt-2'
+                        ? 'text-2xl font-bold text-numeric tabular-nums tracking-tight mt-2'
                         : iosKpiMetricWrap
                     }
                   >
@@ -1389,22 +1404,22 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           (un seul arbre sortable actif dans le DndContext).
           ===================================================== */}
         {!isMdUp && (
-          <div className="flex min-w-0 max-w-full flex-col gap-4 overflow-x-hidden bg-transparent pb-[calc(6.75rem+env(safe-area-inset-bottom,0px))] antialiased font-sans [-webkit-font-smoothing:antialiased] sm:gap-5">
+          <div className="flex min-w-0 max-w-full flex-col gap-3 overflow-x-hidden bg-transparent pb-[calc(6.75rem+env(safe-area-inset-bottom,0px))] antialiased font-sans [-webkit-font-smoothing:antialiased] sm:gap-5">
             {/* Accueil mobile — référence type CRM (clair, cartes blanches, donut, onglets pilule) */}
-            <div className="px-0 pt-0.5 pb-0.5 safe-top">
-              <motion.div className="flex flex-col gap-3" {...iosSpring(0)}>
-                {/* Rangée titre + profil — dense (moins haut) */}
+            <div className="px-0 pt-0.5 pb-0 safe-top">
+              <motion.div className="flex flex-col gap-2 sm:gap-3" {...iosSpring(0)}>
+                {/* Rangée titre + profil — compacte, date & pill sur une ligne */}
                 <div
                   className={cn(
                     mobileHomeSurface,
-                    'relative isolate flex min-h-[4.5rem] items-center justify-between gap-2 overflow-hidden px-3 py-2.5',
+                    'relative isolate flex min-h-0 items-start justify-between gap-3 overflow-hidden px-3.5 py-2.5 sm:px-4 sm:py-3',
                     overviewCover &&
-                      'border-white/20 bg-transparent shadow-[0_8px_30px_-12px_rgba(0,0,0,0.35)] ring-1 ring-white/15 dark:border-zinc-600/40 dark:shadow-[0_8px_32px_-10px_rgba(0,0,0,0.7)] dark:ring-zinc-500/20'
+                      'border-white/20 bg-transparent shadow-sm ring-0 dark:border-zinc-600/40'
                   )}
                 >
                   {overviewCover ? (
                     <div
-                      className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-2xl"
+                      className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-3xl"
                       aria-hidden
                     >
                       <img
@@ -1416,44 +1431,52 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       />
                     </div>
                   ) : null}
-                  <div className="relative z-[1] min-w-0 flex-1">
+                  <div className="relative z-[1] min-w-0 flex-1 space-y-1">
                     <h1
+                      id="dashboard-overview-mobile-title"
                       className={cn(
-                        'truncate text-[15px] font-bold leading-tight tracking-tight text-zinc-900 dark:text-white',
+                        'text-[15px] font-bold leading-tight tracking-tight text-zinc-900 dark:text-white sm:text-[16px]',
                         overviewCover &&
                           'text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_0_20px_rgba(0,0,0,0.35)]'
                       )}
                     >
                       Vue d&apos;ensemble
                     </h1>
-                    <p
-                      className={cn(
-                        'truncate text-[11px] leading-snug text-zinc-500 dark:text-zinc-400',
-                        overviewCover && 'text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.75)]'
-                      )}
-                    >
-                      {now.toLocaleDateString('fr-FR', {
-                        weekday: 'short',
-                        day: 'numeric',
-                        month: 'long',
-                      })}
-                    </p>
-                    {todayOrTomorrowCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('agenda')}
-                        className="mt-0.5 inline-flex w-auto max-w-full min-w-0 items-center gap-0.5 self-start rounded-full border border-white/20 bg-blue-600 px-1.5 py-0.5 text-left text-[10px] font-medium leading-none text-white shadow-sm transition-colors hover:bg-blue-700 active:scale-[0.99] active:bg-blue-800 dark:border-white/15 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-500"
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                      <p
+                        className={cn(
+                          'text-[11px] font-medium capitalize leading-none tracking-wide text-zinc-500 dark:text-zinc-400 sm:text-[12px]',
+                          overviewCover && 'text-white/85 [text-shadow:0_1px_2px_rgba(0,0,0,0.75)]'
+                        )}
                       >
-                        <CalendarCheck
-                          className="size-2.5 shrink-0 text-white"
-                          strokeWidth={2}
-                          aria-hidden
-                        />
-                        {todayOrTomorrowCount} RDV bientôt
-                      </button>
-                    )}
+                        {now.toLocaleDateString('fr-FR', {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                      </p>
+                      {todayOrTomorrowCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('agenda')}
+                          className={cn(
+                            'inline-flex max-w-full min-h-[44px] min-w-0 items-center gap-1.5 rounded-full border px-3 py-2 text-[11px] font-semibold leading-tight shadow-sm transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:text-xs',
+                            overviewCover
+                              ? 'border-white/25 bg-blue-600 text-white hover:bg-blue-500'
+                              : 'border-blue-200/90 bg-blue-600 text-white hover:bg-blue-700 dark:border-blue-500/40 dark:bg-blue-600 dark:hover:bg-blue-500'
+                          )}
+                        >
+                          <CalendarCheck
+                            className="size-3.5 shrink-0 opacity-95 sm:size-4"
+                            strokeWidth={2}
+                            aria-hidden
+                          />
+                          {todayOrTomorrowCount} RDV bientôt
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="relative z-[1] flex shrink-0 items-center gap-0.5 self-center">
+                  <div className="relative z-[1] flex shrink-0 items-start gap-0.5 pt-0.5">
                     <motion.button
                       type="button"
                       onClick={(e) => {
@@ -1465,9 +1488,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       disabled={avatarUploading}
                       whileTap={prefersReducedMotion ? undefined : { scale: 0.94 }}
                       className={cn(
-                        'relative h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 bg-zinc-100 shadow-sm dark:bg-zinc-800',
+                        'relative size-11 shrink-0 overflow-hidden rounded-2xl border bg-zinc-100 shadow-sm dark:bg-zinc-800 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-900',
                         overviewCover
-                          ? 'border-white/90 ring-2 ring-black/25'
+                          ? 'border-white/90 ring-2 ring-black/20'
                           : 'border-zinc-200 dark:border-zinc-600'
                       )}
                       aria-label={onAvatarClick ? 'Changer la photo de profil' : 'Paramètres'}
@@ -1498,34 +1521,50 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   </div>
                 </div>
 
+                {mobileAfterHero ? <div className="min-w-0 -mt-0.5">{mobileAfterHero}</div> : null}
+
                 {/* Sous-navigation pilule (réf. Home / My Tier / Activities) */}
                 <div
-                  className="flex gap-1 rounded-full bg-zinc-200/75 p-1 ring-1 ring-inset ring-zinc-900/[0.06] dark:bg-black/25 dark:ring-zinc-700/50"
+                  className="grid grid-cols-3 gap-1 rounded-3xl border border-zinc-200/80 bg-white/95 p-1 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70"
                   role="tablist"
                   aria-label="Raccourcis accueil"
                 >
                   <span
                     role="tab"
                     aria-selected
-                    className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-white py-2 text-center text-[13px] font-semibold text-zinc-900 shadow-sm ring-1 ring-zinc-900/[0.04] dark:bg-zinc-800 dark:text-white dark:ring-1 dark:ring-inset dark:ring-white/10"
+                    aria-current="page"
+                    className="flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl bg-zinc-900 px-2 py-2 text-center text-[13px] font-semibold text-white shadow-sm dark:bg-white dark:text-zinc-900"
                   >
+                    <Home className="h-4 w-4 shrink-0" aria-hidden />
                     Accueil
                   </span>
                   <button
                     type="button"
                     role="tab"
                     onClick={() => setActiveTab('requests')}
-                    className="flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-full py-2 text-center text-[13px] font-medium text-zinc-600 transition-colors active:scale-[0.98] dark:text-zinc-500"
+                    className="relative flex min-h-[48px] min-w-0 items-center justify-center gap-1.5 rounded-2xl px-2 py-2 text-center text-[13px] font-medium text-zinc-600 transition-all active:scale-[0.98] hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset dark:text-zinc-400 dark:hover:bg-zinc-800"
                   >
+                    <Inbox className="h-4 w-4 shrink-0" aria-hidden />
                     Demandes
+                    {pendingDemandesCount > 0 && (
+                      <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white dark:bg-red-500 dark:ring-zinc-900">
+                        {pendingDemandesCount > 9 ? '9+' : pendingDemandesCount}
+                      </span>
+                    )}
                   </button>
                   <button
                     type="button"
                     role="tab"
                     onClick={() => setActiveTab('agenda')}
-                    className="flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-full py-2 text-center text-[13px] font-medium text-zinc-600 transition-colors active:scale-[0.98] dark:text-zinc-500"
+                    className="flex min-h-[48px] min-w-0 items-center justify-center gap-1.5 rounded-2xl px-2 py-2 text-center text-[13px] font-medium text-zinc-600 transition-all active:scale-[0.98] hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset dark:text-zinc-400 dark:hover:bg-zinc-800"
                   >
+                    <Calendar className="h-4 w-4 shrink-0" aria-hidden />
                     Agenda
+                    {todayAppointments.length > 0 && (
+                      <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                        {todayAppointments.length}
+                      </span>
+                    )}
                   </button>
                 </div>
 
@@ -1551,7 +1590,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         className={mobileQuickActionTile}
                       >
                         <Plus
-                          className="h-[18px] w-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
+                          className="size-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
                           strokeWidth={2}
                           aria-hidden
                         />
@@ -1568,10 +1607,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         variants={quickTileVariants}
                         whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
                         transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                        aria-label="Ouvrir la galerie flash"
                         className={mobileQuickActionTile}
                       >
                         <Zap
-                          className="h-[18px] w-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
+                          className="size-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
                           strokeWidth={2}
                           aria-hidden
                         />
@@ -1587,10 +1627,11 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           variants={quickTileVariants}
                           whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
                           transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                          aria-label="Voir la vitrine publique dans un nouvel onglet"
                           className={mobileQuickActionTile}
                         >
                           <ExternalLink
-                            className="h-[18px] w-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
+                            className="size-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
                             strokeWidth={2}
                             aria-hidden
                           />
@@ -1607,7 +1648,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           )}
                         >
                           <ExternalLink
-                            className="h-[18px] w-[18px] shrink-0 text-zinc-400 dark:text-zinc-500"
+                            className="size-[18px] shrink-0 text-zinc-400 dark:text-zinc-500"
                             strokeWidth={2}
                             aria-hidden
                           />
@@ -1638,7 +1679,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           </span>
                         )}
                         <Inbox
-                          className="h-[18px] w-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
+                          className="size-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
                           strokeWidth={2}
                           aria-hidden
                         />
@@ -1651,126 +1692,207 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 </motion.div>
 
                 {/* Carte métrique principale (revenu + rappels lisibles + zone Finance plate) */}
-                <div className={cn(mobileHomeSurface, 'p-4')}>
-                  <div className="flex min-w-0 items-end justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-semibold text-zinc-900 dark:text-white">
-                        Revenu du mois
+                <Card size="sm" className={cn(mobileHomeSurface, 'gap-3 py-4')}>
+                  <CardHeader className="flex flex-col gap-3 px-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+                        Pilotage du mois
                       </p>
-                      <p className="mt-0.5 text-[12px] text-zinc-500 dark:text-zinc-400/95">
+                      <CardTitle className="mt-1 text-[17px] font-bold tracking-tight text-zinc-950 dark:text-white">
+                        Revenus, RDV & demandes
+                      </CardTitle>
+                      <CardDescription className="text-[12px]">
                         {crmMonthRangeLabel}
-                      </p>
+                      </CardDescription>
                     </div>
-                    <p className="shrink-0 text-right text-[32px] font-bold leading-none tabular-nums tracking-tight text-zinc-900 dark:text-white">
-                      {privacyMode ? '••••' : `${monthlyRevenue.toLocaleString('fr-FR')} €`}
-                    </p>
-                  </div>
-                  <div className="mt-3 flex flex-col gap-2.5">
-                    {trendRevenue !== null && (
-                      <div className="flex min-w-0 flex-wrap items-end gap-2">
-                        <span className="inline-flex items-center gap-0.5 rounded-full bg-zinc-100 px-2.5 py-1 text-[12px] font-semibold tabular-nums text-zinc-800 dark:bg-zinc-800/80 dark:text-zinc-200">
-                          {trendRevenue >= 0 ? (
-                            <TrendingUp className="h-3.5 w-3.5" aria-hidden />
-                          ) : (
-                            <TrendingDown className="h-3.5 w-3.5" aria-hidden />
-                          )}
-                          {trendRevenue >= 0 ? '+' : ''}
-                          {trendRevenue}% vs mois dernier
-                        </span>
-                      </div>
-                    )}
-                    {(rdvAlertUnpaidCount > 0 || rdvAlertBientotCount > 0) && !privacyMode && (
-                      <div
-                        className="flex flex-wrap gap-1"
-                        role="status"
-                        aria-label="Rappels rendez-vous"
-                      >
-                        {rdvAlertUnpaidCount > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => onAlertNavigate?.({ id: 'unpaid', type: 'warning' })}
-                            className="inline-flex min-h-0 min-w-0 max-w-full items-center gap-0.5 rounded-full bg-blue-50/95 px-1.5 py-0.5 text-left text-[10px] font-medium leading-tight text-blue-950 ring-1 ring-blue-200/90 transition [transition-property:transform,background-color] active:scale-[0.99] dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
-                          >
-                            <AlertCircle
-                              className="h-3 w-3 shrink-0 text-blue-600 dark:text-sky-400"
-                              strokeWidth={2}
-                              aria-hidden
-                            />
-                            <span className="min-w-0 [text-wrap:balance]">
-                              {rdvAlertUnpaidCount} sans acompte
-                            </span>
-                          </button>
-                        )}
-                        {rdvAlertBientotCount > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => onAlertNavigate?.({ id: '24h', type: 'info' })}
-                            className="inline-flex min-h-0 min-w-0 max-w-full items-center gap-0.5 rounded-full bg-sky-50 px-1.5 py-0.5 text-left text-[10px] font-medium leading-tight text-sky-950 ring-1 ring-sky-200/90 transition [transition-property:transform,background-color] active:scale-[0.99] dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
-                          >
-                            <Clock
-                              className="h-3 w-3 shrink-0 text-sky-600 dark:text-cyan-300"
-                              strokeWidth={2}
-                              aria-hidden
-                            />
-                            <span className="min-w-0 [text-wrap:balance]">
-                              {rdvAlertBientotCount} auj. ou demain
-                            </span>
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-4 space-y-2 border-t border-zinc-100 pt-4 dark:border-zinc-700/60">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('finance')}
-                      className="group flex w-full min-h-12 min-w-0 items-center gap-3 rounded-xl bg-zinc-50/95 px-3 py-2.5 text-left transition [transition-property:transform,background-color] active:scale-[0.99] dark:bg-zinc-800/40 dark:hover:bg-zinc-800/60"
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm dark:bg-blue-500">
-                        <Wallet className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[13px] font-semibold leading-snug text-zinc-900 dark:text-white">
-                          Acomptes &amp; encaissements
-                        </span>
-                        <span className="mt-0.5 block text-[11px] font-medium text-blue-600 dark:text-blue-400">
-                          Finance
-                        </span>
-                      </span>
-                      <ChevronRight
-                        className="h-4 w-4 shrink-0 text-zinc-400 transition-colors group-active:text-blue-500 dark:text-zinc-500"
-                        strokeWidth={2}
-                        aria-hidden
-                      />
-                    </button>
-                    {stripeConnectAccountId && useSupabase && (
-                      <button
+                    <CardAction className="w-full sm:w-auto sm:shrink-0">
+                      <Button
                         type="button"
-                        onClick={() => void openStripeExpressDashboard()}
-                        disabled={stripeExpressOpening}
-                        title="Tableau de bord Stripe (Express)"
-                        className="flex w-full min-h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-200/90 bg-transparent px-3 py-2.5 text-[12px] font-semibold text-zinc-700 transition active:scale-[0.99] disabled:opacity-60 dark:border-zinc-600/90 dark:text-zinc-200 dark:hover:bg-zinc-800/30"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActiveTab('finance')}
+                        className="min-h-[44px] w-full rounded-2xl sm:min-h-0 sm:w-auto"
                       >
-                        {stripeExpressOpening ? (
-                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                        ) : (
-                          <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />
-                        )}
-                        Tableau de bord Stripe
-                      </button>
-                    )}
-                  </div>
-                </div>
+                        Finance
+                        <ChevronRight data-icon="inline-end" />
+                      </Button>
+                    </CardAction>
+                  </CardHeader>
+
+                  <CardContent className="flex flex-col gap-3 px-4">
+                    <div className="rounded-3xl border border-zinc-900 bg-zinc-950 p-3.5 text-white shadow-sm dark:border-zinc-100 dark:bg-white dark:text-zinc-950">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[12px] font-medium text-white/65 dark:text-zinc-500">
+                            Revenu encaissé
+                          </p>
+                          <p className="mt-1 text-[32px] font-bold leading-none tracking-tight tabular-nums">
+                            {privacyMode
+                              ? '••••'
+                              : `${safeMonthlyRevenue.toLocaleString('fr-FR')}€`}
+                          </p>
+                        </div>
+                        <Badge
+                          variant="secondary"
+                          className="h-auto flex-col items-end rounded-2xl px-3 py-2"
+                        >
+                          <span className="text-[10px] uppercase tracking-wide opacity-70">
+                            Prévu
+                          </span>
+                          <span className="text-sm font-bold tabular-nums">
+                            {privacyMode
+                              ? '••••'
+                              : `+${safeMonthlyForecast.toLocaleString('fr-FR')}€`}
+                          </span>
+                        </Badge>
+                      </div>
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        {[
+                          ['RDV mois', appointmentsThisMonth],
+                          ['Terminés', completedAppointmentsThisMonth],
+                          ['Panier moy.', privacyMode ? '••' : `${averageTicketThisMonth}€`],
+                        ].map(([label, value]) => (
+                          <div
+                            key={label}
+                            className="rounded-2xl bg-white/10 p-2 dark:bg-zinc-950/10"
+                          >
+                            <p className="truncate text-[10px] font-medium text-white/55 dark:text-zinc-500">
+                              {label}
+                            </p>
+                            <p className="mt-1 text-lg font-bold tabular-nums">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setActiveTab('agenda')}
+                        className="h-auto min-h-[62px] flex-col items-start rounded-2xl px-3 py-2.5"
+                      >
+                        <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+                          <CalendarCheck data-icon="inline-start" />
+                          Aujourd’hui
+                        </span>
+                        <span className="text-2xl font-bold tabular-nums text-zinc-950 dark:text-white">
+                          {todayAppointments.length}
+                        </span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setActiveTab('requests')}
+                        className="h-auto min-h-[62px] flex-col items-start rounded-2xl px-3 py-2.5"
+                      >
+                        <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+                          <Inbox data-icon="inline-start" />
+                          Demandes
+                        </span>
+                        <span className="text-2xl font-bold tabular-nums text-zinc-950 dark:text-white">
+                          {pendingDemandesCount}
+                        </span>
+                      </Button>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      {trendRevenue !== null && (
+                        <div className="flex min-w-0 flex-wrap items-end gap-2">
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              'h-6 rounded-2xl text-[12px] font-semibold tabular-nums',
+                              trendRevenue >= 0
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                                : 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
+                            )}
+                          >
+                            {trendRevenue >= 0 ? (
+                              <TrendingUp data-icon="inline-start" aria-hidden />
+                            ) : (
+                              <TrendingDown data-icon="inline-start" aria-hidden />
+                            )}
+                            {trendRevenue >= 0 ? '+' : ''}
+                            {trendRevenue}% vs mois dernier
+                          </Badge>
+                        </div>
+                      )}
+                      {(rdvAlertUnpaidCount > 0 || rdvAlertBientotCount > 0) && !privacyMode && (
+                        <div
+                          className="flex flex-wrap gap-1"
+                          role="status"
+                          aria-label="Rappels rendez-vous"
+                        >
+                          {rdvAlertUnpaidCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => onAlertNavigate?.({ id: 'unpaid', type: 'warning' })}
+                              className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-blue-50/95 px-3 py-2 text-left text-[11px] font-medium leading-snug text-blue-950 ring-1 ring-blue-200/90 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
+                            >
+                              <AlertCircle
+                                className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-sky-400"
+                                strokeWidth={2}
+                                aria-hidden
+                              />
+                              <span className="min-w-0 [text-wrap:balance]">
+                                {rdvAlertUnpaidCount} sans acompte
+                              </span>
+                            </button>
+                          )}
+                          {rdvAlertBientotCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => onAlertNavigate?.({ id: '24h', type: 'info' })}
+                              className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-sky-50 px-3 py-2 text-left text-[11px] font-medium leading-snug text-sky-950 ring-1 ring-sky-200/90 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
+                            >
+                              <Clock
+                                className="h-3.5 w-3.5 shrink-0 text-sky-600 dark:text-cyan-300"
+                                strokeWidth={2}
+                                aria-hidden
+                              />
+                              <span className="min-w-0 [text-wrap:balance]">
+                                {rdvAlertBientotCount} auj. ou demain
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {stripeConnectAccountId && useSupabase && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void openStripeExpressDashboard()}
+                          disabled={stripeExpressOpening}
+                          title="Tableau de bord Stripe (Express)"
+                          className="min-h-[44px] w-full rounded-2xl border-dashed"
+                        >
+                          {stripeExpressOpening ? (
+                            <Loader2
+                              data-icon="inline-start"
+                              className="animate-spin"
+                              aria-hidden
+                            />
+                          ) : (
+                            <LayoutDashboard data-icon="inline-start" aria-hidden />
+                          )}
+                          Tableau de bord Stripe
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Bloc statistiques : toggle + période + donut */}
                 <div className={cn(mobileHomeSurface, 'p-4')}>
                   <div className="flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
-                    <div className="flex flex-1 gap-1 rounded-full bg-zinc-100/90 p-0.5 ring-1 ring-inset ring-zinc-900/[0.04] dark:bg-black/35 dark:ring-zinc-700/45">
+                    <div className="flex flex-1 gap-1 rounded-full bg-zinc-100/90 p-1 ring-1 ring-inset ring-zinc-900/[0.04] dark:bg-black/35 dark:ring-zinc-700/45">
                       <button
                         type="button"
                         onClick={() => setInsightView('rdv')}
                         className={cn(
-                          'flex-1 rounded-full py-2 text-center text-[12px] font-semibold transition-colors',
+                          'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-900',
                           insightView === 'rdv'
                             ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white dark:ring-1 dark:ring-inset dark:ring-white/12'
                             : 'text-zinc-500 dark:text-zinc-500'
@@ -1782,7 +1904,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         type="button"
                         onClick={() => setInsightView('demandes')}
                         className={cn(
-                          'flex-1 rounded-full py-2 text-center text-[12px] font-semibold transition-colors',
+                          'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-900',
                           insightView === 'demandes'
                             ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white dark:ring-1 dark:ring-inset dark:ring-white/12'
                             : 'text-zinc-500 dark:text-zinc-500'
@@ -1791,20 +1913,26 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         Demandes
                       </button>
                     </div>
-                    <div className="flex items-center gap-1 self-end min-[400px]:self-auto">
-                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Période</span>
-                      <div className="relative max-w-[min(100%,8.5rem)]">
+                    <div className="flex min-h-[44px] items-center gap-2 self-stretch min-[400px]:self-auto">
+                      <label
+                        htmlFor="overview-insight-period"
+                        className="shrink-0 text-xs font-medium text-zinc-600 dark:text-zinc-400"
+                      >
+                        Période
+                      </label>
+                      <div className="relative min-w-0 flex-1 max-w-[11rem]">
                         <select
+                          id="overview-insight-period"
                           value={insightPeriod}
                           onChange={(e) => setInsightPeriod(e.target.value as 'week' | 'month')}
-                          className="h-6 w-full min-h-0 max-w-full appearance-none rounded border border-zinc-200 bg-white py-0 pl-1 pr-5 text-[11px] font-medium leading-none text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                          className="min-h-[44px] w-full appearance-none rounded-xl border border-zinc-200 bg-white py-2 pl-3 pr-9 text-sm font-medium text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                           aria-label="Période des statistiques"
                         >
                           <option value="week">7 jours</option>
                           <option value="month">Mois en cours</option>
                         </select>
                         <ChevronDown
-                          className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-zinc-500"
+                          className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
                           aria-hidden
                         />
                       </div>
@@ -1874,26 +2002,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     <button
                       type="button"
                       onClick={() => setActiveTab('requests')}
-                      className="flex items-center gap-1.5 rounded-full bg-zinc-200/90 px-3 py-1.5 text-xs font-semibold text-zinc-900 shadow-sm transition-transform active:scale-[0.98] dark:bg-zinc-700/50 dark:text-zinc-100"
+                      className="flex min-h-[44px] items-center gap-2 rounded-full bg-zinc-200/90 px-4 py-2 text-xs font-semibold text-zinc-900 shadow-sm transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:bg-zinc-700/50 dark:text-zinc-100 dark:focus-visible:ring-offset-zinc-900"
                     >
-                      <AlertCircle className="h-3.5 w-3.5" />
+                      <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
                       {unpaidCount} sans acompte
                     </button>
                   </div>
                 )}
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('agenda')}
-                  className={cn(
-                    'flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200/80 bg-zinc-100/80 py-2.5 text-[13px] font-semibold text-zinc-900 shadow-[0_2px_12px_rgba(15,23,42,0.05)] active:scale-[0.99] dark:border-zinc-700 dark:bg-zinc-800/70 dark:text-zinc-100'
-                  )}
-                  aria-label={`${todayAppointments.length} rendez-vous aujourd’hui, ouvrir l’agenda`}
-                >
-                  <Calendar className="h-4 w-4" strokeWidth={2} aria-hidden />
-                  <span className="tabular-nums">{todayAppointments.length}</span>
-                  <span>RDV aujourd’hui</span>
-                </button>
               </motion.div>
             </div>
 
@@ -1965,64 +2080,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               </div>
             )}
 
-            <div className="px-0">
-              <StudioPresenceMiniCard
-                studioId={studioId}
-                studioSlug={vitrineSlug}
-                useSupabase={useSupabase}
-                usePlaceholderWhenEmpty={usePlaceholderForPublicVisibility}
-                onOpenAnalytics={() => setActiveTab('analytics')}
-                onOpenFlashAndLinks={() => {
-                  if (onSetupNavigate) onSetupNavigate('settings-vitrine');
-                  else setActiveTab('flash');
-                }}
-              />
-            </div>
-
             {/* Main Content — mêmes jetons cartes CRM */}
             <motion.div className="px-0 flex flex-col gap-4" {...iosSpring(0.12)}>
-              {/* Prochain client — une seule zone cliquable, infos fusionnées (moins de blocs) */}
-              {nextClient && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedAppointment(nextClient)}
-                  className={cn(
-                    crmCard,
-                    'w-full p-2.5 flex items-center gap-2.5 text-left active:scale-[0.99] transition-transform touch-manipulation min-h-[52px]'
-                  )}
-                  aria-label={`Ouvrir le rendez-vous de ${nextClient.clientName || 'client'} à ${nextClient.time || ''}`}
-                >
-                  <img
-                    src={nextClient.clientAvatar || '/images/avatar-client-default.png'}
-                    alt=""
-                    className="w-9 h-9 rounded-xl object-cover bg-zinc-100 dark:bg-zinc-800 shrink-0 border border-zinc-200/80 dark:border-zinc-700"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                        {nextClient.clientName}
-                      </p>
-                      <span className="text-xs font-semibold tabular-nums text-zinc-500 dark:text-zinc-400 shrink-0">
-                        {nextClient.time || '--:--'}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5 leading-snug">
-                      {[
-                        nextClient.service,
-                        nextClient.duration ? `${nextClient.duration} min` : null,
-                      ]
-                        .filter((x): x is string => Boolean(x))
-                        .join(' · ') || 'Tatouage'}
-                    </p>
-                  </div>
-                  <ChevronRight
-                    className="w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0"
-                    strokeWidth={2}
-                    aria-hidden
-                  />
-                </button>
-              )}
-
               {/* Widget "Actions Requises" — affiché uniquement si demandes en attente */}
               {pendingDemandesCount > 0 && (
                 <button
@@ -2030,7 +2089,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   onClick={() => setActiveTab('requests')}
                   className={cn(
                     mobileHomeSurface,
-                    'w-full border-l-4 border-l-amber-500/90 pl-3.5 p-3 flex items-center gap-3 text-left active:scale-[0.99] transition-transform touch-manipulation min-h-[52px] dark:border-l-amber-500/80'
+                    'w-full border-l-4 border-l-amber-500/90 pl-3.5 p-3 flex items-center gap-3 text-left active:scale-[0.99] transition-transform touch-manipulation min-h-[56px] rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:border-l-amber-500/80 dark:focus-visible:ring-offset-zinc-900'
                   )}
                   aria-label={`Voir les ${pendingDemandesCount} demande${pendingDemandesCount > 1 ? 's' : ''} en attente`}
                 >
@@ -2070,7 +2129,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsEditMode((v) => !v)}
-                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-sm min-[400px]:text-[15px] font-medium transition-colors active:scale-[0.98] touch-manipulation ${
+                      className={`inline-flex min-h-[44px] items-center gap-1.5 px-3 py-2 rounded-xl text-sm min-[400px]:text-[15px] font-medium transition-colors active:scale-[0.98] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 ${
                         isEditMode
                           ? 'bg-blue-600 text-white dark:bg-blue-500'
                           : 'border border-zinc-200/90 bg-zinc-50/80 text-blue-700 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-blue-400'
@@ -2083,8 +2142,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       type="button"
                       onClick={() => setActiveTab('analytics')}
                       className={cn(
-                        'rounded-xl px-2 py-1.5 text-sm font-medium min-[400px]:px-1 min-[400px]:py-1',
-                        'active:opacity-70 touch-manipulation',
+                        'min-h-[44px] rounded-xl px-3 py-2 text-sm font-medium',
+                        'active:opacity-70 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900',
                         crmListLink
                       )}
                     >
@@ -2418,12 +2477,12 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                       Évolution du revenu
                                     </p>
                                     <div className="flex items-baseline gap-2 flex-wrap">
-                                      <p className="text-2xl font-bold text-zinc-900 dark:text-white tabular-nums">
+                                      <p className="text-2xl font-bold text-numeric tabular-nums">
                                         {euro(periodRevenue ?? totalRevenue)}
                                       </p>
                                       {periodTrend !== null && (
                                         <span
-                                          className={`text-sm font-semibold ${periodTrend >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500 dark:text-red-400'}`}
+                                          className={`text-sm font-semibold tabular-nums ${periodTrend >= 0 ? 'text-primary' : 'text-destructive'}`}
                                         >
                                           {periodTrend >= 0 ? '+' : ''}
                                           {periodTrend}%
@@ -2463,7 +2522,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                     <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 tracking-tight">
                                       Aujourd'hui
                                     </p>
-                                    <p className="text-lg font-semibold text-zinc-900 dark:text-white mt-0.5">
+                                    <p className="text-lg font-semibold text-numeric mt-0.5 tabular-nums">
                                       {todayAppointments.length} rendez-vous
                                     </p>
                                   </div>
@@ -2488,7 +2547,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                           className="w-full flex items-center gap-4 p-4 rounded-2xl bg-zinc-50/80 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all text-left group"
                                         >
                                           <div className="flex-shrink-0 w-12 text-center">
-                                            <p className="text-lg font-bold text-zinc-900 dark:text-white tabular-nums">
+                                            <p className="text-lg font-bold text-numeric tabular-nums">
                                               {apt.time?.split(':')[0] || '--'}
                                             </p>
                                             <p className="text-[10px] font-medium text-zinc-400 uppercase">
@@ -2505,7 +2564,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                           </div>
                                           <div className="flex items-center gap-2">
                                             {apt.price && (
-                                              <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-300 tabular-nums">
+                                              <span className="text-sm font-semibold text-numeric tabular-nums">
                                                 {privacyMode ? '••••' : `${apt.price}€`}
                                               </span>
                                             )}
@@ -2633,7 +2692,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                 </div>
                                 <div className="grid grid-cols-3 gap-4">
                                   <div className="text-center p-3 rounded-2xl bg-blue-50 dark:bg-blue-500/10">
-                                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                    <p className="text-2xl font-bold text-primary tabular-nums">
                                       {confirmedApts}
                                     </p>
                                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
@@ -2641,7 +2700,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                     </p>
                                   </div>
                                   <div className="text-center p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80">
-                                    <p className="text-2xl font-bold text-zinc-800 dark:text-zinc-200">
+                                    <p className="text-2xl font-bold text-numeric tabular-nums">
                                       {pendingApts}
                                     </p>
                                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
@@ -2649,7 +2708,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                     </p>
                                   </div>
                                   <div className="text-center p-3 rounded-2xl bg-blue-50 dark:bg-blue-500/10">
-                                    <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+                                    <p className="text-2xl font-bold text-numeric tabular-nums">
                                       {privacyMode ? '••••' : `${avgPrice}€`}
                                     </p>
                                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
@@ -2965,7 +3024,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                             <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate flex-1">
                                               {apt.clientName || 'Client'}
                                             </span>
-                                            <span className="text-sm font-bold text-zinc-900 dark:text-white tabular-nums">
+                                            <span className="text-sm font-bold text-numeric tabular-nums">
                                               {privacyMode ? '+••••' : `+${apt.deposit}€`}
                                             </span>
                                           </button>
@@ -3120,7 +3179,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
                       if (widgetId === 'goals-progress') {
                         const monthlyGoal = 5000;
-                        const progress = Math.min((monthlyRevenue / monthlyGoal) * 100, 100);
+                        const progress = Math.min((safeMonthlyRevenue / monthlyGoal) * 100, 100);
 
                         return (
                           <OverviewSortableWidget
@@ -3138,7 +3197,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                               </div>
                               <div className="mb-3">
                                 <div className="flex items-end justify-between mb-2">
-                                  <span className="text-2xl font-bold">{euro(monthlyRevenue)}</span>
+                                  <span className="text-2xl font-bold">
+                                    {euro(safeMonthlyRevenue)}
+                                  </span>
                                   <span className="text-sm text-white/70">
                                     /{' '}
                                     {privacyMode

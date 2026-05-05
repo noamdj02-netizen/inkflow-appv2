@@ -37,8 +37,16 @@ import { saveAppointmentToSupabase } from '../../lib/supabaseDashboard';
 import {
   findNextAvailableSlotForStudio,
   isSlotAvailableForBooking,
+  updateBookingRecapFields,
 } from '../../lib/supabaseBookings';
 import { sendBookingConfirmation, sendBookingRefusal } from '../../lib/sendNotification';
+import {
+  DEFAULT_BOOKING_CONFIRM_DEPOSIT_EUR,
+  inkflowBookingConfirmationUrl,
+  inkflowPublicMessagesUrl,
+  inkflowStudioPublicUrl,
+} from '../../lib/bookingRecapUrls';
+import { getCanonicalAppOrigin } from '../../lib/urls';
 import type { PendingStampReward } from '../../lib/stampLoyalty';
 import { parseInstagramHandle, instagramMessageUrl } from '../../lib/instagramUtils';
 import { buildMailtoHref, handleMailtoClick } from '../../lib/mailto';
@@ -525,6 +533,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
 
   const handleConfirm = async (apt: Appointment) => {
     onUpdateAppointment(apt.id, { status: 'confirmed' });
+    const recapUrl = inkflowStudioPublicUrl(studioSlug) ?? `${getCanonicalAppOrigin()}/discover`;
     const sent = await sendBookingConfirmation({
       clientEmail: apt.clientEmail,
       clientName: apt.clientName,
@@ -532,9 +541,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       requestedDate: apt.date,
       requestedTime: apt.time || null,
       description: apt.service,
+      recapUrl,
     });
     if (sent.ok) {
-      toast.success('RDV confirmé — un email de confirmation a été envoyé au client');
+      toast.success(
+        sent.smsSent
+          ? 'RDV confirmé — email et SMS (lien) envoyés au client'
+          : 'RDV confirmé — un email de confirmation a été envoyé au client'
+      );
       hapticSuccess();
       void import('../../lib/analytics/capture').then(({ captureEvent, AnalyticsEvents }) => {
         captureEvent(AnalyticsEvents.CLIENT_RDV_CONFIRMED_BY_STUDIO, {
@@ -578,18 +592,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   };
 
   const handleConfirmBooking = async (bk: Booking) => {
-    try {
-      await onUpdateBookingStatus?.(bk.id, 'confirmed');
-      const sent = await sendBookingConfirmation({
-        clientEmail: bk.clientEmail,
-        clientName: bk.clientName,
-        studioName: user?.studioName || 'Le studio',
-        requestedDate: bk.requestedDate,
-        requestedTime: bk.requestedTime ?? null,
-        description: bk.description,
-      });
+    const threadUrl = inkflowPublicMessagesUrl(bk.id);
+
+    const notifyConfirmed = (sent: { ok: boolean; smsSent?: boolean; error?: string }) => {
       if (sent.ok) {
-        toast.success('RDV confirmé — un email de confirmation a été envoyé au client');
+        toast.success(
+          sent.smsSent
+            ? 'RDV confirmé — email et SMS (lien) envoyés au client'
+            : 'RDV confirmé — un email de confirmation a été envoyé au client'
+        );
         hapticSuccess();
         void import('../../lib/analytics/capture').then(({ captureEvent, AnalyticsEvents }) => {
           captureEvent(AnalyticsEvents.CLIENT_RDV_CONFIRMED_BY_STUDIO, {
@@ -601,6 +612,96 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       } else {
         toast.error(sent.error || "L'email de confirmation n'a pas pu être envoyé.");
       }
+    };
+
+    try {
+      if (demoMode || !studioId || !onAddAppointment) {
+        await onUpdateBookingStatus?.(bk.id, 'confirmed');
+        const sent = await sendBookingConfirmation({
+          clientEmail: bk.clientEmail,
+          clientName: bk.clientName,
+          studioName: user?.studioName || 'Le studio',
+          requestedDate: bk.requestedDate,
+          requestedTime: bk.requestedTime ?? null,
+          description: bk.description,
+          recapUrl: threadUrl,
+          conversationLink: threadUrl,
+          clientPhone: bk.clientPhone,
+          smsConfirmationOptIn: bk.smsConfirmationOptIn,
+        });
+        notifyConfirmed(sent);
+        return;
+      }
+
+      const available = await isSlotAvailableForBooking(
+        studioId,
+        bk.requestedDate,
+        bk.requestedTime ?? null,
+        bk.id
+      );
+      if (!available) {
+        toast.error(SLOT_UNAVAILABLE_MSG);
+        return;
+      }
+
+      const recapToken = crypto.randomUUID();
+      const now = new Date().toISOString();
+      const aptId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      const serviceName =
+        bk.description.length > 50 ? `${bk.description.slice(0, 47)}...` : bk.description;
+      const amount = DEFAULT_BOOKING_CONFIRM_DEPOSIT_EUR;
+      const newApt: Appointment = {
+        id: aptId,
+        clientId: '',
+        clientName: bk.clientName,
+        clientEmail: bk.clientEmail,
+        clientPhone: bk.clientPhone?.trim() || '',
+        date: bk.requestedDate,
+        time:
+          bk.requestedTime === 'morning'
+            ? '10:00'
+            : bk.requestedTime === 'afternoon'
+              ? '14:00'
+              : bk.requestedTime === 'evening'
+                ? '18:00'
+                : '10:00',
+        service: `RDV vitrine - ${serviceName}`,
+        duration: 60,
+        price: 0,
+        deposit: amount,
+        depositPaid: false,
+        status: 'pending',
+        tattooType: 'custom',
+        location: 'arm',
+        size: 'medium',
+        consentFormSigned: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await saveAppointmentToSupabase(studioId, newApt);
+      onAddAppointment(newApt);
+      await onUpdateBookingStatus?.(bk.id, 'confirmed');
+      await updateBookingRecapFields(bk.id, {
+        clientRecapToken: recapToken,
+        recapAppointmentId: aptId,
+      });
+
+      const confirmationUrl = inkflowBookingConfirmationUrl(recapToken);
+      const sent = await sendBookingConfirmation({
+        clientEmail: bk.clientEmail,
+        clientName: bk.clientName,
+        studioName: user?.studioName || 'Le studio',
+        requestedDate: bk.requestedDate,
+        requestedTime: bk.requestedTime ?? null,
+        description: bk.description,
+        clientConfirmationUrl: confirmationUrl,
+        recapUrl: threadUrl,
+        conversationLink: threadUrl,
+        clientPhone: bk.clientPhone,
+        smsConfirmationOptIn: bk.smsConfirmationOptIn,
+      });
+      notifyConfirmed(sent);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur');
     }
@@ -689,6 +790,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         });
         if ('url' in result) {
           setDepositUrl(result.url);
+          const recapUrl =
+            inkflowStudioPublicUrl(studioSlug) ?? `${getCanonicalAppOrigin()}/discover`;
           const sent = await sendBookingConfirmation({
             clientEmail: depositModalAppointment.clientEmail,
             clientName: depositModalAppointment.clientName,
@@ -697,9 +800,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             requestedTime: depositModalAppointment.time || null,
             description: depositModalAppointment.service,
             paymentLink: result.url,
+            recapUrl,
           });
           if (sent.ok) {
-            toast.success('Lien généré et email envoyé au client avec le lien de paiement.');
+            toast.success(
+              sent.smsSent
+                ? 'Lien généré — email et SMS (lien) envoyés au client.'
+                : 'Lien généré et email envoyé au client avec le lien de paiement.'
+            );
           } else {
             toast.error(sent.error || "Lien créé mais l'email n'a pas été envoyé.");
           }
@@ -745,7 +853,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         clientId: '',
         clientName: depositModalBooking.clientName,
         clientEmail: depositModalBooking.clientEmail,
-        clientPhone: '',
+        clientPhone: depositModalBooking.clientPhone?.trim() || '',
         date: depositModalBooking.requestedDate,
         time:
           depositModalBooking.requestedTime === 'morning'
@@ -783,6 +891,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           type: 'deposit',
         });
         if ('url' in result) {
+          const threadUrl = inkflowPublicMessagesUrl(depositModalBooking.id);
           const sent = await sendBookingConfirmation({
             clientEmail: depositModalBooking.clientEmail,
             clientName: depositModalBooking.clientName,
@@ -791,10 +900,18 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             requestedTime: depositModalBooking.requestedTime ?? null,
             description: depositModalBooking.description,
             paymentLink: result.url,
+            recapUrl: threadUrl,
+            conversationLink: threadUrl,
+            clientPhone: depositModalBooking.clientPhone,
+            smsConfirmationOptIn: depositModalBooking.smsConfirmationOptIn,
           });
           await onUpdateBookingStatus?.(depositModalBooking.id, 'confirmed');
           if (sent.ok) {
-            toast.success('RDV confirmé et email envoyé avec le lien de paiement !');
+            toast.success(
+              sent.smsSent
+                ? 'RDV confirmé — email et SMS (lien) envoyés avec le paiement.'
+                : 'RDV confirmé et email envoyé avec le lien de paiement !'
+            );
             closeDepositModal();
           } else {
             toast.error(sent.error || "RDV enregistré mais l'email n'a pas été envoyé.");
@@ -877,6 +994,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         });
         if ('url' in result) {
           setDepositUrl(result.url);
+          const threadUrl = inkflowPublicMessagesUrl(`pr_${depositModalProject.id}`);
           const sent = await sendBookingConfirmation({
             clientEmail: depositModalProject.clientEmail,
             clientName: depositModalProject.clientName,
@@ -885,10 +1003,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             requestedTime: newApt.time,
             description: newApt.service,
             paymentLink: result.url,
+            recapUrl: threadUrl,
+            conversationLink: threadUrl,
           });
           if (sent.ok) {
             toast.success(
-              'RDV créé, lien généré et email envoyé au client avec le lien de paiement.'
+              sent.smsSent
+                ? 'RDV créé — email et SMS (lien) envoyés avec le lien de paiement.'
+                : 'RDV créé, lien généré et email envoyé au client avec le lien de paiement.'
             );
           } else {
             toast.error(sent.error || "RDV créé mais l'email n'a pas été envoyé.");

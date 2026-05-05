@@ -7,7 +7,9 @@
     "start": "remotion preview src/index.ts",
     "upgrade": "remotion upgrade",
     "render": "remotion render src/index.ts InkflowDemo out/inkflow-demo.mp4",
+    "render:logo": "remotion render src/index.ts LogoReveal out/inkflow-logo-reveal.mp4",
     "render:still": "remotion still src/index.ts InkflowDemo out/poster.png --frame=90",
+    "render:logo:still": "remotion still src/index.ts LogoReveal out/logo-reveal-poster.png --frame=72",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -7,6 +7,9 @@ import { fetchClientHealthProfile, isHealthFormComplete } from './clientHealthPr
 
 export const CLIENT_ONBOARDING_FINALIZE_PATH = '/onboarding/finaliser-profil';
 
+/** Hub web client : profil, photo, téléphone, questionnaire santé (sans ancien portail /client/…). */
+export const CLIENT_ACCOUNT_HUB_PATH = '/mon-compte' as const;
+
 const PHONE_MIN = 10;
 
 function digitsOnly(s: string): string {

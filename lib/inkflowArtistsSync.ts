@@ -9,11 +9,21 @@ export function artistPublicSlug(artistId: string): string {
 }
 
 /** Pousse les comptes tatoueurs du dashboard vers inkflow_artists (app client + /artist/[slug]). Préserve bio / dispo / Insta existants. */
-export async function syncArtistAccountsToSupabase(studioId: string, artists: ArtistAccount[]): Promise<void> {
+export async function syncArtistAccountsToSupabase(
+  studioId: string,
+  artists: ArtistAccount[]
+): Promise<void> {
   if (!studioId || artists.length === 0) return;
 
-  const { data: existingRows } = await supabase.from('inkflow_artists').select('*').eq('studio_id', studioId);
-  const byId = new Map((existingRows ?? []).map((r: Record<string, unknown>) => [r.id as string, r]));
+  const { data: existingRows } = await supabase
+    .from('inkflow_artists')
+    .select(
+      'id,slug,bio,avatar_url,location_lat,location_lng,years_exp,rating,tattoos_count,available_now,instagram_url,service_radius_km'
+    )
+    .eq('studio_id', studioId);
+  const byId = new Map(
+    (existingRows ?? []).map((r: Record<string, unknown>) => [r.id as string, r])
+  );
 
   const rows = artists.map((a) => {
     const ex = byId.get(a.id) as Record<string, unknown> | undefined;
@@ -39,7 +49,9 @@ export async function syncArtistAccountsToSupabase(studioId: string, artists: Ar
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from('inkflow_artists').upsert(rows, { onConflict: 'id' });
+  const { error } = await (supabase as any)
+    .from('inkflow_artists')
+    .upsert(rows, { onConflict: 'id' });
   if (error) throw error;
 }
 
@@ -55,7 +67,9 @@ export interface InkflowArtistPublicRow {
   is_active: boolean;
 }
 
-export async function fetchInkflowArtistsForStudio(studioId: string): Promise<InkflowArtistPublicRow[]> {
+export async function fetchInkflowArtistsForStudio(
+  studioId: string
+): Promise<InkflowArtistPublicRow[]> {
   const { data, error } = await supabase
     .from('inkflow_artists')
     .select('id, name, slug, bio, avatar_url, available_now, instagram_url, styles, is_active')

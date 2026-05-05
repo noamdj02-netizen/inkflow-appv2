@@ -82,7 +82,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!clientId) {
-      console.warn("process-stamp-loyalty-db: pas de client_id pour", clientEmail);
+      console.warn("process-stamp-loyalty-db: pas de client_id pour appointment", appointmentId);
       return new Response(
         JSON.stringify({ ok: true, skipped: "no_client_id" }),
         { status: 200, headers: { "Content-Type": "application/json" } }

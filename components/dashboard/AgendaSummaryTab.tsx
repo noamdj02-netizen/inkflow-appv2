@@ -166,7 +166,7 @@ type DayStripProps = {
 function AgendaDayStrip({ weekDays, selectedYmd, onSelectYmd }: DayStripProps) {
   return (
     <div
-      className="flex snap-x snap-mandatory justify-between gap-1.5 overflow-x-auto pb-1.5 pt-1 [scrollbar-gutter:stable] [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden"
+      className="flex snap-x snap-mandatory justify-between gap-1 overflow-x-auto pb-0 pt-0.5 [scrollbar-gutter:stable] [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-1.5 sm:pb-1 sm:pt-1 md:gap-2 [&::-webkit-scrollbar]:hidden"
       style={{ WebkitOverflowScrolling: 'touch' }}
       role="listbox"
       aria-label="Sélection du jour"
@@ -182,7 +182,7 @@ function AgendaDayStrip({ weekDays, selectedYmd, onSelectYmd }: DayStripProps) {
             aria-label={`${cell.wk2} ${cell.dayNum}${cell.isToday ? ', aujourd’hui' : ''}`}
             onClick={() => onSelectYmd(cell.ymd)}
             className={cn(
-              'flex h-[3.25rem] w-[3.25rem] shrink-0 snap-center flex-col items-center justify-center rounded-full border-2 text-center font-sans transition-[transform,box-shadow,background-color] active:scale-[0.97] min-[400px]:h-14 min-[400px]:w-14 focus-visible:ring-2 focus-visible:ring-ring/50',
+              'flex h-[3rem] w-[3rem] shrink-0 snap-center flex-col items-center justify-center rounded-full border-2 text-center font-sans transition-[transform,box-shadow,background-color] active:scale-[0.97] min-[400px]:h-[3.25rem] min-[400px]:w-[3.25rem] sm:h-14 sm:w-14 focus-visible:ring-2 focus-visible:ring-ring/50',
               selected
                 ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/25'
                 : 'border-border bg-card text-foreground shadow-sm',
@@ -623,9 +623,9 @@ export function AgendaSummaryTab({
   };
 
   return (
-    <div className="min-w-0 max-w-3xl mx-auto pb-6 font-sans text-sm antialiased text-foreground">
+    <div className="min-w-0 max-w-3xl mx-auto pb-4 font-sans text-sm antialiased text-foreground sm:pb-6">
       <div
-        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+        className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4"
         role="region"
         aria-label="Période et vue"
       >
@@ -633,38 +633,38 @@ export function AgendaSummaryTab({
           type="single"
           value={range}
           onValueChange={(v) => v && handleRangeChange(v as SummaryRange)}
-          className="grid w-full min-w-0 max-w-md grid-cols-3 gap-0.5 rounded-full border border-border bg-muted/90 p-0.5"
+          className="grid w-full min-w-0 max-w-none grid-cols-3 gap-0.5 rounded-full border border-border bg-muted/90 p-0.5 md:max-w-md"
           variant="default"
           size="default"
         >
           <ToggleGroupItem
             value="day"
-            className="min-h-11 w-full min-w-0 rounded-full border-0 text-[13px] font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+            className="min-h-9 w-full min-w-0 rounded-full border-0 text-xs font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm md:min-h-11 md:text-[13px]"
           >
             Jour
           </ToggleGroupItem>
           <ToggleGroupItem
             value="week"
-            className="min-h-11 w-full min-w-0 rounded-full border-0 text-[13px] font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+            className="min-h-9 w-full min-w-0 rounded-full border-0 text-xs font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm md:min-h-11 md:text-[13px]"
           >
             Semaine
           </ToggleGroupItem>
           <ToggleGroupItem
             value="month"
-            className="min-h-11 w-full min-w-0 rounded-full border-0 text-[13px] font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+            className="min-h-9 w-full min-w-0 rounded-full border-0 text-xs font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm md:min-h-11 md:text-[13px]"
           >
             Mois
           </ToggleGroupItem>
         </ToggleGroup>
 
-        <div className="flex w-full min-w-0 items-center justify-between gap-2 sm:justify-end sm:gap-3">
-          <div className="flex items-center gap-1">
+        <div className="flex w-full min-w-0 items-center gap-2 md:justify-end md:gap-3">
+          <div className="flex shrink-0 items-center gap-0.5">
             <Button
               type="button"
               variant="outline"
               size="icon"
               onClick={goPrev}
-              className="size-10"
+              className="size-9 shrink-0 touch-manipulation md:size-10"
               aria-label="Période précédente"
             >
               <ChevronLeft data-icon="inline-start" strokeWidth={2} aria-hidden />
@@ -674,19 +674,35 @@ export function AgendaSummaryTab({
               variant="outline"
               size="icon"
               onClick={goNext}
-              className="size-10"
+              className="size-9 shrink-0 touch-manipulation md:size-10"
               aria-label="Période suivante"
             >
               <ChevronRight data-icon="inline-start" strokeWidth={2} aria-hidden />
             </Button>
           </div>
-          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+
+          <p className="min-w-0 flex-1 truncate text-center text-[11px] font-semibold leading-tight text-foreground md:hidden">
+            {periodLabel}
+          </p>
+
+          <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={handleAddToMyCalendar}
+              aria-label="Exporter la période au format agenda (.ics)"
+              title="Ajouter à mon agenda"
+              className="size-9 touch-manipulation md:hidden"
+            >
+              <CalendarPlus className="size-4 shrink-0" aria-hidden />
+            </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={handleAddToMyCalendar}
-              className="h-9 max-w-full shrink gap-1.5 px-2.5 text-xs font-semibold sm:px-3"
+              className="hidden h-9 max-w-full shrink gap-1.5 px-2.5 text-xs font-semibold md:inline-flex md:px-3"
             >
               <CalendarPlus className="size-3.5 shrink-0" aria-hidden />
               <span className="truncate">Ajouter à mon agenda</span>
@@ -696,7 +712,7 @@ export function AgendaSummaryTab({
               variant="outline"
               size="sm"
               onClick={goToday}
-              className="h-9 shrink-0 text-xs font-semibold"
+              className="h-9 shrink-0 px-3 text-[11px] font-semibold tabular-nums md:text-xs"
             >
               Aujourd’hui
             </Button>
@@ -704,26 +720,28 @@ export function AgendaSummaryTab({
         </div>
       </div>
 
-      <p className="mt-3 text-balance text-center text-sm font-semibold text-foreground sm:mt-4 sm:text-left sm:text-base sm:leading-tight">
+      <p className="mt-2 hidden text-balance text-center text-sm font-semibold text-foreground md:mt-3 md:block md:text-left md:text-base md:leading-tight">
         {periodLabel}
       </p>
 
-      <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-2 md:mt-2.5 md:justify-start">
         <Badge
           variant="secondary"
-          className="h-auto gap-1.5 border border-border/80 px-2.5 py-1.5 text-xs font-normal text-muted-foreground"
+          className="h-auto max-w-full gap-1 border border-border/80 px-2 py-1 text-[11px] font-normal leading-snug text-muted-foreground md:gap-1.5 md:px-2.5 md:py-1.5 md:text-xs"
         >
-          <ListOrdered className="text-muted-foreground" aria-hidden />
-          {activeCount} rendez-vous sur la période
-          {cancelledInPeriod > 0 && (
-            <span className="text-muted-foreground/90">· dont {cancelledInPeriod} annulé(s)</span>
-          )}
+          <ListOrdered className="size-3 shrink-0 text-muted-foreground md:size-4" aria-hidden />
+          <span className="min-w-0">
+            {activeCount} RDV <span className="text-muted-foreground/95">sur la période</span>
+            {cancelledInPeriod > 0 && (
+              <span className="text-muted-foreground/90"> · {cancelledInPeriod} annulé(s)</span>
+            )}
+          </span>
         </Badge>
       </div>
 
-      <div className="mt-4 flex flex-col gap-4 sm:mt-5">
+      <div className="mt-3 flex flex-col gap-3 md:mt-5 md:gap-4">
         {showDayStrip && (
-          <div className="rounded-2xl border border-border/80 bg-card/80 px-1.5 py-2.5 shadow-sm ring-1 ring-foreground/5">
+          <div className="rounded-xl border border-border/80 bg-card/80 px-1 py-1.5 shadow-sm ring-1 ring-foreground/5 md:rounded-2xl md:px-1.5 md:py-2.5">
             <AgendaDayStrip
               weekDays={stripWeekDays}
               selectedYmd={selectedYmdForStrip}

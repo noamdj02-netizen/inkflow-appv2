@@ -113,9 +113,9 @@ function isInkflowTeamDomainEmail(email: string): boolean {
 function planToMrrEur(plan: string, priceMap: Record<string, number>): number {
   const p = (plan || "").toLowerCase().trim();
   if (priceMap[p] != null) return priceMap[p];
-  if (p === "starter" || p === "solo" || p === "basic") return priceMap["starter"] ?? 29;
+  if (p === "starter" || p === "solo" || p === "basic") return priceMap["solo"] ?? 29;
   if (p === "pro") return priceMap["pro"] ?? 49;
-  if (p === "studio") return priceMap["studio"] ?? 79;
+  if (p === "studio") return priceMap["studio"] ?? 99;
   return 0;
 }
 
@@ -154,9 +154,9 @@ Deno.serve(async (req: Request) => {
   const founderRaw = Deno.env.get("FOUNDER_ADMIN_EMAILS") ?? "";
 
   const priceMap: Record<string, number> = {
-    starter: Number(Deno.env.get("FOUNDER_MRR_STARTER_EUR") ?? "29") || 29,
+    solo: Number(Deno.env.get("FOUNDER_MRR_SOLO_EUR") ?? Deno.env.get("FOUNDER_MRR_STARTER_EUR") ?? "29") || 29,
     pro: Number(Deno.env.get("FOUNDER_MRR_PRO_EUR") ?? "49") || 49,
-    studio: Number(Deno.env.get("FOUNDER_MRR_STUDIO_EUR") ?? "79") || 79,
+    studio: Number(Deno.env.get("FOUNDER_MRR_STUDIO_EUR") ?? "99") || 99,
   };
 
   const allowed = parseFounderEmails(founderRaw);

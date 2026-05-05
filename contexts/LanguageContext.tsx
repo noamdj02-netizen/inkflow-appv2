@@ -49,7 +49,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'landing.features.key2': 'Messagerie intégrée',
     'landing.features.key3': 'Portfolio & Galerie Flash',
     'landing.features.key4': 'Facturation simplifiée',
-    'landing.app.title': 'Téléchargez l\'application gratuite',
+    'landing.app.title': "Téléchargez l'application gratuite",
     'landing.app.subtitle': 'Gérez votre studio partout, même hors ligne',
     'landing.app.appStore': 'App Store',
     'landing.app.googlePlay': 'Google Play',
@@ -69,7 +69,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'features.section1.v2': 'Acomptes',
     'features.section1.v3': 'Flash',
     'features.section2.title': 'CRM client et fidélisation en un seul endroit',
-    'features.section2.desc': "Centralisez l'historique de chaque client : rendez-vous, notes de session, préférences. Suivez la cicatrisation et fidélisez vos clients avec des rappels personnalisés.",
+    'features.section2.desc':
+      "Centralisez l'historique de chaque client : rendez-vous, notes de session, préférences. Suivez la cicatrisation et fidélisez vos clients avec des rappels personnalisés.",
     'features.section2.f1': 'Fiches clients complètes',
     'features.section2.f2': 'Notes et suivi de cicatrisation',
     'features.section2.f3': 'Rappels automatiques personnalisés',
@@ -79,7 +80,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'features.section2.v2': 'Marie L. — 1 RDV • Prochain 16:30',
     'features.section2.v3': 'Emma L. — Nouvelle demande',
     'features.section3.title': 'Paiements sécurisés et automatisation des acomptes',
-    'features.section3.desc': 'Stripe intégré de bout en bout. Envoyez des liens de paiement en un clic, encaissez les acomptes avant le RDV et réduisez les no-shows.',
+    'features.section3.desc':
+      'Stripe intégré de bout en bout. Envoyez des liens de paiement en un clic, encaissez les acomptes avant le RDV et réduisez les no-shows.',
     'features.section3.f1': 'Liens de paiement Stripe',
     'features.section3.f2': 'Paiements sécurisés PCI',
     'features.section3.f3': 'Confirmation automatique',
@@ -92,7 +94,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'features.section3.val2': '18',
     'features.section3.val3': '94 %',
     'features.section4.title': 'Vitrine en ligne et galerie flash pour vendre vos designs',
-    'features.section4.desc': "Publiez votre portfolio et vos flashs. Vos clients découvrent vos créations, réservent en ligne et paient l'acompte. Le design est bloqué automatiquement après paiement.",
+    'features.section4.desc':
+      "Publiez votre portfolio et vos flashs. Vos clients découvrent vos créations, réservent en ligne et paient l'acompte. Le design est bloqué automatiquement après paiement.",
     'features.section4.f1': 'Galerie flash avec statut',
     'features.section4.f2': 'Page vitrine personnalisable',
     'features.section4.f3': 'Blocage auto après réservation',
@@ -123,44 +126,47 @@ const translations: Record<Lang, Record<string, string>> = {
     'process.step2.desc': 'Ajoutez vos horaires, services, et connectez Stripe pour les paiements.',
     'process.step2.duration': '10 min',
     'process.step3.title': 'Partagez votre lien',
-    'process.step3.desc': 'Envoyez votre lien de réservation à vos clients sur Instagram, WhatsApp...',
+    'process.step3.desc':
+      'Envoyez votre lien de réservation à vos clients sur Instagram, WhatsApp...',
     'process.step3.duration': '1 min',
     'process.step4.title': 'Recevez vos réservations',
-    'process.step4.desc': 'Vos clients réservent 24/7. Vous êtes notifié et les acomptes arrivent automatiquement.',
+    'process.step4.desc':
+      'Vos clients réservent 24/7. Vous êtes notifié et les acomptes arrivent automatiquement.',
     'process.step4.duration': 'Automatique',
     'process.settings': 'Paramètres',
     'process.linkCopied': 'Lien copié !',
     'process.newRdv': '+1 Nouveau RDV',
     'process.cta1': 'Commencer maintenant',
     'process.cta2': 'Voir la démo',
-    'process.trial': "Essai gratuit de 14 jours • Pas de carte bancaire requise",
+    'process.trial': 'Essai gratuit de 14 jours • Pas de carte bancaire requise',
     // Pricing
-    'pricing.title': 'Un tarif simple et transparent',
-    'pricing.subtitle': 'Choisissez le plan qui correspond à votre activité',
+    'pricing.title': 'Le logiciel résa pour tatoueurs — pas un généraliste salons',
+    'pricing.subtitle':
+      'Une promesse précise : demandes, créneaux, acomptes Stripe et dossier client au même endroit. Pas une usine logicielle.',
     'pricing.monthly': 'Mensuel',
     'pricing.annual': 'Annuel',
     'pricing.perMonth': '/mois',
     'pricing.billed': 'Facturé €{amount} par an',
     'pricing.mostPopular': 'Plus populaire',
-    'pricing.starterDesc': 'Pour les tatoueurs indépendants',
-    'pricing.proDesc': "Pour les artistes qui veulent aller plus loin",
+    'pricing.soloDesc': 'Pour les tatoueurs indépendants',
+    'pricing.proDesc': 'Pour les artistes qui veulent aller plus loin',
     'pricing.studioDesc': 'Pour les studios avec plusieurs artistes',
     'pricing.start': 'Commencer',
     'pricing.custom': 'Sur mesure',
     'pricing.f1': 'Réservations illimitées',
-    'pricing.f2': 'Paiements Stripe',
+    'pricing.f2': 'Paiements Stripe + PayPal',
     'pricing.f3': 'Galerie Flash',
     'pricing.f4': '100 clients CRM',
     'pricing.f5': 'Support email',
     'pricing.f6': 'Application mobile',
-    'pricing.f7': 'Tout du plan Starter',
-    'pricing.f8': '2 artistes inclus',
-    'pricing.f9': '200 clients CRM',
+    'pricing.f7': 'Tout du plan Solo',
+    'pricing.f8': '3 artistes inclus',
+    'pricing.f9': '300 clients CRM',
     'pricing.f10': 'Multi-calendriers',
     'pricing.f11': 'Statistiques avancées',
     'pricing.f12': 'Support prioritaire',
     'pricing.f13': 'Tout du plan Pro',
-    'pricing.f14': '3 artistes inclus',
+    'pricing.f14': '5 artistes inclus',
     'pricing.f15': 'Clients CRM illimités',
     'pricing.f16': 'Formation personnalisée',
     'pricing.f17': 'API access',
@@ -172,13 +178,13 @@ const translations: Record<Lang, Record<string, string>> = {
     'testimonials.title': 'Ils nous font confiance',
     'testimonials.subtitle': 'Ils l’utilisent pour sérieux, pas pour la déco',
     'testimonials.quote1':
-      "La galerie flash m’a évité des tonnes de « t’as encore ce motif ? ». Les gens réservent quand c’est dispo, point.",
+      'La galerie flash m’a évité des tonnes de « t’as encore ce motif ? ». Les gens réservent quand c’est dispo, point.',
     'testimonials.quote2':
-      "J’ai l’historique sans fouiller trois apps. Les notes de séance, les paiements : au même endroit.",
+      'J’ai l’historique sans fouiller trois apps. Les notes de séance, les paiements : au même endroit.',
     'testimonials.quote3':
-      "C’est pensé pour un atelier, pas pour un SaaS générique. Quand je bloque, le support répond vite.",
+      'C’est pensé pour un atelier, pas pour un SaaS générique. Quand je bloque, le support répond vite.',
     'testimonials.quote4':
-      "Les résas qui s’ajoutent toutes seules, ça m’a enlevé un paquet d’admin le dimanche soir.",
+      'Les résas qui s’ajoutent toutes seules, ça m’a enlevé un paquet d’admin le dimanche soir.',
     'testimonials.prev': 'Témoignage précédent',
     'testimonials.next': 'Témoignage suivant',
     'testimonials.goTo': 'Aller au témoignage',
@@ -186,15 +192,19 @@ const translations: Record<Lang, Record<string, string>> = {
     'faq.title': 'Questions & Réponses',
     'faq.q1': "Qu'est-ce que l'assistant IA Inkflow ?",
     'faq.a1':
-      "Il te propose des brouillons et des créneaux quand une demande arrive. Tu relis, tu envoies. Rien ne part sans ton accord.",
-    'faq.q2': 'Comment fonctionnent les paiements Stripe ?',
-    'faq.a2': "Inkflow s'intègre directement avec Stripe. Vos clients paient l'acompte en ligne lors de la réservation. Les fonds arrivent sur votre compte Stripe en quelques jours. Aucune configuration complexe.",
-    'faq.q3': 'Quelle est la différence entre le plan Solo et Studio ?',
-    'faq.a3': 'Le plan Solo est conçu pour les tatoueurs indépendants (1 artiste, 100 clients CRM). Le plan Studio inclut plusieurs artistes, des clients CRM illimités et des statistiques avancées par artiste.',
+      'Il te propose des brouillons et des créneaux quand une demande arrive. Tu relis, tu envoies. Rien ne part sans ton accord.',
+    'faq.q2': 'Comment fonctionnent les paiements Stripe et PayPal ?',
+    'faq.a2':
+      "Inkflow utilise Stripe Checkout. Vos clients paient l'acompte en ligne lors de la réservation, par carte et PayPal si PayPal est activé dans votre compte Stripe. Les fonds arrivent sur votre compte Stripe en quelques jours.",
+    'faq.q3': 'Quelle est la différence entre Solo, Pro et Studio ?',
+    'faq.a3':
+      'Solo couvre les indépendants (1 artiste, 100 clients CRM). Pro ajoute 3 artistes, 300 clients CRM, stats avancées et thèmes premium. Studio passe à 5 artistes, clients CRM illimités et API.',
     'faq.q4': 'Puis-je gérer mon propre portail client ?',
-    'faq.a4': "Oui. Chaque client dispose d'un espace personnel pour voir ses rendez-vous, ses messages et l'historique de ses tatouages. Vous contrôlez les accès depuis votre dashboard.",
+    'faq.a4':
+      "Oui. Chaque client dispose d'un espace personnel pour voir ses rendez-vous, ses messages et l'historique de ses tatouages. Vous contrôlez les accès depuis votre dashboard.",
     'faq.q5': 'Comment est gérée la galerie flash unique ?',
-    'faq.a5': "Publiez vos flashs avec photos et prix. Une fois qu'un client paie l'acompte pour un flash, il est automatiquement bloqué et retiré de la galerie publique. Plus de double réservation.",
+    'faq.a5':
+      "Publiez vos flashs avec photos et prix. Une fois qu'un client paie l'acompte pour un flash, il est automatiquement bloqué et retiré de la galerie publique. Plus de double réservation.",
     // Footer
     'footer.cta': 'Tester sur mon studio',
     'footer.emailPlaceholder': 'ton@email.fr',
@@ -260,7 +270,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'features.section1.v2': 'Deposits',
     'features.section1.v3': 'Flash',
     'features.section2.title': 'Client CRM and loyalty in one place',
-    'features.section2.desc': 'Centralize each client\'s history: appointments, session notes, preferences. Track healing and retain clients with personalized reminders.',
+    'features.section2.desc':
+      "Centralize each client's history: appointments, session notes, preferences. Track healing and retain clients with personalized reminders.",
     'features.section2.f1': 'Complete client profiles',
     'features.section2.f2': 'Notes and healing tracking',
     'features.section2.f3': 'Personalized automatic reminders',
@@ -270,7 +281,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'features.section2.v2': 'Marie L. — 1 appt • Next 4:30 PM',
     'features.section2.v3': 'Emma L. — New request',
     'features.section3.title': 'Secure payments and deposit automation',
-    'features.section3.desc': 'Stripe integrated end-to-end. Send payment links in one click, collect deposits before appointments and reduce no-shows.',
+    'features.section3.desc':
+      'Stripe integrated end-to-end. Send payment links in one click, collect deposits before appointments and reduce no-shows.',
     'features.section3.f1': 'Stripe payment links',
     'features.section3.f2': 'PCI secure payments',
     'features.section3.f3': 'Automatic confirmation',
@@ -283,7 +295,8 @@ const translations: Record<Lang, Record<string, string>> = {
     'features.section3.val2': '18',
     'features.section3.val3': '94%',
     'features.section4.title': 'Online showcase and flash gallery to sell your designs',
-    'features.section4.desc': 'Publish your portfolio and flash designs. Clients discover your work, book online and pay the deposit. The design is automatically locked after payment.',
+    'features.section4.desc':
+      'Publish your portfolio and flash designs. Clients discover your work, book online and pay the deposit. The design is automatically locked after payment.',
     'features.section4.f1': 'Flash gallery with status',
     'features.section4.f2': 'Customizable showcase page',
     'features.section4.f3': 'Auto-lock after booking',
@@ -323,32 +336,33 @@ const translations: Record<Lang, Record<string, string>> = {
     'process.cta1': 'Start now',
     'process.cta2': 'View demo',
     'process.trial': '14-day free trial • No credit card required',
-    'pricing.title': 'Simple, transparent pricing',
-    'pricing.subtitle': 'Choose the plan that fits your business',
+    'pricing.title': 'Booking software built for tattoo studios',
+    'pricing.subtitle':
+      'Requests, slots, Stripe deposits, and client threads in one focused product — not generic salon software.',
     'pricing.monthly': 'Monthly',
     'pricing.annual': 'Annual',
     'pricing.perMonth': '/month',
     'pricing.billed': 'Billed €{amount}/year',
     'pricing.mostPopular': 'Most popular',
-    'pricing.starterDesc': 'For independent tattoo artists',
+    'pricing.soloDesc': 'For independent tattoo artists',
     'pricing.proDesc': 'For artists who want to go further',
     'pricing.studioDesc': 'For studios with multiple artists',
     'pricing.start': 'Start',
     'pricing.custom': 'Custom',
     'pricing.f1': 'Unlimited bookings',
-    'pricing.f2': 'Stripe payments',
+    'pricing.f2': 'Stripe + PayPal payments',
     'pricing.f3': 'Flash Gallery',
     'pricing.f4': '100 CRM clients',
     'pricing.f5': 'Email support',
     'pricing.f6': 'Mobile app',
-    'pricing.f7': 'Everything in Starter',
-    'pricing.f8': '2 artists included',
-    'pricing.f9': '200 CRM clients',
+    'pricing.f7': 'Everything in Solo',
+    'pricing.f8': '3 artists included',
+    'pricing.f9': '300 CRM clients',
     'pricing.f10': 'Multi-calendars',
     'pricing.f11': 'Advanced statistics',
     'pricing.f12': 'Priority support',
     'pricing.f13': 'Everything in Pro',
-    'pricing.f14': '3 artists included',
+    'pricing.f14': '5 artists included',
     'pricing.f15': 'Unlimited CRM clients',
     'pricing.f16': 'Personalized training',
     'pricing.f17': 'API access',
@@ -359,11 +373,11 @@ const translations: Record<Lang, Record<string, string>> = {
     'testimonials.title': 'They trust us',
     'testimonials.subtitle': 'People who actually ship with it, not just try it once',
     'testimonials.quote1':
-      'The flash gallery cut down the “is this still available?” DMs. People book when it\'s up, full stop.',
+      "The flash gallery cut down the “is this still available?” DMs. People book when it's up, full stop.",
     'testimonials.quote2':
       'I stopped digging through three apps for history. Session notes and payments live together.',
     'testimonials.quote3':
-      'Built for a shop, not a generic SaaS. When I\'m stuck, support gets back fast.',
+      "Built for a shop, not a generic SaaS. When I'm stuck, support gets back fast.",
     'testimonials.quote4':
       'Bookings that fill themselves in saved me a pile of admin on Sunday nights.',
     'testimonials.prev': 'Previous testimonial',
@@ -373,14 +387,18 @@ const translations: Record<Lang, Record<string, string>> = {
     'faq.q1': 'What is the Inkflow AI assistant?',
     'faq.a1':
       'It drafts replies and suggests slots when a request comes in. You read, tweak, send. Nothing goes out without you.',
-    'faq.q2': 'How do Stripe payments work?',
-    'faq.a2': 'Inkflow integrates directly with Stripe. Clients pay the deposit online when booking. Funds arrive in your Stripe account within days. No complex setup.',
-    'faq.q3': 'What is the difference between Solo and Studio plans?',
-    'faq.a3': 'The Solo plan is designed for independent tattoo artists (1 artist, 100 CRM clients). The Studio plan includes multiple artists, unlimited CRM clients and advanced per-artist statistics.',
+    'faq.q2': 'How do Stripe and PayPal payments work?',
+    'faq.a2':
+      'Inkflow uses Stripe Checkout. Clients pay the deposit online when booking, by card and PayPal if PayPal is enabled in your Stripe account. Funds arrive in your Stripe account within days.',
+    'faq.q3': 'What is the difference between Solo, Pro and Studio plans?',
+    'faq.a3':
+      'Solo covers independent artists (1 artist, 100 CRM clients). Pro adds 3 artists, 300 CRM clients, advanced stats and premium themes. Studio adds 5 artists, unlimited CRM clients and API access.',
     'faq.q4': 'Can I manage my own client portal?',
-    'faq.a4': 'Yes. Each client has a personal space to view their appointments, messages and tattoo history. You control access from your dashboard.',
+    'faq.a4':
+      'Yes. Each client has a personal space to view their appointments, messages and tattoo history. You control access from your dashboard.',
     'faq.q5': 'How is the unique flash gallery managed?',
-    'faq.a5': 'Publish your flash with photos and prices. Once a client pays the deposit for a flash, it is automatically locked and removed from the public gallery. No double booking.',
+    'faq.a5':
+      'Publish your flash with photos and prices. Once a client pays the deposit for a flash, it is automatically locked and removed from the public gallery. No double booking.',
     'footer.legal': 'Legal notice',
     'footer.termsShort': 'Terms',
     'footer.contact': 'Contact',
@@ -416,14 +434,15 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLangState(newLang);
   }, []);
 
-  const t = useCallback((key: string): string => {
-    return translations[lang][key] ?? translations.fr[key] ?? key;
-  }, [lang]);
+  const t = useCallback(
+    (key: string): string => {
+      return translations[lang][key] ?? translations.fr[key] ?? key;
+    },
+    [lang]
+  );
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
-      {children}
-    </LanguageContext.Provider>
+    <LanguageContext.Provider value={{ lang, setLang, t }}>{children}</LanguageContext.Provider>
   );
 };
 

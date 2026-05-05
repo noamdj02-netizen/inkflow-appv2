@@ -1,5 +1,4 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { useClientManifest } from './hooks/useClientManifest';
 import { ThemeProvider } from 'next-themes';
 import { LANDING_URL } from './lib/urls';
 import { SEO } from './components/SEO';
@@ -35,14 +34,6 @@ const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default:
 const SignupPage = lazy(() =>
   import('./pages/SignupPage').then((m) => ({ default: m.SignupPage }))
 );
-const ClientPortalLoginPage = lazy(() =>
-  import('./pages/client/ClientPortalLoginPage').then((m) => ({ default: m.ClientPortalLoginPage }))
-);
-const ClientWelcomeOnboardingPage = lazy(() =>
-  import('./pages/client/ClientWelcomeOnboardingPage').then((m) => ({
-    default: m.ClientWelcomeOnboardingPage,
-  }))
-);
 const DashboardPage = lazy(() =>
   import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
 );
@@ -57,6 +48,14 @@ const ConsentPage = lazy(() =>
 );
 const PublicMessagePage = lazy(() =>
   import('./pages/public/PublicMessagePage').then((m) => ({ default: m.PublicMessagePage }))
+);
+const PublicBookingRecapPage = lazy(() =>
+  import('./pages/public/PublicBookingRecapPage').then((m) => ({
+    default: m.PublicBookingRecapPage,
+  }))
+);
+const ClientAccountHubPage = lazy(() =>
+  import('./pages/public/ClientAccountHubPage').then((m) => ({ default: m.ClientAccountHubPage }))
 );
 const PrivacyPolicyPage = lazy(() =>
   import('./pages/legal/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage }))
@@ -95,29 +94,6 @@ const DailyBriefPage = lazy(() =>
 const AgendaDeepLinkPage = lazy(() =>
   import('./pages/AgendaDeepLinkPage').then((m) => ({ default: m.AgendaDeepLinkPage }))
 );
-const ClientVitrineEmbedPage = lazy(() =>
-  import('./pages/client/ClientStudioEmbedPage').then((m) => ({
-    default: m.ClientVitrineEmbedPage,
-  }))
-);
-const ClientFlashToolsEmbedPage = lazy(() =>
-  import('./pages/client/ClientStudioEmbedPage').then((m) => ({
-    default: m.ClientFlashToolsEmbedPage,
-  }))
-);
-const ClientDashboard = lazy(() =>
-  import('./pages/public/ClientDashboard').then((m) => ({ default: m.ClientDashboard }))
-);
-const ClientHealthOnboardingPage = lazy(() =>
-  import('./pages/client/ClientHealthOnboardingPage').then((m) => ({
-    default: m.ClientHealthOnboardingPage,
-  }))
-);
-const ClientOnboardingFinalizePage = lazy(() =>
-  import('./pages/client/ClientOnboardingFinalizePage').then((m) => ({
-    default: m.ClientOnboardingFinalizePage,
-  }))
-);
 const ArtistPage = lazy(() =>
   import('./pages/vitrine/ArtistPage').then((m) => ({ default: m.ArtistPage }))
 );
@@ -155,7 +131,7 @@ function normalizePathnameForTheme(pathname: string): string {
 /**
  * Mode clair forcé partout sauf sur `/dashboard` (Dashboard Pro), où le thème
  * reste piloté par le stockage + le bouton jour/nuit.
- * Évite que les `!important` dark (`index.css`) n’écrasent l’app client / vitrine.
+ * Évite que les `!important` dark (`index.css`) n’écrasent vitrine / landing.
  */
 const InkflowThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [pathname, setPathname] = useState(() =>
@@ -187,6 +163,21 @@ const InkflowThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 const FullScreenSpinner: React.FC = () => <AuthRouteLoadingSkeleton />;
 
+/** `/client` seul → hub profil + santé. Sous-chemins historiques → annuaire. */
+const ClientRootRedirectToHub: React.FC = () => {
+  useEffect(() => {
+    window.location.replace('/mon-compte');
+  }, []);
+  return <PublicPageLoadingSkeleton />;
+};
+
+const ClientLegacySubpathRedirectToDiscover: React.FC = () => {
+  useEffect(() => {
+    window.location.replace('/discover');
+  }, []);
+  return <PublicPageLoadingSkeleton />;
+};
+
 /** Retour Stripe Connect : si SITE_URL pointe vers / au lieu de /dashboard, on corrige au chargement. */
 function initialRouterPath(): string {
   if (typeof window === 'undefined') return '/';
@@ -211,7 +202,6 @@ function initialRouterPath(): string {
 const Router: React.FC = () => {
   const [currentPath, setCurrentPath] = useState(initialRouterPath);
   const { isAuthenticated, authLoading } = useAuth();
-  useClientManifest(currentPath.startsWith('/client'));
 
   useEffect(() => {
     const handleLocationChange = () =>
@@ -303,6 +293,11 @@ const Router: React.FC = () => {
       getProps: (m) => ({ studioSlug: m[1] }),
     },
     {
+      path: /^\/rdv\/merci\/([^/?#]+)\/?$/,
+      component: PublicBookingRecapPage,
+      getProps: (m) => ({ recapToken: decodeURIComponent(m[1]) }),
+    },
+    {
       path: /^\/consent\/([a-z0-9_-]+)$/,
       component: ConsentPage,
       getProps: (m) => ({ consentId: m[1] }),
@@ -318,6 +313,7 @@ const Router: React.FC = () => {
       getProps: (m) => ({ threadId: m[1] }),
     },
     { path: '/reservation-succes', component: ReservationSuccessPage },
+    { path: '/mon-compte', component: ClientAccountHubPage },
     { path: '/politique-confidentialite', component: PrivacyPolicyPage },
     { path: '/privacy', component: PrivacyPolicyPage },
     { path: '/privacy-policy', component: PrivacyPolicyPage },
@@ -339,14 +335,10 @@ const Router: React.FC = () => {
       getProps: (m) => ({ section: m[1] }),
     },
     { path: '/admin', component: FounderDashboardPage, requiresAuth: true },
-    // ── Portail client "My Inkflow" ─────────────────────────────────────────
-    { path: /^\/onboarding\/finaliser-profil\/?$/, component: ClientOnboardingFinalizePage },
-    { path: /^\/client\/bienvenue\/?$/, component: ClientWelcomeOnboardingPage },
-    { path: '/client', component: ClientPortalLoginPage },
-    { path: /^\/client\/vitrine\/?$/, component: ClientVitrineEmbedPage },
-    { path: /^\/client\/studio\/flash\/?$/, component: ClientFlashToolsEmbedPage },
-    { path: /^\/client\/compte-sante\/?$/, component: ClientHealthOnboardingPage },
-    { path: /^\/client\/dashboard\/?$/, component: ClientDashboard },
+    // Ancien portail : `/client` → hub ; `/client/…` profond → annuaire
+    { path: /^\/client\/.+/, component: ClientLegacySubpathRedirectToDiscover },
+    { path: /^\/client\/?$/, component: ClientRootRedirectToHub },
+    { path: /^\/onboarding\/finaliser-profil\/?$/, component: ClientRootRedirectToHub },
     // ── Discover — directory public ─────────────────────────────────────────
     { path: '/discover', component: DiscoverHomePage },
     {

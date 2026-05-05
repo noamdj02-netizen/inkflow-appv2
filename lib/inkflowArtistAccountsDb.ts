@@ -38,7 +38,7 @@ export async function fetchArtistAccountsForStudio(studioId: string): Promise<Ar
 
   const { data, error } = await supabase
     .from('inkflow_artist_accounts')
-    .select('*')
+    .select('id,studio_id,name,email,role,avatar,specialties,permissions,active,created_at')
     .eq('studio_id', studioId)
     .order('created_at', { ascending: true });
 
@@ -54,7 +54,10 @@ export async function fetchArtistAccountsForStudio(studioId: string): Promise<Ar
  * Synchronise les fiches équipe + permissions vers inkflow_artist_accounts (source de vérité cloud).
  * Préserve auth_user_id pour les lignes existantes.
  */
-export async function upsertArtistAccountsToSupabase(studioId: string, artists: ArtistAccount[]): Promise<void> {
+export async function upsertArtistAccountsToSupabase(
+  studioId: string,
+  artists: ArtistAccount[]
+): Promise<void> {
   if (!studioId || artists.length === 0) return;
 
   const { data: existing } = await supabase

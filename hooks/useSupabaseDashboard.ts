@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { AnalyticsEvents, captureEvent, trackOnboardingFunnel } from '../lib/analytics/capture';
+import {
+  AnalyticsEvents,
+  captureEvent,
+  trackOnboardingFunnel,
+  trackNorthStarFunnelStep,
+} from '../lib/analytics/capture';
 import { processStampLoyaltyAfterCompletedAppointment } from '../lib/stampLoyalty';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -300,6 +305,7 @@ export const useSupabaseDashboard = () => {
                 funnel: 'tattooer_activation',
               });
               trackOnboardingFunnel('first_appointment', { studio_id: studioId });
+              trackNorthStarFunnelStep('first_appointment_in_agenda', { studio_id: studioId });
             }
           })
         );

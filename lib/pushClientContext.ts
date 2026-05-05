@@ -25,5 +25,7 @@ export function isStandalonePwa(): boolean {
  * (préférer le bouton explicite dans les paramètres).
  */
 export function shouldDeferPushPermissionToUserGesture(): boolean {
-  return isLikelyIos();
+  // iOS Safari hors PWA : sans geste utilisateur le prompt est ignoré / peu fiable.
+  // PWA installée (écran d’accueil) : autorisé pour se comporter comme Chrome Android / desktop.
+  return isLikelyIos() && !isStandalonePwa();
 }

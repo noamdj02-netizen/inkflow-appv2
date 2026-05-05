@@ -22,6 +22,8 @@ npm start
 
 Ouvre l’URL indiquée, composition **InkflowDemo** (1920×1080, **~38 s** @ 30 fps — 4 séquences : intro, mockups animés, parcours réservation, outro).
 
+Le projet contient aussi la composition **LogoReveal** (1080×1920, **~4,4 s** @ 30 fps) pour une intro/outro courte en format Instagram Story / Reel.
+
 ## Exporter la vidéo pour Framer
 
 ```bash
@@ -32,6 +34,14 @@ Fichier généré : `out/inkflow-demo.mp4`.
 
 Ensuite : Framer → média → importer la vidéo, ou héberger le fichier et utiliser une URL dans un composant vidéo.
 
+### Exporter l’animation logo
+
+```bash
+npm run render:logo
+```
+
+Fichier généré : `out/inkflow-logo-reveal.mp4`.
+
 ### Image fixe (poster)
 
 ```bash
@@ -40,8 +50,17 @@ npm run render:still
 
 → `out/poster.png` (frame 90).
 
+Pour l’animation logo :
+
+```bash
+npm run render:logo:still
+```
+
+→ `out/logo-reveal-poster.png` (frame 72).
+
 ## Personnaliser
 
+- Animation logo : `src/LogoReveal.tsx`
 - Texte, durée, couleurs : `src/InkflowDemo.tsx`
 - ID / durée / résolution : `src/Root.tsx` (`durationInFrames`, `width`, `height`)
 

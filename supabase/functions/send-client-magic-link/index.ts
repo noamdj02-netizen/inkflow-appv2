@@ -14,12 +14,12 @@ const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const APP_URL              = (Deno.env.get("APP_URL") || "https://app.ink-flow.me").replace(/\/+$/, "");
 
-const CLIENT_ONBOARD_AFTER_AUTH = "/onboarding/finaliser-profil";
+const CLIENT_ONBOARD_AFTER_AUTH = "/discover";
 
 /** Évite redirectTo vers la landing marketing (Framer) — Supabase refuserait ou renverrait vers Site URL. */
 function sanitizeRedirectTo(input: string, appBase: string): string {
   const base = appBase.replace(/\/+$/, "");
-  const fallback = `${base}/auth/callback/client?redirect_to=${encodeURIComponent(CLIENT_ONBOARD_AFTER_AUTH)}`;
+  const fallback = `${base}/auth/callback?redirect_to=${encodeURIComponent(CLIENT_ONBOARD_AFTER_AUTH)}`;
   try {
     const u = new URL(input);
     const host = u.hostname.toLowerCase();
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     const rawRedirect =
       typeof body.redirectTo === "string"
         ? body.redirectTo
-        : `${APP_URL}/auth/callback/client?redirect_to=${encodeURIComponent(CLIENT_ONBOARD_AFTER_AUTH)}`;
+        : `${APP_URL}/auth/callback?redirect_to=${encodeURIComponent(CLIENT_ONBOARD_AFTER_AUTH)}`;
     const redirectTo = sanitizeRedirectTo(rawRedirect, APP_URL);
 
     if (!email) {

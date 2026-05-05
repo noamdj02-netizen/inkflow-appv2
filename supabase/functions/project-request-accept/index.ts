@@ -74,7 +74,7 @@ function buildClientEmail(params: {
     tag: "PROJET ACCEPTÉ",
     title: "Ta demande a été acceptée",
     bodyHtml,
-    button: { text: "Ouvrir mon espace client", url: params.clientAppUrl },
+    button: { text: "Voir sur InkFlow", url: params.clientAppUrl },
   });
 }
 

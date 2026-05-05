@@ -62,7 +62,7 @@ export function getEmailNavigationBaseUrls(): {
   return {
     appUrl,
     siteUrl: getSiteUrl(),
-    clientDashboardUrl: `${appUrl}/client/dashboard?tab=rdv`,
+    clientDashboardUrl: `${appUrl}/discover`,
     tattooerDashboardUrl: `${appUrl}/dashboard`,
   };
 }
@@ -207,7 +207,7 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
 
   const appUrl = getAppUrl();
   const siteUrl = getSiteUrl();
-  const clientDashboardUrl = `${appUrl}/client/dashboard?tab=rdv`;
+  const clientDashboardUrl = `${appUrl}/discover`;
 
   const appCardHtml = hideAppPromo
     ? ""
@@ -216,13 +216,13 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
     <tr>
       <td style="padding:24px 28px;">
         <p style="margin:0 0 12px;font-size:17px;font-weight:700;color:${TITLE};font-family:${FONT_BODY};">Liens rapides InkFlow</p>
-        <p style="margin:0 0 16px;font-size:14px;color:${TEXT_BODY};line-height:1.55;font-family:${FONT_BODY};">Découvre InkFlow sur le site, connecte-toi à l&apos;app pour gérer ton studio, ou ouvre ton espace client — tout depuis un clic.</p>
+        <p style="margin:0 0 16px;font-size:14px;color:${TEXT_BODY};line-height:1.55;font-family:${FONT_BODY};">Découvre InkFlow sur le site, connecte-toi à l&apos;app pour gérer ton studio, ou trouve un studio près de chez toi — tout depuis un clic.</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="padding:0 0 10px;">
             <a href="${escapeHtml(siteUrl)}" style="display:block;text-align:center;padding:12px 16px;background:${CTA_BG};color:${CTA_TEXT}!important;text-decoration:none;border-radius:12px;font-size:14px;font-weight:600;font-family:${FONT_BODY};">Ouvrir l&apos;application</a>
           </td></tr>
           <tr><td style="padding:0 0 10px;">
-            <a href="${escapeHtml(clientDashboardUrl)}" style="display:block;text-align:center;padding:12px 16px;background:#ffffff;color:${CTA_BG}!important;text-decoration:none;border-radius:12px;font-size:14px;font-weight:600;font-family:${FONT_BODY};border:2px solid ${CTA_BG};">Espace client — Mes rendez-vous</a>
+            <a href="${escapeHtml(clientDashboardUrl)}" style="display:block;text-align:center;padding:12px 16px;background:#ffffff;color:${CTA_BG}!important;text-decoration:none;border-radius:12px;font-size:14px;font-weight:600;font-family:${FONT_BODY};border:2px solid ${CTA_BG};">Découvrir les studios</a>
           </td></tr>
           <tr><td style="padding:0;">
             <a href="${escapeHtml(appUrl)}" style="display:block;text-align:center;padding:11px 16px;background:${RECAP_BG};color:${TITLE}!important;text-decoration:none;border-radius:12px;font-size:13px;font-weight:600;border:1px solid ${DIVIDER};font-family:${FONT_BODY};">Connexion app InkFlow</a>

@@ -33,16 +33,53 @@ export type StructuredMessagePayload =
   | PaymentReceiptPayload
   | ConsentFormRequestPayload;
 
+const TRUSTED_PAYMENT_LINK_HOSTS = new Set([
+  'checkout.stripe.com',
+  'billing.stripe.com',
+  'buy.stripe.com',
+  'pay.stripe.com',
+  'app.ink-flow.me',
+]);
+
+function isTrustedPaymentUrl(raw: unknown): raw is string {
+  if (typeof raw !== 'string' || !raw.trim()) return false;
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:') return false;
+    if (TRUSTED_PAYMENT_LINK_HOSTS.has(url.hostname)) return true;
+    return url.hostname.endsWith('.stripe.com');
+  } catch {
+    return false;
+  }
+}
+
 export function tryParseStructuredMessage(content: string): StructuredMessagePayload | null {
   const t = content.trim();
   if (!t.startsWith('{')) return null;
   try {
     const o = JSON.parse(t) as Record<string, unknown>;
-    if (o.kind === 'payment_card' && typeof o.checkoutUrl === 'string' && typeof o.amount === 'number') {
-      return o as unknown as PaymentCardPayload;
+    if (
+      o.kind === 'payment_card' &&
+      isTrustedPaymentUrl(o.checkoutUrl) &&
+      typeof o.amount === 'number'
+    ) {
+      return {
+        kind: 'payment_card',
+        amount: o.amount,
+        currency: typeof o.currency === 'string' ? o.currency : undefined,
+        checkoutUrl: o.checkoutUrl,
+        stripeSessionId: typeof o.stripeSessionId === 'string' ? o.stripeSessionId : undefined,
+      };
     }
     if (o.kind === 'payment_receipt' && typeof o.amount === 'number') {
-      return o as unknown as PaymentReceiptPayload;
+      const receiptUrl = isTrustedPaymentUrl(o.receiptUrl) ? o.receiptUrl : undefined;
+      return {
+        kind: 'payment_receipt',
+        amount: o.amount,
+        currency: typeof o.currency === 'string' ? o.currency : undefined,
+        receiptUrl,
+        stripeSessionId: typeof o.stripeSessionId === 'string' ? o.stripeSessionId : undefined,
+      };
     }
     if (
       o.kind === 'consent_form_request' &&

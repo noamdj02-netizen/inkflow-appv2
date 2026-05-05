@@ -39,7 +39,6 @@ import {
   CreditCard,
   Star,
   Check,
-  Smartphone,
   Heart,
   Globe,
   FileCheck,
@@ -59,6 +58,7 @@ import { Logo } from '../Logo';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../hooks/useSupabaseSync';
 import { useProjectRequests } from '../../hooks/useProjectRequests';
+import { useInkflowNativeShellPushBridge } from '../../hooks/useInkflowNativeShellPushBridge';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useIncomingBookings } from '../../hooks/useIncomingBookings';
 import { usePendingDemandesCounts } from '../../hooks/usePendingDemandesCounts';
@@ -70,11 +70,10 @@ import {
   type Notification as NotificationPopoverItem,
 } from '../ui/notification-popover';
 import { useSubscriptionPermissions } from '../../hooks/useSubscriptionPermissions';
+import { useBreakpointMd } from '../../hooks/useMediaQuery';
 import { Modal } from '../ui/Modal';
 import { LazyImageCropModal } from '../ui/lazyImageCropModal';
 import { ImageCropModalSuspenseFallback } from '../ui/skeleton';
-import { AppointmentCalendar } from './AppointmentCalendar';
-import { MiniCalendar } from './MiniCalendar';
 import { CareSheetsSettings } from './CareSheetsSettings';
 import { PaymentsSettings } from './PaymentsSettings';
 import { FinanceDisplaySettings } from './FinanceDisplaySettings';
@@ -84,7 +83,6 @@ import { AvailabilitySettings } from '../settings/AvailabilitySettings';
 import { VitrineSettings } from '../settings/VitrineSettings';
 import { SlugSettings } from '../settings/SlugSettings';
 import { GeoSettings } from '../settings/GeoSettings';
-import { PublicAppSettings } from '../settings/PublicAppSettings';
 import { InstagramConnect } from '../settings/InstagramConnect';
 import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 import { VitrineLinkButton } from './VitrineLinkButton';
@@ -104,8 +102,12 @@ import {
 import { isStudioAvailabilityConfigured } from '../../lib/studioAvailabilityConfigured';
 import { isStudioStripeConnected } from '../../lib/studioPaymentConfigured';
 import { setStripeConnectResume } from '../../lib/stripeConnectResume';
-import { pathForClientDashboardTab } from '../../lib/clientDashboardRoutes';
-import { AnalyticsEvents, captureEvent, trackOnboardingFunnel } from '../../lib/analytics/capture';
+import {
+  AnalyticsEvents,
+  captureEvent,
+  trackOnboardingFunnel,
+  trackNorthStarFunnelStep,
+} from '../../lib/analytics/capture';
 
 const FinanceDashboard = lazy(() =>
   import('./FinanceDashboard').then((m) => ({ default: m.FinanceDashboard }))
@@ -153,20 +155,40 @@ const LazyWelcomeOnboardingFlow = lazy(() =>
 const LazyClientPreviewDrawer = lazy(() =>
   import('./ClientPreviewDrawer').then((m) => ({ default: m.ClientPreviewDrawer }))
 );
+const LazyDashboardOverviewTab = lazy(() =>
+  import('./DashboardOverviewTab').then((m) => ({ default: m.DashboardOverviewTab }))
+);
+const LazyTodaySessionCockpit = lazy(() =>
+  import('./TodaySessionCockpit').then((m) => ({ default: m.TodaySessionCockpit }))
+);
+const LazyPlanningSidebar = lazy(() =>
+  import('./PlanningSidebar').then((m) => ({ default: m.PlanningSidebar }))
+);
+const LazyWaitlistManager = lazy(() =>
+  import('./WaitlistManager').then((m) => ({ default: m.WaitlistManager }))
+);
+const LazyLoyaltyManager = lazy(() =>
+  import('./LoyaltyManager').then((m) => ({ default: m.LoyaltyManager }))
+);
+const LazyNotificationsPage = lazy(() =>
+  import('./NotificationsPage').then((m) => ({ default: m.NotificationsPage }))
+);
+const LazyAccountPage = lazy(() =>
+  import('./AccountPage').then((m) => ({ default: m.AccountPage }))
+);
+const LazyEtablissementPage = lazy(() =>
+  import('./EtablissementPage').then((m) => ({ default: m.EtablissementPage }))
+);
+const LazySessionCloseoutSheet = lazy(() =>
+  import('./SessionCloseoutSheet').then((m) => ({ default: m.SessionCloseoutSheet }))
+);
+import type { LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
 import { DashboardWidgets, AddWidgetModal, WidgetCard } from './DashboardWidgets';
 import { useDashboardWidgets } from '../../hooks/useDashboardWidgets';
-import { SessionCloseoutSheet } from './SessionCloseoutSheet';
-import { DashboardOverviewTab } from './DashboardOverviewTab';
 import { DashboardTabHero, type DashboardOverviewHeroMeta } from './DashboardTabHero';
-import { PlanningSidebar } from './PlanningSidebar';
-import { WaitlistManager } from './WaitlistManager';
-import { LoyaltyManager, type LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
-import { NotificationsPage } from './NotificationsPage';
 import { ThemeToggle } from '../ThemeToggle';
 import { ConsentFormEditor } from '../consent/ConsentFormEditor';
 import { CalendarSettings } from './CalendarSettings';
-import { AccountPage } from './AccountPage';
-import { EtablissementPage } from './EtablissementPage';
 import {
   Appointment,
   FlashDesign,
@@ -212,7 +234,6 @@ import {
 import { createSubscription } from '../../lib/stripeClient';
 import { getSubscription } from '../../lib/subscriptionGuard';
 import { getPlanLimit } from '../../lib/subscriptionPlans';
-import { getStripePaymentLink, STRIPE_PAYMENT_LINKS } from '../../lib/stripePaymentLinks';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from 'next-themes';
 import {
@@ -288,7 +309,6 @@ type SettingsTabId =
   | 'availability'
   | 'calendar'
   | 'vitrine'
-  | 'public_app'
   | 'waitlist'
   | 'loyalty'
   | 'messagerie';
@@ -361,12 +381,6 @@ const SETTINGS_TAB_META: Record<
     description:
       'Thème visuel, textes, médias, sections et lien public : tout ce que voient les visiteurs avant de réserver.',
   },
-  public_app: {
-    label: 'App client & public',
-    Icon: Smartphone,
-    description:
-      'Bio studio, profils tatoueurs, flashs « vedette », aperçu mobile : cohérence entre vitrine et app client.',
-  },
   waitlist: {
     label: 'Liste d’attente',
     Icon: ListOrdered,
@@ -396,7 +410,6 @@ const SETTINGS_MAIN_TABS: { id: SettingsTabId; label: string }[] = [
   { id: 'availability', label: 'Disponibilités' },
   { id: 'calendar', label: 'Calendrier' },
   { id: 'vitrine', label: 'Page vitrine' },
-  { id: 'public_app', label: 'App client' },
 ];
 
 export const DashboardPro: React.FC = () => {
@@ -459,6 +472,7 @@ export const DashboardPro: React.FC = () => {
     refetch: refetchBookings,
   } = useIncomingBookings(studioId, useSupabase ?? false, demoAccountMode);
   usePushNotifications(studioId, { demoMode: demoAccountMode });
+  useInkflowNativeShellPushBridge(studioId, { demoMode: demoAccountMode });
   const demandes = usePendingDemandesCounts(appointments, bookings, projectRequests);
   const { canAccessFeature, hasReachedLimit, getLimit } = useSubscriptionPermissions(studioId);
   const [paymentSuccessModalOpen, setPaymentSuccessModalOpen] = useState(false);
@@ -531,15 +545,7 @@ export const DashboardPro: React.FC = () => {
 
   const prefersReducedMotion = useReducedMotion();
   /** Aligné sur `DashboardOverviewTab` (768px) — hero « Vue d’ensemble » shell uniquement md+ */
-  const [isMdUp, setIsMdUp] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
-  );
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)');
-    const apply = () => setIsMdUp(mq.matches);
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
+  const isMdUp = useBreakpointMd();
   /** Pastille onglet bas (layoutId) — ressort léger ; 0ms si reduced motion */
   const mobileBottomNavPillTransition = prefersReducedMotion
     ? { duration: 0 }
@@ -669,7 +675,13 @@ export const DashboardPro: React.FC = () => {
     }
   }, [activeTab, settingsTab, clientsView, financeView, planningView, requestsSubTab]);
 
-  const showTabHero = Boolean(tabHeroModel && !loading && (activeTab !== 'overview' || isMdUp));
+  /** Mobile : pas de hero image pour Synthèse agenda — le header affiche le titre, le contenu gagne des lignes pour la liste. */
+  const showTabHero = Boolean(
+    tabHeroModel &&
+    !loading &&
+    (activeTab !== 'overview' || isMdUp) &&
+    !(activeTab === 'agenda' && !isMdUp)
+  );
 
   /** Données pour `NotificationPopover` (titre / message / dates alignés sur le contexte studio). */
   const notificationPopoverItems: NotificationPopoverItem[] = useMemo(
@@ -725,8 +737,11 @@ export const DashboardPro: React.FC = () => {
       return;
     }
     const [studioRes, payRes] = await Promise.all([
-      /** `select('*')` évite un 400 PostgREST si une colonne listée n’est pas encore en prod (migrations en retard). */
-      supabase.from('inkflow_studios').select('*').eq('id', studioId).maybeSingle(),
+      supabase
+        .from('inkflow_studios')
+        .select('availability_settings,stripe_connect_charges_enabled')
+        .eq('id', studioId)
+        .maybeSingle(),
       supabase
         .from('inkflow_payment_settings')
         .select('settings')
@@ -916,7 +931,7 @@ export const DashboardPro: React.FC = () => {
       ) {
         return false;
       }
-      if (tab.id === 'vitrine' || tab.id === 'public_app') return moduleFlags.vitrine;
+      if (tab.id === 'vitrine') return moduleFlags.vitrine;
       return true;
     });
   }, [moduleFlags, isCollaboratorUser]);
@@ -1284,8 +1299,7 @@ export const DashboardPro: React.FC = () => {
 
   useEffect(() => {
     if (activeTab !== 'settings') return;
-    if ((settingsTab === 'vitrine' || settingsTab === 'public_app') && !moduleFlags.vitrine)
-      setSettingsTab('general');
+    if (settingsTab === 'vitrine' && !moduleFlags.vitrine) setSettingsTab('general');
   }, [activeTab, settingsTab, moduleFlags.vitrine]);
 
   // Persist consent/waitlist/artists in localStorage ; fidélité : localStorage hors cloud, Supabase quand useSupabase
@@ -1474,27 +1488,21 @@ export const DashboardPro: React.FC = () => {
     };
   }, [studioId, useSupabase, isCollaboratorUser]);
 
-  // Auto-checkout: when landing with ?subscribe=starter|pro|studio, redirect to Stripe Payment Link; solo|studio use createSubscription
+  // Auto-checkout: when landing with ?subscribe=solo|pro|studio, create a Stripe Checkout Session server-side.
   const subscribeAttempted = React.useRef(false);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const subscribe = params.get('subscribe');
+    const subscribe = params.get('subscribe') === 'starter' ? 'solo' : params.get('subscribe');
     const interval = (params.get('interval') || 'monthly') as 'monthly' | 'annual';
-    if (!subscribe || !user?.email || subscribeAttempted.current) return;
+    if (!subscribe || !user?.email || !studioId || subscribeAttempted.current) return;
 
     subscribeAttempted.current = true;
 
-    const paymentLinkPlan = subscribe as keyof typeof STRIPE_PAYMENT_LINKS;
-    if (subscribe in STRIPE_PAYMENT_LINKS) {
-      window.location.href = getStripePaymentLink(paymentLinkPlan);
-      return;
-    }
-
-    if (['solo', 'studio'].includes(subscribe) && studioId) {
+    if (['solo', 'pro', 'studio'].includes(subscribe)) {
       void createSubscription({
         studioId,
         email: user.email,
-        plan: subscribe as 'solo' | 'studio',
+        plan: subscribe as 'solo' | 'pro' | 'studio',
         interval,
       }).then((result) => {
         if ('url' in result) {
@@ -1765,7 +1773,7 @@ export const DashboardPro: React.FC = () => {
     const needVitrine =
       activeTab === 'overview' ||
       activeTab === 'portfolio' ||
-      (activeTab === 'settings' && (settingsTab === 'vitrine' || settingsTab === 'public_app'));
+      (activeTab === 'settings' && settingsTab === 'vitrine');
     if (!needVitrine) return;
     setVitrineLoading(activeTab === 'portfolio');
     const slug =
@@ -2281,6 +2289,7 @@ export const DashboardPro: React.FC = () => {
       funnel: 'tattooer_activation',
     });
     trackOnboardingFunnel('first_deposit_received', { studio_id: studioId });
+    trackNorthStarFunnelStep('first_deposit_received', { studio_id: studioId });
   }, [studioId, hasAnyDepositPaid]);
 
   /** Clé stable pour l’onboarding : e-mail normalisé (aligné inscription), sinon id Supabase. */
@@ -3158,19 +3167,8 @@ export const DashboardPro: React.FC = () => {
             </div>
           </nav>
 
-          {/* Footer — Espace Client + Déconnexion */}
+          {/* Footer — Déconnexion */}
           <div className="relative z-10 mt-auto px-3 py-3 border-t border-zinc-100 dark:border-zinc-800/50 safe-bottom space-y-0.5">
-            {/* Espace Client */}
-            <a
-              href={pathForClientDashboardTab('home')}
-              target="_blank"
-              rel="noreferrer"
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all active:scale-[0.98] motion-reduce:active:scale-100 border-l-4 border-l-transparent"
-            >
-              <User className="w-4 h-4 flex-shrink-0" />
-              <span>Espace Client</span>
-              <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
-            </a>
             {/* V2: Parrainage masqué pour le MVP
             <a
               href="/referral"
@@ -3601,7 +3599,7 @@ export const DashboardPro: React.FC = () => {
           <div
             className={`app-shell-content min-w-0 overflow-x-hidden ${
               activeTab === 'overview'
-                ? 'px-4 py-5 sm:p-6 md:px-7 md:py-6 lg:px-8 lg:py-7 xl:px-9 xl:py-7 2xl:px-11 2xl:py-8 dashboard-overview-bg'
+                ? 'px-3 py-3 sm:px-5 sm:py-5 md:px-7 md:py-6 lg:px-8 lg:py-7 xl:px-9 xl:py-7 2xl:px-11 2xl:py-8 dashboard-overview-bg'
                 : 'px-3 py-4 sm:p-6 md:p-8 xl:px-10 2xl:px-12 dashboard-pages-bg'
             }`}
           >
@@ -3647,71 +3645,103 @@ export const DashboardPro: React.FC = () => {
                       {activeTab === 'overview' && (
                         <div className="min-w-0">
                           <DashboardTabErrorBoundary sectionLabel="La vue d’ensemble n’a pas pu être chargée.">
-                            <DashboardOverviewTab
-                              pageTitleInShell={Boolean(!loading && isMdUp)}
-                              usePlaceholderForPublicVisibility={demoAccountMode}
-                              now={now}
-                              firstName={firstName}
-                              user={user}
-                              studioSlug={studioSlug}
-                              studioId={studioId}
-                              useSupabase={useSupabase ?? false}
-                              appointments={appointments}
-                              todayAppointments={todayAppointments}
-                              today={today}
-                              projectRequests={projectRequests}
-                              clients={clients}
-                              topClients={topClients}
-                              customWidgets={customWidgets}
-                              setCustomWidgets={setCustomWidgets}
-                              monthlyRevenue={monthlyRevenue}
-                              totalRevenue={totalRevenue}
-                              pendingDeposits={pendingDeposits}
-                              nextAppointmentIn2h={nextAppointmentIn2h}
-                              visibleAlerts={visibleAlerts}
-                              rdvAlertUnpaidCount={
-                                visibleAlerts.find((a) => a.id === 'unpaid') ? unpaidCount : 0
-                              }
-                              rdvAlertBientotCount={
-                                visibleAlerts.find((a) => a.id === '24h') ? upcoming24h.length : 0
-                              }
-                              setDismissedAlerts={setDismissedAlerts}
-                              overviewCalendarMonth={overviewCalendarMonth}
-                              setOverviewCalendarMonth={setOverviewCalendarMonth}
-                              nextClientOfDay={nextClientOfDay}
-                              setActiveTab={setActiveTab}
-                              onAlertNavigate={(alert) => {
-                                if (alert.id === 'unpaid') {
-                                  setRequestsInitialTab('history');
-                                  setRequestsSubTab('history');
-                                  setActiveTab('requests');
-                                } else if (alert.type === 'warning') {
-                                  setActiveTab('finance');
-                                } else {
-                                  setActiveTab('agenda');
+                            <Suspense fallback={<DashboardLoadingSkeleton />}>
+                              {isMdUp ? (
+                                <LazyTodaySessionCockpit
+                                  today={today}
+                                  appointments={appointments}
+                                  clients={clients}
+                                  flashDesigns={flashDesigns}
+                                  stripeConnectReady={paymentsSetupComplete === true}
+                                  onSyncAppointmentPrice={handleOverviewUpdateAppointment}
+                                  onSelectAppointment={setSelectedAppointment}
+                                  onOpenCloseout={setSessionCloseoutAppointment}
+                                  onOpenStockTrace={goToStockTraceFromCloseout}
+                                  onOpenAgenda={() => setActiveTab('agenda')}
+                                />
+                              ) : null}
+                              <LazyDashboardOverviewTab
+                                pageTitleInShell={Boolean(!loading && isMdUp)}
+                                usePlaceholderForPublicVisibility={demoAccountMode}
+                                now={now}
+                                firstName={firstName}
+                                user={user}
+                                studioSlug={studioSlug}
+                                studioId={studioId}
+                                useSupabase={useSupabase ?? false}
+                                appointments={appointments}
+                                todayAppointments={todayAppointments}
+                                today={today}
+                                projectRequests={projectRequests}
+                                clients={clients}
+                                topClients={topClients}
+                                customWidgets={customWidgets}
+                                setCustomWidgets={setCustomWidgets}
+                                monthlyRevenue={monthlyRevenue}
+                                totalRevenue={totalRevenue}
+                                pendingDeposits={pendingDeposits}
+                                nextAppointmentIn2h={nextAppointmentIn2h}
+                                visibleAlerts={visibleAlerts}
+                                rdvAlertUnpaidCount={
+                                  visibleAlerts.find((a) => a.id === 'unpaid') ? unpaidCount : 0
                                 }
-                              }}
-                              setSelectedAppointment={setSelectedAppointment}
-                              onUpdateAppointment={handleOverviewUpdateAppointment}
-                              setShowBookingModal={setShowBookingModal}
-                              setSelectedFlash={setSelectedFlash}
-                              setShowWidgetModal={setShowWidgetModal}
-                              pendingDemandesCount={demandes.total}
-                              recentDeposits={recentDeposits}
-                              overviewHeaderBgUrl={vitrineData?.coverImage ?? null}
-                              onAvatarClick={() => avatarInputRef.current?.click()}
-                              avatarUploading={avatarUploading}
-                              flashDesigns={flashDesigns}
-                              availabilitySetupComplete={availabilitySetupComplete}
-                              paymentsSetupComplete={paymentsSetupComplete}
-                              onSetupNavigate={handleSetupNavigate}
-                              studioSubscriptionStatus={subscriptionStatus ?? undefined}
-                              trialEndsAt={trialEndsAt ?? undefined}
-                              onOpenBilling={() => {
-                                setActiveTab('settings');
-                                setSettingsTab('billing');
-                              }}
-                            />
+                                rdvAlertBientotCount={
+                                  visibleAlerts.find((a) => a.id === '24h') ? upcoming24h.length : 0
+                                }
+                                setDismissedAlerts={setDismissedAlerts}
+                                overviewCalendarMonth={overviewCalendarMonth}
+                                setOverviewCalendarMonth={setOverviewCalendarMonth}
+                                nextClientOfDay={nextClientOfDay}
+                                setActiveTab={setActiveTab}
+                                onAlertNavigate={(alert) => {
+                                  if (alert.id === 'unpaid') {
+                                    setRequestsInitialTab('history');
+                                    setRequestsSubTab('history');
+                                    setActiveTab('requests');
+                                  } else if (alert.type === 'warning') {
+                                    setActiveTab('finance');
+                                  } else {
+                                    setActiveTab('agenda');
+                                  }
+                                }}
+                                setSelectedAppointment={setSelectedAppointment}
+                                onUpdateAppointment={handleOverviewUpdateAppointment}
+                                setShowBookingModal={setShowBookingModal}
+                                setSelectedFlash={setSelectedFlash}
+                                setShowWidgetModal={setShowWidgetModal}
+                                pendingDemandesCount={demandes.total}
+                                recentDeposits={recentDeposits}
+                                overviewHeaderBgUrl={vitrineData?.coverImage ?? null}
+                                onAvatarClick={() => avatarInputRef.current?.click()}
+                                avatarUploading={avatarUploading}
+                                flashDesigns={flashDesigns}
+                                availabilitySetupComplete={availabilitySetupComplete}
+                                paymentsSetupComplete={paymentsSetupComplete}
+                                onSetupNavigate={handleSetupNavigate}
+                                studioSubscriptionStatus={subscriptionStatus ?? undefined}
+                                trialEndsAt={trialEndsAt ?? undefined}
+                                mobileAfterHero={
+                                  !isMdUp ? (
+                                    <LazyTodaySessionCockpit
+                                      today={today}
+                                      appointments={appointments}
+                                      clients={clients}
+                                      flashDesigns={flashDesigns}
+                                      stripeConnectReady={paymentsSetupComplete === true}
+                                      onSyncAppointmentPrice={handleOverviewUpdateAppointment}
+                                      onSelectAppointment={setSelectedAppointment}
+                                      onOpenCloseout={setSessionCloseoutAppointment}
+                                      onOpenStockTrace={goToStockTraceFromCloseout}
+                                      onOpenAgenda={() => setActiveTab('agenda')}
+                                    />
+                                  ) : null
+                                }
+                                onOpenBilling={() => {
+                                  setActiveTab('settings');
+                                  setSettingsTab('billing');
+                                }}
+                              />
+                            </Suspense>
                           </DashboardTabErrorBoundary>
                         </div>
                       )}
@@ -3839,13 +3869,15 @@ export const DashboardPro: React.FC = () => {
                         <div className="min-w-0">
                           <DashboardTabErrorBoundary sectionLabel="Les clients n’ont pas pu être chargés.">
                             {clientsView === 'loyalty' ? (
-                              <LoyaltyManager
-                                entries={loyaltyEntries}
-                                clients={clients}
-                                onUpdatePoints={() => {}}
-                                settings={loyaltySettings}
-                                onUpdateSettings={setLoyaltySettings}
-                              />
+                              <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                <LazyLoyaltyManager
+                                  entries={loyaltyEntries}
+                                  clients={clients}
+                                  onUpdatePoints={() => {}}
+                                  settings={loyaltySettings}
+                                  onUpdateSettings={setLoyaltySettings}
+                                />
+                              </Suspense>
                             ) : (
                               <Suspense fallback={<DashboardLoadingSkeleton />}>
                                 <ClientList
@@ -3935,25 +3967,27 @@ export const DashboardPro: React.FC = () => {
                       {activeTab === 'notifications' && (
                         <div className="min-w-0">
                           <DashboardTabErrorBoundary sectionLabel="Les notifications n’ont pas pu être chargées.">
-                            <NotificationsPage
-                              studioId={studioId}
-                              notifications={notifications}
-                              markNotificationAsRead={markNotificationAsRead}
-                              onNavigate={(notif) => {
-                                if (
-                                  notif.type === 'message' ||
-                                  notif.actionUrl?.includes('messaging')
-                                ) {
-                                  setActiveTab('messaging');
-                                  return;
-                                }
-                                if (notif.type === 'booking') {
-                                  setRequestsSubTab('inbox');
-                                  setActiveTab('requests');
-                                } else if (notif.type === 'payment') setActiveTab('finance');
-                                else setActiveTab('overview');
-                              }}
-                            />
+                            <Suspense fallback={<DashboardLoadingSkeleton />}>
+                              <LazyNotificationsPage
+                                studioId={studioId}
+                                notifications={notifications}
+                                markNotificationAsRead={markNotificationAsRead}
+                                onNavigate={(notif) => {
+                                  if (
+                                    notif.type === 'message' ||
+                                    notif.actionUrl?.includes('messaging')
+                                  ) {
+                                    setActiveTab('messaging');
+                                    return;
+                                  }
+                                  if (notif.type === 'booking') {
+                                    setRequestsSubTab('inbox');
+                                    setActiveTab('requests');
+                                  } else if (notif.type === 'payment') setActiveTab('finance');
+                                  else setActiveTab('overview');
+                                }}
+                              />
+                            </Suspense>
                           </DashboardTabErrorBoundary>
                         </div>
                       )}
@@ -4302,7 +4336,7 @@ export const DashboardPro: React.FC = () => {
                                     {
                                       label: 'Vitrine & Communication',
                                       color: 'amber',
-                                      items: ['vitrine', 'public_app', 'messagerie'],
+                                      items: ['vitrine', 'messagerie'],
                                     },
                                   ];
                                   const colorMap: Record<
@@ -4870,89 +4904,107 @@ export const DashboardPro: React.FC = () => {
                                 </div>
                               )}
                               {settingsTab === 'waitlist' && (
-                                <WaitlistManager
-                                  entries={waitlistEntries}
-                                  onAdd={async (e) => {
-                                    if (useSupabase && studioId) {
-                                      try {
-                                        const created = await addWaitlistEntryToSupabase(studioId, {
-                                          clientName: e.clientName,
-                                          clientEmail: e.clientEmail,
-                                          desiredService: e.desiredService,
-                                          preferredDates: e.preferredDates,
-                                          notes: e.notes,
-                                          status: 'waiting',
-                                        });
-                                        setWaitlistEntries((prev) => [...prev, created]);
-                                        toast.success("Client ajouté à la liste d'attente");
-                                      } catch {
-                                        toast.error("Erreur lors de l'ajout");
+                                <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                  <LazyWaitlistManager
+                                    entries={waitlistEntries}
+                                    onAdd={async (e) => {
+                                      if (useSupabase && studioId) {
+                                        try {
+                                          const created = await addWaitlistEntryToSupabase(
+                                            studioId,
+                                            {
+                                              clientName: e.clientName,
+                                              clientEmail: e.clientEmail,
+                                              desiredService: e.desiredService,
+                                              preferredDates: e.preferredDates,
+                                              notes: e.notes,
+                                              status: 'waiting',
+                                            }
+                                          );
+                                          setWaitlistEntries((prev) => [...prev, created]);
+                                          toast.success("Client ajouté à la liste d'attente");
+                                        } catch {
+                                          toast.error("Erreur lors de l'ajout");
+                                        }
+                                      } else {
+                                        setWaitlistEntries((prev) => [
+                                          ...prev,
+                                          { ...e, studioId: studioId || '' },
+                                        ]);
                                       }
-                                    } else {
-                                      setWaitlistEntries((prev) => [
-                                        ...prev,
-                                        { ...e, studioId: studioId || '' },
-                                      ]);
-                                    }
-                                  }}
-                                  onNotify={async (id) => {
-                                    if (useSupabase && studioId) {
-                                      try {
-                                        const now = new Date().toISOString();
-                                        await updateWaitlistStatusInSupabase(id, {
-                                          status: 'notified',
-                                          notified_at: now,
-                                        });
+                                    }}
+                                    onNotify={async (id) => {
+                                      if (useSupabase && studioId) {
+                                        try {
+                                          const now = new Date().toISOString();
+                                          await updateWaitlistStatusInSupabase(id, {
+                                            status: 'notified',
+                                            notified_at: now,
+                                          });
+                                          setWaitlistEntries((prev) =>
+                                            prev.map((e) =>
+                                              e.id === id
+                                                ? {
+                                                    ...e,
+                                                    status: 'notified' as const,
+                                                    notifiedAt: now,
+                                                  }
+                                                : e
+                                            )
+                                          );
+                                          toast.success('Client notifié');
+                                        } catch {
+                                          toast.error('Erreur lors de la notification');
+                                        }
+                                      } else {
                                         setWaitlistEntries((prev) =>
                                           prev.map((e) =>
                                             e.id === id
                                               ? {
                                                   ...e,
                                                   status: 'notified' as const,
-                                                  notifiedAt: now,
+                                                  notifiedAt: new Date().toISOString(),
                                                 }
                                               : e
                                           )
                                         );
-                                        toast.success('Client notifié');
-                                      } catch {
-                                        toast.error('Erreur lors de la notification');
                                       }
-                                    } else {
-                                      setWaitlistEntries((prev) =>
-                                        prev.map((e) =>
-                                          e.id === id
-                                            ? {
-                                                ...e,
-                                                status: 'notified' as const,
-                                                notifiedAt: new Date().toISOString(),
-                                              }
-                                            : e
-                                        )
-                                      );
-                                    }
-                                  }}
-                                  onRemove={async (id) => {
-                                    if (useSupabase && studioId) {
-                                      try {
-                                        await deleteWaitlistEntryFromSupabase(id);
+                                    }}
+                                    onRemove={async (id) => {
+                                      if (useSupabase && studioId) {
+                                        try {
+                                          await deleteWaitlistEntryFromSupabase(id);
+                                          setWaitlistEntries((prev) =>
+                                            prev.filter((e) => e.id !== id)
+                                          );
+                                          toast.success('Entrée supprimée');
+                                        } catch {
+                                          toast.error('Erreur lors de la suppression');
+                                        }
+                                      } else {
                                         setWaitlistEntries((prev) =>
                                           prev.filter((e) => e.id !== id)
                                         );
-                                        toast.success('Entrée supprimée');
-                                      } catch {
-                                        toast.error('Erreur lors de la suppression');
                                       }
-                                    } else {
-                                      setWaitlistEntries((prev) => prev.filter((e) => e.id !== id));
-                                    }
-                                  }}
-                                  onBook={async (entry) => {
-                                    if (useSupabase && studioId) {
-                                      try {
-                                        await updateWaitlistStatusInSupabase(entry.id, {
-                                          status: 'booked',
-                                        });
+                                    }}
+                                    onBook={async (entry) => {
+                                      if (useSupabase && studioId) {
+                                        try {
+                                          await updateWaitlistStatusInSupabase(entry.id, {
+                                            status: 'booked',
+                                          });
+                                          setWaitlistEntries((prev) =>
+                                            prev.map((e) =>
+                                              e.id === entry.id
+                                                ? { ...e, status: 'booked' as const }
+                                                : e
+                                            )
+                                          );
+                                          toast.success('Réservation enregistrée');
+                                        } catch {
+                                          toast.error('Erreur lors de la réservation');
+                                        }
+                                      } else {
                                         setWaitlistEntries((prev) =>
                                           prev.map((e) =>
                                             e.id === entry.id
@@ -4960,30 +5012,21 @@ export const DashboardPro: React.FC = () => {
                                               : e
                                           )
                                         );
-                                        toast.success('Réservation enregistrée');
-                                      } catch {
-                                        toast.error('Erreur lors de la réservation');
                                       }
-                                    } else {
-                                      setWaitlistEntries((prev) =>
-                                        prev.map((e) =>
-                                          e.id === entry.id
-                                            ? { ...e, status: 'booked' as const }
-                                            : e
-                                        )
-                                      );
-                                    }
-                                  }}
-                                />
+                                    }}
+                                  />
+                                </Suspense>
                               )}
                               {settingsTab === 'loyalty' && (
-                                <LoyaltyManager
-                                  entries={loyaltyEntries}
-                                  clients={clients}
-                                  onUpdatePoints={() => {}}
-                                  settings={loyaltySettings}
-                                  onUpdateSettings={setLoyaltySettings}
-                                />
+                                <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                  <LazyLoyaltyManager
+                                    entries={loyaltyEntries}
+                                    clients={clients}
+                                    onUpdatePoints={() => {}}
+                                    settings={loyaltySettings}
+                                    onUpdateSettings={setLoyaltySettings}
+                                  />
+                                </Suspense>
                               )}
                               {settingsTab === 'calendar' && (
                                 <CalendarSettings
@@ -5044,58 +5087,6 @@ export const DashboardPro: React.FC = () => {
                                     </p>
                                   </div>
                                 ))}
-                              {settingsTab === 'public_app' && studioId && (
-                                <PublicAppSettings
-                                  studioId={studioId}
-                                  studioSlug={studioSlug}
-                                  studioName={(
-                                    user?.studioName ||
-                                    generalStudioName ||
-                                    'Studio'
-                                  ).trim()}
-                                  artistAccounts={artistAccounts}
-                                  flashDesigns={flashDesigns}
-                                  onUpdateFlash={updateFlash}
-                                  onOpenGeoSettings={() => setSettingsTab('general')}
-                                  studioTagline={vitrineData?.tagline ?? ''}
-                                  studioDescription={vitrineData?.description ?? ''}
-                                  previewCityLabel={
-                                    vitrineData?.address?.trim()
-                                      ? vitrineData.address.split('\n')[0].trim().slice(0, 48)
-                                      : undefined
-                                  }
-                                  onSaveStudioCopy={
-                                    user?.email && user?.studioName
-                                      ? async ({ tagline, description }) => {
-                                          const slug =
-                                            studioSlug != null && studioSlug !== ''
-                                              ? studioSlug
-                                              : getVitrineSlug(user.studioName!);
-                                          const base = vitrineData ?? defaultVitrineData(slug);
-                                          const newData: VitrineData = {
-                                            ...base,
-                                            tagline,
-                                            description,
-                                          };
-                                          setVitrineData(newData);
-                                          try {
-                                            await saveVitrineDataAsync(
-                                              slug,
-                                              newData,
-                                              user.email!,
-                                              user.studioName!
-                                            );
-                                            toast.success('Texte public enregistré');
-                                          } catch {
-                                            toast.warning(
-                                              'Enregistré localement. Synchronisation à réessayer.'
-                                            );
-                                          }
-                                        }
-                                      : undefined
-                                  }
-                                />
-                              )}
                               {settingsTab === 'messagerie' && studioId && (
                                 <InstagramConnect studioId={studioId} />
                               )}
@@ -5108,90 +5099,94 @@ export const DashboardPro: React.FC = () => {
                         <div className="min-w-0">
                           <DashboardTabErrorBoundary sectionLabel="L’établissement n’a pas pu être chargé.">
                             <div className="animate-fade-in">
-                              <EtablissementPage
-                                studioId={studioId}
-                                studioName={generalStudioName}
-                                siret={generalSiret}
-                                email={generalEmail}
-                                user={user}
-                                artists={artistAccounts}
-                                googlePlaceId={generalGooglePlaceId}
-                                useSupabase={useSupabase ?? false}
-                                onSaveGooglePlaceId={handleSaveGooglePlaceId}
-                                onSaveIdentity={async (form) => {
-                                  if (generalSaving) return;
-                                  setGeneralSaving(true);
-                                  try {
-                                    if (studioId) {
-                                      const { error } = await supabase
-                                        .from('inkflow_studios')
-                                        .update({
-                                          name: form.studioName,
-                                          studio_name: form.studioName,
-                                          updated_at: new Date().toISOString(),
-                                          ...(form.siret ? { siret: form.siret } : {}),
-                                        })
-                                        .eq('id', studioId);
-                                      if (error) throw error;
+                              <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                <LazyEtablissementPage
+                                  studioId={studioId}
+                                  studioName={generalStudioName}
+                                  siret={generalSiret}
+                                  email={generalEmail}
+                                  user={user}
+                                  artists={artistAccounts}
+                                  googlePlaceId={generalGooglePlaceId}
+                                  useSupabase={useSupabase ?? false}
+                                  onSaveGooglePlaceId={handleSaveGooglePlaceId}
+                                  onSaveIdentity={async (form) => {
+                                    if (generalSaving) return;
+                                    setGeneralSaving(true);
+                                    try {
+                                      if (studioId) {
+                                        const { error } = await supabase
+                                          .from('inkflow_studios')
+                                          .update({
+                                            name: form.studioName,
+                                            studio_name: form.studioName,
+                                            updated_at: new Date().toISOString(),
+                                            ...(form.siret ? { siret: form.siret } : {}),
+                                          })
+                                          .eq('id', studioId);
+                                        if (error) throw error;
+                                      }
+                                      updateUser({ studioName: form.studioName });
+                                      setGeneralStudioName(form.studioName);
+                                      if (form.siret) setGeneralSiret(form.siret);
+                                      localStorage.setItem('inkflow_studio_name', form.studioName);
+                                    } finally {
+                                      setGeneralSaving(false);
                                     }
-                                    updateUser({ studioName: form.studioName });
-                                    setGeneralStudioName(form.studioName);
-                                    if (form.siret) setGeneralSiret(form.siret);
-                                    localStorage.setItem('inkflow_studio_name', form.studioName);
-                                  } finally {
-                                    setGeneralSaving(false);
+                                  }}
+                                  onAddArtist={handleAddCollaborator}
+                                  onUpdateArtist={(a) =>
+                                    setArtistAccounts((prev) =>
+                                      prev.map((x) => (x.id === a.id ? a : x))
+                                    )
                                   }
-                                }}
-                                onAddArtist={handleAddCollaborator}
-                                onUpdateArtist={(a) =>
-                                  setArtistAccounts((prev) =>
-                                    prev.map((x) => (x.id === a.id ? a : x))
-                                  )
-                                }
-                                onDeleteArtist={(id) =>
-                                  setArtistAccounts((prev) => prev.filter((x) => x.id !== id))
-                                }
-                                onSendCollaboratorInvite={
-                                  studioId && useSupabase ? handleSendCollaboratorInvite : undefined
-                                }
-                                maxArtists={getLimit('artists')}
-                                onGoToBilling={() => {
-                                  setActiveTab('settings');
-                                  setSettingsTab('billing');
-                                }}
-                                subscriptionStatus={subscriptionStatus ?? undefined}
-                                trialEndsAt={trialEndsAt}
-                                googleBusinessConnected={googleBusinessConnected}
-                                googleBusinessLocationName={googleBusinessLocationName}
-                                googleBusinessNeedsLocationSelection={
-                                  googleBusinessNeedsLocationSelection
-                                }
-                                googleBusinessLocations={googleBusinessLocations}
-                                loadingGoogleBusinessLocations={loadingGoogleBusinessLocations}
-                                googleBusinessLocationsHint={googleBusinessLocationsHint}
-                                onConnectGoogleBusiness={
-                                  studioId && useSupabase && googleBusinessOAuthUi
-                                    ? handleConnectGoogleBusiness
-                                    : undefined
-                                }
-                                onDisconnectGoogleBusiness={
-                                  studioId &&
-                                  useSupabase &&
-                                  (googleBusinessOAuthUi || googleBusinessConnected)
-                                    ? handleDisconnectGoogleBusiness
-                                    : undefined
-                                }
-                                onSelectGoogleBusinessLocation={
-                                  studioId && useSupabase && googleBusinessOAuthUi
-                                    ? handleSelectGoogleBusinessLocation
-                                    : undefined
-                                }
-                                onLoadGoogleBusinessLocations={
-                                  studioId && useSupabase && googleBusinessOAuthUi
-                                    ? loadGoogleBusinessLocations
-                                    : undefined
-                                }
-                              />
+                                  onDeleteArtist={(id) =>
+                                    setArtistAccounts((prev) => prev.filter((x) => x.id !== id))
+                                  }
+                                  onSendCollaboratorInvite={
+                                    studioId && useSupabase
+                                      ? handleSendCollaboratorInvite
+                                      : undefined
+                                  }
+                                  maxArtists={getLimit('artists')}
+                                  onGoToBilling={() => {
+                                    setActiveTab('settings');
+                                    setSettingsTab('billing');
+                                  }}
+                                  subscriptionStatus={subscriptionStatus ?? undefined}
+                                  trialEndsAt={trialEndsAt}
+                                  googleBusinessConnected={googleBusinessConnected}
+                                  googleBusinessLocationName={googleBusinessLocationName}
+                                  googleBusinessNeedsLocationSelection={
+                                    googleBusinessNeedsLocationSelection
+                                  }
+                                  googleBusinessLocations={googleBusinessLocations}
+                                  loadingGoogleBusinessLocations={loadingGoogleBusinessLocations}
+                                  googleBusinessLocationsHint={googleBusinessLocationsHint}
+                                  onConnectGoogleBusiness={
+                                    studioId && useSupabase && googleBusinessOAuthUi
+                                      ? handleConnectGoogleBusiness
+                                      : undefined
+                                  }
+                                  onDisconnectGoogleBusiness={
+                                    studioId &&
+                                    useSupabase &&
+                                    (googleBusinessOAuthUi || googleBusinessConnected)
+                                      ? handleDisconnectGoogleBusiness
+                                      : undefined
+                                  }
+                                  onSelectGoogleBusinessLocation={
+                                    studioId && useSupabase && googleBusinessOAuthUi
+                                      ? handleSelectGoogleBusinessLocation
+                                      : undefined
+                                  }
+                                  onLoadGoogleBusinessLocations={
+                                    studioId && useSupabase && googleBusinessOAuthUi
+                                      ? loadGoogleBusinessLocations
+                                      : undefined
+                                  }
+                                />
+                              </Suspense>
                             </div>
                           </DashboardTabErrorBoundary>
                         </div>
@@ -5201,94 +5196,101 @@ export const DashboardPro: React.FC = () => {
                         <div className="min-w-0">
                           <DashboardTabErrorBoundary sectionLabel="Le compte n’a pas pu être chargé.">
                             <div className="animate-fade-in px-0">
-                              <AccountPage
-                                user={user}
-                                studioId={studioId}
-                                studioName={generalStudioName}
-                                email={generalEmail}
-                                siret={generalSiret}
-                                onStudioNameChange={(v) => {
-                                  setGeneralStudioName(v);
-                                  setGeneralSaved(false);
-                                }}
-                                onEmailChange={(v) => {
-                                  setGeneralEmail(v);
-                                  setGeneralSaved(false);
-                                }}
-                                onSiretChange={(v) => {
-                                  setGeneralSiret(v);
-                                  setGeneralSaved(false);
-                                }}
-                                saving={generalSaving}
-                                saved={generalSaved}
-                                onSave={async () => {
-                                  if (generalSaving) return;
-                                  setGeneralSaving(true);
-                                  try {
-                                    if (studioId) {
-                                      const { error: mainError } = await supabase
-                                        .from('inkflow_studios')
-                                        .update({
-                                          name: generalStudioName,
-                                          studio_name: generalStudioName,
-                                          email: generalEmail,
-                                          updated_at: new Date().toISOString(),
-                                        })
-                                        .eq('id', studioId);
-                                      if (mainError) throw mainError;
-                                      if (generalSiret.trim()) {
-                                        await supabase
+                              <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                <LazyAccountPage
+                                  user={user}
+                                  studioId={studioId}
+                                  studioName={generalStudioName}
+                                  email={generalEmail}
+                                  siret={generalSiret}
+                                  onStudioNameChange={(v) => {
+                                    setGeneralStudioName(v);
+                                    setGeneralSaved(false);
+                                  }}
+                                  onEmailChange={(v) => {
+                                    setGeneralEmail(v);
+                                    setGeneralSaved(false);
+                                  }}
+                                  onSiretChange={(v) => {
+                                    setGeneralSiret(v);
+                                    setGeneralSaved(false);
+                                  }}
+                                  saving={generalSaving}
+                                  saved={generalSaved}
+                                  onSave={async () => {
+                                    if (generalSaving) return;
+                                    setGeneralSaving(true);
+                                    try {
+                                      if (studioId) {
+                                        const { error: mainError } = await supabase
                                           .from('inkflow_studios')
-                                          .update({ siret: generalSiret.trim() })
+                                          .update({
+                                            name: generalStudioName,
+                                            studio_name: generalStudioName,
+                                            email: generalEmail,
+                                            updated_at: new Date().toISOString(),
+                                          })
                                           .eq('id', studioId);
+                                        if (mainError) throw mainError;
+                                        if (generalSiret.trim()) {
+                                          await supabase
+                                            .from('inkflow_studios')
+                                            .update({ siret: generalSiret.trim() })
+                                            .eq('id', studioId);
+                                        }
+                                      } else if (useSupabase) {
+                                        throw new Error(
+                                          'Studio non initialisé. Rechargez la page.'
+                                        );
                                       }
-                                    } else if (useSupabase) {
-                                      throw new Error('Studio non initialisé. Rechargez la page.');
+                                      updateUser({
+                                        studioName: generalStudioName,
+                                        email: generalEmail,
+                                      });
+                                      localStorage.setItem(
+                                        'inkflow_studio_name',
+                                        generalStudioName
+                                      );
+                                      localStorage.setItem('inkflow_email', generalEmail);
+                                      setGeneralSaved(true);
+                                      toast.success('Paramètres enregistrés');
+                                      setTimeout(() => setGeneralSaved(false), 3000);
+                                    } catch (err) {
+                                      toast.error(
+                                        err instanceof Error
+                                          ? err.message
+                                          : 'Erreur lors de la sauvegarde'
+                                      );
+                                    } finally {
+                                      setGeneralSaving(false);
                                     }
-                                    updateUser({
-                                      studioName: generalStudioName,
-                                      email: generalEmail,
+                                  }}
+                                  avatarInputRef={avatarInputRef}
+                                  avatarUploading={avatarUploading}
+                                  onAvatarClick={() => avatarInputRef.current?.click()}
+                                  onAvatarRemove={handleAvatarRemove}
+                                  artists={artistAccounts}
+                                  onGoToCollaborateurs={() => {
+                                    handleSidebarNav(() => {
+                                      setActiveTab('etablissement');
+                                      setSidebarOpen(false);
                                     });
-                                    localStorage.setItem('inkflow_studio_name', generalStudioName);
-                                    localStorage.setItem('inkflow_email', generalEmail);
-                                    setGeneralSaved(true);
-                                    toast.success('Paramètres enregistrés');
-                                    setTimeout(() => setGeneralSaved(false), 3000);
-                                  } catch (err) {
-                                    toast.error(
-                                      err instanceof Error
-                                        ? err.message
-                                        : 'Erreur lors de la sauvegarde'
-                                    );
-                                  } finally {
-                                    setGeneralSaving(false);
-                                  }
-                                }}
-                                avatarInputRef={avatarInputRef}
-                                avatarUploading={avatarUploading}
-                                onAvatarClick={() => avatarInputRef.current?.click()}
-                                onAvatarRemove={handleAvatarRemove}
-                                artists={artistAccounts}
-                                onGoToCollaborateurs={() => {
-                                  handleSidebarNav(() => {
-                                    setActiveTab('etablissement');
-                                    setSidebarOpen(false);
-                                  });
-                                }}
-                                onGoToBilling={() => {
-                                  setActiveTab('settings');
-                                  setSettingsTab('billing');
-                                }}
-                                onGoToNotifications={() => {
-                                  setActiveTab('settings');
-                                  setSettingsTab('general');
-                                }}
-                                onLogout={logout}
-                                subscriptionStatus={subscriptionStatus ?? undefined}
-                                trialEndsAt={trialEndsAt}
-                                onRefreshStudioSubscription={refreshStudioSubscription}
-                                isStudioOwner={!isCollaboratorUser}
-                              />
+                                  }}
+                                  onGoToBilling={() => {
+                                    setActiveTab('settings');
+                                    setSettingsTab('billing');
+                                  }}
+                                  onGoToNotifications={() => {
+                                    setActiveTab('settings');
+                                    setSettingsTab('general');
+                                  }}
+                                  onLogout={logout}
+                                  subscriptionStatus={subscriptionStatus ?? undefined}
+                                  trialEndsAt={trialEndsAt}
+                                  onRefreshStudioSubscription={refreshStudioSubscription}
+                                  isStudioOwner={!isCollaboratorUser}
+                                />
+                              </Suspense>
                             </div>
                           </DashboardTabErrorBoundary>
                         </div>
@@ -5312,33 +5314,39 @@ export const DashboardPro: React.FC = () => {
         {/* end app-shell-main */}
 
         {/* Sidebar droite : mini-calendrier + planning du jour — visible lg+ */}
-        <PlanningSidebar
-          appointments={appointments}
-          selectedDate={planningSidebarDate}
-          onSelectDate={setPlanningSidebarDate}
-          onSelectAppointment={setSelectedAppointment}
-          currentMonth={planningSidebarMonth}
-          onPrevMonth={() =>
-            setPlanningSidebarMonth((m) => {
-              const d = new Date(m);
-              d.setMonth(d.getMonth() - 1);
-              return d;
-            })
+        <Suspense
+          fallback={
+            <div className="hidden xl:flex w-[min(100%,320px)] shrink-0 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/40 animate-pulse min-h-[min(70dvh,560px)]" />
           }
-          onNextMonth={() =>
-            setPlanningSidebarMonth((m) => {
-              const d = new Date(m);
-              d.setMonth(d.getMonth() + 1);
-              return d;
-            })
-          }
-          onToday={() => {
-            setPlanningSidebarDate(null);
-            setPlanningSidebarMonth(new Date());
-          }}
-          onNewAppointment={() => setShowBookingModal(true)}
-          className="hidden xl:flex"
-        />
+        >
+          <LazyPlanningSidebar
+            appointments={appointments}
+            selectedDate={planningSidebarDate}
+            onSelectDate={setPlanningSidebarDate}
+            onSelectAppointment={setSelectedAppointment}
+            currentMonth={planningSidebarMonth}
+            onPrevMonth={() =>
+              setPlanningSidebarMonth((m) => {
+                const d = new Date(m);
+                d.setMonth(d.getMonth() - 1);
+                return d;
+              })
+            }
+            onNextMonth={() =>
+              setPlanningSidebarMonth((m) => {
+                const d = new Date(m);
+                d.setMonth(d.getMonth() + 1);
+                return d;
+              })
+            }
+            onToday={() => {
+              setPlanningSidebarDate(null);
+              setPlanningSidebarMonth(new Date());
+            }}
+            onNewAppointment={() => setShowBookingModal(true)}
+            className="hidden xl:flex"
+          />
+        </Suspense>
       </div>
       {/* end app-shell-row */}
 
@@ -5525,39 +5533,41 @@ export const DashboardPro: React.FC = () => {
               </button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-              <PlanningSidebar
-                appointments={appointments}
-                selectedDate={planningSidebarDate}
-                onSelectDate={setPlanningSidebarDate}
-                onSelectAppointment={(apt) => {
-                  setSelectedAppointment(apt);
-                  setShowPlanningSheet(false);
-                }}
-                currentMonth={planningSidebarMonth}
-                onPrevMonth={() =>
-                  setPlanningSidebarMonth((m) => {
-                    const d = new Date(m);
-                    d.setMonth(d.getMonth() - 1);
-                    return d;
-                  })
-                }
-                onNextMonth={() =>
-                  setPlanningSidebarMonth((m) => {
-                    const d = new Date(m);
-                    d.setMonth(d.getMonth() + 1);
-                    return d;
-                  })
-                }
-                onToday={() => {
-                  setPlanningSidebarDate(null);
-                  setPlanningSidebarMonth(new Date());
-                }}
-                onNewAppointment={() => {
-                  setShowPlanningSheet(false);
-                  setShowBookingModal(true);
-                }}
-                className="w-full border-0 rounded-none flex"
-              />
+              <Suspense fallback={<DashboardLoadingSkeleton />}>
+                <LazyPlanningSidebar
+                  appointments={appointments}
+                  selectedDate={planningSidebarDate}
+                  onSelectDate={setPlanningSidebarDate}
+                  onSelectAppointment={(apt) => {
+                    setSelectedAppointment(apt);
+                    setShowPlanningSheet(false);
+                  }}
+                  currentMonth={planningSidebarMonth}
+                  onPrevMonth={() =>
+                    setPlanningSidebarMonth((m) => {
+                      const d = new Date(m);
+                      d.setMonth(d.getMonth() - 1);
+                      return d;
+                    })
+                  }
+                  onNextMonth={() =>
+                    setPlanningSidebarMonth((m) => {
+                      const d = new Date(m);
+                      d.setMonth(d.getMonth() + 1);
+                      return d;
+                    })
+                  }
+                  onToday={() => {
+                    setPlanningSidebarDate(null);
+                    setPlanningSidebarMonth(new Date());
+                  }}
+                  onNewAppointment={() => {
+                    setShowPlanningSheet(false);
+                    setShowBookingModal(true);
+                  }}
+                  className="w-full border-0 rounded-none flex"
+                />
+              </Suspense>
             </div>
           </div>
         </>
@@ -5739,15 +5749,20 @@ export const DashboardPro: React.FC = () => {
           }
         }}
       />
-      <SessionCloseoutSheet
-        isOpen={Boolean(sessionCloseoutAppointment)}
-        onClose={() => setSessionCloseoutAppointment(null)}
-        appointment={sessionCloseoutAppointment}
-        studioId={studioId}
-        studioSlug={studioSlug}
-        stripeConnectReady={paymentsSetupComplete === true}
-        onGoToStockTrace={goToStockTraceFromCloseout}
-      />
+      <Suspense fallback={null}>
+        <LazySessionCloseoutSheet
+          isOpen={Boolean(sessionCloseoutAppointment)}
+          onClose={() => setSessionCloseoutAppointment(null)}
+          appointment={sessionCloseoutAppointment}
+          studioId={studioId}
+          studioSlug={studioSlug}
+          stripeConnectReady={paymentsSetupComplete === true}
+          onGoToStockTrace={goToStockTraceFromCloseout}
+          onBalanceMarkedPaid={(id, paidAtIso) =>
+            updateAppointment(id, { balancePaidAt: paidAtIso })
+          }
+        />
+      </Suspense>
       {selectedAppointment ? (
         <Suspense fallback={null}>
           <LazyClientPreviewDrawer
@@ -5758,6 +5773,8 @@ export const DashboardPro: React.FC = () => {
             artistName={user?.name || 'Artiste'}
             appointment={selectedAppointment}
             onUpdateAppointment={handleAppointmentIdUpdate}
+            onOpenCloseout={setSessionCloseoutAppointment}
+            onOpenAgenda={() => setActiveTab('agenda')}
             showInkflowClientDiscussion={previewHasInkflowClientAccount}
             inkflowMessagingThreadId={previewInkflowMessagingThreadId}
             onOpenInkflowDiscussion={

@@ -674,10 +674,31 @@ export function mapClientFromDb(row: Record<string, unknown>): Client {
 /** Limite par défaut pour éviter surcharge mémoire (pagination à ajouter si > 500) */
 const DEFAULT_LIST_LIMIT = 500;
 
+/** Listes dashboard — colonnes alignées sur les `map*FromDb` ; chaînes littérales pour l’inférence Supabase TS. */
+const LIST_SELECT_APPOINTMENTS =
+  'id,client_id,client_name,client_email,client_phone,date,time,service,duration,price,deposit,deposit_paid,balance_paid_at,status,tattoo_type,flash_id,location,size,consent_form_signed,project_request_id,created_at,updated_at';
+
+const LIST_SELECT_CLIENTS =
+  'id,name,email,phone,avatar_url,total_spent,appointments_count,last_visit,first_visit,status,tags,tattoos,notes,portal_user_id,health_profile_snapshot,updated_at';
+
+const LIST_SELECT_WAITLIST =
+  'id,studio_id,client_name,client_email,desired_service,preferred_dates,notes,status,notified_at,created_at';
+
+const LIST_SELECT_FLASH =
+  'id,studio_id,title,description,image_url,price,deposit_amount,available,reserved,category,size,placement,estimated_duration,tags,created_at,slug,artist_id,featured,display_order,updated_at';
+
+const LIST_SELECT_NOTIFICATIONS = 'id,studio_id,type,title,message,read,created_at,action_url';
+
+const LIST_SELECT_PROJECT_REQUESTS =
+  'id,studio_id,client_name,client_email,client_instagram,description,project_type,placement,estimated_size,budget,status,reference_image_url,reference_images,created_at,proposed_slot,slot_expires_at,artist_message';
+
+const LIST_SELECT_LOYALTY =
+  'id,studio_id,client_id,points,tier,referral_code,total_earned,total_redeemed,created_at';
+
 export async function getClientsFromSupabase(studioId: string): Promise<Client[]> {
   const { data, error } = await supabase
     .from('inkflow_clients')
-    .select('*')
+    .select(LIST_SELECT_CLIENTS)
     .eq('studio_id', studioId)
     .order('updated_at', { ascending: false })
     .limit(DEFAULT_LIST_LIMIT);
@@ -773,7 +794,7 @@ export function mapWaitlistEntryFromDb(row: Record<string, unknown>): WaitlistEn
 export async function getWaitlistFromSupabase(studioId: string): Promise<WaitlistEntry[]> {
   const { data, error } = await supabase
     .from('inkflow_waitlist')
-    .select('*')
+    .select(LIST_SELECT_WAITLIST)
     .eq('studio_id', studioId)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -870,7 +891,7 @@ export function mapAppointmentFromDb(row: Record<string, unknown>): Appointment 
 export async function getAppointmentsFromSupabase(studioId: string): Promise<Appointment[]> {
   const { data, error } = await supabase
     .from('inkflow_appointments')
-    .select('*')
+    .select(LIST_SELECT_APPOINTMENTS)
     .eq('studio_id', studioId)
     .order('date', { ascending: true })
     .order('time', { ascending: true })
@@ -894,6 +915,7 @@ export async function saveAppointmentToSupabase(studioId: string, apt: Appointme
     price: apt.price,
     deposit: apt.deposit,
     deposit_paid: apt.depositPaid,
+    balance_paid_at: apt.balancePaidAt ?? null,
     status: apt.status,
     tattoo_type: apt.tattooType,
     flash_id: apt.flashId || null,
@@ -1037,7 +1059,7 @@ export function mapFlashFromDb(row: Record<string, unknown>): FlashDesign {
 export async function getFlashDesignsFromSupabase(studioId: string): Promise<FlashDesign[]> {
   const { data, error } = await supabase
     .from('inkflow_flash_designs')
-    .select('*')
+    .select(LIST_SELECT_FLASH)
     .eq('studio_id', studioId)
     .order('created_at', { ascending: false })
     .limit(DEFAULT_LIST_LIMIT);
@@ -1100,7 +1122,7 @@ export function mapNotificationFromDb(row: Record<string, unknown>): Notificatio
 export async function getNotificationsFromSupabase(studioId: string): Promise<Notification[]> {
   const { data, error } = await supabase
     .from('inkflow_notifications')
-    .select('*')
+    .select(LIST_SELECT_NOTIFICATIONS)
     .eq('studio_id', studioId)
     .order('created_at', { ascending: false })
     .limit(50);
@@ -1171,7 +1193,7 @@ export function mapProjectRequestFromDb(row: Record<string, unknown>): ProjectRe
 export async function getProjectRequestsFromSupabase(studioId: string): Promise<ProjectRequest[]> {
   const { data, error } = await supabase
     .from('inkflow_project_requests')
-    .select('*')
+    .select(LIST_SELECT_PROJECT_REQUESTS)
     .eq('studio_id', studioId)
     .order('created_at', { ascending: false })
     .limit(DEFAULT_LIST_LIMIT);
@@ -1282,7 +1304,7 @@ function mapLoyaltyRowToEntry(row: {
 export async function fetchLoyaltyEntriesFromSupabase(studioId: string): Promise<LoyaltyEntry[]> {
   const { data, error } = await supabase
     .from('inkflow_loyalty')
-    .select('*')
+    .select(LIST_SELECT_LOYALTY)
     .eq('studio_id', studioId)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -1296,7 +1318,7 @@ export async function fetchPointsLoyaltySettingsFromSupabase(
 ): Promise<LoyaltySettings> {
   const { data, error } = await supabase
     .from('inkflow_studios')
-    .select('*')
+    .select('points_loyalty_settings')
     .eq('id', studioId)
     .maybeSingle();
   if (error) throw error;

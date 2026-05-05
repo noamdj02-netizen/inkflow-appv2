@@ -211,6 +211,9 @@ export interface Booking {
   placement?: string;
   /** Taille estimée (optionnel) */
   size?: string;
+  /** Téléphone saisi vitrine + opt-in SMS (confirmation / lien paiement). */
+  clientPhone?: string;
+  smsConfirmationOptIn?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -227,6 +230,10 @@ export interface VitrineBookingFormData {
   clientInstagram?: string;
   /** Photo profil si le client est connecté (espace client) */
   clientAvatarUrl?: string;
+  /** Mobile pour SMS transactionnels (opt-in séparé) */
+  clientPhone?: string;
+  /** Consentement explicite : SMS courte confirmation + lien (Twilio configuré). */
+  smsConfirmationOptIn?: boolean;
 }
 
 export interface StudioSettings {
@@ -273,6 +280,11 @@ export type SubscriptionStatus =
 
 /** Clés des fonctionnalités gérées par le plan (Stripe) */
 export type PlanFeatureKey =
+  | 'reservations_online'
+  | 'stripe_payments'
+  | 'paypal_payments'
+  | 'vitrine_public'
+  | 'crm_clients'
   | 'galerie_flash'
   | 'app_mobile'
   | 'api_access'

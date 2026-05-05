@@ -5,6 +5,25 @@ import { normalizePublicMessageThreadId } from './threadIds';
 import { isInkflowInternalStaffEmail } from './inkflowInternalStaff';
 import { getStudioByEmail } from './supabaseDashboard';
 
+/** Ancien portail web « My Inkflow » : sous-chemins `/client/…` → annuaire ; entrée `/client` et onboarding → hub client. */
+export function remapSunsetClientPortalPaths(fullPath: string): string {
+  const f = String(fullPath ?? '').trim();
+  if (!f) return f;
+  try {
+    const u = new URL(f, 'https://app.ink-flow.me');
+    const p = u.pathname.replace(/\/+$/, '') || '/';
+    if (p === '/client' || p === '/onboarding/finaliser-profil') {
+      return `/mon-compte${u.search}${u.hash}`;
+    }
+    if (p.startsWith('/client/')) {
+      return `/discover${u.search}${u.hash}`;
+    }
+  } catch {
+    /* ignore */
+  }
+  return f;
+}
+
 /**
  * Client espace client (même logique que {@link resolvePostLoginPath}) : metadata ou ligne portail.
  * Utilisé par ex. `/messages/:threadId` pour préremplir le nom sans écran intermédiaire.
@@ -19,7 +38,7 @@ export async function getInkflowPortalClientInfo(
       ? meta.full_name.trim()
       : typeof meta?.name === 'string' && meta.name.trim()
         ? meta.name.trim()
-        : user.email?.split('@')[0] ?? 'Client';
+        : (user.email?.split('@')[0] ?? 'Client');
 
   if (meta?.account_type === 'client' || meta?.role === 'client') {
     return { isPortalClient: true, displayName };
@@ -39,7 +58,9 @@ export async function getInkflowPortalClientInfo(
  * Comptes espace client (portail) sans studio InkFlow : ne pas les envoyer sur le dashboard tatoueur.
  * Si l’e-mail a déjà un studio (tatoueur), on laisse accéder au /dashboard.
  */
-export async function shouldRedirectPortalClientFromProDashboard(user: User | null): Promise<boolean> {
+export async function shouldRedirectPortalClientFromProDashboard(
+  user: User | null
+): Promise<boolean> {
   if (!user) return false;
   const { isPortalClient } = await getInkflowPortalClientInfo(user);
   if (!isPortalClient) return false;
@@ -54,7 +75,7 @@ function emailNorm(e: string | undefined): string {
 }
 
 /** Path seul, sans query/hash — pour comparer `/dashboard` et `/dashboard?subscribe=…`. */
-function pathnameOnly(raw: string): string {
+export function getRedirectPathnameOnly(raw: string): string {
   const s = String(raw || '').trim();
   if (!s) return '/';
   if (s.startsWith('/')) {
@@ -144,18 +165,19 @@ export async function resolvePublicMessageAutoProfile(
 
 /**
  * Après connexion : applique la cible `redirect` / sessionStorage / défaut (souvent `/dashboard`).
- * Ne force plus `/client/dashboard` selon le seul profil portail : la page `/login` (« Bon retour »)
- * mène au dashboard tatoueur ; l’espace client passe par `/client` ou une URL sous `/client/…`.
+ * Comptes portail sans studio : si la cible n’est pas `/mon-compte`, LoginPage peut renvoyer vers `/discover`.
  */
 export async function resolvePostLoginPath(
   raw: string | null | undefined,
   options?: { defaultPath?: string }
 ): Promise<string> {
-  const base = sanitizePostAuthRedirect(raw, options);
-  /** Chemins explicites (ex. tunnel onboarding) : ne pas écraser avec la home client. */
+  const base = remapSunsetClientPortalPaths(sanitizePostAuthRedirect(raw, options));
+  /** Tunnel onboarding tatoueur (ex. `/onboarding/…` hors finalisation client). */
   if (base.startsWith('/onboarding')) return base;
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return base;
     /**
      * Comptes équipe InkFlow (@ink-flow.me, @inkflow.me, VITE_FOUNDER_ADMIN_EMAILS).
@@ -163,9 +185,8 @@ export async function resolvePostLoginPath(
      * sur `base === '/dashboard'` échouait → dashboard tatoueur en prod.
      */
     if (isInkflowInternalStaffEmail(user.email)) {
-      const p = pathnameOnly(base);
+      const p = getRedirectPathnameOnly(base);
       if (p.startsWith('/onboarding')) return base;
-      if (p.startsWith('/client')) return base;
       if (p === '/admin' || p.startsWith('/admin/')) return base;
       return '/admin';
     }
@@ -173,4 +194,15 @@ export async function resolvePostLoginPath(
   } catch {
     return base;
   }
+}
+
+/**
+ * Après auth : ne pas appeler ensureStudio / e-mail bienvenue tatoueur pour les parcours client final.
+ */
+export function shouldSkipTattooerStudioBootstrap(
+  resolvedRedirectUrl: string,
+  isClientAuthCallback: boolean
+): boolean {
+  if (isClientAuthCallback) return true;
+  return getRedirectPathnameOnly(resolvedRedirectUrl) === '/mon-compte';
 }

@@ -8,6 +8,8 @@ export const AnalyticsEvents = {
   SIGNUP_COMPLETED: 'signup_completed',
   /** Funnel tatoueur — étapes explicites pour graphiques PostHog */
   ONBOARDING_FUNNEL: 'onboarding_funnel',
+  /** North star — séquence inscription → lien public → RDV/agenda → acompte (voir docs/NORTH-STAR-FUNNEL.md) */
+  NORTH_STAR_FUNNEL: 'north_star_funnel',
   FIRST_CLIENT_CREATED: 'first_client_created',
   FIRST_APPOINTMENT_CREATED: 'first_appointment_created',
   TATTOOER_FIRST_DEPOSIT: 'tattooer_first_deposit_received',
@@ -26,6 +28,11 @@ export type OnboardingFunnelStep =
   | 'first_deposit_received'
   | 'book_page_viewed';
 
+export type NorthStarFunnelStep =
+  | 'public_booking_url_live'
+  | 'first_appointment_in_agenda'
+  | 'first_deposit_received';
+
 export function captureEvent(event: string, properties?: Record<string, unknown>): void {
   if (!isPosthogInitialized()) return;
   try {
@@ -42,6 +49,17 @@ export function trackOnboardingFunnel(
   captureEvent(AnalyticsEvents.ONBOARDING_FUNNEL, {
     step,
     funnel: 'tattooer_activation',
+    ...extra,
+  });
+}
+
+export function trackNorthStarFunnelStep(
+  step: NorthStarFunnelStep,
+  extra?: Record<string, string | number | boolean | null | undefined>
+): void {
+  captureEvent(AnalyticsEvents.NORTH_STAR_FUNNEL, {
+    step,
+    funnel: 'tattooer_growth',
     ...extra,
   });
 }

@@ -14,7 +14,21 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "me.inkflow.studio"
+      "bundleIdentifier": "me.inkflow.studio",
+      "associatedDomains": [
+        "applinks:app.ink-flow.me",
+        "applinks:ink-flow.me"
+      ],
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "InkFlow utilise l’appareil photo pour ajouter des références, flashs et photos de séance.",
+        "NSPhotoLibraryUsageDescription": "InkFlow utilise la photothèque pour importer des références client, flashs et documents de séance.",
+        "NSPhotoLibraryAddUsageDescription": "InkFlow peut enregistrer des visuels ou documents générés pour ton studio.",
+        "NSMicrophoneUsageDescription": "InkFlow peut utiliser le micro uniquement si une capture vidéo de séance est lancée depuis l’app.",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
     },
     "android": {
       "package": "me.inkflow.studio",
@@ -24,6 +38,27 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "app.ink-flow.me",
+              "pathPrefix": "/dashboard"
+            },
+            {
+              "scheme": "https",
+              "host": "ink-flow.me"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {

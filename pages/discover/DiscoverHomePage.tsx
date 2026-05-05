@@ -82,8 +82,8 @@ export function DiscoverHomePage() {
       }}
     >
       <SEO
-        title="Trouver un tatoueur — directory studios & portfolios"
-        description="Parcours des portfolios de tatoueurs et studios en France. Filtre par style et ville, puis réserve ton créneau avec Inkflow."
+        title="Tatoueurs & studios — portfolios, réserver en ligne, acompte sécurisé | InkFlow"
+        description="InkFlow ne remplace pas « n’importe quel rdv beauté » : c’est le dossier tatouage — portfolio, demande, créneau, acompte Stripe, messages. Trouve un artiste près de chez toi."
         canonical="/discover"
         keywords="tatoueur, studio tatouage, tattoo France, directory tatouage, réserver tatouage, portfolio tatoueur"
         schema={websiteSchema}

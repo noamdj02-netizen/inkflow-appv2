@@ -5,6 +5,16 @@
  */
 import type { SubscriptionPlan, PlanFeatureKey, PlanLimitKey } from '../types';
 
+const CORE_FEATURES: PlanFeatureKey[] = [
+  'reservations_online',
+  'stripe_payments',
+  'paypal_payments',
+  'vitrine_public',
+  'crm_clients',
+  'galerie_flash',
+  'app_mobile',
+];
+
 /** -1 = illimité */
 export interface PlanLimits {
   artists: number;
@@ -29,8 +39,8 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
       artists: 1,
       clients_crm: 100,
     },
-    features: ['galerie_flash', 'app_mobile'],
-    // Interdit : api_access, stats_avancees (non listés = pas d'accès)
+    features: CORE_FEATURES,
+    // Interdit : api_access, stats_avancees, multi_calendriers, themes_premium.
   },
   pro: {
     id: 'pro',
@@ -40,7 +50,7 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
       artists: 3,
       clients_crm: 300,
     },
-    features: ['galerie_flash', 'app_mobile', 'multi_calendriers', 'stats_avancees', 'themes_premium'],
+    features: [...CORE_FEATURES, 'multi_calendriers', 'stats_avancees', 'themes_premium'],
   },
   studio: {
     id: 'studio',
@@ -51,8 +61,7 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
       clients_crm: -1,
     },
     features: [
-      'galerie_flash',
-      'app_mobile',
+      ...CORE_FEATURES,
       'multi_calendriers',
       'stats_avancees',
       'api_access',
@@ -68,8 +77,7 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
       clients_crm: -1,
     },
     features: [
-      'galerie_flash',
-      'app_mobile',
+      ...CORE_FEATURES,
       'multi_calendriers',
       'stats_avancees',
       'api_access',
@@ -83,7 +91,10 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
  * Vérifie si le plan donne accès à une fonctionnalité.
  * Utilisable côté frontend (masquer lien API, stats avancées, etc.) et backend (refuser l’appel).
  */
-export function canAccessFeature(plan: SubscriptionPlan | null | undefined, feature: PlanFeatureKey): boolean {
+export function canAccessFeature(
+  plan: SubscriptionPlan | null | undefined,
+  feature: PlanFeatureKey
+): boolean {
   if (!plan) return false;
   const config = PLAN_CONFIG[plan];
   return config ? config.features.includes(feature) : false;
@@ -112,7 +123,10 @@ export function hasReachedLimit(
 /**
  * Retourne la limite numérique pour un plan (ou -1 si illimité).
  */
-export function getPlanLimit(plan: SubscriptionPlan | null | undefined, limitKey: PlanLimitKey): number {
+export function getPlanLimit(
+  plan: SubscriptionPlan | null | undefined,
+  limitKey: PlanLimitKey
+): number {
   if (!plan) return 0;
   const config = PLAN_CONFIG[plan];
   return config ? config.limits[limitKey] : 0;

@@ -55,12 +55,17 @@ export async function testEmailConnection(): Promise<{
       const msg = await getInvokeFailureMessage(
         error,
         data,
-        "Échec send-email-test — déployez la fonction : supabase functions deploy send-email-test",
+        'Échec send-email-test — déployez la fonction : supabase functions deploy send-email-test'
       );
       logEdgeInvokeError('send-email-test', error, data);
       return { ok: false, message: msg, details: msg };
     }
-    const d = data as { success?: boolean; error?: string; userMessage?: string; details?: string } | null;
+    const d = data as {
+      success?: boolean;
+      error?: string;
+      userMessage?: string;
+      details?: string;
+    } | null;
     if (d && (d.error || d.success === false)) {
       return {
         ok: false,
@@ -68,7 +73,7 @@ export async function testEmailConnection(): Promise<{
         details: d.details,
       };
     }
-    return { ok: true, message: "Email de test envoyé. Vérifiez votre boîte (et les spams)." };
+    return { ok: true, message: 'Email de test envoyé. Vérifiez votre boîte (et les spams).' };
   } catch (err) {
     logEdgeInvokeError('send-email-test', err);
     return {
@@ -121,17 +126,27 @@ export interface SendBookingConfirmationParams {
   conversationLink?: string;
   /** Lien de paiement Stripe (optionnel). Si fourni, l'email affiche un bouton "Payer mon acompte" (vert, style premium) dans le corps du mail. */
   paymentLink?: string;
+  /** Page web « récit complet » (messagerie, vitrine) — secours email + SMS. */
+  recapUrl?: string;
+  /** Page récap + acompte (`/rdv/merci/...`). Prioritaire sur conversationLink pour le CTA e-mail / SMS. */
+  clientConfirmationUrl?: string;
+  /** Téléphone client (opt-in SMS). */
+  clientPhone?: string;
+  /** Si true + Twilio + numéro valide → SMS transactionnel avec le même lien principal que le mail. */
+  smsConfirmationOptIn?: boolean;
   /** Adresse du studio pour la pièce jointe .ics (optionnel) */
   studioAddress?: string;
 }
+
+const MAX_URL_IN_PAYLOAD = 2000;
 
 /**
  * Envoie au client un email de confirmation de RDV quand le tatoueur confirme une demande RDV vitrine.
  * Retourne `ok` pour afficher un toast correct (l’appel Edge peut échouer : JWT, Resend, etc.).
  */
 export async function sendBookingConfirmation(
-  params: SendBookingConfirmationParams,
-): Promise<{ ok: boolean; error?: string }> {
+  params: SendBookingConfirmationParams
+): Promise<{ ok: boolean; error?: string; smsSent?: boolean; smsSkippedReason?: string }> {
   try {
     const body = {
       clientEmail: sanitizeEmail(params.clientEmail),
@@ -140,8 +155,18 @@ export async function sendBookingConfirmation(
       requestedDate: params.requestedDate,
       requestedTime: params.requestedTime ?? null,
       description: sanitizeText(params.description, 500) ?? '',
-      conversationLink: params.conversationLink ? sanitizeText(params.conversationLink, 500) : undefined,
-      paymentLink: params.paymentLink ? sanitizeText(params.paymentLink, 500) : undefined,
+      conversationLink: params.conversationLink
+        ? sanitizeText(params.conversationLink, MAX_URL_IN_PAYLOAD)
+        : undefined,
+      paymentLink: params.paymentLink
+        ? sanitizeText(params.paymentLink, MAX_URL_IN_PAYLOAD)
+        : undefined,
+      recapUrl: params.recapUrl ? sanitizeText(params.recapUrl, MAX_URL_IN_PAYLOAD) : undefined,
+      clientConfirmationUrl: params.clientConfirmationUrl
+        ? sanitizeText(params.clientConfirmationUrl, MAX_URL_IN_PAYLOAD)
+        : undefined,
+      clientPhone: params.clientPhone ? sanitizeText(params.clientPhone, 40) : undefined,
+      smsConfirmationOptIn: params.smsConfirmationOptIn === true,
       studioAddress: params.studioAddress ? sanitizeText(params.studioAddress, 300) : undefined,
     };
     const { data, error } = await invokeWithJwtRetry('send-booking-confirmation', body);
@@ -154,12 +179,20 @@ export async function sendBookingConfirmation(
       }
       return { ok: false, error: details };
     }
-    const d = data as { error?: string; success?: boolean } | null;
+    const d = data as {
+      error?: string;
+      success?: boolean;
+      sms?: { sent?: boolean; skippedReason?: string };
+    } | null;
     if (d && typeof d.error === 'string' && d.error) {
       logEdgeInvokeError('send-booking-confirmation', d.error, data);
       return { ok: false, error: d.error };
     }
-    return { ok: true };
+    return {
+      ok: true,
+      smsSent: d?.sms?.sent === true,
+      smsSkippedReason: typeof d?.sms?.skippedReason === 'string' ? d.sms.skippedReason : undefined,
+    };
   } catch (err) {
     logEdgeInvokeError('send-booking-confirmation', err);
     return { ok: false, error: err instanceof Error ? err.message : 'Erreur inconnue' };
@@ -205,7 +238,9 @@ export interface SendConversationLinkToClientParams {
  * Non bloquant : en cas d'erreur (ex. Resend non configuré), on ne remonte pas l'erreur.
  * @returns { sent: true } si l'email a été envoyé, { sent: false, unauthorized?: boolean, errorDetails?: string } sinon
  */
-export async function sendConversationLinkToClient(params: SendConversationLinkToClientParams): Promise<{ sent: boolean; unauthorized?: boolean; errorDetails?: string }> {
+export async function sendConversationLinkToClient(
+  params: SendConversationLinkToClientParams
+): Promise<{ sent: boolean; unauthorized?: boolean; errorDetails?: string }> {
   try {
     const { data, error } = await invokeWithJwtRetry('send-client-conversation-link', {
       clientEmail: params.clientEmail,
@@ -216,10 +251,12 @@ export async function sendConversationLinkToClient(params: SendConversationLinkT
     if (error) {
       const retryStatus = (error as { context?: { status?: number } })?.context?.status;
       const em = getInvokeErrorMessage(error, '');
-      const unauthorized = retryStatus === 401 || retryStatus === 461
-        || em.includes('401')
-        || em.includes('461')
-        || em.toLowerCase().includes('unauthorized');
+      const unauthorized =
+        retryStatus === 401 ||
+        retryStatus === 461 ||
+        em.includes('401') ||
+        em.includes('461') ||
+        em.toLowerCase().includes('unauthorized');
       logEdgeInvokeError('send-client-conversation-link', error, data);
       const errorDetails = await getInvokeFailureMessage(error, data, '');
       return { sent: false, unauthorized: unauthorized || undefined, errorDetails };
@@ -234,8 +271,7 @@ export async function sendConversationLinkToClient(params: SendConversationLinkT
       const d = data as { userMessage?: string; error?: unknown };
       const errField = d.error;
       const errorDetails =
-        d.userMessage ??
-        (typeof errField === 'string' ? errField : String(errField));
+        d.userMessage ?? (typeof errField === 'string' ? errField : String(errField));
       logEdgeInvokeError('send-client-conversation-link', errField, data);
       return { sent: false, errorDetails };
     }
@@ -282,7 +318,7 @@ export interface SendAlternativeDateProposalParams {
  * Retourne `ok` pour les toasts (Edge / Resend / JWT peuvent échouer).
  */
 export async function sendAlternativeDateProposal(
-  params: SendAlternativeDateProposalParams,
+  params: SendAlternativeDateProposalParams
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const clientEmail = sanitizeEmail(params.clientEmail);
@@ -295,13 +331,15 @@ export async function sendAlternativeDateProposal(
       studioName: sanitizeText(params.studioName, MAX_NAME_LENGTH) ?? '',
       proposedDate: params.proposedDate,
       proposedTime: params.proposedTime ?? null,
-      previousContext: params.previousContext ? sanitizeText(params.previousContext, 500) : undefined,
+      previousContext: params.previousContext
+        ? sanitizeText(params.previousContext, 500)
+        : undefined,
       replyToEmail: params.replyToEmail ? sanitizeEmail(params.replyToEmail) : undefined,
     };
     /** `fetch` explicite : le SDK `functions.invoke` renvoie souvent une erreur opaque avec `data: null`. */
     const { data, error: fetchErr } = await invokeEdgeFunctionViaFetch(
       'send-alternative-date-proposal',
-      body,
+      body
     );
     if (fetchErr) {
       logEdgeInvokeError('send-alternative-date-proposal', new Error(fetchErr), data);
@@ -317,7 +355,9 @@ export async function sendAlternativeDateProposal(
   }
 }
 
-export async function sendMessageNotificationToClient(params: SendMessageNotificationToClientParams): Promise<void> {
+export async function sendMessageNotificationToClient(
+  params: SendMessageNotificationToClientParams
+): Promise<void> {
   try {
     const { error } = await invokeWithJwtRetry('send-message-notification', {
       type: 'to_client',
@@ -367,7 +407,9 @@ export interface SendReferralNotificationParams {
  * Rappelle qu'il gagne 1 mois gratuit.
  * Non bloquant : en cas d'erreur (ex. Resend non configuré), on ne remonte pas.
  */
-export async function sendReferralNotification(params: SendReferralNotificationParams): Promise<void> {
+export async function sendReferralNotification(
+  params: SendReferralNotificationParams
+): Promise<void> {
   try {
     const body = {
       referrerId: params.referrerId,
@@ -384,7 +426,9 @@ export async function sendReferralNotification(params: SendReferralNotificationP
  * Notifie le studio par email qu'un client a envoyé un message.
  * Non bloquant : en cas d'erreur, on ne remonte pas.
  */
-export async function sendMessageNotificationToStudio(params: SendMessageNotificationToStudioParams): Promise<void> {
+export async function sendMessageNotificationToStudio(
+  params: SendMessageNotificationToStudioParams
+): Promise<void> {
   try {
     const { error } = await invokeWithJwtRetry('send-message-notification', {
       type: 'to_studio',
@@ -412,7 +456,9 @@ export interface CreateInAppNotificationParams {
  * Cette notification apparaîtra dans le dropdown et la page de notifications du studio.
  * Non bloquant : les erreurs sont ignorées.
  */
-export async function createInAppNotification(params: CreateInAppNotificationParams): Promise<void> {
+export async function createInAppNotification(
+  params: CreateInAppNotificationParams
+): Promise<void> {
   try {
     const payload = {
       id: crypto.randomUUID(),
@@ -444,7 +490,7 @@ export async function notifyNewBookingRequest(
   description: string,
   requestedDate?: string
 ): Promise<void> {
-  const dateStr = requestedDate 
+  const dateStr = requestedDate
     ? ` le ${new Date(requestedDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
     : '';
   await createInAppNotification({

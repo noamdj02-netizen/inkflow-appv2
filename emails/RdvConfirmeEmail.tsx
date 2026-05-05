@@ -1,7 +1,6 @@
 import * as React from 'react';
 
 import { EmailBase } from './EmailBase';
-import { absoluteUrlForClientDashboardTab } from '../lib/clientDashboardRoutes';
 
 interface RdvConfirmeEmailProps {
   clientName?: string;
@@ -23,7 +22,7 @@ export const RdvConfirmeEmail = ({
   supportAddress = 'Paris, France',
 }: RdvConfirmeEmailProps) => {
   const appOrigin = 'https://app.ink-flow.me';
-  const ctaUrl = conversationLink || absoluteUrlForClientDashboardTab(appOrigin, 'rdv');
+  const ctaUrl = conversationLink || `${appOrigin}/discover`;
 
   const footerNote = [
     `Besoin d'aide ? Appelez-nous au ${supportPhone}, démarrez un chat dans l'application, ou consultez le centre d'assistance.`,
@@ -37,7 +36,7 @@ export const RdvConfirmeEmail = ({
       title="Votre rendez-vous est confirmé."
       bodyText={`Bonjour ${clientName},\n\nNous sommes impatients de vous voir chez ${studioName}.`}
       recap={[{ label: 'Date', value: date }]}
-      ctaLabel="Ouvrir mon espace client"
+      ctaLabel="Découvrir les studios"
       ctaHref={ctaUrl}
       secondaryCtaLabel="Site ink-flow.me"
       secondaryCtaHref={baseUrl}

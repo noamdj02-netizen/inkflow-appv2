@@ -1,10 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useClientFramerGestures } from '../../lib/clientFramerGestures';
-import { MapPin, Star, Calendar, Heart, ArrowLeft, Share2, Instagram, ExternalLink, MessageCircle, Bell, Check, X } from 'lucide-react';
+import {
+  MapPin,
+  Star,
+  Calendar,
+  Heart,
+  ArrowLeft,
+  Share2,
+  Instagram,
+  ExternalLink,
+  MessageCircle,
+  Bell,
+  Check,
+  X,
+} from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { CX } from '../../components/client/clientExperienceTypes';
-import { pathForClientDashboardTab } from '../../lib/clientDashboardRoutes';
 
 interface Artist {
   id: string;
@@ -65,11 +77,13 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
 
       const { data: artistData, error: artistErr } = await supabase
         .from('inkflow_artists')
-        .select(`
+        .select(
+          `
           id, name, slug, bio, avatar_url, styles, years_exp, rating, tattoos_count, studio_id,
           available_now, instagram_url,
           inkflow_studios(studio_name, slug)
-        `)
+        `
+        )
         .eq('slug', artistSlug)
         .eq('is_active', true)
         .maybeSingle();
@@ -80,7 +94,10 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
         return;
       }
 
-      const studioInfo = artistData.inkflow_studios as { studio_name?: string; slug?: string } | null;
+      const studioInfo = artistData.inkflow_studios as {
+        studio_name?: string;
+        slug?: string;
+      } | null;
       setArtist({
         ...artistData,
         available_now: Boolean(artistData.available_now),
@@ -134,23 +151,29 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
   const joinWaitlist = async () => {
     if (!sessionEmail || !artist) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('inkflow_waitlist').upsert({
-      client_email: sessionEmail,
-      artist_id: artist.id,
-      studio_id: artist.studio_id,
-      created_at: new Date().toISOString(),
-    }, { onConflict: 'client_email,artist_id' });
+    await (supabase as any).from('inkflow_waitlist').upsert(
+      {
+        client_email: sessionEmail,
+        artist_id: artist.id,
+        studio_id: artist.studio_id,
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: 'client_email,artist_id' }
+    );
     setWaitlisted(true);
     setWaitlistDone(true);
     setTimeout(() => setWaitlistDone(false), 4000);
   };
 
   const openChat = () => {
-    if (!sessionEmail || !artist) { window.location.href = '/client'; return; }
+    if (!sessionEmail || !artist) {
+      window.location.href = '/client';
+      return;
+    }
     // Thread ID déterministe : client+artiste
     let h = 5381;
     const seed = `${sessionEmail}-${artist.id}`;
-    for (let i = 0; i < seed.length; i++) h = ((h << 5) + h) + seed.charCodeAt(i);
+    for (let i = 0; i < seed.length; i++) h = (h << 5) + h + seed.charCodeAt(i);
     const threadId = `a-${Math.abs(h).toString(36)}`;
     window.location.href = `/c/${threadId}`;
   };
@@ -170,16 +193,27 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: CX.bg }}>
-        <div className="w-10 h-10 rounded-full border-2 animate-spin" style={{ borderColor: CX.border, borderTopColor: CX.accent }} />
+        <div
+          className="w-10 h-10 rounded-full border-2 animate-spin"
+          style={{ borderColor: CX.border, borderTopColor: CX.accent }}
+        />
       </div>
     );
   }
 
   if (error || !artist) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: CX.bg, color: CX.text }}>
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-6"
+        style={{ background: CX.bg, color: CX.text }}
+      >
         <p className="text-lg font-semibold mb-4">{error ?? 'Artiste introuvable'}</p>
-        <motion.a href={pathForClientDashboardTab('explore')} whileTap={tap} className="text-sm underline" style={{ color: CX.accent }}>
+        <motion.a
+          href="/discover"
+          whileTap={tap}
+          className="text-sm underline"
+          style={{ color: CX.accent }}
+        >
           Retour à l'exploration
         </motion.a>
       </div>
@@ -189,7 +223,10 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
   return (
     <div className="min-h-screen pb-24" style={{ background: CX.bg, color: CX.text }}>
       {/* Header cover */}
-      <div className="relative h-56" style={{ background: `linear-gradient(135deg, #1a1510 0%, #2d2418 100%)` }}>
+      <div
+        className="relative h-56"
+        style={{ background: `linear-gradient(135deg, #1a1510 0%, #2d2418 100%)` }}
+      >
         <motion.button
           type="button"
           onClick={() => window.history.back()}
@@ -239,7 +276,10 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-bold tracking-tight">{artist.name}</h1>
               {artist.available_now && (
-                <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: 'rgba(34,197,94,0.2)', color: '#4ade80' }}>
+                <span
+                  className="text-[10px] font-bold px-2 py-1 rounded-full"
+                  style={{ background: 'rgba(34,197,94,0.2)', color: '#4ade80' }}
+                >
                   Disponible maintenant
                 </span>
               )}
@@ -295,7 +335,11 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
 
         {artist.instagram_url && (
           <a
-            href={artist.instagram_url.startsWith('http') ? artist.instagram_url : `https://${artist.instagram_url}`}
+            href={
+              artist.instagram_url.startsWith('http')
+                ? artist.instagram_url
+                : `https://${artist.instagram_url}`
+            }
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 mt-4 text-sm font-medium transition-opacity hover:opacity-90"
@@ -362,15 +406,25 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
             >
               <AnimatePresence mode="wait">
                 {waitlistDone ? (
-                  <motion.span key="ok" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-                    className="flex items-center gap-2">
+                  <motion.span
+                    key="ok"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="flex items-center gap-2"
+                  >
                     <Check className="w-4 h-4" /> Sur liste d'attente !
                   </motion.span>
                 ) : (
-                  <motion.span key="w" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-                    className="flex items-center gap-2">
+                  <motion.span
+                    key="w"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    className="flex items-center gap-2"
+                  >
                     <Bell className="w-4 h-4" />
-                    {waitlisted ? 'Liste d\'attente ✓' : 'Rejoindre la liste d\'attente'}
+                    {waitlisted ? "Liste d'attente ✓" : "Rejoindre la liste d'attente"}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -381,7 +435,10 @@ export const ArtistPage: React.FC<ArtistPageProps> = ({ artistSlug }) => {
 
       {/* Portfolio */}
       <section className="px-4 mt-8">
-        <h2 className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: CX.muted }}>
+        <h2
+          className="text-sm font-bold uppercase tracking-widest mb-4"
+          style={{ color: CX.muted }}
+        >
           Flashs disponibles
         </h2>
         {flashes.length === 0 ? (

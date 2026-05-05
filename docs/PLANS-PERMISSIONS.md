@@ -1,16 +1,28 @@
 # Gestion des permissions par plan d'abonnement (Stripe)
 
-Configuration centralisée des plans **Solo**, **Studio** et **Enterprise** pour `canAccessFeature()` et `hasReachedLimit()` (frontend et backend).
+Configuration centralisée des plans **Solo**, **Pro**, **Studio** et **Enterprise** pour `canAccessFeature()` et `hasReachedLimit()` (frontend et backend).
+
+### Taxonomie marketing vs code Stripe
+
+Les **valeurs canoniques dans le dépôt** sont les enums TypeScript **`SubscriptionPlan`** : `solo` | `pro` | `studio` | `enterprise` (voir **`lib/subscriptionPlans.ts`**).
+
+En messaging public (pricing, landing, emails), tu peux utiliser d’autres libellés (ex. Basic / Starter) tant que :
+
+1. **`plan_type`** (ou équivalent Stripe / `inkflow_subscriptions`) est **mappé explicitement** vers un des quatre ids ci-dessus.
+2. **Prix affichés** et **Stripe price IDs** correspondent à cette ligne — pas de confusion entre deux grilles différentes.
+
+Document de détail métier prix / features : tableau ci‑dessous aligné **`PLAN_CONFIG`**.
 
 ---
 
 ## Règles par plan
 
-| Plan        | Prix  | Artistes | Clients CRM | Features autorisées |
-|------------|-------|----------|-------------|----------------------|
-| **Solo**   | 29€   | 1        | 100         | Galerie Flash, App mobile |
-| **Studio** | 79€   | 3        | Illimité    | Solo + Multi-calendriers, Stats avancées, API |
-| **Enterprise** | Sur devis | Illimité | Illimité | Studio + White-label |
+| Plan           | Prix      | Artistes | Clients CRM | Features autorisées                                                                      |
+| -------------- | --------- | -------- | ----------- | ---------------------------------------------------------------------------------------- |
+| **Solo**       | 29€       | 1        | 100         | Réservation en ligne, paiements Stripe + PayPal via Stripe, galerie, vitrine, CRM limité |
+| **Pro**        | 49€       | 3        | 300         | Solo + multi-calendriers, stats avancées, thèmes premium                                 |
+| **Studio**     | 99€       | 5        | Illimité    | Pro + API                                                                                |
+| **Enterprise** | Sur devis | Illimité | Illimité    | Studio + White-label                                                                     |
 
 Features **interdites** en Solo : API, Stats avancées (elles ne sont pas dans la liste du plan).
 
@@ -34,7 +46,8 @@ import { useSubscriptionPermissions } from '../hooks/useSubscriptionPermissions'
 
 function MyComponent() {
   const { studioId } = useSupabaseSync();
-  const { plan, canAccessFeature, hasReachedLimit, getLimit, loading } = useSubscriptionPermissions(studioId);
+  const { plan, canAccessFeature, hasReachedLimit, getLimit, loading } =
+    useSubscriptionPermissions(studioId);
 
   if (loading) return <Spinner />;
 
@@ -51,6 +64,11 @@ function MyComponent() {
 
 - `galerie_flash` — Galerie Flash
 - `app_mobile` — App mobile
+- `reservations_online` — Réservation en ligne
+- `stripe_payments` — Paiements Stripe
+- `paypal_payments` — PayPal via Stripe Checkout (à activer dans Stripe)
+- `vitrine_public` — Vitrine publique
+- `crm_clients` — CRM clients (limite via `clients_crm`)
 - `api_access` — Accès API
 - `stats_avancees` — Statistiques avancées
 - `multi_calendriers` — Multi-calendriers

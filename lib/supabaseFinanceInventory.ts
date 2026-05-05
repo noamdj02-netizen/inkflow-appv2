@@ -2,6 +2,19 @@ import { supabase } from './supabase';
 import type { Json } from '../types/database';
 import { normalizeStudioFinancePrefs, type StudioFinancePrefs } from '../types/studioFinancePrefs';
 
+/** Colonnes explicites — évite select('*') sur les lectures dashboard stock / coûts. */
+const SEL_CONSUMABLE_PRODUCT =
+  'id,studio_id,name,category,unit,qty_on_hand,brand,sku,created_at,updated_at';
+const SEL_CONSUMABLE_SUPPLIER =
+  'id,studio_id,name,website,default_shipping_fee_cents,free_shipping_threshold_cents,created_at';
+const SEL_CONSUMABLE_PRICE =
+  'id,studio_id,product_id,supplier_id,price_cents,pack_size,valid_from,notes,created_at';
+const SEL_STOCK_MOVEMENT =
+  'id,studio_id,product_id,delta_qty,reason,source,appointment_id,meta,created_at';
+const SEL_CONSUMABLE_LOT =
+  'id,studio_id,raw_barcode,lot_number,expiry_date,product_label,supplier_name,client_id,appointment_id,created_at';
+const SEL_APPOINTMENT_COST = 'id,studio_id,appointment_id,label,amount_cents,created_at';
+
 export async function getStudioFinancePrefsFromSupabase(
   studioId: string
 ): Promise<StudioFinancePrefs> {
@@ -66,7 +79,7 @@ export async function setFiscalChecklistItem(
       item_key: itemKey,
       checked,
       checked_at: checked ? new Date().toISOString() : null,
-    } as Record<string, unknown>,
+    },
     { onConflict: 'studio_id,month,item_key' }
   );
   if (error) throw error;
@@ -144,7 +157,7 @@ export interface AppointmentCostRow {
 export async function fetchConsumableProducts(studioId: string): Promise<ConsumableProductRow[]> {
   const { data, error } = await supabase
     .from('inkflow_consumable_products')
-    .select('*')
+    .select(SEL_CONSUMABLE_PRODUCT)
     .eq('studio_id', studioId)
     .order('name', { ascending: true });
   if (error) throw error;
@@ -175,7 +188,7 @@ export async function insertConsumableProduct(
       brand: payload.brand?.trim() || null,
       sku: payload.sku?.trim() || null,
     })
-    .select('*')
+    .select(SEL_CONSUMABLE_PRODUCT)
     .single();
   if (error) throw error;
   return data as ConsumableProductRow;
@@ -209,7 +222,7 @@ export async function updateConsumableProduct(
 export async function fetchConsumableSuppliers(studioId: string): Promise<ConsumableSupplierRow[]> {
   const { data, error } = await supabase
     .from('inkflow_consumable_suppliers')
-    .select('*')
+    .select(SEL_CONSUMABLE_SUPPLIER)
     .eq('studio_id', studioId)
     .order('name', { ascending: true });
   if (error) throw error;
@@ -247,7 +260,7 @@ export async function insertConsumableSupplier(
           ? null
           : Math.max(0, Math.round(payload.free_shipping_threshold_cents)),
     })
-    .select('*')
+    .select(SEL_CONSUMABLE_SUPPLIER)
     .single();
   if (error) throw error;
   return data as ConsumableSupplierRow;
@@ -284,7 +297,7 @@ export async function updateConsumableSupplier(
 export async function fetchPricesForStudio(studioId: string): Promise<ConsumablePriceRow[]> {
   const { data, error } = await supabase
     .from('inkflow_consumable_prices')
-    .select('*')
+    .select(SEL_CONSUMABLE_PRICE)
     .eq('studio_id', studioId)
     .order('valid_from', { ascending: false });
   if (error) throw error;
@@ -314,7 +327,7 @@ export async function insertConsumablePrice(
       notes: payload.notes?.trim() || null,
       valid_from: payload.valid_from?.trim() || new Date().toISOString().slice(0, 10),
     })
-    .select('*')
+    .select(SEL_CONSUMABLE_PRICE)
     .single();
   if (error) throw error;
   return data as ConsumablePriceRow;
@@ -349,7 +362,7 @@ export async function fetchStockMovements(
 ): Promise<StockMovementRow[]> {
   const { data, error } = await supabase
     .from('inkflow_stock_movements')
-    .select('*')
+    .select(SEL_STOCK_MOVEMENT)
     .eq('studio_id', studioId)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -360,7 +373,7 @@ export async function fetchStockMovements(
 export async function fetchConsumableLots(studioId: string): Promise<ConsumableLotRow[]> {
   const { data, error } = await supabase
     .from('inkflow_consumable_lots')
-    .select('*')
+    .select(SEL_CONSUMABLE_LOT)
     .eq('studio_id', studioId)
     .order('expiry_date', { ascending: true, nullsFirst: false });
   if (error) throw error;
@@ -391,7 +404,7 @@ export async function insertConsumableLot(
       client_id: payload.client_id ?? null,
       appointment_id: payload.appointment_id ?? null,
     })
-    .select('*')
+    .select(SEL_CONSUMABLE_LOT)
     .single();
   if (error) throw error;
   return data as ConsumableLotRow;
@@ -433,7 +446,7 @@ export async function deleteConsumableLot(lotId: string): Promise<void> {
 export async function fetchAppointmentCosts(studioId: string): Promise<AppointmentCostRow[]> {
   const { data, error } = await supabase
     .from('inkflow_appointment_costs')
-    .select('*')
+    .select(SEL_APPOINTMENT_COST)
     .eq('studio_id', studioId)
     .order('created_at', { ascending: false })
     .limit(500);

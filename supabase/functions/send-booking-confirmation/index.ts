@@ -4,6 +4,8 @@
  */
 
 import { escapeHtml, wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
+import { normalizePhoneToE164Fr } from "../_shared/phoneE164.ts";
+import { sendTwilioTransactionalSms } from "../_shared/twilioSms.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
@@ -32,6 +34,14 @@ interface Payload {
   description: string;
   conversationLink?: string;
   paymentLink?: string;
+  /** Page récap + acompte — prioritaire sur conversationLink pour le CTA principal. */
+  clientConfirmationUrl?: string;
+  /** Lien web « récit complet » (messagerie / vitrine). Utilisé en secours SMS + mail. */
+  recapUrl?: string;
+  /** Téléphone client (formulaire vitrine ou fiche RDV). */
+  clientPhone?: string;
+  /** Si true et Twilio configuré + numéro valide → SMS transactionnel avec le même lien principal que le mail. */
+  smsConfirmationOptIn?: boolean;
   /** Adresse du studio pour le .ics (optionnel) */
   studioAddress?: string;
 }
@@ -94,6 +104,64 @@ function buildIcsContent(payload: Payload): string {
   ].join("\r\n");
 }
 
+function primaryActionUrl(payload: Payload): string {
+  const raw =
+    payload.paymentLink?.trim() ||
+    payload.clientConfirmationUrl?.trim() ||
+    payload.conversationLink?.trim() ||
+    payload.recapUrl?.trim() ||
+    `${APP_URL}/discover`;
+  return ensureAbsoluteUrl(raw, APP_URL);
+}
+
+/** Date courte pour SMS (sans accents longs pour limiter UCS-2). */
+function smsDateSnippet(requestedDate: string, requestedTime: string | null): string {
+  try {
+    const dateStr = requestedDate
+      ? new Date(requestedDate + "T12:00:00").toLocaleDateString("fr-FR", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        })
+      : "";
+    const timeStr = formatTimeLabel(requestedTime);
+    return timeStr ? `${dateStr} ${timeStr}` : dateStr;
+  } catch {
+    return "";
+  }
+}
+
+async function maybeSendBookingConfirmationSms(payload: Payload): Promise<{
+  sent: boolean;
+  skippedReason?: string;
+}> {
+  if (!payload.smsConfirmationOptIn) {
+    return { sent: false, skippedReason: "opt_out" };
+  }
+  const to = normalizePhoneToE164Fr(payload.clientPhone);
+  if (!to) {
+    return { sent: false, skippedReason: "invalid_phone" };
+  }
+
+  const link = primaryActionUrl(payload);
+  const hasPayment = !!payload.paymentLink?.trim();
+  const hasRecapLanding = !!payload.clientConfirmationUrl?.trim();
+  const when = smsDateSnippet(payload.requestedDate, payload.requestedTime);
+  /** Texte SMS court ; détail dans la page lien. */
+  const body = hasPayment
+    ? `InkFlow — ${payload.studioName}: finalise ton resa (acompte). ${link}`
+    : hasRecapLanding
+      ? `InkFlow — ${payload.studioName}: recap + acompte. ${link}`
+      : `InkFlow — RDV confirme chez ${payload.studioName}${when ? ` (${when})` : ""}. Details: ${link}`;
+
+  const r = await sendTwilioTransactionalSms({ toE164: to, body });
+  if (r.ok) return { sent: true };
+  if (r.error === "twilio_not_configured") {
+    return { sent: false, skippedReason: "twilio_not_configured" };
+  }
+  return { sent: false, skippedReason: `send_failed:${r.error}` };
+}
+
 function formatDateDisplay(requestedDate: string, requestedTime: string | null): string {
   const dateStr = requestedDate
     ? new Date(requestedDate + "T12:00:00").toLocaleDateString("fr-FR", {
@@ -111,10 +179,22 @@ function buildRdvConfirmeHtml(payload: Payload): string {
   const descriptionRaw = typeof payload.description === "string" ? payload.description : "";
   const dateDisplay = formatDateDisplay(payload.requestedDate, payload.requestedTime);
   const hasPaymentLink = !!payload.paymentLink?.trim?.();
-  const rawCta = payload.paymentLink || payload.conversationLink || APP_URL;
-  const ctaUrl = ensureAbsoluteUrl(rawCta, APP_URL);
-  const ctaLabel = hasPaymentLink ? "Régler mon acompte" : "Confirmer mon rendez-vous";
-  const clientDashboardUrl = `${APP_URL}/client/dashboard?tab=rdv`;
+  const hasRecapLanding = !!payload.clientConfirmationUrl?.trim?.();
+  const ctaUrl = primaryActionUrl(payload);
+  const ctaLabel = hasPaymentLink
+    ? "Régler mon acompte"
+    : hasRecapLanding
+      ? "Voir le récapitulatif et payer l'acompte"
+      : "Confirmer mon rendez-vous";
+  const clientDashboardUrl = `${APP_URL}/discover`;
+  const messagesUrlRaw = payload.conversationLink?.trim() || "";
+  const secondaryButton =
+    hasPaymentLink || !messagesUrlRaw
+      ? { text: "Découvrir les studios", url: clientDashboardUrl }
+      : {
+          text: "Messagerie avec le studio",
+          url: ensureAbsoluteUrl(messagesUrlRaw, APP_URL),
+        };
   const safeClientName = escapeHtml(payload.clientName);
   const safeStudioName = escapeHtml(payload.studioName);
   const rawPaymentUrl = hasPaymentLink ? payload.paymentLink!.trim() : "";
@@ -124,7 +204,9 @@ function buildRdvConfirmeHtml(payload: Payload): string {
 
   const intro = hasPaymentLink
     ? `${safeClientName}, le studio a bien reçu votre demande et a validé votre créneau. Pour bloquer définitivement cette date dans l'agenda, il ne vous reste plus qu'à régler votre acompte.`
-    : `${safeClientName}, votre rendez-vous chez ${safeStudioName} est confirmé. Nous avons hâte de vous accueillir.`;
+    : hasRecapLanding
+      ? `${safeClientName}, votre créneau chez ${safeStudioName} est réservé. Ouvrez la page ci-dessous pour voir le récapitulatif et régler votre acompte sécurisé — c'est ce qui bloque définitivement la date.`
+      : `${safeClientName}, votre rendez-vous chez ${safeStudioName} est confirmé. Nous avons hâte de vous accueillir.`;
 
   const recap = emailInfoBox(`
     <p style="${EMAIL_STYLES.label}">Date</p>
@@ -147,15 +229,23 @@ function buildRdvConfirmeHtml(payload: Payload): string {
   return wrapEmailLayout({
     preheader: hasPaymentLink
       ? `Un clic pour finaliser l’acompte chez ${payload.studioName} — le créneau t’attend 12h`
-      : `RDV enregistré chez ${payload.studioName} — reçu et prochaine étape`,
-    tag: hasPaymentLink ? "PAIEMENT" : "CONFIRMATION DE RDV",
-    title: hasPaymentLink ? "Finalisez votre réservation" : "Votre rendez-vous est confirmé",
+      : hasRecapLanding
+        ? `Récap + acompte chez ${payload.studioName} — un clic pour finaliser`
+        : `RDV enregistré chez ${payload.studioName} — reçu et prochaine étape`,
+    tag: hasPaymentLink ? "PAIEMENT" : hasRecapLanding ? "ACOMPTE" : "CONFIRMATION DE RDV",
+    title: hasPaymentLink
+      ? "Finalisez votre réservation"
+      : hasRecapLanding
+        ? "Finalisez avec l’acompte"
+        : "Votre rendez-vous est confirmé",
     subtitle: hasPaymentLink
       ? "Réglez votre acompte pour bloquer définitivement le créneau."
-      : "Récapitulatif de votre demande.",
+      : hasRecapLanding
+        ? "Récapitulatif et paiement sécurisé sur une seule page."
+        : "Récapitulatif de votre demande.",
     bodyHtml,
     button: { text: ctaLabel, url: ctaUrl },
-    secondaryButton: { text: "Ouvrir mon espace client", url: clientDashboardUrl },
+    secondaryButton,
     buttonSubtext: "Retrouve tes rendez-vous et messages dans l’app InkFlow.",
     linkHint: hasPaymentLink
       ? { label: "Si le bouton ne s'affiche pas, copiez ce lien :", url: rawPaymentUrl }
@@ -194,9 +284,12 @@ Deno.serve(async (req: Request) => {
 
     const html = buildRdvConfirmeHtml(payload);
     const hasPaymentLink = !!payload.paymentLink?.trim?.();
+    const hasRecapLanding = !!payload.clientConfirmationUrl?.trim?.();
     const subject = hasPaymentLink
       ? `Action requise : finalisez votre réservation — ${payload.studioName}`
-      : `Votre rendez-vous avec ${payload.studioName} est validé`;
+      : hasRecapLanding
+        ? `Récapitulatif et acompte — ${payload.studioName}`
+        : `Votre rendez-vous avec ${payload.studioName} est validé`;
 
     const icsContent = buildIcsContent(payload);
     const icsBytes = new TextEncoder().encode(icsContent);
@@ -233,8 +326,25 @@ Deno.serve(async (req: Request) => {
     }
 
     const result = await resendRes.json();
+
+    let smsOutcome: Awaited<ReturnType<typeof maybeSendBookingConfirmationSms>>;
+    try {
+      smsOutcome = await maybeSendBookingConfirmationSms(payload);
+    } catch (smsErr) {
+      const mes = smsErr instanceof Error ? smsErr.message : String(smsErr);
+      console.warn("[send-booking-confirmation] SMS error (non-blocking):", mes.slice(0, 200));
+      smsOutcome = { sent: false, skippedReason: "send_failed:sms_throw" };
+    }
+
     return new Response(
-      JSON.stringify({ success: true, emailId: result.id }),
+      JSON.stringify({
+        success: true,
+        emailId: result.id,
+        sms: {
+          sent: smsOutcome.sent,
+          skippedReason: smsOutcome.skippedReason,
+        },
+      }),
       { headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (err) {

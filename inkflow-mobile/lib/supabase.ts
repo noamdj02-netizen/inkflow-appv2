@@ -17,17 +17,13 @@ export function isSupabaseConfigured(): boolean {
   return !!(supabaseUrl && supabaseAnonKey && supabaseUrl.length > 10);
 }
 
-if (!isSupabaseConfigured()) {
-  throw new Error(
-    '[Inkflow] Supabase: créez inkflow-mobile/.env (voir .env.example) avec EXPO_PUBLIC_SUPABASE_URL et EXPO_PUBLIC_SUPABASE_ANON_KEY — mêmes valeurs que le web — puis: npx expo start -c'
-  );
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-  },
-});
+export const supabase = isSupabaseConfigured()
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        storage: AsyncStorage,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    })
+  : null;

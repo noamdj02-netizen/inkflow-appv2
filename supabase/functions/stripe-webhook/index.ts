@@ -5,6 +5,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 import * as Sentry from "https://deno.land/x/sentry/index.mjs";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { applyPaidCheckoutDbState } from "../_shared/applyPaidCheckoutDbState.ts";
+import { applyPaidTerminalBalanceFromPaymentIntent } from "../_shared/applyPaidTerminalBalance.ts";
 import {
   appendFlashVitrineNote,
   type AppointmentRowForCrm,
@@ -965,9 +966,19 @@ Deno.serve(async (req: Request) => {
       }
 
       case "payment_intent.succeeded": {
-        console.log(
-          "[stripe-webhook] payment_intent.succeeded — flux Checkout déjà couvert par checkout.session.completed (pas d’action)",
-        );
+        const pi = event.data.object as Stripe.PaymentIntent;
+        await applyPaidTerminalBalanceFromPaymentIntent(supabase, {
+          id: pi.id,
+          metadata: pi.metadata as Record<string, string | undefined> | null,
+          amount_received: pi.amount_received ?? null,
+          amount: pi.amount ?? null,
+        });
+        if (
+          pi.metadata &&
+          (pi.metadata as Record<string, string | undefined>).inkflow_terminal === "1"
+        ) {
+          console.log("[stripe-webhook] payment_intent.succeeded Terminal balance pi=", pi.id);
+        }
         break;
       }
 

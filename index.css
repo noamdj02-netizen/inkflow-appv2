@@ -87,6 +87,9 @@
   --chart-3: #60a5fa;
   --chart-4: #93c5fd;
   --chart-5: #bfdbfe;
+  /** Chiffres / métriques (KPI, montants) — teinte marque, lisibles sur fond clair */
+  --numeric: oklch(0.22 0.07 264);
+  --numeric-muted: oklch(0.44 0.042 264);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -334,6 +337,8 @@ video {
   --chart-3: #2563eb;
   --chart-4: #1d4ed8;
   --chart-5: #93c5fd;
+  --numeric: oklch(0.94 0.03 264);
+  --numeric-muted: oklch(0.62 0.045 264);
   --bg-primary: #000000;
   --bg-secondary: #09090b;
   --bg-sidebar: #0a0a0a;
@@ -2638,6 +2643,8 @@ summary {
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
+  --color-numeric: var(--numeric);
+  --color-numeric-muted: var(--numeric-muted);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -2672,6 +2679,8 @@ summary {
   --chart-3: #2563eb;
   --chart-4: #1d4ed8;
   --chart-5: #93c5fd;
+  --numeric: oklch(0.94 0.03 264);
+  --numeric-muted: oklch(0.62 0.045 264);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: #2563eb;

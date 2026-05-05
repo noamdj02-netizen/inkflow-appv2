@@ -4,9 +4,6 @@ const nextConfig = {
     remotePatterns: [],
     formats: ['image/avif', 'image/webp'],
   },
-  experimental: {
-    optimizePackageImports: ['lucide-react'],
-  },
 };
 
 module.exports = nextConfig;

@@ -155,7 +155,7 @@ Deno.serve(async (req: Request) => {
         .eq("email", clientEmail.trim().toLowerCase())
         .maybeSingle();
       if (blocked) {
-        console.log(`send-loyalty-emails: skip suppressed ${clientEmail}`);
+        console.log(`send-loyalty-emails: skip suppressed for apt ${apt.id}`);
         results.push({ id: apt.id, wave: wave.label, status: "skipped", reason: "suppressed" });
         continue;
       }
@@ -206,7 +206,7 @@ Deno.serve(async (req: Request) => {
         }
 
         results.push({ id: apt.id, wave: wave.label, status: "sent" });
-        console.log(`send-loyalty-emails: ${wave.label} sent to ${clientEmail} for apt ${apt.id}`);
+        console.log(`send-loyalty-emails: ${wave.label} sent for apt ${apt.id}`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`send-loyalty-emails: ${wave.label} failed for ${apt.id}:`, msg);

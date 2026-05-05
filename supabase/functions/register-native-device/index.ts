@@ -1,9 +1,34 @@
 /**
- * Enregistre un jeton device pour push natif futur (FCM/APNs). JWT utilisateur requis.
+ * Enregistre un jeton device pour push natif Expo (FCM/APNs). JWT utilisateur requis.
+ * Optionnel `studio_id` pour router send-push-notification (titulaire ou collaborateur).
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { getCorsHeaders } from "../_shared/cors.ts";
+
+async function canUserAccessStudio(
+  admin: ReturnType<typeof createClient>,
+  studioId: string,
+  userEmail: string,
+): Promise<boolean> {
+  const em = userEmail.trim().toLowerCase();
+  const { data: st, error: stErr } = await admin
+    .from("inkflow_studios")
+    .select("email")
+    .eq("id", studioId)
+    .maybeSingle();
+  if (stErr || !st?.email) return false;
+  if ((st.email as string).trim().toLowerCase() === em) return true;
+
+  const { data: collab } = await admin
+    .from("inkflow_artist_accounts")
+    .select("id")
+    .eq("studio_id", studioId)
+    .ilike("email", userEmail.trim())
+    .maybeSingle();
+
+  return Boolean(collab?.id);
+}
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
@@ -39,14 +64,14 @@ Deno.serve(async (req: Request) => {
     global: { headers: { Authorization: authHeader } },
   });
   const { data: { user }, error: userErr } = await userClient.auth.getUser();
-  if (userErr || !user?.id) {
+  if (userErr || !user?.id || !user.email) {
     return new Response(JSON.stringify({ error: "Session invalide" }), {
       status: 401,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   }
 
-  let body: { token?: string; platform?: string };
+  let body: { token?: string; platform?: string; studio_id?: string };
   try {
     body = await req.json();
   } catch {
@@ -61,6 +86,13 @@ Deno.serve(async (req: Request) => {
     ? body.platform.trim().slice(0, 32)
     : "unknown";
 
+  const studioIdRaw =
+    typeof body.studio_id === "string"
+      ? body.studio_id.trim()
+      : typeof (body as { studioId?: string }).studioId === "string"
+        ? (body as { studioId: string }).studioId.trim()
+        : "";
+
   if (!token || token.length < 8) {
     return new Response(JSON.stringify({ error: "token requis" }), {
       status: 400,
@@ -69,11 +101,25 @@ Deno.serve(async (req: Request) => {
   }
 
   const admin = createClient(supabaseUrl, serviceKey);
+
+  let studioIdResolved: string | null = studioIdRaw || null;
+
+  if (studioIdResolved) {
+    const allowed = await canUserAccessStudio(admin, studioIdResolved, user.email);
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Studio interdit pour ce compte" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+  }
+
   const { error: upsertErr } = await admin.from("inkflow_native_device_tokens").upsert(
     {
       user_id: user.id,
       token,
       platform,
+      ...(studioIdResolved ? { studio_id: studioIdResolved } : {}),
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id,token" },

@@ -3,18 +3,26 @@ import {
   Banknote,
   Calendar,
   CalendarDays,
+  CheckCircle2,
   Clock,
+  Copy,
   Euro,
+  FileSignature,
+  HeartPulse,
+  Instagram,
   Mail,
   MapPin,
   MessageCircle,
   Phone,
   Sparkles,
   Tag,
+  WalletCards,
 } from 'lucide-react';
 import { buildMailtoHref, handleMailtoClick } from '../../lib/mailto';
 import { useToast } from '../../contexts/ToastContext';
 import type { Appointment, Client } from '../../types';
+import { appointmentRemainingBalanceEuros } from '../../lib/appointmentBalance';
+import { instagramMessageUrl, parseInstagramHandle } from '../../lib/instagramUtils';
 
 export interface ClientPreviewData {
   /** Données du rendez-vous (clientName, clientEmail, etc.) */
@@ -149,6 +157,21 @@ function formatRelativeCalendarDay(appointmentDateYmd: string): string {
   return '';
 }
 
+function PrepLine({ ok, icon, label }: { ok: boolean; icon: React.ReactNode; label: string }) {
+  return (
+    <div
+      className={`flex min-h-[40px] items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
+        ok
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
+          : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200'
+      } [&_svg]:size-4 [&_svg]:shrink-0`}
+    >
+      {ok ? <CheckCircle2 /> : icon}
+      <span className="truncate font-medium">{label}</span>
+    </div>
+  );
+}
+
 export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
   data,
   studioId: _studioId,
@@ -165,11 +188,33 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
   const mailtoHref = buildMailtoHref(appointment.clientEmail, 'À propos de votre rendez-vous');
   const phoneDisplay = (appointment.clientPhone || client?.phone || '').trim();
   const telHref = phoneDisplay ? `tel:${phoneDisplay.replace(/\s/g, '')}` : '';
+  const smsHref = phoneDisplay ? `sms:${phoneDisplay.replace(/\s/g, '')}` : '';
+  const instagramHandle = parseInstagramHandle(
+    (appointment as Appointment & { clientInstagram?: string | null }).clientInstagram,
+    `${appointment.notes ?? ''}\n${client?.notes ?? ''}\n${appointment.service ?? ''}`
+  );
+  const hasAnyContactDetail = Boolean(appointment.clientEmail || phoneDisplay || instagramHandle);
+  const copyContact = async () => {
+    const lines = [
+      appointment.clientName,
+      appointment.clientEmail ? `Email: ${appointment.clientEmail}` : null,
+      phoneDisplay ? `Téléphone: ${phoneDisplay}` : null,
+      instagramHandle ? `Instagram: @${instagramHandle}` : null,
+    ].filter(Boolean);
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'));
+      toast.success('Coordonnées copiées');
+    } catch {
+      toast.error('Impossible de copier les coordonnées.');
+    }
+  };
 
   const avatarLetter = (appointment.clientName || '?').charAt(0).toUpperCase();
   const avatarUrl = client?.avatar;
 
   const whenLabel = formatAppointmentWhen(appointment.date, appointment.time);
+  const remainingBalance = appointmentRemainingBalanceEuros(appointment);
+  const hasHealthSnapshot = Boolean(client?.healthProfileSnapshot);
 
   const crmSubtitle = client
     ? `Fiche CRM · ${CLIENT_STATUS_LABEL[client.status]}`
@@ -267,7 +312,49 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                 )}
               </span>
             </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[var(--bg-hover)] text-xs">
+              <WalletCards className="w-3.5 h-3.5 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
+              <span className="text-[var(--text-secondary)]">Solde</span>
+              <span className="font-semibold text-[var(--text-primary)]">
+                {remainingBalance.toFixed(2)}€
+              </span>
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Préparation séance */}
+      <div className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden">
+        <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-secondary)]/50">
+          <p className="font-semibold text-sm text-[var(--text-primary)]">Préparation séance</p>
+        </div>
+        <div className="p-4 grid grid-cols-1 gap-2">
+          <PrepLine
+            ok={appointment.consentFormSigned}
+            icon={<FileSignature />}
+            label={appointment.consentFormSigned ? 'Consentement signé' : 'Consentement à envoyer'}
+          />
+          <PrepLine
+            ok={hasHealthSnapshot}
+            icon={<HeartPulse />}
+            label={
+              hasHealthSnapshot ? 'Questionnaire santé présent' : 'Questionnaire santé manquant'
+            }
+          />
+          <PrepLine
+            ok={appointment.depositPaid}
+            icon={<Banknote />}
+            label={appointment.depositPaid ? 'Acompte encaissé' : 'Acompte à relancer'}
+          />
+          <PrepLine
+            ok={remainingBalance < 1 || Boolean(appointment.balancePaidAt)}
+            icon={<Euro />}
+            label={
+              remainingBalance < 1 || appointment.balancePaidAt
+                ? 'Solde réglé'
+                : `Solde restant : ${remainingBalance.toFixed(2)}€`
+            }
+          />
         </div>
       </div>
 
@@ -277,7 +364,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         tabIndex={onClientClick ? 0 : undefined}
         onClick={onClientClick}
         onKeyDown={onClientClick ? (e) => e.key === 'Enter' && onClientClick() : undefined}
-        className={`rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden ${onClientClick ? 'cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors' : ''}`}
+        className={`order-first rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden ${onClientClick ? 'cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors' : ''}`}
       >
         <div className="p-5">
           <div className="flex items-start gap-4">
@@ -416,55 +503,85 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
       {/* Contact */}
       <div className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden">
         <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-secondary)]/50">
-          <span className="font-semibold text-sm text-[var(--text-primary)]">
-            Contacter le client
-          </span>
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-semibold text-sm text-[var(--text-primary)]">
+              Contacter le client
+            </span>
+            <button
+              type="button"
+              onClick={() => void copyContact()}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--border)] px-2.5 text-xs font-semibold text-[var(--text-secondary)] active:scale-[0.98] transition-all"
+            >
+              <Copy className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
+              Copier
+            </button>
+          </div>
         </div>
-        <div className="p-4 space-y-3">
+        <div className="flex flex-col gap-3 p-4">
+          <div className="flex flex-wrap gap-2">
+            {appointment.clientEmail && (
+              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
+                <Mail className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
+                <span className="truncate">{appointment.clientEmail}</span>
+              </span>
+            )}
+            {phoneDisplay && (
+              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
+                <Phone className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
+                <span className="truncate">{phoneDisplay}</span>
+              </span>
+            )}
+            {instagramHandle && (
+              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
+                <Instagram className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
+                <span className="truncate">@{instagramHandle}</span>
+              </span>
+            )}
+            {!hasAnyContactDetail && (
+              <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                Aucune coordonnée exploitable
+              </span>
+            )}
+          </div>
           <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">
             {showInkflowClientDiscussion ? (
               <>
-                En complément, joignez le client par{' '}
-                <strong className="text-[var(--text-secondary)]">e-mail</strong>,{' '}
-                <strong className="text-[var(--text-secondary)]">téléphone</strong> ou{' '}
-                <strong className="text-[var(--text-secondary)]">Instagram</strong>. Les demandes
-                vitrine hors app passent surtout par ces canaux.
+                La discussion InkFlow reste disponible, mais vous pouvez aussi contacter le client
+                directement pour confirmer un détail ou relancer une réponse.
               </>
             ) : (
               <>
-                Échangez par <strong className="text-[var(--text-secondary)]">e-mail</strong>,{' '}
-                <strong className="text-[var(--text-secondary)]">téléphone</strong> ou{' '}
-                <strong className="text-[var(--text-secondary)]">Instagram</strong> — la messagerie
-                intégrée Inkflow n’est pas utilisée pour les demandes.
+                Contactez le client directement pour confirmer le rendez-vous, envoyer une consigne
+                ou relancer une réponse.
               </>
             )}
           </p>
-          <div className={`flex gap-2 ${compact ? 'flex-col' : 'flex-col sm:flex-row'}`}>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {mailtoHref ? (
               <a
                 href={mailtoHref}
                 onClick={(e) => {
                   handleMailtoClick(e, mailtoHref);
                 }}
-                className="flex items-center justify-center gap-2 min-h-[44px] flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all touch-manipulation"
+                className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all touch-manipulation"
               >
                 <Mail className="w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
-                Écrire par e-mail
+                E-mail
               </a>
             ) : (
               <button
                 type="button"
                 onClick={() => toast.error('Adresse e-mail du client invalide ou manquante.')}
-                className="flex items-center justify-center gap-2 min-h-[44px] flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-tertiary)] opacity-60 cursor-not-allowed"
+                className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-tertiary)] opacity-60 cursor-not-allowed"
               >
                 <Mail className="w-4 h-4 shrink-0 stroke-[1.75]" />
-                Écrire par e-mail
+                E-mail
               </button>
             )}
             {telHref ? (
               <a
                 href={telHref}
-                className="flex items-center justify-center gap-2 min-h-[44px] flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all touch-manipulation"
+                className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all touch-manipulation"
               >
                 <Phone className="w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
                 Appeler
@@ -473,11 +590,31 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               <button
                 type="button"
                 disabled
-                className="flex items-center justify-center gap-2 min-h-[44px] flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-tertiary)] opacity-50 cursor-not-allowed"
+                className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-tertiary)] opacity-50 cursor-not-allowed"
               >
                 <Phone className="w-4 h-4 shrink-0 stroke-[1.75]" />
                 Pas de numéro
               </button>
+            )}
+            {smsHref && (
+              <a
+                href={smsHref}
+                className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all touch-manipulation"
+              >
+                <MessageCircle className="w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
+                SMS
+              </a>
+            )}
+            {instagramHandle && (
+              <a
+                href={instagramMessageUrl(instagramHandle)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all touch-manipulation"
+              >
+                <Instagram className="w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
+                Instagram
+              </a>
             )}
           </div>
         </div>

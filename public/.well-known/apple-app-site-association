@@ -3,12 +3,25 @@
     "apps": [],
     "details": [
       {
-        "appID": "TEAMID.bundle.id.inkflow",
-        "paths": ["/dashboard*", "/book/*", "/studio/*", "/p/*", "/client/*"]
+        "appID": "REPLACE_WITH_APPLE_TEAM_ID.me.inkflow.studio",
+        "paths": [
+          "/dashboard*",
+          "/book/*",
+          "/studio/*",
+          "/agenda",
+          "/agenda*",
+          "/messages/*",
+          "/c/*",
+          "/consent/*",
+          "/reservation-succes",
+          "/reservation-succes*",
+          "/client/*",
+          "/p/*"
+        ]
       }
     ]
   },
   "webcredentials": {
-    "apps": ["TEAMID.bundle.id.inkflow"]
+    "apps": ["REPLACE_WITH_APPLE_TEAM_ID.me.inkflow.studio"]
   }
 }

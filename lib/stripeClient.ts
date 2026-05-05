@@ -157,13 +157,18 @@ export async function createThemeCheckoutSession(params: {
   if (!baseUrl || !key) {
     return { error: 'Supabase non configuré (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).' };
   }
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken || !isAccessTokenForCurrentSupabaseProject(accessToken)) {
+    return { error: 'Reconnectez-vous pour débloquer ce thème.' };
+  }
   const fnUrl = `${baseUrl.replace(/\/$/, '')}/functions/v1/create-theme-checkout-session`;
   try {
     const res = await fetch(fnUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${key}`,
+        Authorization: `Bearer ${accessToken}`,
         apikey: key,
       },
       body: JSON.stringify(params),

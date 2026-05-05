@@ -2,9 +2,11 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { getCorsHeaders, corsResponse } from "../_shared/cors.ts";
 import { resolveAbsoluteSiteBase } from "../_shared/siteUrl.ts";
+import { getGoTrueUser } from "../_shared/supabaseAuth.ts";
 
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const SITE_URL = resolveAbsoluteSiteBase(
   Deno.env.get("SITE_URL") || Deno.env.get("APP_URL"),
@@ -38,6 +40,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const auth = req.headers.get("Authorization") ?? "";
+    const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+    const user = await getGoTrueUser(SUPABASE_URL, SUPABASE_ANON_KEY, bearer);
+    if (!user?.email) {
+      return new Response(
+        JSON.stringify({ error: "Session requise" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
     const payload: ThemeCheckoutPayload = await req.json();
 
     if (!payload.studioId || !payload.themeId || !payload.userEmail) {
@@ -67,6 +79,12 @@ Deno.serve(async (req: Request) => {
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+    if ((studio.email as string | null)?.toLowerCase() !== user.email.toLowerCase()) {
+      return new Response(
+        JSON.stringify({ error: "Accès refusé" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
 
     const unlocked = (studio.unlocked_themes as string[]) || [];
     if (unlocked.includes(payload.themeId)) {
@@ -90,7 +108,7 @@ Deno.serve(async (req: Request) => {
       "mode": "payment",
       "success_url": successUrl,
       "cancel_url": cancelUrl,
-      "customer_email": payload.userEmail,
+      "customer_email": user.email,
       "line_items[0][price_data][currency]": "eur",
       "line_items[0][price_data][product_data][name]": `Thème vitrine : ${themeName}`,
       "line_items[0][price_data][product_data][description]": "InkFlow - Thème premium pour votre page vitrine (paiement unique)",
@@ -122,7 +140,7 @@ Deno.serve(async (req: Request) => {
         userMsg = errBody.slice(0, 200) || userMsg;
       }
       return new Response(
-        JSON.stringify({ error: userMsg, details: errBody }),
+        JSON.stringify({ error: userMsg }),
         { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }

@@ -16,7 +16,7 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ consentId }) => {
   useEffect(() => {
     supabase
       .from('inkflow_consent_forms')
-      .select('*')
+      .select('id,signed_at,template,client_name,client_email,appointment_id')
       .eq('id', consentId)
       .single()
       .then(({ data, error }) => {

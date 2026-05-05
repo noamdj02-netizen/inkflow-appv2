@@ -80,14 +80,32 @@ await supabase.functions.invoke('send-push-notification', {
 
 ## 4. Secrets Supabase (récap)
 
-| Secret              | Où le mettre                   | Description                                             |
-| ------------------- | ------------------------------ | ------------------------------------------------------- |
-| `VAPID_PUBLIC_KEY`  | Supabase Edge Function Secrets | Même clé que `VITE_VAPID_PUBLIC_KEY` (pour la fonction) |
-| `VAPID_PRIVATE_KEY` | Supabase Edge Function Secrets | Clé privée (ne jamais l’exposer côté client)            |
+| Secret              | Où le mettre                   | Description                                                           |
+| ------------------- | ------------------------------ | --------------------------------------------------------------------- |
+| `VAPID_PUBLIC_KEY`  | Supabase Edge Function Secrets | Même clé que `VITE_VAPID_PUBLIC_KEY` (pour la fonction)               |
+| `VAPID_PRIVATE_KEY` | Supabase Edge Function Secrets | Clé privée (ne jamais l’exposer côté client)                          |
+| `EXPO_ACCESS_TOKEN` | Supabase Edge Function Secrets | Optionnel ; Bearer Expo pour `exp.host` (push vers jetons Expo shell) |
 
 ```bash
 npx supabase secrets set VAPID_PUBLIC_KEY=BNx...  VAPID_PRIVATE_KEY=xxx...
+# Optionnel — app enveloppe Expo :
+npx supabase secrets set EXPO_ACCESS_TOKEN=xxx...
 ```
+
+---
+
+## 4bis. App Expo « Inkflow Pro » (WebView + Expo Push)
+
+Le Web Push **VAPID** dans une WebView iOS/Android n’est pas fiable ; l’app **`inkflow-mobile/`** enregistre un **jeton Expo** (`ExponentPushToken[…]`) et le rattache au studio.
+
+| Étape         | Détail                                                                                                                                                                                                                                                           |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Migration** | Colonne `studio_id` sur `inkflow_native_device_tokens` (voir migration `*_native_device_studio_id.sql`).                                                                                                                                                         |
+| **Front web** | User-Agent enrichi avec `InkflowProShell` ; le dashboard envoie `postMessage({ type: 'inkflow_native_push_register', accessToken, studioId })` via `useInkflowNativeShellPushBridge`.                                                                            |
+| **Mobile**    | `WebAppShell.tsx` : `onMessage` → `register-native-device` avec JWT + `studio_id`. Variable **`EXPO_PUBLIC_SUPABASE_URL`** (même projet que le web) dans **EAS Secrets** ou `.env` Expo pour que `fetch` atteigne `/functions/v1/register-native-device`.        |
+| **Edge**      | `send-push-notification` envoie aussi vers `https://exp.host/--/api/v2/push/send` pour les lignes où `studio_id` est renseigné. Secret optionnel **`EXPO_ACCESS_TOKEN`** (Expo → Access tokens). Sans VAPID, seuls les jetons Expo peuvent recevoir des alertes. |
+
+Déployer aussi la fonction **`register-native-device`** après modification du corps JSON (`studio_id`).
 
 ---
 
@@ -170,30 +188,30 @@ Le tatoueur active les notifications push dans **Paramètres → Notifications**
 
 ## 8. Web Push (VAPID) vs FCM / Expo
 
-| Technologie                        | Contexte InkFlow                                                                                                                                      |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Web Push + VAPID**               | C’est ce que fait `send-push-notification` : abonnements dans `inkflow_push_subscriptions`, clés `VAPID_`\*. Fonctionne dans le **navigateur** / PWA. |
-| **Firebase Cloud Messaging (FCM)** | Push natif Android / intégrations Google — **non utilisé** dans ce dépôt web.                                                                         |
-| **Expo Push**                      | Notifications pour apps **Expo/React Native** — **non présent** ici.                                                                                  |
+| Technologie                        | Contexte InkFlow                                                                                                             |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Web Push + VAPID**               | Abonnements dans `inkflow_push_subscriptions`, clés `VAPID_*`. Fonctionne dans le **navigateur** / PWA installée.            |
+| **Firebase Cloud Messaging (FCM)** | Push natif Android « pur » — **non utilisé** directement dans ce dépôt ; Expo peut router vers FCM sous le capot.            |
+| **Expo Push**                      | Utilisé par l’app **`inkflow-mobile`** (WebView + jetons Expo enregistrés dans `inkflow_native_device_tokens`). Voir § 4bis. |
 
-Une **notification de bienvenue au moment du clic sur le lien de confirmation d’email** n’est en pratique **pas réaliste** sur le web : l’utilisateur n’a en général **pas encore** souscrit au Web Push dans le navigateur à cette étape. Les événements Auth (`auth.users`) ne déclenchent pas non plus le même pipeline que les webhooks métier (`notification-webhook`).
+Une **notification de bienvenue au moment du clic sur le lien de confirmation d’email** reste peu réaliste sur le web tant que l’utilisateur n’a pas encore accepté les notifications dans le navigateur.
 
-**Recommandation MVP web** : considérer un « welcome push » comme **hors scope** ; faire activer les notifications depuis **Paramètres → Notifications** après la première connexion. Une phase ultérieure (app native, FCM/Expo) pourrait reprendre ce besoin hors navigateur.
+**Activation** : Web — **Paramètres → Notifications** (PWA / Safari installée sur iOS). Shell Expo — permission demandée au premier message bridge `inkflow_native_push_register` depuis le dashboard (voir § 4bis).
 
 ---
 
-## 9. Push natif (préparation — hors Web Push VAPID)
+## 9. Push natif / Expo (jetons hors Web Push VAPID)
 
-Pour une **app native** (React Native / Expo / build natif), les jetons FCM/APNs ne passent pas par `inkflow_push_subscriptions` (Web Push). Ils sont stockés dans `**inkflow_native_device_tokens`\*\* (`user_id`, `token`, `platform`, `updated_at`), avec RLS : l’utilisateur ne lit/écrit que ses lignes.
+Pour l’app enveloppe **Expo** (`inkflow-mobile`), les jetons **Expo Push** ne passent pas par `inkflow_push_subscriptions`. Ils sont stockés dans **`inkflow_native_device_tokens`** (`user_id`, `studio_id`, `token`, `platform`, `updated_at`), avec RLS côté utilisateur.
 
 ### Edge Function `register-native-device`
 
 - **POST** `/functions/v1/register-native-device`
 - **Headers** : `Authorization: Bearer <JWT utilisateur>` (session Supabase Auth)
-- **Body JSON** : `{ "token": "<device token>", "platform": "ios" | "android" | "unknown" }`
+- **Body JSON** : `{ "token": "<ExponentPushToken…>", "platform": "ios" | "android" | …, "studio_id": "<studio uuid>" }` (alias accepté : `studioId`)
 - **Réponse** : `{ "ok": true }`
 
-L’envoi effectif vers FCM/APNs n’est **pas** implémenté tant que les clés serveur (Firebase, certificats Apple, etc.) ne sont pas configurées — cette étape enregistre seulement le jeton côté base.
+L’envoi est traité par **`send-push-notification`** via l’API Expo (`exp.host`) lorsque **`EXPO_ACCESS_TOKEN`** est défini ; sinon seuls les abonnements Web Push VAPID partent (si configurés).
 
 ```bash
 npx supabase functions deploy register-native-device

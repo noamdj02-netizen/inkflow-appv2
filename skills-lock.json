@@ -101,6 +101,12 @@
       "sourceType": "github",
       "computedHash": "e7f3d02a0233beafdd6fe5335427388109b9699ebcdc6a8782a8bada2826d916"
     },
+    "reactive-programming": {
+      "source": "aj-geddes/useful-ai-prompts",
+      "sourceType": "github",
+      "skillPath": "skills/reactive-programming/SKILL.md",
+      "computedHash": "747cef359002fa06d23794648a84fe9dc59ff9fbe7a60d19d14a31878e1538df"
+    },
     "site-architecture": {
       "source": "coreyhaines31/marketingskills",
       "sourceType": "github",

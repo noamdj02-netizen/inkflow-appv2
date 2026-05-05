@@ -1,5 +1,8 @@
 import { supabase } from './supabase';
 
+const SEL_SUPPLIER_CATALOG_ITEM =
+  'id,studio_id,supplier_id,linked_product_id,name,brand,sku,ean,category,pack_size,list_price_cents,price_cents,promo_price_cents,promo_label,promo_starts_at,promo_ends_at,product_url,notes,is_active,created_at,updated_at';
+
 export interface SupplierCatalogItemRow {
   id: string;
   studio_id: string;
@@ -29,7 +32,7 @@ export async function fetchSupplierCatalogItems(
 ): Promise<SupplierCatalogItemRow[]> {
   const { data, error } = await supabase
     .from('inkflow_supplier_catalog_items')
-    .select('*')
+    .select(SEL_SUPPLIER_CATALOG_ITEM)
     .eq('studio_id', studioId)
     .order('supplier_id', { ascending: true })
     .order('name', { ascending: true });
@@ -86,7 +89,7 @@ export async function insertSupplierCatalogItem(
       is_active: payload.is_active ?? true,
       updated_at: new Date().toISOString(),
     })
-    .select('*')
+    .select(SEL_SUPPLIER_CATALOG_ITEM)
     .single();
   if (error) throw error;
   return data as SupplierCatalogItemRow;
