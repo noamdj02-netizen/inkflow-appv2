@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface StarRatingProps {
   avg: number;
   count: number;

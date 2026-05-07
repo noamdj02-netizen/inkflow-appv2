@@ -51,10 +51,17 @@ export const DemoMessagingView: React.FC<DemoMessagingViewProps> = ({
 
   const isExternal = onAiReply != null && aiRepliesProp != null;
   const aiReplies = aiRepliesProp ?? AI_REPLIES;
-  const typing = isExternal && selectedThread ? (aiTyping[selectedThread.threadId] ?? false) : internalTyping;
-  const replyFull = isExternal && selectedThread ? (aiReplies[selectedThread.threadId] ?? '') : internalReplyFull;
-  const replyRevealedText = isExternal && selectedThread ? (aiStreaming[selectedThread.threadId] ?? '') : internalReplyFull.slice(0, internalReplyRevealed);
-  const isComplete = isExternal ? (selectedThread && (aiStreaming[selectedThread.threadId] ?? '').length >= (aiReplies[selectedThread.threadId] ?? '').length) : internalReplyRevealed >= internalReplyFull.length;
+  const typing =
+    isExternal && selectedThread ? (aiTyping[selectedThread.threadId] ?? false) : internalTyping;
+  const replyRevealedText =
+    isExternal && selectedThread
+      ? (aiStreaming[selectedThread.threadId] ?? '')
+      : internalReplyFull.slice(0, internalReplyRevealed);
+  const isComplete = isExternal
+    ? selectedThread &&
+      (aiStreaming[selectedThread.threadId] ?? '').length >=
+        (aiReplies[selectedThread.threadId] ?? '').length
+    : internalReplyRevealed >= internalReplyFull.length;
 
   useEffect(() => {
     if (!isExternal) {
@@ -131,12 +138,18 @@ export const DemoMessagingView: React.FC<DemoMessagingViewProps> = ({
                 type="button"
                 onClick={() => setSelectedThread(thread)}
                 className={`w-full flex items-center gap-3 p-4 min-h-[64px] hover:bg-[var(--bg-hover)] border-b border-[var(--border)] transition-colors text-left touch-manipulation ${
-                  selectedThread?.threadId === thread.threadId ? 'bg-blue-50 dark:bg-blue-500/10' : ''
+                  selectedThread?.threadId === thread.threadId
+                    ? 'bg-blue-50 dark:bg-blue-500/10'
+                    : ''
                 }`}
               >
                 <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold">
                   {thread.avatar ? (
-                    <img src={thread.avatar} alt="" className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover" />
+                    <img
+                      src={thread.avatar}
+                      alt=""
+                      className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover"
+                    />
                   ) : (
                     <span>{thread.clientName?.[0]?.toUpperCase() || '?'}</span>
                   )}
@@ -150,7 +163,9 @@ export const DemoMessagingView: React.FC<DemoMessagingViewProps> = ({
                       {formatTime(thread.lastMessageAt)}
                     </span>
                   </div>
-                  <p className="text-xs text-[var(--text-secondary)] truncate">{thread.lastMessage}</p>
+                  <p className="text-xs text-[var(--text-secondary)] truncate">
+                    {thread.lastMessage}
+                  </p>
                 </div>
                 {thread.unreadCount > 0 && (
                   <span className="w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
@@ -176,7 +191,11 @@ export const DemoMessagingView: React.FC<DemoMessagingViewProps> = ({
               </button>
               <div className="relative w-9 h-9 rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-sm">
                 {selectedThread.avatar ? (
-                  <img src={selectedThread.avatar} alt="" className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover" />
+                  <img
+                    src={selectedThread.avatar}
+                    alt=""
+                    className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover"
+                  />
                 ) : (
                   <span>{selectedThread.clientName?.[0]?.toUpperCase() || '?'}</span>
                 )}
@@ -211,9 +230,18 @@ export const DemoMessagingView: React.FC<DemoMessagingViewProps> = ({
                   <div className="max-w-[75%] px-4 py-3 rounded-2xl rounded-br-md bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 text-[var(--text-primary)]">
                     <span className="text-sm">IA en train de rédiger</span>
                     <span className="inline-flex gap-0.5 ml-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span
+                        className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce"
+                        style={{ animationDelay: '0ms' }}
+                      />
+                      <span
+                        className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce"
+                        style={{ animationDelay: '150ms' }}
+                      />
+                      <span
+                        className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce"
+                        style={{ animationDelay: '300ms' }}
+                      />
                     </span>
                   </div>
                 </div>
@@ -243,7 +271,9 @@ export const DemoMessagingView: React.FC<DemoMessagingViewProps> = ({
                   placeholder="Écrire un message..."
                   className="flex-1 min-w-0 px-4 py-3 sm:py-2.5 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] text-[var(--text-primary)] text-base sm:text-sm placeholder:text-[var(--text-tertiary)] min-h-[44px]"
                   aria-label="Message"
-                  onChange={(e) => { inputValueRef.current = e.target.value; }}
+                  onChange={(e) => {
+                    inputValueRef.current = e.target.value;
+                  }}
                 />
                 <button
                   type="button"

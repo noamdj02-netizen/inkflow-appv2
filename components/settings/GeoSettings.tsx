@@ -9,7 +9,16 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { MapPin, Navigation, Eye, EyeOff, Check, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
+import {
+  MapPin,
+  Navigation,
+  Eye,
+  EyeOff,
+  Check,
+  Loader2,
+  AlertCircle,
+  ExternalLink,
+} from 'lucide-react';
 import {
   geocodeAddressDetailed,
   getStudioGeo,
@@ -33,7 +42,7 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
   studioSlug = '',
   onGeoAddressSynced,
 }) => {
-  const [geo, setGeo] = useState<StudioGeoData | null>(null);
+  const [, setGeo] = useState<StudioGeoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
@@ -77,7 +86,9 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
   const handleGeocode = async () => {
     const addr = addressInput.trim() || studioAddress?.trim();
     if (!addr) {
-      setError('Indiquez une adresse ci-dessus ou renseignez-la sur la page vitrine (onglet Page vitrine).');
+      setError(
+        'Indiquez une adresse ci-dessus ou renseignez-la sur la page vitrine (onglet Page vitrine).'
+      );
       return;
     }
     setGeocoding(true);
@@ -95,7 +106,11 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
   };
 
   const handleGPS = () => {
-    if (typeof window !== 'undefined' && !window.isSecureContext && window.location.hostname !== 'localhost') {
+    if (
+      typeof window !== 'undefined' &&
+      !window.isSecureContext &&
+      window.location.hostname !== 'localhost'
+    ) {
       setError('La position du navigateur nécessite HTTPS (sauf en développement sur localhost).');
       return;
     }
@@ -114,9 +129,9 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
         if (apiKey) {
           try {
             const res = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lt},${lg}&key=${apiKey}&language=fr`,
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lt},${lg}&key=${apiKey}&language=fr`
             );
-            const json = await res.json() as {
+            const json = (await res.json()) as {
               status: string;
               results?: Array<{
                 address_components: Array<{ types: string[]; long_name: string }>;
@@ -126,7 +141,7 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
             if (json.status === 'OK' && json.results?.[0]) {
               const comp = json.results[0].address_components ?? [];
               const cityComp = comp.find(
-                (c) => c.types.includes('locality') || c.types.includes('postal_town'),
+                (c) => c.types.includes('locality') || c.types.includes('postal_town')
               );
               setCity(cityComp?.long_name ?? '');
               setAddressInput(json.results[0].formatted_address ?? '');
@@ -144,14 +159,15 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
           msg =
             'Accès à la position refusé. Autorisez la localisation pour ce site (icône cadenas ou réglages du navigateur).';
         } else if (code === 2) {
-          msg = 'Position indisponible (GPS désactivé ou signal trop faible). Essayez « Géocoder » avec votre adresse.';
+          msg =
+            'Position indisponible (GPS désactivé ou signal trop faible). Essayez « Géocoder » avec votre adresse.';
         } else if (code === 3) {
           msg = 'Délai dépassé. Réessayez ou saisissez l’adresse puis « Géocoder ».';
         }
         setError(msg);
         setGeocoding(false);
       },
-      { enableHighAccuracy: false, maximumAge: 300_000, timeout: 25_000 },
+      { enableHighAccuracy: false, maximumAge: 300_000, timeout: 25_000 }
     );
   };
 
@@ -245,7 +261,11 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
                 disabled={geocoding}
                 className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-60 min-h-[44px]"
               >
-                {geocoding ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                {geocoding ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <MapPin className="w-4 h-4" />
+                )}
                 Géocoder
               </button>
               <button
@@ -268,7 +288,9 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
             <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
             <div className="min-w-0">
               {city && (
-                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">{city}</p>
+                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                  {city}
+                </p>
               )}
               <p className="text-xs text-emerald-700 dark:text-emerald-400 font-mono mt-0.5">
                 {lat?.toFixed(5)}, {lng?.toFixed(5)}
@@ -288,10 +310,11 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
         {/* Toggle visibilité */}
         <div className="flex items-center justify-between py-3 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/30">
           <div className="flex items-center gap-3">
-            {visible
-              ? <Eye className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-              : <EyeOff className="w-4 h-4 text-zinc-400" />
-            }
+            {visible ? (
+              <Eye className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+            ) : (
+              <EyeOff className="w-4 h-4 text-zinc-400" />
+            )}
             <div>
               <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
                 Visible sur la carte client
@@ -341,9 +364,13 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
           }`}
         >
           {saving ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Sauvegarde…</>
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" /> Sauvegarde…
+            </>
           ) : saved ? (
-            <><Check className="w-4 h-4" /> Position enregistrée !</>
+            <>
+              <Check className="w-4 h-4" /> Position enregistrée !
+            </>
           ) : (
             'Enregistrer la position'
           )}
@@ -354,7 +381,8 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
           <p className="text-xs text-zinc-400 dark:text-zinc-500 text-center leading-relaxed">
             Pour « Géocoder » et l’adresse après « Ma position », ajoutez une clé navigateur (
             <code className="font-mono">VITE_GOOGLE_MAPS_JS_API_KEY</code>) avec l’API{' '}
-            <strong className="font-medium text-zinc-500 dark:text-zinc-400">Geocoding</strong> activée sur Google Cloud.
+            <strong className="font-medium text-zinc-500 dark:text-zinc-400">Geocoding</strong>{' '}
+            activée sur Google Cloud.
           </p>
         )}
       </div>

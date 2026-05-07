@@ -7,7 +7,6 @@ import {
   Zap,
   Crown,
   Shield,
-  FileText,
   Sparkles,
   ArrowRight,
   Clock,
@@ -196,7 +195,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
         toast.error('Une erreur est survenue');
       })
       .finally(() => setLoading(false));
-  }, [studioId]);
+  }, [studioId, toast]);
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     if (!studioId) return;

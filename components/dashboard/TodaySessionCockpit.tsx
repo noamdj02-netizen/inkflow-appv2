@@ -187,10 +187,7 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
   }, [canonicalFlashPrice, focusAppointment, hasPriceMismatch, onSyncAppointmentPrice]);
 
   return (
-    <Card
-      size="sm"
-      className="mb-3 rounded-3xl border-zinc-200/80 bg-white/95 shadow-sm ring-0 dark:border-zinc-800 dark:bg-zinc-900/70 sm:mb-4"
-    >
+    <Card size="sm" className="ds-glass-widget mb-3 ring-0 sm:mb-4">
       <CardHeader className="space-y-0 px-3.5 pb-2.5 pt-3.5 sm:space-y-2 sm:px-4 sm:pb-3 sm:pt-4">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
@@ -229,8 +226,8 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
       </CardHeader>
 
       <CardContent className="space-y-0 px-3.5 pb-4 pt-0 sm:px-4 sm:pb-5">
-        <div className="rounded-2xl border border-zinc-200/90 bg-zinc-50/80 p-2.5 dark:border-zinc-800 dark:bg-zinc-950/45 sm:p-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 sm:mb-2.5">
+        <div className="ds-glass-panel p-2.5 sm:p-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:mb-2.5">
             Aujourd’hui
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -254,9 +251,9 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
             <MetricCard icon={<Package />} label="Lots" value="1 clic" />
           </div>
 
-          <div className="mt-2.5 border-t border-zinc-200/70 pt-2.5 dark:border-zinc-700/80 sm:mt-3 sm:pt-3">
+          <div className="mt-2.5 border-t border-border/60 pt-2.5 sm:mt-3 sm:pt-3">
             {displayedAppointment ? (
-              <div className="rounded-2xl border border-zinc-200/90 bg-white p-2.5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/85 sm:p-3">
+              <div className="rounded-2xl border border-border/60 bg-background/40 p-2.5 shadow-sm sm:p-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
@@ -276,7 +273,7 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
                     <h3 className="mt-2 truncate text-[15px] font-bold leading-snug text-zinc-950 dark:text-white sm:mt-2.5 sm:text-lg">
                       {displayedAppointment.clientName}
                     </h3>
-                    <p className="mt-0.5 truncate text-[13px] text-zinc-500 dark:text-zinc-400 sm:text-sm">
+                    <p className="mt-0.5 truncate text-[13px] text-muted-foreground sm:text-sm">
                       {stripEmbeddedPriceFromService(displayedAppointment.service) || 'Séance'} ·{' '}
                       {formatEuro(displayedAppointment.price)}
                     </p>
@@ -359,11 +356,9 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/60 px-4 py-4 text-center dark:border-zinc-600 dark:bg-zinc-900/40">
-                <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                  Aucune séance aujourd’hui.
-                </p>
-                <p className="mt-1 text-xs leading-snug text-zinc-500 dark:text-zinc-400 sm:text-sm">
+              <div className="rounded-2xl border border-dashed border-border/70 bg-background/35 px-4 py-4 text-center">
+                <p className="text-sm font-semibold text-foreground">Aucune séance aujourd’hui.</p>
+                <p className="mt-1 text-xs leading-snug text-muted-foreground sm:text-sm">
                   Ouvre l’agenda pour préparer les prochains créneaux ou partager ton lien de
                   réservation.
                 </p>
@@ -385,8 +380,8 @@ interface MetricCardProps {
 
 const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, tone = 'zinc' }) => {
   return (
-    <div className="min-w-0 rounded-xl border border-zinc-200/90 bg-white/90 p-2 sm:p-2.5 dark:border-zinc-700 dark:bg-zinc-900/60 [&_svg]:size-3 [&_svg]:shrink-0 sm:[&_svg]:size-3.5">
-      <div className="flex items-center gap-1 text-[10px] font-medium text-zinc-500 dark:text-zinc-400 sm:text-[11px]">
+    <div className="min-w-0 rounded-xl border border-border/60 bg-background/35 p-2 sm:p-2.5 [&_svg]:size-3 [&_svg]:shrink-0 sm:[&_svg]:size-3.5">
+      <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground sm:text-[11px]">
         {icon}
         <span className="truncate">{label}</span>
       </div>
@@ -395,7 +390,7 @@ const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, tone = 'zin
           'mt-0.5 truncate text-[13px] font-bold tabular-nums sm:text-base',
           tone === 'emerald' && 'text-emerald-700 dark:text-emerald-300',
           tone === 'amber' && 'text-amber-700 dark:text-amber-300',
-          tone === 'zinc' && 'text-zinc-950 dark:text-white'
+          tone === 'zinc' && 'text-foreground'
         )}
       >
         {value}

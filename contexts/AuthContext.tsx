@@ -233,7 +233,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [isSupabaseAuthEnabled]);
 
   /** Après login, la photo ne doit pas dépendre du localStorage (vidé à la déconnexion) : relire `avatar_url` en base. */
   useEffect(() => {

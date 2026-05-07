@@ -23,12 +23,8 @@ import {
   ExternalLink,
   AlertCircle,
   CalendarCheck,
-  Phone,
   MessageCircle,
-  Home,
-  Settings,
   Zap,
-  Grip,
   Move,
   GripVertical,
   X,
@@ -36,13 +32,8 @@ import {
   Sparkles,
   BarChart3,
   Gift,
-  Heart,
   Award,
-  Percent,
   Bell,
-  FileText,
-  MapPin,
-  Share2,
   Check,
   Loader2,
   Camera,
@@ -67,12 +58,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { RevenueChart } from './RevenueChart';
-import { AppointmentDayList } from './AppointmentDayList';
 import { getVitrineSlug } from '../../lib/vitrineStorage';
 import {
   getLayoutFromStorage,
   setLayoutToStorage,
-  DEFAULT_LAYOUT,
   type DashboardLayout,
 } from '../../lib/dashboardWidgetOrder';
 import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
@@ -81,6 +70,7 @@ import type { Appointment, Client, FlashDesign, ProjectRequest } from '../../typ
 import type { DashboardWidget } from './DashboardWidgets';
 import { StudioSetupChecklist } from './StudioSetupChecklist';
 import { StudioPresenceMiniCard } from './StudioPresenceMiniCard';
+import { BADGES, BUTTONS, KPI_SHELLS, TYPOGRAPHY } from './DashboardOverviewDesignSystem';
 import { IconBox } from '../ui/IconBox';
 import { LANDING_PRICING_URL } from '../../lib/urls';
 import { Button } from '@/components/ui/button';
@@ -276,7 +266,7 @@ function OverviewSortableWidget({
           <div
             {...attributes}
             {...listeners}
-            className="p-1.5 rounded-lg bg-blue-600 dark:bg-blue-500 text-white cursor-grab active:cursor-grabbing shadow-lg"
+            className="p-1.5 rounded-lg bg-primary text-primary-foreground cursor-grab active:cursor-grabbing shadow-lg"
           >
             <GripVertical className="w-3.5 h-3.5" />
           </div>
@@ -294,7 +284,7 @@ function OverviewSortableWidget({
       <div
         className={
           isEditMode
-            ? 'ring-2 ring-blue-500/50 ring-offset-2 dark:ring-offset-zinc-950 rounded-2xl'
+            ? 'ring-2 ring-primary/40 ring-offset-2 ring-offset-background rounded-2xl'
             : ''
         }
       >
@@ -343,7 +333,7 @@ function OverviewSortableKpi({
           <div
             {...attributes}
             {...listeners}
-            className="p-1.5 rounded-lg bg-blue-600 dark:bg-blue-500 text-white cursor-grab active:cursor-grabbing shadow-lg"
+            className="p-1.5 rounded-lg bg-primary text-primary-foreground cursor-grab active:cursor-grabbing shadow-lg"
           >
             <GripVertical className="w-3.5 h-3.5" />
           </div>
@@ -359,7 +349,7 @@ function OverviewSortableKpi({
         </div>
       )}
       <div
-        className={`h-full ${isEditMode ? 'ring-2 ring-blue-500/50 ring-offset-2 dark:ring-offset-zinc-950 rounded-2xl' : ''}`}
+        className={`h-full ${isEditMode ? 'ring-2 ring-primary/40 ring-offset-2 ring-offset-background rounded-2xl' : ''}`}
       >
         {children}
       </div>
@@ -466,12 +456,12 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   clients,
   topClients,
   customWidgets,
-  setCustomWidgets,
+  setCustomWidgets: _setCustomWidgets,
   monthlyRevenue,
   monthlyForecast,
   totalRevenue,
   pendingDeposits,
-  nextAppointmentIn2h,
+  nextAppointmentIn2h: _nextAppointmentIn2h,
   visibleAlerts,
   rdvAlertUnpaidCount = 0,
   rdvAlertBientotCount = 0,
@@ -479,10 +469,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   setActiveTab,
   onAlertNavigate,
   setSelectedAppointment,
-  onUpdateAppointment,
+  onUpdateAppointment: _onUpdateAppointment,
   setShowBookingModal,
   setSelectedFlash,
-  setShowWidgetModal,
+  setShowWidgetModal: _setShowWidgetModal,
   pendingDemandesCount,
   studioSlug,
   studioId,
@@ -498,7 +488,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   studioSubscriptionStatus,
   trialEndsAt,
   onOpenBilling,
-  pageTitleInShell = false,
+  pageTitleInShell: _pageTitleInShell = false,
   mobileAfterHero,
   usePlaceholderForPublicVisibility = false,
 }) => {
@@ -527,25 +517,25 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     [prefersReducedMotion]
   );
 
-  const quickGridVariants = useMemo(
+  const mobileStackVariants = useMemo(
     () => ({
       hidden: {},
       visible: prefersReducedMotion
         ? { transition: { duration: 0 } }
-        : { transition: { staggerChildren: 0.07, delayChildren: 0.1 } },
+        : { transition: { staggerChildren: 0.06, delayChildren: 0.02 } },
     }),
     [prefersReducedMotion]
   );
 
-  const quickTileVariants = useMemo(
+  const mobileSectionVariants = useMemo(
     () => ({
-      hidden: prefersReducedMotion ? { y: 0, opacity: 1 } : { y: 12, opacity: 0.88 },
+      hidden: prefersReducedMotion ? { y: 0, opacity: 1 } : { y: 10, opacity: 0.92 },
       visible: prefersReducedMotion
         ? { y: 0, opacity: 1, transition: { duration: 0 } }
         : {
             y: 0,
             opacity: 1,
-            transition: { type: 'spring' as const, stiffness: 500, damping: 34, mass: 0.7 },
+            transition: { duration: 0.28, ease: [0.2, 0.8, 0.2, 1] as const },
           },
     }),
     [prefersReducedMotion]
@@ -631,14 +621,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   ).length;
 
   const unpaidCount = appointments.filter((a) => !a.deposit && a.status !== 'cancelled').length;
-  const todayOrTomorrowCount = appointments.filter((a) => {
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
-    return (
-      (a.date === today || a.date === tomorrowStr) && ['pending', 'confirmed'].includes(a.status)
-    );
-  }).length;
 
   useEffect(() => {
     if (!showWidgetPicker) return;
@@ -974,60 +956,37 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
   const nextClient = todayAppointments[0] || null;
 
-  const greeting = (() => {
-    const h = now.getHours();
-    return h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
-  })();
-
   /** Photo de couverture vitrine (Paramètres) — bandeau accueil mobile */
   const overviewCover = overviewHeaderBgUrl?.trim() || null;
 
   /** Desktop KPI — cartes .prodify-card (relief portfolio, aligné index.css) */
-  const desktopKpiShell =
-    'prodify-card p-5 h-full flex flex-col justify-between min-h-[130px] min-w-0 ring-1 ring-inset ring-zinc-900/[0.04] dark:ring-white/[0.05]';
-  const desktopKpiCaption =
-    'text-[11px] font-medium text-zinc-500 dark:text-zinc-400 tracking-tight shrink-0';
-  const desktopKpiIconBtn =
-    'w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-colors flex-shrink-0';
-  /** Cartes KPI mobile : fond « secondary grouped » + bandeau sémantique (équivalent tint iOS) */
-  /** Cartes & listes — mêmes jetons que revenu / stats (vue mobile CRM) */
-  const crmCard =
-    'rounded-3xl border border-zinc-200/80 bg-white/95 shadow-sm ring-0 dark:border-zinc-800 dark:bg-zinc-900/70';
-  /** Accueil mobile : surfaces alignées avec le cockpit du jour */
-  const mobileHomeSurface =
-    'rounded-3xl border border-zinc-200/80 bg-white/95 shadow-sm ring-0 dark:border-zinc-800 dark:bg-zinc-900/70';
-  const mobileQuickActionBar =
-    'rounded-3xl border border-zinc-200/80 bg-white/95 p-2 shadow-sm ring-0 dark:border-zinc-800 dark:bg-zinc-900/70';
-  const mobileQuickActionTile =
-    'flex min-h-[54px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200 bg-zinc-50/80 px-1 py-2 shadow-none active:scale-[0.98] active:opacity-95 motion-reduce:active:scale-100 dark:border-zinc-800 dark:bg-zinc-950/40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/55 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-blue-400/50 dark:focus-visible:ring-offset-zinc-900 [@media(hover:hover)]:hover:bg-white dark:[@media(hover:hover)]:hover:bg-zinc-900';
-  const crmCardHeader =
-    'px-4 py-3 flex items-baseline justify-between border-b border-zinc-200/70 dark:border-zinc-800';
-  const crmSectionTitle = 'text-[16px] font-bold tracking-tight text-zinc-900 dark:text-white';
-  const crmListLink = 'text-[13px] font-medium text-zinc-800 dark:text-zinc-200';
-  const crmMuted = 'text-[12px] text-zinc-500 dark:text-zinc-400';
+  const desktopKpiShell = `prodify-card ${KPI_SHELLS.desktop.outer}`;
+  const desktopKpiCaption = KPI_SHELLS.desktop.caption;
+  const desktopKpiIconBtn = KPI_SHELLS.desktop.icon;
+  /** Home mobile — widgets au même "glass shell" (Figma 387:178) */
+  const crmCard = 'ds-glass-widget';
+  const mobileHomeSurface = 'ds-glass-widget';
+  const crmCardHeader = 'px-4 py-3 flex items-baseline justify-between border-b border-border';
+  const crmSectionTitle = 'text-[16px] font-semibold tracking-tight text-foreground';
+  const crmListLink = 'text-[13px] font-medium text-muted-foreground hover:text-foreground';
 
-  const mobileKpiOuter =
-    'h-full min-w-0 min-h-[128px] flex flex-row rounded-[1.25rem] border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-[#1C1C1E] shadow-[0_2px_12px_rgba(15,23,42,0.06)] dark:shadow-none overflow-hidden';
-  const mobileKpiInner =
-    'flex flex-1 min-h-0 min-w-0 flex-col justify-between gap-0.5 p-3.5 min-[400px]:p-4';
+  const mobileKpiOuter = KPI_SHELLS.mobile.outer;
+  const mobileKpiInner = KPI_SHELLS.mobile.inner;
   /** Bandeau vertical KPI mobile — marque blue-600 */
   const mobileKpiStrip = {
-    revenue: 'bg-blue-600 dark:bg-blue-500',
-    deposits: 'bg-blue-600 dark:bg-blue-500',
-    clients: 'bg-blue-600 dark:bg-blue-500',
-    appointments: 'bg-blue-600 dark:bg-blue-500',
+    revenue: KPI_SHELLS.mobile.strip,
+    deposits: KPI_SHELLS.mobile.strip,
+    clients: KPI_SHELLS.mobile.strip,
+    appointments: KPI_SHELLS.mobile.strip,
   } as const;
-  const iosKpiCaption =
-    'text-[12px] font-medium text-zinc-500 dark:text-zinc-400 leading-snug pr-1 tracking-tight';
+  const iosKpiCaption = KPI_SHELLS.mobile.caption;
   /** Chiffres KPI mobile — grands chiffres tabulaires, lisibles (Dynamic Type–friendly) */
   const iosKpiMetricWrap = 'mt-0.5 inline-flex items-baseline gap-0.5 flex-wrap min-w-0';
-  const iosKpiMetricValue =
-    'text-[28px] min-[400px]:text-[32px] font-semibold tabular-nums tracking-[-0.03em] text-numeric leading-none';
+  const iosKpiMetricValue = KPI_SHELLS.mobile.metric;
   const iosKpiMetricSuffix =
     'text-[14px] min-[400px]:text-[15px] font-medium text-numeric-muted leading-none tabular-nums select-none';
   /** 44×44 pt zone tactile (HIG) */
-  const iosKpiIconBtn =
-    'shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl bg-zinc-100/95 dark:bg-zinc-800/95 active:scale-[0.97] active:opacity-80 transition-all motion-reduce:active:scale-100';
+  const iosKpiIconBtn = BUTTONS.icon;
   /** Métadonnées sous le chiffre — pastille type footnote iOS */
   const iosKpiMetaPill =
     'inline-flex items-center rounded-full bg-zinc-100/95 dark:bg-zinc-800/90 px-2 py-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-300';
@@ -1041,14 +1000,12 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   const iosKpiMetaPillAmber =
     'inline-flex items-center gap-1.5 rounded-full bg-violet-100 dark:bg-violet-500/20 px-2 py-1 text-[11px] font-medium text-violet-900 dark:text-violet-200';
   /** Pastilles KPI desktop (text-[10px] bold) — cohérents avec le thème zinc du dashboard */
-  const kpiPillSm =
-    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold w-fit';
-  const kpiPillPending = `${kpiPillSm} bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200`;
-  const kpiPillNeutral = `${kpiPillSm} bg-zinc-200/90 text-zinc-800 dark:bg-zinc-600/30 dark:text-zinc-200`;
-  const kpiPillVipPill = `${kpiPillSm} bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200`;
-  const kpiPillGrowthPill = `${kpiPillSm} bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200`;
-  const kpiPillDeclinePill = `${kpiPillSm} bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200`;
-  const kpiPillSubtle = `${kpiPillSm} bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400`;
+  const kpiPillPending = BADGES.pending;
+  const kpiPillNeutral = BADGES.neutral;
+  const kpiPillVipPill = BADGES.vip;
+  const kpiPillGrowthPill = BADGES.growth;
+  const kpiPillDeclinePill = BADGES.decline;
+  const kpiPillSubtle = TYPOGRAPHY.tiny;
   const iosKpiMetaPillTrendUp =
     'inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-500/20 px-2 py-1 text-[11px] font-medium text-emerald-900 dark:text-emerald-200';
   const iosKpiMetaPillTrendDown =
@@ -1404,24 +1361,14 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           (un seul arbre sortable actif dans le DndContext).
           ===================================================== */}
         {!isMdUp && (
-          <div className="flex min-w-0 max-w-full flex-col gap-3 overflow-x-hidden bg-transparent pb-[calc(6.75rem+env(safe-area-inset-bottom,0px))] antialiased font-sans [-webkit-font-smoothing:antialiased] sm:gap-5">
+          <div className="ds-home-mobile-ambience flex min-w-0 max-w-full flex-col gap-4 overflow-x-hidden bg-transparent pb-[calc(6.75rem+env(safe-area-inset-bottom,0px))] antialiased font-sans [-webkit-font-smoothing:antialiased] sm:gap-6">
             {/* Accueil mobile — référence type CRM (clair, cartes blanches, donut, onglets pilule) */}
             <div className="px-0 pt-0.5 pb-0 safe-top">
               <motion.div className="flex flex-col gap-2 sm:gap-3" {...iosSpring(0)}>
-                {/* Rangée titre + profil — compacte, date & pill sur une ligne */}
-                <div
-                  className={cn(
-                    mobileHomeSurface,
-                    'relative isolate flex min-h-0 items-start justify-between gap-3 overflow-hidden px-3.5 py-2.5 sm:px-4 sm:py-3',
-                    overviewCover &&
-                      'border-white/20 bg-transparent shadow-sm ring-0 dark:border-zinc-600/40'
-                  )}
-                >
+                {/* Hero mobile — inspiré du layout Figma (wallet): gradient + KPI central + actions */}
+                <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary to-indigo-900 text-primary-foreground shadow-sm">
                   {overviewCover ? (
-                    <div
-                      className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-3xl"
-                      aria-hidden
-                    >
+                    <div className="pointer-events-none absolute inset-0 opacity-30" aria-hidden>
                       <img
                         src={overviewCover}
                         alt=""
@@ -1431,584 +1378,528 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       />
                     </div>
                   ) : null}
-                  <div className="relative z-[1] min-w-0 flex-1 space-y-1">
-                    <h1
-                      id="dashboard-overview-mobile-title"
-                      className={cn(
-                        'text-[15px] font-bold leading-tight tracking-tight text-zinc-900 dark:text-white sm:text-[16px]',
-                        overviewCover &&
-                          'text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.85),0_0_20px_rgba(0,0,0,0.35)]'
-                      )}
-                    >
-                      Vue d&apos;ensemble
-                    </h1>
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                      <p
-                        className={cn(
-                          'text-[11px] font-medium capitalize leading-none tracking-wide text-zinc-500 dark:text-zinc-400 sm:text-[12px]',
-                          overviewCover && 'text-white/85 [text-shadow:0_1px_2px_rgba(0,0,0,0.75)]'
-                        )}
-                      >
-                        {now.toLocaleDateString('fr-FR', {
-                          weekday: 'short',
-                          day: 'numeric',
-                          month: 'short',
-                        })}
-                      </p>
-                      {todayOrTomorrowCount > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('agenda')}
-                          className={cn(
-                            'inline-flex max-w-full min-h-[44px] min-w-0 items-center gap-1.5 rounded-full border px-3 py-2 text-[11px] font-semibold leading-tight shadow-sm transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:text-xs',
-                            overviewCover
-                              ? 'border-white/25 bg-blue-600 text-white hover:bg-blue-500'
-                              : 'border-blue-200/90 bg-blue-600 text-white hover:bg-blue-700 dark:border-blue-500/40 dark:bg-blue-600 dark:hover:bg-blue-500'
-                          )}
+                  <div className="relative z-[1] px-4 pb-4 pt-3.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/70">
+                          {now.toLocaleDateString('fr-FR', {
+                            weekday: 'short',
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                        </p>
+                        <h1
+                          id="dashboard-overview-mobile-title"
+                          className="mt-1 text-[16px] font-semibold tracking-tight text-white"
                         >
-                          <CalendarCheck
-                            className="size-3.5 shrink-0 opacity-95 sm:size-4"
-                            strokeWidth={2}
-                            aria-hidden
-                          />
-                          {todayOrTomorrowCount} RDV bientôt
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="relative z-[1] flex shrink-0 items-start gap-0.5 pt-0.5">
-                    <motion.button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (onAvatarClick) onAvatarClick();
-                        else setActiveTab('settings');
-                      }}
-                      disabled={avatarUploading}
-                      whileTap={prefersReducedMotion ? undefined : { scale: 0.94 }}
-                      className={cn(
-                        'relative size-11 shrink-0 overflow-hidden rounded-2xl border bg-zinc-100 shadow-sm dark:bg-zinc-800 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-900',
-                        overviewCover
-                          ? 'border-white/90 ring-2 ring-black/20'
-                          : 'border-zinc-200 dark:border-zinc-600'
-                      )}
-                      aria-label={onAvatarClick ? 'Changer la photo de profil' : 'Paramètres'}
-                    >
-                      {user?.avatar ? (
-                        <img src={user.avatar} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-zinc-200 dark:bg-zinc-700">
-                          {onAvatarClick ? (
-                            <Camera
-                              className="h-4 w-4 text-zinc-600 dark:text-zinc-300"
-                              strokeWidth={2}
-                              aria-hidden
-                            />
-                          ) : (
-                            <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">
-                              {firstName ? firstName[0].toUpperCase() : '?'}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {avatarUploading && (
-                        <span className="absolute inset-0 flex items-center justify-center bg-black/40">
-                          <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden />
-                        </span>
-                      )}
-                    </motion.button>
-                  </div>
-                </div>
+                          Accueil
+                        </h1>
+                      </div>
 
-                {mobileAfterHero ? <div className="min-w-0 -mt-0.5">{mobileAfterHero}</div> : null}
-
-                {/* Sous-navigation pilule (réf. Home / My Tier / Activities) */}
-                <div
-                  className="grid grid-cols-3 gap-1 rounded-3xl border border-zinc-200/80 bg-white/95 p-1 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70"
-                  role="tablist"
-                  aria-label="Raccourcis accueil"
-                >
-                  <span
-                    role="tab"
-                    aria-selected
-                    aria-current="page"
-                    className="flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl bg-zinc-900 px-2 py-2 text-center text-[13px] font-semibold text-white shadow-sm dark:bg-white dark:text-zinc-900"
-                  >
-                    <Home className="h-4 w-4 shrink-0" aria-hidden />
-                    Accueil
-                  </span>
-                  <button
-                    type="button"
-                    role="tab"
-                    onClick={() => setActiveTab('requests')}
-                    className="relative flex min-h-[48px] min-w-0 items-center justify-center gap-1.5 rounded-2xl px-2 py-2 text-center text-[13px] font-medium text-zinc-600 transition-all active:scale-[0.98] hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset dark:text-zinc-400 dark:hover:bg-zinc-800"
-                  >
-                    <Inbox className="h-4 w-4 shrink-0" aria-hidden />
-                    Demandes
-                    {pendingDemandesCount > 0 && (
-                      <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white dark:bg-red-500 dark:ring-zinc-900">
-                        {pendingDemandesCount > 9 ? '9+' : pendingDemandesCount}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    onClick={() => setActiveTab('agenda')}
-                    className="flex min-h-[48px] min-w-0 items-center justify-center gap-1.5 rounded-2xl px-2 py-2 text-center text-[13px] font-medium text-zinc-600 transition-all active:scale-[0.98] hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset dark:text-zinc-400 dark:hover:bg-zinc-800"
-                  >
-                    <Calendar className="h-4 w-4 shrink-0" aria-hidden />
-                    Agenda
-                    {todayAppointments.length > 0 && (
-                      <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                        {todayAppointments.length}
-                      </span>
-                    )}
-                  </button>
-                </div>
-
-                {/* Actions rapides — sous Accueil / Demandes / Agenda (une rangée, cibles 44pt) */}
-                <motion.div className="w-full" {...iosSpring(0.04)}>
-                  <div className={mobileQuickActionBar}>
-                    <motion.div
-                      className="grid min-w-0 grid-cols-4 gap-2"
-                      variants={quickGridVariants}
-                      initial="hidden"
-                      animate="visible"
-                    >
                       <motion.button
                         type="button"
-                        onClick={() => {
-                          setSelectedFlash(null);
-                          setShowBookingModal(true);
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (onAvatarClick) onAvatarClick();
+                          else setActiveTab('settings');
                         }}
-                        variants={quickTileVariants}
-                        whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                        aria-label="Nouveau rendez-vous"
-                        className={mobileQuickActionTile}
+                        disabled={avatarUploading}
+                        whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
+                        className="relative size-11 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md shadow-sm touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+                        aria-label={onAvatarClick ? 'Changer la photo de profil' : 'Paramètres'}
                       >
-                        <Plus
-                          className="size-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
-                          strokeWidth={2}
-                          aria-hidden
-                        />
-                        <span
-                          className="px-0.5 text-center text-[10px] font-semibold leading-tight text-zinc-600 dark:text-zinc-300"
-                          aria-hidden
-                        >
-                          Nouv. RDV
-                        </span>
-                      </motion.button>
-                      <motion.button
-                        type="button"
-                        onClick={() => setActiveTab('flash')}
-                        variants={quickTileVariants}
-                        whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                        aria-label="Ouvrir la galerie flash"
-                        className={mobileQuickActionTile}
-                      >
-                        <Zap
-                          className="size-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
-                          strokeWidth={2}
-                          aria-hidden
-                        />
-                        <span className="text-center text-[10px] font-semibold leading-tight text-zinc-600 dark:text-zinc-300">
-                          Flash
-                        </span>
-                      </motion.button>
-                      {vitrineSlug ? (
-                        <motion.a
-                          href={`/studio/${vitrineSlug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          variants={quickTileVariants}
-                          whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
-                          transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                          aria-label="Voir la vitrine publique dans un nouvel onglet"
-                          className={mobileQuickActionTile}
-                        >
-                          <ExternalLink
-                            className="size-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
-                            strokeWidth={2}
-                            aria-hidden
-                          />
-                          <span className="text-center text-[10px] font-semibold leading-tight text-zinc-600 dark:text-zinc-300">
-                            Vitrine
-                          </span>
-                        </motion.a>
-                      ) : (
-                        <motion.div
-                          variants={quickTileVariants}
-                          className={cn(
-                            mobileQuickActionTile,
-                            'border-dashed border-zinc-300/90 bg-zinc-100/80 opacity-60 pointer-events-none dark:border-zinc-600 dark:bg-zinc-900/50'
-                          )}
-                        >
-                          <ExternalLink
-                            className="size-[18px] shrink-0 text-zinc-400 dark:text-zinc-500"
-                            strokeWidth={2}
-                            aria-hidden
-                          />
-                          <span className="text-center text-[10px] font-semibold leading-tight text-zinc-400 dark:text-zinc-500">
-                            Vitrine
-                          </span>
-                        </motion.div>
-                      )}
-                      <motion.button
-                        type="button"
-                        onClick={() => setActiveTab('requests')}
-                        variants={quickTileVariants}
-                        whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                        aria-label={
-                          pendingDemandesCount > 0
-                            ? `Demandes, ${pendingDemandesCount} en attente`
-                            : 'Demandes'
-                        }
-                        className={cn(mobileQuickActionTile, 'relative')}
-                      >
-                        {pendingDemandesCount > 0 && (
-                          <span
-                            aria-hidden
-                            className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-0.5 text-[9px] font-bold tabular-nums leading-none text-white shadow-sm ring-2 ring-white dark:bg-red-500 dark:ring-zinc-900"
-                          >
-                            {pendingDemandesCount > 9 ? '9+' : pendingDemandesCount}
+                        {user?.avatar ? (
+                          <img src={user.avatar} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-white/15">
+                            {onAvatarClick ? (
+                              <Camera
+                                className="h-4 w-4 text-white/90"
+                                strokeWidth={2}
+                                aria-hidden
+                              />
+                            ) : (
+                              <span className="text-sm font-bold text-white/90">
+                                {firstName ? firstName[0].toUpperCase() : '?'}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {avatarUploading && (
+                          <span className="absolute inset-0 flex items-center justify-center bg-black/40">
+                            <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden />
                           </span>
                         )}
-                        <Inbox
-                          className="size-[18px] shrink-0 text-zinc-700 dark:text-zinc-200"
-                          strokeWidth={2}
-                          aria-hidden
-                        />
-                        <span className="text-center text-[10px] font-semibold leading-tight text-zinc-600 dark:text-zinc-300">
-                          Demandes
-                        </span>
                       </motion.button>
-                    </motion.div>
-                  </div>
-                </motion.div>
+                    </div>
 
-                {/* Carte métrique principale (revenu + rappels lisibles + zone Finance plate) */}
-                <Card size="sm" className={cn(mobileHomeSurface, 'gap-3 py-4')}>
-                  <CardHeader className="flex flex-col gap-3 px-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
-                        Pilotage du mois
+                    <div className="mt-5 flex flex-col items-center text-center">
+                      <p className="text-[12px] font-medium text-white/70">Pilotage du mois</p>
+                      <p className="mt-1 text-[38px] font-bold leading-none tracking-tight tabular-nums text-white">
+                        {privacyMode ? '••••' : `${safeMonthlyRevenue.toLocaleString('fr-FR')}€`}
                       </p>
-                      <CardTitle className="mt-1 text-[17px] font-bold tracking-tight text-zinc-950 dark:text-white">
-                        Revenus, RDV & demandes
-                      </CardTitle>
-                      <CardDescription className="text-[12px]">
-                        {crmMonthRangeLabel}
-                      </CardDescription>
-                    </div>
-                    <CardAction className="w-full sm:w-auto sm:shrink-0">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setActiveTab('finance')}
-                        className="min-h-[44px] w-full rounded-2xl sm:min-h-0 sm:w-auto"
-                      >
-                        Finance
-                        <ChevronRight data-icon="inline-end" />
-                      </Button>
-                    </CardAction>
-                  </CardHeader>
-
-                  <CardContent className="flex flex-col gap-3 px-4">
-                    <div className="rounded-3xl border border-zinc-900 bg-zinc-950 p-3.5 text-white shadow-sm dark:border-zinc-100 dark:bg-white dark:text-zinc-950">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[12px] font-medium text-white/65 dark:text-zinc-500">
-                            Revenu encaissé
-                          </p>
-                          <p className="mt-1 text-[32px] font-bold leading-none tracking-tight tabular-nums">
-                            {privacyMode
-                              ? '••••'
-                              : `${safeMonthlyRevenue.toLocaleString('fr-FR')}€`}
-                          </p>
-                        </div>
-                        <Badge
-                          variant="secondary"
-                          className="h-auto flex-col items-end rounded-2xl px-3 py-2"
-                        >
-                          <span className="text-[10px] uppercase tracking-wide opacity-70">
-                            Prévu
-                          </span>
-                          <span className="text-sm font-bold tabular-nums">
-                            {privacyMode
-                              ? '••••'
-                              : `+${safeMonthlyForecast.toLocaleString('fr-FR')}€`}
-                          </span>
-                        </Badge>
-                      </div>
-                      <div className="mt-3 grid grid-cols-3 gap-2">
-                        {[
-                          ['RDV mois', appointmentsThisMonth],
-                          ['Terminés', completedAppointmentsThisMonth],
-                          ['Panier moy.', privacyMode ? '••' : `${averageTicketThisMonth}€`],
-                        ].map(([label, value]) => (
-                          <div
-                            key={label}
-                            className="rounded-2xl bg-white/10 p-2 dark:bg-zinc-950/10"
-                          >
-                            <p className="truncate text-[10px] font-medium text-white/55 dark:text-zinc-500">
-                              {label}
-                            </p>
-                            <p className="mt-1 text-lg font-bold tabular-nums">{value}</p>
-                          </div>
-                        ))}
-                      </div>
+                      <p className="mt-1 text-[12px] font-medium text-white/70">
+                        {privacyMode
+                          ? 'Prévision ••••'
+                          : `Prévision +${safeMonthlyForecast.toLocaleString('fr-FR')}€`}
+                      </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="mt-5 grid grid-cols-2 gap-2">
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         onClick={() => setActiveTab('agenda')}
-                        className="h-auto min-h-[62px] flex-col items-start rounded-2xl px-3 py-2.5"
+                        className={cn(
+                          'min-h-[44px] justify-between rounded-2xl px-3 py-2 text-left text-[12px] font-medium',
+                          'bg-white/10 text-white/90 backdrop-blur-md',
+                          'hover:bg-white/15 hover:text-white',
+                          'active:scale-[0.99] transition-[transform,background-color]',
+                          'focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent'
+                        )}
                       >
-                        <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-                          <CalendarCheck data-icon="inline-start" />
-                          Aujourd’hui
+                        <span className="flex min-w-0 items-center gap-2">
+                          <CalendarCheck
+                            data-icon="inline-start"
+                            className="text-white/85"
+                            aria-hidden
+                          />
+                          <span className="truncate">Aujourd’hui</span>
                         </span>
-                        <span className="text-2xl font-bold tabular-nums text-zinc-950 dark:text-white">
+                        <span className="tabular-nums font-semibold">
                           {todayAppointments.length}
                         </span>
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         onClick={() => setActiveTab('requests')}
-                        className="h-auto min-h-[62px] flex-col items-start rounded-2xl px-3 py-2.5"
+                        className={cn(
+                          'min-h-[44px] justify-between rounded-2xl px-3 py-2 text-left text-[12px] font-medium',
+                          'bg-white/10 text-white/90 backdrop-blur-md',
+                          'hover:bg-white/15 hover:text-white',
+                          'active:scale-[0.99] transition-[transform,background-color]',
+                          'focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent'
+                        )}
                       >
-                        <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-                          <Inbox data-icon="inline-start" />
-                          Demandes
+                        <span className="flex min-w-0 items-center gap-2">
+                          <Inbox data-icon="inline-start" className="text-white/85" aria-hidden />
+                          <span className="truncate">Demandes</span>
                         </span>
-                        <span className="text-2xl font-bold tabular-nums text-zinc-950 dark:text-white">
-                          {pendingDemandesCount}
-                        </span>
+                        <span className="tabular-nums font-semibold">{pendingDemandesCount}</span>
                       </Button>
                     </div>
+                  </div>
 
-                    <div className="flex flex-col gap-2">
-                      {trendRevenue !== null && (
-                        <div className="flex min-w-0 flex-wrap items-end gap-2">
-                          <Badge
-                            variant="secondary"
-                            className={cn(
-                              'h-6 rounded-2xl text-[12px] font-semibold tabular-nums',
-                              trendRevenue >= 0
-                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-                                : 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
-                            )}
-                          >
-                            {trendRevenue >= 0 ? (
-                              <TrendingUp data-icon="inline-start" aria-hidden />
-                            ) : (
-                              <TrendingDown data-icon="inline-start" aria-hidden />
-                            )}
-                            {trendRevenue >= 0 ? '+' : ''}
-                            {trendRevenue}% vs mois dernier
-                          </Badge>
-                        </div>
-                      )}
-                      {(rdvAlertUnpaidCount > 0 || rdvAlertBientotCount > 0) && !privacyMode && (
-                        <div
-                          className="flex flex-wrap gap-1"
-                          role="status"
-                          aria-label="Rappels rendez-vous"
-                        >
-                          {rdvAlertUnpaidCount > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => onAlertNavigate?.({ id: 'unpaid', type: 'warning' })}
-                              className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-blue-50/95 px-3 py-2 text-left text-[11px] font-medium leading-snug text-blue-950 ring-1 ring-blue-200/90 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
-                            >
-                              <AlertCircle
-                                className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-sky-400"
-                                strokeWidth={2}
-                                aria-hidden
-                              />
-                              <span className="min-w-0 [text-wrap:balance]">
-                                {rdvAlertUnpaidCount} sans acompte
-                              </span>
-                            </button>
-                          )}
-                          {rdvAlertBientotCount > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => onAlertNavigate?.({ id: '24h', type: 'info' })}
-                              className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-sky-50 px-3 py-2 text-left text-[11px] font-medium leading-snug text-sky-950 ring-1 ring-sky-200/90 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
-                            >
-                              <Clock
-                                className="h-3.5 w-3.5 shrink-0 text-sky-600 dark:text-cyan-300"
-                                strokeWidth={2}
-                                aria-hidden
-                              />
-                              <span className="min-w-0 [text-wrap:balance]">
-                                {rdvAlertBientotCount} auj. ou demain
-                              </span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      {stripeConnectAccountId && useSupabase && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void openStripeExpressDashboard()}
-                          disabled={stripeExpressOpening}
-                          title="Tableau de bord Stripe (Express)"
-                          className="min-h-[44px] w-full rounded-2xl border-dashed"
-                        >
-                          {stripeExpressOpening ? (
-                            <Loader2
-                              data-icon="inline-start"
-                              className="animate-spin"
-                              aria-hidden
-                            />
-                          ) : (
-                            <LayoutDashboard data-icon="inline-start" aria-hidden />
-                          )}
-                          Tableau de bord Stripe
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Bloc statistiques : toggle + période + donut */}
-                <div className={cn(mobileHomeSurface, 'p-4')}>
-                  <div className="flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
-                    <div className="flex flex-1 gap-1 rounded-full bg-zinc-100/90 p-1 ring-1 ring-inset ring-zinc-900/[0.04] dark:bg-black/35 dark:ring-zinc-700/45">
-                      <button
+                  {/* Dock actions — réduit: un CTA principal + secondaires */}
+                  <div className="relative z-[1] px-3 pb-3">
+                    <div className="grid grid-cols-4 gap-2 rounded-3xl border border-white/15 bg-white/10 p-2 backdrop-blur-md">
+                      <Button
                         type="button"
-                        onClick={() => setInsightView('rdv')}
-                        className={cn(
-                          'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-900',
-                          insightView === 'rdv'
-                            ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white dark:ring-1 dark:ring-inset dark:ring-white/12'
-                            : 'text-zinc-500 dark:text-zinc-500'
-                        )}
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedFlash(null);
+                          setShowBookingModal(true);
+                        }}
+                        className="min-h-[52px] flex-col gap-1 rounded-2xl text-white hover:bg-white/15 hover:text-white"
                       >
-                        RDV
-                      </button>
-                      <button
+                        <Plus aria-hidden />
+                        <span className="text-[11px] font-medium">RDV</span>
+                      </Button>
+                      <Button
                         type="button"
-                        onClick={() => setInsightView('demandes')}
-                        className={cn(
-                          'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-900',
-                          insightView === 'demandes'
-                            ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white dark:ring-1 dark:ring-inset dark:ring-white/12'
-                            : 'text-zinc-500 dark:text-zinc-500'
-                        )}
+                        variant="ghost"
+                        onClick={() => {
+                          if (vitrineSlug)
+                            window.open(`/studio/${vitrineSlug}`, '_blank', 'noopener,noreferrer');
+                          else setActiveTab('agenda');
+                        }}
+                        className="min-h-[52px] flex-col gap-1 rounded-2xl text-white hover:bg-white/15 hover:text-white"
                       >
-                        Demandes
-                      </button>
-                    </div>
-                    <div className="flex min-h-[44px] items-center gap-2 self-stretch min-[400px]:self-auto">
-                      <label
-                        htmlFor="overview-insight-period"
-                        className="shrink-0 text-xs font-medium text-zinc-600 dark:text-zinc-400"
+                        <ExternalLink aria-hidden />
+                        <span className="text-[11px] font-medium">Vitrine</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setActiveTab('flash')}
+                        className="min-h-[52px] flex-col gap-1 rounded-2xl text-white hover:bg-white/15 hover:text-white"
                       >
-                        Période
-                      </label>
-                      <div className="relative min-w-0 flex-1 max-w-[11rem]">
-                        <select
-                          id="overview-insight-period"
-                          value={insightPeriod}
-                          onChange={(e) => setInsightPeriod(e.target.value as 'week' | 'month')}
-                          className="min-h-[44px] w-full appearance-none rounded-xl border border-zinc-200 bg-white py-2 pl-3 pr-9 text-sm font-medium text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                          aria-label="Période des statistiques"
-                        >
-                          <option value="week">7 jours</option>
-                          <option value="month">Mois en cours</option>
-                        </select>
-                        <ChevronDown
-                          className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
-                          aria-hidden
-                        />
-                      </div>
+                        <Zap aria-hidden />
+                        <span className="text-[11px] font-medium">Flash</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setActiveTab('clients')}
+                        className="min-h-[52px] flex-col gap-1 rounded-2xl text-white hover:bg-white/15 hover:text-white"
+                      >
+                        <Users aria-hidden />
+                        <span className="text-[11px] font-medium">Clients</span>
+                      </Button>
                     </div>
                   </div>
-                  <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
-                    {insightPeriod === 'month'
-                      ? crmMonthRangeLabel
-                      : `Semaine : ${crmWeekRangeLabel}`}
-                  </p>
-                  {insightDonutData.length > 0 ? (
-                    <div className="mt-4 flex flex-col items-stretch gap-4 min-[420px]:flex-row min-[420px]:items-center">
-                      <div className="mx-auto w-full max-w-[200px] min-[420px]:mx-0 min-[420px]:w-[200px] min-[420px]:shrink-0">
-                        <div className="h-[200px] w-full min-[420px]:h-[180px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={insightDonutData}
-                                dataKey="value"
-                                nameKey="name"
-                                innerRadius="58%"
-                                outerRadius="88%"
-                                paddingAngle={2}
-                                stroke="none"
-                              >
-                                {insightDonutData.map((entry) => (
-                                  <Cell key={entry.name} fill={entry.color} />
-                                ))}
-                              </Pie>
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-                      <ul className="flex min-w-0 flex-1 flex-col gap-2" aria-label="Légende">
-                        {insightDonutData.map((row) => (
-                          <li
-                            key={row.name}
-                            className="flex items-center justify-between gap-2 text-[13px]"
-                          >
-                            <span className="flex min-w-0 items-center gap-2">
-                              <span
-                                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                style={{ backgroundColor: row.color }}
-                                aria-hidden
-                              />
-                              <span className="truncate text-zinc-700 dark:text-zinc-200">
-                                {row.name}
-                              </span>
-                            </span>
-                            <span className="shrink-0 font-semibold tabular-nums text-zinc-900 dark:text-white">
-                              {row.value}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <p className="mt-4 rounded-xl border border-dashed border-zinc-200 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                      Pas encore de données sur cette période.
-                    </p>
-                  )}
                 </div>
 
-                {/* Pills rappels (acomptes — RDV proches affichés dans l’en-tête Vue d’ensemble) */}
-                {unpaidCount > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('requests')}
-                      className="flex min-h-[44px] items-center gap-2 rounded-full bg-zinc-200/90 px-4 py-2 text-xs font-semibold text-zinc-900 shadow-sm transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:bg-zinc-700/50 dark:text-zinc-100 dark:focus-visible:ring-offset-zinc-900"
-                    >
-                      <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
-                      {unpaidCount} sans acompte
-                    </button>
-                  </div>
-                )}
+                {pendingDemandesCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('requests')}
+                    className={cn(
+                      'flex w-full min-h-[44px] items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white/95 px-4 py-2.5 text-left shadow-sm backdrop-blur-sm transition-all active:scale-[0.99]',
+                      'dark:border-zinc-700/70 dark:bg-zinc-900/65'
+                    )}
+                  >
+                    <span className="flex min-w-0 items-center gap-2 text-[13px] font-medium text-zinc-700 dark:text-zinc-200">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 dark:bg-amber-500/12">
+                        <Inbox className="size-4 text-amber-700 dark:text-amber-300" aria-hidden />
+                      </span>
+                      <span className="truncate">
+                        {pendingDemandesCount}{' '}
+                        {pendingDemandesCount === 1 ? 'demande en attente' : 'demandes en attente'}
+                      </span>
+                    </span>
+                    <ChevronRight
+                      className="size-4 shrink-0 text-zinc-400 dark:text-zinc-500"
+                      aria-hidden
+                    />
+                  </button>
+                ) : null}
+
+                {mobileAfterHero ? <div className="min-w-0 -mt-0.5">{mobileAfterHero}</div> : null}
+
+                {/* Sous-navigation — supprimée (dock d’actions dans le hero + scroll plus fluide). */}
+
+                <motion.div
+                  variants={mobileStackVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="flex flex-col gap-4 sm:gap-5"
+                >
+                  {/* Carte métrique principale (revenu + rappels lisibles + zone Finance plate) */}
+                  <motion.div variants={mobileSectionVariants}>
+                    <Card size="sm" className={cn(mobileHomeSurface, 'gap-3 py-4')}>
+                      <CardHeader className="flex flex-col gap-3 px-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+                            Pilotage du mois
+                          </p>
+                          <CardTitle className="mt-1 text-[17px] font-bold tracking-tight text-zinc-950 dark:text-white">
+                            Revenus, RDV & demandes
+                          </CardTitle>
+                          <CardDescription className="text-[12px]">
+                            {crmMonthRangeLabel}
+                          </CardDescription>
+                        </div>
+                        <CardAction className="w-full sm:w-auto sm:shrink-0">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setActiveTab('finance')}
+                            className="min-h-[44px] w-full rounded-2xl sm:min-h-0 sm:w-auto"
+                          >
+                            Finance
+                            <ChevronRight data-icon="inline-end" />
+                          </Button>
+                        </CardAction>
+                      </CardHeader>
+
+                      <CardContent className="flex flex-col gap-3 px-4">
+                        <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-primary to-indigo-900 p-3.5 text-primary-foreground shadow-sm">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-[12px] font-medium text-white/75">
+                                Revenu encaissé
+                              </p>
+                              <p className="mt-1 text-[32px] font-bold leading-none tracking-tight tabular-nums">
+                                {privacyMode
+                                  ? '••••'
+                                  : `${safeMonthlyRevenue.toLocaleString('fr-FR')}€`}
+                              </p>
+                            </div>
+                            <Badge
+                              variant="secondary"
+                              className="h-auto flex-col items-end rounded-2xl px-3 py-2 bg-white/12 text-white border border-white/10"
+                            >
+                              <span className="text-[10px] uppercase tracking-wide opacity-70">
+                                Prévu
+                              </span>
+                              <span className="text-sm font-bold tabular-nums">
+                                {privacyMode
+                                  ? '••••'
+                                  : `+${safeMonthlyForecast.toLocaleString('fr-FR')}€`}
+                              </span>
+                            </Badge>
+                          </div>
+                          <div className="mt-3 grid grid-cols-3 gap-2">
+                            {[
+                              ['RDV mois', appointmentsThisMonth],
+                              ['Terminés', completedAppointmentsThisMonth],
+                              ['Panier moy.', privacyMode ? '••' : `${averageTicketThisMonth}€`],
+                            ].map(([label, value]) => (
+                              <div key={label} className="rounded-2xl bg-white/10 p-2">
+                                <p className="truncate text-[10px] font-medium text-white/70">
+                                  {label}
+                                </p>
+                                <p className="mt-1 text-lg font-bold tabular-nums">{value}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setActiveTab('agenda')}
+                            className="h-auto min-h-[62px] flex-col items-start rounded-2xl px-3 py-2.5"
+                          >
+                            <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+                              <CalendarCheck data-icon="inline-start" />
+                              Aujourd’hui
+                            </span>
+                            <span className="text-2xl font-bold tabular-nums text-zinc-950 dark:text-white">
+                              {todayAppointments.length}
+                            </span>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setActiveTab('requests')}
+                            className="h-auto min-h-[62px] flex-col items-start rounded-2xl px-3 py-2.5"
+                          >
+                            <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+                              <Inbox data-icon="inline-start" />
+                              Demandes
+                            </span>
+                            <span className="text-2xl font-bold tabular-nums text-zinc-950 dark:text-white">
+                              {pendingDemandesCount}
+                            </span>
+                          </Button>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          {trendRevenue !== null && (
+                            <div className="flex min-w-0 flex-wrap items-end gap-2">
+                              <Badge
+                                variant="secondary"
+                                className={cn(
+                                  'h-6 rounded-2xl text-[12px] font-semibold tabular-nums',
+                                  trendRevenue >= 0
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                                    : 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
+                                )}
+                              >
+                                {trendRevenue >= 0 ? (
+                                  <TrendingUp data-icon="inline-start" aria-hidden />
+                                ) : (
+                                  <TrendingDown data-icon="inline-start" aria-hidden />
+                                )}
+                                {trendRevenue >= 0 ? '+' : ''}
+                                {trendRevenue}% vs mois dernier
+                              </Badge>
+                            </div>
+                          )}
+                          {(rdvAlertUnpaidCount > 0 || rdvAlertBientotCount > 0) &&
+                            !privacyMode && (
+                              <div
+                                className="flex flex-wrap gap-1"
+                                role="status"
+                                aria-label="Rappels rendez-vous"
+                              >
+                                {rdvAlertUnpaidCount > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onAlertNavigate?.({ id: 'unpaid', type: 'warning' })
+                                    }
+                                    className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-primary/10 px-3 py-2 text-left text-[11px] font-medium leading-snug text-zinc-950 ring-1 ring-primary/20 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
+                                  >
+                                    <AlertCircle
+                                      className="h-3.5 w-3.5 shrink-0 text-primary dark:text-sky-400"
+                                      strokeWidth={2}
+                                      aria-hidden
+                                    />
+                                    <span className="min-w-0 [text-wrap:balance]">
+                                      {rdvAlertUnpaidCount} sans acompte
+                                    </span>
+                                  </button>
+                                )}
+                                {rdvAlertBientotCount > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onAlertNavigate?.({ id: '24h', type: 'info' })}
+                                    className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-sky-50 px-3 py-2 text-left text-[11px] font-medium leading-snug text-sky-950 ring-1 ring-sky-200/90 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
+                                  >
+                                    <Clock
+                                      className="h-3.5 w-3.5 shrink-0 text-sky-600 dark:text-cyan-300"
+                                      strokeWidth={2}
+                                      aria-hidden
+                                    />
+                                    <span className="min-w-0 [text-wrap:balance]">
+                                      {rdvAlertBientotCount} auj. ou demain
+                                    </span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          {stripeConnectAccountId && useSupabase && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void openStripeExpressDashboard()}
+                              disabled={stripeExpressOpening}
+                              title="Tableau de bord Stripe (Express)"
+                              className="min-h-[44px] w-full rounded-2xl border-dashed"
+                            >
+                              {stripeExpressOpening ? (
+                                <Loader2
+                                  data-icon="inline-start"
+                                  className="animate-spin"
+                                  aria-hidden
+                                />
+                              ) : (
+                                <LayoutDashboard data-icon="inline-start" aria-hidden />
+                              )}
+                              Tableau de bord Stripe
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  {/* Bloc statistiques : toggle + période + donut */}
+                  <motion.div variants={mobileSectionVariants}>
+                    <div className={cn(mobileHomeSurface, 'p-4')}>
+                      <div className="flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
+                        <div className="flex flex-1 gap-1 rounded-full bg-zinc-100/90 p-1 ring-1 ring-inset ring-zinc-900/[0.04] dark:bg-black/35 dark:ring-zinc-700/45">
+                          <button
+                            type="button"
+                            onClick={() => setInsightView('rdv')}
+                            className={cn(
+                              'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                              insightView === 'rdv'
+                                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white dark:ring-1 dark:ring-inset dark:ring-white/12'
+                                : 'text-zinc-500 dark:text-zinc-500'
+                            )}
+                          >
+                            RDV
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setInsightView('demandes')}
+                            className={cn(
+                              'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                              insightView === 'demandes'
+                                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-white dark:ring-1 dark:ring-inset dark:ring-white/12'
+                                : 'text-zinc-500 dark:text-zinc-500'
+                            )}
+                          >
+                            Demandes
+                          </button>
+                        </div>
+                        <div className="flex min-h-[44px] items-center gap-2 self-stretch min-[400px]:self-auto">
+                          <label
+                            htmlFor="overview-insight-period"
+                            className="shrink-0 text-xs font-medium text-zinc-600 dark:text-zinc-400"
+                          >
+                            Période
+                          </label>
+                          <div className="relative min-w-0 flex-1 max-w-[11rem]">
+                            <select
+                              id="overview-insight-period"
+                              value={insightPeriod}
+                              onChange={(e) => setInsightPeriod(e.target.value as 'week' | 'month')}
+                              className="min-h-[44px] w-full appearance-none rounded-xl border border-zinc-200 bg-white py-2 pl-3 pr-9 text-sm font-medium text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                              aria-label="Période des statistiques"
+                            >
+                              <option value="week">7 jours</option>
+                              <option value="month">Mois en cours</option>
+                            </select>
+                            <ChevronDown
+                              className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
+                              aria-hidden
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
+                        {insightPeriod === 'month'
+                          ? crmMonthRangeLabel
+                          : `Semaine : ${crmWeekRangeLabel}`}
+                      </p>
+                      {insightDonutData.length > 0 ? (
+                        <div className="mt-4 flex flex-col items-stretch gap-4 min-[420px]:flex-row min-[420px]:items-center">
+                          <div className="mx-auto w-full max-w-[200px] min-[420px]:mx-0 min-[420px]:w-[200px] min-[420px]:shrink-0">
+                            <div className="h-[200px] w-full min-[420px]:h-[180px]">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie
+                                    data={insightDonutData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    innerRadius="58%"
+                                    outerRadius="88%"
+                                    paddingAngle={2}
+                                    stroke="none"
+                                  >
+                                    {insightDonutData.map((entry) => (
+                                      <Cell key={entry.name} fill={entry.color} />
+                                    ))}
+                                  </Pie>
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+                          <ul className="flex min-w-0 flex-1 flex-col gap-2" aria-label="Légende">
+                            {insightDonutData.map((row) => (
+                              <li
+                                key={row.name}
+                                className="flex items-center justify-between gap-2 text-[13px]"
+                              >
+                                <span className="flex min-w-0 items-center gap-2">
+                                  <span
+                                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                    style={{ backgroundColor: row.color }}
+                                    aria-hidden
+                                  />
+                                  <span className="truncate text-zinc-700 dark:text-zinc-200">
+                                    {row.name}
+                                  </span>
+                                </span>
+                                <span className="shrink-0 font-semibold tabular-nums text-zinc-900 dark:text-white">
+                                  {row.value}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <p className="mt-4 rounded-xl border border-dashed border-zinc-200 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                          Pas encore de données sur cette période.
+                        </p>
+                      )}
+                    </div>
+                  </motion.div>
+
+                  {/* Pills rappels (acomptes — RDV proches affichés dans l’en-tête Vue d’ensemble) */}
+                  {unpaidCount > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('requests')}
+                        className="flex min-h-[44px] items-center gap-2 rounded-full bg-zinc-200/90 px-4 py-2 text-xs font-semibold text-zinc-900 shadow-sm transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:bg-zinc-700/50 dark:text-zinc-100 dark:focus-visible:ring-offset-zinc-900"
+                      >
+                        <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
+                        {unpaidCount} sans acompte
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
               </motion.div>
             </div>
 
@@ -2081,247 +1972,174 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             )}
 
             {/* Main Content — mêmes jetons cartes CRM */}
-            <motion.div className="px-0 flex flex-col gap-4" {...iosSpring(0.12)}>
-              {/* Widget "Actions Requises" — affiché uniquement si demandes en attente */}
-              {pendingDemandesCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('requests')}
-                  className={cn(
-                    mobileHomeSurface,
-                    'w-full border-l-4 border-l-amber-500/90 pl-3.5 p-3 flex items-center gap-3 text-left active:scale-[0.99] transition-transform touch-manipulation min-h-[56px] rounded-3xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:border-l-amber-500/80 dark:focus-visible:ring-offset-zinc-900'
-                  )}
-                  aria-label={`Voir les ${pendingDemandesCount} demande${pendingDemandesCount > 1 ? 's' : ''} en attente`}
-                >
-                  <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200/80 dark:border-zinc-700/80 flex items-center justify-center shrink-0">
-                    <Inbox
-                      className="w-5 h-5 text-zinc-600 dark:text-zinc-400"
-                      strokeWidth={2}
-                      aria-hidden
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">
-                      {pendingDemandesCount} demande{pendingDemandesCount > 1 ? 's' : ''} en attente
-                    </p>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      Action requise · Répondre maintenant
-                    </p>
-                  </div>
-                  <ChevronRight
-                    className="w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0"
-                    strokeWidth={2}
-                    aria-hidden
-                  />
-                </button>
-              )}
-
-              {/* KPIs — encart « Ce mois » (même peau que revenu / stats) */}
-              <div className={cn(mobileHomeSurface, 'p-4')}>
-                <div className="flex flex-col gap-2 min-[380px]:flex-row min-[380px]:items-end min-[380px]:justify-between min-[380px]:gap-3 sm:pb-0">
-                  <div className="min-w-0">
-                    <h2 className="text-[13px] font-semibold text-zinc-900 dark:text-white">
-                      Ce mois
-                    </h2>
-                    <p className={cn(crmMuted, 'mt-0.5')}>Indicateurs clés</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 self-stretch min-[380px]:self-auto justify-end min-[380px]:pb-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setIsEditMode((v) => !v)}
-                      className={`inline-flex min-h-[44px] items-center gap-1.5 px-3 py-2 rounded-xl text-sm min-[400px]:text-[15px] font-medium transition-colors active:scale-[0.98] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 ${
-                        isEditMode
-                          ? 'bg-blue-600 text-white dark:bg-blue-500'
-                          : 'border border-zinc-200/90 bg-zinc-50/80 text-blue-700 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-blue-400'
-                      }`}
-                    >
-                      <LayoutGrid className="w-4 h-4 shrink-0" />
-                      {isEditMode ? 'OK' : 'Widgets'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('analytics')}
-                      className={cn(
-                        'min-h-[44px] rounded-xl px-3 py-2 text-sm font-medium',
-                        'active:opacity-70 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900',
-                        crmListLink
-                      )}
-                    >
-                      Tout
-                    </button>
-                  </div>
-                </div>
-                {!isMdUp ? (
-                  <SortableContext items={layout.kpiOrder} strategy={rectSortingStrategy}>
-                    <div className="mt-3 grid grid-cols-2 gap-3 min-[400px]:gap-3.5 items-stretch min-w-0 [contain:layout] [grid-auto-rows:minmax(0,1fr)]">
-                      {layout.kpiOrder.map((widgetId) => renderKpiWidget(widgetId))}
-                    </div>
-                  </SortableContext>
-                ) : null}
-              </div>
-
+            <motion.div
+              variants={mobileStackVariants}
+              initial="hidden"
+              animate="visible"
+              className="px-0 flex flex-col gap-4"
+              {...iosSpring(0.12)}
+            >
               {/* Aujourd&apos;hui */}
-              <div className={cn('overflow-hidden', crmCard)}>
-                <div className={crmCardHeader}>
-                  <span className={crmSectionTitle}>Aujourd&apos;hui</span>
-                  <span className="text-[13px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
-                    {todayAppointments.length} RDV
-                  </span>
+              <motion.div variants={mobileSectionVariants}>
+                <div className={cn('overflow-hidden', crmCard)}>
+                  <div className={crmCardHeader}>
+                    <span className={crmSectionTitle}>Aujourd&apos;hui</span>
+                    <span className="text-[13px] font-medium tabular-nums text-zinc-500 dark:text-zinc-400">
+                      {todayAppointments.length} RDV
+                    </span>
+                  </div>
+                  {todayAppointments.length > 0 ? (
+                    <div className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
+                      {todayAppointments.slice(0, 4).map((apt) => {
+                        const tint = getTodayRowTint(apt.status);
+                        const needsDeposit = !apt.depositPaid && apt.deposit > 0;
+                        return (
+                          <button
+                            key={apt.id}
+                            type="button"
+                            onClick={() => setSelectedAppointment(apt)}
+                            className={`w-full flex items-center gap-3 pl-3 pr-4 py-3 min-h-[52px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left ${tint.border} ${needsDeposit ? 'ring-1 ring-inset ring-blue-400/40 dark:ring-blue-500/30' : ''}`}
+                          >
+                            <div
+                              className={`w-[3.25rem] flex flex-col items-center justify-center flex-shrink-0 rounded-xl py-1.5 ${tint.timeBg}`}
+                            >
+                              <p
+                                className={`text-[17px] font-semibold tabular-nums leading-none ${tint.hour}`}
+                              >
+                                {apt.time?.split(':')[0]}
+                              </p>
+                              <p className={`text-[11px] mt-0.5 tabular-nums ${tint.minute}`}>
+                                :{apt.time?.split(':')[1] || '00'}
+                              </p>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[17px] font-medium text-zinc-900 dark:text-white truncate">
+                                {apt.clientName}
+                              </p>
+                              <p className="text-[15px] text-zinc-500 dark:text-zinc-400 truncate">
+                                {apt.service || 'Tatouage'}
+                              </p>
+                            </div>
+                            <ChevronRight
+                              className={`w-5 h-5 flex-shrink-0 ${needsDeposit ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-300 dark:text-zinc-600'}`}
+                              aria-hidden
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="px-4 pb-4">
+                      <div className="text-center py-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
+                        <Calendar className="w-8 h-8 text-zinc-300 dark:text-zinc-600 mx-auto mb-2" />
+                        <p className="text-sm text-zinc-500 dark:text-zinc-500">
+                          Aucun RDV aujourd'hui
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {todayAppointments.length > 0 ? (
-                  <div className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
-                    {todayAppointments.slice(0, 4).map((apt) => {
-                      const tint = getTodayRowTint(apt.status);
-                      const needsDeposit = !apt.depositPaid && apt.deposit > 0;
-                      return (
+              </motion.div>
+
+              {/* Upcoming Appointments */}
+              {upcomingAppointments.length > 0 && (
+                <motion.div variants={mobileSectionVariants}>
+                  <div className={cn('overflow-hidden', crmCard)}>
+                    <div className={crmCardHeader}>
+                      <span className={crmSectionTitle}>À venir</span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('agenda')}
+                        className={crmListLink}
+                      >
+                        Tout
+                      </button>
+                    </div>
+                    <div className="divide-y divide-zinc-200/70 dark:divide-zinc-800/80">
+                      {upcomingAppointments.slice(0, 3).map((apt) => (
                         <button
                           key={apt.id}
                           type="button"
                           onClick={() => setSelectedAppointment(apt)}
-                          className={`w-full flex items-center gap-3 pl-3 pr-4 py-3 min-h-[52px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left ${tint.border} ${needsDeposit ? 'ring-1 ring-inset ring-blue-400/40 dark:ring-blue-500/30' : ''}`}
+                          className={cn(
+                            'w-full flex items-center gap-3 px-4 py-3 min-h-[56px] text-left',
+                            'transition-colors touch-manipulation',
+                            'active:bg-zinc-100/80 dark:active:bg-zinc-800/60'
+                          )}
                         >
-                          <div
-                            className={`w-[3.25rem] flex flex-col items-center justify-center flex-shrink-0 rounded-xl py-1.5 ${tint.timeBg}`}
-                          >
-                            <p
-                              className={`text-[17px] font-semibold tabular-nums leading-none ${tint.hour}`}
-                            >
-                              {apt.time?.split(':')[0]}
-                            </p>
-                            <p className={`text-[11px] mt-0.5 tabular-nums ${tint.minute}`}>
-                              :{apt.time?.split(':')[1] || '00'}
-                            </p>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[17px] font-medium text-zinc-900 dark:text-white truncate">
-                              {apt.clientName}
-                            </p>
-                            <p className="text-[15px] text-zinc-500 dark:text-zinc-400 truncate">
-                              {apt.service || 'Tatouage'}
-                            </p>
-                          </div>
-                          <ChevronRight
-                            className={`w-5 h-5 flex-shrink-0 ${needsDeposit ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-300 dark:text-zinc-600'}`}
-                            aria-hidden
-                          />
+                          <span className="text-[13px] font-medium text-zinc-500 dark:text-zinc-400 min-w-[3.25rem] tabular-nums">
+                            {new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', {
+                              day: 'numeric',
+                              month: 'short',
+                            })}
+                          </span>
+                          <span className="text-[16px] font-medium text-zinc-900 dark:text-white truncate flex-1">
+                            {apt.clientName}
+                          </span>
+                          <span className="inline-flex items-center justify-center size-9 rounded-full bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200/70 dark:bg-zinc-800/80 dark:text-zinc-300 dark:ring-zinc-700/70">
+                            <Clock className="h-4 w-4" strokeWidth={2} aria-hidden />
+                          </span>
                         </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="px-4 pb-4">
-                    <div className="text-center py-8 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
-                      <Calendar className="w-8 h-8 text-zinc-300 dark:text-zinc-600 mx-auto mb-2" />
-                      <p className="text-sm text-zinc-500 dark:text-zinc-500">
-                        Aucun RDV aujourd'hui
-                      </p>
+                      ))}
                     </div>
                   </div>
-                )}
-              </div>
+                </motion.div>
+              )}
 
-              {/* Upcoming Appointments */}
-              {upcomingAppointments.length > 0 && (
+              {/* Top clients */}
+              <motion.div variants={mobileSectionVariants}>
                 <div className={cn('overflow-hidden', crmCard)}>
                   <div className={crmCardHeader}>
-                    <span className={crmSectionTitle}>À venir</span>
+                    <span className={crmSectionTitle}>Top clients</span>
                     <button
                       type="button"
-                      onClick={() => setActiveTab('agenda')}
+                      onClick={() => setActiveTab('clients')}
                       className={crmListLink}
                     >
                       Tout
                     </button>
                   </div>
-                  <div className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
-                    {upcomingAppointments.slice(0, 3).map((apt) => (
-                      <button
-                        key={apt.id}
-                        type="button"
-                        onClick={() => setSelectedAppointment(apt)}
-                        className="w-full flex items-center gap-3 px-4 py-3 min-h-[52px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left"
-                      >
-                        <span className="text-[15px] text-zinc-500 dark:text-zinc-400 min-w-[3.25rem] tabular-nums">
-                          {new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', {
-                            day: 'numeric',
-                            month: 'short',
-                          })}
-                        </span>
-                        <span className="text-[17px] font-normal text-zinc-900 dark:text-white truncate flex-1">
-                          {apt.clientName}
-                        </span>
-                        <span
-                          className={`inline-flex items-center justify-center min-w-[2rem] min-h-[2rem] rounded-lg ${
-                            apt.status === 'confirmed'
-                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
-                              : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                          }`}
-                          title={apt.status === 'confirmed' ? 'Confirmé' : 'En attente'}
+                  {topClients.length > 0 ? (
+                    <div className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
+                      {topClients.slice(0, 4).map((client) => (
+                        <button
+                          key={client.id}
+                          type="button"
+                          onClick={() => setActiveTab('clients')}
+                          className="w-full flex items-center gap-3 px-4 py-3 min-h-[52px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left"
                         >
-                          {apt.status === 'confirmed' ? (
-                            <Check className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden />
-                          ) : (
-                            <Clock className="w-3.5 h-3.5" strokeWidth={2} aria-hidden />
-                          )}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Top clients */}
-              <div className={cn('overflow-hidden', crmCard)}>
-                <div className={crmCardHeader}>
-                  <span className={crmSectionTitle}>Top clients</span>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('clients')}
-                    className={crmListLink}
-                  >
-                    Tout
-                  </button>
-                </div>
-                {topClients.length > 0 ? (
-                  <div className="divide-y divide-zinc-200/80 dark:divide-zinc-800">
-                    {topClients.slice(0, 4).map((client) => (
-                      <button
-                        key={client.id}
-                        type="button"
-                        onClick={() => setActiveTab('clients')}
-                        className="w-full flex items-center gap-3 px-4 py-3 min-h-[52px] active:bg-zinc-100/80 dark:active:bg-zinc-800/60 transition-colors text-left"
-                      >
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-200/80 dark:bg-zinc-700">
-                          <ClientPhotoAvatar
-                            name={client.name}
-                            src={client.avatar}
-                            className="h-full w-full"
-                            textClassName="text-sm font-semibold text-zinc-600 dark:text-zinc-300"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[17px] font-normal text-zinc-900 dark:text-white truncate">
-                              {client.name}
-                            </span>
-                            {(client.totalSpent ?? 0) >= 500 && (
-                              <Star className="w-3.5 h-3.5 text-blue-600 fill-blue-600/90 dark:text-blue-400 dark:fill-blue-400/80 shrink-0" />
-                            )}
+                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-200/80 dark:bg-zinc-700">
+                            <ClientPhotoAvatar
+                              name={client.name}
+                              src={client.avatar}
+                              className="h-full w-full"
+                              textClassName="text-sm font-semibold text-zinc-600 dark:text-zinc-300"
+                            />
                           </div>
-                          <span className="text-[15px] text-zinc-500 dark:text-zinc-400">
-                            {privacyMode ? '••••' : `${client.totalSpent}€`} dépensés
-                          </span>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 flex-shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="px-4 pb-4">
-                    <p className="text-sm text-zinc-400 text-center py-6">Aucun client</p>
-                  </div>
-                )}
-              </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[17px] font-normal text-zinc-900 dark:text-white truncate">
+                                {client.name}
+                              </span>
+                              {(client.totalSpent ?? 0) >= 500 && (
+                                <Star className="w-3.5 h-3.5 text-blue-600 fill-blue-600/90 dark:text-blue-400 dark:fill-blue-400/80 shrink-0" />
+                              )}
+                            </div>
+                            <span className="text-[15px] text-zinc-500 dark:text-zinc-400">
+                              {privacyMode ? '••••' : `${client.totalSpent}€`} dépensés
+                            </span>
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 flex-shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-4 pb-4">
+                      <p className="text-sm text-zinc-400 text-center py-6">Aucun client</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
             </motion.div>
           </div>
         )}
@@ -3273,7 +3091,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                 </div>
                                 <div className="flex-1 flex justify-end">
                                   <div className="flex -space-x-2">
-                                    {topClients.slice(0, 3).map((c, i) => (
+                                    {topClients.slice(0, 3).map((c) => (
                                       <div
                                         key={c.id}
                                         className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/30 flex items-center justify-center text-sm font-bold"

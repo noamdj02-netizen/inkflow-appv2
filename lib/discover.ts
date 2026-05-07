@@ -3,7 +3,12 @@
  * Remplace les API routes Next.js — appels Supabase directs depuis le client.
  */
 import { supabase } from './supabase';
-import { createHash } from 'crypto';
+
+/**
+ * Tables `inkflow_city_pages`, `inkflow_reviews`, `inkflow_review_votes` ne sont pas
+ * encore dans `types/database.ts` — casts jusqu’à `supabase gen types` après sync schéma.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 // ── Types publics ─────────────────────────────────────────────────────────────
 
@@ -82,28 +87,22 @@ const STUDIO_SELECT = `
 
 // ── Recherche studios ─────────────────────────────────────────────────────────
 export async function searchStudios(params: SearchParams): Promise<SearchResult> {
-  const {
-    city, style, q,
-    priceMax, priceMin,
-    sort = 'rank',
-    page = 1,
-    perPage = 12,
-  } = params;
+  const { city, style, q, priceMax, priceMin, sort = 'rank', page = 1, perPage = 12 } = params;
 
   let query = (supabase as any)
     .from('inkflow_studios')
     .select(STUDIO_SELECT, { count: 'exact' })
     .eq('is_discoverable', true);
 
-  if (city)     query = query.eq('city_slug', city);
-  if (style)    query = query.contains('styles', [style]);
+  if (city) query = query.eq('city_slug', city);
+  if (style) query = query.contains('styles', [style]);
   if (priceMax) query = query.lte('price_min', priceMax);
   if (priceMin) query = query.gte('price_max', priceMin);
-  if (q)        query = query.or(`name.ilike.%${q}%,studio_name.ilike.%${q}%,bio.ilike.%${q}%`);
+  if (q) query = query.or(`name.ilike.%${q}%,studio_name.ilike.%${q}%,bio.ilike.%${q}%`);
 
   const sortMap: Record<string, { col: string; asc: boolean }> = {
-    rank:   { col: 'discover_rank',  asc: false },
-    rating: { col: 'rating_avg',     asc: false },
+    rank: { col: 'discover_rank', asc: false },
+    rating: { col: 'rating_avg', asc: false },
     recent: { col: 'last_active_at', asc: false },
   };
   const { col, asc } = sortMap[sort] ?? sortMap.rank;
@@ -153,7 +152,7 @@ export async function getActiveCities(limit = 12): Promise<CityPage[]> {
 // ── Avis d'un studio ─────────────────────────────────────────────────────────
 export async function getStudioReviews(
   studioId: string,
-  page = 1,
+  page = 1
 ): Promise<{ reviews: DiscoverReview[]; total: number }> {
   const perPage = 10;
   const from = (page - 1) * perPage;
@@ -162,7 +161,7 @@ export async function getStudioReviews(
     .from('inkflow_reviews')
     .select(
       'id, client_name, rating, body, tattoo_style, tattoo_photo_url, is_verified, reply_body, reply_at, helpful_count, created_at',
-      { count: 'exact' },
+      { count: 'exact' }
     )
     .eq('studio_id', studioId)
     .eq('status', 'approved')
@@ -190,9 +189,9 @@ export async function postReview(payload: PostReviewPayload): Promise<void> {
     new Uint8Array(
       await crypto.subtle.digest(
         'SHA-256',
-        new TextEncoder().encode(payload.clientEmail.toLowerCase().trim()),
-      ),
-    ),
+        new TextEncoder().encode(payload.clientEmail.toLowerCase().trim())
+      )
+    )
   )
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
@@ -213,8 +212,7 @@ export async function postReview(payload: PostReviewPayload): Promise<void> {
   });
 
   if (error) {
-    if (error.code === '23505')
-      throw new Error('Vous avez déjà laissé un avis pour cet artiste.');
+    if (error.code === '23505') throw new Error('Vous avez déjà laissé un avis pour cet artiste.');
     throw new Error(error.message);
   }
 }
@@ -233,7 +231,7 @@ export async function replyToReview(reviewId: string, replyBody: string): Promis
 export async function voteReview(
   reviewId: string,
   vote: 'helpful' | 'not_helpful',
-  fingerprint: string,
+  fingerprint: string
 ): Promise<void> {
   const { error } = await (supabase as any).from('inkflow_review_votes').insert({
     id: crypto.randomUUID(),

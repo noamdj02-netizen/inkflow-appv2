@@ -58,7 +58,7 @@ export function useAutoSave<T>(
       setLastSavedAt(Date.now());
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaved(false), 1500);
-    } catch (err) {
+    } catch {
       // Silent: do not set error (no UI/toast). Caller should use a try/catch inside saveFn for silent auto-save.
     } finally {
       setSaving(false);

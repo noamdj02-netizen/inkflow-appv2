@@ -189,6 +189,90 @@
       padding-right: var(--pro-grid-px-lg);
     }
   }
+
+  /* ==========================================================
+     Dashboard Pro — Glass Widget Shell (Figma 387:178)
+     Usage: wrap widgets/cockpit with `.ds-glass-widget`
+     ========================================================== */
+  .ds-glass-widget {
+    position: relative;
+    overflow: hidden;
+    border-radius: 2rem; /* close to 32px */
+    border: 1px solid color-mix(in oklab, white 8%, transparent);
+    background: color-mix(in oklab, white 3%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+  .ds-glass-widget::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 4px;
+    background: color-mix(in oklab, white 12%, transparent);
+    pointer-events: none;
+  }
+  /* Light theme fallback: keep premium SaaS look (no heavy glass) */
+  :root[data-theme='light'] .ds-glass-widget {
+    border-color: rgba(228, 228, 231, 0.9);
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: var(--pro-shadow);
+  }
+  :root[data-theme='light'] .ds-glass-widget::before {
+    background: rgba(37, 99, 235, 0.12);
+  }
+
+  .ds-glass-panel {
+    border-radius: 1.5rem;
+    border: 1px solid color-mix(in oklab, white 6%, transparent);
+    background: rgba(9, 9, 11, 0.5);
+  }
+  :root[data-theme='light'] .ds-glass-panel {
+    border-color: rgba(228, 228, 231, 0.85);
+    background: rgba(244, 244, 245, 0.7);
+  }
+
+  .ds-glass-pill-success {
+    border-radius: 9999px;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    background: rgba(34, 197, 94, 0.1);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+  }
+  :root[data-theme='light'] .ds-glass-pill-success {
+    border-color: rgba(34, 197, 94, 0.22);
+    background: rgba(34, 197, 94, 0.08);
+  }
+
+  /* ==========================================================
+     Antigravity — Home mobile ambience (subtle, readable)
+     ========================================================== */
+  .ds-home-mobile-ambience {
+    position: relative;
+    isolation: isolate;
+  }
+  .ds-home-mobile-ambience::after {
+    content: '';
+    position: absolute;
+    inset: -32px -16px auto -16px;
+    height: 320px;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 120% 80% at 30% 0%, rgba(37, 99, 235, 0.22), transparent 55%),
+      radial-gradient(ellipse 80% 60% at 95% 10%, rgba(99, 102, 241, 0.14), transparent 52%),
+      radial-gradient(ellipse 90% 60% at 50% 60%, rgba(255, 255, 255, 0.35), transparent 60%);
+  }
+  :root[data-theme='dark'] .ds-home-mobile-ambience::after {
+    background:
+      radial-gradient(ellipse 120% 80% at 30% 0%, rgba(37, 99, 235, 0.26), transparent 56%),
+      radial-gradient(ellipse 80% 60% at 95% 10%, rgba(99, 102, 241, 0.16), transparent 54%),
+      radial-gradient(ellipse 90% 60% at 50% 60%, rgba(255, 255, 255, 0.06), transparent 62%);
+  }
 }
 
 /* Tailwind dark: variant — active when data-theme="dark" on root */
@@ -556,13 +640,22 @@ video {
     radial-gradient(ellipse 72% 48% at 94% 6%, rgba(59, 130, 246, 0.048), transparent 50%),
     radial-gradient(ellipse 55% 32% at 50% 100%, rgba(252, 252, 253, 0.92), transparent 62%),
     linear-gradient(180deg, #fbfcfd 0%, #f4f5f7 48%, #eef0f3 100%);
-  background-attachment: local;
+  /*
+   * iOS/WebKit: `background-attachment: local` inside an overflow scroll container
+   * can cause visible “desync” / jitter while sliding. Keep it default (scroll)
+   * so the canvas feels glued to the content.
+   */
+  background-attachment: scroll;
   isolation: isolate;
 }
 /* Grain fin (texture) — premium UI ; au-dessus des dégradés, sous le contenu */
 .dashboard-overview-bg::after {
   content: '';
-  position: absolute;
+  /*
+   * Make grain stable while the content scrolls.
+   * (Fixed relative to viewport avoids repaint jitter on iOS overflow scrolling.)
+   */
+  position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
@@ -571,6 +664,34 @@ video {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 160px 160px;
   background-repeat: repeat;
+}
+
+/* ===== Dashboard Overview — Surface system (mobile coherence) =====
+   Objectif: réduire l'effet "patchwork" au scroll en uniformisant radius/border/shadow. */
+.dashboard-surface {
+  border-radius: 1.5rem; /* ~rounded-3xl */
+  border: 1px solid rgba(228, 228, 231, 0.82);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.85) inset,
+    0 1px 2px -1px rgba(15, 23, 42, 0.08);
+}
+:root[data-theme='dark'] .dashboard-surface {
+  border-color: rgba(39, 39, 42, 0.95);
+  background: rgba(24, 24, 27, 0.58);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 10px 30px -20px rgba(0, 0, 0, 0.75);
+}
+
+/* Variante "grouped background" (conteneurs secondaires) */
+.dashboard-surface-muted {
+  background: rgba(244, 244, 245, 0.65);
+  border-color: rgba(228, 228, 231, 0.75);
+}
+:root[data-theme='dark'] .dashboard-surface-muted {
+  background: rgba(39, 39, 42, 0.28);
+  border-color: rgba(63, 63, 70, 0.75);
 }
 @media (prefers-reduced-motion: reduce) {
   .dashboard-overview-bg::after {
@@ -616,6 +737,41 @@ video {
 @media (prefers-reduced-motion: reduce) {
   .dashboard-pro-ios-hero-film {
     opacity: 0.02;
+  }
+}
+
+/* ===== Dashboard Overview — Glass system (Figma 387:178) =====
+   Dark glass: blur + thin border + top overlay strip + one shadow. */
+@layer components {
+  .dash-glass-card {
+    position: relative;
+    border-radius: 2rem; /* ~rounded-[32px] */
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: clip;
+  }
+  .dash-glass-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+  }
+  .dash-glass-panel {
+    border-radius: 2rem;
+    background: rgba(9, 9, 11, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  .dash-glass-tile {
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
   }
 }
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  MapPin, Phone, Mail, Clock, Instagram, ChevronRight, CheckCircle, Star,
+  MapPin, Phone, Mail, Clock, Instagram, CheckCircle, Star,
   MessageCircle, Share2, Heart, Award, Shield, Users, Camera, X,
   Facebook, ExternalLink, Calendar, ArrowRight, Menu,
   ChevronDown, Send, AlertCircle, Sparkles, Copy, ArrowLeft
@@ -264,7 +264,6 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
     }
   }, [studioSlug]);
 
-  const selectedFlashId = selectedFlash?.id;
   useEffect(() => {
     if (selectedFlash) {
       setFlashDepositName('');
@@ -273,7 +272,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       setFlashDepositError(null);
       setFlashDepositUrl(null);
     }
-  }, [selectedFlashId]);
+  }, [selectedFlash]);
 
   useEffect(() => {
     const modalOpen =
@@ -397,7 +396,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
         setBookingError('Studio introuvable. Contactez-nous directement.');
       }
       setBookingStudioId(id ?? null);
-    } catch (err) {
+    } catch {
       setBookingError('Impossible de charger le formulaire. Réessayez.');
     }
   };
@@ -496,7 +495,7 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
       setContactPhone('');
       setContactSubject('');
       setContactMessage('');
-    } catch (err) {
+    } catch {
       toast.error('Une erreur est survenue. Réessayez.');
     } finally {
       setContactLoading(false);

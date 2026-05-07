@@ -45,14 +45,11 @@ import { clientNavigate } from '../../lib/clientAppNavigate';
 import {
   getFavoriteFlashIds,
   isFavoriteFlashId,
-  isFavoriteStudioId,
   toggleFavoriteFlashId,
-  toggleFavoriteStudioId,
 } from '../../lib/clientFavoritesLocal';
 import {
   hydrateClientFavoritesFromSupabase,
   toggleFavoriteWithSupabaseSync,
-  toggleStudioFavoriteWithSupabaseSync,
 } from '../../lib/clientFavoritesSync';
 import { CLIENT_DASHBOARD_THEME, buildClientDesignTokens } from '../../lib/clientDashboardTheme';
 import {
@@ -281,10 +278,6 @@ function getStudioThumbnailUrl(s: NearbyStudio): string | null {
     if (u) return u;
   }
   return null;
-}
-
-function ratingLabel(n: number) {
-  return n.toFixed(1);
 }
 
 // ─── Fake map dots (MVP — remplacer par Leaflet/Mapbox quand dispo) ───────────
@@ -3321,7 +3314,7 @@ export function ClientDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [userEmail]);
+  }, [userEmail, toast]);
 
   const refreshPushSurface = useCallback(() => {
     if (typeof window === 'undefined') return;

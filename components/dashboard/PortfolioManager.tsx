@@ -232,7 +232,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     setImageLoading(true);
     try {
       startCropFromFile(file, field);
-    } catch (err) {
+    } catch {
       toast.error("Impossible de charger l'image");
       setImageLoading(false);
     }

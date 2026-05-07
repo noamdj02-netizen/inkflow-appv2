@@ -1,11 +1,6 @@
 import { supabase } from './supabase';
 import type { Subscription, SubscriptionPlan } from '../types';
-import {
-  PLAN_CONFIG,
-  canAccessFeature as canAccessFeaturePlan,
-  hasReachedLimit as hasReachedLimitPlan,
-  getPlanLimit,
-} from './subscriptionPlans';
+import { PLAN_CONFIG, hasReachedLimit as hasReachedLimitPlan } from './subscriptionPlans';
 
 /** @deprecated Préférer getPlanConfig() et getPlanLimit() depuis subscriptionPlans. Conservé pour compatibilité. */
 const PLAN_LIMITS: Record<

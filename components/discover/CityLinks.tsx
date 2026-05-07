@@ -1,4 +1,3 @@
-import React from 'react';
 import type { CityPage } from '../../lib/discover';
 import { DISCOVER_UI as U } from '../../lib/discoverUiTheme';
 
@@ -7,17 +6,24 @@ export function CityLinks({ cities }: { cities: CityPage[] }) {
 
   return (
     <section style={{ padding: '0 16px 40px' }}>
-      <h2 style={{
-        fontSize: 20, fontWeight: 700, color: U.text,
-        letterSpacing: '-0.03em', marginBottom: 16,
-      }}>
+      <h2
+        style={{
+          fontSize: 20,
+          fontWeight: 700,
+          color: U.text,
+          letterSpacing: '-0.03em',
+          marginBottom: 16,
+        }}
+      >
         Parcourir par ville
       </h2>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-        gap: 10,
-      }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+          gap: 10,
+        }}
+      >
         {cities.map((c) => (
           <a
             key={c.slug}

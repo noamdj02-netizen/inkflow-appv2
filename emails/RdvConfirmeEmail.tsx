@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 import { EmailBase } from './EmailBase';
 
 interface RdvConfirmeEmailProps {

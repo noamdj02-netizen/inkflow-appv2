@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import { Heart } from 'lucide-react';
 import { CX } from '../../components/client/clientExperienceTypes';
 import { FlashCard } from '../../components/client/FlashCard';
@@ -38,24 +37,27 @@ export const ClientFavoritesTab: React.FC<ClientFavoritesTabProps> = ({ sessionE
     })();
   }, [sessionEmail]);
 
-  const handleToggleFavorite = useCallback(async (flashId: string, newState: boolean) => {
-    try {
-      await toggleFlashFavorite(flashId, newState);
-      if (newState) {
-        setFavSet((prev) => new Set([...prev, flashId]));
-      } else {
-        setFavSet((prev) => {
-          const next = new Set(prev);
-          next.delete(flashId);
-          return next;
-        });
-        setFlashes((prev) => prev.filter((f) => f.id !== flashId));
-        toast.success('Retiré des favoris');
+  const handleToggleFavorite = useCallback(
+    async (flashId: string, newState: boolean) => {
+      try {
+        await toggleFlashFavorite(flashId, newState);
+        if (newState) {
+          setFavSet((prev) => new Set([...prev, flashId]));
+        } else {
+          setFavSet((prev) => {
+            const next = new Set(prev);
+            next.delete(flashId);
+            return next;
+          });
+          setFlashes((prev) => prev.filter((f) => f.id !== flashId));
+          toast.success('Retiré des favoris');
+        }
+      } catch {
+        toast.error('Erreur lors de la mise à jour');
       }
-    } catch (err) {
-      toast.error('Erreur lors de la mise à jour');
-    }
-  }, [toast]);
+    },
+    [toast]
+  );
 
   if (loading) {
     return (

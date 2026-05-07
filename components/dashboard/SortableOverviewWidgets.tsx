@@ -81,14 +81,7 @@ function SortableWidget({
   children: React.ReactNode;
   disabled?: boolean;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
     disabled,
   });
@@ -140,19 +133,24 @@ export const SortableOverviewWidgets: React.FC<SortableOverviewWidgetsProps> = (
   });
 
   useEffect(() => {
-    setOrder(prev => mergeOrder(prev, customWidgetIds));
-  }, [customWidgetIds.join(',')]);
+    setOrder((prev) => mergeOrder(prev, customWidgetIds));
+  }, [customWidgetIds]);
 
   useEffect(() => {
     if (!studioId || !useSupabase) return;
     let cancelled = false;
-    import('../../lib/supabaseDashboard').then(({ getWidgetOrderFromSupabase }) =>
-      getWidgetOrderFromSupabase(studioId).then((fromApi) => {
-        if (!cancelled && fromApi.length > 0) setOrder(prev => mergeOrder(fromApi, customWidgetIds));
-      })
-    ).catch(() => {});
-    return () => { cancelled = true; };
-  }, [studioId, useSupabase, customWidgetIds.join(',')]);
+    import('../../lib/supabaseDashboard')
+      .then(({ getWidgetOrderFromSupabase }) =>
+        getWidgetOrderFromSupabase(studioId).then((fromApi) => {
+          if (!cancelled && fromApi.length > 0)
+            setOrder(() => mergeOrder(fromApi, customWidgetIds));
+        })
+      )
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [studioId, useSupabase, customWidgetIds]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -172,7 +170,7 @@ export const SortableOverviewWidgets: React.FC<SortableOverviewWidgetsProps> = (
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
-      setOrder(prev => {
+      setOrder((prev) => {
         const oldIndex = prev.indexOf(String(active.id));
         const newIndex = prev.indexOf(String(over.id));
         if (oldIndex === -1 || newIndex === -1) return prev;
@@ -206,7 +204,9 @@ export const SortableOverviewWidgets: React.FC<SortableOverviewWidgetsProps> = (
     return result;
   }, [order, itemsById, items]);
 
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 768
+  );
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
     const fn = () => setIsMobile(mq.matches);
@@ -219,7 +219,9 @@ export const SortableOverviewWidgets: React.FC<SortableOverviewWidgetsProps> = (
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={order} strategy={rectSortingStrategy}>
-        <div className={`grid grid-cols-2 gap-4 ${gridCols === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-4'}`}>
+        <div
+          className={`grid grid-cols-2 gap-4 ${gridCols === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-4'}`}
+        >
           {sortedItems.map((item) => (
             <div key={item.id} className="min-w-0">
               <SortableWidget id={item.id} disabled={dragDisabled}>

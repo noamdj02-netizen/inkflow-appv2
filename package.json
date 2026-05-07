@@ -34,6 +34,7 @@
     "readiness:env": "node scripts/readiness.mjs env",
     "readiness:sentry": "node scripts/readiness.mjs sentry",
     "readiness:manual": "node scripts/readiness.mjs manual",
+    "readiness:prepush": "node scripts/readiness.mjs prepush",
     "readiness": "npm run ci && npm run readiness:env && npm run readiness:sentry",
     "qa:audit-vite": "node scripts/qa-dashboard-ready.mjs audit-vite",
     "qa:sentry-build": "node scripts/qa-dashboard-ready.mjs sentry-build",

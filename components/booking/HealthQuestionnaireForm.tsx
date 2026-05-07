@@ -2,14 +2,14 @@
  * Questionnaire de Santé obligatoire avant paiement
  * Design cohérent avec le tunnel de réservation (épuré, blanc, zinc)
  */
-import React, { useState, useMemo } from 'react';
-import { AlertTriangle, Check, FileText, ChevronLeft, Heart } from 'lucide-react';
+import { useState, useMemo, type FC, type FormEvent } from 'react';
+import { AlertTriangle, Check, ChevronLeft, Heart } from 'lucide-react';
 
 export interface HealthFormData {
   clientName: string;
   clientBirthdate: string;
   clientInstagram: string;
-  
+
   allergies: boolean | null;
   allergiesDetails: string;
   grossesse: boolean | null;
@@ -21,7 +21,7 @@ export interface HealthFormData {
   antibiotiques: boolean | null;
   antiInflammatoires: boolean | null;
   steroides: boolean | null;
-  
+
   certifiedAccurate: boolean;
   signatureText: string;
 }
@@ -60,7 +60,12 @@ interface YesNoFieldProps {
   required?: boolean;
 }
 
-const YesNoField: React.FC<YesNoFieldProps> = ({ label, value, onChange, required = true }) => (
+const YesNoField: FC<YesNoFieldProps> = ({
+  label,
+  value,
+  onChange,
+  required: _required = true,
+}) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 border-b border-zinc-100 last:border-0 gap-2 sm:gap-4">
     <span className="text-sm text-zinc-700 font-medium">{label}</span>
     <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
@@ -68,9 +73,7 @@ const YesNoField: React.FC<YesNoFieldProps> = ({ label, value, onChange, require
         type="button"
         onClick={() => onChange(true)}
         className={`flex-1 sm:flex-none min-w-[60px] min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.97] touch-manipulation ${
-          value === true
-            ? 'bg-zinc-900 text-white'
-            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+          value === true ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
         }`}
       >
         Oui
@@ -79,9 +82,7 @@ const YesNoField: React.FC<YesNoFieldProps> = ({ label, value, onChange, require
         type="button"
         onClick={() => onChange(false)}
         className={`flex-1 sm:flex-none min-w-[60px] min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.97] touch-manipulation ${
-          value === false
-            ? 'bg-zinc-900 text-white'
-            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+          value === false ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
         }`}
       >
         Non
@@ -90,7 +91,7 @@ const YesNoField: React.FC<YesNoFieldProps> = ({ label, value, onChange, require
   </div>
 );
 
-export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = ({
+export const HealthQuestionnaireForm: FC<HealthQuestionnaireFormProps> = ({
   initialData,
   onComplete,
   onBack,
@@ -119,21 +120,21 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
       'antiInflammatoires',
       'steroides',
     ];
-    
+
     for (const key of requiredBooleans) {
       if (form[key] === null) return false;
     }
-    
+
     if (form.allergies && !form.allergiesDetails.trim()) return false;
     if (!form.certifiedAccurate) return false;
     if (!form.signatureText.trim()) return false;
     if (!form.clientName.trim()) return false;
     if (!form.clientBirthdate) return false;
-    
+
     return true;
   }, [form]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!isComplete) return;
     onComplete(form);
@@ -141,9 +142,16 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
 
   const answeredCount = useMemo(() => {
     const fields: (keyof HealthFormData)[] = [
-      'allergies', 'grossesse', 'allaitement', 'maladiesInfectieuses',
-      'infectionsVirales', 'troubleCicatriciel', 'diabete',
-      'antibiotiques', 'antiInflammatoires', 'steroides',
+      'allergies',
+      'grossesse',
+      'allaitement',
+      'maladiesInfectieuses',
+      'infectionsVirales',
+      'troubleCicatriciel',
+      'diabete',
+      'antibiotiques',
+      'antiInflammatoires',
+      'steroides',
     ];
     return fields.filter((f) => form[f] !== null).length;
   }, [form]);
@@ -206,7 +214,9 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
           </div>
         </div>
         <div>
-          <label className="block text-xs font-medium text-zinc-500 mb-1.5">Date de naissance</label>
+          <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+            Date de naissance
+          </label>
           <input
             type="date"
             value={form.clientBirthdate}
@@ -221,7 +231,11 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
       <div className="bg-white border-x border-zinc-200 p-4 sm:p-5">
         <h3 className="text-sm font-semibold text-zinc-900 mb-3">Questions de santé</h3>
         <div className="space-y-0">
-          <YesNoField label="Allergies connues" value={form.allergies} onChange={(v) => update('allergies', v)} />
+          <YesNoField
+            label="Allergies connues"
+            value={form.allergies}
+            onChange={(v) => update('allergies', v)}
+          />
           {form.allergies && (
             <div className="py-3 border-b border-zinc-100">
               <input
@@ -234,15 +248,47 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
               />
             </div>
           )}
-          <YesNoField label="Grossesse en cours" value={form.grossesse} onChange={(v) => update('grossesse', v)} />
-          <YesNoField label="Allaitement" value={form.allaitement} onChange={(v) => update('allaitement', v)} />
-          <YesNoField label="Maladies infectieuses ou bactériennes" value={form.maladiesInfectieuses} onChange={(v) => update('maladiesInfectieuses', v)} />
-          <YesNoField label="Infections virales" value={form.infectionsVirales} onChange={(v) => update('infectionsVirales', v)} />
-          <YesNoField label="Trouble cicatriciel" value={form.troubleCicatriciel} onChange={(v) => update('troubleCicatriciel', v)} />
+          <YesNoField
+            label="Grossesse en cours"
+            value={form.grossesse}
+            onChange={(v) => update('grossesse', v)}
+          />
+          <YesNoField
+            label="Allaitement"
+            value={form.allaitement}
+            onChange={(v) => update('allaitement', v)}
+          />
+          <YesNoField
+            label="Maladies infectieuses ou bactériennes"
+            value={form.maladiesInfectieuses}
+            onChange={(v) => update('maladiesInfectieuses', v)}
+          />
+          <YesNoField
+            label="Infections virales"
+            value={form.infectionsVirales}
+            onChange={(v) => update('infectionsVirales', v)}
+          />
+          <YesNoField
+            label="Trouble cicatriciel"
+            value={form.troubleCicatriciel}
+            onChange={(v) => update('troubleCicatriciel', v)}
+          />
           <YesNoField label="Diabète" value={form.diabete} onChange={(v) => update('diabete', v)} />
-          <YesNoField label="Prise d'antibiotiques" value={form.antibiotiques} onChange={(v) => update('antibiotiques', v)} />
-          <YesNoField label="Anti-inflammatoires" value={form.antiInflammatoires} onChange={(v) => update('antiInflammatoires', v)} />
-          <YesNoField label="Stéroïdes" value={form.steroides} onChange={(v) => update('steroides', v)} />
+          <YesNoField
+            label="Prise d'antibiotiques"
+            value={form.antibiotiques}
+            onChange={(v) => update('antibiotiques', v)}
+          />
+          <YesNoField
+            label="Anti-inflammatoires"
+            value={form.antiInflammatoires}
+            onChange={(v) => update('antiInflammatoires', v)}
+          />
+          <YesNoField
+            label="Stéroïdes"
+            value={form.steroides}
+            onChange={(v) => update('steroides', v)}
+          />
         </div>
       </div>
 
@@ -254,7 +300,9 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
             <div className="text-sm text-amber-800 space-y-1">
               {form.diabete && <p>Diabète : cicatrisation potentiellement plus lente</p>}
               {form.maladiesInfectieuses && <p>Maladie infectieuse : validité médicale requise</p>}
-              {form.infectionsVirales && <p>Infection virale : consultation médicale recommandée</p>}
+              {form.infectionsVirales && (
+                <p>Infection virale : consultation médicale recommandée</p>
+              )}
             </div>
           </div>
         </div>
@@ -272,11 +320,11 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
             required
           />
           <label htmlFor="certify" className="text-sm text-zinc-600 leading-relaxed cursor-pointer">
-            Je certifie sur l'honneur que les informations ci-dessus sont exactes. 
-            Je comprends qu'une omission pourrait compromettre ma sécurité.
+            Je certifie sur l'honneur que les informations ci-dessus sont exactes. Je comprends
+            qu'une omission pourrait compromettre ma sécurité.
           </label>
         </div>
-        
+
         <div>
           <label className="block text-xs font-medium text-zinc-500 mb-1.5">
             Signature (tapez votre nom complet)
@@ -317,7 +365,7 @@ export const HealthQuestionnaireForm: React.FC<HealthQuestionnaireFormProps> = (
           Valider et continuer
         </button>
       </div>
-      
+
       {!isComplete && (
         <p className="text-center text-xs text-zinc-500 mt-3 pb-4">
           Répondez à toutes les questions et signez pour continuer

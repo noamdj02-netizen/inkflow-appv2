@@ -9,7 +9,6 @@
 
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
-import React from 'react';
 
 import {
   WelcomeEmail,

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { AlertCircle, Calendar, CalendarCheck, Home, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';

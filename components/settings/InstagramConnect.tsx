@@ -25,8 +25,10 @@ export const InstagramConnect: React.FC<InstagramConnectProps> = ({ studioId }) 
           setIgUsername(data.username ?? null);
         }
       })
-      .catch(() => { toast.error('Une erreur est survenue'); });
-  }, [studioId]);
+      .catch(() => {
+        toast.error('Une erreur est survenue');
+      });
+  }, [studioId, toast]);
 
   const handleConnect = async () => {
     if (!studioId || loading) return;
@@ -97,8 +99,8 @@ export const InstagramConnect: React.FC<InstagramConnectProps> = ({ studioId }) 
           <div className="flex items-start gap-2 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 rounded-lg px-4 py-3">
             <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <p className="text-xs">
-              Ton compte Instagram doit être en mode <strong>Professionnel</strong>{' '}
-              et lié à une Page Facebook.
+              Ton compte Instagram doit être en mode <strong>Professionnel</strong> et lié à une
+              Page Facebook.
             </p>
           </div>
           <details className="rounded-lg border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden">
@@ -106,16 +108,37 @@ export const InstagramConnect: React.FC<InstagramConnectProps> = ({ studioId }) 
               Comment lier Instagram à ma Page ?
             </summary>
             <div className="px-4 pb-4 pt-1 text-xs text-[var(--text-secondary)] space-y-3 border-t border-[var(--border)]">
-              <p><strong>Méthode 1 – Depuis Instagram</strong> (app) :</p>
+              <p>
+                <strong>Méthode 1 – Depuis Instagram</strong> (app) :
+              </p>
               <ol className="list-decimal list-inside space-y-1 ml-1">
-                <li>Va sur ton <strong>profil</strong> Instagram</li>
-                <li><strong>Modifier le profil</strong> (ou « Edit profile »)</li>
-                <li>Section <strong>« Infos professionnelles publiques »</strong> → touche <strong>« Page »</strong></li>
-                <li>Se connecter à Facebook puis choisir ta Page (ou en créer une) → <strong>Connecter</strong></li>
+                <li>
+                  Va sur ton <strong>profil</strong> Instagram
+                </li>
+                <li>
+                  <strong>Modifier le profil</strong> (ou « Edit profile »)
+                </li>
+                <li>
+                  Section <strong>« Infos professionnelles publiques »</strong> → touche{' '}
+                  <strong>« Page »</strong>
+                </li>
+                <li>
+                  Se connecter à Facebook puis choisir ta Page (ou en créer une) →{' '}
+                  <strong>Connecter</strong>
+                </li>
               </ol>
-              <p><strong>Méthode 2</strong> : Profil → ☰ → Paramètres → Compte → <strong>Partenaires autorisés</strong> → Page Facebook.</p>
-              <p><strong>Depuis Facebook</strong> : ouvre ta <strong>Page</strong> → Paramètres de la Page → <strong>Instagram</strong> → Connecter un compte Instagram.</p>
-              <p className="pt-1 text-amber-600 dark:text-amber-400">Compte obligatoirement en <strong>Professionnel</strong> (Créateur ou Entreprise). Une fois lié, reviens ici et réessaie.</p>
+              <p>
+                <strong>Méthode 2</strong> : Profil → ☰ → Paramètres → Compte →{' '}
+                <strong>Partenaires autorisés</strong> → Page Facebook.
+              </p>
+              <p>
+                <strong>Depuis Facebook</strong> : ouvre ta <strong>Page</strong> → Paramètres de la
+                Page → <strong>Instagram</strong> → Connecter un compte Instagram.
+              </p>
+              <p className="pt-1 text-amber-600 dark:text-amber-400">
+                Compte obligatoirement en <strong>Professionnel</strong> (Créateur ou Entreprise).
+                Une fois lié, reviens ici et réessaie.
+              </p>
             </div>
           </details>
           <button

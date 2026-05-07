@@ -61,7 +61,7 @@ export const InstagramMessagingView: React.FC<InstagramMessagingViewProps> = ({ 
     getInstagramMessages(studioId, selectedConv.participantId)
       .then(setMessages)
       .catch(() => setMessages([]));
-  }, [studioId, selectedConv?.participantId]);
+  }, [studioId, selectedConv]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

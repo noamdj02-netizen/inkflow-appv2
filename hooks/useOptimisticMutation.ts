@@ -22,33 +22,34 @@ export function useOptimisticMutation<T extends { id: string }>(
   const add = useCallback(
     (item: T, serverFn: (item: T) => Promise<unknown>) => {
       // Optimistic: add immediately
-      setState(prev => [...prev, item]);
+      setState((prev) => [...prev, item]);
       inflightRef.current++;
 
       serverFn(item)
         .catch((err) => {
           // Rollback: remove the optimistically added item
-          setState(prev => prev.filter(i => i.id !== item.id));
+          setState((prev) => prev.filter((i) => i.id !== item.id));
           const msg = err?.message || '';
-          const displayMsg = msg && (msg.includes('créneau') || msg.includes('slot')) ? msg : 'Erreur de sauvegarde — modification annulée';
+          const displayMsg =
+            msg && (msg.includes('créneau') || msg.includes('slot'))
+              ? msg
+              : 'Erreur de sauvegarde — modification annulée';
           toast.error(displayMsg);
         })
-        .finally(() => { inflightRef.current--; });
+        .finally(() => {
+          inflightRef.current--;
+        });
     },
     [setState, toast]
   );
 
   const update = useCallback(
-    (
-      id: string,
-      optimisticUpdate: (item: T) => T,
-      serverFn: (updated: T) => Promise<unknown>
-    ) => {
+    (id: string, optimisticUpdate: (item: T) => T, serverFn: (updated: T) => Promise<unknown>) => {
       let snapshot: T | undefined;
       let updated: T | undefined;
 
-      setState(prev => {
-        const next = prev.map(item => {
+      setState((prev) => {
+        const next = prev.map((item) => {
           if (item.id === id) {
             snapshot = item;
             updated = optimisticUpdate(item);
@@ -66,12 +67,14 @@ export function useOptimisticMutation<T extends { id: string }>(
       const capturedUpdated = updated;
 
       serverFn(capturedUpdated)
-        .catch((err) => {
+        .catch((_err) => {
           // Rollback: restore the snapshot
-          setState(prev => prev.map(item => item.id === id ? capturedSnapshot : item));
+          setState((prev) => prev.map((item) => (item.id === id ? capturedSnapshot : item)));
           toast.error('Erreur de sauvegarde — modification annulee');
         })
-        .finally(() => { inflightRef.current--; });
+        .finally(() => {
+          inflightRef.current--;
+        });
     },
     [setState, toast]
   );
@@ -80,9 +83,9 @@ export function useOptimisticMutation<T extends { id: string }>(
     (id: string, serverFn: (id: string) => Promise<unknown>) => {
       let snapshot: T | undefined;
 
-      setState(prev => {
-        snapshot = prev.find(i => i.id === id);
-        return prev.filter(i => i.id !== id);
+      setState((prev) => {
+        snapshot = prev.find((i) => i.id === id);
+        return prev.filter((i) => i.id !== id);
       });
 
       if (!snapshot) return;
@@ -91,12 +94,14 @@ export function useOptimisticMutation<T extends { id: string }>(
       const capturedSnapshot = snapshot;
 
       serverFn(id)
-        .catch((err) => {
+        .catch((_err) => {
           // Rollback: re-add the removed item
-          setState(prev => [...prev, capturedSnapshot]);
+          setState((prev) => [...prev, capturedSnapshot]);
           toast.error('Erreur de suppression — element restaure');
         })
-        .finally(() => { inflightRef.current--; });
+        .finally(() => {
+          inflightRef.current--;
+        });
     },
     [setState, toast]
   );

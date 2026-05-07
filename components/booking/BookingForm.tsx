@@ -1,8 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar, Clock, User, Mail, Phone, MapPin, DollarSign, Loader2, Info } from 'lucide-react';
+import {
+  Calendar,
+  Clock,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  DollarSign,
+  Loader2,
+  Info,
+} from 'lucide-react';
 import type { Appointment, BookingFormData } from '../../types';
-import { fetchStudioAvailability, getAvailableSlotsForDate, type StudioAvailabilityResponse } from '../../lib/studioAvailability';
-import { appointmentsToBusySlots, mergeBusySlots, normalizeSlotTime } from '../../lib/bookingBusySlots';
+import {
+  fetchStudioAvailability,
+  getAvailableSlotsForDate,
+  type StudioAvailabilityResponse,
+} from '../../lib/studioAvailability';
+import {
+  appointmentsToBusySlots,
+  mergeBusySlots,
+  normalizeSlotTime,
+} from '../../lib/bookingBusySlots';
 
 interface BookingFormProps {
   onSubmit: (data: BookingFormData) => void | Promise<void>;
@@ -61,7 +79,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   useEffect(() => {
     if (!studioManualMode) return;
     const defaultDeposit = preselectedFlash
-      ? typeof preselectedFlash.depositAmount === 'number' && !Number.isNaN(preselectedFlash.depositAmount)
+      ? typeof preselectedFlash.depositAmount === 'number' &&
+        !Number.isNaN(preselectedFlash.depositAmount)
         ? preselectedFlash.depositAmount
         : Math.round(preselectedFlash.price * 0.3)
       : 0;
@@ -73,7 +92,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       ...(!prev.location ? { location: 'other' as const } : {}),
       ...(!prev.size ? { size: 'medium' as const } : {}),
     }));
-  }, [studioManualMode, preselectedFlash?.id, preselectedFlash?.price, preselectedFlash?.depositAmount]);
+  }, [studioManualMode, preselectedFlash]);
 
   useEffect(() => {
     if (!studioManualMode || !studioId?.trim()) return;
@@ -116,7 +135,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
 
   const canGoNextFromStep1 = (): boolean => {
     if (!formData.location || !formData.size) return false;
-    if (formData.tattooType === 'custom' && !studioManualMode && !formData.description?.trim()) return false;
+    if (formData.tattooType === 'custom' && !studioManualMode && !formData.description?.trim())
+      return false;
     if (studioManualMode) {
       if (!formData.clientName?.trim() || !formData.clientEmail?.trim()) return false;
     }
@@ -126,7 +146,12 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   const handleNext = () => {
     if (step === 1 && !canGoNextFromStep1()) return;
     if (step === 2 && !studioManualMode) {
-      if (!formData.clientName?.trim() || !formData.clientEmail?.trim() || !formData.clientPhone?.trim()) return;
+      if (
+        !formData.clientName?.trim() ||
+        !formData.clientEmail?.trim() ||
+        !formData.clientPhone?.trim()
+      )
+        return;
     }
     if (step < totalSteps) setStep(step + 1);
   };
@@ -136,18 +161,29 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   };
 
   const effectiveDepositAmount = (): number => {
-    if (studioManualMode && typeof formData.deposit === 'number' && !Number.isNaN(formData.deposit)) {
+    if (
+      studioManualMode &&
+      typeof formData.deposit === 'number' &&
+      !Number.isNaN(formData.deposit)
+    ) {
       return Math.max(0, formData.deposit);
     }
     return calculateDeposit();
   };
 
   const calculateDeposit = (): number => {
-    if (studioManualMode && typeof formData.deposit === 'number' && !Number.isNaN(formData.deposit)) {
+    if (
+      studioManualMode &&
+      typeof formData.deposit === 'number' &&
+      !Number.isNaN(formData.deposit)
+    ) {
       return Math.max(0, formData.deposit);
     }
     if (preselectedFlash) {
-      if (typeof preselectedFlash.depositAmount === 'number' && !Number.isNaN(preselectedFlash.depositAmount)) {
+      if (
+        typeof preselectedFlash.depositAmount === 'number' &&
+        !Number.isNaN(preselectedFlash.depositAmount)
+      ) {
         return preselectedFlash.depositAmount;
       }
       return Math.round(preselectedFlash.price * 0.3);
@@ -165,11 +201,20 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       formData.tattooType === 'flash' && preselectedFlash
         ? preselectedFlash.title
         : descRaw || (studioManualMode ? 'Projet sur mesure' : '');
-    const data = { ...formData, service, description: descRaw || (studioManualMode ? 'À préciser' : '') } as BookingFormData;
+    const data = {
+      ...formData,
+      service,
+      description: descRaw || (studioManualMode ? 'À préciser' : ''),
+    } as BookingFormData;
     if (studioManualMode) {
-      const p = typeof formData.price === 'number' && !Number.isNaN(formData.price) ? Math.max(0, formData.price) : 0;
+      const p =
+        typeof formData.price === 'number' && !Number.isNaN(formData.price)
+          ? Math.max(0, formData.price)
+          : 0;
       const d =
-        typeof formData.deposit === 'number' && !Number.isNaN(formData.deposit) ? Math.max(0, formData.deposit) : 0;
+        typeof formData.deposit === 'number' && !Number.isNaN(formData.deposit)
+          ? Math.max(0, formData.deposit)
+          : 0;
       data.price = p;
       data.deposit = d;
       if (d <= 0) {
@@ -215,8 +260,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       <div className="flex items-start gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-900/40 px-3 py-2.5">
         <Info className="w-4 h-4 text-zinc-500 shrink-0 mt-0.5" aria-hidden />
         <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-snug">
-          Les heures déjà prises (réservations en ligne, agenda) sont masquées. Vous pouvez forcer un doublon si besoin
-          (ex. deux artistes).
+          Les heures déjà prises (réservations en ligne, agenda) sont masquées. Vous pouvez forcer
+          un doublon si besoin (ex. deux artistes).
         </p>
       </div>
       {studioManualMode && (
@@ -250,7 +295,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({
               min={0}
               step={0.01}
               inputMode="decimal"
-              value={formData.deposit === undefined || formData.deposit === null ? '' : formData.deposit}
+              value={
+                formData.deposit === undefined || formData.deposit === null ? '' : formData.deposit
+              }
               onChange={(e) => {
                 const v = e.target.value;
                 updateFormData('deposit', v === '' ? undefined : Math.max(0, parseFloat(v) || 0));
@@ -322,8 +369,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                 </div>
               ) : (
                 <p className="text-sm text-amber-700 dark:text-amber-300">
-                  Aucun créneau libre ce jour-là avec vos règles actuelles. Utilisez « Autre horaire » ou choisissez une autre
-                  date.
+                  Aucun créneau libre ce jour-là avec vos règles actuelles. Utilisez « Autre horaire
+                  » ou choisissez une autre date.
                 </p>
               )}
               <button
@@ -379,7 +426,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       </div>
       {studioManualMode && hasSlotOverlap && (
         <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/90 dark:bg-amber-950/40 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
-          Ce créneau est déjà réservé (agenda ou vitrine). Choisissez une autre heure ou confirmez un doublon volontaire.
+          Ce créneau est déjà réservé (agenda ou vitrine). Choisissez une autre heure ou confirmez
+          un doublon volontaire.
           <label className="mt-2 flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -395,11 +443,15 @@ export const BookingForm: React.FC<BookingFormProps> = ({
         <>
           <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl p-4">
             <div className="flex items-start gap-3">
-              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" aria-hidden />
+              <DollarSign
+                className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0"
+                aria-hidden
+              />
               <div>
                 <h4 className="font-bold text-blue-900 dark:text-blue-100 mb-1">Acompte requis</h4>
                 <p className="text-sm text-blue-700 dark:text-blue-400">
-                  Un acompte de <strong>{effectiveDepositAmount()}€</strong> sera requis pour confirmer votre réservation.
+                  Un acompte de <strong>{effectiveDepositAmount()}€</strong> sera requis pour
+                  confirmer votre réservation.
                 </p>
               </div>
             </div>
@@ -413,16 +465,20 @@ export const BookingForm: React.FC<BookingFormProps> = ({
               className="mt-1.5 h-5 w-5 shrink-0 rounded border-neutral-300"
               required={effectiveDepositAmount() > 0}
             />
-            <label htmlFor="deposit-agree" className="text-sm text-neutral-700 dark:text-neutral-300 py-2 -my-2 pl-1 cursor-pointer">
-              J&apos;accepte de payer l&apos;acompte de {effectiveDepositAmount()}€ pour confirmer ma réservation.
+            <label
+              htmlFor="deposit-agree"
+              className="text-sm text-neutral-700 dark:text-neutral-300 py-2 -my-2 pl-1 cursor-pointer"
+            >
+              J&apos;accepte de payer l&apos;acompte de {effectiveDepositAmount()}€ pour confirmer
+              ma réservation.
             </label>
           </div>
         </>
       ) : (
         <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50/80 dark:bg-neutral-900/40 p-4">
           <p className="text-sm text-neutral-700 dark:text-neutral-300">
-            <strong className="font-semibold">Sans acompte</strong> — adapté aux proches, amis ou projets internes. Vous pouvez
-            ajouter un montant plus haut si besoin.
+            <strong className="font-semibold">Sans acompte</strong> — adapté aux proches, amis ou
+            projets internes. Vous pouvez ajouter un montant plus haut si besoin.
           </p>
         </div>
       )}
@@ -443,13 +499,17 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           <div key={s} className="flex items-center flex-1">
             <div
               className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                s <= step ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900' : 'bg-zinc-200 text-zinc-400 dark:bg-zinc-700'
+                s <= step
+                  ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                  : 'bg-zinc-200 text-zinc-400 dark:bg-zinc-700'
               }`}
             >
               {s}
             </div>
             {s < totalSteps && (
-              <div className={`flex-1 h-0.5 mx-2 rounded ${s < step ? 'bg-zinc-900 dark:bg-white' : 'bg-zinc-200 dark:bg-zinc-600'}`} />
+              <div
+                className={`flex-1 h-0.5 mx-2 rounded ${s < step ? 'bg-zinc-900 dark:bg-white' : 'bg-zinc-200 dark:bg-zinc-600'}`}
+              />
             )}
           </div>
         ))}
@@ -458,7 +518,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       {step === 1 && (
         <div className="space-y-5">
           <div>
-            <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">Type de tatouage</h4>
+            <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+              Type de tatouage
+            </h4>
             <div className="grid sm:grid-cols-2 gap-3">
               <button
                 type="button"
@@ -491,7 +553,10 @@ export const BookingForm: React.FC<BookingFormProps> = ({
             {preselectedFlash && (
               <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-500/10 rounded-xl border border-blue-200 dark:border-blue-500/30 text-sm">
                 <span className="font-semibold">{preselectedFlash.title}</span>
-                <span className="text-zinc-600 dark:text-zinc-400"> · {preselectedFlash.price}€</span>
+                <span className="text-zinc-600 dark:text-zinc-400">
+                  {' '}
+                  · {preselectedFlash.price}€
+                </span>
               </div>
             )}
           </div>
@@ -517,7 +582,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1.5 text-zinc-600 dark:text-zinc-400">Taille</label>
+              <label className="block text-xs font-semibold mb-1.5 text-zinc-600 dark:text-zinc-400">
+                Taille
+              </label>
               <select
                 value={formData.size || ''}
                 onChange={(e) => updateFormData('size', e.target.value)}

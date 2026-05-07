@@ -5,15 +5,11 @@ import {
   Calendar,
   Users,
   Settings,
-  Plus,
-  Bell,
   LogOut,
   ChevronRight,
   ChevronLeft,
-  ChevronDown,
   X,
   AlertTriangle,
-  Trophy,
   MessageSquare,
   ClipboardList,
   Wallet,
@@ -25,17 +21,12 @@ import {
   User,
   Camera,
   Trash2,
-  DollarSign,
-  Target,
   Clock,
-  Sparkles,
   Zap,
-  MapPin,
   FolderOpen,
   Share2,
   ExternalLink,
   Search,
-  Gift,
   CreditCard,
   Star,
   Check,
@@ -183,7 +174,7 @@ const LazySessionCloseoutSheet = lazy(() =>
   import('./SessionCloseoutSheet').then((m) => ({ default: m.SessionCloseoutSheet }))
 );
 import type { LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
-import { DashboardWidgets, AddWidgetModal, WidgetCard } from './DashboardWidgets';
+import { AddWidgetModal } from './DashboardWidgets';
 import { useDashboardWidgets } from '../../hooks/useDashboardWidgets';
 import { DashboardTabHero, type DashboardOverviewHeroMeta } from './DashboardTabHero';
 import { ThemeToggle } from '../ThemeToggle';
@@ -199,7 +190,6 @@ import {
   MessageThread,
   type SubscriptionPlan,
 } from '../../types';
-import type { Client } from '../../types';
 import type { ClientPreviewData } from './ClientPreviewPanel';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
 import { DashboardTabErrorBoundary } from './DashboardTabErrorBoundary';
@@ -474,7 +464,11 @@ export const DashboardPro: React.FC = () => {
   usePushNotifications(studioId, { demoMode: demoAccountMode });
   useInkflowNativeShellPushBridge(studioId, { demoMode: demoAccountMode });
   const demandes = usePendingDemandesCounts(appointments, bookings, projectRequests);
-  const { canAccessFeature, hasReachedLimit, getLimit } = useSubscriptionPermissions(studioId);
+  const {
+    canAccessFeature: _canAccessFeature,
+    hasReachedLimit,
+    getLimit,
+  } = useSubscriptionPermissions(studioId);
   const [paymentSuccessModalOpen, setPaymentSuccessModalOpen] = useState(false);
   const [welcomePaidPlan, setWelcomePaidPlan] = useState<SubscriptionPlan | null>(null);
   const paymentWelcomePollRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1058,7 +1052,7 @@ export const DashboardPro: React.FC = () => {
       setArtistAccounts((prev) => [...prev, row]);
       toast.success('Collaborateur ajouté');
     },
-    [toast]
+    [studioId, toast]
   );
 
   /** Renvoie l’e-mail d’invitation (Edge Function Resend) pour un collaborateur déjà listé. */
@@ -1183,9 +1177,8 @@ export const DashboardPro: React.FC = () => {
       } finally {
         setLoadingGoogleBusinessLocations(false);
       }
-      // toast volontairement omis des deps (évite re-création en boucle si le contexte change à chaque rendu).
     },
-    [studioId]
+    [studioId, toast]
   );
 
   useEffect(() => {
@@ -1242,7 +1235,7 @@ export const DashboardPro: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        const ok = await completeGoogleAuth(code, state);
+        await completeGoogleAuth(code, state);
         if (cancelled) return;
         window.history.replaceState({}, '', '/dashboard?connected=google');
         setActiveTab('settings');
@@ -1303,23 +1296,26 @@ export const DashboardPro: React.FC = () => {
   }, [activeTab, settingsTab, moduleFlags.vitrine]);
 
   // Persist consent/waitlist/artists in localStorage ; fidélité : localStorage hors cloud, Supabase quand useSupabase
-  const storageKey = (prefix: string) => `${prefix}_${studioId || user?.email || 'default'}`;
+  const getStorageKey = useCallback(
+    (prefix: string) => `${prefix}_${studioId || user?.email || 'default'}`,
+    [studioId, user?.email]
+  );
   useEffect(() => {
     if (!user) return;
     const c = safeJsonParse<{ id: string; title: string; content: string }[]>(
-      localStorage.getItem(storageKey('inkflow_consent')),
+      localStorage.getItem(getStorageKey('inkflow_consent')),
       []
     );
     if (c.length > 0) setConsentTemplates(c);
     if (!useSupabase) {
       const w = safeJsonParse<WaitlistEntry[]>(
-        localStorage.getItem(storageKey('inkflow_waitlist')),
+        localStorage.getItem(getStorageKey('inkflow_waitlist')),
         []
       );
       if (w.length > 0) setWaitlistEntries(w);
     }
     const a = safeJsonParse<ArtistAccount[]>(
-      localStorage.getItem(storageKey('inkflow_artists')),
+      localStorage.getItem(getStorageKey('inkflow_artists')),
       []
     );
     if (a.length > 0) setArtistAccounts(a);
@@ -1336,17 +1332,17 @@ export const DashboardPro: React.FC = () => {
         ],
       };
       const ly = safeJsonParse<LoyaltySettingsType>(
-        localStorage.getItem(storageKey('inkflow_loyalty_settings')),
+        localStorage.getItem(getStorageKey('inkflow_loyalty_settings')),
         defaultLoyalty
       );
       if (ly && Object.keys(ly).length > 0) setLoyaltySettings(ly);
       const le = safeJsonParse<LoyaltyEntry[]>(
-        localStorage.getItem(storageKey('inkflow_loyalty_entries')),
+        localStorage.getItem(getStorageKey('inkflow_loyalty_entries')),
         []
       );
       if (le.length > 0) setLoyaltyEntries(le);
     }
-  }, [user?.email, studioId, useSupabase]);
+  }, [user?.email, studioId, useSupabase, user, getStorageKey]);
 
   // Load waitlist from Supabase when useSupabase
   useEffect(() => {
@@ -1410,43 +1406,49 @@ export const DashboardPro: React.FC = () => {
   useEffect(() => {
     if (!user) return;
     try {
-      localStorage.setItem(storageKey('inkflow_consent'), JSON.stringify(consentTemplates));
-    } catch (_) {
+      localStorage.setItem(getStorageKey('inkflow_consent'), JSON.stringify(consentTemplates));
+    } catch {
       /* ignore */
     }
-  }, [consentTemplates, user?.email, studioId]);
+  }, [consentTemplates, user?.email, studioId, getStorageKey, user]);
   useEffect(() => {
     if (!user || useSupabase) return;
     try {
-      localStorage.setItem(storageKey('inkflow_waitlist'), JSON.stringify(waitlistEntries));
-    } catch (_) {
+      localStorage.setItem(getStorageKey('inkflow_waitlist'), JSON.stringify(waitlistEntries));
+    } catch {
       /* ignore */
     }
-  }, [waitlistEntries, user?.email, studioId, useSupabase]);
+  }, [waitlistEntries, user?.email, studioId, useSupabase, getStorageKey, user]);
   useEffect(() => {
     if (!user) return;
     try {
-      localStorage.setItem(storageKey('inkflow_artists'), JSON.stringify(artistAccounts));
-    } catch (_) {
+      localStorage.setItem(getStorageKey('inkflow_artists'), JSON.stringify(artistAccounts));
+    } catch {
       /* ignore */
     }
-  }, [artistAccounts, user?.email, studioId]);
+  }, [artistAccounts, user?.email, studioId, getStorageKey, user]);
   useEffect(() => {
     if (!user || useSupabase) return;
     try {
-      localStorage.setItem(storageKey('inkflow_loyalty_settings'), JSON.stringify(loyaltySettings));
-    } catch (_) {
+      localStorage.setItem(
+        getStorageKey('inkflow_loyalty_settings'),
+        JSON.stringify(loyaltySettings)
+      );
+    } catch {
       /* ignore */
     }
-  }, [loyaltySettings, user?.email, studioId, useSupabase]);
+  }, [loyaltySettings, user?.email, studioId, useSupabase, getStorageKey, user]);
   useEffect(() => {
     if (!user || useSupabase) return;
     try {
-      localStorage.setItem(storageKey('inkflow_loyalty_entries'), JSON.stringify(loyaltyEntries));
-    } catch (_) {
+      localStorage.setItem(
+        getStorageKey('inkflow_loyalty_entries'),
+        JSON.stringify(loyaltyEntries)
+      );
+    } catch {
       /* ignore */
     }
-  }, [loyaltyEntries, user?.email, studioId, useSupabase]);
+  }, [loyaltyEntries, user?.email, studioId, useSupabase, getStorageKey, user]);
 
   useEffect(() => {
     if (!studioId || !useSupabase || artistAccounts.length === 0 || isCollaboratorUser) return;
@@ -2040,7 +2042,8 @@ export const DashboardPro: React.FC = () => {
 
     const newAppointment: Appointment = {
       id: `a${Date.now()}`,
-      clientId: 'new',
+      /** Vide → `client_id` NULL en base (FK vers inkflow_clients). `'new'` cassait l’INSERT et rollback optimiste. */
+      clientId: '',
       clientName: data.clientName,
       clientEmail: data.clientEmail,
       clientPhone: data.clientPhone?.trim() || '',
@@ -2049,7 +2052,7 @@ export const DashboardPro: React.FC = () => {
       service:
         data.tattooType === 'flash' && selectedFlash
           ? `Flash - ${selectedFlash.title}`
-          : data.description,
+          : [data.service, data.description].find((s) => String(s || '').trim()) || 'RDV',
       duration: selectedFlash ? selectedFlash.estimatedDuration : 60,
       price: resolvedPrice,
       deposit: resolvedDeposit,
@@ -2079,9 +2082,6 @@ export const DashboardPro: React.FC = () => {
   const today = now.toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   const todayAppointments = appointments.filter((a) => a.date === today);
-  const todayRevenue = appointments
-    .filter((a) => a.date === today && a.status === 'completed')
-    .reduce((sum, a) => sum + a.price, 0);
   const totalRevenue = appointments
     .filter((a) => a.status === 'completed')
     .reduce((sum, a) => sum + a.price, 0);
@@ -4077,7 +4077,7 @@ export const DashboardPro: React.FC = () => {
                                       newData,
                                       user.email,
                                       user.studioName
-                                    ).catch((err) => {
+                                    ).catch(() => {
                                       toast.warning(
                                         'Sauvegardé localement. Synchronisation serveur échouée.'
                                       );

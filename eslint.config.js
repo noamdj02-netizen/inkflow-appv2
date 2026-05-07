@@ -26,6 +26,8 @@ export default tseslint.config(
       '.agents/**',
       'coverage/**',
       'apps/**',
+      '_design_import/**',
+      'test-results/**',
     ],
   },
   eslint.configs.recommended,

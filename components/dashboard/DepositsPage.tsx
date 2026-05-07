@@ -3,18 +3,12 @@ import {
   Receipt,
   CheckCircle,
   Clock,
-  AlertCircle,
   Send,
   Search,
-  Calendar,
-  User,
   CreditCard,
-  ChevronRight,
-  Phone,
   ExternalLink,
   Loader2,
   Copy,
-  Link2,
   Check,
   DollarSign,
   Banknote,
@@ -44,14 +38,11 @@ export const DepositsPage: React.FC<DepositsPageProps> = ({
 
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDeposit, setSelectedDeposit] = useState<Appointment | null>(null);
   const [showSendModal, setShowSendModal] = useState(false);
   const [appointmentToSend, setAppointmentToSend] = useState<Appointment | null>(null);
   const [isMarkingPaid, setIsMarkingPaid] = useState<string | null>(null);
   const [isSendingLink, setIsSendingLink] = useState(false);
   const [generatedPaymentUrl, setGeneratedPaymentUrl] = useState<string | null>(null);
-
-  const today = new Date().toISOString().split('T')[0];
 
   const depositsData = useMemo(() => {
     const validAppointments = appointments.filter(

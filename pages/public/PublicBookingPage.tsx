@@ -9,7 +9,6 @@ import {
   ArrowLeft,
   User,
   Lock,
-  ChevronLeft,
   ChevronRight,
   CreditCard,
   Check,
@@ -23,7 +22,7 @@ import {
 } from 'lucide-react';
 import { ProjectRequestForm } from '../../components/booking/ProjectRequestForm';
 import { HealthQuestionnaireForm } from '../../components/booking/HealthQuestionnaireForm';
-import { toLocalDateString } from '../../lib/utils';
+import { BookingAppInterface480 } from '../../components/booking/BookingAppInterface480';
 import { SEO } from '../../components/SEO';
 import { FlashCard } from '../../components/ui/FlashCard';
 import {
@@ -33,12 +32,6 @@ import {
 } from '../../hooks/useBookingFlow';
 import { AnalyticsEvents, captureEvent } from '../../lib/analytics/capture';
 import { LANDING_URL } from '../../lib/urls';
-
-const WEEKDAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-const MONTHS = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
-];
 
 interface PublicBookingPageProps {
   studioSlug: string;
@@ -63,7 +56,7 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     availableFlashes,
     selectedFlash,
     flashPlacementOptions,
-    resolvedPlacement,
+    resolvedPlacement: _resolvedPlacement,
     depositAmount,
     projectSubmitted,
     projectError,
@@ -676,138 +669,52 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
 
             {/* 3. Disponibilités */}
             <section className="mb-6 relative z-0">
-              <div className="bg-ink-surface rounded-2xl border border-ink-border p-5">
-                <h2 className="text-sm font-semibold text-ink-text mb-3">Disponibilités</h2>
-                {availabilityLoading ? (
-                  <div className="py-8 flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-ink-border border-t-zinc-900 rounded-full animate-spin" />
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between mb-4">
-                      <button
-                        type="button"
-                        aria-label="Mois précédent"
-                        onClick={() =>
-                          setCalendarMonth(
-                            (p) => new Date(p.getFullYear(), p.getMonth() - 1)
-                          )
-                        }
-                        className="p-2 rounded-lg hover:bg-ink-surface text-ink-muted transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
-                      >
-                        <ChevronLeft className="w-5 h-5" aria-hidden />
-                      </button>
-                      <span className="font-semibold text-ink-text text-sm">
-                        {MONTHS[calendarMonth.getMonth()]} {calendarMonth.getFullYear()}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label="Mois suivant"
-                        onClick={() =>
-                          setCalendarMonth(
-                            (p) => new Date(p.getFullYear(), p.getMonth() + 1)
-                          )
-                        }
-                        className="p-2 rounded-lg hover:bg-ink-surface text-ink-muted transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2"
-                      >
-                        <ChevronRight className="w-5 h-5" aria-hidden />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 mb-2">
-                      {WEEKDAYS.map((d) => (
-                        <div
-                          key={d}
-                          className="text-center text-[10px] font-medium text-zinc-400"
-                        >
-                          {d}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 mb-4">
-                      {(() => {
-                        const first = new Date(
-                          calendarMonth.getFullYear(),
-                          calendarMonth.getMonth(),
-                          1
-                        );
-                        const last = new Date(
-                          calendarMonth.getFullYear(),
-                          calendarMonth.getMonth() + 1,
-                          0
-                        );
-                        const startPad = first.getDay();
-                        const days: (Date | null)[] = [];
-                        for (let i = 0; i < startPad; i++) days.push(null);
-                        for (let d = 1; d <= last.getDate(); d++)
-                          days.push(
-                            new Date(
-                              calendarMonth.getFullYear(),
-                              calendarMonth.getMonth(),
-                              d
-                            )
-                          );
-                        return days.map((d, i) => {
-                          if (!d) return <div key={`e-${i}`} />;
-                          const dateStr = toLocalDateString(d);
-                          const isAvailable = availableDates.includes(dateStr);
-                          const selected = form.selectedDate === dateStr;
-                          return (
-                            <button
-                              key={dateStr}
-                              type="button"
-                              onClick={() =>
-                                isAvailable &&
-                                setForm((f) => ({
-                                  ...f,
-                                  selectedDate: dateStr,
-                                  selectedTime: '',
-                                }))
-                              }
-                              disabled={!isAvailable}
-                              className={`aspect-square rounded-lg text-xs font-medium transition-all ${
-                                !isAvailable
-                                  ? 'text-zinc-300 cursor-not-allowed'
-                                  : selected
-                                  ? 'bg-zinc-900 text-white'
-                                  : 'text-ink-text hover:bg-ink-surface'
-                              }`}
-                            >
-                              {d.getDate()}
-                            </button>
-                          );
-                        });
-                      })()}
-                    </div>
-                    {form.selectedDate && (
-                      <div>
-                        <p className="text-xs font-medium text-ink-muted mb-2">
-                          Créneau horaire
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {availableSlots.map((time) => (
-                            <button
-                              key={time}
-                              type="button"
-                              onClick={() => setForm((f) => ({ ...f, selectedTime: time }))}
-                              className={`px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
-                                form.selectedTime === time
-                                  ? 'bg-zinc-900 text-white'
-                                  : 'bg-ink-surface text-ink-text hover:bg-zinc-200'
-                              }`}
-                            >
-                              {time}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
+              {availabilityLoading ? (
+                <div className="py-8 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-ink-border border-t-zinc-900 rounded-full animate-spin" />
+                </div>
+              ) : (
+                <div className="bg-white rounded-[22px] border border-[#e0e0e8] overflow-hidden shadow-[0px_20px_25px_rgba(0,0,0,0.1),0px_8px_10px_rgba(0,0,0,0.1)]">
+                  <BookingAppInterface480
+                    title="Réserver"
+                    subtitle={`Choisis un créneau pour ${studio.name}`}
+                    calendarMonth={calendarMonth}
+                    onPrevMonth={() =>
+                      setCalendarMonth((p) => new Date(p.getFullYear(), p.getMonth() - 1))
+                    }
+                    onNextMonth={() =>
+                      setCalendarMonth((p) => new Date(p.getFullYear(), p.getMonth() + 1))
+                    }
+                    availableDates={availableDates}
+                    selectedDate={form.selectedDate}
+                    onSelectDate={(dateStr) =>
+                      setForm((f) => ({ ...f, selectedDate: dateStr, selectedTime: '' }))
+                    }
+                    availableSlots={form.selectedDate ? availableSlots : []}
+                    selectedTime={form.selectedTime}
+                    onSelectTime={(time) => setForm((f) => ({ ...f, selectedTime: time }))}
+                    recap={{
+                      durationLabel: '2h',
+                      depositLabel: depositAmount != null ? `${depositAmount}€` : '—',
+                      totalLabel:
+                        selectedFlash && typeof selectedFlash.price === 'number'
+                          ? `${selectedFlash.price}€`
+                          : '—',
+                    }}
+                    onContinue={() => {
+                      document.getElementById('booking-contact')?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start',
+                      });
+                    }}
+                    continueDisabled={!form.selectedDate || !form.selectedTime}
+                  />
+                </div>
+              )}
             </section>
 
             {/* 4. Vos Coordonnées */}
-            <section className="mb-6">
+            <section id="booking-contact" className="mb-6">
               <div className="bg-ink-surface rounded-2xl border border-ink-border p-5">
                 <h2 className="text-sm font-semibold text-ink-text mb-3">Vos coordonnées</h2>
                 <div className="grid grid-cols-2 gap-3">

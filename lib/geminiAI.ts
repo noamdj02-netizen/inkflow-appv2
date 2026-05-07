@@ -367,7 +367,7 @@ const JPEG_QUALITY = 0.8;
 /** Réduit la taille de l'image pour éviter timeout et dépassement de quota. */
 async function compressImageForAI(dataUrl: string): Promise<string> {
   if (typeof document === 'undefined' || !dataUrl.startsWith('data:image')) return dataUrl;
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, _reject) => {
     const img = new Image();
     img.onload = () => {
       const w = img.width;

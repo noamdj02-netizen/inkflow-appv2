@@ -30,7 +30,15 @@ import {
   Compass,
   Sparkles,
 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { Logo } from '../components/Logo';
 import { LANDING_URL } from '../lib/urls';
 import { MiniCalendar } from '../components/dashboard/MiniCalendar';
@@ -44,7 +52,6 @@ import {
   getDemoSandboxRevenueStats,
   getDemoSandboxRecentDeposits,
   getDemoSandboxRevenueChartData,
-  getDemoFlashItems,
   getDemoPortfolioItems,
   getDemoFinanceLines,
   getDemoNotifications,
@@ -61,7 +68,17 @@ import {
 import { useToast } from '../contexts/ToastContext';
 import { EmptyState } from '../components/common/EmptyState';
 
-type TabId = 'overview' | 'requests' | 'appointments' | 'flash' | 'clients' | 'messaging' | 'vitrine' | 'portfolio' | 'finance' | 'settings';
+type TabId =
+  | 'overview'
+  | 'requests'
+  | 'appointments'
+  | 'flash'
+  | 'clients'
+  | 'messaging'
+  | 'vitrine'
+  | 'portfolio'
+  | 'finance'
+  | 'settings';
 
 const GUIDE_STEPS: TourStep[] = [
   {
@@ -95,14 +112,14 @@ const GUIDE_STEPS: TourStep[] = [
     tabId: 'overview',
     title: 'Suivi des acomptes',
     content:
-      "Chaque encaissement est tracé ici. Remboursements, paiements partiels — visibilité totale sur votre trésorerie.",
+      'Chaque encaissement est tracé ici. Remboursements, paiements partiels — visibilité totale sur votre trésorerie.',
   },
   {
     target: '[data-joyride="new-rdv"]',
     tabId: 'overview',
     title: 'Créer un rendez-vous',
     content:
-      "En un clic, créez un RDV, assignez un client et demandez un acompte Stripe. Créez un compte gratuit pour tester.",
+      'En un clic, créez un RDV, assignez un client et demandez un acompte Stripe. Créez un compte gratuit pour tester.',
   },
 ];
 
@@ -138,7 +155,6 @@ export const DemoSandboxPage: React.FC = () => {
   const revenueStats = getDemoSandboxRevenueStats();
   const recentDeposits = getDemoSandboxRecentDeposits();
   const revenueChartData = getDemoSandboxRevenueChartData();
-  const flashItems = getDemoFlashItems();
   const portfolioItems = getDemoPortfolioItems();
   const financeLines = getDemoFinanceLines();
 
@@ -152,7 +168,10 @@ export const DemoSandboxPage: React.FC = () => {
   );
 
   useEffect(() => {
-    if (!ctaUnlocked && (tourStep >= CTA_TOUR_STEP_THRESHOLD || engagementCount >= CTA_ENGAGEMENT_THRESHOLD)) {
+    if (
+      !ctaUnlocked &&
+      (tourStep >= CTA_TOUR_STEP_THRESHOLD || engagementCount >= CTA_ENGAGEMENT_THRESHOLD)
+    ) {
       setCtaUnlocked(true);
     }
   }, [tourStep, engagementCount, ctaUnlocked]);
@@ -242,10 +261,13 @@ export const DemoSandboxPage: React.FC = () => {
       const now = new Date();
       const monthLabel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
       const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        .toISOString()
+        .split('T')[0];
 
       const monthAppointments = appointments.filter(
-        (a) => a.date >= monthStart && a.date <= monthEnd && (a.status === 'completed' || a.depositPaid)
+        (a) =>
+          a.date >= monthStart && a.date <= monthEnd && (a.status === 'completed' || a.depositPaid)
       );
       const monthFinanceLines = financeLines.filter((line) => {
         const d = line.date.split('T')[0];
@@ -253,8 +275,12 @@ export const DemoSandboxPage: React.FC = () => {
       });
 
       const totalCA = revenueStats.monthlyRevenue;
-      const depositsReceived = monthFinanceLines.filter((l) => l.amount > 0).reduce((s, l) => s + l.amount, 0);
-      const refunds = monthFinanceLines.filter((l) => l.amount < 0).reduce((s, l) => s + Math.abs(l.amount), 0);
+      const depositsReceived = monthFinanceLines
+        .filter((l) => l.amount > 0)
+        .reduce((s, l) => s + l.amount, 0);
+      const refunds = monthFinanceLines
+        .filter((l) => l.amount < 0)
+        .reduce((s, l) => s + Math.abs(l.amount), 0);
       const clientCount = new Set(monthAppointments.map((a) => a.clientId || a.clientName)).size;
 
       doc.setFillColor(23, 23, 23);
@@ -280,7 +306,7 @@ export const DemoSandboxPage: React.FC = () => {
 
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text('Chiffre d\'affaires:', margin, yPos);
+      doc.text("Chiffre d'affaires:", margin, yPos);
       doc.setFont('helvetica', 'normal');
       doc.text(`${totalCA}€`, pageWidth - margin, yPos, { align: 'right' });
       yPos += 7;
@@ -327,7 +353,11 @@ export const DemoSandboxPage: React.FC = () => {
           sub: l.type === 'refund' ? 'Remboursement' : 'Acompte',
           amount: l.amount,
         })),
-      ].sort((a, b) => new Date(b.date + 'T' + (b.time || '00:00')).getTime() - new Date(a.date + 'T' + (a.time || '00:00')).getTime());
+      ].sort(
+        (a, b) =>
+          new Date(b.date + 'T' + (b.time || '00:00')).getTime() -
+          new Date(a.date + 'T' + (a.time || '00:00')).getTime()
+      );
 
       if (transactions.length === 0) {
         doc.setFont('helvetica', 'normal');
@@ -338,8 +368,18 @@ export const DemoSandboxPage: React.FC = () => {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(23, 23, 23);
-        const colW = [(pageWidth - 2 * margin) * 0.25, (pageWidth - 2 * margin) * 0.3, (pageWidth - 2 * margin) * 0.25, (pageWidth - 2 * margin) * 0.2];
-        const colX = [margin, margin + colW[0], margin + colW[0] + colW[1], margin + colW[0] + colW[1] + colW[2]];
+        const colW = [
+          (pageWidth - 2 * margin) * 0.25,
+          (pageWidth - 2 * margin) * 0.3,
+          (pageWidth - 2 * margin) * 0.25,
+          (pageWidth - 2 * margin) * 0.2,
+        ];
+        const colX = [
+          margin,
+          margin + colW[0],
+          margin + colW[0] + colW[1],
+          margin + colW[0] + colW[1] + colW[2],
+        ];
         doc.text('Date / Heure', colX[0], yPos);
         doc.text('Client', colX[1], yPos);
         doc.text('Service', colX[2], yPos);
@@ -355,7 +395,9 @@ export const DemoSandboxPage: React.FC = () => {
           doc.text(line.length > 18 ? line.slice(0, 15) + '…' : line, colX[0], yPos);
           doc.text(t.label.length > 22 ? t.label.slice(0, 19) + '…' : t.label, colX[1], yPos);
           doc.text(t.sub.length > 18 ? t.sub.slice(0, 15) + '…' : t.sub, colX[2], yPos);
-          doc.text(`${t.amount >= 0 ? '' : '-'}${Math.abs(t.amount)}€`, pageWidth - margin, yPos, { align: 'right' });
+          doc.text(`${t.amount >= 0 ? '' : '-'}${Math.abs(t.amount)}€`, pageWidth - margin, yPos, {
+            align: 'right',
+          });
           yPos += 6;
         }
       }
@@ -374,16 +416,41 @@ export const DemoSandboxPage: React.FC = () => {
   const topClients = clients.slice(0, 4);
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { id: 'overview', label: "Vue d'ensemble", icon: <LayoutDashboard className="w-5 h-5" strokeWidth={1.5} /> },
-    { id: 'requests', label: 'Demandes', icon: <MessageSquare className="w-5 h-5" strokeWidth={1.5} />, badge: DEMO_PENDING_REQUESTS_COUNT },
-    { id: 'appointments', label: 'Rendez-vous', icon: <Calendar className="w-5 h-5" strokeWidth={1.5} /> },
+    {
+      id: 'overview',
+      label: "Vue d'ensemble",
+      icon: <LayoutDashboard className="w-5 h-5" strokeWidth={1.5} />,
+    },
+    {
+      id: 'requests',
+      label: 'Demandes',
+      icon: <MessageSquare className="w-5 h-5" strokeWidth={1.5} />,
+      badge: DEMO_PENDING_REQUESTS_COUNT,
+    },
+    {
+      id: 'appointments',
+      label: 'Rendez-vous',
+      icon: <Calendar className="w-5 h-5" strokeWidth={1.5} />,
+    },
     { id: 'flash', label: 'Galerie Flash', icon: <Image className="w-5 h-5" strokeWidth={1.5} /> },
     { id: 'clients', label: 'Clients', icon: <Users className="w-5 h-5" strokeWidth={1.5} /> },
-    { id: 'messaging', label: 'Messagerie', icon: <MessageSquare className="w-5 h-5" strokeWidth={1.5} /> },
-    { id: 'vitrine', label: 'Ma vitrine', icon: <ExternalLink className="w-5 h-5" strokeWidth={1.5} /> },
+    {
+      id: 'messaging',
+      label: 'Messagerie',
+      icon: <MessageSquare className="w-5 h-5" strokeWidth={1.5} />,
+    },
+    {
+      id: 'vitrine',
+      label: 'Ma vitrine',
+      icon: <ExternalLink className="w-5 h-5" strokeWidth={1.5} />,
+    },
     { id: 'portfolio', label: 'Portfolio', icon: <Image className="w-5 h-5" strokeWidth={1.5} /> },
     { id: 'finance', label: 'Finance', icon: <Wallet className="w-5 h-5" strokeWidth={1.5} /> },
-    { id: 'settings', label: 'Paramètres', icon: <Settings className="w-5 h-5" strokeWidth={1.5} /> },
+    {
+      id: 'settings',
+      label: 'Paramètres',
+      icon: <Settings className="w-5 h-5" strokeWidth={1.5} />,
+    },
   ];
 
   const renderTabContent = () => {
@@ -393,7 +460,11 @@ export const DemoSandboxPage: React.FC = () => {
           {/* Header */}
           <div className="px-2 sm:px-4 pt-4 sm:pt-6 pb-2 sm:pb-4">
             <p className="text-[13px] font-medium text-zinc-500 dark:text-zinc-400 mb-1">
-              {new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' })}
+              {new Date().toLocaleDateString('fr-FR', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'long',
+              })}
             </p>
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">
               Bonjour 👋
@@ -411,7 +482,10 @@ export const DemoSandboxPage: React.FC = () => {
               </button>
               <button
                 data-joyride="demandes"
-                onClick={() => { setActiveTab('requests'); trackEngagement(); }}
+                onClick={() => {
+                  setActiveTab('requests');
+                  trackEngagement();
+                }}
                 className="rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 px-4 py-2.5 text-sm font-medium transition-colors inline-flex items-center gap-2 min-h-[44px] touch-manipulation"
               >
                 <Inbox className="w-4 h-4 shrink-0" strokeWidth={1.5} /> Demandes
@@ -424,7 +498,10 @@ export const DemoSandboxPage: React.FC = () => {
               <button
                 type="button"
                 data-joyride="ma-vitrine"
-                onClick={() => { setActiveTab('vitrine'); trackEngagement(); }}
+                onClick={() => {
+                  setActiveTab('vitrine');
+                  trackEngagement();
+                }}
                 className="rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 px-4 py-2.5 text-sm font-medium transition-colors inline-flex items-center gap-2 min-h-[44px] touch-manipulation"
               >
                 <Image className="w-4 h-4 shrink-0" strokeWidth={1.5} /> Ma vitrine
@@ -436,7 +513,10 @@ export const DemoSandboxPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 px-2 sm:px-4">
             <button
               type="button"
-              onClick={() => { setActiveTab('appointments'); trackEngagement(); }}
+              onClick={() => {
+                setActiveTab('appointments');
+                trackEngagement();
+              }}
               className="flex items-center p-3 rounded-xl bg-white dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-all cursor-pointer group text-left w-full"
             >
               <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-500 dark:text-blue-400 shrink-0 mr-3">
@@ -445,11 +525,17 @@ export const DemoSandboxPage: React.FC = () => {
               <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 flex-1 min-w-0 truncate">
                 {DEMO_UNPAID_DEPOSITS_COUNT} RDV sans acompte payé
               </span>
-              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 text-zinc-500" strokeWidth={1.5} />
+              <ChevronRight
+                className="w-4 h-4 transition-transform group-hover:translate-x-0.5 text-zinc-500"
+                strokeWidth={1.5}
+              />
             </button>
             <button
               type="button"
-              onClick={() => { setActiveTab('appointments'); trackEngagement(); }}
+              onClick={() => {
+                setActiveTab('appointments');
+                trackEngagement();
+              }}
               className="flex items-center p-3 rounded-xl bg-white dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-all cursor-pointer group text-left w-full"
             >
               <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500/10 text-blue-500 dark:text-blue-400 shrink-0 mr-3">
@@ -460,7 +546,10 @@ export const DemoSandboxPage: React.FC = () => {
               </span>
               <div className="flex items-center gap-1 text-xs font-medium text-zinc-500 ml-auto shrink-0">
                 <span className="hidden sm:inline">Gérer</span>
-                <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
+                <ChevronRight
+                  className="w-4 h-4 transition-transform group-hover:translate-x-0.5"
+                  strokeWidth={1.5}
+                />
               </div>
             </button>
           </div>
@@ -485,10 +574,13 @@ export const DemoSandboxPage: React.FC = () => {
                       </span>
                       <span
                         className={`text-xs font-medium flex-shrink-0 ${
-                          d.amount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                          d.amount >= 0
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-red-600 dark:text-red-400'
                         }`}
                       >
-                        {d.amount >= 0 ? '+' : ''}{d.amount}€
+                        {d.amount >= 0 ? '+' : ''}
+                        {d.amount}€
                       </span>
                     </div>
                   ))}
@@ -499,20 +591,38 @@ export const DemoSandboxPage: React.FC = () => {
               <div className="prodify-card p-6">
                 <div className="flex items-center justify-between mb-4">
                   <span className="flex items-center gap-2 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
-                    <FolderOpen className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} /> Clients récents
+                    <FolderOpen
+                      className="w-5 h-5 text-zinc-500 dark:text-zinc-400"
+                      strokeWidth={1.5}
+                    />{' '}
+                    Clients récents
                   </span>
-                  <button onClick={() => { setActiveTab('clients'); trackEngagement(); }} className="text-[13px] font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                  <button
+                    onClick={() => {
+                      setActiveTab('clients');
+                      trackEngagement();
+                    }}
+                    className="text-[13px] font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                  >
                     Voir tout
                   </button>
                 </div>
                 <button
-                  onClick={() => { setActiveTab('clients'); trackEngagement(); }}
+                  onClick={() => {
+                    setActiveTab('clients');
+                    trackEngagement();
+                  }}
                   className="w-full flex items-center gap-3 p-3 mb-3 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-colors text-left"
                 >
                   <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
-                    <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" strokeWidth={1.5} />
+                    <UserPlus
+                      className="w-4 h-4 text-blue-600 dark:text-blue-400"
+                      strokeWidth={1.5}
+                    />
                   </div>
-                  <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Nouveau client</span>
+                  <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                    Nouveau client
+                  </span>
                 </button>
                 <div className="grid grid-cols-2 gap-3">
                   {topClients.map((client, i) => {
@@ -520,16 +630,25 @@ export const DemoSandboxPage: React.FC = () => {
                     return (
                       <button
                         key={client.id}
-                        onClick={() => { setActiveTab('clients'); trackEngagement(); }}
+                        onClick={() => {
+                          setActiveTab('clients');
+                          trackEngagement();
+                        }}
                         className="text-left p-3.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
                       >
                         <div
                           className={`relative w-7 h-7 rounded-lg overflow-hidden mb-2 flex-shrink-0 ${colors[i % 4]} flex items-center justify-center bg-zinc-300 dark:bg-zinc-600`}
                         >
                           {client.avatar ? (
-                            <img src={client.avatar} alt="" className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover" />
+                            <img
+                              src={client.avatar}
+                              alt=""
+                              className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover"
+                            />
                           ) : (
-                            <span className="text-white text-xs font-bold">{client.name?.charAt(0)}</span>
+                            <span className="text-white text-xs font-bold">
+                              {client.name?.charAt(0)}
+                            </span>
                           )}
                         </div>
                         <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 truncate">
@@ -547,11 +666,18 @@ export const DemoSandboxPage: React.FC = () => {
               {/* Mini calendrier */}
               <MiniCalendar
                 selectedDate={null}
-                onSelectDate={() => { setActiveTab('appointments'); trackEngagement(); }}
+                onSelectDate={() => {
+                  setActiveTab('appointments');
+                  trackEngagement();
+                }}
                 datesWithAppointments={datesWithAppointments}
                 currentMonth={overviewCalendarMonth}
-                onPrevMonth={() => setOverviewCalendarMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1))}
-                onNextMonth={() => setOverviewCalendarMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1))}
+                onPrevMonth={() =>
+                  setOverviewCalendarMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1))
+                }
+                onNextMonth={() =>
+                  setOverviewCalendarMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1))
+                }
                 onToday={() => setOverviewCalendarMonth(new Date())}
               />
             </div>
@@ -562,7 +688,11 @@ export const DemoSandboxPage: React.FC = () => {
               <div className="prodify-card p-6" data-joyride="mes-rdv">
                 <div className="flex items-center justify-between mb-4">
                   <span className="flex items-center gap-2 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
-                    <Calendar className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} /> Mes Rendez-vous
+                    <Calendar
+                      className="w-5 h-5 text-zinc-500 dark:text-zinc-400"
+                      strokeWidth={1.5}
+                    />{' '}
+                    Mes Rendez-vous
                   </span>
                   <button
                     onClick={handleNewAppointment}
@@ -575,7 +705,9 @@ export const DemoSandboxPage: React.FC = () => {
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="badge-prodify badge-progress">AUJOURD&apos;HUI</span>
-                    <span className="text-[13px] text-zinc-500 dark:text-zinc-400">• {todayAppointments.length} RDV</span>
+                    <span className="text-[13px] text-zinc-500 dark:text-zinc-400">
+                      • {todayAppointments.length} RDV
+                    </span>
                   </div>
                   {todayAppointments.length > 0 ? (
                     <div className="space-y-2 overflow-hidden min-w-0">
@@ -594,23 +726,37 @@ export const DemoSandboxPage: React.FC = () => {
                           </span>
                           <span
                             className={`badge-prodify ${
-                              apt.status === 'confirmed' ? 'badge-confirmed' : apt.status === 'pending' ? 'badge-pending' : 'badge-completed'
+                              apt.status === 'confirmed'
+                                ? 'badge-confirmed'
+                                : apt.status === 'pending'
+                                  ? 'badge-pending'
+                                  : 'badge-completed'
                             }`}
                           >
-                            {apt.status === 'confirmed' ? 'Confirmé' : apt.status === 'pending' ? 'En attente' : 'Terminé'}
+                            {apt.status === 'confirmed'
+                              ? 'Confirmé'
+                              : apt.status === 'pending'
+                                ? 'En attente'
+                                : 'Terminé'}
                           </span>
-                          <span className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-400">{apt.time || '—'}</span>
+                          <span className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-400">
+                            {apt.time || '—'}
+                          </span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 pl-3">Aucun RDV aujourd&apos;hui</p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 pl-3">
+                      Aucun RDV aujourd&apos;hui
+                    </p>
                   )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <span className="badge-prodify badge-upcoming">À VENIR</span>
-                    <span className="text-[13px] text-zinc-500 dark:text-zinc-400">• {upcomingAppointments.length} RDV</span>
+                    <span className="text-[13px] text-zinc-500 dark:text-zinc-400">
+                      • {upcomingAppointments.length} RDV
+                    </span>
                   </div>
                   {upcomingAppointments.length > 0 ? (
                     <div className="space-y-2">
@@ -628,13 +774,18 @@ export const DemoSandboxPage: React.FC = () => {
                             {apt.status === 'confirmed' ? 'Confirmé' : 'En attente'}
                           </span>
                           <span className="text-[13px] text-zinc-500 dark:text-zinc-400">
-                            {new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                            {new Date(apt.date + 'T00:00').toLocaleDateString('fr-FR', {
+                              day: 'numeric',
+                              month: 'short',
+                            })}
                           </span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 pl-3">Aucun RDV à venir</p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 pl-3">
+                      Aucun RDV à venir
+                    </p>
                   )}
                 </div>
                 <button
@@ -649,14 +800,18 @@ export const DemoSandboxPage: React.FC = () => {
               <div className="prodify-card p-6">
                 <div className="flex items-center gap-2 mb-5">
                   <Target className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
-                  <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Mes Statistiques</span>
+                  <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+                    Mes Statistiques
+                  </span>
                 </div>
                 <div className="space-y-5">
                   <div>
                     <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">
                       Revenu aujourd&apos;hui
                     </div>
-                    <div className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">+{revenueStats.vsYesterday}€ vs hier</div>
+                    <div className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">
+                      +{revenueStats.vsYesterday}€ vs hier
+                    </div>
                     <div className="flex items-center gap-3">
                       <div className="progress-bar-prodify">
                         <div className="progress-fill blue" style={{ width: '75%' }} />
@@ -667,7 +822,9 @@ export const DemoSandboxPage: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">Revenu mensuel</div>
+                    <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5">
+                      Revenu mensuel
+                    </div>
                     <div className="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">
                       {new Date().toLocaleDateString('fr-FR', { month: 'long' })}
                     </div>
@@ -687,14 +844,22 @@ export const DemoSandboxPage: React.FC = () => {
               <div className="prodify-card p-6 overflow-hidden">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-zinc-500 dark:text-zinc-400" strokeWidth={1.5} />
-                    <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Évolution du revenu</span>
+                    <BarChart3
+                      className="w-5 h-5 text-zinc-500 dark:text-zinc-400"
+                      strokeWidth={1.5}
+                    />
+                    <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
+                      Évolution du revenu
+                    </span>
                   </div>
                   <span className="badge-prodify badge-progress">6 mois</span>
                 </div>
                 <div className="-mx-2 sm:mx-0 h-[200px]">
                   <ResponsiveContainer width="100%" height={200}>
-                    <AreaChart data={revenueChartData} margin={{ top: 0, right: 0, left: -8, bottom: 0 }}>
+                    <AreaChart
+                      data={revenueChartData}
+                      margin={{ top: 0, right: 0, left: -8, bottom: 0 }}
+                    >
                       <defs>
                         <linearGradient id="colorRevenueDemo" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#2563eb" stopOpacity={0.35} />
@@ -702,13 +867,35 @@ export const DemoSandboxPage: React.FC = () => {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
-                      <XAxis dataKey="month" stroke="#71717a" style={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#71717a" style={{ fontSize: 11 }} tickLine={false} axisLine={false} width={32} />
+                      <XAxis
+                        dataKey="month"
+                        stroke="#71717a"
+                        style={{ fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke="#71717a"
+                        style={{ fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={32}
+                      />
                       <Tooltip
                         formatter={(v: number) => [`${v}€`, 'Revenu']}
-                        contentStyle={{ borderRadius: 12, border: '1px solid #e4e4e7', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+                        contentStyle={{
+                          borderRadius: 12,
+                          border: '1px solid #e4e4e7',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                        }}
                       />
-                      <Area type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} fill="url(#colorRevenueDemo)" />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#2563eb"
+                        strokeWidth={2}
+                        fill="url(#colorRevenueDemo)"
+                      />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -811,7 +998,13 @@ export const DemoSandboxPage: React.FC = () => {
               iconNode="📩"
               title="Aucune nouvelle demande"
               description="Connectez votre Instagram pour recevoir des demandes"
-              primaryAction={{ label: 'Connecter Instagram', onClick: () => { trackEngagement(); toast.info('Créez un compte pour connecter Instagram.'); } }}
+              primaryAction={{
+                label: 'Connecter Instagram',
+                onClick: () => {
+                  trackEngagement();
+                  toast.info('Créez un compte pour connecter Instagram.');
+                },
+              }}
             />
           </div>
         );
@@ -844,33 +1037,60 @@ export const DemoSandboxPage: React.FC = () => {
           <div className="space-y-3">
             {filteredRequests.map((req) => {
               const scoreColor =
-                req.score >= 70 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10' : req.score >= 40 ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10' : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10';
-              const statusLabel = req.status === 'new' ? 'Nouvelle' : req.status === 'contacted' ? 'Contactée' : 'En cours';
+                req.score >= 70
+                  ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10'
+                  : req.score >= 40
+                    ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10'
+                    : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10';
+              const statusLabel =
+                req.status === 'new'
+                  ? 'Nouvelle'
+                  : req.status === 'contacted'
+                    ? 'Contactée'
+                    : 'En cours';
               return (
                 <div
                   key={req.id}
                   className="prodify-card p-5 flex flex-col sm:flex-row sm:items-center gap-4"
                 >
                   <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className={`relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0 ${req.avatarColor} flex items-center justify-center text-white font-bold text-sm bg-zinc-200 dark:bg-zinc-700`}>
+                    <div
+                      className={`relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0 ${req.avatarColor} flex items-center justify-center text-white font-bold text-sm bg-zinc-200 dark:bg-zinc-700`}
+                    >
                       {req.avatarImage ? (
-                        <img src={req.avatarImage} alt="" className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover" />
+                        <img
+                          src={req.avatarImage}
+                          alt=""
+                          className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover"
+                        />
                       ) : (
                         <span>{req.avatar}</span>
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-zinc-900 dark:text-zinc-100">{req.clientName}</p>
-                      <p className="font-medium text-zinc-800 dark:text-zinc-200 text-sm">{req.project}</p>
+                      <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                        {req.clientName}
+                      </p>
+                      <p className="font-medium text-zinc-800 dark:text-zinc-200 text-sm">
+                        {req.project}
+                      </p>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        <span className="text-xs px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">{req.zone}</span>
-                        <span className="text-xs px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">{req.size}</span>
-                        <span className="text-xs px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">{req.budget}</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                          {req.zone}
+                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                          {req.size}
+                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                          {req.budget}
+                        </span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${scoreColor}`}>
+                    <span
+                      className={`text-xs font-semibold px-2.5 py-1 rounded-full ${scoreColor}`}
+                    >
                       Score IA: {req.score}/100
                     </span>
                     <span className="text-xs text-zinc-500 dark:text-zinc-400">{req.date}</span>
@@ -899,7 +1119,10 @@ export const DemoSandboxPage: React.FC = () => {
             <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Galerie Flash</h2>
             <button
               type="button"
-              onClick={() => { trackEngagement(); toast.info('Créez un compte pour ajouter des designs.'); }}
+              onClick={() => {
+                trackEngagement();
+                toast.info('Créez un compte pour ajouter des designs.');
+              }}
               className="pill-primary inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4" /> Ajouter un design
@@ -908,7 +1131,9 @@ export const DemoSandboxPage: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {demoFlashDesigns.map((design) => (
               <div key={design.id} className="prodify-card overflow-hidden flex flex-col">
-                <div className={`aspect-square relative flex items-center justify-center text-5xl ${design.bgColor} text-white overflow-hidden bg-zinc-900`}>
+                <div
+                  className={`aspect-square relative flex items-center justify-center text-5xl ${design.bgColor} text-white overflow-hidden bg-zinc-900`}
+                >
                   {design.image ? (
                     <img
                       src={design.image}
@@ -922,10 +1147,14 @@ export const DemoSandboxPage: React.FC = () => {
                 <div className="p-3 flex-1 flex flex-col">
                   <p className="font-semibold text-zinc-900 dark:text-zinc-100">{design.title}</p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">{design.style}</p>
-                  <p className="text-sm font-bold text-blue-600 dark:text-blue-400 mt-1">{design.price}€</p>
+                  <p className="text-sm font-bold text-blue-600 dark:text-blue-400 mt-1">
+                    {design.price}€
+                  </p>
                   <span
                     className={`mt-2 inline-flex w-fit text-[10px] font-semibold px-2 py-0.5 rounded ${
-                      design.available ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
+                      design.available
+                        ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+                        : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
                     }`}
                   >
                     {design.available ? 'Disponible' : 'Réservé'}
@@ -947,7 +1176,13 @@ export const DemoSandboxPage: React.FC = () => {
               iconNode="👤"
               title="Votre CRM est vide"
               description="Ajoutez votre premier client ou importez depuis Instagram"
-              primaryAction={{ label: 'Nouveau client', onClick: () => { trackEngagement(); toast.info('Créez un compte pour ajouter des clients.'); } }}
+              primaryAction={{
+                label: 'Nouveau client',
+                onClick: () => {
+                  trackEngagement();
+                  toast.info('Créez un compte pour ajouter des clients.');
+                },
+              }}
             />
           </div>
         );
@@ -963,7 +1198,10 @@ export const DemoSandboxPage: React.FC = () => {
             />
             <button
               type="button"
-              onClick={() => { trackEngagement(); toast.info('Créez un compte pour ajouter des clients.'); }}
+              onClick={() => {
+                trackEngagement();
+                toast.info('Créez un compte pour ajouter des clients.');
+              }}
               className="pill-primary inline-flex items-center gap-2"
             >
               <UserPlus className="w-4 h-4" /> Nouveau client
@@ -976,15 +1214,23 @@ export const DemoSandboxPage: React.FC = () => {
                 className="prodify-card p-5 flex flex-col sm:flex-row sm:items-center gap-4"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0 ${client.avatarColor} flex items-center justify-center text-white font-bold text-sm bg-zinc-200 dark:bg-zinc-700`}>
+                  <div
+                    className={`relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0 ${client.avatarColor} flex items-center justify-center text-white font-bold text-sm bg-zinc-200 dark:bg-zinc-700`}
+                  >
                     {client.avatar ? (
-                      <img src={client.avatar} alt="" className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover" />
+                      <img
+                        src={client.avatar}
+                        alt=""
+                        className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover"
+                      />
                     ) : (
                       <span>{client.name.charAt(0)}</span>
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">{client.name}</p>
+                    <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                      {client.name}
+                    </p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       Dernière visite : {new Date(client.lastVisit).toLocaleDateString('fr-FR')}
                     </p>
@@ -993,7 +1239,9 @@ export const DemoSandboxPage: React.FC = () => {
                 <div className="flex flex-wrap gap-2 text-sm text-zinc-600 dark:text-zinc-400">
                   <span>{client.appointmentsCount} RDV</span>
                   <span>·</span>
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">{client.totalSpent}€ dépensés</span>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {client.totalSpent}€ dépensés
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {client.tags.map((tag) => (
@@ -1007,7 +1255,10 @@ export const DemoSandboxPage: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => { trackEngagement(); toast.info('Ouvrez un compte pour accéder au dossier client.'); }}
+                  onClick={() => {
+                    trackEngagement();
+                    toast.info('Ouvrez un compte pour accéder au dossier client.');
+                  }}
                   className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline mt-2 sm:mt-0"
                 >
                   Voir le dossier
@@ -1027,7 +1278,10 @@ export const DemoSandboxPage: React.FC = () => {
             <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Portfolio</h2>
             <button
               type="button"
-              onClick={() => { trackEngagement(); toast.info('Créez un compte pour ajouter des réalisations.'); }}
+              onClick={() => {
+                trackEngagement();
+                toast.info('Créez un compte pour ajouter des réalisations.');
+              }}
               className="pill-primary inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4" /> Ajouter une réalisation
@@ -1041,7 +1295,9 @@ export const DemoSandboxPage: React.FC = () => {
                 </div>
                 <div className="p-3">
                   <p className="font-semibold text-zinc-900 dark:text-zinc-100">{item.title}</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{item.category} • {item.date}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {item.category} • {item.date}
+                  </p>
                 </div>
               </div>
             ))}
@@ -1059,14 +1315,24 @@ export const DemoSandboxPage: React.FC = () => {
               iconNode="💳"
               title="Aucune transaction ce mois"
               description="Activez Stripe pour encaisser les acomptes automatiquement"
-              primaryAction={{ label: 'Configurer Stripe', onClick: () => { trackEngagement(); toast.info('Créez un compte pour configurer les paiements.'); } }}
+              primaryAction={{
+                label: 'Configurer Stripe',
+                onClick: () => {
+                  trackEngagement();
+                  toast.info('Créez un compte pour configurer les paiements.');
+                },
+              }}
             />
           </div>
         );
       }
       const kpis = demoFinanceKpis;
       const statusClass = (s: string) =>
-        s === 'Payé' ? 'text-emerald-600 dark:text-emerald-400' : s === 'En attente' ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400';
+        s === 'Payé'
+          ? 'text-emerald-600 dark:text-emerald-400'
+          : s === 'En attente'
+            ? 'text-amber-600 dark:text-amber-400'
+            : 'text-red-600 dark:text-red-400';
       return (
         <div className="demo-finance-container animate-fade-in space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1087,23 +1353,43 @@ export const DemoSandboxPage: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-joyride="demo-finance-ca">
             <div className="prodify-card p-6">
-              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase mb-1">Revenu ce mois</p>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{kpis.revenueThisMonth}€</p>
-              <p className="text-sm text-emerald-600 dark:text-emerald-400">+{kpis.revenueVsLastMonthPercent}% vs mois dernier</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase mb-1">
+                Revenu ce mois
+              </p>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                {kpis.revenueThisMonth}€
+              </p>
+              <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                +{kpis.revenueVsLastMonthPercent}% vs mois dernier
+              </p>
             </div>
             <div className="prodify-card p-6">
-              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase mb-1">Acomptes en attente</p>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{kpis.pendingDepositsAmount}€</p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">{kpis.pendingDepositsCount} en attente</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase mb-1">
+                Acomptes en attente
+              </p>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                {kpis.pendingDepositsAmount}€
+              </p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                {kpis.pendingDepositsCount} en attente
+              </p>
             </div>
             <div className="prodify-card p-6">
-              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase mb-1">Taux de no-show</p>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{kpis.noShowRatePercent}%</p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">{kpis.noShowCount} sur {kpis.totalRdvCount} RDV</p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase mb-1">
+                Taux de no-show
+              </p>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                {kpis.noShowRatePercent}%
+              </p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                {kpis.noShowCount} sur {kpis.totalRdvCount} RDV
+              </p>
             </div>
           </div>
           <div className="prodify-card overflow-hidden">
-            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 px-4 sm:px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">Dernières transactions</h3>
+            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 px-4 sm:px-5 py-4 border-b border-zinc-200 dark:border-zinc-800">
+              Dernières transactions
+            </h3>
             <div className="overflow-x-auto -mx-px">
               <table className="w-full text-sm min-w-[320px]">
                 <thead>
@@ -1117,12 +1403,21 @@ export const DemoSandboxPage: React.FC = () => {
                 </thead>
                 <tbody>
                   {demoTransactions.map((tx) => (
-                    <tr key={tx.id} className="border-b border-zinc-100 dark:border-zinc-800/50 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-900/30">
-                      <td className="px-5 py-3 text-zinc-700 dark:text-zinc-300">{new Date(tx.date).toLocaleDateString('fr-FR')}</td>
-                      <td className="px-5 py-3 font-medium text-zinc-900 dark:text-zinc-100">{tx.client}</td>
+                    <tr
+                      key={tx.id}
+                      className="border-b border-zinc-100 dark:border-zinc-800/50 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-900/30"
+                    >
+                      <td className="px-5 py-3 text-zinc-700 dark:text-zinc-300">
+                        {new Date(tx.date).toLocaleDateString('fr-FR')}
+                      </td>
+                      <td className="px-5 py-3 font-medium text-zinc-900 dark:text-zinc-100">
+                        {tx.client}
+                      </td>
                       <td className="px-5 py-3 text-zinc-600 dark:text-zinc-400">{tx.type}</td>
                       <td className="px-5 py-3 font-semibold">{tx.amount}€</td>
-                      <td className={`px-5 py-3 font-medium ${statusClass(tx.status)}`}>{tx.status}</td>
+                      <td className={`px-5 py-3 font-medium ${statusClass(tx.status)}`}>
+                        {tx.status}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1144,7 +1439,10 @@ export const DemoSandboxPage: React.FC = () => {
           <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center max-w-sm">
             En démo, les paramètres sont désactivés. Créez un compte pour configurer votre studio.
           </p>
-          <a href="/signup" className="px-6 py-3 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-semibold hover:opacity-90 transition-opacity">
+          <a
+            href="/signup"
+            className="px-6 py-3 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-semibold hover:opacity-90 transition-opacity"
+          >
             Créer un compte
           </a>
         </div>
@@ -1174,11 +1472,19 @@ export const DemoSandboxPage: React.FC = () => {
         >
           <div className="absolute inset-0 z-0 bg-white dark:bg-zinc-950" aria-hidden />
           <div className="relative z-10 px-4 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between safe-top">
-            <a href={LANDING_URL} className="flex items-center gap-3 min-w-0 group" aria-label="Retour à l'accueil">
+            <a
+              href={LANDING_URL}
+              className="flex items-center gap-3 min-w-0 group"
+              aria-label="Retour à l'accueil"
+            >
               <Logo size="lg" className="rounded-xl group-hover:opacity-90 transition-opacity" />
               <div className="min-w-0">
-                <span className="block text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">INKFLOW</span>
-                <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 truncate max-w-[120px] mt-0.5">Mon studio</p>
+                <span className="block text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                  INKFLOW
+                </span>
+                <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 truncate max-w-[120px] mt-0.5">
+                  Mon studio
+                </p>
               </div>
             </a>
             <button
@@ -1215,14 +1521,21 @@ export const DemoSandboxPage: React.FC = () => {
                       </span>
                     )}
                   </span>
-                  <span className="flex-1 text-left whitespace-nowrap min-w-0 overflow-hidden text-ellipsis" title={tab.label}>{tab.label}</span>
+                  <span
+                    className="flex-1 text-left whitespace-nowrap min-w-0 overflow-hidden text-ellipsis"
+                    title={tab.label}
+                  >
+                    {tab.label}
+                  </span>
                 </button>
               );
             })}
           </nav>
           <div
             className={`relative z-10 mt-auto px-3 py-3 border-t border-zinc-200 dark:border-zinc-800 safe-bottom transition-all duration-500 ${
-              ctaUnlocked ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+              ctaUnlocked
+                ? 'opacity-100 translate-y-0'
+                : 'opacity-0 translate-y-2 pointer-events-none'
             }`}
           >
             {ctaUnlocked && (
@@ -1255,7 +1568,9 @@ export const DemoSandboxPage: React.FC = () => {
                 <Menu className="w-6 h-6 text-zinc-500 dark:text-zinc-400" />
               </button>
               <h2 className="text-lg sm:text-xl font-semibold truncate text-zinc-900 dark:text-zinc-100">
-                {activeTab === 'vitrine' ? 'InkFlow — Ma vitrine Démo' : `InkFlow — ${tabs.find((t) => t.id === activeTab)?.label ?? "Vue d'ensemble"} Démo`}
+                {activeTab === 'vitrine'
+                  ? 'InkFlow — Ma vitrine Démo'
+                  : `InkFlow — ${tabs.find((t) => t.id === activeTab)?.label ?? "Vue d'ensemble"} Démo`}
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -1272,10 +1587,16 @@ export const DemoSandboxPage: React.FC = () => {
                 </button>
                 {showNotifications && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} aria-hidden />
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowNotifications(false)}
+                      aria-hidden
+                    />
                     <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-auto border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-xl bg-white dark:bg-zinc-900 z-50 animate-slide-up">
                       <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                        <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">Notifications</h4>
+                        <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                          Notifications
+                        </h4>
                         {notifications.filter((n) => !n.read).length > 0 && (
                           <button
                             onClick={() =>
@@ -1294,7 +1615,9 @@ export const DemoSandboxPage: React.FC = () => {
                             onClick={() => {
                               markNotificationAsRead(notif.id);
                               setShowNotifications(false);
-                              setActiveTab(notif.message.includes('qualifier') ? 'requests' : 'appointments');
+                              setActiveTab(
+                                notif.message.includes('qualifier') ? 'requests' : 'appointments'
+                              );
                             }}
                             className={`w-full text-left p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${
                               !notif.read ? 'bg-blue-50/50 dark:bg-blue-500/10' : ''
@@ -1336,7 +1659,9 @@ export const DemoSandboxPage: React.FC = () => {
             </div>
           </header>
 
-          <div className="app-shell-content p-4 sm:p-5 md:p-6 dashboard-overview-bg min-w-0 overflow-x-hidden">{renderTabContent()}</div>
+          <div className="app-shell-content p-4 sm:p-5 md:p-6 dashboard-overview-bg min-w-0 overflow-x-hidden">
+            {renderTabContent()}
+          </div>
         </div>
       </div>
 

@@ -109,15 +109,15 @@ function FinanceBilanModal({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const { start, end, label } = getDateRange(period);
 
-  const inRange = (dateStr: string) => dateStr >= start && dateStr <= end;
-
   const periodAppointments = useMemo(
     () =>
-      appointments.filter((a) => inRange(a.date) && (a.status === 'completed' || a.depositPaid)),
+      appointments.filter(
+        (a) => a.date >= start && a.date <= end && (a.status === 'completed' || a.depositPaid)
+      ),
     [appointments, start, end]
   );
   const periodCash = useMemo(
-    () => cashEntries.filter((e) => inRange(e.date)),
+    () => cashEntries.filter((e) => e.date >= start && e.date <= end),
     [cashEntries, start, end]
   );
 
@@ -313,7 +313,7 @@ function FinanceBilanModal({
 
       const fileName = start === end ? `Bilan-${start}.pdf` : `Bilan-${start}-${end}.pdf`;
       doc.save(fileName);
-    } catch (error) {
+    } catch {
       alert('Erreur lors de la génération du PDF.');
     } finally {
       setIsGeneratingPdf(false);

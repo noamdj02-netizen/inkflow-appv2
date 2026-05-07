@@ -5,6 +5,7 @@ import type { Appointment } from '../../types';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { appointmentRemainingBalanceEuros } from '../../lib/appointmentBalance';
 import { useToast } from '../../contexts/ToastContext';
+import { isInkflowNativeShellUserAgent } from '../../lib/nativeWebShell';
 import {
   stripeTerminalCreateBalanceIntent,
   stripeTerminalFetchConnectionSecret,
@@ -54,9 +55,30 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [terminalLoading, setTerminalLoading] = useState(false);
   const [terminalStatus, setTerminalStatus] = useState<string | null>(null);
+  const isNativeShell =
+    typeof navigator !== 'undefined' && isInkflowNativeShellUserAgent(navigator.userAgent);
 
   const remaining = appointment ? appointmentRemainingBalanceEuros(appointment) : 0;
   const balanceAlready = Boolean(appointment?.balancePaidAt?.trim()) || remaining < 0.01;
+
+  const openTapToPayInNativeApp = useCallback(() => {
+    if (!appointment) return;
+    if (typeof window === 'undefined') return;
+    // Expo shell listens to `inkflowpro:` deep links. It will map to /dashboard?appointment=<id>
+    // and can then run the native Tap to Pay flow.
+    const deepLink = `inkflowpro://appointment/${encodeURIComponent(appointment.id)}`;
+    const startedAt = Date.now();
+    window.location.href = deepLink;
+
+    // Fallback: if the app isn't installed, users stay on the web page.
+    window.setTimeout(() => {
+      if (Date.now() - startedAt < 1500) {
+        toast.info(
+          'Si rien ne s’ouvre, installe/ouvre l’app Inkflow Pro puis réessaie (Tap to Pay est natif).'
+        );
+      }
+    }, 900);
+  }, [appointment, toast]);
 
   const handleStripeBalance = useCallback(async () => {
     if (!appointment || !studioId || remaining < 1) {
@@ -102,6 +124,12 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
     }
     if (typeof window === 'undefined') {
       toast.error('Terminal Stripe indisponible dans cet environnement.');
+      return;
+    }
+    // Tap to Pay + lecteurs Bluetooth (WisePad/Reader M2) passent par le SDK natif.
+    // Sur web, on évite un message trompeur et on guide vers l’encaissement en ligne / l’app native.
+    if (!isNativeShell && !shouldUseTerminalSimulator()) {
+      openTapToPayInNativeApp();
       return;
     }
 
@@ -173,7 +201,9 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
         toast.error(
           useSimulated
             ? 'Aucun lecteur simulé. Utilise des clés Stripe test avec VITE_STRIPE_TERMINAL_SIMULATOR=true.'
-            : 'Aucun lecteur Stripe détecté. Allume ton WisePad/M2, ou passe par Tap to Pay dans l’app native.'
+            : isNativeShell
+              ? 'Aucun lecteur Stripe détecté. Allume ton WisePad / Reader M2, puis réessaie.'
+              : 'Aucun lecteur Stripe détecté. Sur web, passe par « Paiement en ligne » (Stripe Checkout) ou encaisse depuis l’app Inkflow Pro.'
         );
         await disconnectSafe();
         return;
@@ -226,7 +256,17 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
       setTerminalStatus(null);
       setTerminalLoading(false);
     }
-  }, [appointment, studioId, remaining, stripeConnectReady, toast, onBalanceMarkedPaid, onClose]);
+  }, [
+    appointment,
+    studioId,
+    remaining,
+    stripeConnectReady,
+    toast,
+    onBalanceMarkedPaid,
+    onClose,
+    isNativeShell,
+    openTapToPayInNativeApp,
+  ]);
 
   const handleStock = useCallback(() => {
     if (!appointment) return;
@@ -322,7 +362,11 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
             ) : (
               <Smartphone className="w-4 h-4" />
             )}
-            {terminalLoading ? (terminalStatus ?? 'Terminal…') : 'Tap to Pay / lecteur Stripe'}
+            {terminalLoading
+              ? (terminalStatus ?? 'Terminal…')
+              : isNativeShell
+                ? 'Tap to Pay / lecteur Stripe'
+                : 'Tap to Pay (ouvrir Inkflow Pro)'}
           </button>
 
           <button

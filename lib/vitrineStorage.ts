@@ -37,7 +37,11 @@ function isSupabaseEnvConfigured(): boolean {
   return !!(url && key && url.length > 10);
 }
 
-export function getVitrineData(slug: string, userEmail?: string, studioName?: string): VitrineData {
+export function getVitrineData(
+  slug: string,
+  _userEmail?: string,
+  _studioName?: string
+): VitrineData {
   const defaultData = defaultVitrineData(slug);
   if (typeof window === 'undefined') return defaultData;
   try {
@@ -168,7 +172,7 @@ export async function getVitrineDataBySlugAsync(slug: string): Promise<VitrineDa
       }
     }
     return fromDb;
-  } catch (e) {
+  } catch {
     if (localRaw) {
       try {
         return {

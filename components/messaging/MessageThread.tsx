@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, ArrowLeft, User, MessageCircle } from 'lucide-react';
+import { Send, ArrowLeft, MessageCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { sendMessageNotificationToClient } from '../../lib/sendNotification';
 import { useToast } from '../../contexts/ToastContext';
@@ -40,6 +40,8 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({
       setSelectedThreadId(initialThreadId);
       onInitialThreadOpened?.();
     }
+    // selectedThreadId / callback exclus : évite de ré-appliquer le deep-link après sélection manuelle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialThreadId]);
 
   useEffect(() => {
@@ -118,7 +120,7 @@ export const MessageThreadView: React.FC<MessageThreadProps> = ({
         });
       }
       setNewMessage('');
-    } catch (err) {
+    } catch {
       toast.error("Erreur lors de l'envoi du message");
     } finally {
       setSending(false);

@@ -293,7 +293,7 @@ export const CareSheetsSettings: React.FC<CareSheetsSettingsProps> = ({
         setTemplates([]);
       }
     }
-  }, [studioId, useSupabase]);
+  }, [studioId, useSupabase, toast]);
 
   const selected = templates.find((t) => t.id === selectedId);
 

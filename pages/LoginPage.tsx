@@ -44,7 +44,7 @@ export const LoginPage: React.FC = () => {
   const toast = useToast();
   const initialQ = readLoginPageQueryOnce();
   const [checkEmailMessage, setCheckEmailMessage] = useState(initialQ.checkEmail);
-  const [inviteTeamEmailPending, setInviteTeamEmailPending] = useState(initialQ.inviteTeam);
+  const [inviteTeamEmailPending] = useState(initialQ.inviteTeam);
   /** E-mail pour renvoyer la confirmation (URL + saisie dans le formulaire). */
   const [loginEmailForResend, setLoginEmailForResend] = useState(initialQ.confirmEmail);
   const [resendLoading, setResendLoading] = useState(false);

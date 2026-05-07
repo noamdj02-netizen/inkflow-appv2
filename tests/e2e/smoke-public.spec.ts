@@ -30,4 +30,15 @@ test.describe('Smoke public', () => {
     expect(res?.ok()).toBeTruthy();
     await expect(page.locator('body')).toBeVisible();
   });
+
+  test('/invite/:code redirige vers signup avec ref', async ({ page }) => {
+    await page.goto('/invite/smokeabc');
+    await expect(page).toHaveURL(/\/signup\?ref=SMOKEABC/);
+  });
+
+  test('dashboard-demo répond', async ({ page }) => {
+    const res = await page.goto('/dashboard-demo');
+    expect(res?.ok()).toBeTruthy();
+    await expect(page.locator('body')).toBeVisible();
+  });
 });

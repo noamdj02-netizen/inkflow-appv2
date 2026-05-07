@@ -142,7 +142,7 @@ export const InvoiceButton: React.FC<InvoiceButtonProps> = ({ appointment, artis
       const pdfBlob = doc.output('blob');
       const safeId = appointment.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'rdv';
       downloadBlobAsFile(`inkflow-recu-acompte-${safeId}.pdf`, pdfBlob);
-    } catch (error) {
+    } catch {
       alert('Erreur lors de la génération du PDF.');
     } finally {
       setIsGenerating(false);

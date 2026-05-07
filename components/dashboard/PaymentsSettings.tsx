@@ -95,7 +95,7 @@ export const PaymentsSettings: React.FC<PaymentsSettingsProps> = ({
       .catch(() => {
         toast.error('Une erreur est survenue');
       });
-  }, [studioId, useSupabase]);
+  }, [studioId, useSupabase, toast]);
 
   const { saving, saved, saveNow } = useAutoSave(
     settings,

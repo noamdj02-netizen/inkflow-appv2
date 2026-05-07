@@ -43,15 +43,14 @@ export function useRealtimeSync<T extends { id: string }>(
         (payload) => {
           try {
             const newItem = mapFromDb(payload.new as Record<string, unknown>);
-            setState(prev => {
+            setState((prev) => {
               // Avoid duplicates (optimistic add may have already inserted it)
-              if (prev.some(i => i.id === newItem.id)) {
-                return prev.map(i => i.id === newItem.id ? newItem : i);
+              if (prev.some((i) => i.id === newItem.id)) {
+                return prev.map((i) => (i.id === newItem.id ? newItem : i));
               }
               return [...prev, newItem];
             });
-          } catch (e) {
-          }
+          } catch {}
         }
       )
       .on(
@@ -60,9 +59,8 @@ export function useRealtimeSync<T extends { id: string }>(
         (payload) => {
           try {
             const updated = mapFromDb(payload.new as Record<string, unknown>);
-            setState(prev => prev.map(i => i.id === updated.id ? updated : i));
-          } catch (e) {
-          }
+            setState((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+          } catch {}
         }
       )
       .on(
@@ -71,7 +69,7 @@ export function useRealtimeSync<T extends { id: string }>(
         (payload) => {
           const oldId = (payload.old as Record<string, unknown>)?.id as string;
           if (oldId) {
-            setState(prev => prev.filter(i => i.id !== oldId));
+            setState((prev) => prev.filter((i) => i.id !== oldId));
           }
         }
       )
@@ -123,7 +121,7 @@ export function useRealtimeVitrine(
               event: 'UPDATE',
               schema: 'public',
               table: 'inkflow_vitrine_data',
-              filter: `studio_id=eq.${studioId}`
+              filter: `studio_id=eq.${studioId}`,
             },
             (payload) => {
               try {
@@ -133,14 +131,12 @@ export function useRealtimeVitrine(
                   const defaults = defaultVitrineData(studioSlug);
                   setStudio({ ...defaults, ...vitrinePayload, slug: studioSlug } as VitrineData);
                 }
-              } catch (e) {
-              }
+              } catch {}
             }
           )
           .subscribe();
       })
-      .catch((err) => {
-      });
+      .catch(() => {});
 
     return () => {
       cancelled = true;

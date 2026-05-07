@@ -2,7 +2,7 @@
  * Visite guidée avec spotlight : overlay SVG découpé, anneau de focus, tooltip dynamique.
  * Production-ready, accessible, mobile-first.
  */
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 
 export interface TourStep {
   target: string;
@@ -30,13 +30,11 @@ interface DemoTourProps {
 }
 
 const SPOTLIGHT_PADDING = 12;
-const BADGE_SIZE = 28;
 const TOOLTIP_MAX_WIDTH = 380;
 const TOOLTIP_MIN_SPACE = 340;
 const MOBILE_BREAKPOINT = 480;
 const TOOLTIP_MOBILE_PADDING = 16;
 const TOOLTIP_MIN_HEIGHT_ESTIMATE = 320;
-const SCROLL_DELAY_MS = 380;
 const TOOLTIP_VISIBLE_DELAY_MS = 380;
 const MASK_TRANSITION = 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
 const FOCUS_RING_STYLE = {

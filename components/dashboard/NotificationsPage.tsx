@@ -4,18 +4,14 @@ import {
   BellOff,
   Check,
   CheckCheck,
-  Trash2,
   Calendar,
   CreditCard,
   MessageSquare,
   AlertCircle,
   Star,
   Clock,
-  Filter,
   Search,
   MailOpen,
-  ChevronRight,
-  Inbox,
 } from 'lucide-react';
 import type { Notification } from '../../types';
 import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
@@ -63,7 +59,6 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
 }) => {
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedNotifications, setSelectedNotifications] = useState<Set<string>>(new Set());
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
 
@@ -122,23 +117,6 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
 
   const handleMarkAllAsRead = () => {
     notifications.filter((n) => !n.read).forEach((n) => markNotificationAsRead(n.id));
-  };
-
-  const handleMarkSelectedAsRead = () => {
-    selectedNotifications.forEach((id) => markNotificationAsRead(id));
-    setSelectedNotifications(new Set());
-  };
-
-  const toggleSelection = (id: string) => {
-    setSelectedNotifications((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
   };
 
   const formatDate = (dateStr: string) => {

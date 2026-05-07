@@ -48,17 +48,10 @@ const TIER_COLORS: Record<LoyaltyTier, string> = {
   platinum: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
 };
 
-const TIER_ICONS: Record<LoyaltyTier, string> = {
-  bronze: 'B',
-  silver: 'A',
-  gold: 'O',
-  platinum: 'P',
-};
-
 export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({
   entries,
   clients,
-  onUpdatePoints,
+  onUpdatePoints: _onUpdatePoints,
   settings,
   onUpdateSettings,
 }) => {

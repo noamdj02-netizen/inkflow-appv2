@@ -9,6 +9,7 @@ export function useDashboardWidgets(
   useSupabase: boolean,
   options?: { onError?: (err: Error) => void }
 ) {
+  const onWidgetSaveError = options?.onError;
   const [widgets, setWidgets] = useState<DashboardWidget[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -37,13 +38,13 @@ export function useDashboardWidgets(
         localStorage.setItem(STORAGE_KEY, JSON.stringify(nextVal));
         if (studioId && useSupabase) {
           saveWidgetsToSupabase(studioId, nextVal).catch((err: Error) => {
-            options?.onError?.(err);
+            onWidgetSaveError?.(err);
           });
         }
         return nextVal;
       });
     },
-    [studioId, useSupabase, options?.onError]
+    [studioId, useSupabase, onWidgetSaveError]
   );
 
   return [widgets, setWidgetsAndSave] as const;

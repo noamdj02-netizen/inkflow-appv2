@@ -24,6 +24,8 @@
     "app",
     "inkflow-mobile",
     "mobile",
+    "_design_import",
+    "test-results",
     "pages/_error.tsx",
     "claude-skills",
     "mon-app",

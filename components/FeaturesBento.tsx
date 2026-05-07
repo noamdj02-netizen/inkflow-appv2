@@ -6,7 +6,6 @@ import {
   Zap,
   Shield,
   Clock,
-  TrendingUp,
   Sparkles,
   Check,
   ChevronRight,

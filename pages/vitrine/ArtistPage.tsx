@@ -13,7 +13,6 @@ import {
   MessageCircle,
   Bell,
   Check,
-  X,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { CX } from '../../components/client/clientExperienceTypes';

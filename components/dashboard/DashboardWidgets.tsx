@@ -194,7 +194,7 @@ export const WidgetCard: React.FC<{
   };
 
   return (
-    <div className="group relative dashboard-widget-card rounded-2xl p-5 min-h-[140px] flex flex-col">
+    <div className="group relative ds-glass-widget p-5 min-h-[140px] flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div

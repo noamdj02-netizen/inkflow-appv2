@@ -6,9 +6,7 @@ import React, { useState, useCallback } from 'react';
 import { Gift, Copy, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
-import { getInviteBaseUrl, APP_URL } from '../../lib/urls';
-
-const APP_ORIGIN = typeof window !== 'undefined' ? window.location.origin : APP_URL;
+import { getInviteBaseUrl } from '../../lib/urls';
 
 export interface ReferralWidgetProps {
   studioId: string | null;
@@ -39,22 +37,21 @@ export const ReferralWidget: React.FC<ReferralWidgetProps> = ({
     }
     let cancelled = false;
     void Promise.resolve(
-      supabase
-        .from('inkflow_studios')
-        .select('referral_code')
-        .eq('id', studioId)
-        .single()
-    ).then(({ data, error }) => {
-      if (cancelled) return;
-      setCode(error || !data?.referral_code ? 'ABC123' : data.referral_code);
-    }).finally(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => { cancelled = true; };
+      supabase.from('inkflow_studios').select('referral_code').eq('id', studioId).single()
+    )
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        setCode(error || !data?.referral_code ? 'ABC123' : data.referral_code);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [studioId, useSupabase, propCode]);
 
   const inviteBase = getInviteBaseUrl();
-  const inviteUrl = code ? `${inviteBase}/${code}` : `${APP_ORIGIN}/signup`;
   const fallbackUrl = `${inviteBase}/${code || 'ABC123'}`;
 
   const handleCopy = useCallback(async () => {

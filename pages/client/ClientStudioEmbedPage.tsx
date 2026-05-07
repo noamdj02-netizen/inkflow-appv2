@@ -2,7 +2,7 @@
  * Outils studio dans le contexte « My Inkflow » : même session Supabase, URL reste /client/…
  * L’UI métier est chargée depuis /dashboard (iframe same-origin).
  */
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { SEO } from '../../components/SEO';
@@ -31,7 +31,9 @@ function ClientStudioEmbed({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (cancelled) return;
       if (!user?.email) {
         setAccess('no-session');
@@ -46,7 +48,9 @@ function ClientStudioEmbed({
         if (!cancelled) setAccess('no-studio');
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const iframeSrc = `${typeof window !== 'undefined' ? window.location.origin : ''}${iframePath}`;
@@ -63,23 +67,38 @@ function ClientStudioEmbed({
         className="min-h-[100dvh] flex items-center justify-center client-dashboard-shell"
         style={{ background: D.bg }}
       >
-        <div className="text-sm font-medium" style={{ color: D.muted }}>Chargement…</div>
+        <div className="text-sm font-medium" style={{ color: D.muted }}>
+          Chargement…
+        </div>
       </div>
     );
   }
 
   if (access === 'no-session') {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center client-dashboard-shell" style={{ background: D.bg }}>
-        <p className="text-sm" style={{ color: D.muted }}>Redirection…</p>
+      <div
+        className="min-h-[100dvh] flex items-center justify-center client-dashboard-shell"
+        style={{ background: D.bg }}
+      >
+        <p className="text-sm" style={{ color: D.muted }}>
+          Redirection…
+        </p>
       </div>
     );
   }
 
   if (access === 'no-studio') {
     return (
-      <div className="min-h-[100dvh] flex flex-col client-dashboard-shell px-4 py-8" style={{ background: D.bg }}>
-        <SEO title={seoTitle} description="Réservé aux comptes studio Inkflow." canonical={canonicalPath} noindex />
+      <div
+        className="min-h-[100dvh] flex flex-col client-dashboard-shell px-4 py-8"
+        style={{ background: D.bg }}
+      >
+        <SEO
+          title={seoTitle}
+          description="Réservé aux comptes studio Inkflow."
+          canonical={canonicalPath}
+          noindex
+        />
         <p className="text-center text-sm mb-6" style={{ color: D.text }}>
           Cette page est réservée aux comptes avec un studio Inkflow lié à cet email.
         </p>
@@ -99,7 +118,12 @@ function ClientStudioEmbed({
       className="app-shell flex min-h-0 min-h-[100dvh] flex-col client-dashboard-shell"
       style={{ background: D.bg, WebkitFontSmoothing: 'antialiased' }}
     >
-      <SEO title={seoTitle} description="Personnalisation studio depuis l’app client Inkflow." canonical={canonicalPath} noindex />
+      <SEO
+        title={seoTitle}
+        description="Personnalisation studio depuis l’app client Inkflow."
+        canonical={canonicalPath}
+        noindex
+      />
       <header
         className="flex shrink-0 items-center gap-3 px-4 py-3 safe-top border-b"
         style={{ borderColor: D.border, background: D.headerBg, backdropFilter: D.blur }}
@@ -115,8 +139,12 @@ function ClientStudioEmbed({
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Logo size="sm" className="shrink-0 rounded-lg" />
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold" style={{ color: D.text }}>{pageTitle}</div>
-            <div className="truncate text-[11px]" style={{ color: D.muted }}>My Inkflow</div>
+            <div className="truncate text-sm font-semibold" style={{ color: D.text }}>
+              {pageTitle}
+            </div>
+            <div className="truncate text-[11px]" style={{ color: D.muted }}>
+              My Inkflow
+            </div>
           </div>
         </div>
       </header>

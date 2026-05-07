@@ -1,4 +1,3 @@
-import { supabase } from './supabase';
 import { getInvokeErrorMessage, invokeWithJwtRetry } from './edgeFunctionInvoke';
 
 export interface GoogleCalendarEvent {
@@ -21,7 +20,12 @@ export interface CalendarIntegrationStatus {
 
 function toUserFriendlyMessage(fnName: string, raw: string): string {
   const lower = raw.toLowerCase();
-  if (lower.includes('failed to send') || lower.includes('edge function') || lower.includes('fetch') || lower.includes('network')) {
+  if (
+    lower.includes('failed to send') ||
+    lower.includes('edge function') ||
+    lower.includes('fetch') ||
+    lower.includes('network')
+  ) {
     return `Google Agenda indisponible. Vérifiez votre connexion ou contactez le support.`;
   }
   return raw;
@@ -30,7 +34,10 @@ function toUserFriendlyMessage(fnName: string, raw: string): string {
 async function invokeEdge<T = unknown>(fnName: string, body: Record<string, unknown>): Promise<T> {
   const { data, error } = await invokeWithJwtRetry(fnName, body);
   if (error) {
-    const errData = typeof data === 'object' && data && 'error' in data ? (data as { error?: string }).error : null;
+    const errData =
+      typeof data === 'object' && data && 'error' in data
+        ? (data as { error?: string }).error
+        : null;
     const raw = errData || getInvokeErrorMessage(error, 'Edge function error');
     throw new Error(toUserFriendlyMessage(fnName, raw));
   }
@@ -66,12 +73,18 @@ export async function disconnectGoogle(studioId: string): Promise<void> {
   await invokeEdge('google-calendar-auth', { action: 'disconnect', studioId });
 }
 
-export async function pushAppointmentToGoogle(studioId: string, appointmentId: string): Promise<string | null> {
-  const res = await invokeEdge<{ success: boolean; googleEventId?: string }>('google-calendar-sync', {
-    action: 'push_one',
-    studioId,
-    appointmentId,
-  });
+export async function pushAppointmentToGoogle(
+  studioId: string,
+  appointmentId: string
+): Promise<string | null> {
+  const res = await invokeEdge<{ success: boolean; googleEventId?: string }>(
+    'google-calendar-sync',
+    {
+      action: 'push_one',
+      studioId,
+      appointmentId,
+    }
+  );
   return res.googleEventId || null;
 }
 
@@ -84,10 +97,13 @@ export async function pushAllAppointments(studioId: string): Promise<number> {
 }
 
 export async function pullGoogleEvents(studioId: string): Promise<GoogleCalendarEvent[]> {
-  const res = await invokeEdge<{ success: boolean; events: GoogleCalendarEvent[] }>('google-calendar-sync', {
-    action: 'pull',
-    studioId,
-  });
+  const res = await invokeEdge<{ success: boolean; events: GoogleCalendarEvent[] }>(
+    'google-calendar-sync',
+    {
+      action: 'pull',
+      studioId,
+    }
+  );
   return res.events || [];
 }
 
@@ -113,7 +129,8 @@ export function generateICS(apt: {
   const start = new Date(`${apt.date}T${apt.time}:00`);
   const end = new Date(start.getTime() + (apt.duration || 60) * 60 * 1000);
 
-  const fmt = (d: Date) => d.toISOString().replaceAll('-', '').replaceAll(':', '').split('.')[0] + 'Z';
+  const fmt = (d: Date) =>
+    d.toISOString().replaceAll('-', '').replaceAll(':', '').split('.')[0] + 'Z';
 
   return [
     'BEGIN:VCALENDAR',
@@ -133,7 +150,9 @@ export function generateICS(apt: {
     'END:VALARM',
     'END:VEVENT',
     'END:VCALENDAR',
-  ].filter(Boolean).join('\r\n');
+  ]
+    .filter(Boolean)
+    .join('\r\n');
 }
 
 /** Download an .ics file for a single appointment */
@@ -152,10 +171,11 @@ export function downloadICS(apt: Parameters<typeof generateICS>[0]): void {
 
 /** Generate combined .ics for multiple appointments (Apple Calendar, Outlook) */
 export function generateICSAll(appointments: Parameters<typeof generateICS>[0][]): string {
-  const events = appointments.map(apt => {
+  const events = appointments.map((apt) => {
     const start = new Date(`${apt.date}T${apt.time}:00`);
     const end = new Date(start.getTime() + (apt.duration || 60) * 60 * 1000);
-    const fmt = (d: Date) => d.toISOString().replaceAll('-', '').replaceAll(':', '').split('.')[0] + 'Z';
+    const fmt = (d: Date) =>
+      d.toISOString().replaceAll('-', '').replaceAll(':', '').split('.')[0] + 'Z';
     return [
       'BEGIN:VEVENT',
       `UID:${apt.id}@inkflow.app`,
@@ -170,7 +190,9 @@ export function generateICSAll(appointments: Parameters<typeof generateICS>[0][]
       'TRIGGER:-PT60M',
       'END:VALARM',
       'END:VEVENT',
-    ].filter(Boolean).join('\r\n');
+    ]
+      .filter(Boolean)
+      .join('\r\n');
   });
   return [
     'BEGIN:VCALENDAR',
@@ -208,7 +230,8 @@ export function getGoogleCalendarAddUrl(apt: {
   const start = new Date(`${apt.date}T${apt.time}:00`);
   const end = new Date(start.getTime() + (apt.duration || 60) * 60 * 1000);
 
-  const fmt = (d: Date) => d.toISOString().replaceAll('-', '').replaceAll(':', '').split('.')[0] + 'Z';
+  const fmt = (d: Date) =>
+    d.toISOString().replaceAll('-', '').replaceAll(':', '').split('.')[0] + 'Z';
 
   const params = new URLSearchParams({
     action: 'TEMPLATE',

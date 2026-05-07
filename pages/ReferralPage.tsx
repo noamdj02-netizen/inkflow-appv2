@@ -49,16 +49,16 @@ const FAQ_ITEMS = [
     a: "Dès que votre filleul s'inscrit et souscrit à l'abonnement Pro InkFlow, vous recevez automatiquement 1 mois d'abonnement gratuit. Le mois est ajouté à la fin de votre période actuelle.",
   },
   {
-    q: "Y a-t-il une limite de parrainages ?",
+    q: 'Y a-t-il une limite de parrainages ?',
     a: "Non. Vous pouvez parrainer autant de confrères que vous le souhaitez. Chaque filleul qui souscrit = 1 mois gratuit pour vous. Certains tatoueurs ont déjà cumulé plus d'un an d'abonnement offert.",
   },
   {
-    q: "Mon filleul reçoit-il aussi 1 mois gratuit ?",
+    q: 'Mon filleul reçoit-il aussi 1 mois gratuit ?',
     a: "Oui ! C'est gagnant-gagnant : vous et votre filleul recevez chacun 1 mois d'abonnement Pro offert. C'est notre façon de remercier la communauté.",
   },
   {
-    q: "Le lien de parrainage expire-t-il ?",
-    a: "Non, votre lien est permanent. Vous pouvez le partager à tout moment. Il reste valide tant que votre compte InkFlow est actif.",
+    q: 'Le lien de parrainage expire-t-il ?',
+    a: 'Non, votre lien est permanent. Vous pouvez le partager à tout moment. Il reste valide tant que votre compte InkFlow est actif.',
   },
 ];
 
@@ -128,8 +128,12 @@ export const ReferralPage: React.FC = () => {
   }, [inviteUrl, toast]);
 
   const shareWhatsApp = useCallback(() => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(shareMessage)}`, '_blank', 'noopener,noreferrer');
-  }, [inviteUrl]);
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(shareMessage)}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
+  }, [shareMessage]);
 
   const shareInstagram = useCallback(async () => {
     try {
@@ -138,7 +142,7 @@ export const ReferralPage: React.FC = () => {
     } catch {
       toast.error('Impossible de copier');
     }
-  }, [inviteUrl, toast]);
+  }, [shareMessage, toast]);
 
   const shareEmail = useCallback(() => {
     const params = new URLSearchParams({
@@ -236,11 +240,7 @@ export const ReferralPage: React.FC = () => {
                 Aidez vos confrères à reprendre le contrôle de leur studio. Partagez InkFlow et
                 gagnez des mois d&apos;abonnement gratuit. Sans limite.
               </motion.p>
-              <motion.div
-                variants={fadeUp}
-                custom={3}
-                className="flex flex-wrap gap-4 pt-2"
-              >
+              <motion.div variants={fadeUp} custom={3} className="flex flex-wrap gap-4 pt-2">
                 <div className="flex items-center gap-2 text-neutral-600">
                   <Gift className="w-5 h-5 text-emerald-600" strokeWidth={1.5} />
                   <span className="text-sm">1 mois offert par filleul</span>
@@ -354,14 +354,12 @@ export const ReferralPage: React.FC = () => {
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
-          <motion.div
-            className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6 sm:p-8 space-y-6 hover:border-neutral-700 transition-colors"
-          >
+          <motion.div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6 sm:p-8 space-y-6 hover:border-neutral-700 transition-colors">
             <div>
               <h2 className="text-lg font-semibold text-white">Votre lien de parrainage</h2>
               <p className="text-sm text-zinc-500 mt-1">
-                Partagez ce lien unique à vos confrères. Chaque inscription = 1 mois offert pour vous
-                deux.
+                Partagez ce lien unique à vos confrères. Chaque inscription = 1 mois offert pour
+                vous deux.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
@@ -453,30 +451,45 @@ export const ReferralPage: React.FC = () => {
           </motion.p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { img: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=600&auto=format&fit=crop', step: '1', title: 'Partagez votre lien', desc: "Envoyez votre lien unique à vos confrères tatoueurs par WhatsApp, Instagram, email ou en personne. Le lien ne change jamais." },
-              { img: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?q=80&w=600&auto=format&fit=crop', step: '2', title: "Ils s'inscrivent", desc: "Votre ami crée son compte InkFlow via votre lien et souscrit à l'abonnement Pro. La récompense est déclenchée automatiquement." },
-              { img: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=600&auto=format&fit=crop', step: '3', title: 'Vous gagnez 1 mois', desc: "Vous recevez 1 mois d'abonnement gratuit. Lui aussi. Sans limite de parrainages — certains cumulent plus d'un an offert." },
+              {
+                img: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=600&auto=format&fit=crop',
+                step: '1',
+                title: 'Partagez votre lien',
+                desc: 'Envoyez votre lien unique à vos confrères tatoueurs par WhatsApp, Instagram, email ou en personne. Le lien ne change jamais.',
+              },
+              {
+                img: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?q=80&w=600&auto=format&fit=crop',
+                step: '2',
+                title: "Ils s'inscrivent",
+                desc: "Votre ami crée son compte InkFlow via votre lien et souscrit à l'abonnement Pro. La récompense est déclenchée automatiquement.",
+              },
+              {
+                img: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=600&auto=format&fit=crop',
+                step: '3',
+                title: 'Vous gagnez 1 mois',
+                desc: "Vous recevez 1 mois d'abonnement gratuit. Lui aussi. Sans limite de parrainages — certains cumulent plus d'un an offert.",
+              },
             ].map((card, i) => (
-            <motion.div
-              key={i}
-              className="rounded-2xl border border-neutral-700 bg-neutral-900 overflow-hidden hover:border-neutral-600 transition-colors"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              whileHover={{ y: -4 }}
-            >
-              <div className="h-36 overflow-hidden">
-                <img src={card.img} alt={card.title} className="w-full h-full object-cover" />
-              </div>
-              <div className="p-6">
-                <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-                  Étape {card.step}
-                </span>
-                <h3 className="text-xl font-semibold text-white mt-2">{card.title}</h3>
-                <p className="text-zinc-400 mt-2 text-sm leading-relaxed">{card.desc}</p>
-              </div>
-            </motion.div>
+              <motion.div
+                key={i}
+                className="rounded-2xl border border-neutral-700 bg-neutral-900 overflow-hidden hover:border-neutral-600 transition-colors"
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                whileHover={{ y: -4 }}
+              >
+                <div className="h-36 overflow-hidden">
+                  <img src={card.img} alt={card.title} className="w-full h-full object-cover" />
+                </div>
+                <div className="p-6">
+                  <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+                    Étape {card.step}
+                  </span>
+                  <h3 className="text-xl font-semibold text-white mt-2">{card.title}</h3>
+                  <p className="text-zinc-400 mt-2 text-sm leading-relaxed">{card.desc}</p>
+                </div>
+              </motion.div>
             ))}
           </div>
         </motion.section>
@@ -533,9 +546,7 @@ export const ReferralPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-white">Support dédié</h3>
-                  <p className="text-sm text-zinc-400 mt-1">
-                    Équipe réactive pour les tatoueurs.
-                  </p>
+                  <p className="text-sm text-zinc-400 mt-1">Équipe réactive pour les tatoueurs.</p>
                 </div>
               </div>
             </div>
@@ -679,9 +690,7 @@ export const ReferralPage: React.FC = () => {
           transition={{ duration: 0.5 }}
         >
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-8 sm:p-12 text-center hover:border-neutral-700 transition-colors">
-            <h2 className="text-2xl font-bold text-white mb-4">
-              Prêt à partager ?
-            </h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Prêt à partager ?</h2>
             <p className="text-zinc-400 mb-6 max-w-md mx-auto">
               Chaque confrère que vous invitez vous rapproche d&apos;un abonnement 100 % gratuit.
             </p>

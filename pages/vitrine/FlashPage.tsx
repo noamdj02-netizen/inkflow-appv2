@@ -15,8 +15,6 @@ import {
 import { supabase } from '../../lib/supabase';
 import { CX } from '../../components/client/clientExperienceTypes';
 import { useToast } from '../../contexts/ToastContext';
-import { SEO } from '../../components/SEO';
-import { APP_URL } from '../../lib/urls';
 import { isClientPortalFullyReady } from '../../lib/clientOnboardingGate';
 
 interface FlashData {

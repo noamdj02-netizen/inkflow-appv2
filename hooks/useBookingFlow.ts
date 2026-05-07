@@ -12,20 +12,28 @@ import {
 } from '../lib/supabaseDashboard';
 import { getVitrineDataBySlugAsync } from '../lib/vitrineStorage';
 import { toLocalDateString } from '../lib/utils';
-import { fetchStudioAvailability, DEFAULT_TIME_SLOTS, DEFAULT_OFF_DAYS, type StudioAvailabilityResponse } from '../lib/studioAvailability';
+import {
+  fetchStudioAvailability,
+  DEFAULT_TIME_SLOTS,
+  DEFAULT_OFF_DAYS,
+  type StudioAvailabilityResponse,
+} from '../lib/studioAvailability';
 import { createCheckoutSession } from '../lib/stripeClient';
 import { createProjectRequest } from '../lib/supabaseProjectRequests';
-import { fetchClientHealthProfile, isHealthFormComplete, upsertClientHealthProfile } from '../lib/clientHealthProfile';
+import {
+  fetchClientHealthProfile,
+  isHealthFormComplete,
+  upsertClientHealthProfile,
+} from '../lib/clientHealthProfile';
 import { supabase } from '../lib/supabase';
 import type { HealthFormData } from '../components/booking/HealthQuestionnaireForm';
-import {
-  fetchPublicArtistsForStudio,
-  type PublicBookingArtist,
-} from '../lib/publicStudioArtists';
+import { fetchPublicArtistsForStudio, type PublicBookingArtist } from '../lib/publicStudioArtists';
 
 export type BookingMode = 'select' | 'flash' | 'project';
 
-const supabaseEnabled = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+const supabaseEnabled = !!(
+  import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 /** Flash affiché sur la page publique (vitrine JSON ou table Supabase) */
 export interface PublicFlash {
@@ -115,9 +123,7 @@ export function replaceUrlArtistParam(artistSlug: string | null): void {
 export function useBookingFlow(studioSlug: string) {
   // ── Mode & flash ────────────────────────────────────────────────────────────
   const flashInUrl =
-    typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search).get('flash')
-      : null;
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('flash') : null;
 
   const [bookingMode, setBookingMode] = useState<BookingMode>(flashInUrl ? 'flash' : 'select');
   const [selectedFlashId, setSelectedFlashId] = useState<string | null>(() => flashInUrl);
@@ -171,7 +177,7 @@ export function useBookingFlow(studioSlug: string) {
 
   // ── Questionnaire de santé ───────────────────────────────────────────────────
   const [showHealthForm, setShowHealthForm] = useState(false);
-  const [healthFormData, setHealthFormData] = useState<HealthFormData | null>(null);
+  const [_healthFormData, setHealthFormData] = useState<HealthFormData | null>(null);
   const [healthFormCompleted, setHealthFormCompleted] = useState(false);
 
   // ── Paiement ─────────────────────────────────────────────────────────────────
@@ -312,8 +318,9 @@ export function useBookingFlow(studioSlug: string) {
   }, [studioId]);
 
   /** Tant que la liste charge, on n’affiche pas les flashs (évite un flash puis blocage multi-artistes). */
-  const artistContextLocked =
-    Boolean(supabaseEnabled && studioId && studioId !== 'loading' && artistsLoading);
+  const artistContextLocked = Boolean(
+    supabaseEnabled && studioId && studioId !== 'loading' && artistsLoading
+  );
 
   const needsArtistChoice = !artistContextLocked && publicArtists.length >= 2;
 
@@ -406,7 +413,9 @@ export function useBookingFlow(studioSlug: string) {
     const verifyPayment = async () => {
       try {
         const baseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/+$/, '');
-        const key = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim().replace(/^['"]|['"]$/g, '');
+        const key = (import.meta.env.VITE_SUPABASE_ANON_KEY || '')
+          .trim()
+          .replace(/^['"]|['"]$/g, '');
 
         if (!baseUrl || !key) {
           setPaymentVerified(false);
@@ -423,13 +432,15 @@ export function useBookingFlow(studioSlug: string) {
           data = (await res.json()) as typeof data;
         } catch {
           setPaymentVerified(false);
-          setPaymentError('Réponse du serveur illisible. Réessayez ou vérifiez votre compte bancaire.');
+          setPaymentError(
+            'Réponse du serveur illisible. Réessayez ou vérifiez votre compte bancaire.'
+          );
           return;
         }
 
         if (!res.ok || data.error) {
           setPaymentVerified(false);
-          setPaymentError(data.error || 'Le paiement n\'a pas pu être vérifié.');
+          setPaymentError(data.error || "Le paiement n'a pas pu être vérifié.");
           return;
         }
 
@@ -441,7 +452,7 @@ export function useBookingFlow(studioSlug: string) {
         setPaymentError(
           isNetwork
             ? 'Connexion instable. Vérifiez le réseau puis rafraîchissez la page pour confirmer le paiement.'
-            : 'Impossible de confirmer le paiement pour le moment. Si le débit a bien eu lieu, gardez votre reçu.',
+            : 'Impossible de confirmer le paiement pour le moment. Si le débit a bien eu lieu, gardez votre reçu.'
         );
       }
     };
@@ -451,23 +462,27 @@ export function useBookingFlow(studioSlug: string) {
 
   // ── Valeurs calculées ────────────────────────────────────────────────────────
 
-  const getAvailableSlotsForDate = useMemo(() => (dateStr: string): string[] => {
-    const taken = busySlots[dateStr] || [];
-    if (taken.includes('__blocked__') || taken.includes('__full__')) return [];
+  const getAvailableSlotsForDate = useMemo(
+    () =>
+      (dateStr: string): string[] => {
+        const taken = busySlots[dateStr] || [];
+        if (taken.includes('__blocked__') || taken.includes('__full__')) return [];
 
-    let slots: string[];
-    if (dynamicSlotsByDay) {
-      const date = new Date(dateStr + 'T00:00:00');
-      const dayIndex = date.getDay();
-      slots = dynamicSlotsByDay[dayIndex] || [];
-    } else if (studioSlots.length > 0) {
-      slots = studioSlots;
-    } else {
-      slots = DEFAULT_TIME_SLOTS;
-    }
+        let slots: string[];
+        if (dynamicSlotsByDay) {
+          const date = new Date(dateStr + 'T00:00:00');
+          const dayIndex = date.getDay();
+          slots = dynamicSlotsByDay[dayIndex] || [];
+        } else if (studioSlots.length > 0) {
+          slots = studioSlots;
+        } else {
+          slots = DEFAULT_TIME_SLOTS;
+        }
 
-    return slots.filter((t) => !taken.includes(t));
-  }, [busySlots, dynamicSlotsByDay, studioSlots]);
+        return slots.filter((t) => !taken.includes(t));
+      },
+    [busySlots, dynamicSlotsByDay, studioSlots]
+  );
 
   const availableDates = useMemo((): string[] => {
     const dates: string[] = [];
@@ -488,11 +503,11 @@ export function useBookingFlow(studioSlug: string) {
       if (getAvailableSlotsForDate(dateStr).length > 0) dates.push(dateStr);
     }
     return dates;
-  }, [busySlots, advanceBookingDays, bookingWindowDays, studioOffDays, getAvailableSlotsForDate]);
+  }, [advanceBookingDays, bookingWindowDays, studioOffDays, getAvailableSlotsForDate]);
 
   const availableSlots = useMemo(
-    () => form.selectedDate ? getAvailableSlotsForDate(form.selectedDate) : [],
-    [form.selectedDate, getAvailableSlotsForDate],
+    () => (form.selectedDate ? getAvailableSlotsForDate(form.selectedDate) : []),
+    [form.selectedDate, getAvailableSlotsForDate]
   );
 
   const artistStepResolved = !needsArtistChoice || Boolean(selectedArtistId);
@@ -503,13 +518,7 @@ export function useBookingFlow(studioSlug: string) {
     if (!artistStepResolved) return [];
     if (!needsArtistChoice) return base;
     return base.filter((f) => !f.artistId || f.artistId === selectedArtistId);
-  }, [
-    flashList,
-    artistContextLocked,
-    artistStepResolved,
-    needsArtistChoice,
-    selectedArtistId,
-  ]);
+  }, [flashList, artistContextLocked, artistStepResolved, needsArtistChoice, selectedArtistId]);
 
   const selectedFlash = selectedFlashId
     ? availableFlashes.find((f) => f.id === selectedFlashId)
@@ -520,18 +529,20 @@ export function useBookingFlow(studioSlug: string) {
     return publicArtists.find((a) => a.id === selectedArtistId)?.name ?? null;
   }, [selectedArtistId, publicArtists]);
 
-  const artistSelectionPending =
-    needsArtistChoice && !selectedArtistId && !artistContextLocked;
+  const artistSelectionPending = needsArtistChoice && !selectedArtistId && !artistContextLocked;
 
   const flashPlacementOptions = useMemo(() => {
     if (!selectedFlash) return [];
-    const base = selectedFlash.placement?.length ? selectedFlash.placement : DEFAULT_BODY_PLACEMENTS;
+    const base = selectedFlash.placement?.length
+      ? selectedFlash.placement
+      : DEFAULT_BODY_PLACEMENTS;
     return [...new Set(base)];
   }, [selectedFlash]);
 
   const resolvedPlacement = useMemo(() => {
     if (!form.flashPlacementPreset) return '';
-    if (form.flashPlacementPreset === PLACEMENT_OTHER_VALUE) return form.flashPlacementCustom.trim();
+    if (form.flashPlacementPreset === PLACEMENT_OTHER_VALUE)
+      return form.flashPlacementCustom.trim();
     return form.flashPlacementPreset.trim();
   }, [form.flashPlacementPreset, form.flashPlacementCustom]);
 
@@ -563,17 +574,11 @@ export function useBookingFlow(studioSlug: string) {
     }
     setProjectError(null);
     try {
-      const prefix = selectedArtistLabel
-        ? `Tatoueur souhaité : ${selectedArtistLabel}\n\n`
-        : '';
-      await createProjectRequest(
-        { ...data, description: prefix + data.description },
-        studioId
-      );
+      const prefix = selectedArtistLabel ? `Tatoueur souhaité : ${selectedArtistLabel}\n\n` : '';
+      await createProjectRequest({ ...data, description: prefix + data.description }, studioId);
       setProjectSubmitted(true);
     } catch (e) {
-      const msg =
-        e instanceof Error ? e.message : 'Erreur lors de l\'envoi. Veuillez réessayer.';
+      const msg = e instanceof Error ? e.message : "Erreur lors de l'envoi. Veuillez réessayer.";
       setProjectError(msg);
     }
   };

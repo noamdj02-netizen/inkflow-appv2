@@ -9,17 +9,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
-  Clock,
-  MapPin,
-  User,
   Plus,
   Users,
   DollarSign,
-  TrendingUp,
   Eye,
-  MoreHorizontal,
   Phone,
-  Mail,
   Banknote,
   CheckCircle2,
   X,
@@ -34,7 +28,6 @@ import {
 
 const WEEKDAYS_SHORT = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const WEEKDAYS_FULL = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8h - 19h
 
 interface PlanningSidebarProps {
   appointments: Appointment[];

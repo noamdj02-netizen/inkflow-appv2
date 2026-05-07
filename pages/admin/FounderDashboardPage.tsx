@@ -180,22 +180,6 @@ function FounderKpiCard(props: {
   );
 }
 
-function maskSensitiveNumber(reveal: boolean, value: number, suffix = ''): React.ReactNode {
-  if (!reveal) {
-    return (
-      <span className="inline-block blur-[6px] select-none tabular-nums text-zinc-900">
-        ••••{suffix}
-      </span>
-    );
-  }
-  return (
-    <span className="tabular-nums text-zinc-900">
-      {value}
-      {suffix}
-    </span>
-  );
-}
-
 function maskEuro(reveal: boolean, value: number): React.ReactNode {
   if (!reveal) {
     return (

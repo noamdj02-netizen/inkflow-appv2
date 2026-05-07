@@ -85,7 +85,7 @@ interface ClientListProps {
 
 export const ClientList: React.FC<ClientListProps> = ({
   clients,
-  onSelectClient,
+  onSelectClient: _onSelectClient,
   onAddClient,
   loadClientNotes,
   saveClientNotes,
@@ -140,7 +140,7 @@ export const ClientList: React.FC<ClientListProps> = ({
 
   const notesData = useMemo(
     () => (selectedClient ? { clientId: selectedClient.id, notes } : { clientId: '', notes: '' }),
-    [selectedClient?.id, notes]
+    [selectedClient, notes]
   );
   const saveNotesFn = useCallback(
     async (d: { clientId: string; notes: string }) => {
@@ -225,7 +225,7 @@ export const ClientList: React.FC<ClientListProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [selectedClient?.id, stampStudioId, useSupabase]);
+  }, [selectedClient, stampStudioId, useSupabase]);
 
   /** Command palette (⌘K) : ouvre la fiche client depuis le dashboard */
   useEffect(() => {
@@ -278,7 +278,7 @@ export const ClientList: React.FC<ClientListProps> = ({
     const newId = onAddClient(newClient);
     if (typeof newId === 'string' && addForm.notes.trim()) {
       if (useSupabase && saveClientNotes) {
-        saveClientNotes(newId, addForm.notes.trim()).catch((err) => {
+        saveClientNotes(newId, addForm.notes.trim()).catch(() => {
           toast.error('Erreur lors de la sauvegarde des notes');
         });
       } else {

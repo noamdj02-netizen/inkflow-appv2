@@ -99,7 +99,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
   userEmail,
   studioSlug: studioSlugFromDb,
   variant = 'default',
-  showLabel = true,
+  showLabel: _showLabel = true,
 }) => {
   const toast = useToast();
   const [copied, setCopied] = useState(false);
@@ -140,7 +140,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
       .catch(() => {
         toast.error('Une erreur est survenue');
       });
-  }, [studioId, useSupabase]);
+  }, [studioId, useSupabase, toast]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
@@ -150,7 +150,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
       saveVitrineLinkSettingsToSupabase(
         studioId,
         settings as unknown as Record<string, unknown>
-      ).catch((err) => {
+      ).catch(() => {
         toast.error('Erreur de sauvegarde des paramètres');
       });
       saveTimeoutRef.current = null;
@@ -158,7 +158,7 @@ export const VitrineLinkButton: React.FC<VitrineLinkButtonProps> = ({
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [settings, studioId, useSupabase]);
+  }, [settings, studioId, useSupabase, toast]);
 
   useEffect(() => {
     if (showQr && qrCanvasRef.current) {

@@ -322,7 +322,6 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
   const requestedDate = watch('requestedDate');
   const requestedTime = watch('requestedTime');
   const clientName = watch('clientName');
-  const clientEmail = watch('clientEmail');
   const description = watch('description');
   const bodyPlacement = watch('bodyPlacement') || '';
   const estimatedSizeCm = watch('estimatedSizeCm') || '';
@@ -346,7 +345,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [studioId]);
+  }, [studioId, toast]);
 
   const getAvailableSlotsForDate = (dateStr: string): string[] => {
     const taken = busySlots[dateStr] || [];

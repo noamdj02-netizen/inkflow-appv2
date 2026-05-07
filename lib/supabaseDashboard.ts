@@ -1,6 +1,7 @@
 import { supabase, getStudioId } from './supabase';
 import { findNextAvailableSlotForStudio } from './supabaseBookings';
 import { buildFlashSlug } from './flashSlug';
+import type { Database } from '../types/database';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db: any = supabase;
 import { sendReferralNotification } from './sendNotification';
@@ -161,7 +162,7 @@ export async function ensureStudio(
         ? preferredSlug
         : `${baseSlug}-${uniqueSlugSuffix(`${id}-retry-${attempt}-${Date.now()}`)}`;
 
-    const payload: Record<string, unknown> = {
+    const payload: Database['public']['Tables']['inkflow_studios']['Insert'] = {
       id,
       email: emailNorm,
       name,
@@ -171,9 +172,7 @@ export async function ensureStudio(
     };
     if (referredBy) payload.referred_by = referredBy;
 
-    const { error } = await (supabase as any)
-      .from('inkflow_studios')
-      .upsert(payload, { onConflict: 'id' });
+    const { error } = await supabase.from('inkflow_studios').upsert(payload, { onConflict: 'id' });
     if (!error) {
       if (referredBy) {
         const { error: refErr } = await supabase.from('inkflow_referrals').insert({
@@ -889,15 +888,22 @@ export function mapAppointmentFromDb(row: Record<string, unknown>): Appointment 
 }
 
 export async function getAppointmentsFromSupabase(studioId: string): Promise<Appointment[]> {
+  /** Les RDV les plus récents d’abord : avec tri asc + LIMIT on ne chargeait que les plus anciens (> limite) et les nouveaux RDV disparaissaient au reload. */
   const { data, error } = await supabase
     .from('inkflow_appointments')
     .select(LIST_SELECT_APPOINTMENTS)
     .eq('studio_id', studioId)
-    .order('date', { ascending: true })
-    .order('time', { ascending: true })
+    .order('date', { ascending: false })
+    .order('time', { ascending: false })
     .limit(DEFAULT_LIST_LIMIT);
   if (error) throw error;
-  return (data || []).map(mapAppointmentFromDb);
+  const mapped = (data || []).map(mapAppointmentFromDb);
+  mapped.sort((a, b) => {
+    const byDate = a.date.localeCompare(b.date);
+    if (byDate !== 0) return byDate;
+    return (a.time || '').localeCompare(b.time || '');
+  });
+  return mapped;
 }
 
 export async function saveAppointmentToSupabase(studioId: string, apt: Appointment): Promise<void> {

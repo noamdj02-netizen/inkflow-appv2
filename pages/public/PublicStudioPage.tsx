@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  MapPin, Phone, Mail, Clock, Instagram, ChevronRight, CheckCircle, Star
+  MapPin, Phone, Mail, Instagram, ChevronRight, CheckCircle, Star
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
 import { FlashDesign } from '../../types';
@@ -10,7 +10,7 @@ interface PublicStudioPageProps {
 }
 
 export const PublicStudioPage: React.FC<PublicStudioPageProps> = ({ studioSlug }) => {
-  const [selectedFlash, setSelectedFlash] = useState<FlashDesign | null>(null);
+  const [, setSelectedFlash] = useState<FlashDesign | null>(null);
 
   const studio = {
     name: "Ink & Art Studio",

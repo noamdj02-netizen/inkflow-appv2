@@ -1,7 +1,7 @@
 /**
  * /discover — Page d'accueil du directory tatoueurs
  */
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SearchBar } from '../../components/discover/SearchBar';
 import { ArtistCard } from '../../components/discover/ArtistCard';
 import { CityLinks } from '../../components/discover/CityLinks';

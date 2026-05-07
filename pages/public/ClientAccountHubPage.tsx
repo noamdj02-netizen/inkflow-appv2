@@ -286,7 +286,7 @@ export const ClientAccountHubPage: React.FC = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+      <div className="public-page-scroll flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
         <Loader2 className="w-8 h-8 animate-spin text-zinc-400" aria-hidden />
       </div>
     );
@@ -295,7 +295,7 @@ export const ClientAccountHubPage: React.FC = () => {
   if (!isAuthenticated || !user) {
     return (
       <div
-        className="min-h-[100dvh] bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100"
+        className="public-page-scroll bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <SEO
@@ -409,7 +409,7 @@ export const ClientAccountHubPage: React.FC = () => {
 
   return (
     <div
-      className="min-h-[100dvh] bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100"
+      className="public-page-scroll bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <SEO

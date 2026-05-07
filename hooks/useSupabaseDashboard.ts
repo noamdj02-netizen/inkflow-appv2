@@ -23,7 +23,6 @@ import {
   saveFlashDesignToSupabase,
   saveClientNotesToSupabase,
   deleteAppointmentFromSupabase,
-  deleteClientFromSupabase,
   deleteFlashDesignFromSupabase,
   markNotificationReadInSupabase,
   mapAppointmentFromDb,
@@ -283,7 +282,7 @@ export const useSupabaseDashboard = () => {
 
     setConnectionError(null);
     init();
-  }, [user?.id, user?.email, useSupabase, loadAllData, retryCount]);
+  }, [user, useSupabase, loadAllData, retryCount]);
 
   const retry = useCallback(() => {
     setConnectionError(null);
@@ -484,7 +483,7 @@ export const useSupabaseDashboard = () => {
       if (!useSupabase || isDemoAccountUser) return '';
       try {
         return await getClientNotesFromSupabase(clientId);
-      } catch (e) {
+      } catch {
         return '';
       }
     },
@@ -496,7 +495,7 @@ export const useSupabaseDashboard = () => {
       if (!useSupabase || isDemoAccountUser) return;
       try {
         await saveClientNotesToSupabase(clientId, notes);
-      } catch (e) {}
+      } catch {}
     },
     [useSupabase, isDemoAccountUser]
   );

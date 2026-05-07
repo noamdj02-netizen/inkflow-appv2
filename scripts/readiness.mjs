@@ -5,6 +5,7 @@
  *   node scripts/readiness.mjs env     — VITE_* obligatoires dans .env.local (+ rappels Stripe / Edge)
  *   node scripts/readiness.mjs sentry — format VITE_SENTRY_DSN + vérif prod
  *   node scripts/readiness.mjs manual — parcours P0–P1 à cocher à la main (mobile + desktop)
+ *   node scripts/readiness.mjs prepush — vérifs locales rapides avant push (clés format, pas de commit secrets)
  *
  * Voir aussi : npm run smoke:urls (avec preview sur 4173 par défaut).
  */
@@ -99,6 +100,57 @@ function cmdSentry() {
 `);
 }
 
+function cmdPrepush() {
+  const env = { ...process.env, ...loadDotEnvFile('.env.local') };
+  let warnings = 0;
+
+  console.log('[readiness:prepush] Vérifs locales (pas d’appel réseau). .env.local reste ignoré par git.\n');
+
+  const resend = env.RESEND_API_KEY?.trim() || '';
+  if (resend && !resend.startsWith('re_')) {
+    console.warn('[readiness:prepush] RESEND_API_KEY : format inhabituel (attendu re_…).');
+    warnings += 1;
+  }
+  if (!resend) {
+    console.warn(
+      '[readiness:prepush] RESEND_API_KEY absente dans .env.local — emails Edge Functions OK uniquement si secret défini côté Supabase.'
+    );
+    warnings += 1;
+  }
+
+  const viteApp = (env.VITE_APP_URL || '').trim();
+  if (viteApp.endsWith('.')) {
+    console.warn(
+      `[readiness:prepush] VITE_APP_URL se termine par « . » — retire le point final (${viteApp.slice(0, 48)}…).`
+    );
+    warnings += 1;
+  }
+
+  const vapid = (env.VITE_VAPID_PUBLIC_KEY || '').trim();
+  if (!vapid) {
+    console.warn('[readiness:prepush] VITE_VAPID_PUBLIC_KEY absente — Web Push navigateur désactivé (Expo peut suffire).');
+    warnings += 1;
+  }
+
+  console.log(`
+[readiness:prepush] Sécurité :
+  • Ne jamais commit .env.local ; régénère toute clé exposée (chat, capture d’écran, paste public).
+  • Supabase Dashboard → Secrets : RESEND_API_KEY, STRIPE_*, SITE_URL, APP_URL, VAPID_*.
+
+[readiness:prepush] Test email local :
+    npm run resend:test -- ton@email.com
+
+[readiness:prepush] Smoke URLs après build :
+    npm run preview -- --host 127.0.0.1 --port 4173
+    SMOKE_BASE_URL=http://127.0.0.1:4173 npm run smoke:urls
+`);
+  if (warnings > 0) {
+    console.warn(`[readiness:prepush] ${warnings} avertissement(s) — corrige avant démo prod si pertinent.`);
+  } else {
+    console.log('[readiness:prepush] Aucun problème de format détecté (variables présentes).');
+  }
+}
+
 function cmdManual() {
   console.log(`[readiness:manual] À cocher sur mobile web ET desktop (source détaillée : docs/MVP-STATUS-AND-AUDIT.md §6).
 
@@ -133,7 +185,10 @@ switch (cmd) {
   case 'manual':
     cmdManual();
     break;
+  case 'prepush':
+    cmdPrepush();
+    break;
   default:
-    console.log(`Commandes : env | sentry | manual`);
+    console.log(`Commandes : env | sentry | manual | prepush`);
     process.exitCode = cmd === 'help' ? 0 : 1;
 }

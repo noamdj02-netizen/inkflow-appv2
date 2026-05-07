@@ -23,7 +23,6 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { RequestsBookingsListSkeleton } from '../common/LoadingSkeleton';
-import { EmptyState } from '../common/EmptyState';
 import { Appointment, ProjectRequest, Booking, BookingStatus, Client } from '../../types';
 import { RequestQuickViewSheet } from './RequestQuickViewSheet';
 import { InvoiceButton } from './InvoiceButton';
@@ -335,11 +334,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     [onSubTabChange]
   );
 
-  // Synchroniser l'onglet quand la sidebar change (ex: clic sur Projets)
+  // Synchroniser l’onglet quand la sidebar change (ex: clic sur Projets)
   useEffect(() => {
-    if (initialTab && initialTab !== activeTab) {
-      setActiveTab(initialTab);
-    }
+    if (!initialTab) return;
+    setActiveTab(initialTab);
   }, [initialTab]);
 
   // Modale « Générer lien acompte » Stripe (RDV existant)
@@ -404,7 +402,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   const [rejectPending, setRejectPending] = useState<RejectPending | null>(null);
   const [rejectLoading, setRejectLoading] = useState(false);
 
-  const inferRequestType = (desc: string, placement?: string): 'flash' | 'custom' => {
+  const inferRequestType = (desc: string, _placement?: string): 'flash' | 'custom' => {
     const d = (desc || '').toLowerCase();
     if (d.includes('flash') || d.includes('pré-dessiné') || d.includes('prédessiné'))
       return 'flash';
@@ -508,7 +506,6 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     pendingAppointments,
     pendingBookings,
     pendingProjects,
-    pendingCustomBookings,
     bookingsChronological,
     flashBookings,
     customBookings,
