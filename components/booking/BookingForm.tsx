@@ -11,37 +11,61 @@ interface BookingFormProps {
 export const BookingForm: React.FC<BookingFormProps> = ({
   onSubmit,
   onCancel,
-  preselectedFlash
+  preselectedFlash,
 }) => {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<BookingFormData>>({
     tattooType: preselectedFlash ? 'flash' : 'custom',
     flashId: preselectedFlash?.id,
-    description: preselectedFlash?.title
+    description: preselectedFlash?.title,
   });
 
   useEffect(() => {
     if (preselectedFlash) {
-      setFormData(prev => ({ ...prev, tattooType: 'flash', flashId: preselectedFlash.id, description: preselectedFlash.title }));
+      setFormData((prev) => ({
+        ...prev,
+        tattooType: 'flash',
+        flashId: preselectedFlash.id,
+        description: preselectedFlash.title,
+      }));
     }
   }, [preselectedFlash]);
 
   const updateFormData = (field: string, value: unknown) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleNext = () => { if (step < 3) setStep(step + 1); };
-  const handleBack = () => { if (step > 1) setStep(step - 1); };
+  const handleNext = () => {
+    if (step < 3) setStep(step + 1);
+  };
+  const handleBack = () => {
+    if (step > 1) setStep(step - 1);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const service = formData.tattooType === 'flash' && preselectedFlash ? preselectedFlash.title : (formData.description || '');
+    const service =
+      formData.tattooType === 'flash' && preselectedFlash
+        ? preselectedFlash.title
+        : formData.description || '';
     const data = { ...formData, service } as BookingFormData;
     // Validation stricte
-    if (!data.clientName?.trim() || !data.clientEmail?.trim() || !data.clientPhone?.trim() || !data.location || !data.size || !data.date || !data.time || !data.agreedToDeposit) {
+    if (
+      !data.clientName?.trim() ||
+      !data.clientEmail?.trim() ||
+      !data.clientPhone?.trim() ||
+      !data.location ||
+      !data.size ||
+      !data.date ||
+      !data.time ||
+      !data.agreedToDeposit
+    ) {
+      setValidationError("Veuillez remplir tous les champs obligatoires et accepter l'acompte.");
       return;
     }
+    setValidationError(null);
     setSubmitting(true);
     try {
       const result = onSubmit(data);
@@ -63,12 +87,18 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       <div className="flex items-center justify-between mb-8">
         {[1, 2, 3].map((s) => (
           <div key={s} className="flex items-center flex-1">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
-              s <= step ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-400'
-            }`}>
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
+                s <= step ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-400'
+              }`}
+            >
               {s}
             </div>
-            {s < 3 && <div className={`flex-1 h-1 mx-2 rounded ${s < step ? 'bg-neutral-900' : 'bg-neutral-200'}`} />}
+            {s < 3 && (
+              <div
+                className={`flex-1 h-1 mx-2 rounded ${s < step ? 'bg-neutral-900' : 'bg-neutral-200'}`}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -78,19 +108,31 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           <div>
             <h3 className="text-xl font-bold mb-4">Type de tatouage</h3>
             <div className="grid md:grid-cols-2 gap-4">
-              <button type="button" onClick={() => updateFormData('tattooType', 'custom')}
+              <button
+                type="button"
+                onClick={() => updateFormData('tattooType', 'custom')}
                 className={`p-6 rounded-xl border-2 transition-all text-left ${
-                  formData.tattooType === 'custom' ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200 hover:border-neutral-400'
-                }`}>
+                  formData.tattooType === 'custom'
+                    ? 'border-neutral-900 bg-neutral-50'
+                    : 'border-neutral-200 hover:border-neutral-400'
+                }`}
+              >
                 <div className="text-3xl mb-3">🎨</div>
                 <h4 className="font-bold text-lg mb-2">Design personnalisé</h4>
-                <p className="text-sm text-neutral-600">Créez un tatouage unique avec notre artiste</p>
+                <p className="text-sm text-neutral-600">
+                  Créez un tatouage unique avec notre artiste
+                </p>
               </button>
-              <button type="button" onClick={() => updateFormData('tattooType', 'flash')}
+              <button
+                type="button"
+                onClick={() => updateFormData('tattooType', 'flash')}
                 className={`p-6 rounded-xl border-2 transition-all text-left ${
-                  formData.tattooType === 'flash' ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200 hover:border-neutral-400'
+                  formData.tattooType === 'flash'
+                    ? 'border-neutral-900 bg-neutral-50'
+                    : 'border-neutral-200 hover:border-neutral-400'
                 }`}
-                disabled={!!preselectedFlash}>
+                disabled={!!preselectedFlash}
+              >
                 <div className="text-3xl mb-3">⚡</div>
                 <h4 className="font-bold text-lg mb-2">Flash</h4>
                 <p className="text-sm text-neutral-600">Choisissez parmi nos designs prêts</p>
@@ -110,9 +152,16 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold mb-2"><MapPin className="w-4 h-4 inline mr-2" />Emplacement</label>
-              <select value={formData.location || ''} onChange={(e) => updateFormData('location', e.target.value)}
-                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900" required>
+              <label className="block text-sm font-semibold mb-2">
+                <MapPin className="w-4 h-4 inline mr-2" />
+                Emplacement
+              </label>
+              <select
+                value={formData.location || ''}
+                onChange={(e) => updateFormData('location', e.target.value)}
+                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                required
+              >
                 <option value="">Sélectionner...</option>
                 <option value="arm">Bras</option>
                 <option value="leg">Jambe</option>
@@ -123,8 +172,12 @@ export const BookingForm: React.FC<BookingFormProps> = ({
             </div>
             <div>
               <label className="block text-sm font-semibold mb-2">Taille estimée</label>
-              <select value={formData.size || ''} onChange={(e) => updateFormData('size', e.target.value)}
-                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900" required>
+              <select
+                value={formData.size || ''}
+                onChange={(e) => updateFormData('size', e.target.value)}
+                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                required
+              >
                 <option value="">Sélectionner...</option>
                 <option value="small">Petit (5-10cm)</option>
                 <option value="medium">Moyen (10-20cm)</option>
@@ -135,9 +188,13 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           </div>
           <div>
             <label className="block text-sm font-semibold mb-2">Description du projet</label>
-            <textarea value={formData.description || ''} onChange={(e) => updateFormData('description', e.target.value)}
+            <textarea
+              value={formData.description || ''}
+              onChange={(e) => updateFormData('description', e.target.value)}
               className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 min-h-[120px]"
-              placeholder="Décrivez votre idée de tatouage..." required={formData.tattooType !== 'flash'} />
+              placeholder="Décrivez votre idée de tatouage..."
+              required={formData.tattooType !== 'flash'}
+            />
           </div>
         </div>
       )}
@@ -146,23 +203,47 @@ export const BookingForm: React.FC<BookingFormProps> = ({
         <div className="space-y-6">
           <h3 className="text-xl font-bold mb-4">Vos informations</h3>
           <div>
-            <label className="block text-sm font-semibold mb-2"><User className="w-4 h-4 inline mr-2" />Nom complet</label>
-            <input type="text" value={formData.clientName || ''} onChange={(e) => updateFormData('clientName', e.target.value)}
+            <label className="block text-sm font-semibold mb-2">
+              <User className="w-4 h-4 inline mr-2" />
+              Nom complet
+            </label>
+            <input
+              type="text"
+              value={formData.clientName || ''}
+              onChange={(e) => updateFormData('clientName', e.target.value)}
               className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
-              placeholder="Jean Dupont" required />
+              placeholder="Jean Dupont"
+              required
+            />
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold mb-2"><Mail className="w-4 h-4 inline mr-2" />Email</label>
-              <input type="email" value={formData.clientEmail || ''} onChange={(e) => updateFormData('clientEmail', e.target.value)}
+              <label className="block text-sm font-semibold mb-2">
+                <Mail className="w-4 h-4 inline mr-2" />
+                Email
+              </label>
+              <input
+                type="email"
+                value={formData.clientEmail || ''}
+                onChange={(e) => updateFormData('clientEmail', e.target.value)}
                 className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                placeholder="jean@exemple.com" required />
+                placeholder="jean@exemple.com"
+                required
+              />
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-2"><Phone className="w-4 h-4 inline mr-2" />Téléphone</label>
-              <input type="tel" value={formData.clientPhone || ''} onChange={(e) => updateFormData('clientPhone', e.target.value)}
+              <label className="block text-sm font-semibold mb-2">
+                <Phone className="w-4 h-4 inline mr-2" />
+                Téléphone
+              </label>
+              <input
+                type="tel"
+                value={formData.clientPhone || ''}
+                onChange={(e) => updateFormData('clientPhone', e.target.value)}
                 className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                placeholder="+33 6 12 34 56 78" required />
+                placeholder="+33 6 12 34 56 78"
+                required
+              />
             </div>
           </div>
         </div>
@@ -173,15 +254,30 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           <h3 className="text-xl font-bold mb-4">Choisir un créneau</h3>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold mb-2"><Calendar className="w-4 h-4 inline mr-2" />Date</label>
-              <input type="date" value={formData.date || ''} onChange={(e) => updateFormData('date', e.target.value)}
+              <label className="block text-sm font-semibold mb-2">
+                <Calendar className="w-4 h-4 inline mr-2" />
+                Date
+              </label>
+              <input
+                type="date"
+                value={formData.date || ''}
+                onChange={(e) => updateFormData('date', e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900" required />
+                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                required
+              />
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-2"><Clock className="w-4 h-4 inline mr-2" />Heure</label>
-              <select value={formData.time || ''} onChange={(e) => updateFormData('time', e.target.value)}
-                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900" required>
+              <label className="block text-sm font-semibold mb-2">
+                <Clock className="w-4 h-4 inline mr-2" />
+                Heure
+              </label>
+              <select
+                value={formData.time || ''}
+                onChange={(e) => updateFormData('time', e.target.value)}
+                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                required
+              >
                 <option value="">Sélectionner...</option>
                 <option value="09:00">09:00</option>
                 <option value="10:00">10:00</option>
@@ -199,14 +295,21 @@ export const BookingForm: React.FC<BookingFormProps> = ({
               <div>
                 <h4 className="font-bold text-blue-900 dark:text-blue-100 mb-1">Acompte requis</h4>
                 <p className="text-sm text-blue-700 dark:text-blue-400">
-                  Un acompte de <strong>{calculateDeposit()}€</strong> sera requis pour confirmer votre réservation.
+                  Un acompte de <strong>{calculateDeposit()}€</strong> sera requis pour confirmer
+                  votre réservation.
                 </p>
               </div>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <input type="checkbox" id="deposit-agree" checked={formData.agreedToDeposit || false}
-              onChange={(e) => updateFormData('agreedToDeposit', e.target.checked)} className="mt-1 rounded border-neutral-300" required />
+            <input
+              type="checkbox"
+              id="deposit-agree"
+              checked={formData.agreedToDeposit || false}
+              onChange={(e) => updateFormData('agreedToDeposit', e.target.checked)}
+              className="mt-1 rounded border-neutral-300"
+              required
+            />
             <label htmlFor="deposit-agree" className="text-sm text-neutral-700">
               J'accepte de payer l'acompte de {calculateDeposit()}€ pour confirmer ma réservation.
             </label>
@@ -214,20 +317,34 @@ export const BookingForm: React.FC<BookingFormProps> = ({
         </div>
       )}
 
+      {validationError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          {validationError}
+        </p>
+      )}
+
       <div className="flex items-center justify-between pt-6 border-t border-neutral-200">
-        <button type="button" onClick={step === 1 ? onCancel : handleBack}
-          className="px-6 py-3 border-2 border-neutral-200 rounded-xl font-semibold hover:border-neutral-900 transition-colors">
+        <button
+          type="button"
+          onClick={step === 1 ? onCancel : handleBack}
+          className="px-6 py-3 border-2 border-neutral-200 rounded-xl font-semibold hover:border-neutral-900 transition-colors"
+        >
           {step === 1 ? 'Annuler' : 'Précédent'}
         </button>
         {step < 3 ? (
-          <button type="button" onClick={handleNext}
-            className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors">
+          <button
+            type="button"
+            onClick={handleNext}
+            className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors"
+          >
             Suivant
           </button>
         ) : (
-          <button type="submit"
+          <button
+            type="submit"
             disabled={submitting}
-            className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+            className="px-6 py-3 bg-neutral-900 text-white rounded-xl font-semibold hover:bg-neutral-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
             {submitting ? 'Envoi en cours...' : 'Confirmer la réservation'}
           </button>
         )}

@@ -10,6 +10,12 @@
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <script>
+      /* Reload quand un nouveau SW prend le contrôle — évite les vieux chunks en cache */
+      if('serviceWorker' in navigator){
+        navigator.serviceWorker.addEventListener('controllerchange',function(){
+          window.location.reload();
+        });
+      }
       /* Auto-clear stale SW on localhost — évite le splash bloqué en dev */
       (function(){
         if('serviceWorker' in navigator && (location.hostname==='localhost'||location.hostname==='127.0.0.1')) {

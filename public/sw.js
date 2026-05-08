@@ -1,11 +1,12 @@
 /* eslint-disable no-restricted-globals */
-import { precacheAndRoute } from 'workbox-precaching';
+import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { CacheFirst, NetworkFirst } from 'workbox-strategies';
 
+cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Nouveau SW s’active tout de suite après déploi (évite ancienne version en cache)
+// Nouveau SW s'active tout de suite après déploi (évite ancienne version en cache)
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
