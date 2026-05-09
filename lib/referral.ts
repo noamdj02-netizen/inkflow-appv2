@@ -9,7 +9,7 @@ function getSupabaseEdgeConfig(): { url: string; anonKey: string } {
 
 export async function processReferralSignup(
   refereeEmail: string,
-  referralCode: string,
+  referralCode: string
 ): Promise<{ success: boolean; message: string }> {
   const { url, anonKey } = getSupabaseEdgeConfig();
   if (!url || !anonKey) {
@@ -19,12 +19,21 @@ export async function processReferralSignup(
     };
   }
 
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    return {
+      success: false,
+      message: 'Connecte-toi pour enregistrer un code parrainage.',
+    };
+  }
+
   try {
     const res = await fetch(`${url}/functions/v1/process-referral`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${anonKey}`,
+        Authorization: `Bearer ${accessToken}`,
         apikey: anonKey,
       },
       body: JSON.stringify({
@@ -58,12 +67,20 @@ export async function completeReferralOnBooking(refereeEmail: string): Promise<v
   const { url, anonKey } = getSupabaseEdgeConfig();
   if (!url || !anonKey) return;
 
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) return;
+
+  const em = refereeEmail.trim().toLowerCase();
+  const sessionEm = sessionData.session?.user?.email?.trim().toLowerCase();
+  if (sessionEm && em && sessionEm !== em) return;
+
   try {
     const res = await fetch(`${url}/functions/v1/complete-referral`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${anonKey}`,
+        Authorization: `Bearer ${accessToken}`,
         apikey: anonKey,
       },
       body: JSON.stringify({ referee_email: refereeEmail }),

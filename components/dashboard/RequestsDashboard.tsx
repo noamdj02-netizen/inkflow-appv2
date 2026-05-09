@@ -45,7 +45,7 @@ import {
   inkflowPublicMessagesUrl,
   inkflowStudioPublicUrl,
 } from '../../lib/bookingRecapUrls';
-import { getCanonicalAppOrigin } from '../../lib/urls';
+import { getCanonicalAppOrigin, buildClientAccountHubUrl } from '../../lib/urls';
 import type { PendingStampReward } from '../../lib/stampLoyalty';
 import { parseInstagramHandle, instagramMessageUrl } from '../../lib/instagramUtils';
 import { buildMailtoHref, handleMailtoClick } from '../../lib/mailto';
@@ -279,6 +279,12 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   demoMode = false,
 }) => {
   const toast = useToast();
+  const clientPortalUrlForEmails = useMemo(() => {
+    const s = studioSlug?.trim();
+    if (!s) return undefined;
+    return buildClientAccountHubUrl({ studioSlug: s });
+  }, [studioSlug]);
+
   const clientByEmail = useMemo(() => {
     const m = new Map<string, Client>();
     clients.forEach((c) => {
@@ -539,6 +545,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
       requestedTime: apt.time || null,
       description: apt.service,
       recapUrl,
+      ...(clientPortalUrlForEmails ? { clientPortalUrl: clientPortalUrlForEmails } : {}),
     });
     if (sent.ok) {
       toast.success(
@@ -625,6 +632,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           conversationLink: threadUrl,
           clientPhone: bk.clientPhone,
           smsConfirmationOptIn: bk.smsConfirmationOptIn,
+          ...(clientPortalUrlForEmails ? { clientPortalUrl: clientPortalUrlForEmails } : {}),
         });
         notifyConfirmed(sent);
         return;
@@ -697,6 +705,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         conversationLink: threadUrl,
         clientPhone: bk.clientPhone,
         smsConfirmationOptIn: bk.smsConfirmationOptIn,
+        ...(clientPortalUrlForEmails ? { clientPortalUrl: clientPortalUrlForEmails } : {}),
       });
       notifyConfirmed(sent);
     } catch (e) {
@@ -798,6 +807,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             description: depositModalAppointment.service,
             paymentLink: result.url,
             recapUrl,
+            ...(clientPortalUrlForEmails ? { clientPortalUrl: clientPortalUrlForEmails } : {}),
           });
           if (sent.ok) {
             toast.success(
@@ -901,6 +911,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             conversationLink: threadUrl,
             clientPhone: depositModalBooking.clientPhone,
             smsConfirmationOptIn: depositModalBooking.smsConfirmationOptIn,
+            ...(clientPortalUrlForEmails ? { clientPortalUrl: clientPortalUrlForEmails } : {}),
           });
           await onUpdateBookingStatus?.(depositModalBooking.id, 'confirmed');
           if (sent.ok) {
@@ -1002,6 +1013,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
             paymentLink: result.url,
             recapUrl: threadUrl,
             conversationLink: threadUrl,
+            ...(clientPortalUrlForEmails ? { clientPortalUrl: clientPortalUrlForEmails } : {}),
           });
           if (sent.ok) {
             toast.success(

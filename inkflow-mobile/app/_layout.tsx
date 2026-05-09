@@ -81,6 +81,7 @@ function RootLayoutNav() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="tap-to-pay" options={{ presentation: 'modal', headerShown: false }} />
         </Stack>
       </GestureHandlerRootView>
     </SafeAreaProvider>

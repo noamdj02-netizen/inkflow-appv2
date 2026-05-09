@@ -2,11 +2,12 @@
  * Hub client web — connexion, photo, coordonnées, questionnaire santé.
  * Pas d’ancien portail /client/dashboard : tout passe par cette page + messagerie / consent URL publiques.
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   Camera,
   CheckCircle2,
+  ChevronDown,
   FileSignature,
   Heart,
   Loader2,
@@ -39,9 +40,13 @@ import {
   trySyncClientCrmProfile,
 } from '../../lib/clientPortalProfile';
 import { getStudioByEmail } from '../../lib/supabaseDashboard';
-import { getCanonicalAppOrigin } from '../../lib/urls';
-import { getClientMagicLinkRedirectTo, getClientPortalOAuthRedirectTo } from '../../lib/urls';
-import { LANDING_URL } from '../../lib/urls';
+import {
+  getCanonicalAppOrigin,
+  getClientAccountHubPath,
+  getClientMagicLinkRedirectTo,
+  getClientPortalOAuthRedirectTo,
+  LANDING_URL,
+} from '../../lib/urls';
 
 const inputClass =
   'w-full px-4 py-3 rounded-xl text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-emerald-500/25 focus:border-emerald-500 min-h-[44px]';
@@ -71,6 +76,31 @@ export const ClientAccountHubPage: React.FC = () => {
 
   const [healthInitial, setHealthInitial] = useState<Partial<HealthFormData> | undefined>();
   const [healthDone, setHealthDone] = useState(false);
+
+  const [studioFromQuery, setStudioFromQuery] = useState<string | undefined>();
+  const strippedStudioQueryRef = useRef(false);
+  const postLoginWelcomeToastRef = useRef(false);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    setStudioFromQuery(sp.get('studio')?.trim() || sp.get('from')?.trim() || undefined);
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user || strippedStudioQueryRef.current) return;
+    const sp = new URLSearchParams(window.location.search);
+    if (!sp.has('studio') && !sp.has('from')) return;
+    strippedStudioQueryRef.current = true;
+    try {
+      window.history.replaceState({}, '', CLIENT_ACCOUNT_HUB_PATH);
+    } catch {
+      /* ignore */
+    }
+    if (!postLoginWelcomeToastRef.current) {
+      postLoginWelcomeToastRef.current = true;
+      toast.success('Bienvenue — ton espace client est prêt.');
+    }
+  }, [isAuthenticated, user, toast]);
 
   const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const needsPw = user ? clientNeedsPassword(meta) : false;
@@ -139,7 +169,7 @@ export const ClientAccountHubPage: React.FC = () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: getClientPortalOAuthRedirectTo() },
+        options: { redirectTo: getClientPortalOAuthRedirectTo({ studioSlug: studioFromQuery }) },
       });
       if (error) toast.error(error.message);
     } finally {
@@ -158,7 +188,7 @@ export const ClientAccountHubPage: React.FC = () => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: em,
-        options: { emailRedirectTo: getClientMagicLinkRedirectTo() },
+        options: { emailRedirectTo: getClientMagicLinkRedirectTo({ studioSlug: studioFromQuery }) },
       });
       if (error) {
         toast.error(error.message);
@@ -280,8 +310,9 @@ export const ClientAccountHubPage: React.FC = () => {
   };
 
   const loginHref = useMemo(
-    () => `/login?redirect=${encodeURIComponent(CLIENT_ACCOUNT_HUB_PATH)}`,
-    [],
+    () =>
+      `/login?redirect=${encodeURIComponent(getClientAccountHubPath({ studioSlug: studioFromQuery }))}`,
+    [studioFromQuery],
   );
 
   if (authLoading) {
@@ -320,88 +351,160 @@ export const ClientAccountHubPage: React.FC = () => {
             </p>
           </div>
 
-          <ul className="space-y-3 mb-8 text-sm text-zinc-600 dark:text-zinc-400">
-            <li className="flex gap-2">
-              <UserRound className="w-5 h-5 text-emerald-600 shrink-0" aria-hidden />
-              Profil : prénom, nom, téléphone, e-mail (e-mail de connexion).
-            </li>
-            <li className="flex gap-2">
-              <Heart className="w-5 h-5 text-emerald-600 shrink-0" aria-hidden />
-              Questionnaire santé : complète-le une fois ; tes prochaines résas iront plus vite.
-            </li>
-            <li className="flex gap-2">
-              <FileSignature className="w-5 h-5 text-emerald-600 shrink-0" aria-hidden />
-              Consentement : le studio t’envoie un lien par e-mail ou messagerie — signature optionnelle
-              selon leur process (tu n’as pas besoin de ce compte pour signer).
-            </li>
-          </ul>
-
-          <GoogleSignInButton
-            label="Continuer avec Google"
-            disabled={googleLoading}
-            onClick={() => void handleGoogle()}
-          />
-          {googleLoading ? (
-            <p className="text-center text-xs text-zinc-500 mt-2">Redirection…</p>
+          {studioFromQuery ? (
+            <div className="mb-6 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/40 px-4 py-3 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed min-w-0">
+                  Pour suivre ton dossier après une réservation depuis cette vitrine : connecte-toi ci-dessous.
+                  Une fois entré, tu pourras compléter ton <strong className="font-semibold">profil</strong> et ton{' '}
+                  <strong className="font-semibold">questionnaire santé</strong> au même endroit.
+                </p>
+                <a
+                  href={`/studio/${encodeURIComponent(studioFromQuery)}`}
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-xl text-sm font-semibold border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-700 active:scale-[0.98] transition-all"
+                >
+                  Retour vitrine
+                </a>
+              </div>
+              <p className="mt-2 text-xs text-zinc-500 font-mono">
+                Réf. vitrine · {studioFromQuery}
+              </p>
+            </div>
           ) : null}
 
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-zinc-200 dark:border-zinc-800" />
+          <details className="group mb-8 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-900/30 open:bg-white dark:open:bg-zinc-900/50 transition-colors">
+            <summary className="cursor-pointer select-none flex items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-zinc-800 dark:text-zinc-200 list-none [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden />
+                À quoi sert ce compte client ?
+              </span>
+              <ChevronDown
+                className="w-4 h-4 text-zinc-400 shrink-0 transition-transform group-open:rotate-180"
+                aria-hidden
+              />
+            </summary>
+            <ul className="space-y-2.5 px-4 pb-4 pt-0 text-sm text-zinc-600 dark:text-zinc-400 leading-snug border-t border-zinc-200/80 dark:border-zinc-700/80">
+              <li className="flex gap-2.5 pt-3">
+                <UserRound className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" aria-hidden />
+                <span>Photo et coordonnées : prénom, nom, téléphone — ils apparaissent sur tes demandes quand tu es connecté depuis la vitrine.</span>
+              </li>
+              <li className="flex gap-2.5">
+                <Heart className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" aria-hidden />
+                <span>Questionnaire santé : une fois rempli, tes prochains rendez-vous iront plus vite.</span>
+              </li>
+              <li className="flex gap-2.5">
+                <FileSignature className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" aria-hidden />
+                <span>
+                  Consentement tatouage : le studio peut t’envoyer un lien séparé — tu peux signer sans passer par ce compte si le studio te le propose ainsi.
+                </span>
+              </li>
+            </ul>
+          </details>
+
+          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 shadow-sm space-y-6">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mb-1">
+                Connexion rapide
+              </p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                Google ou lien magique par e-mail — aucun mot de passe obligatoire pour commencer.
+              </p>
+              <GoogleSignInButton
+                label="Continuer avec Google"
+                disabled={googleLoading}
+                onClick={() => void handleGoogle()}
+                className="active:scale-[0.98] transition-all"
+              />
+              {googleLoading ? (
+                <p className="text-center text-xs text-zinc-500 mt-2">Redirection vers Google…</p>
+              ) : null}
             </div>
-            <div className="relative flex justify-center text-xs uppercase tracking-wide">
-              <span className="bg-zinc-50 dark:bg-zinc-950 px-3 text-zinc-500">ou</span>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center" aria-hidden>
+                <div className="w-full border-t border-zinc-200 dark:border-zinc-700" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase tracking-wide">
+                <span className="bg-white dark:bg-zinc-900 px-3 text-zinc-500">ou par e-mail</span>
+              </div>
             </div>
+
+            {magicSent ? (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/30 p-4 text-sm text-emerald-900 dark:text-emerald-100">
+                  <CheckCircle2 className="w-5 h-5 inline mr-2 align-text-bottom" aria-hidden />
+                  Si un compte existe pour cette adresse, tu recevras un lien dans quelques instants. Ouvre-le sur{' '}
+                  <strong>cet appareil</strong> pour rester sur la même session.
+                </div>
+                <p className="text-xs text-zinc-500 text-center leading-relaxed">
+                  Rien reçu ? Vérifie les courriers indésirables. Le lien expire après quelques minutes.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setMagicSent(false)}
+                  className="w-full min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-600 text-sm font-semibold text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
+                >
+                  Utiliser une autre adresse e-mail
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleMagicLink} className="space-y-3">
+                <label htmlFor="hub-magic-email" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  Ton e-mail (le même que pour la réservation si possible)
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" aria-hidden />
+                  <input
+                    id="hub-magic-email"
+                    type="email"
+                    name="hub-magic-email"
+                    autoComplete="email"
+                    value={magicEmail}
+                    onChange={(e) => setMagicEmail(e.target.value)}
+                    className={`${inputClass} pl-11`}
+                    placeholder="toi@email.com"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={magicLoading}
+                  className="w-full min-h-[48px] rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-60"
+                >
+                  {magicLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" aria-hidden />
+                  ) : (
+                    <ArrowRight className="w-5 h-5" aria-hidden />
+                  )}
+                  Recevoir un lien magique
+                </button>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center leading-relaxed">
+                  Pas de mot de passe : nous t’envoyons un lien sécurisé. Tu pourras en définir un plus tard dans ton espace.
+                </p>
+              </form>
+            )}
           </div>
 
-          {magicSent ? (
-            <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/80 dark:bg-emerald-950/30 p-4 text-sm text-emerald-900 dark:text-emerald-100">
-              <CheckCircle2 className="w-5 h-5 inline mr-2 align-text-bottom" aria-hidden />
-              Si un compte existe pour cet e-mail, tu recevras un lien. Ouvre-le sur ce téléphone ou ordinateur.
-            </div>
-          ) : (
-            <form onSubmit={handleMagicLink} className="space-y-3">
-              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                E-mail
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" aria-hidden />
-                <input
-                  type="email"
-                  name="hub-magic-email"
-                  autoComplete="email"
-                  value={magicEmail}
-                  onChange={(e) => setMagicEmail(e.target.value)}
-                  className={`${inputClass} pl-11`}
-                  placeholder="toi@email.com"
-                  required
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={magicLoading}
-                className="w-full min-h-[48px] rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-60"
+          <div className="mt-8 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/20 px-4 py-4 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 text-center">Autres accès</p>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:justify-center sm:flex-wrap">
+              <a
+                href="/login"
+                className="inline-flex min-h-[44px] items-center justify-center px-4 rounded-xl text-sm font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40 active:scale-[0.98] transition-all"
               >
-                {magicLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" aria-hidden />
-                ) : (
-                  <ArrowRight className="w-5 h-5" aria-hidden />
-                )}
-                Recevoir un lien magique
-              </button>
-            </form>
-          )}
-
-          <p className="mt-8 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Tu es tatoueur ?{' '}
-            <a href="/login" className="font-semibold text-emerald-700 dark:text-emerald-400 underline-offset-2 hover:underline">
-              Connexion studio
-            </a>
-            {' · '}
-            <a href={loginHref} className="font-semibold underline-offset-2 hover:underline">
-              Connexion e-mail / mot de passe
-            </a>
-          </p>
+                Connexion studio (tatoueur)
+              </a>
+              <a
+                href={loginHref}
+                className="inline-flex min-h-[44px] items-center justify-center px-4 rounded-xl text-sm font-semibold border border-zinc-200 dark:border-zinc-600 text-zinc-800 dark:text-zinc-200 hover:bg-white dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
+              >
+                E-mail + mot de passe (client)
+              </a>
+            </div>
+            <p className="text-xs text-zinc-500 text-center leading-relaxed max-w-sm mx-auto">
+              Tu as déjà un mot de passe client ? Utilise le second bouton — tu reviendras ici après connexion.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -445,6 +548,53 @@ export const ClientAccountHubPage: React.FC = () => {
             .
           </div>
         ) : null}
+
+        <section
+          className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          aria-label="Résumé de ton compte"
+        >
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Connecté avec</p>
+            <p className="mt-1 font-semibold text-zinc-900 dark:text-zinc-100 truncate" title={user.email ?? ''}>
+              {user.email ?? '—'}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Complète ton profil et ta fiche santé pour accélérer tes prochains rendez-vous.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold border ${
+                profileFieldsFilled
+                  ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
+                  : 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-950 dark:text-amber-100'
+              }`}
+            >
+              {profileFieldsFilled ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5" aria-hidden /> Profil
+                </>
+              ) : (
+                'Profil à compléter'
+              )}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold border ${
+                healthDone
+                  ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
+                  : 'border-zinc-200 dark:border-zinc-700 bg-zinc-100/80 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-200'
+              }`}
+            >
+              {healthDone ? (
+                <>
+                  <Heart className="w-3.5 h-3.5 text-emerald-600" aria-hidden /> Santé
+                </>
+              ) : (
+                'Santé à remplir'
+              )}
+            </span>
+          </div>
+        </section>
 
         {needsPw ? (
           <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 shadow-sm">

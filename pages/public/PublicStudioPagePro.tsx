@@ -3,7 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import {
   MapPin, Phone, Mail, Clock, Instagram, CheckCircle, Star,
   MessageCircle, Share2, Heart, Award, Shield, Users, Camera, X,
-  Facebook, ExternalLink, Calendar, ArrowRight, Menu,
+  Facebook, ExternalLink, Calendar, ArrowRight, Menu, LogIn,
   ChevronDown, Send, AlertCircle, Sparkles, Copy, ArrowLeft
 } from 'lucide-react';
 import { Logo } from '../../components/Logo';
@@ -21,7 +21,13 @@ import { useToast } from '../../contexts/ToastContext';
 import type { VitrineData, VitrineFlashDesign } from '../../types/vitrine';
 import type { ProjectRequestFormData } from '../../types';
 import { DemoTour, type TourStep } from '../../components/demo/DemoTour';
-import { LANDING_URL, LANDING_TERMS_URL, LANDING_PRIVACY_URL, safeExternalHttpUrl } from '../../lib/urls';
+import {
+  LANDING_URL,
+  LANDING_TERMS_URL,
+  LANDING_PRIVACY_URL,
+  safeExternalHttpUrl,
+  getClientAccountHubPath,
+} from '../../lib/urls';
 import { getVitrineTheme } from '../../lib/themes';
 import { StudioThemeRouter } from '../../components/studio-themes/StudioThemeRouter';
 import { GoogleReviews } from '../../components/vitrine/GoogleReviews';
@@ -787,6 +793,22 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                 <MessageCircle className="w-5 h-5" aria-hidden />
                 <span className="text-sm font-medium">Contact</span>
               </motion.button>
+              <motion.button
+                type="button"
+                title="Profil, photo et questionnaire santé (compte client InkFlow)"
+                aria-label="Ouvrir mon espace client InkFlow : profil et questionnaire santé"
+                onClick={() => navigateTo(getClientAccountHubPath({ studioSlug }))}
+                whileTap={vitrineTap}
+                className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-colors text-sm font-medium min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 active:scale-[0.98]"
+              >
+                <LogIn className="w-4 h-4 shrink-0" aria-hidden />
+                <span className="flex flex-col items-start leading-[1.15] gap-0.5">
+                  <span>Mon espace client</span>
+                  <span className="text-[10px] font-normal font-sans text-neutral-500 uppercase tracking-wide">
+                    Profil & santé
+                  </span>
+                </span>
+              </motion.button>
               <motion.a href={`/book/${studioSlug}`} onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigateTo(`/book/${studioSlug}`); }} data-joyride="vitrine-reserver" whileTap={vitrineTap} className="bg-[var(--vitrine-primary)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center gap-2 text-sm sm:text-base min-h-[44px] items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-neutral-900">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" aria-hidden />
                 <span>Réserver</span>
@@ -813,6 +835,22 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                     <MessageCircle className="w-5 h-5" /> Contact
                   </button>
                 </div>
+                <button
+                  type="button"
+                  title="Profil et questionnaire santé (compte client)"
+                  aria-label="Mon espace client InkFlow : profil et questionnaire santé"
+                  onClick={() => {
+                    navigateTo(getClientAccountHubPath({ studioSlug }));
+                    setShowMobileMenu(false);
+                  }}
+                  className="w-full mt-2 text-left px-4 py-3 rounded-xl font-medium min-h-[44px] flex items-center gap-2 text-neutral-800 border border-neutral-200 bg-white hover:bg-neutral-50 active:scale-[0.98] transition-all"
+                >
+                  <LogIn className="w-5 h-5 shrink-0" aria-hidden />
+                  <span className="flex flex-col gap-0.5">
+                    <span>Mon espace client</span>
+                    <span className="text-xs font-normal text-neutral-500">Connexion réservée aux clients InkFlow</span>
+                  </span>
+                </button>
               </nav>
             </div>
           )}

@@ -215,7 +215,7 @@ export const faqPageSchemaFr: object = {
       name: 'Quelle est la différence entre Solo, Pro et Studio ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Solo couvre les indépendants (1 artiste, 100 clients CRM). Pro ajoute 3 artistes, 300 clients CRM, stats avancées et thèmes premium. Studio passe à 5 artistes, clients CRM illimités et API.',
+        text: 'Solo conserve réservation · paiements · vitrine avec plafonds 1 siège / 100 fiches CRM, sans encore activer multi-calendriers étendus, statistiques avancées ou thème vitrine premium. Pro élève vos plafonds (3 sièges · 300 fiches) et active ces trois options. Studio reprend Pro, cinq sièges, CRM illimité sur notre grille et accès développeurs (API InkFlow documentée).',
       },
     },
     {

@@ -114,6 +114,8 @@ export interface EmailLayoutOptions {
   button?: { text: string; url: string };
   /** Bouton secondaire (ex. mailto, lien vitrine) — style contour bleu */
   secondaryButton?: { text: string; url: string };
+  /** HTML placé après le bloc CTA (lien texte secondaire, etc.) */
+  postButtonHtml?: string;
   buttonSubtext?: string;
   linkHint?: { label: string; url: string };
   hideAppPromo?: boolean;
@@ -144,6 +146,7 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
     bodyHtml,
     button,
     secondaryButton,
+    postButtonHtml,
     buttonSubtext,
     linkHint,
     hideAppPromo = false,
@@ -197,6 +200,8 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
     : secondaryBtnHtml
       ? `<div style="text-align:left;margin:28px 0 12px;">${secondaryBtnHtml}</div>`
       : "";
+
+  const postButtonBlockHtml = postButtonHtml ? postButtonHtml : "";
 
   const linkHintHtml = linkHint
     ? `<p style="color:${TEXT_MUTED};font-size:14px;margin-top:20px;line-height:1.5;font-family:${FONT_BODY};">
@@ -288,6 +293,7 @@ export function wrapEmailLayout(options: EmailLayoutOptions): string {
                     ${subtitleHtml}
                     ${bodyHtml}
                     ${buttonHtml}
+                    ${postButtonBlockHtml}
                     ${linkHintHtml}
               ${appCardHtml}
               ${footerHtml}`;

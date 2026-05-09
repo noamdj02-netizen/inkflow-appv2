@@ -2,7 +2,7 @@
 
 Document opérationnel aligné sur le code actuel : webhook `stripe-webhook` (idempotence fail-closed, `Stripe.webhooks.constructEvent`), portail facturation, checkout Connect.
 
-**Référence variables :** [ENV-PRODUCTION.md](./ENV-PRODUCTION.md).
+**Référence variables :** [ENV-PRODUCTION.md](./ENV-PRODUCTION.md). Checklist transverse (calendrier, réservations, déploiements Edge) : [PRODUCTION-READINESS-CHECKLIST.md](./PRODUCTION-READINESS-CHECKLIST.md).
 
 ---
 

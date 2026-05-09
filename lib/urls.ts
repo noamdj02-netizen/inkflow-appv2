@@ -29,22 +29,39 @@ export function getCanonicalAppOrigin(): string {
   return origin;
 }
 
+/**
+ * Chemin hub client relatif (navigation SPA + `redirect_to` auth).
+ * `studio` : contexte vitrine / e-mail (questionnaire, retour après login).
+ */
+export function getClientAccountHubPath(opts?: { studioSlug?: string | null }): string {
+  const slug = opts?.studioSlug?.trim();
+  if (!slug) return CLIENT_ACCOUNT_HUB_PATH;
+  return `${CLIENT_ACCOUNT_HUB_PATH}?studio=${encodeURIComponent(slug)}`;
+}
+
+/** URL absolue hub client (e-mails, partage) — origine canonique appli. */
+export function buildClientAccountHubUrl(opts?: { studioSlug?: string | null }): string {
+  const origin = getCanonicalAppOrigin().replace(/\/+$/, '');
+  return `${origin}${getClientAccountHubPath(opts)}`;
+}
+
 /** redirectTo pour le magic link et la confirmation e-mail client → callback puis hub `/mon-compte`. */
-export function getClientMagicLinkRedirectTo(): string {
+export function getClientMagicLinkRedirectTo(opts?: { studioSlug?: string | null }): string {
+  const hubPath = getClientAccountHubPath({ studioSlug: opts?.studioSlug });
   const q = new URLSearchParams({
-    redirect_to: CLIENT_ACCOUNT_HUB_PATH,
+    redirect_to: hubPath,
   });
   return `${getCanonicalAppOrigin()}/auth/callback/client?${q.toString()}`;
 }
 
 /** Même cible que le magic link (inscription e-mail avec confirmation). */
-export function getClientEmailConfirmRedirectTo(): string {
-  return getClientMagicLinkRedirectTo();
+export function getClientEmailConfirmRedirectTo(opts?: { studioSlug?: string | null }): string {
+  return getClientMagicLinkRedirectTo(opts);
 }
 
 /** `redirectTo` OAuth (Google) depuis `/client` — même callback que le magic link. */
-export function getClientPortalOAuthRedirectTo(): string {
-  return getClientMagicLinkRedirectTo();
+export function getClientPortalOAuthRedirectTo(opts?: { studioSlug?: string | null }): string {
+  return getClientMagicLinkRedirectTo(opts);
 }
 
 /** redirectTo pour OAuth tatoueur (`/auth/callback`). */

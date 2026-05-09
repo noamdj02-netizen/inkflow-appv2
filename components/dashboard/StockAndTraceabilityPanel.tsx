@@ -5,6 +5,7 @@ import {
   Mic,
   Package,
   Plus,
+  Printer,
   QrCode,
   Sparkles,
   Trash2,
@@ -22,6 +23,7 @@ import {
   fetchConsumableSuppliers,
   fetchPricesForStudio,
   fetchStockMovements,
+  findConsumableLotByRawBarcode,
   getStudioFinancePrefsFromSupabase,
   insertConsumableLot,
   insertConsumablePrice,
@@ -39,7 +41,9 @@ import {
   flattenTattooSupplierPresets,
   TATTOO_SUPPLIER_PRESET_GROUPS,
 } from '../../lib/tattooSupplierPresets';
+import { normalizeScannedBarcodeValue } from '../../lib/inventoryScanToken';
 import { ConsumablesComparatorPanel } from './ConsumablesComparatorPanel';
+import { InventoryPrintLabelModal } from './InventoryPrintLabelModal';
 import { SupplierCatalogPanel } from './SupplierCatalogPanel';
 import { COMPARATOR_CATEGORY_OPTIONS } from '../../lib/consumableCategories';
 
@@ -69,6 +73,7 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [presetImporting, setPresetImporting] = useState(false);
+  const [labelModalOpen, setLabelModalOpen] = useState(false);
   const [stockSubSection, setStockSubSection] = useState<'traceability' | 'comparator' | 'catalog'>(
     'traceability'
   );
@@ -194,11 +199,21 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
             if (!streamRef.current || !videoRef.current || !studioId) return;
             try {
               const raw = await tryDecode();
-              if (raw) {
+              const normalized = raw ? normalizeScannedBarcodeValue(raw) : '';
+              if (normalized) {
                 try {
+                  const existing = await findConsumableLotByRawBarcode(studioId, normalized);
+                  if (existing) {
+                    toast.info(
+                      `Code déjà enregistré : ${existing.product_label?.trim() || existing.lot_number}`
+                    );
+                    stopScan();
+                    await reload();
+                    return;
+                  }
                   await insertConsumableLot(studioId, {
-                    raw_barcode: raw,
-                    lot_number: raw.slice(0, 80),
+                    raw_barcode: normalized,
+                    lot_number: normalized.slice(0, 80),
                     product_label: lotManual.product_label || null,
                     supplier_name: lotManual.supplier_name || null,
                     expiry_date: lotManual.expiry_date || null,
@@ -913,11 +928,21 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
                   Arrêter la caméra
                 </button>
               )}
+              <button
+                type="button"
+                disabled={!studioId || !useSupabase}
+                onClick={() => setLabelModalOpen(true)}
+                className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 text-sm font-medium disabled:opacity-50 active:scale-[0.98] transition-all"
+              >
+                <Printer className="w-4 h-4" />
+                Créer une étiquette
+              </button>
             </div>
             <p className="text-xs text-zinc-500">
               Chrome utilise le scan natif ; Safari et Firefox s’appuient sur le décodage logiciel
-              (QR / codes-barres courants). HTTPS et permission caméra requises. Tu peux renseigner
-              libellé ou péremption avant le scan pour pré-remplir la fiche.
+              (QR / codes-barres courants). HTTPS et permission caméra requises. « Créer une
+              étiquette » ouvre une fenêtre où tu choisis aiguille, encre ou autre matériel, puis tu
+              enregistres et imprimes.
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               <input
@@ -1038,6 +1063,15 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
           </section>
         </>
       ) : null}
+      <InventoryPrintLabelModal
+        isOpen={labelModalOpen}
+        onClose={() => setLabelModalOpen(false)}
+        studioId={studioId}
+        lotManual={lotManual}
+        clientId={clientId}
+        appointmentId={appointmentId}
+        onSuccess={() => void reload()}
+      />
     </div>
   );
 };

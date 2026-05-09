@@ -56,7 +56,8 @@ Dans **Vercel Dashboard → Votre projet → Settings → Environment Variables*
 - **Redirect URLs** : listez toutes les origines où l’utilisateur peut atterrir après clic dans l’e-mail, par exemple :
   - `https://app.ink-flow.me/`\*\* (reset mdp : `.../reset-password` puis `.../auth/update-password`)
   - `https://app.ink-flow.me/auth/callback`
-  - `http://localhost:5173/**` et `http://127.0.0.1:5173/**`
+  - `http://localhost:3000/**` et `http://127.0.0.1:3000/**` (port Vite par défaut — voir `vite.config.ts`)
+  - si tu utilises un autre port (ex. 5173), ajoute aussi `http://localhost:5173/**`
   - `https://*.vercel.app/**` (previews Vercel)
     Si l’URL utilisée par l’app (`emailRedirectTo`, ex. `/auth/callback`) n’est pas autorisée ici, l’inscription peut échouer ou aucun e-mail n’est envoyé.
 
@@ -76,14 +77,14 @@ Dans **Vercel Dashboard → Votre projet → Settings → Environment Variables*
 
 ### 3.1 Google Calendar
 
-| Secret                 | Valeur                           |
-| ---------------------- | -------------------------------- |
-| `GOOGLE_CLIENT_ID`     | `xxx.apps.googleusercontent.com` |
-| `GOOGLE_CLIENT_SECRET` | Votre Client Secret              |
-| `GOOGLE_REDIRECT_URI`  | `https://ink-flow.me/dashboard`  |
-| `SITE_URL`             | `https://ink-flow.me`            |
+| Secret                 | Valeur                                                                                                                                                                |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GOOGLE_CLIENT_ID`     | `xxx.apps.googleusercontent.com`                                                                                                                                      |
+| `GOOGLE_CLIENT_SECRET` | Votre Client Secret                                                                                                                                                   |
+| `GOOGLE_REDIRECT_URI`  | **Identique** à une URI autorisée dans Google Cloud : ex. `http://localhost:3000/dashboard` (dev, port Vite par défaut) ou `https://app.ink-flow.me/dashboard` (prod) |
+| `SITE_URL`             | URL publique de l’app SPA (ex. `https://app.ink-flow.me`)                                                                                                             |
 
-Voir `docs/CALENDAR_SETUP.md` pour la configuration Google Cloud Console.
+Voir `docs/CALENDAR_SETUP.md` et la checklist **[`PRODUCTION-READINESS-CHECKLIST.md`](./PRODUCTION-READINESS-CHECKLIST.md)** (section port & OAuth).
 
 ### 3.2 Stripe
 
@@ -99,7 +100,26 @@ Voir `docs/CALENDAR_SETUP.md` pour la configuration Google Cloud Console.
 | ---------------- | -------------------------------------------------- |
 | `RESEND_API_KEY` | `re_xxx` (depuis [resend.com](https://resend.com)) |
 
-### 3.4 Twilio (SMS — optionnel)
+### 3.4 Parrainage client (Edge `process-referral` / `complete-referral`)
+
+| Secret                             | Valeur                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INKFLOW_REFERRAL_INTERNAL_SECRET` | **Optionnel.** Secret long (32+ caractères) connu **uniquement** des backends (cron, autre fonction). Permet d’appeler `complete-referral` sans JWT utilisateur via `Authorization: Bearer <secret>` ou `x-inkflow-referral-secret`. Sinon seul le JWT du filleul (email = `referee_email`) est accepté. |
+| `SUPABASE_ANON_KEY`                | Déjà requis ailleurs ; **obligatoire** sur ces fonctions pour valider le JWT via GoTrue.                                                                                                                                                                                                                 |
+
+**`process-referral`** : impose une **session utilisateur** dont l’e-mail = `referee_email` (après connexion / inscription côté portail client).
+
+### 3.5 Instagram Messaging (webhook)
+
+| Secret                      | Valeur                                                                                                                                        |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `META_WEBHOOK_VERIFY_TOKEN` | Token arbitraire **fort** — identique à celui saisi dans Meta Developer Console (vérification webhook). **Aucune valeur par défaut en prod.** |
+| `META_APP_SECRET`           | **Ou** `FACEBOOK_APP_SECRET` — App Secret Meta ; sert à valider `X-Hub-Signature-256` sur chaque POST webhook.                                |
+| `SUPABASE_SERVICE_ROLE_KEY` | Déjà requis — écriture messages en base.                                                                                                      |
+
+Sans `META_APP_SECRET`, les POST webhook sont **refusés** (503) pour éviter le spam non authentifié.
+
+### 3.6 Twilio (SMS — optionnel)
 
 Confirmations RDV vitrine (`send-booking-confirmation`) : si le client a coché le consentement SMS sur `/book`, un court SMS avec lien peut compléter l’e-mail. Sans ces secrets, l’e-mail seul suffit.
 
@@ -156,7 +176,7 @@ npx supabase functions deploy send-aftercare-email
 1. [console.cloud.google.com](https://console.cloud.google.com) → Nouveau projet
 2. **APIs & Services → Library** → activer **Google Calendar API**
 3. **Credentials → Create OAuth Client ID** (Web application)
-4. Authorized redirect URIs : `https://ink-flow.me/dashboard`
+4. Authorized redirect URIs : même valeur que **`GOOGLE_REDIRECT_URI`** (secret Supabase) — ex. `http://localhost:3000/dashboard` + URL prod du dashboard (**`vite.config.ts` utilise le port 3000 en dev**)
 5. Copiez Client ID et Client Secret → secrets Supabase
 
 ---
@@ -194,6 +214,8 @@ npx supabase functions deploy send-aftercare-email
 
 ## 8. Checklist finale
 
+**Checklist détaillée (calendrier, réservations, Stripe, mails, Meta)** : [`docs/PRODUCTION-READINESS-CHECKLIST.md`](./PRODUCTION-READINESS-CHECKLIST.md)
+
 - `.env.local` ou variables Vercel configurées
 - Supabase : projet créé, `SUPABASE_BOOTSTRAP.sql` exécuté
 - Supabase Auth : Email + Google activés
@@ -203,6 +225,8 @@ npx supabase functions deploy send-aftercare-email
 - Google Cloud : OAuth Calendar configuré
 - Resend : clé API configurée
 - Domaine `ink-flow.me` configuré sur Vercel
+- Si **Instagram Messaging** actif : `META_WEBHOOK_VERIFY_TOKEN` + `META_APP_SECRET` (ou `FACEBOOK_APP_SECRET`) sur l’Edge `instagram-webhook`
+- Si **parrainage client** (`process-referral` / `complete-referral`) : `SUPABASE_ANON_KEY` sur ces fonctions ; optionnel `INKFLOW_REFERRAL_INTERNAL_SECRET` pour complétion automatisée côté serveur
 
 ### 8.1 Santé avant de scaler (micro-entreprise)
 
@@ -237,11 +261,12 @@ La liste peut évoluer : comparer avec `ls supabase/functions` après pull.
 
 ## 10. Docs liées (scale & exploitation)
 
-| Fichier                                                                    | Usage                                               |
-| -------------------------------------------------------------------------- | --------------------------------------------------- |
-| [`INKFLOW-SCALE-PLAYBOOK.md`](./INKFLOW-SCALE-PLAYBOOK.md)                 | Priorités produit / acquisition / support / finance |
-| [`REGRESSION-CRITICAL-PATHS.md`](./REGRESSION-CRITICAL-PATHS.md)           | Tests manuels + smoke Playwright                    |
-| [`SUPPORT-FAQ-TEMPLATES.md`](./SUPPORT-FAQ-TEMPLATES.md)                   | Réponses types support                              |
-| [`UNIT-ECONOMICS-SNAPSHOT.md`](./UNIT-ECONOMICS-SNAPSHOT.md)               | Grille coûts / MRR mensuelle                        |
-| [`NORTH-STAR-FUNNEL.md`](./NORTH-STAR-FUNNEL.md)                           | Funnel analytics tatoueur                           |
-| [`SECURITY-NARRATIVE-STRIPE-RGPD.md`](./SECURITY-NARRATIVE-STRIPE-RGPD.md) | Secrets, RLS, communication conformité              |
+| Fichier                                                                    | Usage                                                                           |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [`PRODUCTION-READINESS-CHECKLIST.md`](./PRODUCTION-READINESS-CHECKLIST.md) | Go-live : Google Calendar (port dev), réservations, Stripe Connect, mails, Meta |
+| [`INKFLOW-SCALE-PLAYBOOK.md`](./INKFLOW-SCALE-PLAYBOOK.md)                 | Priorités produit / acquisition / support / finance                             |
+| [`REGRESSION-CRITICAL-PATHS.md`](./REGRESSION-CRITICAL-PATHS.md)           | Tests manuels + smoke Playwright                                                |
+| [`SUPPORT-FAQ-TEMPLATES.md`](./SUPPORT-FAQ-TEMPLATES.md)                   | Réponses types support                                                          |
+| [`UNIT-ECONOMICS-SNAPSHOT.md`](./UNIT-ECONOMICS-SNAPSHOT.md)               | Grille coûts / MRR mensuelle                                                    |
+| [`NORTH-STAR-FUNNEL.md`](./NORTH-STAR-FUNNEL.md)                           | Funnel analytics tatoueur                                                       |
+| [`SECURITY-NARRATIVE-STRIPE-RGPD.md`](./SECURITY-NARRATIVE-STRIPE-RGPD.md) | Secrets, RLS, communication conformité                                          |

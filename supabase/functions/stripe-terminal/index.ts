@@ -1,5 +1,5 @@
 /**
- * Stripe Terminal (Web) — jeton de connexion lecteur + PaymentIntent solde RDV (Connect).
+ * Stripe Terminal — jeton connexion lecteur (Connect) + lieu Terminal + PaymentIntent solde RDV.
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
@@ -22,7 +22,7 @@ const CONNECT_FEE_BPS = Math.max(
 const RATE_MAX = 30;
 const RATE_WINDOW_MS = 60_000;
 
-type Action = "connection_token" | "create_payment_intent";
+type Action = "connection_token" | "create_payment_intent" | "ensure_terminal_location";
 
 function stripeForm(body: Record<string, string>): string {
   return new URLSearchParams(body).toString();
@@ -36,6 +36,33 @@ async function stripePost(path: string, body: Record<string, string>): Promise<R
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: stripeForm(body),
+  });
+}
+
+/** Terminal + Stripe Connect : le lecteur (Tap to Pay, Bluetooth…) est rattaché au compte connecté. */
+async function stripePostForConnectAccount(
+  path: string,
+  body: Record<string, string>,
+  connectAccountId: string,
+): Promise<Response> {
+  return await fetch(`https://api.stripe.com/v1/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Stripe-Account": connectAccountId,
+    },
+    body: stripeForm(body),
+  });
+}
+
+async function stripeGetForConnectAccount(path: string, connectAccountId: string): Promise<Response> {
+  return await fetch(`https://api.stripe.com/v1/${path}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+      "Stripe-Account": connectAccountId,
+    },
   });
 }
 
@@ -175,9 +202,12 @@ Deno.serve(async (req: Request) => {
       amountEuros?: number;
     };
     const action = (body.action || "").trim() as Action;
-    if (!["connection_token", "create_payment_intent"].includes(action)) {
+    if (!["connection_token", "create_payment_intent", "ensure_terminal_location"].includes(action)) {
       return new Response(
-        JSON.stringify({ error: "action invalide (connection_token | create_payment_intent)" }),
+        JSON.stringify({
+          error:
+            "action invalide (connection_token | create_payment_intent | ensure_terminal_location)",
+        }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -206,7 +236,11 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "connection_token") {
-      const ctRes = await stripePost("terminal/connection_tokens", {});
+      const ctRes = await stripePostForConnectAccount(
+        "terminal/connection_tokens",
+        {},
+        connectAccountId!,
+      );
       const ctText = await ctRes.text();
       if (!ctRes.ok) {
         console.error("[stripe-terminal] connection_tokens:", ctRes.status, ctText);
@@ -233,6 +267,110 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ secret: ct.secret }), {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
+    }
+
+    if (action === "ensure_terminal_location") {
+      const ip = clientIpFromRequest(req);
+      if (!allowRateLimit(`terminal_loc:${ip}`, RATE_MAX, RATE_WINDOW_MS)) {
+        return new Response(JSON.stringify({ error: "Trop de requêtes. Réessayez dans une minute." }), {
+          status: 429,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const { data: meta, error: metaErr } = await supabase
+        .from("inkflow_studios")
+        .select("studio_name, city")
+        .eq("id", studio.id)
+        .maybeSingle();
+
+      if (metaErr || !meta) {
+        return new Response(JSON.stringify({ error: "Studio introuvable." }), {
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const displayName =
+        typeof meta.studio_name === "string" && meta.studio_name.trim()
+          ? meta.studio_name.trim().slice(0, 100)
+          : "Studio";
+      const city =
+        typeof meta.city === "string" && meta.city.trim()
+          ? meta.city.trim().slice(0, 100)
+          : "Paris";
+
+      const listRes = await stripeGetForConnectAccount(
+        "terminal/locations?limit=10",
+        connectAccountId!,
+      );
+      const listText = await listRes.text();
+      if (!listRes.ok) {
+        console.error("[stripe-terminal] terminal/locations list:", listRes.status, listText);
+        let userMsg = "Impossible de lister les lieux Terminal Stripe";
+        try {
+          const p = JSON.parse(listText) as { error?: { message?: string } };
+          if (p.error?.message) userMsg = p.error.message;
+        } catch {
+          userMsg = listText.slice(0, 200);
+        }
+        return new Response(JSON.stringify({ error: userMsg }), {
+          status: 502,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const listed = JSON.parse(listText) as { data?: Array<{ id?: string }> };
+      const existingId = listed.data?.find((x) => x?.id)?.id;
+      if (existingId) {
+        return new Response(
+          JSON.stringify({
+            locationId: existingId,
+            merchantDisplayName: displayName,
+            connectAccountId: connectAccountId!,
+          }),
+          { headers: { "Content-Type": "application/json", ...corsHeaders } },
+        );
+      }
+
+      const locBody: Record<string, string> = {
+        display_name: displayName,
+        "address[line1]": displayName,
+        "address[city]": city,
+        "address[country]": "FR",
+        "address[postal_code]": "75001",
+      };
+      const creRes = await stripePostForConnectAccount("terminal/locations", locBody, connectAccountId!);
+      const creText = await creRes.text();
+      if (!creRes.ok) {
+        console.error("[stripe-terminal] terminal/locations create:", creRes.status, creText);
+        let userMsg = "Impossible de créer le lieu Terminal (Tap to Pay)";
+        try {
+          const p = JSON.parse(creText) as { error?: { message?: string } };
+          if (p.error?.message) userMsg = p.error.message;
+        } catch {
+          userMsg = creText.slice(0, 200);
+        }
+        return new Response(JSON.stringify({ error: userMsg }), {
+          status: 502,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+      const created = JSON.parse(creText) as { id?: string };
+      if (!created.id) {
+        return new Response(JSON.stringify({ error: "Réponse Stripe inattendue (lieu Terminal)." }), {
+          status: 502,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+      return new Response(
+        JSON.stringify({
+          locationId: created.id,
+          merchantDisplayName: displayName,
+          connectAccountId: connectAccountId!,
+        }),
+        { headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
     }
 
     const ip = clientIpFromRequest(req);

@@ -81,6 +81,8 @@ supabase gen types typescript --local > types/database.ts
 # Webhook Stripe : URL Edge Supabase stripe-webhook (pas de route locale Next `/api/` dans ce repo)
 ```
 
+Préparation **prod** (OAuth calendrier port 3000, résa, Stripe, déploiements Edge) : **`docs/PRODUCTION-READINESS-CHECKLIST.md`**.
+
 ## Stratégie offres Stripe / plans SaaS tattooer
 
 Les **plans produit InkFlow sont définis en code** (`lib/subscriptionPlans.ts`, `subscriptionPlan`: **solo**, **pro**, **studio**, **enterprise**) et documentés avec les prix cibles dans **`docs/PLANS-PERMISSIONS.md`**.

@@ -23,6 +23,7 @@ import { Appointment, Client } from '../../types';
 import { cn } from '@/lib/utils';
 import { MiniCalendar } from './MiniCalendar';
 import { AppointmentCalendar } from './AppointmentCalendar';
+import { FullScreenCalendar } from '@/components/ui/fullscreen-calendar';
 import { EmptyState } from '../common/EmptyState';
 import { downloadICS, getGoogleCalendarAddUrl } from '../../lib/googleCalendar';
 import { getClientAvatarForAppointment } from '../../lib/appointmentClientDisplay';
@@ -294,6 +295,57 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
     }
     return list.sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`));
   }, [appointments, statusFilter, selectedDate, dateRangeChip, searchQuery]);
+
+  /**
+   * Même filtres que la liste mais **sans** le filtre jour unique — ainsi la grille mois
+   * conserve les autres jours en surbrillance quand un jour est sélectionné pour la liste.
+   */
+  const appointmentsForCalendarGrid = useMemo(() => {
+    let list = appointments;
+    if (statusFilter !== 'all') list = list.filter((a) => a.status === statusFilter);
+    if (dateRangeChip === 'today') {
+      list = list.filter((a) => a.date === toDateStr(new Date()));
+    } else if (dateRangeChip === 'week') {
+      const { start, end } = getThisWeekYmdBounds();
+      list = list.filter((a) => a.date >= start && a.date <= end);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(
+        (a) =>
+          a.clientName.toLowerCase().includes(q) ||
+          a.service.toLowerCase().includes(q) ||
+          a.clientEmail?.toLowerCase().includes(q)
+      );
+    }
+    return list.sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`));
+  }, [appointments, statusFilter, dateRangeChip, searchQuery]);
+
+  /** Agrégats pour le mois grille (voir `FullScreenCalendar`). */
+  const fullscreenCalendarData = useMemo(() => {
+    type Bundle = Map<string, Array<(typeof appointments)[number]>>;
+    const byDay: Bundle = new Map();
+    for (const a of appointmentsForCalendarGrid) {
+      if (!byDay.has(a.date)) byDay.set(a.date, []);
+      byDay.get(a.date)!.push(a);
+    }
+    return [...byDay.entries()]
+      .map(([ymd, apts]) => {
+        const sorted = [...apts].sort((x, y) =>
+          `${x.date}T${x.time ?? ''}`.localeCompare(`${y.date}T${y.time ?? ''}`)
+        );
+        return {
+          day: new Date(`${ymd}T12:00:00`),
+          events: sorted.map((apt) => ({
+            id: apt.id,
+            name: apt.clientName,
+            time: apt.time ?? '',
+            datetime: apt.time ? `${apt.date}T${apt.time}` : `${apt.date}T12:00:00`,
+          })),
+        };
+      })
+      .sort((a, b) => a.day.getTime() - b.day.getTime());
+  }, [appointmentsForCalendarGrid]);
 
   const stats = useMemo(() => {
     const today = toDateStr(new Date());
@@ -570,12 +622,43 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
           </div>
         )}
 
+        {/* ── Calendrier mois desktop (largeur suffisante) — grilles type shadcn / 21st */}
+        <div className="hidden min-w-0 lg:block">
+          <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
+            <div className="max-h-[min(720px,calc(100vh-14rem))] overflow-y-auto">
+              <FullScreenCalendar
+                className="text-zinc-900 dark:text-zinc-50"
+                data={fullscreenCalendarData}
+                selectedDateYmd={selectedDate}
+                onSelectDay={(d) => {
+                  setSelectedDate(d);
+                  setDateRangeChip(null);
+                }}
+                monthDate={miniCalendarMonth}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
+                onGoToday={() => {
+                  setSelectedDate(toDateStr(new Date()));
+                  setDateRangeChip(null);
+                  setMiniCalendarMonth(new Date());
+                }}
+                onNewEvent={onNewAppointment}
+                onSearchClick={() => setShowSearch(true)}
+              />
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+            Touche une date pour filtrer la liste selon tes filtres actifs (statut, période,
+            recherche).
+          </p>
+        </div>
+
         {/* ── LAYOUT ─────────────────────────────────────────────── */}
         <div className="flex flex-col lg:flex-row gap-3 sm:gap-5 min-w-0">
-          {/* Sidebar calendrier */}
+          {/* Mini cal — mobile / tablette (volet rétractable ) */}
           <aside
             id="agenda-mini-calendar-panel"
-            className={`lg:w-64 xl:w-72 flex-shrink-0 ${showCalendarMobile ? 'block' : 'hidden lg:block'}`}
+            className={`flex-shrink-0 lg:hidden ${showCalendarMobile ? 'block' : 'hidden'}`}
           >
             <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
               <div className="border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">

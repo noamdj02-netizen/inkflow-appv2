@@ -23,7 +23,6 @@ import {
   ExternalLink,
   AlertCircle,
   CalendarCheck,
-  MessageCircle,
   Zap,
   Move,
   GripVertical,
@@ -69,7 +68,6 @@ import { useBreakpointMd } from '../../hooks/useMediaQuery';
 import type { Appointment, Client, FlashDesign, ProjectRequest } from '../../types';
 import type { DashboardWidget } from './DashboardWidgets';
 import { StudioSetupChecklist } from './StudioSetupChecklist';
-import { StudioPresenceMiniCard } from './StudioPresenceMiniCard';
 import { BADGES, BUTTONS, KPI_SHELLS, TYPOGRAPHY } from './DashboardOverviewDesignSystem';
 import { IconBox } from '../ui/IconBox';
 import { LANDING_PRICING_URL } from '../../lib/urls';
@@ -398,7 +396,6 @@ export interface DashboardOverviewTabProps {
   setDismissedAlerts: React.Dispatch<React.SetStateAction<Set<string>>>;
   overviewCalendarMonth: Date;
   setOverviewCalendarMonth: React.Dispatch<React.SetStateAction<Date>>;
-  nextClientOfDay: Appointment | null;
   setActiveTab: (tab: TabId) => void;
   onAlertNavigate?: (alert: { id: string; type: string }) => void;
   setSelectedAppointment: (apt: Appointment | null) => void;
@@ -439,10 +436,6 @@ export interface DashboardOverviewTabProps {
   pageTitleInShell?: boolean;
   /** Contenu mobile placé juste après le héros pour garder le visuel d’accueil en premier. */
   mobileAfterHero?: React.ReactNode;
-  /**
-   * Compte démo : quand l’API renvoie 0 vues / 0 ouvertures, afficher des chiffres d’exemple sur la carte Visibilité.
-   */
-  usePlaceholderForPublicVisibility?: boolean;
 }
 
 export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
@@ -490,7 +483,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   onOpenBilling,
   pageTitleInShell: _pageTitleInShell = false,
   mobileAfterHero,
-  usePlaceholderForPublicVisibility = false,
 }) => {
   const { privacyMode } = useStudioPrivacy();
   const euro = (n: number) => formatEuroPrivacy(n, privacyMode);
@@ -794,14 +786,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         description: "Liste des rendez-vous aujourd'hui",
       },
       {
-        id: 'next-client',
-        name: 'Prochain client',
-        icon: UserPlus,
-        color: 'blue',
-        category: 'sidebar',
-        description: 'Carte du prochain client',
-      },
-      {
         id: 'clients-deposits',
         name: 'Clients / Acomptes',
         icon: Users,
@@ -953,8 +937,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       return newLayout;
     });
   }, []);
-
-  const nextClient = todayAppointments[0] || null;
 
   /** Photo de couverture vitrine (Paramètres) — bandeau accueil mobile */
   const overviewCover = overviewHeaderBgUrl?.trim() || null;
@@ -2624,128 +2606,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 {/* ====== RIGHT COLUMN (4/12) ====== */}
                 <SortableContext items={layout.rightColumn} strategy={verticalListSortingStrategy}>
                   <div className="lg:col-span-4 space-y-5 md:space-y-6 min-w-0">
-                    <StudioPresenceMiniCard
-                      studioId={studioId}
-                      studioSlug={vitrineSlug}
-                      useSupabase={useSupabase}
-                      usePlaceholderWhenEmpty={usePlaceholderForPublicVisibility}
-                      onOpenAnalytics={() => setActiveTab('analytics')}
-                      onOpenFlashAndLinks={() => {
-                        if (onSetupNavigate) onSetupNavigate('settings-vitrine');
-                        else setActiveTab('flash');
-                      }}
-                    />
                     {layout.rightColumn.map((widgetId) => {
-                      if (widgetId === 'next-client') {
-                        return nextClient ? (
-                          <OverviewSortableWidget
-                            key={widgetId}
-                            id={widgetId}
-                            isEditMode={isEditMode}
-                            onRemoveWidget={handleRemoveWidget}
-                          >
-                            <div className="bg-gradient-to-br from-blue-800 via-blue-700 to-blue-900 rounded-3xl p-6 text-white shadow-[0_20px_50px_-12px_rgba(30,64,175,0.45)] dark:shadow-[0_24px_60px_-16px_rgba(0,0,0,0.65)] relative overflow-hidden">
-                              <div className="absolute inset-0 pointer-events-none">
-                                <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl translate-x-1/4 -translate-y-1/4" />
-                                <div className="absolute bottom-0 left-0 w-28 h-28 bg-white/5 rounded-full blur-2xl -translate-x-1/3 translate-y-1/3" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-                              </div>
-                              <div className="relative z-10">
-                                <div className="flex items-center justify-between mb-5">
-                                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/80">
-                                    Prochain client
-                                  </span>
-                                  <span className="px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/15 text-[10px] font-semibold tabular-nums">
-                                    {nextClient.time || '--:--'}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-4 mb-6">
-                                  <img
-                                    src={
-                                      nextClient.clientAvatar ||
-                                      '/gallery/photo-handsome-unshaven-guy-looks-with-pleasant-expression-directly-camera.jpg'
-                                    }
-                                    alt={nextClient.clientName || 'Client'}
-                                    className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border-2 border-white/30 shadow-lg"
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xl font-bold truncate mb-1">
-                                      {nextClient.clientName}
-                                    </p>
-                                    <p className="text-sm text-white/70">
-                                      {nextClient.service || 'Tatouage'}
-                                    </p>
-                                    <div className="flex items-center gap-3 mt-2 text-xs">
-                                      {nextClient.duration && (
-                                        <span className="flex items-center gap-1 text-white/70">
-                                          <Clock className="w-4 h-4 shrink-0" strokeWidth={2} />{' '}
-                                          {nextClient.duration}min
-                                        </span>
-                                      )}
-                                      {nextClient.price && (
-                                        <span className="font-bold text-white">
-                                          {privacyMode ? '••••' : `${nextClient.price}€`}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    onClick={() => setSelectedAppointment(nextClient)}
-                                    className="flex-1 min-h-[48px] px-5 py-3 rounded-xl bg-white text-blue-600 text-sm font-bold hover:bg-zinc-50 transition-all shadow-md shadow-blue-900/20 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
-                                  >
-                                    Voir le RDV
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedAppointment(nextClient);
-                                      setActiveTab('messaging');
-                                    }}
-                                    className="p-3.5 rounded-xl bg-white/12 backdrop-blur-sm border border-white/25 text-white hover:bg-white/20 transition-colors min-h-[48px] min-w-[48px] inline-flex items-center justify-center"
-                                    title="Envoyer un message"
-                                    type="button"
-                                  >
-                                    <MessageCircle className="w-5 h-5" aria-hidden />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </OverviewSortableWidget>
-                        ) : (
-                          <OverviewSortableWidget
-                            key={widgetId}
-                            id={widgetId}
-                            isEditMode={isEditMode}
-                            onRemoveWidget={handleRemoveWidget}
-                          >
-                            <div className="prodify-card p-6 text-center">
-                              <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                                <Calendar className="w-6 h-6 text-zinc-400" />
-                              </div>
-                              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-1">
-                                Aucun RDV aujourd’hui
-                              </p>
-                              <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-4">
-                                Idéal pour préparer des flashs, du matériel ou la vitrine — ou
-                                bloquer un créneau tout de suite.
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedFlash(null);
-                                  setShowBookingModal(true);
-                                }}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 dark:bg-white px-4 py-2.5 text-sm font-semibold text-white dark:text-zinc-900 shadow-sm transition-all active:scale-[0.98] "
-                              >
-                                <Plus className="w-4 h-4 shrink-0" aria-hidden />
-                                Planifier un RDV
-                              </button>
-                            </div>
-                          </OverviewSortableWidget>
-                        );
-                      }
-
                       if (widgetId === 'clients-deposits') {
                         return (
                           <OverviewSortableWidget
@@ -3123,7 +2984,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
         createPortal(
           <>
             <div
-              className="fixed inset-0 bg-black z-[500]"
+              className="fixed inset-0 z-[500] bg-black/70 dark:bg-black/80"
               aria-hidden
               onClick={() => setShowWidgetPicker(false)}
             />

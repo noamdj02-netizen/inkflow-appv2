@@ -136,6 +136,8 @@ export interface SendBookingConfirmationParams {
   smsConfirmationOptIn?: boolean;
   /** Adresse du studio pour la pièce jointe .ics (optionnel) */
   studioAddress?: string;
+  /** URL absolue hub `/mon-compte` (profil santé). Secondaire dans l’e-mail. */
+  clientPortalUrl?: string;
 }
 
 const MAX_URL_IN_PAYLOAD = 2000;
@@ -168,6 +170,9 @@ export async function sendBookingConfirmation(
       clientPhone: params.clientPhone ? sanitizeText(params.clientPhone, 40) : undefined,
       smsConfirmationOptIn: params.smsConfirmationOptIn === true,
       studioAddress: params.studioAddress ? sanitizeText(params.studioAddress, 300) : undefined,
+      ...(params.clientPortalUrl?.trim()
+        ? { clientPortalUrl: sanitizeText(params.clientPortalUrl.trim(), MAX_URL_IN_PAYLOAD) }
+        : {}),
     };
     const { data, error } = await invokeWithJwtRetry('send-booking-confirmation', body);
     if (error) {

@@ -380,6 +380,23 @@ export async function fetchConsumableLots(studioId: string): Promise<ConsumableL
   return (data ?? []) as ConsumableLotRow[];
 }
 
+/** Lot déjà créé avec ce code machine (pour éviter les doublons au re-scan). */
+export async function findConsumableLotByRawBarcode(
+  studioId: string,
+  rawBarcode: string
+): Promise<ConsumableLotRow | null> {
+  const key = rawBarcode.trim();
+  if (!key) return null;
+  const { data, error } = await supabase
+    .from('inkflow_consumable_lots')
+    .select(SEL_CONSUMABLE_LOT)
+    .eq('studio_id', studioId)
+    .eq('raw_barcode', key)
+    .maybeSingle();
+  if (error) throw error;
+  return (data ?? null) as ConsumableLotRow | null;
+}
+
 export async function insertConsumableLot(
   studioId: string,
   payload: {

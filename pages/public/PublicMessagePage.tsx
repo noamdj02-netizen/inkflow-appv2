@@ -10,7 +10,7 @@ import { Logo } from '../../components/Logo';
 import { sendMessageNotificationToStudio } from '../../lib/sendNotification';
 import { tryParseStructuredMessage } from '../../lib/messageContent';
 import { ConsentFormMessageCard } from '../../components/messaging/ConsentFormMessageCard';
-import { getCanonicalAppOrigin } from '../../lib/urls';
+import { getCanonicalAppOrigin, getClientAccountHubPath } from '../../lib/urls';
 import { useToast } from '../../contexts/ToastContext';
 import type { Message } from '../../types';
 import { normalizePublicMessageThreadId } from '../../lib/threadIds';
@@ -153,6 +153,14 @@ function PublicMessageHeaderBar(props: {
           </>
         )}
       </div>
+      {!loading && studio?.slug ? (
+        <a
+          href={getClientAccountHubPath({ studioSlug: studio.slug })}
+          className="shrink-0 inline-flex items-center justify-center min-h-[40px] sm:min-h-[44px] px-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-semibold text-neutral-700 border border-neutral-200 hover:bg-neutral-50 active:scale-[0.98] transition-all"
+        >
+          Mon compte
+        </a>
+      ) : null}
       {!loading && vitrineHref ? (
         <a
           href={vitrineHref}

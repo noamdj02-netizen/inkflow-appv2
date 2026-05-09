@@ -198,9 +198,11 @@ Deno.serve(async (req: Request) => {
 
     if (!stripeRes.ok) {
       const errBody = await stripeRes.text();
-      console.error("Stripe subscription error:", stripeRes.status, errBody);
+      console.error("Stripe subscription error:", stripeRes.status, errBody.slice(0, 500));
       return new Response(
-        JSON.stringify({ error: "Stripe subscription failed", details: errBody }),
+        JSON.stringify({
+          error: "Impossible de créer la session de paiement. Réessayez ou contactez le support.",
+        }),
         { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }

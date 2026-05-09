@@ -44,6 +44,8 @@ interface Payload {
   smsConfirmationOptIn?: boolean;
   /** Adresse du studio pour le .ics (optionnel) */
   studioAddress?: string;
+  /** Lien absolu hub client (questionnaire, profil) — secondaire dans l’e-mail uniquement. */
+  clientPortalUrl?: string;
 }
 
 function formatTimeLabel(t: string | null): string {
@@ -215,6 +217,18 @@ function buildRdvConfirmeHtml(payload: Payload): string {
     <p style="margin:0;font-size:16px;color:#1A202C;line-height:1.5;">${safeDescription}</p>
   `);
 
+  const portalUrlAbs = payload.clientPortalUrl?.trim()
+    ? ensureAbsoluteUrl(payload.clientPortalUrl!.trim(), APP_URL)
+    : "";
+  const postButtonHtml =
+    portalUrlAbs
+      ? `<p style="margin:20px 0 0;${EMAIL_STYLES.small}">
+           <a href="${escapeHtml(portalUrlAbs)}" style="color:#0b5394;font-weight:600;text-decoration:underline;">
+             Gérer mon compte client (questionnaire santé, consentements)
+           </a>
+         </p>`
+      : undefined;
+
   const bodyHtml = `
     <p style="${EMAIL_STYLES.text}">Bonjour <strong>${safeClientName}</strong>, ${intro}</p>
     ${recap}
@@ -246,6 +260,7 @@ function buildRdvConfirmeHtml(payload: Payload): string {
     bodyHtml,
     button: { text: ctaLabel, url: ctaUrl },
     secondaryButton,
+    ...(postButtonHtml ? { postButtonHtml } : {}),
     buttonSubtext: "Retrouve tes rendez-vous et messages dans l’app InkFlow.",
     linkHint: hasPaymentLink
       ? { label: "Si le bouton ne s'affiche pas, copiez ce lien :", url: rawPaymentUrl }

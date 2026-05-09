@@ -17,12 +17,12 @@ Document de détail métier prix / features : tableau ci‑dessous aligné **`PL
 
 ## Règles par plan
 
-| Plan           | Prix      | Artistes | Clients CRM | Features autorisées                                                                      |
-| -------------- | --------- | -------- | ----------- | ---------------------------------------------------------------------------------------- |
-| **Solo**       | 29€       | 1        | 100         | Réservation en ligne, paiements Stripe + PayPal via Stripe, galerie, vitrine, CRM limité |
-| **Pro**        | 49€       | 3        | 300         | Solo + multi-calendriers, stats avancées, thèmes premium                                 |
-| **Studio**     | 99€       | 5        | Illimité    | Pro + API                                                                                |
-| **Enterprise** | Sur devis | Illimité | Illimité    | Studio + White-label                                                                     |
+| Plan           | Prix      | Artistes | Clients CRM | Features autorisées                                                                                                          |
+| -------------- | --------- | -------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Solo**       | 29€       | 1        | 100         | Réservations, paiements, vitrine publique & galerie Flash, CRM, app mobile (**sans** multi-cal./stats av./thème premium/API) |
+| **Pro**        | 49€       | 3        | 300         | Solo + multi-cal., stats av., thème premium                                                                                  |
+| **Studio**     | 99€       | 5        | Illimité    | Tout ce que Pro permet + accès développeurs **API** (clé produit `api_access`)                                               |
+| **Enterprise** | Sur devis | Illimité | Illimité    | Studio + White-label                                                                                                         |
 
 Features **interdites** en Solo : API, Stats avancées (elles ne sont pas dans la liste du plan).
 

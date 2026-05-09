@@ -187,7 +187,14 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
   }, [canonicalFlashPrice, focusAppointment, hasPriceMismatch, onSyncAppointmentPrice]);
 
   return (
-    <Card size="sm" className="ds-glass-widget mb-3 ring-0 sm:mb-4">
+    <Card
+      size="sm"
+      className={cn(
+        'ds-glass-widget mb-3 shadow-none ring-0 sm:mb-4',
+        /** Évite bg-card (~blanc en dark) qui recouvre le shell glass du DS */
+        'border-0 bg-transparent'
+      )}
+    >
       <CardHeader className="space-y-0 px-3.5 pb-2.5 pt-3.5 sm:space-y-2 sm:px-4 sm:pb-3 sm:pt-4">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
@@ -253,17 +260,17 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
 
           <div className="mt-2.5 border-t border-border/60 pt-2.5 sm:mt-3 sm:pt-3">
             {displayedAppointment ? (
-              <div className="rounded-2xl border border-border/60 bg-background/40 p-2.5 shadow-sm sm:p-3">
+              <div className="rounded-2xl border border-border/60 bg-background/40 p-2.5 shadow-sm ring-1 ring-black/[0.04] dark:bg-zinc-950/85 dark:border-zinc-700/65 dark:ring-white/[0.06] sm:p-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                      <Badge className="h-6 gap-1 rounded-xl px-2.5 text-xs sm:h-7 sm:rounded-2xl sm:px-3 sm:text-sm">
+                      <Badge className="h-6 gap-1 rounded-xl bg-blue-700 px-2.5 text-xs text-white dark:bg-blue-500 sm:h-7 sm:rounded-2xl sm:px-3 sm:text-sm">
                         <Clock data-icon="inline-start" className="size-3 sm:size-3.5" />
                         {displayedAppointment.time}
                       </Badge>
                       <Badge
                         variant={readyForSession ? 'secondary' : 'outline'}
-                        className="h-6 rounded-xl px-2.5 text-xs sm:h-7 sm:rounded-2xl sm:px-3 sm:text-sm"
+                        className="h-6 rounded-xl px-2.5 text-xs sm:h-7 sm:rounded-2xl sm:px-3 sm:text-sm dark:border-zinc-600 dark:bg-zinc-800/95 dark:text-zinc-50"
                       >
                         {readyForSession
                           ? 'Prêt à tatouer'
@@ -356,7 +363,7 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-border/70 bg-background/35 px-4 py-4 text-center">
+              <div className="rounded-2xl border border-dashed border-border/70 bg-background/35 px-4 py-4 text-center dark:border-zinc-600/65 dark:bg-zinc-950/40">
                 <p className="text-sm font-semibold text-foreground">Aucune séance aujourd’hui.</p>
                 <p className="mt-1 text-xs leading-snug text-muted-foreground sm:text-sm">
                   Ouvre l’agenda pour préparer les prochains créneaux ou partager ton lien de
@@ -380,7 +387,7 @@ interface MetricCardProps {
 
 const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, tone = 'zinc' }) => {
   return (
-    <div className="min-w-0 rounded-xl border border-border/60 bg-background/35 p-2 sm:p-2.5 [&_svg]:size-3 [&_svg]:shrink-0 sm:[&_svg]:size-3.5">
+    <div className="min-w-0 rounded-xl border border-border/60 bg-background/35 p-2 ring-1 ring-black/[0.03] dark:border-zinc-700/65 dark:bg-zinc-950/55 dark:ring-white/[0.06] sm:p-2.5 [&_svg]:size-3 [&_svg]:shrink-0 sm:[&_svg]:size-3.5">
       <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground sm:text-[11px]">
         {icon}
         <span className="truncate">{label}</span>
@@ -410,8 +417,8 @@ const ChecklistLine: React.FC<ChecklistLineProps> = ({ ok, icon, label }) => (
     className={cn(
       'flex min-h-[32px] items-center gap-2 rounded-xl border px-2.5 py-1 sm:min-h-[36px] sm:rounded-2xl sm:px-3 sm:py-1.5 [&_svg]:size-3.5 [&_svg]:shrink-0 sm:[&_svg]:size-4',
       ok
-        ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
-        : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200'
+        ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-950/85 dark:text-emerald-50'
+        : 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-400/40 dark:bg-amber-950/90 dark:text-amber-50'
     )}
   >
     {ok ? <CheckCircle2 /> : icon}

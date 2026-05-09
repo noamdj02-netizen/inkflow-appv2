@@ -60,13 +60,13 @@ Les Edge Functions Supabase lisent des variables d’environnement définies com
 2. **Edge Functions** (menu gauche) → **Secrets** (ou **Project Settings** → **Edge Functions**).
 3. Ajoute les secrets suivants :
 
-| Nom                | Valeur                    | Exemple                    |
-|--------------------|---------------------------|----------------------------|
-| `STRIPE_SECRET_KEY`| Ta clé secrète Stripe     | `sk_test_...` ou `sk_live_...` |
-| `SITE_URL`         | URL de ton site en prod   | `https://inkflow.app` ou `https://ton-domaine.vercel.app` |
+| Nom                 | Valeur                  | Exemple                                                   |
+| ------------------- | ----------------------- | --------------------------------------------------------- |
+| `STRIPE_SECRET_KEY` | Ta clé secrète Stripe   | `sk_test_...` ou `sk_live_...`                            |
+| `SITE_URL`          | URL de ton site en prod | `https://inkflow.app` ou `https://ton-domaine.vercel.app` |
 
 Pour du dev local avec redirection Stripe vers ton front :  
-`SITE_URL` = `http://localhost:5173` (ou le port de ton serveur Vite).
+`SITE_URL` = `http://localhost:3000` (port **par défaut** Vite InkFlow dans `vite.config.ts` ; ajuster si tu overrides le port).
 
 ### Option B : En ligne de commande
 
@@ -126,8 +126,8 @@ Le front InkFlow appelle déjà cette URL via `supabase.functions.invoke('create
 
 1. **Voir l’erreur réelle**  
    Le message dans la modale (sous le montant) vient du backend. Exemples :
-   - *"Function not found"* / *"FunctionsRelayError"* → la fonction n’est pas déployée ou le projet n’est pas le bon. Déploie : `npx supabase functions deploy create-checkout-session`.
-   - *"Stripe checkout failed"* / *"Invalid API Key"* → mauvaise ou absente `STRIPE_SECRET_KEY`. Vérifie les secrets dans le Dashboard Supabase puis **redéploie** la fonction (les secrets sont lus au déploiement).
+   - _"Function not found"_ / _"FunctionsRelayError"_ → la fonction n’est pas déployée ou le projet n’est pas le bon. Déploie : `npx supabase functions deploy create-checkout-session`.
+   - _"Stripe checkout failed"_ / _"Invalid API Key"_ → mauvaise ou absente `STRIPE_SECRET_KEY`. Vérifie les secrets dans le Dashboard Supabase puis **redéploie** la fonction (les secrets sont lus au déploiement).
    - Pas de message précis → vérifie que `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` dans ton front pointent bien vers le projet où la fonction est déployée.
 
 2. **Redéployer après avoir mis les secrets**  

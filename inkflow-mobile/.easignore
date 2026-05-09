@@ -1,0 +1,27 @@
+# https://docs.expo.dev/build-reference/easignore/
+# Réduit la taille d’archive (upload EAS). Les deps sont reinstallées sur les builders.
+
+.expo/
+.vscode/
+.metro-health-check*
+
+node_modules/
+
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+.DS_Store
+
+.env
+.env.*
+!.env.example
+
+# Artefacts natifs régénérés côté EAS si besoin
+android/.gradle/
+android/app/build/
+android/build/
+
+**/Pods/
+**/build/
+**/DerivedData/

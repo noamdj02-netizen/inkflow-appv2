@@ -12,7 +12,7 @@ import {
   User,
 } from 'lucide-react';
 import { SEO } from '../../components/SEO';
-import { LANDING_URL } from '../../lib/urls';
+import { LANDING_URL, getClientAccountHubPath } from '../../lib/urls';
 import { getVitrineDataBySlugAsync } from '../../lib/vitrineStorage';
 import type { VitrineData } from '../../types/vitrine';
 
@@ -352,6 +352,20 @@ export const ReservationSuccessPage: React.FC = () => {
           ) : null}
         </ul>
       </section>
+
+      {studioSlug ? (
+        <section className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-4 text-center">
+          <p className="text-sm text-emerald-950 font-medium leading-snug">
+            Complète ton profil, ta photo et ton questionnaire santé — liés à la même adresse e-mail.
+          </p>
+          <a
+            href={getClientAccountHubPath({ studioSlug })}
+            className="mt-3 inline-flex min-h-[44px] items-center justify-center w-full px-4 rounded-xl border border-emerald-200 bg-white text-sm font-semibold text-emerald-900 hover:bg-emerald-50/80 active:scale-[0.98] transition-all"
+          >
+            Ouvrir mon compte InkFlow
+          </a>
+        </section>
+      ) : null}
 
       {apt && (
         <div className="mt-5 flex gap-3">

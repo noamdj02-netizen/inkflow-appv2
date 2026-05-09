@@ -31,7 +31,7 @@ import {
   PLACEMENT_OTHER_VALUE,
 } from '../../hooks/useBookingFlow';
 import { AnalyticsEvents, captureEvent } from '../../lib/analytics/capture';
-import { LANDING_URL } from '../../lib/urls';
+import { LANDING_URL, getClientAccountHubPath } from '../../lib/urls';
 
 interface PublicBookingPageProps {
   studioSlug: string;
@@ -81,6 +81,8 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
     handlePay,
   } = useBookingFlow(studioSlug);
 
+  const clientHubHref = getClientAccountHubPath({ studioSlug });
+
   const depositAnalyticsSent = useRef(false);
 
   useEffect(() => {
@@ -116,9 +118,16 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         <motion.a
           href={`/studio/${studioSlug}`}
           whileTap={tap}
-          className="w-full max-w-xs h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors"
+          className="w-full max-w-xs h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors active:scale-[0.98]"
         >
           Retour au studio
+        </motion.a>
+        <motion.a
+          href={clientHubHref}
+          whileTap={tap}
+          className="w-full max-w-xs h-12 mt-3 flex items-center justify-center rounded-xl border border-zinc-600 text-zinc-200 text-sm font-semibold hover:bg-white/5 transition-colors active:scale-[0.98]"
+        >
+          Mon compte — profil & santé
         </motion.a>
       </div>
     );
@@ -141,9 +150,16 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         <motion.a
           href={`/studio/${studioSlug}`}
           whileTap={tap}
-          className="w-full max-w-xs h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors"
+          className="w-full max-w-xs h-14 flex items-center justify-center rounded-xl bg-zinc-900 text-white font-semibold hover:bg-zinc-800 transition-colors active:scale-[0.98]"
         >
           Retour au studio
+        </motion.a>
+        <motion.a
+          href={clientHubHref}
+          whileTap={tap}
+          className="w-full max-w-xs h-12 mt-3 flex items-center justify-center rounded-xl border border-zinc-600 text-zinc-200 text-sm font-semibold hover:bg-white/5 transition-colors active:scale-[0.98]"
+        >
+          Mon compte — profil & santé
         </motion.a>
       </div>
     );
@@ -243,10 +259,19 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
           <motion.a
             href={`/studio/${studioSlug}`}
             whileTap={tap}
-            className="absolute left-3 top-[max(0.5rem,env(safe-area-inset-top,0px))] z-10 inline-flex min-h-[44px] max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-full bg-black/50 px-3.5 py-2 text-left text-sm font-medium text-white shadow-sm ring-1 ring-white/15 backdrop-blur-md transition-all hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
+            className="absolute left-3 top-[max(0.5rem,env(safe-area-inset-top,0px))] z-10 inline-flex min-h-[44px] max-w-[calc(100%-8.5rem)] items-center gap-2 rounded-full bg-black/50 px-3.5 py-2 text-left text-sm font-medium text-white shadow-sm ring-1 ring-white/15 backdrop-blur-md transition-all hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
           >
             <ArrowLeft className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
             <span className="leading-tight">Retour à la vitrine</span>
+          </motion.a>
+          <motion.a
+            href={clientHubHref}
+            whileTap={tap}
+            className="absolute right-3 top-[max(0.5rem,env(safe-area-inset-top,0px))] z-10 inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-black/50 px-3 py-2 text-sm font-medium text-white shadow-sm ring-1 ring-white/15 backdrop-blur-md transition-all hover:bg-black/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 active:scale-[0.98]"
+            aria-label="Mon compte InkFlow — profil et questionnaire santé"
+          >
+            <User className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
+            <span className="hidden sm:inline">Mon compte</span>
           </motion.a>
         </div>
       ) : null}
@@ -275,14 +300,22 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
         }`}
       >
         {!studio.coverImage && (
-          <nav className="pb-3" aria-label="Navigation vers la vitrine">
+          <nav className="pb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-2" aria-label="Navigation réservation">
             <motion.a
               href={`/studio/${studioSlug}`}
               whileTap={tap}
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-1 -ml-1 text-sm font-medium text-ink-muted transition-all hover:text-ink-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-1 -ml-1 text-sm font-medium text-ink-muted transition-all hover:text-ink-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg active:scale-[0.98]"
             >
               <ArrowLeft className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
               Retour à la vitrine
+            </motion.a>
+            <motion.a
+              href={clientHubHref}
+              whileTap={tap}
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-ink-text border border-zinc-700/50 bg-zinc-900/40 hover:bg-zinc-900/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 active:scale-[0.98]"
+            >
+              <User className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden />
+              Mon compte
             </motion.a>
           </nav>
         )}

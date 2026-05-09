@@ -73,6 +73,14 @@
         {
           "sounds": []
         }
+      ],
+      [
+        "@stripe/stripe-terminal-react-native",
+        {
+          "tapToPayCheck": true,
+          "bluetoothBackgroundMode": false,
+          "locationWhenInUsePermission": "InkFlow utilise ta position pour sécuriser les paiements Tap to Pay en salon."
+        }
       ]
     ],
     "experiments": {

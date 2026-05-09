@@ -38,6 +38,13 @@ function shouldUseTerminalSimulator(): boolean {
   return import.meta.env.VITE_STRIPE_TERMINAL_SIMULATOR === 'true';
 }
 
+function shouldUseNativeTapToPayIphone(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  if (!isInkflowNativeShellUserAgent(navigator.userAgent)) return false;
+  if (shouldUseTerminalSimulator()) return false;
+  return /iPhone|iPad|iPod/.test(navigator.userAgent);
+}
+
 /**
  * Après passage du RDV en « terminé » : solde Stripe (Checkout ou Terminal) + raccourci traçabilité matériel.
  */
@@ -62,11 +69,10 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
   const balanceAlready = Boolean(appointment?.balancePaidAt?.trim()) || remaining < 0.01;
 
   const openTapToPayInNativeApp = useCallback(() => {
-    if (!appointment) return;
+    if (!appointment || !studioId) return;
     if (typeof window === 'undefined') return;
-    // Expo shell listens to `inkflowpro:` deep links. It will map to /dashboard?appointment=<id>
-    // and can then run the native Tap to Pay flow.
-    const deepLink = `inkflowpro://appointment/${encodeURIComponent(appointment.id)}`;
+    // Shell natif Inkflow Pro : ouvre l’écran Tap to Pay (SDK Stripe Terminal) avec solde + studio.
+    const deepLink = `inkflowpro://tap-to-pay?appointment=${encodeURIComponent(appointment.id)}&studio=${encodeURIComponent(studioId)}&amountEuros=${encodeURIComponent(remaining.toFixed(2))}`;
     const startedAt = Date.now();
     window.location.href = deepLink;
 
@@ -78,7 +84,7 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
         );
       }
     }, 900);
-  }, [appointment, toast]);
+  }, [appointment, studioId, remaining, toast]);
 
   const handleStripeBalance = useCallback(async () => {
     if (!appointment || !studioId || remaining < 1) {
@@ -126,8 +132,12 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
       toast.error('Terminal Stripe indisponible dans cet environnement.');
       return;
     }
-    // Tap to Pay + lecteurs Bluetooth (WisePad/Reader M2) passent par le SDK natif.
-    // Sur web, on évite un message trompeur et on guide vers l’encaissement en ligne / l’app native.
+    // iPhone dans le shell natif : `@stripe/terminal-js` ne peut pas utiliser Tap to Pay — flux SDK natif uniquement.
+    if (shouldUseNativeTapToPayIphone()) {
+      openTapToPayInNativeApp();
+      return;
+    }
+    // Sur le web (hors shell), on ouvre l’app Inkflow Pro ; simulateur local (Bluetooth) garde terminal-js.
     if (!isNativeShell && !shouldUseTerminalSimulator()) {
       openTapToPayInNativeApp();
       return;

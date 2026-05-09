@@ -151,6 +151,10 @@ Configurer le secret `GOOGLE_PLACES_API_KEY` (ou `GOOGLE_MAPS_API_KEY`) dans Sup
 
 ---
 
+## Checklist transverse (calendrier, résa, Stripe)
+
+Pour une passe **go / no-go** structurée avec cases à cocher et commandes `deploy` groupées : **[`docs/PRODUCTION-READINESS-CHECKLIST.md`](./PRODUCTION-READINESS-CHECKLIST.md)**.
+
 ## Checklist de déploiement MVP (29 mars)
 
 ### Supabase Secrets (obligatoires)

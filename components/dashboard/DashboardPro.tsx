@@ -2181,15 +2181,6 @@ export const DashboardPro: React.FC = () => {
 
   const visibleAlerts = alerts.filter((a) => !dismissedAlerts.has(a.id));
 
-  /** Prochain client de la journée (premier RDV à venir aujourd'hui) */
-  const nextClientOfDay = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const upcoming = appointments
-      .filter((a) => a.date === todayStr && ['pending', 'confirmed'].includes(a.status))
-      .sort((a, b) => `${a.time}`.localeCompare(b.time));
-    return upcoming[0] ?? null;
-  }, [appointments]);
-
   const buildClientPreviewData = useCallback(
     (apt: Appointment | null): ClientPreviewData | null => {
       if (!apt) return null;
@@ -3662,7 +3653,6 @@ export const DashboardPro: React.FC = () => {
                               ) : null}
                               <LazyDashboardOverviewTab
                                 pageTitleInShell={Boolean(!loading && isMdUp)}
-                                usePlaceholderForPublicVisibility={demoAccountMode}
                                 now={now}
                                 firstName={firstName}
                                 user={user}
@@ -3691,7 +3681,6 @@ export const DashboardPro: React.FC = () => {
                                 setDismissedAlerts={setDismissedAlerts}
                                 overviewCalendarMonth={overviewCalendarMonth}
                                 setOverviewCalendarMonth={setOverviewCalendarMonth}
-                                nextClientOfDay={nextClientOfDay}
                                 setActiveTab={setActiveTab}
                                 onAlertNavigate={(alert) => {
                                   if (alert.id === 'unpaid') {

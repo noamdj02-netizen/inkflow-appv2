@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { usePathname, useRouter, type Href } from 'expo-router';
+import { tryParseTapToPayDeepLink } from '@/lib/tapToPayDeepLink';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
@@ -133,6 +135,8 @@ async function openExternalUrl(url: string): Promise<void> {
 }
 
 export default function WebAppShell() {
+  const router = useRouter();
+  const pathname = usePathname();
   const webViewRef = useRef<WebView>(null);
   const [webAppUrl, setWebAppUrl] = useState(WEB_APP_URL);
   const [isLoading, setIsLoading] = useState(true);
@@ -155,13 +159,31 @@ export default function WebAppShell() {
     }
   }, []);
 
-  const openMappedDeepLink = useCallback((url: string) => {
-    const mappedUrl = mapDeepLinkToWebUrl(url);
-    if (!mappedUrl) return false;
-    setLoadError(null);
-    setWebAppUrl(mappedUrl);
-    return true;
-  }, []);
+  const openMappedDeepLink = useCallback(
+    (url: string) => {
+      const tap = tryParseTapToPayDeepLink(url);
+      if (tap) {
+        setLoadError(null);
+        // Expo Router peut déjà avoir ouvert `/tap-to-pay` (URL système) — éviter double navigation.
+        if (!(typeof pathname === 'string' && pathname.includes('tap-to-pay'))) {
+          const q = new URLSearchParams({
+            appointment: tap.appointmentId,
+            studio: tap.studioId,
+            amountEuros: tap.amountEuros.toFixed(2),
+          }).toString();
+          router.push(`/tap-to-pay?${q}` as Href);
+        }
+        return true;
+      }
+
+      const mappedUrl = mapDeepLinkToWebUrl(url);
+      if (!mappedUrl) return false;
+      setLoadError(null);
+      setWebAppUrl(mappedUrl);
+      return true;
+    },
+    [pathname, router]
+  );
 
   useEffect(() => {
     void Linking.getInitialURL().then((initialUrl) => {

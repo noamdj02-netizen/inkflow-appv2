@@ -7,6 +7,7 @@ import {
   MessageCircle,
   Sparkles,
   AlertCircle,
+  User,
 } from 'lucide-react';
 import { SEO } from '../../components/SEO';
 import { supabase } from '../../lib/supabase';
@@ -15,7 +16,7 @@ import {
   DEFAULT_BOOKING_CONFIRM_DEPOSIT_EUR,
   inkflowPublicMessagesUrl,
 } from '../../lib/bookingRecapUrls';
-import { LANDING_URL } from '../../lib/urls';
+import { LANDING_URL, getClientAccountHubPath } from '../../lib/urls';
 
 export interface PublicBookingRecapPageProps {
   recapToken: string;
@@ -183,6 +184,8 @@ export function PublicBookingRecapPage({ recapToken }: PublicBookingRecapPagePro
   };
 
   const messagesUrl = recap ? inkflowPublicMessagesUrl(recap.threadId) : '';
+  const clientHubHref =
+    recap?.studioSlug?.trim() ? getClientAccountHubPath({ studioSlug: recap.studioSlug }) : null;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
@@ -295,6 +298,15 @@ export function PublicBookingRecapPage({ recapToken }: PublicBookingRecapPagePro
                     <MessageCircle className="w-4 h-4" aria-hidden />
                     Ouvrir la messagerie
                   </a>
+                  {clientHubHref ? (
+                    <a
+                      href={clientHubHref}
+                      className="inline-flex items-center gap-2 mt-3 px-4 py-3 min-h-[44px] rounded-xl border border-emerald-700/30 dark:border-emerald-400/40 text-emerald-950 dark:text-emerald-100 text-sm font-semibold hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 active:scale-[0.98] transition-all"
+                    >
+                      <User className="w-4 h-4" aria-hidden />
+                      Compléter profil & questionnaire santé
+                    </a>
+                  ) : null}
                 </div>
               </div>
             ) : (
@@ -319,6 +331,18 @@ export function PublicBookingRecapPage({ recapToken }: PublicBookingRecapPagePro
                   Paiement sécurisé par carte (Stripe). Après paiement, vous recevrez une confirmation
                   par e-mail ; un SMS peut suivre si vous l’avez accepté sur la vitrine.
                 </p>
+                {clientHubHref ? (
+                  <p className="text-xs text-center text-zinc-600 dark:text-zinc-400 leading-relaxed px-1">
+                    Vous préférez préparer votre dossier tout de suite ?{' '}
+                    <a
+                      href={clientHubHref}
+                      className="font-semibold text-zinc-800 dark:text-zinc-200 underline-offset-2 hover:underline"
+                    >
+                      Ouvrir mon compte InkFlow (profil & santé)
+                    </a>
+                    .
+                  </p>
+                ) : null}
               </div>
             )}
 
@@ -330,6 +354,15 @@ export function PublicBookingRecapPage({ recapToken }: PublicBookingRecapPagePro
                 <MessageCircle className="w-4 h-4" aria-hidden />
                 Messagerie
               </a>
+              {clientHubHref ? (
+                <a
+                  href={clientHubHref}
+                  className="flex-1 inline-flex items-center justify-center gap-2 min-h-[44px] rounded-xl border border-zinc-200 dark:border-zinc-700 font-medium text-sm active:scale-[0.98] transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
+                >
+                  <User className="w-4 h-4 shrink-0" aria-hidden />
+                  Profil & santé
+                </a>
+              ) : null}
             </div>
           </div>
         ) : null}

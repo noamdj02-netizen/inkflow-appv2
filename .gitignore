@@ -9,6 +9,11 @@ lerna-debug.log*
 
 node_modules
 dist
+
+# Playwright / E2E
+test-results/
+playwright-report/
+
 dist-ssr
 *.local
 
