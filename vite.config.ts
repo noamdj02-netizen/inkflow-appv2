@@ -56,6 +56,20 @@ export default defineConfig(({ mode }) => {
       fs: {
         strict: false,
       },
+      /**
+       * Pré-transforme les entrées lazy volumineuses au démarrage du serveur dev.
+       * Réduit les échecs sporadiques « Failed to fetch dynamically imported module »
+       * lors de la première navigation (ex. `/studio/:slug` → PublicStudioPagePro).
+       */
+      warmup: {
+        clientFiles: [
+          './App.tsx',
+          './pages/public/PublicStudioPagePro.tsx',
+          './pages/public/PublicBookingPage.tsx',
+          './pages/public/PublicBookingRecapPage.tsx',
+          './pages/public/ClientAccountHubPage.tsx',
+        ],
+      },
     },
     plugins: [
       react(),
@@ -138,6 +152,7 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, '.'),
         tslib: path.resolve(__dirname, 'node_modules/tslib/tslib.es6.mjs'),
       },
+      dedupe: ['react', 'react-dom'],
     },
     build: {
       sourcemap: !!sentryAuthToken,
