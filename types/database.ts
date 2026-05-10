@@ -297,6 +297,72 @@ export type Database = {
         };
         Relationships: [];
       };
+      daily_briefs: {
+        Row: {
+          alerts: Json;
+          bookings: number;
+          created_at: string;
+          date: string;
+          ig_profile_views: number | null;
+          ig_reach: number | null;
+          new_studios: number;
+          pending_projects: number;
+          revenue: number;
+          unpaid_deposits: number;
+          updated_at: string;
+        };
+        Insert: {
+          alerts?: Json;
+          bookings?: number;
+          created_at?: string;
+          date: string;
+          ig_profile_views?: number | null;
+          ig_reach?: number | null;
+          new_studios?: number;
+          pending_projects?: number;
+          revenue?: number;
+          unpaid_deposits?: number;
+          updated_at?: string;
+        };
+        Update: {
+          alerts?: Json;
+          bookings?: number;
+          created_at?: string;
+          date?: string;
+          ig_profile_views?: number | null;
+          ig_reach?: number | null;
+          new_studios?: number;
+          pending_projects?: number;
+          revenue?: number;
+          unpaid_deposits?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      email_suppressions: {
+        Row: {
+          created_at: string;
+          email: string;
+          id: string;
+          reason: string | null;
+          source: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          email: string;
+          id?: string;
+          reason?: string | null;
+          source?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          email?: string;
+          id?: string;
+          reason?: string | null;
+          source?: string | null;
+        };
+        Relationships: [];
+      };
       flashs: {
         Row: {
           artist_id: string;
@@ -356,139 +422,6 @@ export type Database = {
           },
         ];
       };
-      inkflow_appointments: {
-        Row: {
-          apple_event_uid: string | null;
-          balance_paid_at: string | null;
-          balance_reminder_sent_at: string | null;
-          closeout_push_sent_at: string | null;
-          post_slot_nudge_sent_at: string | null;
-          calendar_synced_at: string | null;
-          client_email: string;
-          client_id: string | null;
-          client_name: string;
-          client_phone: string | null;
-          consent_form_signed: boolean | null;
-          created_at: string | null;
-          date: string;
-          deposit: number | null;
-          deposit_paid: boolean | null;
-          duration: number | null;
-          flash_id: string | null;
-          google_event_id: string | null;
-          id: string;
-          location: string | null;
-          loyalty_j1_sent_at: string | null;
-          loyalty_j30_sent_at: string | null;
-          loyalty_j7_sent_at: string | null;
-          price: number | null;
-          project_request_id: string | null;
-          feedback_email_sent_at: string | null;
-          reminder_sent_at: string | null;
-          service: string;
-          size: string | null;
-          status: string | null;
-          studio_id: string;
-          tattoo_type: string | null;
-          time: string;
-          updated_at: string | null;
-        };
-        Insert: {
-          apple_event_uid?: string | null;
-          balance_paid_at?: string | null;
-          balance_reminder_sent_at?: string | null;
-          closeout_push_sent_at?: string | null;
-          post_slot_nudge_sent_at?: string | null;
-          calendar_synced_at?: string | null;
-          client_email: string;
-          client_id?: string | null;
-          client_name: string;
-          client_phone?: string | null;
-          consent_form_signed?: boolean | null;
-          created_at?: string | null;
-          date: string;
-          deposit?: number | null;
-          deposit_paid?: boolean | null;
-          duration?: number | null;
-          flash_id?: string | null;
-          google_event_id?: string | null;
-          id: string;
-          location?: string | null;
-          loyalty_j1_sent_at?: string | null;
-          loyalty_j30_sent_at?: string | null;
-          loyalty_j7_sent_at?: string | null;
-          price?: number | null;
-          project_request_id?: string | null;
-          feedback_email_sent_at?: string | null;
-          reminder_sent_at?: string | null;
-          service: string;
-          size?: string | null;
-          status?: string | null;
-          studio_id: string;
-          tattoo_type?: string | null;
-          time: string;
-          updated_at?: string | null;
-        };
-        Update: {
-          apple_event_uid?: string | null;
-          balance_paid_at?: string | null;
-          balance_reminder_sent_at?: string | null;
-          closeout_push_sent_at?: string | null;
-          post_slot_nudge_sent_at?: string | null;
-          calendar_synced_at?: string | null;
-          client_email?: string;
-          client_id?: string | null;
-          client_name?: string;
-          client_phone?: string | null;
-          consent_form_signed?: boolean | null;
-          created_at?: string | null;
-          date?: string;
-          deposit?: number | null;
-          deposit_paid?: boolean | null;
-          duration?: number | null;
-          flash_id?: string | null;
-          google_event_id?: string | null;
-          id?: string;
-          location?: string | null;
-          loyalty_j1_sent_at?: string | null;
-          loyalty_j30_sent_at?: string | null;
-          loyalty_j7_sent_at?: string | null;
-          price?: number | null;
-          project_request_id?: string | null;
-          feedback_email_sent_at?: string | null;
-          reminder_sent_at?: string | null;
-          service?: string;
-          size?: string | null;
-          status?: string | null;
-          studio_id?: string;
-          tattoo_type?: string | null;
-          time?: string;
-          updated_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'inkflow_appointments_client_id_fkey';
-            columns: ['client_id'];
-            isOneToOne: false;
-            referencedRelation: 'inkflow_clients';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'inkflow_appointments_studio_id_fkey';
-            columns: ['studio_id'];
-            isOneToOne: false;
-            referencedRelation: 'artist_payment_stats';
-            referencedColumns: ['studio_id'];
-          },
-          {
-            foreignKeyName: 'inkflow_appointments_studio_id_fkey';
-            columns: ['studio_id'];
-            isOneToOne: false;
-            referencedRelation: 'inkflow_studios';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
       inkflow_appointment_costs: {
         Row: {
           amount_cents: number;
@@ -526,42 +459,151 @@ export type Database = {
             foreignKeyName: 'inkflow_appointment_costs_studio_id_fkey';
             columns: ['studio_id'];
             isOneToOne: false;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_appointment_costs_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
             referencedRelation: 'inkflow_studios';
             referencedColumns: ['id'];
           },
         ];
       };
-      inkflow_fiscal_checklist: {
+      inkflow_appointments: {
         Row: {
-          checked: boolean;
-          checked_at: string | null;
-          created_at: string;
+          apple_event_uid: string | null;
+          balance_paid_at: string | null;
+          balance_reminder_sent_at: string | null;
+          calendar_synced_at: string | null;
+          client_email: string;
+          client_id: string | null;
+          client_name: string;
+          client_phone: string | null;
+          closeout_push_sent_at: string | null;
+          consent_form_signed: boolean | null;
+          created_at: string | null;
+          date: string;
+          deposit: number | null;
+          deposit_paid: boolean | null;
+          duration: number | null;
+          feedback_email_sent_at: string | null;
+          flash_id: string | null;
+          google_event_id: string | null;
           id: string;
-          item_key: string;
-          month: string;
+          location: string | null;
+          loyalty_j1_sent_at: string | null;
+          loyalty_j30_sent_at: string | null;
+          loyalty_j7_sent_at: string | null;
+          post_slot_nudge_sent_at: string | null;
+          price: number | null;
+          project_request_id: string | null;
+          reminder_sent_at: string | null;
+          service: string;
+          size: string | null;
+          status: string | null;
           studio_id: string;
+          tattoo_type: string | null;
+          time: string;
+          updated_at: string | null;
         };
         Insert: {
-          checked?: boolean;
-          checked_at?: string | null;
-          created_at?: string;
-          id?: string;
-          item_key: string;
-          month: string;
+          apple_event_uid?: string | null;
+          balance_paid_at?: string | null;
+          balance_reminder_sent_at?: string | null;
+          calendar_synced_at?: string | null;
+          client_email: string;
+          client_id?: string | null;
+          client_name: string;
+          client_phone?: string | null;
+          closeout_push_sent_at?: string | null;
+          consent_form_signed?: boolean | null;
+          created_at?: string | null;
+          date: string;
+          deposit?: number | null;
+          deposit_paid?: boolean | null;
+          duration?: number | null;
+          feedback_email_sent_at?: string | null;
+          flash_id?: string | null;
+          google_event_id?: string | null;
+          id: string;
+          location?: string | null;
+          loyalty_j1_sent_at?: string | null;
+          loyalty_j30_sent_at?: string | null;
+          loyalty_j7_sent_at?: string | null;
+          post_slot_nudge_sent_at?: string | null;
+          price?: number | null;
+          project_request_id?: string | null;
+          reminder_sent_at?: string | null;
+          service: string;
+          size?: string | null;
+          status?: string | null;
           studio_id: string;
+          tattoo_type?: string | null;
+          time: string;
+          updated_at?: string | null;
         };
         Update: {
-          checked?: boolean;
-          checked_at?: string | null;
-          created_at?: string;
+          apple_event_uid?: string | null;
+          balance_paid_at?: string | null;
+          balance_reminder_sent_at?: string | null;
+          calendar_synced_at?: string | null;
+          client_email?: string;
+          client_id?: string | null;
+          client_name?: string;
+          client_phone?: string | null;
+          closeout_push_sent_at?: string | null;
+          consent_form_signed?: boolean | null;
+          created_at?: string | null;
+          date?: string;
+          deposit?: number | null;
+          deposit_paid?: boolean | null;
+          duration?: number | null;
+          feedback_email_sent_at?: string | null;
+          flash_id?: string | null;
+          google_event_id?: string | null;
           id?: string;
-          item_key?: string;
-          month?: string;
+          location?: string | null;
+          loyalty_j1_sent_at?: string | null;
+          loyalty_j30_sent_at?: string | null;
+          loyalty_j7_sent_at?: string | null;
+          post_slot_nudge_sent_at?: string | null;
+          price?: number | null;
+          project_request_id?: string | null;
+          reminder_sent_at?: string | null;
+          service?: string;
+          size?: string | null;
+          status?: string | null;
           studio_id?: string;
+          tattoo_type?: string | null;
+          time?: string;
+          updated_at?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: 'inkflow_fiscal_checklist_studio_id_fkey';
+            foreignKeyName: 'inkflow_appointments_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_appointments_project_request_id_fkey';
+            columns: ['project_request_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_project_requests';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_appointments_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_appointments_studio_id_fkey';
             columns: ['studio_id'];
             isOneToOne: false;
             referencedRelation: 'inkflow_studios';
@@ -710,9 +752,9 @@ export type Database = {
       inkflow_bookings: {
         Row: {
           client_avatar_url: string | null;
-          client_phone: string | null;
           client_email: string;
           client_name: string;
+          client_phone: string | null;
           client_recap_token: string | null;
           created_at: string | null;
           description: string;
@@ -728,9 +770,9 @@ export type Database = {
         };
         Insert: {
           client_avatar_url?: string | null;
-          client_phone?: string | null;
           client_email: string;
           client_name: string;
+          client_phone?: string | null;
           client_recap_token?: string | null;
           created_at?: string | null;
           description: string;
@@ -746,9 +788,9 @@ export type Database = {
         };
         Update: {
           client_avatar_url?: string | null;
-          client_phone?: string | null;
           client_email?: string;
           client_name?: string;
+          client_phone?: string | null;
           client_recap_token?: string | null;
           created_at?: string | null;
           description?: string;
@@ -763,6 +805,13 @@ export type Database = {
           updated_at?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'inkflow_bookings_recap_appointment_id_fkey';
+            columns: ['recap_appointment_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_appointments';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'inkflow_bookings_studio_id_fkey';
             columns: ['studio_id'];
@@ -868,6 +917,48 @@ export type Database = {
             referencedColumns: ['id'];
           },
         ];
+      };
+      inkflow_city_pages: {
+        Row: {
+          artist_count: number | null;
+          created_at: string | null;
+          department: string | null;
+          hero_image_url: string | null;
+          is_active: boolean | null;
+          lat: number | null;
+          lng: number | null;
+          meta_description: string | null;
+          name: string;
+          region: string | null;
+          slug: string;
+        };
+        Insert: {
+          artist_count?: number | null;
+          created_at?: string | null;
+          department?: string | null;
+          hero_image_url?: string | null;
+          is_active?: boolean | null;
+          lat?: number | null;
+          lng?: number | null;
+          meta_description?: string | null;
+          name: string;
+          region?: string | null;
+          slug: string;
+        };
+        Update: {
+          artist_count?: number | null;
+          created_at?: string | null;
+          department?: string | null;
+          hero_image_url?: string | null;
+          is_active?: boolean | null;
+          lat?: number | null;
+          lng?: number | null;
+          meta_description?: string | null;
+          name?: string;
+          region?: string | null;
+          slug?: string;
+        };
+        Relationships: [];
       };
       inkflow_client_artist_follows: {
         Row: {
@@ -1329,6 +1420,13 @@ export type Database = {
             foreignKeyName: 'inkflow_consumable_lots_studio_id_fkey';
             columns: ['studio_id'];
             isOneToOne: false;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_consumable_lots_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
             referencedRelation: 'inkflow_studios';
             referencedColumns: ['id'];
           },
@@ -1375,6 +1473,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: 'inkflow_consumable_products';
             referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_consumable_prices_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
           },
           {
             foreignKeyName: 'inkflow_consumable_prices_studio_id_fkey';
@@ -1434,6 +1539,13 @@ export type Database = {
             foreignKeyName: 'inkflow_consumable_products_studio_id_fkey';
             columns: ['studio_id'];
             isOneToOne: false;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_consumable_products_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
             referencedRelation: 'inkflow_studios';
             referencedColumns: ['id'];
           },
@@ -1472,225 +1584,58 @@ export type Database = {
             foreignKeyName: 'inkflow_consumable_suppliers_studio_id_fkey';
             columns: ['studio_id'];
             isOneToOne: false;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_consumable_suppliers_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
             referencedRelation: 'inkflow_studios';
             referencedColumns: ['id'];
           },
         ];
       };
-      inkflow_supplier_catalog_items: {
+      inkflow_fiscal_checklist: {
         Row: {
-          brand: string | null;
-          category: string;
+          checked: boolean;
+          checked_at: string | null;
           created_at: string;
-          ean: string | null;
           id: string;
-          is_active: boolean;
-          linked_product_id: string | null;
-          list_price_cents: number | null;
-          name: string;
-          notes: string | null;
-          pack_size: number;
-          price_cents: number;
-          product_url: string | null;
-          promo_ends_at: string | null;
-          promo_label: string | null;
-          promo_price_cents: number | null;
-          promo_starts_at: string | null;
-          sku: string | null;
-          studio_id: string;
-          supplier_id: string;
-          updated_at: string;
-        };
-        Insert: {
-          brand?: string | null;
-          category?: string;
-          created_at?: string;
-          ean?: string | null;
-          id?: string;
-          is_active?: boolean;
-          linked_product_id?: string | null;
-          list_price_cents?: number | null;
-          name: string;
-          notes?: string | null;
-          pack_size?: number;
-          price_cents: number;
-          product_url?: string | null;
-          promo_ends_at?: string | null;
-          promo_label?: string | null;
-          promo_price_cents?: number | null;
-          promo_starts_at?: string | null;
-          sku?: string | null;
-          studio_id: string;
-          supplier_id: string;
-          updated_at?: string;
-        };
-        Update: {
-          brand?: string | null;
-          category?: string;
-          created_at?: string;
-          ean?: string | null;
-          id?: string;
-          is_active?: boolean;
-          linked_product_id?: string | null;
-          list_price_cents?: number | null;
-          name?: string;
-          notes?: string | null;
-          pack_size?: number;
-          price_cents?: number;
-          product_url?: string | null;
-          promo_ends_at?: string | null;
-          promo_label?: string | null;
-          promo_price_cents?: number | null;
-          promo_starts_at?: string | null;
-          sku?: string | null;
-          studio_id?: string;
-          supplier_id?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'inkflow_supplier_catalog_items_linked_product_id_fkey';
-            columns: ['linked_product_id'];
-            isOneToOne: false;
-            referencedRelation: 'inkflow_consumable_products';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'inkflow_supplier_catalog_items_studio_id_fkey';
-            columns: ['studio_id'];
-            isOneToOne: false;
-            referencedRelation: 'inkflow_studios';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'inkflow_supplier_catalog_items_supplier_id_fkey';
-            columns: ['supplier_id'];
-            isOneToOne: false;
-            referencedRelation: 'inkflow_consumable_suppliers';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      inkflow_price_contributions: {
-        Row: {
-          category_slug: string;
-          contributed_at: string;
-          id: string;
-          label_normalized: string;
-          pack_size: number;
-          price_cents: number;
-          studio_id: string;
-          supplier_label: string | null;
-        };
-        Insert: {
-          category_slug: string;
-          contributed_at?: string;
-          id?: string;
-          label_normalized: string;
-          pack_size?: number;
-          price_cents: number;
-          studio_id: string;
-          supplier_label?: string | null;
-        };
-        Update: {
-          category_slug?: string;
-          contributed_at?: string;
-          id?: string;
-          label_normalized?: string;
-          pack_size?: number;
-          price_cents?: number;
-          studio_id?: string;
-          supplier_label?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'inkflow_price_contributions_studio_id_fkey';
-            columns: ['studio_id'];
-            isOneToOne: false;
-            referencedRelation: 'inkflow_studios';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      inkflow_stock_movements: {
-        Row: {
-          appointment_id: string | null;
-          created_at: string;
-          delta_qty: number;
-          id: string;
-          meta: Json;
-          product_id: string;
-          reason: string | null;
-          source: string;
+          item_key: string;
+          month: string;
           studio_id: string;
         };
         Insert: {
-          appointment_id?: string | null;
+          checked?: boolean;
+          checked_at?: string | null;
           created_at?: string;
-          delta_qty: number;
           id?: string;
-          meta?: Json;
-          product_id: string;
-          reason?: string | null;
-          source?: string;
+          item_key: string;
+          month: string;
           studio_id: string;
         };
         Update: {
-          appointment_id?: string | null;
+          checked?: boolean;
+          checked_at?: string | null;
           created_at?: string;
-          delta_qty?: number;
           id?: string;
-          meta?: Json;
-          product_id?: string;
-          reason?: string | null;
-          source?: string;
+          item_key?: string;
+          month?: string;
           studio_id?: string;
         };
         Relationships: [
           {
-            foreignKeyName: 'inkflow_stock_movements_appointment_id_fkey';
-            columns: ['appointment_id'];
-            isOneToOne: false;
-            referencedRelation: 'inkflow_appointments';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'inkflow_stock_movements_product_id_fkey';
-            columns: ['product_id'];
-            isOneToOne: false;
-            referencedRelation: 'inkflow_consumable_products';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'inkflow_stock_movements_studio_id_fkey';
+            foreignKeyName: 'inkflow_fiscal_checklist_studio_id_fkey';
             columns: ['studio_id'];
             isOneToOne: false;
-            referencedRelation: 'inkflow_studios';
-            referencedColumns: ['id'];
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
           },
-        ];
-      };
-      inkflow_studio_finance_prefs: {
-        Row: {
-          settings: Json;
-          studio_id: string;
-          updated_at: string;
-        };
-        Insert: {
-          settings?: Json;
-          studio_id: string;
-          updated_at?: string;
-        };
-        Update: {
-          settings?: Json;
-          studio_id?: string;
-          updated_at?: string;
-        };
-        Relationships: [
           {
-            foreignKeyName: 'inkflow_studio_finance_prefs_studio_id_fkey';
+            foreignKeyName: 'inkflow_fiscal_checklist_studio_id_fkey';
             columns: ['studio_id'];
-            isOneToOne: true;
+            isOneToOne: false;
             referencedRelation: 'inkflow_studios';
             referencedColumns: ['id'];
           },
@@ -2056,7 +2001,22 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_native_device_tokens_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_native_device_tokens_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       inkflow_notifications: {
         Row: {
@@ -2197,6 +2157,13 @@ export type Database = {
             referencedColumns: ['id'];
           },
           {
+            foreignKeyName: 'inkflow_payments_project_request_id_fkey';
+            columns: ['project_request_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_project_requests';
+            referencedColumns: ['id'];
+          },
+          {
             foreignKeyName: 'inkflow_payments_studio_id_fkey';
             columns: ['studio_id'];
             isOneToOne: false;
@@ -2205,6 +2172,54 @@ export type Database = {
           },
           {
             foreignKeyName: 'inkflow_payments_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_price_contributions: {
+        Row: {
+          category_slug: string;
+          contributed_at: string;
+          id: string;
+          label_normalized: string;
+          pack_size: number;
+          price_cents: number;
+          studio_id: string;
+          supplier_label: string | null;
+        };
+        Insert: {
+          category_slug: string;
+          contributed_at?: string;
+          id?: string;
+          label_normalized: string;
+          pack_size?: number;
+          price_cents: number;
+          studio_id: string;
+          supplier_label?: string | null;
+        };
+        Update: {
+          category_slug?: string;
+          contributed_at?: string;
+          id?: string;
+          label_normalized?: string;
+          pack_size?: number;
+          price_cents?: number;
+          studio_id?: string;
+          supplier_label?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_price_contributions_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_price_contributions_studio_id_fkey';
             columns: ['studio_id'];
             isOneToOne: false;
             referencedRelation: 'inkflow_studios';
@@ -2280,6 +2295,42 @@ export type Database = {
           },
           {
             foreignKeyName: 'inkflow_project_requests_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_push_subscriptions: {
+        Row: {
+          created_at: string | null;
+          id: string;
+          studio_id: string;
+          subscription: Json;
+        };
+        Insert: {
+          created_at?: string | null;
+          id?: string;
+          studio_id: string;
+          subscription: Json;
+        };
+        Update: {
+          created_at?: string | null;
+          id?: string;
+          studio_id?: string;
+          subscription?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_push_subscriptions_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_push_subscriptions_studio_id_fkey';
             columns: ['studio_id'];
             isOneToOne: false;
             referencedRelation: 'inkflow_studios';
@@ -2368,6 +2419,129 @@ export type Database = {
             columns: ['appointment_id'];
             isOneToOne: false;
             referencedRelation: 'inkflow_appointments';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_review_votes: {
+        Row: {
+          created_at: string | null;
+          id: string;
+          review_id: string;
+          vote: string;
+          voter_fingerprint: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          id?: string;
+          review_id: string;
+          vote: string;
+          voter_fingerprint: string;
+        };
+        Update: {
+          created_at?: string | null;
+          id?: string;
+          review_id?: string;
+          vote?: string;
+          voter_fingerprint?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_review_votes_review_id_fkey';
+            columns: ['review_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_reviews';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_reviews: {
+        Row: {
+          appointment_id: string | null;
+          body: string | null;
+          client_email: string;
+          client_email_hash: string;
+          client_name: string;
+          created_at: string | null;
+          helpful_count: number | null;
+          id: string;
+          is_verified: boolean | null;
+          moderated_at: string | null;
+          moderation_reason: string | null;
+          not_helpful_count: number | null;
+          rating: number;
+          reply_at: string | null;
+          reply_body: string | null;
+          status: string | null;
+          studio_id: string;
+          tattoo_photo_url: string | null;
+          tattoo_style: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          appointment_id?: string | null;
+          body?: string | null;
+          client_email: string;
+          client_email_hash: string;
+          client_name: string;
+          created_at?: string | null;
+          helpful_count?: number | null;
+          id?: string;
+          is_verified?: boolean | null;
+          moderated_at?: string | null;
+          moderation_reason?: string | null;
+          not_helpful_count?: number | null;
+          rating: number;
+          reply_at?: string | null;
+          reply_body?: string | null;
+          status?: string | null;
+          studio_id: string;
+          tattoo_photo_url?: string | null;
+          tattoo_style?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          appointment_id?: string | null;
+          body?: string | null;
+          client_email?: string;
+          client_email_hash?: string;
+          client_name?: string;
+          created_at?: string | null;
+          helpful_count?: number | null;
+          id?: string;
+          is_verified?: boolean | null;
+          moderated_at?: string | null;
+          moderation_reason?: string | null;
+          not_helpful_count?: number | null;
+          rating?: number;
+          reply_at?: string | null;
+          reply_body?: string | null;
+          status?: string | null;
+          studio_id?: string;
+          tattoo_photo_url?: string | null;
+          tattoo_style?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_reviews_appointment_id_fkey';
+            columns: ['appointment_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_appointments';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_reviews_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_reviews_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
             referencedColumns: ['id'];
           },
         ];
@@ -2472,6 +2646,71 @@ export type Database = {
           },
         ];
       };
+      inkflow_stock_movements: {
+        Row: {
+          appointment_id: string | null;
+          created_at: string;
+          delta_qty: number;
+          id: string;
+          meta: Json;
+          product_id: string;
+          reason: string | null;
+          source: string;
+          studio_id: string;
+        };
+        Insert: {
+          appointment_id?: string | null;
+          created_at?: string;
+          delta_qty: number;
+          id?: string;
+          meta?: Json;
+          product_id: string;
+          reason?: string | null;
+          source?: string;
+          studio_id: string;
+        };
+        Update: {
+          appointment_id?: string | null;
+          created_at?: string;
+          delta_qty?: number;
+          id?: string;
+          meta?: Json;
+          product_id?: string;
+          reason?: string | null;
+          source?: string;
+          studio_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_stock_movements_appointment_id_fkey';
+            columns: ['appointment_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_appointments';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_stock_movements_product_id_fkey';
+            columns: ['product_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_consumable_products';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_stock_movements_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_stock_movements_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       inkflow_stripe_processed_events: {
         Row: {
           event_type: string | null;
@@ -2490,41 +2729,129 @@ export type Database = {
         };
         Relationships: [];
       };
+      inkflow_studio_finance_prefs: {
+        Row: {
+          settings: Json;
+          studio_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          settings?: Json;
+          studio_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          settings?: Json;
+          studio_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_studio_finance_prefs_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: true;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_studio_finance_prefs_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: true;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_studio_public_metrics: {
+        Row: {
+          discover_profile_views: number;
+          studio_id: string;
+          updated_at: string;
+          vitrine_views: number;
+        };
+        Insert: {
+          discover_profile_views?: number;
+          studio_id: string;
+          updated_at?: string;
+          vitrine_views?: number;
+        };
+        Update: {
+          discover_profile_views?: number;
+          studio_id?: string;
+          updated_at?: string;
+          vitrine_views?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_studio_public_metrics_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: true;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_studio_public_metrics_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: true;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       inkflow_studios: {
         Row: {
           availability_settings: Json | null;
           avatar_url: string | null;
+          bio: string | null;
           city: string | null;
+          city_slug: string | null;
+          country: string | null;
           created_at: string | null;
           csv_import_slots_remaining: number | null;
           dashboard_preferences: Json;
+          discover_rank: number | null;
           email: string;
           google_access_token: string | null;
           google_business_access_token: string | null;
           google_business_location_name: string | null;
+          google_business_locations_cache: Json | null;
+          google_business_locations_cached_at: string | null;
           google_business_refresh_token: string | null;
           google_business_token_expiry: number | null;
           google_calendar_id: string | null;
           google_place_id: string | null;
-          google_reviews_cache: Json | null;
           google_refresh_token: string | null;
+          google_reviews_cache: Json | null;
           google_token_expiry: number | null;
           id: string;
+          instagram: string | null;
+          is_discoverable: boolean | null;
+          last_active_at: string | null;
+          lat: number | null;
           latitude: number | null;
+          lng: number | null;
           location_visible: boolean;
           longitude: number | null;
           name: string;
           plan_type: string;
+          points_loyalty_settings: Json | null;
+          portfolio_cover_url: string | null;
+          portfolio_preview: Json | null;
+          price_max: number | null;
+          price_min: number | null;
+          rating_avg: number | null;
+          rating_count: number | null;
           referral_code: string | null;
           referred_by: string | null;
           siret: string | null;
           slug: string;
+          stamp_loyalty_settings: Json | null;
           stripe_connect_account_id: string | null;
           stripe_connect_charges_enabled: boolean | null;
           stripe_connect_details_submitted: boolean | null;
-          stamp_loyalty_settings: Json | null;
-          points_loyalty_settings: Json | null;
           studio_name: string;
+          styles: string[] | null;
+          subscription_billing_failures: number;
           subscription_status: string | null;
           trial_ends_at: string | null;
           unlocked_themes: string[] | null;
@@ -2534,37 +2861,56 @@ export type Database = {
         Insert: {
           availability_settings?: Json | null;
           avatar_url?: string | null;
+          bio?: string | null;
           city?: string | null;
+          city_slug?: string | null;
+          country?: string | null;
           created_at?: string | null;
           csv_import_slots_remaining?: number | null;
           dashboard_preferences?: Json;
+          discover_rank?: number | null;
           email: string;
           google_access_token?: string | null;
           google_business_access_token?: string | null;
           google_business_location_name?: string | null;
+          google_business_locations_cache?: Json | null;
+          google_business_locations_cached_at?: string | null;
           google_business_refresh_token?: string | null;
           google_business_token_expiry?: number | null;
           google_calendar_id?: string | null;
           google_place_id?: string | null;
           google_refresh_token?: string | null;
-          google_token_expiry?: number | null;
           google_reviews_cache?: Json | null;
+          google_token_expiry?: number | null;
           id: string;
+          instagram?: string | null;
+          is_discoverable?: boolean | null;
+          last_active_at?: string | null;
+          lat?: number | null;
           latitude?: number | null;
+          lng?: number | null;
           location_visible?: boolean;
           longitude?: number | null;
           name: string;
           plan_type?: string;
+          points_loyalty_settings?: Json | null;
+          portfolio_cover_url?: string | null;
+          portfolio_preview?: Json | null;
+          price_max?: number | null;
+          price_min?: number | null;
+          rating_avg?: number | null;
+          rating_count?: number | null;
           referral_code?: string | null;
           referred_by?: string | null;
           siret?: string | null;
           slug: string;
+          stamp_loyalty_settings?: Json | null;
           stripe_connect_account_id?: string | null;
           stripe_connect_charges_enabled?: boolean | null;
           stripe_connect_details_submitted?: boolean | null;
-          stamp_loyalty_settings?: Json | null;
-          points_loyalty_settings?: Json | null;
           studio_name: string;
+          styles?: string[] | null;
+          subscription_billing_failures?: number;
           subscription_status?: string | null;
           trial_ends_at?: string | null;
           unlocked_themes?: string[] | null;
@@ -2574,37 +2920,56 @@ export type Database = {
         Update: {
           availability_settings?: Json | null;
           avatar_url?: string | null;
+          bio?: string | null;
           city?: string | null;
+          city_slug?: string | null;
+          country?: string | null;
           created_at?: string | null;
           csv_import_slots_remaining?: number | null;
           dashboard_preferences?: Json;
+          discover_rank?: number | null;
           email?: string;
           google_access_token?: string | null;
           google_business_access_token?: string | null;
           google_business_location_name?: string | null;
+          google_business_locations_cache?: Json | null;
+          google_business_locations_cached_at?: string | null;
           google_business_refresh_token?: string | null;
           google_business_token_expiry?: number | null;
           google_calendar_id?: string | null;
           google_place_id?: string | null;
-          google_reviews_cache?: Json | null;
           google_refresh_token?: string | null;
+          google_reviews_cache?: Json | null;
           google_token_expiry?: number | null;
           id?: string;
+          instagram?: string | null;
+          is_discoverable?: boolean | null;
+          last_active_at?: string | null;
+          lat?: number | null;
           latitude?: number | null;
+          lng?: number | null;
           location_visible?: boolean;
           longitude?: number | null;
           name?: string;
           plan_type?: string;
+          points_loyalty_settings?: Json | null;
+          portfolio_cover_url?: string | null;
+          portfolio_preview?: Json | null;
+          price_max?: number | null;
+          price_min?: number | null;
+          rating_avg?: number | null;
+          rating_count?: number | null;
           referral_code?: string | null;
           referred_by?: string | null;
           siret?: string | null;
           slug?: string;
+          stamp_loyalty_settings?: Json | null;
           stripe_connect_account_id?: string | null;
           stripe_connect_charges_enabled?: boolean | null;
           stripe_connect_details_submitted?: boolean | null;
-          stamp_loyalty_settings?: Json | null;
-          points_loyalty_settings?: Json | null;
           studio_name?: string;
+          styles?: string[] | null;
+          subscription_billing_failures?: number;
           subscription_status?: string | null;
           trial_ends_at?: string | null;
           unlocked_themes?: string[] | null;
@@ -2681,6 +3046,107 @@ export type Database = {
             columns: ['studio_id'];
             isOneToOne: false;
             referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      inkflow_supplier_catalog_items: {
+        Row: {
+          brand: string | null;
+          category: string;
+          created_at: string;
+          ean: string | null;
+          id: string;
+          is_active: boolean;
+          linked_product_id: string | null;
+          list_price_cents: number | null;
+          name: string;
+          notes: string | null;
+          pack_size: number;
+          price_cents: number;
+          product_url: string | null;
+          promo_ends_at: string | null;
+          promo_label: string | null;
+          promo_price_cents: number | null;
+          promo_starts_at: string | null;
+          sku: string | null;
+          studio_id: string;
+          supplier_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          brand?: string | null;
+          category?: string;
+          created_at?: string;
+          ean?: string | null;
+          id?: string;
+          is_active?: boolean;
+          linked_product_id?: string | null;
+          list_price_cents?: number | null;
+          name: string;
+          notes?: string | null;
+          pack_size?: number;
+          price_cents: number;
+          product_url?: string | null;
+          promo_ends_at?: string | null;
+          promo_label?: string | null;
+          promo_price_cents?: number | null;
+          promo_starts_at?: string | null;
+          sku?: string | null;
+          studio_id: string;
+          supplier_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          brand?: string | null;
+          category?: string;
+          created_at?: string;
+          ean?: string | null;
+          id?: string;
+          is_active?: boolean;
+          linked_product_id?: string | null;
+          list_price_cents?: number | null;
+          name?: string;
+          notes?: string | null;
+          pack_size?: number;
+          price_cents?: number;
+          product_url?: string | null;
+          promo_ends_at?: string | null;
+          promo_label?: string | null;
+          promo_price_cents?: number | null;
+          promo_starts_at?: string | null;
+          sku?: string | null;
+          studio_id?: string;
+          supplier_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'inkflow_supplier_catalog_items_linked_product_id_fkey';
+            columns: ['linked_product_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_consumable_products';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_supplier_catalog_items_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'artist_payment_stats';
+            referencedColumns: ['studio_id'];
+          },
+          {
+            foreignKeyName: 'inkflow_supplier_catalog_items_studio_id_fkey';
+            columns: ['studio_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_studios';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'inkflow_supplier_catalog_items_supplier_id_fkey';
+            columns: ['supplier_id'];
+            isOneToOne: false;
+            referencedRelation: 'inkflow_consumable_suppliers';
             referencedColumns: ['id'];
           },
         ];
@@ -3303,6 +3769,10 @@ export type Database = {
       };
     };
     Functions: {
+      abandon_public_checkout_appointment: {
+        Args: { p_client_email: string; p_id: string };
+        Returns: number;
+      };
       generate_referral_code: { Args: never; Returns: string };
       generate_unique_slug: {
         Args: { base_text: string; column_name?: string; table_name: string };
@@ -3315,6 +3785,11 @@ export type Database = {
           date_fin: string;
           is_available: boolean;
         }[];
+      };
+      get_booking_client_recap: { Args: { p_token: string }; Returns: Json };
+      get_client_unread_message_count: {
+        Args: { p_client_email: string };
+        Returns: number;
       };
       get_discovery_studios_for_client: {
         Args: {
@@ -3369,10 +3844,10 @@ export type Database = {
       get_public_message_studio_header: {
         Args: { p_thread_id: string };
         Returns: {
-          avatar_url: string | null;
+          avatar_url: string;
           id: string;
           name: string;
-          portfolio_cover_url: string | null;
+          portfolio_cover_url: string;
           slug: string;
           studio_name: string;
         }[];
@@ -3389,11 +3864,12 @@ export type Database = {
           studio_id: string;
           thread_id: string;
         }[];
-      };
-      get_booking_client_recap: { Args: { p_token: string }; Returns: Json };
-      get_client_unread_message_count: {
-        Args: { p_client_email: string };
-        Returns: number;
+        SetofOptions: {
+          from: '*';
+          to: 'inkflow_messages';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       get_studio_by_email_with_data: {
         Args: { p_email: string };
@@ -3410,28 +3886,46 @@ export type Database = {
       get_studio_public_by_slug: {
         Args: { p_slug: string };
         Returns: {
-          avatar_url: string | null;
+          avatar_url: string;
           id: string;
           name: string;
           payments_online: boolean;
-          portfolio_cover_url: string | null;
+          portfolio_cover_url: string;
           siret: string;
           slug: string;
           studio_name: string;
           vitrine_theme: string;
         }[];
       };
-      process_referral_reward: { Args: { p_referee_id: string }; Returns: Json };
+      get_studio_public_metrics_for_dashboard: {
+        Args: { p_studio_id: string };
+        Returns: Json;
+      };
       increment_studio_channel_view: {
-        Args: { p_studio_id: string; p_channel: string };
+        Args: { p_channel: string; p_studio_id: string };
         Returns: undefined;
       };
-      get_studio_public_metrics_for_dashboard: { Args: { p_studio_id: string }; Returns: Json };
-      sync_client_crm_from_portal: {
-        Args: { p_avatar_url: string | null; p_display_name: string };
+      inkflow_apply_flash_checkout_reserve: {
+        Args: { p_flash_id: string };
         Returns: undefined;
       };
+      inkflow_jwt_email_norm: { Args: never; Returns: string };
+      inkflow_list_slot_end_nudges: {
+        Args: never;
+        Returns: {
+          client_id: string;
+          client_name: string;
+          id: string;
+          studio_id: string;
+        }[];
+      };
+      inkflow_studio_ids_for_jwt: { Args: never; Returns: string[] };
+      process_referral_reward: { Args: { p_referee_id: string }; Returns: Json };
       studio_exists: { Args: { sid: string }; Returns: boolean };
+      sync_client_crm_from_portal: {
+        Args: { p_avatar_url: string; p_display_name: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       BookingStatus: 'PENDING_PAYMENT' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
