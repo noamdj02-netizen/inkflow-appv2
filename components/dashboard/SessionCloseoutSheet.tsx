@@ -6,6 +6,7 @@ import { createCheckoutSession } from '../../lib/stripeClient';
 import { appointmentRemainingBalanceEuros } from '../../lib/appointmentBalance';
 import { useToast } from '../../contexts/ToastContext';
 import { isInkflowNativeShellUserAgent } from '../../lib/nativeWebShell';
+import { getCanonicalAppOrigin } from '../../lib/urls';
 import {
   stripeTerminalCreateBalanceIntent,
   stripeTerminalFetchConnectionSecret,
@@ -71,12 +72,25 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
   const openTapToPayInNativeApp = useCallback(() => {
     if (!appointment || !studioId) return;
     if (typeof window === 'undefined') return;
-    // Shell natif Inkflow Pro : ouvre l’écran Tap to Pay (SDK Stripe Terminal) avec solde + studio.
-    const deepLink = `inkflowpro://tap-to-pay?appointment=${encodeURIComponent(appointment.id)}&studio=${encodeURIComponent(studioId)}&amountEuros=${encodeURIComponent(remaining.toFixed(2))}`;
+    const params = new URLSearchParams({
+      appointment: appointment.id,
+      studio: studioId,
+      amountEuros: remaining.toFixed(2),
+    });
+    const query = params.toString();
+
+    // Safari (hors WebView Inkflow Pro) rejette souvent `location.href = inkflowpro://…`
+    // (« adresse non valide »). On passe par une page HTTPS avec un vrai <a href="inkflowpro://…">.
+    if (!isInkflowNativeShellUserAgent(navigator.userAgent)) {
+      const base = getCanonicalAppOrigin().replace(/\/$/, '');
+      window.location.assign(`${base}/tap-to-pay?${query}`);
+      return;
+    }
+
+    // WebView shell : interception native côté inkflow-mobile (shouldStartLoad).
+    const deepLink = `inkflowpro://tap-to-pay?${query}`;
     const startedAt = Date.now();
     window.location.href = deepLink;
-
-    // Fallback: if the app isn't installed, users stay on the web page.
     window.setTimeout(() => {
       if (Date.now() - startedAt < 1500) {
         toast.info(

@@ -16,7 +16,8 @@
           "/reservation-succes",
           "/reservation-succes*",
           "/client/*",
-          "/p/*"
+          "/p/*",
+          "/tap-to-pay*"
         ]
       }
     ]

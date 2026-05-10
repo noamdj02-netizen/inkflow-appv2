@@ -46,6 +46,9 @@ const PublicBookingPage = lazy(() =>
 const ConsentPage = lazy(() =>
   import('./pages/public/ConsentPage').then((m) => ({ default: m.ConsentPage }))
 );
+const TapToPayHandoffPage = lazy(() =>
+  import('./pages/public/TapToPayHandoffPage').then((m) => ({ default: m.TapToPayHandoffPage }))
+);
 const PublicMessagePage = lazy(() =>
   import('./pages/public/PublicMessagePage').then((m) => ({ default: m.PublicMessagePage }))
 );
@@ -302,6 +305,7 @@ const Router: React.FC = () => {
       component: ConsentPage,
       getProps: (m) => ({ consentId: m[1] }),
     },
+    { path: '/tap-to-pay', component: TapToPayHandoffPage },
     {
       path: /^\/messages\/([a-z0-9_.-]+)$/,
       component: PublicMessagePage,
