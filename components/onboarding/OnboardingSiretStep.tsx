@@ -16,7 +16,10 @@ export interface OnboardingSiretStepProps {
   onComplete: () => void;
 }
 
-export const OnboardingSiretStep: React.FC<OnboardingSiretStepProps> = ({ studioId, onComplete }) => {
+export const OnboardingSiretStep: React.FC<OnboardingSiretStepProps> = ({
+  studioId,
+  onComplete,
+}) => {
   const toast = useToast();
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(true);
@@ -25,7 +28,11 @@ export const OnboardingSiretStep: React.FC<OnboardingSiretStepProps> = ({ studio
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase.from('inkflow_studios').select('siret').eq('id', studioId).maybeSingle();
+      const { data } = await supabase
+        .from('inkflow_studios')
+        .select('siret')
+        .eq('id', studioId)
+        .maybeSingle();
       if (!cancelled && data?.siret && typeof data.siret === 'string') {
         setValue(formatSiret(data.siret));
       }
@@ -70,9 +77,14 @@ export const OnboardingSiretStep: React.FC<OnboardingSiretStepProps> = ({ studio
       role="dialog"
       aria-labelledby="siret-title"
     >
-      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios">
         <div className="lg:hidden flex-shrink-0 h-28 sm:h-36 relative overflow-hidden safe-top">
-          <img src={heroImg} alt="" className="absolute inset-0 w-full h-full object-cover object-center" loading="eager" />
+          <img
+            src={heroImg}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover object-center"
+            loading="eager"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-black via-transparent to-transparent" />
         </div>
 
@@ -88,12 +100,15 @@ export const OnboardingSiretStep: React.FC<OnboardingSiretStepProps> = ({ studio
               <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
             </div>
 
-            <h1 id="siret-title" className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
+            <h1
+              id="siret-title"
+              className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5"
+            >
               SIRET du studio
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-5 sm:mb-6">
-              Obligatoire pour des factures conformes et les mentions légales. Stocké de façon sécurisée — comme dans Paramètres
-              → Établissement.
+              Obligatoire pour des factures conformes et les mentions légales. Stocké de façon
+              sécurisée — comme dans Paramètres → Établissement.
             </p>
 
             {loading ? (
@@ -159,12 +174,19 @@ export const OnboardingSiretStep: React.FC<OnboardingSiretStepProps> = ({ studio
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <img src={heroImg} alt="" className="absolute inset-0 w-full min-h-full object-cover object-bottom" loading="eager" />
+        <img
+          src={heroImg}
+          alt=""
+          className="absolute inset-0 w-full min-h-full object-cover object-bottom"
+          loading="eager"
+        />
         <div className="absolute bottom-0 left-0 right-0 z-10 px-10 pb-10 pt-16 pointer-events-none">
           <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
             Cadre pro.
           </h2>
-          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">Facturation et transparence.</p>
+          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
+            Facturation et transparence.
+          </p>
         </div>
       </motion.div>
     </motion.div>

@@ -84,6 +84,8 @@ export async function testEmailConnection(): Promise<{
 }
 
 interface ProjectNotificationData {
+  /** Ligne créée côté client — validée par l’Edge Function (anti-abus). */
+  projectRequestId: string;
   studioId: string;
   clientName: string;
   clientEmail: string;
@@ -100,6 +102,7 @@ interface ProjectNotificationData {
 export async function sendProjectNotification(data: ProjectNotificationData): Promise<void> {
   try {
     const body = {
+      projectRequestId: data.projectRequestId,
       studioId: data.studioId,
       clientName: sanitizeText(data.clientName, MAX_NAME_LENGTH) ?? '',
       clientEmail: sanitizeEmail(data.clientEmail),
@@ -116,6 +119,8 @@ export async function sendProjectNotification(data: ProjectNotificationData): Pr
 }
 
 export interface SendBookingConfirmationParams {
+  /** Obligatoire : contrôle JWT tatoueur côté Edge (sauf secret interne). */
+  studioId: string;
   clientEmail: string;
   clientName: string;
   studioName: string;
@@ -150,7 +155,11 @@ export async function sendBookingConfirmation(
   params: SendBookingConfirmationParams
 ): Promise<{ ok: boolean; error?: string; smsSent?: boolean; smsSkippedReason?: string }> {
   try {
+    if (!params.studioId?.trim()) {
+      return { ok: false, error: 'studioId manquant' };
+    }
     const body = {
+      studioId: params.studioId.trim(),
       clientEmail: sanitizeEmail(params.clientEmail),
       clientName: sanitizeText(params.clientName, MAX_NAME_LENGTH) ?? '',
       studioName: sanitizeText(params.studioName, MAX_NAME_LENGTH) ?? '',
@@ -205,6 +214,7 @@ export async function sendBookingConfirmation(
 }
 
 export interface SendBookingRefusalParams {
+  studioId: string;
   clientEmail: string;
   clientName: string;
   studioName: string;
@@ -218,7 +228,9 @@ export interface SendBookingRefusalParams {
  */
 export async function sendBookingRefusal(params: SendBookingRefusalParams): Promise<void> {
   try {
+    if (!params.studioId?.trim()) return;
     const body = {
+      studioId: params.studioId.trim(),
       clientEmail: sanitizeEmail(params.clientEmail),
       clientName: sanitizeText(params.clientName, MAX_NAME_LENGTH) ?? '',
       studioName: sanitizeText(params.studioName, MAX_NAME_LENGTH) ?? '',

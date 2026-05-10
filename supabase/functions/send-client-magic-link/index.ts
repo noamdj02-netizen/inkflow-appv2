@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 import { wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { rateLimitByIp } from "../_shared/edgeInvokeAuth.ts";
 
 const RESEND_API_KEY       = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM          = "My Inkflow <contact@ink-flow.me>";
@@ -36,6 +37,13 @@ Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (!rateLimitByIp(req, "send-client-magic-link", 20)) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {

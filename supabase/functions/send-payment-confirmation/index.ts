@@ -7,10 +7,12 @@
 import { escapeHtml, wrapEmailLayout, EMAIL_STYLES, getDefaultEmailHeroBanner } from "../_shared/emailLayout.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { isServiceRoleOrInternalSecret } from "../_shared/edgeInvokeAuth.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
 const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
+const SUPABASE_SERVICE_ROLE_KEY = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim();
 
 interface Payload {
   clientEmail: string;
@@ -228,6 +230,13 @@ Deno.serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  if (!isServiceRoleOrInternalSecret(req, SUPABASE_SERVICE_ROLE_KEY)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 
   try {

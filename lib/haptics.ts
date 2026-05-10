@@ -32,3 +32,26 @@ export function hapticDestructiveDone(): void {
   if (!canVibrate()) return;
   navigator.vibrate([15, 50, 15]);
 }
+
+function postInkflowNativeMessage(type: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const bridge = (
+    window as Window & { ReactNativeWebView?: { postMessage: (payload: string) => void } }
+  ).ReactNativeWebView;
+  if (!bridge?.postMessage) return false;
+  try {
+    bridge.postMessage(JSON.stringify({ type }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sélection / navigation (onglets) — enveloppe native Expo si dispo, sinon Vibration API.
+ */
+export function hapticTabChange(): void {
+  if (postInkflowNativeMessage('inkflow_haptic_selection')) return;
+  if (!canVibrate()) return;
+  navigator.vibrate(8);
+}

@@ -8,6 +8,11 @@ import { createClient } from "npm:@supabase/supabase-js@2.95.3";
 import { sendEmail } from "../_shared/resend.ts";
 import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import {
+  rateLimitByIp,
+  internalFunctionSecretOk,
+  verifyMessageNotificationPayload,
+} from "../_shared/edgeInvokeAuth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -123,6 +128,13 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    if (!rateLimitByIp(req, "send-message-notification", 45)) {
+      return new Response(
+        JSON.stringify({ error: "Too many requests" }),
+        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
     const payload: Payload = await req.json();
 
     if (!payload.type || !payload.messagePreview || !payload.threadId) {
@@ -130,6 +142,22 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: "type, messagePreview and threadId are required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    if (
+      !internalFunctionSecretOk(req) &&
+      !(await verifyMessageNotificationPayload(supabase, {
+        type: payload.type,
+        threadId: payload.threadId,
+        messagePreview: payload.messagePreview,
+        studioId: payload.type === "to_studio" ? payload.studioId : undefined,
+      }))
+    ) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     const conversationUrl = `${APP_URL}/dashboard`;
@@ -165,7 +193,6 @@ Deno.serve(async (req: Request) => {
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       const { data: studio } = await supabase
         .from("inkflow_studios")
         .select("email, studio_name")

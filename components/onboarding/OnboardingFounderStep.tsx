@@ -43,7 +43,7 @@ export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ on
       aria-describedby="founder-note"
     >
       {/* Left — Contenu */}
-      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios">
         {/* Hero compact mobile */}
         <div className="lg:hidden flex-shrink-0 h-32 sm:h-40 relative overflow-hidden safe-top">
           <img
@@ -67,7 +67,10 @@ export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ on
               <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
             </div>
 
-            <h1 id="founder-title" className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-3 sm:mb-4">
+            <h1
+              id="founder-title"
+              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-3 sm:mb-4"
+            >
               Une note du fondateur
             </h1>
 
@@ -117,7 +120,9 @@ export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ on
           <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
             Gérez votre studio.
           </h2>
-          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">Libérez votre art.</p>
+          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
+            Libérez votre art.
+          </p>
         </div>
       </motion.div>
     </motion.div>

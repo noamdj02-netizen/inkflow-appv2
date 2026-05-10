@@ -78,6 +78,7 @@ import { InstagramConnect } from '../settings/InstagramConnect';
 import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 import { VitrineLinkButton } from './VitrineLinkButton';
 import { useStudioPrivacy } from '../../contexts/StudioPrivacyContext';
+import { hapticTabChange } from '../../lib/haptics';
 import { StudioCommandPalette } from './StudioCommandPalette';
 import FloatingActionMenu, { type FloatingActionMenuOption } from './FloatingActionMenu';
 import { ModulesSettings } from './ModulesSettings';
@@ -193,9 +194,18 @@ import {
 import type { ClientPreviewData } from './ClientPreviewPanel';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
 import { DashboardTabErrorBoundary } from './DashboardTabErrorBoundary';
+import { PendingCriticalWritesBanner } from './PendingCriticalWritesBanner';
 import { shouldShowWelcomeFlow } from '../../lib/shouldShowWelcomeFlow';
 import { isJustSignedUp } from '../../lib/welcomeStorage';
 import { supabase } from '../../lib/supabase';
+import { pickLinkedAppointmentForProjectRequest } from '../../lib/linkedAppointmentFromContext';
+import {
+  isSyntheticClientPreviewAppointmentId,
+  messageThreadIdFromSyntheticPreviewAppointmentId,
+  syntheticAppointmentFromBooking,
+  syntheticAppointmentFromProjectRequest,
+  type ClientFicheDemandeSource,
+} from '../../lib/clientPreviewFromDemande';
 import {
   getWaitlistFromSupabase,
   addWaitlistEntryToSupabase,
@@ -555,6 +565,15 @@ export const DashboardPro: React.FC = () => {
     return activeTab;
   }, [activeTab, settingsTab, clientsView, financeView, planningView, requestsSubTab]);
 
+  const skipNextTabHapticRef = useRef(true);
+  useEffect(() => {
+    if (skipNextTabHapticRef.current) {
+      skipNextTabHapticRef.current = false;
+      return;
+    }
+    hapticTabChange();
+  }, [dashboardPanelKey]);
+
   /** Bandeau héros (titre + accroche + optionnellement couverture vitrine). Vue d’ensemble : md+ seulement (mobile : hero iOS dans l’onglet). */
   const tabHeroModel = useMemo((): { title: string; description: string } | null => {
     if (activeTab === 'overview') {
@@ -767,14 +786,31 @@ export const DashboardPro: React.FC = () => {
 
   const handleAppointmentIdUpdate = useCallback(
     (aptId: string, updates: Partial<Appointment>) => {
+      if (isSyntheticClientPreviewAppointmentId(aptId)) {
+        toast.info(
+          'Cette fiche vient d’une demande (page book ou brief). Gère-la dans Demandes ou crée un RDV dans l’agenda.'
+        );
+        return;
+      }
       const apt = appointments.find((a) => a.id === aptId);
       const willComplete = updates.status === 'completed' && apt?.status !== 'completed';
+      if (willComplete && apt && !apt.consentFormSigned) {
+        const proceed = window.confirm(
+          'Aucun consentement signé dans InkFlow pour ce rendez-vous.\n\n' +
+            'En principe, enregistre la signature (messagerie ou formulaire) avant de clôturer.\n\n' +
+            'Confirmer quand même ? (ex. formulaire papier archivé hors InkFlow)'
+        );
+        if (!proceed) {
+          toast.error('Statut inchangé — enregistre le consentement ou confirme explicitement.');
+          return;
+        }
+      }
       updateAppointment(aptId, updates);
       if (willComplete && apt) {
         setSessionCloseoutAppointment({ ...apt, ...updates });
       }
     },
-    [appointments, updateAppointment]
+    [appointments, updateAppointment, toast]
   );
 
   const handleOverviewUpdateAppointment = useCallback(
@@ -1204,11 +1240,17 @@ export const DashboardPro: React.FC = () => {
   const handleSelectGoogleBusinessLocation = useCallback(
     async (locationName: string) => {
       if (!studioId) return;
-      await saveGoogleBusinessLocation(studioId, locationName);
-      setGoogleBusinessLocationsHint(null);
-      await refreshGoogleBusinessStatus();
+      try {
+        await saveGoogleBusinessLocation(studioId, locationName);
+        setGoogleBusinessLocationsHint(null);
+        await refreshGoogleBusinessStatus();
+        toast.success('Fiche Google enregistrée pour les avis');
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        toast.error(msg.length > 160 ? `${msg.slice(0, 157)}…` : msg);
+      }
     },
-    [studioId, refreshGoogleBusinessStatus]
+    [studioId, refreshGoogleBusinessStatus, toast]
   );
 
   /**
@@ -1810,6 +1852,7 @@ export const DashboardPro: React.FC = () => {
           lastMessage: string;
           lastMessageAt: string;
           unreadCount: number;
+          linkedAppointmentId?: string | null;
         }
       >();
       for (const row of rows) {
@@ -1828,6 +1871,7 @@ export const DashboardPro: React.FC = () => {
       }
 
       const prThreadIds = Array.from(threadMap.keys()).filter((id) => id.startsWith('pr_'));
+      const todayStr = new Date().toISOString().slice(0, 10);
       if (prThreadIds.length > 0) {
         const { data: prRows } = await supabase
           .from('inkflow_project_requests')
@@ -1850,6 +1894,44 @@ export const DashboardPro: React.FC = () => {
             if (pr.name) t.clientName = t.clientName || pr.name;
           }
         }
+
+        const { data: prApts } = await supabase
+          .from('inkflow_appointments')
+          .select('id, project_request_id, date, status')
+          .eq('studio_id', studioId)
+          .in('project_request_id', prThreadIds);
+        const byPr = new Map<string, { id: string; date: string; status: string }[]>();
+        for (const row of prApts ?? []) {
+          const pid = row.project_request_id;
+          if (!pid) continue;
+          if (!byPr.has(pid)) byPr.set(pid, []);
+          byPr.get(pid)!.push({
+            id: row.id,
+            date: row.date,
+            status: row.status || '',
+          });
+        }
+        for (const threadId of prThreadIds) {
+          const t = threadMap.get(threadId);
+          const list = byPr.get(threadId);
+          if (t && list?.length) {
+            const picked = pickLinkedAppointmentForProjectRequest(list, todayStr);
+            if (picked) t.linkedAppointmentId = picked;
+          }
+        }
+      }
+
+      const bkThreadIds = Array.from(threadMap.keys()).filter((id) => id.startsWith('bk_'));
+      if (bkThreadIds.length > 0) {
+        const { data: bkRows } = await supabase
+          .from('inkflow_bookings')
+          .select('id, recap_appointment_id')
+          .eq('studio_id', studioId)
+          .in('id', bkThreadIds);
+        for (const r of bkRows ?? []) {
+          const t = threadMap.get(r.id);
+          if (t && r.recap_appointment_id) t.linkedAppointmentId = r.recap_appointment_id;
+        }
       }
 
       setMessageThreads(
@@ -1860,6 +1942,7 @@ export const DashboardPro: React.FC = () => {
           lastMessage: t.lastMessage,
           lastMessageAt: t.lastMessageAt,
           unreadCount: t.unreadCount,
+          linkedAppointmentId: t.linkedAppointmentId ?? null,
         }))
       );
     };
@@ -2190,12 +2273,56 @@ export const DashboardPro: React.FC = () => {
           c.email?.toLowerCase() === apt.clientEmail?.toLowerCase() ||
           c.name?.toLowerCase() === apt.clientName?.toLowerCase()
       );
+      const sameClientRow = (a: Appointment) =>
+        (apt.clientId && a.clientId === apt.clientId) ||
+        (!!apt.clientEmail &&
+          !!a.clientEmail &&
+          a.clientEmail.toLowerCase() === apt.clientEmail.toLowerCase()) ||
+        (!!apt.clientName &&
+          !!a.clientName &&
+          a.clientName.toLowerCase() === apt.clientName.toLowerCase());
+      const clientAppointments = appointments.filter(sameClientRow);
+
+      const normEm = (s: string | undefined) => (s ?? '').trim().toLowerCase();
+      const aptEm = normEm(apt.clientEmail);
+      const aptNm = apt.clientName?.trim().toLowerCase() ?? '';
+      const crmEm = normEm(clientMatch?.email);
+      const crmNm = clientMatch?.name?.trim().toLowerCase() ?? '';
+
+      const clientProjectRequests = projectRequests.filter((pr) => {
+        const pEm = normEm(pr.clientEmail);
+        const pNm = pr.clientName?.trim().toLowerCase() ?? '';
+        if (aptEm && pEm && aptEm === pEm) return true;
+        if (aptNm && pNm && aptNm === pNm) return true;
+        if (crmEm && pEm && crmEm === pEm) return true;
+        if (crmNm && pNm && crmNm === pNm) return true;
+        return false;
+      });
+
+      const clientWaitlistEntries = waitlistEntries.filter((w) => {
+        const wEm = normEm(w.clientEmail);
+        if (aptEm && wEm && aptEm === wEm) return true;
+        if (crmEm && wEm && crmEm === wEm) return true;
+        return false;
+      });
+
+      const publicBookingSlug =
+        studioSlug != null && studioSlug !== ''
+          ? studioSlug
+          : user?.studioName
+            ? getVitrineSlug(user.studioName)
+            : null;
+
       return {
         appointment: apt,
         client: clientMatch ?? null,
+        clientAppointments,
+        clientProjectRequests,
+        clientWaitlistEntries,
+        publicBookingSlug: publicBookingSlug || null,
       };
     },
-    [clients]
+    [clients, appointments, projectRequests, waitlistEntries, studioSlug, user?.studioName]
   );
 
   const previewDataForDrawer = useMemo(
@@ -2207,6 +2334,8 @@ export const DashboardPro: React.FC = () => {
   const previewInkflowMessagingThreadId = useMemo(() => {
     const apt = selectedAppointment;
     if (!apt) return null;
+    const bookingSynth = messageThreadIdFromSyntheticPreviewAppointmentId(apt.id);
+    if (bookingSynth) return bookingSynth;
     const em = apt.clientEmail?.trim().toLowerCase();
     if (em) {
       const hit = messageThreads.find((t) => (t.clientEmail || '').trim().toLowerCase() === em);
@@ -2230,13 +2359,32 @@ export const DashboardPro: React.FC = () => {
   }, [selectedAppointment, clients]);
 
   const handleOpenInkflowDiscussionFromPreview = useCallback(() => {
-    handleSidebarNav(() => {
+    setSidebarOpen(false);
+    if (previewInkflowMessagingThreadId) {
       setOpenMessageThreadId(previewInkflowMessagingThreadId);
-      setActiveTab('messaging');
-      setSelectedAppointment(null);
-      setSidebarOpen(false);
-    });
-  }, [handleSidebarNav, previewInkflowMessagingThreadId]);
+    }
+    setActiveTab('messaging');
+    setSelectedAppointment(null);
+  }, [previewInkflowMessagingThreadId]);
+
+  const handlePromptNewProjectFromPreview = useCallback(() => {
+    setSidebarOpen(false);
+    setSelectedAppointment(null);
+    setRequestsSubTab('projects');
+    setActiveTab('requests');
+  }, []);
+
+  const openClientFicheFromDemande = useCallback((source: ClientFicheDemandeSource) => {
+    if (source.kind === 'appointment') {
+      setSelectedAppointment(source.appointment);
+      return;
+    }
+    if (source.kind === 'booking') {
+      setSelectedAppointment(syntheticAppointmentFromBooking(source.booking));
+      return;
+    }
+    setSelectedAppointment(syntheticAppointmentFromProjectRequest(source.project));
+  }, []);
 
   // sortableOverviewItems removed — KPIs now inline in Prodify layout, custom widgets rendered separately
 
@@ -3257,6 +3405,13 @@ export const DashboardPro: React.FC = () => {
               </Button>
             </Alert>
           )}
+          {useSupabase && demoAccountMode === false && (
+            <PendingCriticalWritesBanner
+              studioId={studioId}
+              userEmail={user?.email}
+              onAfterRetrySuccess={retry}
+            />
+          )}
           {useSupabase && isOnline && !connectionError && lastSyncedAt && (
             <div className="bg-zinc-100/90 dark:bg-zinc-900/50 border-b border-zinc-200/80 dark:border-zinc-800 px-4 py-1.5 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
               <span>
@@ -3613,12 +3768,12 @@ export const DashboardPro: React.FC = () => {
                     <motion.div
                       key={dashboardPanelKey}
                       className="min-w-0"
-                      initial={prefersReducedMotion ? false : { opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={prefersReducedMotion ? undefined : { opacity: 0 }}
+                      initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
                       transition={{
-                        duration: prefersReducedMotion ? 0 : 0.18,
-                        ease: [0.25, 0.1, 0.25, 1],
+                        duration: prefersReducedMotion ? 0 : 0.2,
+                        ease: [0, 0, 0.2, 1],
                       }}
                     >
                       {showTabHero && tabHeroModel && (
@@ -3783,6 +3938,7 @@ export const DashboardPro: React.FC = () => {
                                 projectRequestsLoading={projectRequestsLoading}
                                 projectRequestsLoadError={projectRequestsLoadError}
                                 onRetryProjectRequests={refetchProjectRequests}
+                                onOpenClientFicheFromDemande={openClientFicheFromDemande}
                               />
                             </Suspense>
                           </DashboardTabErrorBoundary>
@@ -5759,8 +5915,14 @@ export const DashboardPro: React.FC = () => {
             onClose={() => setSelectedAppointment(null)}
             data={previewDataForDrawer}
             studioId={studioId || ''}
+            studioName={user?.studioName || generalStudioName || 'Mon studio'}
+            consentPresets={consentTemplates.map(({ title, content }) => ({ title, content }))}
             artistName={user?.name || 'Artiste'}
-            appointment={selectedAppointment}
+            appointment={
+              selectedAppointment && !isSyntheticClientPreviewAppointmentId(selectedAppointment.id)
+                ? selectedAppointment
+                : null
+            }
             onUpdateAppointment={handleAppointmentIdUpdate}
             onOpenCloseout={setSessionCloseoutAppointment}
             onOpenAgenda={() => setActiveTab('agenda')}
@@ -5769,6 +5931,7 @@ export const DashboardPro: React.FC = () => {
             onOpenInkflowDiscussion={
               previewHasInkflowClientAccount ? handleOpenInkflowDiscussionFromPreview : undefined
             }
+            onPromptNewProject={handlePromptNewProjectFromPreview}
           />
         </Suspense>
       ) : null}

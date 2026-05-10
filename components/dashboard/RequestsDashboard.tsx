@@ -21,9 +21,11 @@ import {
   Inbox,
   ChevronRight,
   ArrowLeft,
+  User,
 } from 'lucide-react';
 import { RequestsBookingsListSkeleton } from '../common/LoadingSkeleton';
 import { Appointment, ProjectRequest, Booking, BookingStatus, Client } from '../../types';
+import type { ClientFicheDemandeSource } from '../../lib/clientPreviewFromDemande';
 import { RequestQuickViewSheet } from './RequestQuickViewSheet';
 import { InvoiceButton } from './InvoiceButton';
 import { DevisButton } from './DevisButton';
@@ -91,6 +93,8 @@ interface RequestsDashboardProps {
   onRetryProjectRequests?: () => void;
   /** Garde la sous-navigation « Demandes » du shell alignée (sidebar). */
   onSubTabChange?: (tab: RequestsSubTabId) => void;
+  /** Ouvre le drawer « fiche client » (même contenu que depuis l’agenda). */
+  onOpenClientFicheFromDemande?: (source: ClientFicheDemandeSource) => void;
   /** Après acceptation projet (Edge) — rafraîchir la liste. */
   onProjectRequestsInvalidate?: () => void;
   /** Compte démo : pas d’appel accept réel. */
@@ -122,6 +126,9 @@ const SOURCE_ACCENT = {
   brief: 'border-l-violet-600',
 } as const;
 
+const FICHE_CLIENT_ICON_BTN =
+  'inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 active:scale-[0.98] transition-all touch-manipulation';
+
 function RequestsListErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="border-b border-red-200/90 dark:border-red-900/45 bg-red-50/90 dark:bg-red-950/30 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -149,6 +156,7 @@ type AgendaRequestCardViewProps = {
   onDeposit: () => void;
   onOpenDiscussion?: (threadId: string) => void;
   studioId: string | null;
+  onOpenClientFiche?: () => void;
 };
 
 const AgendaRequestCardView: React.FC<AgendaRequestCardViewProps> = ({
@@ -160,6 +168,7 @@ const AgendaRequestCardView: React.FC<AgendaRequestCardViewProps> = ({
   onDeposit,
   onOpenDiscussion,
   studioId,
+  onOpenClientFiche,
 }) => (
   <div
     className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm border-l-4 ${SOURCE_ACCENT.agenda} p-5 sm:p-6 flex flex-col gap-4 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/25 transition-colors`}
@@ -247,6 +256,18 @@ const AgendaRequestCardView: React.FC<AgendaRequestCardViewProps> = ({
         </div>
       )}
     </div>
+    {onOpenClientFiche && (
+      <div className="w-full sm:ml-14 pt-1">
+        <button
+          type="button"
+          onClick={onOpenClientFiche}
+          className="inline-flex min-h-[44px] w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800/60 text-sm font-semibold text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
+        >
+          <User className="w-4 h-4 shrink-0" aria-hidden />
+          Fiche client
+        </button>
+      </div>
+    )}
   </div>
 );
 
@@ -275,6 +296,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   projectRequestsLoadError = null,
   onRetryProjectRequests,
   onSubTabChange,
+  onOpenClientFicheFromDemande,
   onProjectRequestsInvalidate,
   demoMode = false,
 }) => {
@@ -535,9 +557,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   }, [inboxQueueScope, pendingAppointments.length, pendingBookings.length, pendingProjects.length]);
 
   const handleConfirm = async (apt: Appointment) => {
+    if (!studioId) {
+      toast.error('Studio inconnu — reconnecte-toi.');
+      return;
+    }
     onUpdateAppointment(apt.id, { status: 'confirmed' });
     const recapUrl = inkflowStudioPublicUrl(studioSlug) ?? `${getCanonicalAppOrigin()}/discover`;
     const sent = await sendBookingConfirmation({
+      studioId,
       clientEmail: apt.clientEmail,
       clientName: apt.clientName,
       studioName: user?.studioName || 'Le studio',
@@ -570,8 +597,13 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   };
 
   const handleReject = (apt: Appointment) => {
+    if (!studioId) {
+      toast.error('Studio inconnu.');
+      return;
+    }
     onUpdateAppointment(apt.id, { status: 'cancelled' });
     sendBookingRefusal({
+      studioId,
       clientEmail: apt.clientEmail,
       clientName: apt.clientName,
       studioName: user?.studioName || 'Le studio',
@@ -581,9 +613,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   };
 
   const handleRejectProject = async (pr: ProjectRequest) => {
+    if (!studioId) {
+      toast.error('Studio inconnu.');
+      return;
+    }
     try {
       await onUpdateProjectRequest?.(pr.id, 'rejected');
       sendBookingRefusal({
+        studioId,
         clientEmail: pr.clientEmail,
         clientName: pr.clientName,
         studioName: user?.studioName || 'Le studio',
@@ -621,20 +658,23 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     try {
       if (demoMode || !studioId || !onAddAppointment) {
         await onUpdateBookingStatus?.(bk.id, 'confirmed');
-        const sent = await sendBookingConfirmation({
-          clientEmail: bk.clientEmail,
-          clientName: bk.clientName,
-          studioName: user?.studioName || 'Le studio',
-          requestedDate: bk.requestedDate,
-          requestedTime: bk.requestedTime ?? null,
-          description: bk.description,
-          recapUrl: threadUrl,
-          conversationLink: threadUrl,
-          clientPhone: bk.clientPhone,
-          smsConfirmationOptIn: bk.smsConfirmationOptIn,
-          ...(clientPortalUrlForEmails ? { clientPortalUrl: clientPortalUrlForEmails } : {}),
-        });
-        notifyConfirmed(sent);
+        if (studioId) {
+          const sent = await sendBookingConfirmation({
+            studioId,
+            clientEmail: bk.clientEmail,
+            clientName: bk.clientName,
+            studioName: user?.studioName || 'Le studio',
+            requestedDate: bk.requestedDate,
+            requestedTime: bk.requestedTime ?? null,
+            description: bk.description,
+            recapUrl: threadUrl,
+            conversationLink: threadUrl,
+            clientPhone: bk.clientPhone,
+            smsConfirmationOptIn: bk.smsConfirmationOptIn,
+            ...(clientPortalUrlForEmails ? { clientPortalUrl: clientPortalUrlForEmails } : {}),
+          });
+          notifyConfirmed(sent);
+        }
         return;
       }
 
@@ -694,6 +734,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
 
       const confirmationUrl = inkflowBookingConfirmationUrl(recapToken);
       const sent = await sendBookingConfirmation({
+        studioId,
         clientEmail: bk.clientEmail,
         clientName: bk.clientName,
         studioName: user?.studioName || 'Le studio',
@@ -716,7 +757,12 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   const handleRejectBooking = async (bk: Booking) => {
     try {
       await onUpdateBookingStatus?.(bk.id, 'rejected');
+      if (!studioId) {
+        toast.error('Studio inconnu.');
+        return;
+      }
       sendBookingRefusal({
+        studioId,
         clientEmail: bk.clientEmail,
         clientName: bk.clientName,
         studioName: user?.studioName || 'Le studio',
@@ -799,6 +845,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           const recapUrl =
             inkflowStudioPublicUrl(studioSlug) ?? `${getCanonicalAppOrigin()}/discover`;
           const sent = await sendBookingConfirmation({
+            studioId,
             clientEmail: depositModalAppointment.clientEmail,
             clientName: depositModalAppointment.clientName,
             studioName: user?.studioName || 'Le studio',
@@ -900,6 +947,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         if ('url' in result) {
           const threadUrl = inkflowPublicMessagesUrl(depositModalBooking.id);
           const sent = await sendBookingConfirmation({
+            studioId,
             clientEmail: depositModalBooking.clientEmail,
             clientName: depositModalBooking.clientName,
             studioName: user?.studioName || 'Le studio',
@@ -1004,6 +1052,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           setDepositUrl(result.url);
           const threadUrl = inkflowPublicMessagesUrl(`pr_${depositModalProject.id}`);
           const sent = await sendBookingConfirmation({
+            studioId,
             clientEmail: depositModalProject.clientEmail,
             clientName: depositModalProject.clientName,
             studioName: user?.studioName || 'Le studio',
@@ -1362,6 +1411,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                             onDeposit={() => openDepositModal(apt)}
                             onOpenDiscussion={onOpenProjectDiscussion}
                             studioId={studioId}
+                            onOpenClientFiche={
+                              onOpenClientFicheFromDemande
+                                ? () =>
+                                    onOpenClientFicheFromDemande({
+                                      kind: 'appointment',
+                                      appointment: apt,
+                                    })
+                                : undefined
+                            }
                           />
                         ))}
                       </div>
@@ -1407,112 +1465,135 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                 key={bk.id}
                                 className={`p-3.5 sm:p-5 md:p-6 flex flex-col lg:flex-row lg:items-start gap-3 sm:gap-4 group rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm border-l-4 ${vitrineAccent} hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors touch-manipulation min-w-0`}
                               >
-                                <button
-                                  type="button"
-                                  onClick={() => setSheetItem({ ...bk, _type: 'booking' })}
-                                  className="flex flex-1 min-w-0 text-left w-full lg:flex-initial lg:min-w-0 lg:max-w-[min(100%,42rem)] xl:max-w-[min(100%,48rem)]"
-                                >
-                                  <div className="flex gap-3 sm:gap-4 items-start md:items-center min-w-0 w-full">
-                                    <div
-                                      className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 shrink-0 ${isProfileThumb ? 'rounded-full' : 'rounded-xl'} bg-slate-100 dark:bg-zinc-800 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700`}
-                                    >
-                                      {displayThumb ? (
-                                        <img
-                                          src={displayThumb}
-                                          alt=""
-                                          loading="lazy"
-                                          decoding="async"
-                                          className="w-full h-full object-cover"
-                                        />
-                                      ) : (
-                                        <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                                          <FileText className="w-6 h-6 sm:w-8 sm:h-8" />
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-semibold text-base sm:text-lg text-slate-900 dark:text-white break-words">
-                                        {bk.clientName}
+                                <div className="flex flex-1 min-w-0 gap-2 items-start">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSheetItem({ ...bk, _type: 'booking' })}
+                                    className="flex flex-1 min-w-0 text-left w-full lg:flex-initial lg:min-w-0 lg:max-w-[min(100%,42rem)] xl:max-w-[min(100%,48rem)]"
+                                  >
+                                    <div className="flex gap-3 sm:gap-4 items-start md:items-center min-w-0 w-full">
+                                      <div
+                                        className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 shrink-0 ${isProfileThumb ? 'rounded-full' : 'rounded-xl'} bg-slate-100 dark:bg-zinc-800 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700`}
+                                      >
+                                        {displayThumb ? (
+                                          <img
+                                            src={displayThumb}
+                                            alt=""
+                                            loading="lazy"
+                                            decoding="async"
+                                            className="w-full h-full object-cover"
+                                          />
+                                        ) : (
+                                          <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
+                                            <FileText className="w-6 h-6 sm:w-8 sm:h-8" />
+                                          </span>
+                                        )}
                                       </div>
-                                      <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-start gap-2 min-w-0">
-                                        <Mail className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                                        <span className="min-w-0 truncate sm:whitespace-normal sm:break-words">
-                                          {bk.clientEmail}
-                                        </span>
-                                      </div>
-                                      {stampRwBk && (
-                                        <div className="mt-2 sm:mt-2.5 flex items-start gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-blue-200/90 bg-blue-50/90 dark:border-blue-500/35 dark:bg-blue-500/10 px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm text-blue-900 dark:text-blue-100">
-                                          <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
-                                          <span className="leading-snug">
-                                            <span className="hidden sm:inline">
-                                              Avantage fidélité :{' '}
-                                            </span>
-                                            <span className="sm:hidden">Fidélité </span>
-                                            <strong>{stampRwBk.amountEuros}€</strong>
-                                            <span className="hidden sm:inline"> — code </span>
-                                            <span className="sm:hidden"> · </span>
-                                            <code className="font-mono text-[10px] sm:text-xs bg-white/70 dark:bg-blue-950/40 px-1 sm:px-1.5 py-0.5 rounded-md">
-                                              {stampRwBk.promoCode}
-                                            </code>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-semibold text-base sm:text-lg text-slate-900 dark:text-white break-words">
+                                          {bk.clientName}
+                                        </div>
+                                        <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-start gap-2 min-w-0">
+                                          <Mail className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                          <span className="min-w-0 truncate sm:whitespace-normal sm:break-words">
+                                            {bk.clientEmail}
                                           </span>
                                         </div>
-                                      )}
-                                      <div className="flex flex-wrap gap-1.5 mt-2 sm:mt-2.5">
-                                        <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
-                                          {reqType === 'flash' ? (
-                                            <Sparkles className="w-3 h-3" />
-                                          ) : (
-                                            <FileText className="w-3 h-3" />
+                                        {stampRwBk && (
+                                          <div className="mt-2 sm:mt-2.5 flex items-start gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-blue-200/90 bg-blue-50/90 dark:border-blue-500/35 dark:bg-blue-500/10 px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm text-blue-900 dark:text-blue-100">
+                                            <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                                            <span className="leading-snug">
+                                              <span className="hidden sm:inline">
+                                                Avantage fidélité :{' '}
+                                              </span>
+                                              <span className="sm:hidden">Fidélité </span>
+                                              <strong>{stampRwBk.amountEuros}€</strong>
+                                              <span className="hidden sm:inline"> — code </span>
+                                              <span className="sm:hidden"> · </span>
+                                              <code className="font-mono text-[10px] sm:text-xs bg-white/70 dark:bg-blue-950/40 px-1 sm:px-1.5 py-0.5 rounded-md">
+                                                {stampRwBk.promoCode}
+                                              </code>
+                                            </span>
+                                          </div>
+                                        )}
+                                        <div className="flex flex-wrap gap-1.5 mt-2 sm:mt-2.5">
+                                          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
+                                            {reqType === 'flash' ? (
+                                              <Sparkles className="w-3 h-3" />
+                                            ) : (
+                                              <FileText className="w-3 h-3" />
+                                            )}
+                                            {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
+                                          </span>
+                                          {placement && (
+                                            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
+                                              <MapPin className="w-3 h-3" />{' '}
+                                              {formatPlacementForBadge(placement)}
+                                            </span>
                                           )}
-                                          {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
-                                        </span>
-                                        {placement && (
-                                          <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
-                                            <MapPin className="w-3 h-3" />{' '}
-                                            {formatPlacementForBadge(placement)}
-                                          </span>
-                                        )}
-                                        {size && (
-                                          <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
-                                            <Ruler className="w-3 h-3" /> {formatSizeForBadge(size)}
-                                          </span>
-                                        )}
-                                      </div>
-                                      <p className="mt-2 sm:mt-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 line-clamp-1 sm:line-clamp-2">
-                                        {bk.description}
-                                      </p>
-                                      <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-                                        <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
-                                          {new Date(bk.requestedDate).toLocaleDateString('fr-FR', {
-                                            dateStyle: 'medium',
-                                          })}
-                                        </span>
-                                        {bk.requestedTime && (
+                                          {size && (
+                                            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
+                                              <Ruler className="w-3 h-3" />{' '}
+                                              {formatSizeForBadge(size)}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="mt-2 sm:mt-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 line-clamp-1 sm:line-clamp-2">
+                                          {bk.description}
+                                        </p>
+                                        <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                                           <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
-                                            {bk.requestedTime === 'morning'
-                                              ? 'Matin'
-                                              : bk.requestedTime === 'afternoon'
-                                                ? 'Après-midi'
-                                                : bk.requestedTime === 'evening'
-                                                  ? 'Soirée'
-                                                  : bk.requestedTime}
+                                            {new Date(bk.requestedDate).toLocaleDateString(
+                                              'fr-FR',
+                                              {
+                                                dateStyle: 'medium',
+                                              }
+                                            )}
                                           </span>
-                                        )}
+                                          {bk.requestedTime && (
+                                            <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
+                                              {bk.requestedTime === 'morning'
+                                                ? 'Matin'
+                                                : bk.requestedTime === 'afternoon'
+                                                  ? 'Après-midi'
+                                                  : bk.requestedTime === 'evening'
+                                                    ? 'Soirée'
+                                                    : bk.requestedTime}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <span
+                                          className={`inline-block mt-2 sm:mt-3 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${
+                                            bk.status === 'pending'
+                                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                                              : bk.status === 'confirmed' ||
+                                                  bk.status === 'accepted'
+                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
+                                                : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-slate-400'
+                                          }`}
+                                        >
+                                          {BOOKING_STATUS_LABELS[bk.status] || bk.status}
+                                        </span>
                                       </div>
-                                      <span
-                                        className={`inline-block mt-2 sm:mt-3 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${
-                                          bk.status === 'pending'
-                                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
-                                            : bk.status === 'confirmed' || bk.status === 'accepted'
-                                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
-                                              : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-slate-400'
-                                        }`}
-                                      >
-                                        {BOOKING_STATUS_LABELS[bk.status] || bk.status}
-                                      </span>
                                     </div>
-                                  </div>
-                                </button>
+                                  </button>
+                                  {onOpenClientFicheFromDemande && (
+                                    <button
+                                      type="button"
+                                      title="Fiche client complète"
+                                      aria-label="Fiche client complète"
+                                      onClick={() =>
+                                        onOpenClientFicheFromDemande({
+                                          kind: 'booking',
+                                          booking: bk,
+                                        })
+                                      }
+                                      className={FICHE_CLIENT_ICON_BTN}
+                                    >
+                                      <User className="w-5 h-5 shrink-0" aria-hidden />
+                                    </button>
+                                  )}
+                                </div>
                                 {bk.status === 'pending' && (
                                   <div
                                     className="flex-shrink-0 w-full lg:w-[min(100%,20.5rem)] xl:w-[22rem] pt-2.5 sm:pt-3 mt-0.5 border-t border-slate-100 dark:border-zinc-800 lg:pt-0 lg:mt-0 lg:border-t-0 lg:ml-auto"
@@ -1646,81 +1727,99 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                 key={pr.id}
                                 className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm border-l-4 ${SOURCE_ACCENT.brief} p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors touch-manipulation`}
                               >
-                                <button
-                                  type="button"
-                                  onClick={() => setSheetItem({ ...pr, _type: 'project' })}
-                                  className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto"
-                                >
-                                  <div className="flex gap-4 items-start md:items-center">
-                                    <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700">
-                                      {thumbUrl ? (
-                                        <img
-                                          src={thumbUrl}
-                                          alt=""
-                                          loading="lazy"
-                                          decoding="async"
-                                          className="w-full h-full object-cover"
-                                        />
-                                      ) : (
-                                        <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                                          <FileText className="w-8 h-8" />
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-semibold text-lg text-slate-900 dark:text-white">
-                                        {pr.clientName}
-                                      </div>
-                                      <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
-                                        <span className="flex items-center gap-1.5">
-                                          <Mail className="w-3.5 h-3.5 shrink-0" />
-                                          {pr.clientEmail}
-                                        </span>
-                                        {igProject && (
-                                          <span className="text-slate-500 dark:text-slate-400 text-xs">
-                                            @{igProject}
+                                <div className="flex flex-1 min-w-0 gap-2 items-start md:items-center w-full md:w-auto">
+                                  <button
+                                    type="button"
+                                    onClick={() => setSheetItem({ ...pr, _type: 'project' })}
+                                    className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto"
+                                  >
+                                    <div className="flex gap-4 items-start md:items-center">
+                                      <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700">
+                                        {thumbUrl ? (
+                                          <img
+                                            src={thumbUrl}
+                                            alt=""
+                                            loading="lazy"
+                                            decoding="async"
+                                            className="w-full h-full object-cover"
+                                          />
+                                        ) : (
+                                          <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
+                                            <FileText className="w-8 h-8" />
                                           </span>
                                         )}
                                       </div>
-                                      <div className="flex flex-wrap gap-1.5 mt-2.5">
-                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
-                                          {reqType === 'flash' ? (
-                                            <Sparkles className="w-3 h-3" />
-                                          ) : (
-                                            <FileText className="w-3 h-3" />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-semibold text-lg text-slate-900 dark:text-white">
+                                          {pr.clientName}
+                                        </div>
+                                        <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                                          <span className="flex items-center gap-1.5">
+                                            <Mail className="w-3.5 h-3.5 shrink-0" />
+                                            {pr.clientEmail}
+                                          </span>
+                                          {igProject && (
+                                            <span className="text-slate-500 dark:text-slate-400 text-xs">
+                                              @{igProject}
+                                            </span>
                                           )}
-                                          {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
-                                        </span>
-                                        {pr.placement && (
-                                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
-                                            <MapPin className="w-3 h-3" />{' '}
-                                            {formatPlacementForBadge(pr.placement)}
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5 mt-2.5">
+                                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
+                                            {reqType === 'flash' ? (
+                                              <Sparkles className="w-3 h-3" />
+                                            ) : (
+                                              <FileText className="w-3 h-3" />
+                                            )}
+                                            {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
                                           </span>
-                                        )}
-                                        {pr.size && (
-                                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
-                                            <Ruler className="w-3 h-3" />{' '}
-                                            {formatSizeForBadge(pr.size)}
+                                          {pr.placement && (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
+                                              <MapPin className="w-3 h-3" />{' '}
+                                              {formatPlacementForBadge(pr.placement)}
+                                            </span>
+                                          )}
+                                          {pr.size && (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
+                                              <Ruler className="w-3 h-3" />{' '}
+                                              {formatSizeForBadge(pr.size)}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="mt-2.5 text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
+                                          {pr.description}
+                                        </p>
+                                        <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                                          {new Date(pr.createdAt).toLocaleString('fr-FR', {
+                                            dateStyle: 'medium',
+                                            timeStyle: 'short',
+                                          })}
+                                        </div>
+                                        {pr.status === 'pending' && (
+                                          <span className="inline-block mt-3 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
+                                            Nouvelle
                                           </span>
                                         )}
                                       </div>
-                                      <p className="mt-2.5 text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
-                                        {pr.description}
-                                      </p>
-                                      <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                                        {new Date(pr.createdAt).toLocaleString('fr-FR', {
-                                          dateStyle: 'medium',
-                                          timeStyle: 'short',
-                                        })}
-                                      </div>
-                                      {pr.status === 'pending' && (
-                                        <span className="inline-block mt-3 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
-                                          Nouvelle
-                                        </span>
-                                      )}
                                     </div>
-                                  </div>
-                                </button>
+                                  </button>
+                                  {onOpenClientFicheFromDemande && (
+                                    <button
+                                      type="button"
+                                      title="Fiche client complète"
+                                      aria-label="Fiche client complète"
+                                      onClick={() =>
+                                        onOpenClientFicheFromDemande({
+                                          kind: 'project',
+                                          project: pr,
+                                        })
+                                      }
+                                      className={FICHE_CLIENT_ICON_BTN}
+                                    >
+                                      <User className="w-5 h-5 shrink-0" aria-hidden />
+                                    </button>
+                                  )}
+                                </div>
                                 <div
                                   className="flex flex-col gap-3 flex-shrink-0 w-full md:w-auto md:max-w-sm md:ml-4"
                                   onClick={(e) => e.stopPropagation()}
@@ -1808,6 +1907,15 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                     onDeposit={() => openDepositModal(apt)}
                     onOpenDiscussion={onOpenProjectDiscussion}
                     studioId={studioId}
+                    onOpenClientFiche={
+                      onOpenClientFicheFromDemande
+                        ? () =>
+                            onOpenClientFicheFromDemande({
+                              kind: 'appointment',
+                              appointment: apt,
+                            })
+                        : undefined
+                    }
                   />
                 ))}
               </div>
@@ -1940,110 +2048,127 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                           key={bk.id}
                           className={`p-3.5 sm:p-5 md:p-6 flex flex-col lg:flex-row lg:items-start gap-3 sm:gap-4 group rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm border-l-4 ${vitrineAccent} hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors touch-manipulation min-w-0`}
                         >
-                          <button
-                            type="button"
-                            onClick={() => setSheetItem({ ...bk, _type: 'booking' })}
-                            className="flex flex-1 min-w-0 text-left w-full lg:flex-initial lg:min-w-0 lg:max-w-[min(100%,42rem)] xl:max-w-[min(100%,48rem)]"
-                          >
-                            <div className="flex gap-3 sm:gap-4 items-start md:items-center min-w-0 w-full">
-                              <div
-                                className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 shrink-0 ${isProfileThumb ? 'rounded-full' : 'rounded-xl'} bg-slate-100 dark:bg-zinc-800 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700`}
-                              >
-                                {displayThumb ? (
-                                  <img
-                                    src={displayThumb}
-                                    alt=""
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                                    <FileText className="w-6 h-6 sm:w-8 sm:h-8" />
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-base sm:text-lg text-slate-900 dark:text-white break-words">
-                                  {bk.clientName}
+                          <div className="flex flex-1 min-w-0 gap-2 items-start">
+                            <button
+                              type="button"
+                              onClick={() => setSheetItem({ ...bk, _type: 'booking' })}
+                              className="flex flex-1 min-w-0 text-left w-full lg:flex-initial lg:min-w-0 lg:max-w-[min(100%,42rem)] xl:max-w-[min(100%,48rem)]"
+                            >
+                              <div className="flex gap-3 sm:gap-4 items-start md:items-center min-w-0 w-full">
+                                <div
+                                  className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 shrink-0 ${isProfileThumb ? 'rounded-full' : 'rounded-xl'} bg-slate-100 dark:bg-zinc-800 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700`}
+                                >
+                                  {displayThumb ? (
+                                    <img
+                                      src={displayThumb}
+                                      alt=""
+                                      loading="lazy"
+                                      decoding="async"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
+                                      <FileText className="w-6 h-6 sm:w-8 sm:h-8" />
+                                    </span>
+                                  )}
                                 </div>
-                                <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-start gap-2 min-w-0">
-                                  <Mail className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                                  <span className="min-w-0 truncate sm:whitespace-normal sm:break-words">
-                                    {bk.clientEmail}
-                                  </span>
-                                </div>
-                                {stampRwBk && (
-                                  <div className="mt-2 sm:mt-2.5 flex items-start gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-blue-200/90 bg-blue-50/90 dark:border-blue-500/35 dark:bg-blue-500/10 px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm text-blue-900 dark:text-blue-100">
-                                    <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
-                                    <span className="leading-snug">
-                                      <span className="hidden sm:inline">Avantage fidélité : </span>
-                                      <span className="sm:hidden">Fidélité </span>
-                                      <strong>{stampRwBk.amountEuros}€</strong>
-                                      <span className="hidden sm:inline"> — code </span>
-                                      <span className="sm:hidden"> · </span>
-                                      <code className="font-mono text-[10px] sm:text-xs bg-white/70 dark:bg-blue-950/40 px-1 sm:px-1.5 py-0.5 rounded-md">
-                                        {stampRwBk.promoCode}
-                                      </code>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-base sm:text-lg text-slate-900 dark:text-white break-words">
+                                    {bk.clientName}
+                                  </div>
+                                  <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-start gap-2 min-w-0">
+                                    <Mail className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                    <span className="min-w-0 truncate sm:whitespace-normal sm:break-words">
+                                      {bk.clientEmail}
                                     </span>
                                   </div>
-                                )}
-                                <div className="flex flex-wrap gap-1.5 mt-2 sm:mt-2.5">
-                                  <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
-                                    {reqType === 'flash' ? (
-                                      <Sparkles className="w-3 h-3" />
-                                    ) : (
-                                      <FileText className="w-3 h-3" />
+                                  {stampRwBk && (
+                                    <div className="mt-2 sm:mt-2.5 flex items-start gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-blue-200/90 bg-blue-50/90 dark:border-blue-500/35 dark:bg-blue-500/10 px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm text-blue-900 dark:text-blue-100">
+                                      <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                                      <span className="leading-snug">
+                                        <span className="hidden sm:inline">
+                                          Avantage fidélité :{' '}
+                                        </span>
+                                        <span className="sm:hidden">Fidélité </span>
+                                        <strong>{stampRwBk.amountEuros}€</strong>
+                                        <span className="hidden sm:inline"> — code </span>
+                                        <span className="sm:hidden"> · </span>
+                                        <code className="font-mono text-[10px] sm:text-xs bg-white/70 dark:bg-blue-950/40 px-1 sm:px-1.5 py-0.5 rounded-md">
+                                          {stampRwBk.promoCode}
+                                        </code>
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div className="flex flex-wrap gap-1.5 mt-2 sm:mt-2.5">
+                                    <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
+                                      {reqType === 'flash' ? (
+                                        <Sparkles className="w-3 h-3" />
+                                      ) : (
+                                        <FileText className="w-3 h-3" />
+                                      )}
+                                      {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
+                                    </span>
+                                    {placement && (
+                                      <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
+                                        <MapPin className="w-3 h-3" />{' '}
+                                        {formatPlacementForBadge(placement)}
+                                      </span>
                                     )}
-                                    {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
-                                  </span>
-                                  {placement && (
-                                    <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
-                                      <MapPin className="w-3 h-3" />{' '}
-                                      {formatPlacementForBadge(placement)}
-                                    </span>
-                                  )}
-                                  {size && (
-                                    <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
-                                      <Ruler className="w-3 h-3" /> {formatSizeForBadge(size)}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="mt-2 sm:mt-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 line-clamp-1 sm:line-clamp-2">
-                                  {bk.description}
-                                </p>
-                                <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-                                  <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
-                                    {new Date(bk.requestedDate).toLocaleDateString('fr-FR', {
-                                      dateStyle: 'medium',
-                                    })}
-                                  </span>
-                                  {bk.requestedTime && (
+                                    {size && (
+                                      <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
+                                        <Ruler className="w-3 h-3" /> {formatSizeForBadge(size)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="mt-2 sm:mt-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 line-clamp-1 sm:line-clamp-2">
+                                    {bk.description}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                                     <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
-                                      {bk.requestedTime === 'morning'
-                                        ? 'Matin'
-                                        : bk.requestedTime === 'afternoon'
-                                          ? 'Après-midi'
-                                          : bk.requestedTime === 'evening'
-                                            ? 'Soirée'
-                                            : bk.requestedTime}
+                                      {new Date(bk.requestedDate).toLocaleDateString('fr-FR', {
+                                        dateStyle: 'medium',
+                                      })}
                                     </span>
-                                  )}
+                                    {bk.requestedTime && (
+                                      <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
+                                        {bk.requestedTime === 'morning'
+                                          ? 'Matin'
+                                          : bk.requestedTime === 'afternoon'
+                                            ? 'Après-midi'
+                                            : bk.requestedTime === 'evening'
+                                              ? 'Soirée'
+                                              : bk.requestedTime}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`inline-block mt-2 sm:mt-3 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${
+                                      bk.status === 'pending'
+                                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                                        : bk.status === 'confirmed' || bk.status === 'accepted'
+                                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
+                                          : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-slate-400'
+                                    }`}
+                                  >
+                                    {BOOKING_STATUS_LABELS[bk.status] || bk.status}
+                                  </span>
                                 </div>
-                                <span
-                                  className={`inline-block mt-2 sm:mt-3 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${
-                                    bk.status === 'pending'
-                                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
-                                      : bk.status === 'confirmed' || bk.status === 'accepted'
-                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
-                                        : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-slate-400'
-                                  }`}
-                                >
-                                  {BOOKING_STATUS_LABELS[bk.status] || bk.status}
-                                </span>
                               </div>
-                            </div>
-                          </button>
+                            </button>
+                            {onOpenClientFicheFromDemande && (
+                              <button
+                                type="button"
+                                title="Fiche client complète"
+                                aria-label="Fiche client complète"
+                                onClick={() =>
+                                  onOpenClientFicheFromDemande({ kind: 'booking', booking: bk })
+                                }
+                                className={FICHE_CLIENT_ICON_BTN}
+                              >
+                                <User className="w-5 h-5 shrink-0" aria-hidden />
+                              </button>
+                            )}
+                          </div>
                           {bk.status === 'pending' && (
                             <div
                               className="flex-shrink-0 w-full lg:w-[min(100%,20.5rem)] xl:w-[22rem] pt-2.5 sm:pt-3 mt-0.5 border-t border-slate-100 dark:border-zinc-800 lg:pt-0 lg:mt-0 lg:border-t-0 lg:ml-auto"
@@ -2194,78 +2319,93 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         key={pr.id}
                         className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm border-l-4 ${SOURCE_ACCENT.brief} p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors touch-manipulation`}
                       >
-                        <button
-                          type="button"
-                          onClick={() => setSheetItem({ ...pr, _type: 'project' })}
-                          className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto"
-                        >
-                          <div className="flex gap-4 items-start md:items-center">
-                            <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700">
-                              {thumbUrl ? (
-                                <img
-                                  src={thumbUrl}
-                                  alt=""
-                                  loading="lazy"
-                                  decoding="async"
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                                  <FileText className="w-8 h-8" />
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-lg text-slate-900 dark:text-white">
-                                {pr.clientName}
-                              </div>
-                              <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
-                                <span className="flex items-center gap-1.5">
-                                  <Mail className="w-3.5 h-3.5 shrink-0" />
-                                  {pr.clientEmail}
-                                </span>
-                                {igProject && (
-                                  <span className="text-slate-500 dark:text-slate-400 text-xs">
-                                    @{igProject}
+                        <div className="flex flex-1 min-w-0 gap-2 items-start md:items-center w-full md:w-auto">
+                          <button
+                            type="button"
+                            onClick={() => setSheetItem({ ...pr, _type: 'project' })}
+                            className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto"
+                          >
+                            <div className="flex gap-4 items-start md:items-center">
+                              <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700">
+                                {thumbUrl ? (
+                                  <img
+                                    src={thumbUrl}
+                                    alt=""
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
+                                    <FileText className="w-8 h-8" />
                                   </span>
                                 )}
                               </div>
-                              <div className="flex flex-wrap gap-1.5 mt-2.5">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
-                                  {reqType === 'flash' ? (
-                                    <Sparkles className="w-3 h-3" />
-                                  ) : (
-                                    <FileText className="w-3 h-3" />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-semibold text-lg text-slate-900 dark:text-white">
+                                  {pr.clientName}
+                                </div>
+                                <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                                  <span className="flex items-center gap-1.5">
+                                    <Mail className="w-3.5 h-3.5 shrink-0" />
+                                    {pr.clientEmail}
+                                  </span>
+                                  {igProject && (
+                                    <span className="text-slate-500 dark:text-slate-400 text-xs">
+                                      @{igProject}
+                                    </span>
                                   )}
-                                  {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
+                                </div>
+                                <div className="flex flex-wrap gap-1.5 mt-2.5">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
+                                    {reqType === 'flash' ? (
+                                      <Sparkles className="w-3 h-3" />
+                                    ) : (
+                                      <FileText className="w-3 h-3" />
+                                    )}
+                                    {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
+                                  </span>
+                                  {pr.placement && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
+                                      <MapPin className="w-3 h-3" />{' '}
+                                      {formatPlacementForBadge(pr.placement)}
+                                    </span>
+                                  )}
+                                  {pr.size && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
+                                      <Ruler className="w-3 h-3" /> {formatSizeForBadge(pr.size)}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="mt-2.5 text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
+                                  {pr.description}
+                                </p>
+                                <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                                  {new Date(pr.createdAt).toLocaleString('fr-FR', {
+                                    dateStyle: 'medium',
+                                    timeStyle: 'short',
+                                  })}
+                                </div>
+                                <span className="inline-block mt-3 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
+                                  Nouvelle
                                 </span>
-                                {pr.placement && (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
-                                    <MapPin className="w-3 h-3" />{' '}
-                                    {formatPlacementForBadge(pr.placement)}
-                                  </span>
-                                )}
-                                {pr.size && (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
-                                    <Ruler className="w-3 h-3" /> {formatSizeForBadge(pr.size)}
-                                  </span>
-                                )}
                               </div>
-                              <p className="mt-2.5 text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
-                                {pr.description}
-                              </p>
-                              <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                                {new Date(pr.createdAt).toLocaleString('fr-FR', {
-                                  dateStyle: 'medium',
-                                  timeStyle: 'short',
-                                })}
-                              </div>
-                              <span className="inline-block mt-3 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
-                                Nouvelle
-                              </span>
                             </div>
-                          </div>
-                        </button>
+                          </button>
+                          {onOpenClientFicheFromDemande && (
+                            <button
+                              type="button"
+                              title="Fiche client complète"
+                              aria-label="Fiche client complète"
+                              onClick={() =>
+                                onOpenClientFicheFromDemande({ kind: 'project', project: pr })
+                              }
+                              className={FICHE_CLIENT_ICON_BTN}
+                            >
+                              <User className="w-5 h-5 shrink-0" aria-hidden />
+                            </button>
+                          )}
+                        </div>
                         <div
                           className="flex flex-col gap-3 flex-shrink-0 w-full md:w-auto md:max-w-sm md:ml-4"
                           onClick={(e) => e.stopPropagation()}
@@ -2413,6 +2553,22 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                             )}
                           </div>
                         </div>
+                        {onOpenClientFicheFromDemande && (
+                          <button
+                            type="button"
+                            title="Fiche client complète"
+                            aria-label="Fiche client complète"
+                            onClick={() =>
+                              onOpenClientFicheFromDemande({
+                                kind: 'appointment',
+                                appointment: apt,
+                              })
+                            }
+                            className={`shrink-0 self-start sm:mt-0.5 ${FICHE_CLIENT_ICON_BTN}`}
+                          >
+                            <User className="w-5 h-5 shrink-0" aria-hidden />
+                          </button>
+                        )}
                       </div>
 
                       <div className="flex flex-col gap-2 sm:items-end sm:ml-14">
@@ -2597,6 +2753,17 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
         onConfirmVitrineBooking={async (item) => {
           if (item._type === 'booking') await handleConfirmBooking(item);
         }}
+        onOpenFullClientFiche={
+          sheetItem && onOpenClientFicheFromDemande
+            ? () => {
+                if (sheetItem._type === 'project') {
+                  onOpenClientFicheFromDemande({ kind: 'project', project: sheetItem });
+                } else {
+                  onOpenClientFicheFromDemande({ kind: 'booking', booking: sheetItem });
+                }
+              }
+            : undefined
+        }
         onOpenProjectDiscussion={onOpenProjectDiscussion}
         onAcceptProject={
           studioId

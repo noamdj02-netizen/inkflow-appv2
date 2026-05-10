@@ -752,7 +752,17 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
                                           <button
                                             type="button"
                                             onClick={() =>
-                                              onSelectGoogleBusinessLocation?.(loc.name)
+                                              void Promise.resolve(
+                                                onSelectGoogleBusinessLocation?.(loc.name)
+                                              ).catch((e: unknown) => {
+                                                const msg =
+                                                  e instanceof Error
+                                                    ? e.message
+                                                    : 'Enregistrement impossible';
+                                                toast.error(
+                                                  msg.length > 160 ? `${msg.slice(0, 157)}…` : msg
+                                                );
+                                              })
                                             }
                                             className="w-full text-left px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all active:scale-[0.99]"
                                           >

@@ -15,6 +15,7 @@ import {
   AtSign,
   MessageCircle,
   CreditCard,
+  User,
 } from 'lucide-react';
 import type { ProjectRequest, Booking } from '../../types';
 import { instagramMessageUrl } from '../../lib/instagramUtils';
@@ -47,6 +48,8 @@ interface RequestQuickViewSheetProps {
   onOpenProjectDiscussion?: (threadId: string) => void;
   /** Brief projet en attente : ouvre la modale d’acceptation avec créneau. */
   onAcceptProject?: (project: ProjectRequest) => void;
+  /** Ouvre la fiche client complète (drawer dashboard). */
+  onOpenFullClientFiche?: () => void;
 }
 
 const PLACEMENT_LABELS: Record<string, string> = {
@@ -93,6 +96,7 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
   onProposeDate,
   onOpenProjectDiscussion,
   onAcceptProject,
+  onOpenFullClientFiche,
 }) => {
   const toast = useToast();
   if (!item) return null;
@@ -212,6 +216,20 @@ export const RequestQuickViewSheet: React.FC<RequestQuickViewSheetProps> = ({
                 <Mail className="w-4 h-4 shrink-0" /> Email
               </a>
             </div>
+
+            {onOpenFullClientFiche && (
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenFullClientFiche();
+                  onClose();
+                }}
+                className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 active:scale-[0.98] transition-all shadow-sm"
+              >
+                <User className="w-5 h-5 shrink-0" aria-hidden />
+                Fiche client complète
+              </button>
+            )}
 
             {/* Badges */}
             <div className="flex flex-wrap gap-2">

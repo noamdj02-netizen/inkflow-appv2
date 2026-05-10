@@ -7,6 +7,7 @@ import { wrapEmailLayout, escapeHtml, getEmailNavigationBaseUrls } from "../_sha
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { getGoTrueUser } from "../_shared/supabaseAuth.ts";
+import { internalFunctionSecretOk } from "../_shared/edgeInvokeAuth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "";
@@ -72,21 +73,24 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Method not allowed", allowed: ["POST"] }, 405, corsHeaders);
   }
 
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return jsonResponse({ error: "Unauthorized", code: "missing_authorization" }, 401, corsHeaders);
-  }
-  const accessToken = authHeader.slice(7).trim();
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    return jsonResponse({ error: "Server misconfiguration" }, 500, corsHeaders);
-  }
-  const caller = await getGoTrueUser(SUPABASE_URL, SUPABASE_ANON_KEY, accessToken);
-  if (!caller?.id) {
-    return jsonResponse(
-      { error: "Session invalide ou expirée", code: "invalid_session" },
-      401,
-      corsHeaders,
-    );
+  const internalOk = internalFunctionSecretOk(req);
+  if (!internalOk) {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return jsonResponse({ error: "Unauthorized", code: "missing_authorization" }, 401, corsHeaders);
+    }
+    const accessToken = authHeader.slice(7).trim();
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      return jsonResponse({ error: "Server misconfiguration" }, 500, corsHeaders);
+    }
+    const caller = await getGoTrueUser(SUPABASE_URL, SUPABASE_ANON_KEY, accessToken);
+    if (!caller?.id) {
+      return jsonResponse(
+        { error: "Session invalide ou expirée", code: "invalid_session" },
+        401,
+        corsHeaders,
+      );
+    }
   }
 
   try {

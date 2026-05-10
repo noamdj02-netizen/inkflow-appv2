@@ -166,7 +166,6 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (!id.includes('node_modules')) return undefined;
-            if (id.includes('xlsx')) return 'vendor-xlsx';
             if (id.includes('recharts')) return 'vendor-charts';
             if (id.includes('@supabase')) return 'vendor-supabase';
             if (id.includes('jspdf')) return 'vendor-pdf';

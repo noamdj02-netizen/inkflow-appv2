@@ -1,8 +1,20 @@
 import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import type { useToast } from '../contexts/ToastContext';
+import {
+  clearPendingCriticalWrite,
+  enqueuePendingCriticalInsert,
+  type PendingCriticalWriteKind,
+} from '../lib/pendingCriticalWritesStorage';
 
 type SetState<T> = Dispatch<SetStateAction<T[]>>;
 type ToastHandle = ReturnType<typeof useToast>;
+
+/** Métadonnées pour rejouer une création si l’app est fermée avant la fin du fetch. */
+export type OptimisticPersistMeta = {
+  kind: PendingCriticalWriteKind;
+  studioId: string;
+  userEmailNorm: string;
+};
 
 /**
  * Provides optimistic CRUD operations with automatic rollback on server error.
@@ -10,6 +22,7 @@ type ToastHandle = ReturnType<typeof useToast>;
  * Usage:
  *   const mutation = useOptimisticMutation(setAppointments, toast);
  *   mutation.add(newItem, (item) => saveToSupabase(item));
+ *   mutation.add(newItem, saveFn, { kind: 'appointment', studioId, userEmailNorm });
  *   mutation.update('id', (item) => ({ ...item, status: 'confirmed' }), (updated) => saveToSupabase(updated));
  *   mutation.remove('id', (id) => deleteFromSupabase(id));
  */
@@ -20,12 +33,24 @@ export function useOptimisticMutation<T extends { id: string }>(
   const inflightRef = useRef(0);
 
   const add = useCallback(
-    (item: T, serverFn: (item: T) => Promise<unknown>) => {
+    (item: T, serverFn: (item: T) => Promise<unknown>, persist?: OptimisticPersistMeta) => {
+      if (persist) {
+        enqueuePendingCriticalInsert({
+          kind: persist.kind,
+          studioId: persist.studioId,
+          userEmailNorm: persist.userEmailNorm,
+          entityId: item.id,
+          payload: item,
+        });
+      }
       // Optimistic: add immediately
       setState((prev) => [...prev, item]);
       inflightRef.current++;
 
       serverFn(item)
+        .then(() => {
+          if (persist) clearPendingCriticalWrite(persist.kind, item.id);
+        })
         .catch((err) => {
           // Rollback: remove the optimistically added item
           setState((prev) => prev.filter((i) => i.id !== item.id));

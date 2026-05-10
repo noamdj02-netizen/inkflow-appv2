@@ -2,9 +2,14 @@ import { supabase } from './supabase';
 import { sendProjectNotification } from './sendNotification';
 import type { ProjectRequestFormData } from '../types';
 
-export async function createProjectRequest(data: ProjectRequestFormData, studioId: string): Promise<string> {
+export async function createProjectRequest(
+  data: ProjectRequestFormData,
+  studioId: string
+): Promise<string> {
   const id = `pr_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-  const refs = Array.isArray(data.referenceImages) ? data.referenceImages.filter((u) => typeof u === 'string' && u.trim()) : [];
+  const refs = Array.isArray(data.referenceImages)
+    ? data.referenceImages.filter((u) => typeof u === 'string' && u.trim())
+    : [];
   const row = {
     id,
     studio_id: studioId,
@@ -25,13 +30,14 @@ export async function createProjectRequest(data: ProjectRequestFormData, studioI
     const msg = error.message || '';
     if (msg.includes('row-level security') || error.code === '42501') {
       throw new Error(
-        "Impossible d'enregistrer la demande (accès serveur). Réessayez plus tard ou contactez le studio par un autre canal.",
+        "Impossible d'enregistrer la demande (accès serveur). Réessayez plus tard ou contactez le studio par un autre canal."
       );
     }
     throw error;
   }
 
   sendProjectNotification({
+    projectRequestId: id,
     studioId,
     clientName: data.clientName.trim(),
     clientEmail: data.clientEmail.trim(),

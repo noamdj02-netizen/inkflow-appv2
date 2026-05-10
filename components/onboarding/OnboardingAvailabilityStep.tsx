@@ -27,16 +27,16 @@ export interface OnboardingAvailabilityStepProps {
   onComplete: (offDays: number[], bookingWindowDays: number) => Promise<void>;
 }
 
-export const OnboardingAvailabilityStep: React.FC<OnboardingAvailabilityStepProps> = ({ onComplete }) => {
+export const OnboardingAvailabilityStep: React.FC<OnboardingAvailabilityStepProps> = ({
+  onComplete,
+}) => {
   // Par défaut : dimanche désactivé
   const [offDays, setOffDays] = useState<number[]>([0]);
   const [bookingWindow, setBookingWindow] = useState(60);
   const [loading, setLoading] = useState(false);
 
   const toggleDay = (v: number) => {
-    setOffDays((prev) =>
-      prev.includes(v) ? prev.filter((d) => d !== v) : [...prev, v]
-    );
+    setOffDays((prev) => (prev.includes(v) ? prev.filter((d) => d !== v) : [...prev, v]));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,7 +59,7 @@ export const OnboardingAvailabilityStep: React.FC<OnboardingAvailabilityStepProp
       aria-labelledby="avail-title"
     >
       {/* Left — Formulaire */}
-      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios">
         <div className="lg:hidden flex-shrink-0 h-28 sm:h-36 relative overflow-hidden safe-top">
           <img
             src="/images/fallon-michael-EQucs66pts0-unsplash.jpg"
@@ -82,7 +82,10 @@ export const OnboardingAvailabilityStep: React.FC<OnboardingAvailabilityStepProp
               <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
             </div>
 
-            <h1 id="avail-title" className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1 sm:mb-1.5">
+            <h1
+              id="avail-title"
+              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1 sm:mb-1.5"
+            >
               Vos disponibilités
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-5 sm:mb-6">
@@ -182,7 +185,9 @@ export const OnboardingAvailabilityStep: React.FC<OnboardingAvailabilityStepProp
           <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
             Gérez votre studio.
           </h2>
-          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">Libérez votre art.</p>
+          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
+            Libérez votre art.
+          </p>
         </div>
       </motion.div>
     </motion.div>

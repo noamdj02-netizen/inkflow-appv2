@@ -81,7 +81,8 @@ supabase gen types typescript --local > types/database.ts
 # Webhook Stripe : URL Edge Supabase stripe-webhook (pas de route locale Next `/api/` dans ce repo)
 ```
 
-Préparation **prod** (OAuth calendrier port 3000, résa, Stripe, déploiements Edge) : **`docs/PRODUCTION-READINESS-CHECKLIST.md`**.
+Préparation **prod** (OAuth calendrier port 3000, résa, Stripe, déploiements Edge) : **`docs/PRODUCTION-READINESS-CHECKLIST.md`**.  
+**MVP « fini » — actions réservées au fondateur (secrets, Stripe, tests)** : **`docs/MVP-FINI-ACTIONS-FOUNDATEUR.md`**.
 
 ## Stratégie offres Stripe / plans SaaS tattooer
 

@@ -171,6 +171,12 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
 
   const { saving, saved } = useAutoSave(data, silentAutoSave, { debounceMs: 800 });
 
+  /** JSON vitrine parfois sans tableau (legacy / merge partiel) — évite .map qui crash. */
+  const testimonials = useMemo(
+    () => (Array.isArray(data.testimonials) ? data.testimonials : []),
+    [data.testimonials]
+  );
+
   const update = <K extends keyof VitrineData>(key: K, value: VitrineData[K]) => {
     dirtyRef.current = true;
     setData((prev) => ({ ...prev, [key]: value }));
@@ -1206,10 +1212,12 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                             {googleBusinessLocationName ? (
                               <p
                                 className="text-[11px] text-zinc-400 truncate mt-0.5"
-                                title={googleBusinessLocationName}
+                                title={String(googleBusinessLocationName)}
                               >
-                                {googleBusinessLocationName.split('/').slice(-1)[0] ||
-                                  googleBusinessLocationName}
+                                {(() => {
+                                  const raw = String(googleBusinessLocationName);
+                                  return raw.split('/').filter(Boolean).slice(-1)[0] || raw;
+                                })()}
                               </p>
                             ) : (
                               <p className="text-[11px] text-amber-400 mt-0.5">
@@ -1280,7 +1288,19 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                                 <li key={loc.name}>
                                   <button
                                     type="button"
-                                    onClick={() => onSelectGoogleBusinessLocation?.(loc.name)}
+                                    onClick={() => {
+                                      void Promise.resolve(
+                                        onSelectGoogleBusinessLocation?.(loc.name)
+                                      ).catch((e: unknown) => {
+                                        const msg =
+                                          e instanceof Error
+                                            ? e.message
+                                            : 'Enregistrement impossible';
+                                        toast.error(
+                                          msg.length > 160 ? `${msg.slice(0, 157)}…` : msg
+                                        );
+                                      });
+                                    }}
                                     className="w-full text-left px-4 py-3 hover:bg-zinc-800/60 transition-all active:scale-[0.99]"
                                   >
                                     <p className="text-sm font-medium text-[var(--text-primary)]">
@@ -1329,7 +1349,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 </>
               )}
             </div>
-            {data.testimonials.map((t, idx) => (
+            {testimonials.map((t, idx) => (
               <div
                 key={idx}
                 className="p-4 border border-[var(--border)] rounded-xl bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 space-y-4"
@@ -1340,7 +1360,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     onClick={() =>
                       update(
                         'testimonials',
-                        data.testimonials.filter((_, i) => i !== idx)
+                        testimonials.filter((_, i) => i !== idx)
                       )
                     }
                     className="text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 p-1"
@@ -1352,7 +1372,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                   <input
                     value={t.name}
                     onChange={(e) => {
-                      const x = [...data.testimonials];
+                      const x = [...testimonials];
                       x[idx] = { ...x[idx], name: e.target.value };
                       update('testimonials', x);
                     }}
@@ -1365,7 +1385,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     max={5}
                     value={t.rating}
                     onChange={(e) => {
-                      const x = [...data.testimonials];
+                      const x = [...testimonials];
                       x[idx] = { ...x[idx], rating: parseInt(e.target.value) || 5 };
                       update('testimonials', x);
                     }}
@@ -1376,7 +1396,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 <input
                   value={t.date}
                   onChange={(e) => {
-                    const x = [...data.testimonials];
+                    const x = [...testimonials];
                     x[idx] = { ...x[idx], date: e.target.value };
                     update('testimonials', x);
                   }}
@@ -1386,7 +1406,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                 <textarea
                   value={t.text}
                   onChange={(e) => {
-                    const x = [...data.testimonials];
+                    const x = [...testimonials];
                     x[idx] = { ...x[idx], text: e.target.value };
                     update('testimonials', x);
                   }}
@@ -1398,7 +1418,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                   label="Photo du client"
                   value={t.avatar}
                   onChange={(v) => {
-                    const x = [...data.testimonials];
+                    const x = [...testimonials];
                     x[idx] = { ...x[idx], avatar: v };
                     update('testimonials', x);
                   }}
@@ -1410,7 +1430,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                   <input
                     value={t.tattoo}
                     onChange={(e) => {
-                      const x = [...data.testimonials];
+                      const x = [...testimonials];
                       x[idx] = { ...x[idx], tattoo: e.target.value };
                       update('testimonials', x);
                     }}
@@ -1423,7 +1443,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
                     type="checkbox"
                     checked={t.verified}
                     onChange={(e) => {
-                      const x = [...data.testimonials];
+                      const x = [...testimonials];
                       x[idx] = { ...x[idx], verified: e.target.checked };
                       update('testimonials', x);
                     }}
@@ -1435,7 +1455,7 @@ export const VitrineSettings: React.FC<VitrineSettingsProps> = ({
             <button
               onClick={() =>
                 update('testimonials', [
-                  ...data.testimonials,
+                  ...testimonials,
                   {
                     name: '',
                     rating: 5,

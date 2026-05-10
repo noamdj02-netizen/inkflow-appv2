@@ -45,6 +45,7 @@ import { normalizeScannedBarcodeValue } from '../../lib/inventoryScanToken';
 import { ConsumablesComparatorPanel } from './ConsumablesComparatorPanel';
 import { InventoryPrintLabelModal } from './InventoryPrintLabelModal';
 import { SupplierCatalogPanel } from './SupplierCatalogPanel';
+import { PermissionGate } from '../ui/PermissionGate';
 import { COMPARATOR_CATEGORY_OPTIONS } from '../../lib/consumableCategories';
 
 interface StockAndTraceabilityPanelProps {
@@ -77,6 +78,7 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
   const [stockSubSection, setStockSubSection] = useState<'traceability' | 'comparator' | 'catalog'>(
     'traceability'
   );
+  const [cameraGateOpen, setCameraGateOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -913,10 +915,10 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
               {!scanning ? (
                 <button
                   type="button"
-                  onClick={() => void startScan()}
+                  onClick={() => setCameraGateOpen(true)}
                   className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-sm font-semibold active:scale-[0.98] transition-all"
                 >
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-4 h-4" strokeWidth={1.5} />
                   Scanner un code
                 </button>
               ) : (
@@ -1071,6 +1073,16 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
         clientId={clientId}
         appointmentId={appointmentId}
         onSuccess={() => void reload()}
+      />
+      <PermissionGate
+        open={cameraGateOpen}
+        title="Caméra pour la traçabilité"
+        description="Pour scanner les codes sur les flacons d’encre et enregistrer les lots dans ton stock, InkFlow a besoin d’accéder à la caméra. Aucune image n’est stockée : seul le code-barres ou le QR est lu."
+        onAllow={() => {
+          setCameraGateOpen(false);
+          void startScan();
+        }}
+        onDismiss={() => setCameraGateOpen(false)}
       />
     </div>
   );

@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
+  AlertTriangle,
   Banknote,
-  Calendar,
   CalendarDays,
+  CalendarPlus,
   CheckCircle2,
   Clock,
   Copy,
@@ -14,38 +17,56 @@ import {
   MapPin,
   MessageCircle,
   Phone,
+  Plus,
+  Send,
   Sparkles,
   Tag,
   WalletCards,
 } from 'lucide-react';
 import { buildMailtoHref, handleMailtoClick } from '../../lib/mailto';
 import { useToast } from '../../contexts/ToastContext';
-import type { Appointment, Client } from '../../types';
+import type {
+  Appointment,
+  Client,
+  ClientPreferences,
+  ProjectRequest,
+  WaitlistEntry,
+} from '../../types';
 import { appointmentRemainingBalanceEuros } from '../../lib/appointmentBalance';
 import { instagramMessageUrl, parseInstagramHandle } from '../../lib/instagramUtils';
+import { supabase } from '../../lib/supabase';
+import { CONSENT_FORM_PRESETS, type ConsentFormPreset } from '../../lib/consentFormPresets';
+import { isSyntheticClientPreviewAppointmentId } from '../../lib/clientPreviewFromDemande';
+import { ConsentSender } from '../consent/ConsentSender';
 
 export interface ClientPreviewData {
-  /** Données du rendez-vous (clientName, clientEmail, etc.) */
   appointment: Appointment;
-  /** Client CRM optionnel pour stats enrichies */
   client?: Client | null;
+  /** Tous les RDV du même client (même id ou e-mail) — pour la carte « Prochains RDV ». */
+  clientAppointments?: Appointment[];
+  /** Briefs projet (formulaire sans date) rattachés au même client. */
+  clientProjectRequests?: ProjectRequest[];
+  /** Entrées liste d'attente studio pour ce client. */
+  clientWaitlistEntries?: WaitlistEntry[];
+  /** Slug public `/book/:slug` (viterme réservation). */
+  publicBookingSlug?: string | null;
 }
 
 interface ClientPreviewPanelProps {
   data: ClientPreviewData;
-  /** Conservé pour compat API (drawer) — non utilisé pour la messagerie. */
   studioId: string;
   artistName: string;
-  /** Mode compact pour le drawer */
+  studioName?: string;
+  consentPresets?: ConsentFormPreset[];
   compact?: boolean;
-  /** Callback au clic sur la carte profil (ex: ouvrir le drawer) */
   onClientClick?: () => void;
-  /** Client avec compte espace client (app) : affiche le bloc discussion InkFlow */
   showInkflowClientDiscussion?: boolean;
-  /** Fil messagerie connu (pr_…/bk_… ou fil existant) — peut être null si pas encore de messages */
   inkflowMessagingThreadId?: string | null;
-  /** Ouvre l’onglet Messagerie (optionnellement le fil) */
   onOpenInkflowDiscussion?: () => void;
+  /** Ouvre l’agenda pour planifier / convertir un brief en RDV. */
+  onOpenAgenda?: () => void;
+  /** Redirige vers la boîte Demandes > Briefs (création / suivi). */
+  onPromptNewProject?: () => void;
 }
 
 const STATUS_LABELS: Record<Appointment['status'], string> = {
@@ -58,12 +79,12 @@ const STATUS_LABELS: Record<Appointment['status'], string> = {
 };
 
 const STATUS_BADGE_CLASS: Record<Appointment['status'], string> = {
-  pending: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
-  confirmed: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
-  in_progress: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
-  completed: 'bg-zinc-500/15 text-zinc-700 dark:text-zinc-300 border-zinc-500/30',
-  cancelled: 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30',
-  no_show: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30',
+  pending: 'bg-amber-100/90 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200',
+  confirmed: 'bg-blue-100/90 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200',
+  in_progress: 'bg-sky-100/90 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200',
+  completed: 'bg-slate-100/90 text-slate-700 dark:bg-slate-500/20 dark:text-slate-200',
+  cancelled: 'bg-red-100/90 text-red-800 dark:bg-red-500/20 dark:text-red-200',
+  no_show: 'bg-orange-100/90 text-orange-800 dark:bg-orange-500/20 dark:text-orange-200',
 };
 
 const CLIENT_STATUS_LABEL: Record<Client['status'], string> = {
@@ -87,10 +108,22 @@ const SIZE_LABELS: Record<Appointment['size'], string> = {
   extra_large: 'Très grand',
 };
 
-/** Glyphes d’appoint : teinte secondaire unique + trait légèrement fin (proche SF Symbol à côté du corps de texte). */
-const ICON_ROW = 'w-4 h-4 shrink-0 mt-0.5 text-zinc-500 dark:text-zinc-400 stroke-[1.75]';
-const ICON_ROW_SM = 'w-3.5 h-3.5 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]';
-const ICON_STAT = 'w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]';
+const ICON_FINE = 'shrink-0 text-slate-500 dark:text-slate-400';
+/** Libellé de section — charte finition Apple CRM */
+const SECTION_TITLE =
+  'text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 dark:text-slate-500 mb-2';
+
+const TIMELINE_DOT: Record<Appointment['status'], string> = {
+  completed: 'bg-emerald-500 ring-2 ring-emerald-200/80 dark:ring-emerald-500/30',
+  cancelled: 'bg-red-500 ring-2 ring-red-200/80 dark:ring-red-500/30',
+  no_show: 'bg-orange-500 ring-2 ring-orange-200/80 dark:ring-orange-500/30',
+  pending: 'bg-slate-400 ring-2 ring-slate-200 dark:ring-slate-600',
+  confirmed: 'bg-blue-500 ring-2 ring-blue-200/80 dark:ring-blue-500/25',
+  in_progress: 'bg-sky-500 ring-2 ring-sky-200/80 dark:ring-sky-500/25',
+};
+
+const cardSurface =
+  'rounded-2xl bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06),0_4px_14px_rgba(15,23,42,0.04)] dark:bg-zinc-900 dark:shadow-[0_2px_12px_rgba(0,0,0,0.35)]';
 
 function formatDurationMinutes(mins: number): string {
   if (!Number.isFinite(mins) || mins <= 0) return '—';
@@ -132,7 +165,18 @@ function truncateNote(s: string, max: number): string {
   return `${t.slice(0, max - 1)}…`;
 }
 
-/** Écart en jours calendaires (local) entre aujourd’hui et la date du RDV (YYYY-MM-DD). */
+function formatConsentOutreachSentAt(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
+}
+
 function calendarDaysFromToday(appointmentDateYmd: string): number | null {
   const m = appointmentDateYmd.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return null;
@@ -145,7 +189,6 @@ function calendarDaysFromToday(appointmentDateYmd: string): number | null {
   return Math.round((apt.getTime() - startToday.getTime()) / 86400000);
 }
 
-/** Libellé du type « Dans 21 jours », « Aujourd’hui », « Il y a 3 jours ». */
 function formatRelativeCalendarDay(appointmentDateYmd: string): string {
   const n = calendarDaysFromToday(appointmentDateYmd);
   if (n === null) return '';
@@ -157,33 +200,160 @@ function formatRelativeCalendarDay(appointmentDateYmd: string): string {
   return '';
 }
 
-function PrepLine({ ok, icon, label }: { ok: boolean; icon: React.ReactNode; label: string }) {
+function isUpcomingApt(a: Appointment): boolean {
+  if (a.status === 'cancelled' || a.status === 'completed' || a.status === 'no_show') return false;
+  const delta = calendarDaysFromToday(a.date);
+  return delta !== null && delta >= 0;
+}
+
+/** Passé ou statut terminal — pour la timeline historique. */
+function isHistoryApt(a: Appointment): boolean {
+  const delta = calendarDaysFromToday(a.date);
+  const datePassed = delta !== null && delta < 0;
+  const terminal = a.status === 'completed' || a.status === 'cancelled' || a.status === 'no_show';
+  return terminal || datePassed;
+}
+
+/** Brief encore ouvert si aucun RDV actif n’est lié à cette demande. */
+function isBriefStillOpen(pr: ProjectRequest, clientAppointments: Appointment[]): boolean {
+  return !clientAppointments.some(
+    (a) => a.projectRequestId === pr.id && a.status !== 'cancelled' && a.status !== 'no_show'
+  );
+}
+
+function clientTagsIndicateWaitlist(client: Client | null | undefined): boolean {
+  if (!client?.tags?.length) return false;
+  return client.tags.some((raw) => {
+    const t = raw.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+    return (
+      t.includes('recontacter') ||
+      t.includes('sans date') ||
+      t.includes('attente') ||
+      t.includes('waitlist')
+    );
+  });
+}
+
+function preferencesLines(prefs: ClientPreferences | undefined): string[] {
+  if (!prefs) return [];
+  const out: string[] = [];
+  if (prefs.preferredArtist) out.push(`Artiste préféré : ${prefs.preferredArtist}`);
+  if (prefs.preferredDays?.length) out.push(`Jours : ${prefs.preferredDays.join(', ')}`);
+  if (prefs.preferredTime) {
+    const map = { morning: 'Matin', afternoon: 'Après-midi', evening: 'Soir' };
+    out.push(`Créneau : ${map[prefs.preferredTime]}`);
+  }
+  if (prefs.painTolerance) {
+    const map = { low: 'Faible', medium: 'Modérée', high: 'Élevée' };
+    out.push(`Douleur : ${map[prefs.painTolerance]}`);
+  }
+  if (prefs.allergies?.length) out.push(`Allergies : ${prefs.allergies.join(', ')}`);
+  return out;
+}
+
+/** Image avec lazy + squelette pulsant jusqu’au chargement. */
+function LazyClientPhoto({
+  src,
+  alt,
+  onOpen,
+  layoutId,
+  hideSharedLayout,
+}: {
+  src: string;
+  alt: string;
+  onOpen: () => void;
+  layoutId: string;
+  /** Masque le layoutId pendant l’animation hero (photo élargie). */
+  hideSharedLayout: boolean;
+}) {
+  const [loaded, setLoaded] = useState(false);
   return (
-    <div
-      className={`flex min-h-[40px] items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
-        ok
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
-          : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200'
-      } [&_svg]:size-4 [&_svg]:shrink-0`}
-    >
-      {ok ? <CheckCircle2 /> : icon}
-      <span className="truncate font-medium">{label}</span>
+    <div className="aspect-square w-full">
+      {hideSharedLayout ? (
+        <div
+          className="h-full w-full animate-pulse rounded-xl bg-slate-200/80 dark:bg-zinc-700/80"
+          aria-hidden
+        />
+      ) : (
+        <motion.button
+          type="button"
+          layoutId={layoutId}
+          onClick={onOpen}
+          className="relative h-full w-full overflow-hidden rounded-xl bg-slate-100 text-left dark:bg-zinc-800"
+        >
+          {!loaded && (
+            <div
+              className="absolute inset-0 animate-pulse bg-slate-200/80 dark:bg-zinc-700/80"
+              aria-hidden
+            />
+          )}
+          <img
+            src={src}
+            alt={alt}
+            loading="lazy"
+            decoding="async"
+            onLoad={() => setLoaded(true)}
+            className={`h-full w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          />
+        </motion.button>
+      )}
     </div>
   );
 }
 
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05, delayChildren: 0.02 },
+  },
+};
+
+const staggerItem = {
+  hidden: { opacity: 0, y: 14 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.28, ease: [0, 0, 0.2, 1] as const },
+  },
+};
+
 export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
   data,
-  studioId: _studioId,
-  artistName: _artistName,
+  studioId,
+  artistName,
+  studioName = 'Mon studio',
+  consentPresets,
   compact = false,
   onClientClick,
   showInkflowClientDiscussion = false,
   inkflowMessagingThreadId = null,
   onOpenInkflowDiscussion,
+  onOpenAgenda,
+  onPromptNewProject,
 }) => {
   const toast = useToast();
-  const { appointment, client } = data;
+  const reduceMotion = useReducedMotion();
+  const {
+    appointment,
+    client,
+    clientAppointments = [],
+    clientProjectRequests = [],
+    clientWaitlistEntries = [],
+    publicBookingSlug = null,
+  } = data;
+  const [heroPhoto, setHeroPhoto] = useState<{ url: string; layoutId: string } | null>(null);
+  const [consentSenderOpen, setConsentSenderOpen] = useState(false);
+  const [consentOutreachSentAt, setConsentOutreachSentAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!heroPhoto) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setHeroPhoto(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [heroPhoto]);
 
   const mailtoHref = buildMailtoHref(appointment.clientEmail, 'À propos de votre rendez-vous');
   const phoneDisplay = (appointment.clientPhone || client?.phone || '').trim();
@@ -193,7 +363,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
     (appointment as Appointment & { clientInstagram?: string | null }).clientInstagram,
     `${appointment.notes ?? ''}\n${client?.notes ?? ''}\n${appointment.service ?? ''}`
   );
-  const hasAnyContactDetail = Boolean(appointment.clientEmail || phoneDisplay || instagramHandle);
+
   const copyContact = async () => {
     const lines = [
       appointment.clientName,
@@ -211,414 +381,876 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
 
   const avatarLetter = (appointment.clientName || '?').charAt(0).toUpperCase();
   const avatarUrl = client?.avatar;
-
   const whenLabel = formatAppointmentWhen(appointment.date, appointment.time);
   const remainingBalance = appointmentRemainingBalanceEuros(appointment);
   const hasHealthSnapshot = Boolean(client?.healthProfileSnapshot);
 
-  const crmSubtitle = client
-    ? `Fiche CRM · ${CLIENT_STATUS_LABEL[client.status]}`
-    : 'Pas encore dans la base clients (données RDV uniquement)';
+  const upcomingSorted = useMemo(() => {
+    const pool = clientAppointments.length > 0 ? clientAppointments : [appointment];
+    const upcoming = pool.filter(isUpcomingApt);
+    upcoming.sort((a, b) => {
+      const dc = a.date.localeCompare(b.date);
+      return dc !== 0 ? dc : a.time.localeCompare(b.time);
+    });
+    return upcoming;
+  }, [clientAppointments, appointment]);
 
-  const tagPreview = client?.tags?.filter(Boolean).slice(0, compact ? 2 : 4) ?? [];
+  const pastSorted = useMemo(() => {
+    const pool = clientAppointments.length > 0 ? clientAppointments : [appointment];
+    const past = pool.filter(isHistoryApt);
+    past.sort((a, b) => {
+      const dc = b.date.localeCompare(a.date);
+      return dc !== 0 ? dc : b.time.localeCompare(a.time);
+    });
+    return past;
+  }, [clientAppointments, appointment]);
 
+  const primaryUpcoming = upcomingSorted[0] ?? appointment;
+  const consentMissingOnNext =
+    !primaryUpcoming.consentFormSigned &&
+    primaryUpcoming.status !== 'cancelled' &&
+    primaryUpcoming.status !== 'completed';
+  const primaryConsentTargetSynthetic = isSyntheticClientPreviewAppointmentId(primaryUpcoming.id);
+
+  const effectiveConsentPresets =
+    consentPresets && consentPresets.length > 0 ? consentPresets : CONSENT_FORM_PRESETS;
+
+  const loadConsentOutreach = useCallback(async () => {
+    const sid = studioId?.trim();
+    const aid = primaryUpcoming?.id;
+    if (!sid || !aid || !consentMissingOnNext || primaryConsentTargetSynthetic) {
+      setConsentOutreachSentAt(null);
+      return;
+    }
+    const { data: row, error } = await supabase
+      .from('inkflow_consent_forms')
+      .select('consent_outreach_sent_at')
+      .eq('studio_id', sid)
+      .eq('appointment_id', aid)
+      .is('signed_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error || !row?.consent_outreach_sent_at) {
+      setConsentOutreachSentAt(null);
+      return;
+    }
+    setConsentOutreachSentAt(row.consent_outreach_sent_at);
+  }, [studioId, primaryUpcoming?.id, consentMissingOnNext, primaryConsentTargetSynthetic]);
+
+  useEffect(() => {
+    void loadConsentOutreach();
+  }, [loadConsentOutreach]);
+
+  const galleryUrls = useMemo(() => {
+    const urls: string[] = [];
+    const push = (u: string | undefined) => {
+      const t = u?.trim();
+      if (t && !urls.includes(t)) urls.push(t);
+    };
+    for (const img of appointment.images ?? []) push(img);
+    if (client?.tattoos?.length) {
+      for (const t of client.tattoos) {
+        for (const img of t.images ?? []) push(img);
+      }
+    }
+    return urls;
+  }, [appointment.images, client?.tattoos]);
+
+  const openBriefs = useMemo(
+    () =>
+      clientProjectRequests.filter(
+        (pr) =>
+          (pr.status === 'pending' || pr.status === 'accepted') &&
+          isBriefStillOpen(pr, clientAppointments)
+      ),
+    [clientProjectRequests, clientAppointments]
+  );
+
+  const waitlistActive = useMemo(
+    () => clientWaitlistEntries.filter((w) => w.status === 'waiting' || w.status === 'notified'),
+    [clientWaitlistEntries]
+  );
+
+  const showWaitlistSection = waitlistActive.length > 0 || clientTagsIndicateWaitlist(client);
+
+  const copyBookingLink = async () => {
+    const slug = publicBookingSlug?.trim();
+    if (!slug) {
+      toast.error('Configure un slug vitrine pour générer le lien /book.');
+      return;
+    }
+    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/book/${slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Lien de réservation copié');
+    } catch {
+      toast.error('Impossible de copier le lien.');
+    }
+  };
+
+  const prefsLines = preferencesLines(client?.preferences);
+  const tagPreview = client?.tags?.filter(Boolean).slice(0, compact ? 2 : 5) ?? [];
   const relativeDayLabel = formatRelativeCalendarDay(appointment.date);
 
+  const motionProps = reduceMotion
+    ? { initial: false as const }
+    : {
+        initial: 'hidden' as const,
+        animate: 'show' as const,
+        variants: staggerContainer,
+      };
+
+  const sectionVariants = reduceMotion ? undefined : staggerItem;
+
+  const openConsentSender = () => {
+    if (!studioId?.trim()) {
+      toast.error('Studio non chargé — réessaie dans un instant.');
+      return;
+    }
+    if (primaryConsentTargetSynthetic) {
+      toast.info(
+        'Ce rendez-vous est encore une demande. Crée un RDV dans l’agenda ou ouvre la messagerie pour envoyer le consentement.'
+      );
+      onOpenInkflowDiscussion?.();
+      return;
+    }
+    setConsentSenderOpen(true);
+  };
+
   return (
-    <div className={`flex flex-col gap-4 ${compact ? 'min-w-0' : ''}`}>
-      {/* Ce rendez-vous */}
-      <div className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden">
-        <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-secondary)]/50">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-sm text-[var(--text-primary)]">Ce rendez-vous</p>
-              {relativeDayLabel ? (
-                <p className="text-xs text-[var(--text-secondary)] mt-1 flex items-center gap-1.5 leading-snug">
-                  <CalendarDays className={ICON_ROW_SM} aria-hidden />
-                  <span>{relativeDayLabel}</span>
-                </p>
-              ) : null}
-            </div>
-            <span
-              className={`shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${STATUS_BADGE_CLASS[appointment.status]}`}
-            >
-              {STATUS_LABELS[appointment.status]}
-            </span>
-          </div>
-        </div>
-        <div className={`p-4 space-y-3 ${compact ? 'text-sm' : ''}`}>
-          <div className="flex items-start gap-2">
-            <Calendar className={ICON_ROW} />
-            <div className="min-w-0">
-              <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">
-                Date & heure
-              </p>
-              <p className="font-medium text-[var(--text-primary)] capitalize">{whenLabel}</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-2">
-            <Sparkles className={ICON_ROW} />
-            <div className="min-w-0">
-              <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">
-                Prestation
-              </p>
-              <p className="font-medium text-[var(--text-primary)]">{appointment.service || '—'}</p>
-              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                {appointment.tattooType === 'flash' ? 'Flash' : 'Projet sur mesure'}
-              </p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-start gap-2">
-              <Clock className={ICON_ROW} />
-              <div>
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">
-                  Durée
-                </p>
-                <p className="font-medium text-[var(--text-primary)]">
-                  {formatDurationMinutes(appointment.duration)}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <MapPin className={ICON_ROW} />
-              <div className="min-w-0">
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">
-                  Emplacement
-                </p>
-                <p className="font-medium text-[var(--text-primary)] truncate">
-                  {LOCATION_LABELS[appointment.location]} · {SIZE_LABELS[appointment.size]}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 pt-1 border-t border-[var(--border)]">
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[var(--bg-hover)] text-xs">
-              <Euro className="w-3.5 h-3.5 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
-              <span className="text-[var(--text-secondary)]">Prix</span>
-              <span className="font-semibold text-[var(--text-primary)]">{appointment.price}€</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[var(--bg-hover)] text-xs">
-              <Banknote className="w-3.5 h-3.5 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
-              <span className="text-[var(--text-secondary)]">Acompte</span>
-              <span className="font-semibold text-[var(--text-primary)]">
-                {appointment.deposit}€
-                {appointment.depositPaid ? (
-                  <span className="ml-1 text-blue-600 dark:text-blue-400 font-medium">(payé)</span>
-                ) : (
-                  <span className="ml-1 text-amber-600 dark:text-amber-400 font-medium">
-                    (à payer)
-                  </span>
-                )}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[var(--bg-hover)] text-xs">
-              <WalletCards className="w-3.5 h-3.5 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
-              <span className="text-[var(--text-secondary)]">Solde</span>
-              <span className="font-semibold text-[var(--text-primary)]">
-                {remainingBalance.toFixed(2)}€
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Préparation séance */}
-      <div className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden">
-        <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-secondary)]/50">
-          <p className="font-semibold text-sm text-[var(--text-primary)]">Préparation séance</p>
-        </div>
-        <div className="p-4 grid grid-cols-1 gap-2">
-          <PrepLine
-            ok={appointment.consentFormSigned}
-            icon={<FileSignature />}
-            label={appointment.consentFormSigned ? 'Consentement signé' : 'Consentement à envoyer'}
-          />
-          <PrepLine
-            ok={hasHealthSnapshot}
-            icon={<HeartPulse />}
-            label={
-              hasHealthSnapshot ? 'Questionnaire santé présent' : 'Questionnaire santé manquant'
-            }
-          />
-          <PrepLine
-            ok={appointment.depositPaid}
-            icon={<Banknote />}
-            label={appointment.depositPaid ? 'Acompte encaissé' : 'Acompte à relancer'}
-          />
-          <PrepLine
-            ok={remainingBalance < 1 || Boolean(appointment.balancePaidAt)}
-            icon={<Euro />}
-            label={
-              remainingBalance < 1 || appointment.balancePaidAt
-                ? 'Solde réglé'
-                : `Solde restant : ${remainingBalance.toFixed(2)}€`
-            }
-          />
-        </div>
-      </div>
-
-      {/* Carte Profil Client */}
-      <div
-        role={onClientClick ? 'button' : undefined}
-        tabIndex={onClientClick ? 0 : undefined}
-        onClick={onClientClick}
-        onKeyDown={onClientClick ? (e) => e.key === 'Enter' && onClientClick() : undefined}
-        className={`order-first rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden ${onClientClick ? 'cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors' : ''}`}
-      >
-        <div className="p-5">
+    <>
+      <motion.div className={`flex flex-col gap-5 ${compact ? 'min-w-0' : ''}`} {...motionProps}>
+        {/* —— Identité —— */}
+        <motion.header
+          variants={sectionVariants}
+          className={`${onClientClick ? 'cursor-pointer rounded-2xl active:scale-[0.99]' : ''}`}
+          onClick={onClientClick}
+          onKeyDown={onClientClick ? (e) => e.key === 'Enter' && onClientClick() : undefined}
+          role={onClientClick ? 'button' : undefined}
+          tabIndex={onClientClick ? 0 : undefined}
+        >
+          <p className={SECTION_TITLE}>Identité</p>
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-xl bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <div className="flex size-[3.75rem] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-200 shadow-sm dark:bg-zinc-700">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                <img src={avatarUrl} alt="" className="size-full object-cover" loading="lazy" />
               ) : (
-                <span className="text-zinc-700 dark:text-zinc-200 font-bold text-xl">
+                <span className="text-2xl font-black text-slate-600 dark:text-slate-200">
                   {avatarLetter}
                 </span>
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-lg text-[var(--text-primary)] truncate">
+            <div className="min-w-0 flex-1">
+              <h3 className="text-3xl font-black leading-tight tracking-tight text-zinc-900 dark:text-white">
                 {appointment.clientName}
               </h3>
-              <p className="text-xs text-[var(--text-secondary)] mt-0.5">{crmSubtitle}</p>
-              {tagPreview.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {tagPreview.map((t) => (
-                    <span
-                      key={t}
-                      className="inline-flex items-center gap-0.5 text-[10px] font-medium px-2 py-0.5 rounded-lg bg-[var(--bg-hover)] border border-[var(--border)] text-[var(--text-secondary)]"
-                    >
-                      <Tag className="w-3 h-3 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="flex flex-col gap-2 mt-3 text-xs text-[var(--text-secondary)]">
-                {appointment.clientEmail && (
-                  <span className="flex items-center gap-1.5 min-w-0">
-                    <Mail className="w-3.5 h-3.5 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
-                    <span className="truncate">{appointment.clientEmail}</span>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {telHref ? (
+                  <a
+                    href={telHref}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-slate-100 p-3 text-slate-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-slate-200"
+                    aria-label="Appeler"
+                  >
+                    <Phone className="size-5" strokeWidth={1.5} aria-hidden />
+                  </a>
+                ) : null}
+                {smsHref ? (
+                  <a
+                    href={smsHref}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-slate-100 p-3 text-slate-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-slate-200"
+                    aria-label="Envoyer un SMS"
+                  >
+                    <MessageCircle className="size-5" strokeWidth={1.5} aria-hidden />
+                  </a>
+                ) : null}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {client?.status === 'vip' && (
+                  <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-800 dark:bg-violet-500/20 dark:text-violet-200">
+                    {CLIENT_STATUS_LABEL.vip}
                   </span>
                 )}
-                {phoneDisplay && (
-                  <span className="flex items-center gap-1.5 min-w-0">
-                    <Phone className="w-3.5 h-3.5 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
-                    <span className="truncate">{phoneDisplay}</span>
+                {appointment.consentFormSigned && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200">
+                    <CheckCircle2 className="size-3.5 stroke-[1.5]" aria-hidden />
+                    Consentement signé
+                  </span>
+                )}
+                {client && client.status !== 'vip' && (
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                    {CLIENT_STATUS_LABEL[client.status]}
                   </span>
                 )}
               </div>
+              <div className="mt-4 space-y-2 text-sm text-slate-500 dark:text-slate-400">
+                {appointment.clientEmail ? (
+                  <p className="flex min-w-0 items-center gap-2">
+                    <Mail className={`size-4 ${ICON_FINE}`} strokeWidth={1.5} aria-hidden />
+                    <span className="truncate">{appointment.clientEmail}</span>
+                  </p>
+                ) : null}
+                {phoneDisplay ? (
+                  <p className="flex min-w-0 items-center gap-2">
+                    <Phone className={`size-4 ${ICON_FINE}`} strokeWidth={1.5} aria-hidden />
+                    <span className="truncate">{phoneDisplay}</span>
+                  </p>
+                ) : null}
+                {instagramHandle ? (
+                  <p className="flex min-w-0 items-center gap-2">
+                    <Instagram className={`size-4 ${ICON_FINE}`} strokeWidth={1.5} aria-hidden />
+                    <span className="truncate">@{instagramHandle}</span>
+                  </p>
+                ) : null}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {mailtoHref ? (
+                  <a
+                    href={mailtoHref}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMailtoClick(e, mailtoHref);
+                    }}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-slate-200"
+                  >
+                    <Mail className="size-3.5" strokeWidth={1.5} aria-hidden />
+                    E-mail
+                  </a>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void copyContact();
+                  }}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-slate-200"
+                >
+                  <Copy className="size-3.5" strokeWidth={1.5} aria-hidden />
+                  Copier
+                </button>
+                {instagramHandle ? (
+                  <a
+                    href={instagramMessageUrl(instagramHandle)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-slate-200"
+                  >
+                    <Instagram className="size-3.5" strokeWidth={1.5} aria-hidden />
+                    Instagram
+                  </a>
+                ) : null}
+              </div>
             </div>
           </div>
+        </motion.header>
 
-          {client && (
-            <div className="mt-4 pt-4 border-t border-[var(--border)] space-y-2 text-xs text-[var(--text-secondary)]">
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
+        {/* —— Carte 1 : Prochains rendez-vous —— */}
+        <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
+          <h4 className={SECTION_TITLE}>Prochains rendez-vous</h4>
+          <div className="mt-4 space-y-4">
+            {upcomingSorted.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Aucun rendez-vous à venir pour ce client.
+              </p>
+            ) : (
+              upcomingSorted.slice(0, compact ? 2 : 4).map((apt) => (
+                <div
+                  key={apt.id}
+                  className={`rounded-xl bg-slate-50/90 p-4 dark:bg-zinc-800/50 ${apt.id === appointment.id ? 'ring-2 ring-blue-500/30' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_BADGE_CLASS[apt.status]}`}
+                    >
+                      {STATUS_LABELS[apt.status]}
+                    </span>
+                    {formatRelativeCalendarDay(apt.date) ? (
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                        {formatRelativeCalendarDay(apt.date)}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 text-sm font-semibold capitalize text-zinc-900 dark:text-white">
+                    {formatAppointmentWhen(apt.date, apt.time)}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    {apt.service || '—'}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="size-3.5" strokeWidth={1.5} />
+                      {formatDurationMinutes(apt.duration)}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <MapPin className="size-3.5" strokeWidth={1.5} />
+                      {LOCATION_LABELS[apt.location]} · {SIZE_LABELS[apt.size]}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4 dark:border-zinc-800">
+            <div className="flex items-center gap-1.5 rounded-xl bg-slate-100/80 px-2.5 py-1.5 text-xs dark:bg-zinc-800">
+              <Euro className={`size-3.5 ${ICON_FINE}`} strokeWidth={1.5} />
+              <span className="text-slate-500">Prix</span>
+              <span className="font-bold text-zinc-900 dark:text-white">
+                {primaryUpcoming.price}€
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 rounded-xl bg-slate-100/80 px-2.5 py-1.5 text-xs dark:bg-zinc-800">
+              <Banknote className={`size-3.5 ${ICON_FINE}`} strokeWidth={1.5} />
+              <span className="text-slate-500">Acompte</span>
+              <span className="font-bold text-zinc-900 dark:text-white">
+                {primaryUpcoming.deposit}€
+                {primaryUpcoming.depositPaid ? (
+                  <span className="ml-1 font-medium text-blue-600 dark:text-blue-400">payé</span>
+                ) : (
+                  <span className="ml-1 font-medium text-amber-600 dark:text-amber-400">
+                    à payer
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 rounded-xl bg-slate-100/80 px-2.5 py-1.5 text-xs dark:bg-zinc-800">
+              <WalletCards className={`size-3.5 ${ICON_FINE}`} strokeWidth={1.5} />
+              <span className="text-slate-500">Solde</span>
+              <span className="font-bold text-zinc-900 dark:text-white">
+                {appointmentRemainingBalanceEuros(primaryUpcoming).toFixed(2)}€
+              </span>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* —— Historique : timeline des RDV passés —— */}
+        <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
+          <h4 className={SECTION_TITLE}>Historique des rendez-vous</h4>
+          {pastSorted.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Aucun rendez-vous passé ou clôturé sur cette fiche.
+            </p>
+          ) : (
+            <ul className="mt-1">
+              {pastSorted.slice(0, compact ? 6 : 12).map((apt, idx, arr) => {
+                const isLast = idx === arr.length - 1;
+                return (
+                  <li key={apt.id} className="relative flex gap-3">
+                    <div className="flex w-4 shrink-0 flex-col items-center">
+                      <span
+                        className={`mt-1.5 size-2.5 shrink-0 rounded-full ${TIMELINE_DOT[apt.status]}`}
+                        aria-hidden
+                      />
+                      {!isLast ? (
+                        <span className="mt-1 w-px flex-1 min-h-[12px] bg-slate-200 dark:bg-zinc-700" />
+                      ) : null}
+                    </div>
+                    <div className={`min-w-0 flex-1 pb-5 ${isLast ? 'pb-0' : ''}`}>
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                          {STATUS_LABELS[apt.status]}
+                        </p>
+                        {formatRelativeCalendarDay(apt.date) ? (
+                          <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                            {formatRelativeCalendarDay(apt.date)}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-0.5 text-sm font-semibold text-zinc-900 dark:text-white">
+                        {formatAppointmentWhen(apt.date, apt.time)}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">
+                        {apt.service || '—'}
+                      </p>
+                      <p className="mt-1 font-mono text-[10px] text-slate-400 dark:text-slate-500">
+                        appointment_id · {apt.id}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </motion.section>
+
+        {(openBriefs.length > 0 || onPromptNewProject) && (
+          <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
+            <h4 className={SECTION_TITLE}>Projets actifs</h4>
+            {openBriefs.length === 0 ? (
+              onPromptNewProject ? (
+                <button
+                  type="button"
+                  onClick={() => onPromptNewProject()}
+                  className="mt-1 inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-slate-500 transition-all hover:bg-slate-100/80 hover:text-slate-800 active:scale-[0.98] motion-reduce:active:scale-100 dark:text-slate-400 dark:hover:bg-zinc-800/60 dark:hover:text-slate-200"
+                >
+                  <Plus className="size-3.5" strokeWidth={2} aria-hidden />
+                  Nouveau projet
+                </button>
+              ) : null
+            ) : (
+              <div className="mt-1 space-y-3">
+                {openBriefs.map((pr) => (
+                  <div
+                    key={pr.id}
+                    className={`rounded-2xl border border-blue-100/90 bg-blue-50/50 py-4 pl-4 pr-4 dark:border-blue-500/20 dark:bg-blue-950/30 ${
+                      pr.status === 'pending'
+                        ? 'border-l-4 border-l-blue-600'
+                        : 'border-l-4 border-l-blue-400'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-800 dark:bg-blue-500/15 dark:text-blue-200">
+                        {pr.status === 'pending' ? 'Brief en attente' : 'Brief accepté'}
+                      </span>
+                      <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">
+                        project_request_id · {pr.id}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm font-semibold leading-snug text-zinc-900 dark:text-white">
+                      {truncateNote(pr.description, compact ? 140 : 220)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
+                      {(pr.placement || pr.estimatedSize || pr.size) && (
+                        <span>
+                          <span className="text-slate-400">Zone · </span>
+                          {[pr.placement, pr.estimatedSize || pr.size].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                      {pr.budget ? (
+                        <span>
+                          <span className="text-slate-400">Budget · </span>
+                          {pr.budget}
+                        </span>
+                      ) : null}
+                    </div>
+                    {onOpenAgenda ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenAgenda()}
+                        className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 text-sm font-semibold text-white transition-all active:scale-[0.98] motion-reduce:active:scale-100 dark:bg-blue-500"
+                      >
+                        <CalendarPlus className="size-4" strokeWidth={1.5} aria-hidden />
+                        {pr.status === 'pending' ? 'Convertir en RDV' : 'Planifier ce projet'}
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+            {openBriefs.length > 0 && onPromptNewProject ? (
+              <button
+                type="button"
+                onClick={() => onPromptNewProject()}
+                className="mt-3 inline-flex min-h-10 items-center gap-1.5 text-[11px] font-semibold text-slate-500 transition-all hover:text-slate-800 active:scale-[0.98] dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                <Plus className="size-3.5" strokeWidth={2} aria-hidden />
+                Nouveau projet
+              </button>
+            ) : null}
+          </motion.section>
+        )}
+
+        {/* —— File d’attente —— */}
+        {showWaitlistSection ? (
+          <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
+            <h4 className={SECTION_TITLE}>File d&apos;attente</h4>
+            <div className="mt-1 space-y-2">
+              {waitlistActive.map((w) => (
+                <div
+                  key={w.id}
+                  className="flex items-start gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 px-3 py-3 dark:border-zinc-700 dark:bg-zinc-800/40"
+                >
+                  <div className="flex min-w-0 flex-1 gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-200/80 dark:bg-zinc-700">
+                      <Clock
+                        className="size-5 text-slate-600 dark:text-slate-300"
+                        strokeWidth={1.5}
+                        aria-hidden
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-slate-200/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 dark:bg-zinc-600 dark:text-slate-100">
+                          Sans date
+                        </span>
+                        <span className="truncate text-xs font-semibold text-zinc-800 dark:text-zinc-100">
+                          {w.desiredService || w.notes || 'Créneau à proposer'}
+                        </span>
+                      </div>
+                      {w.notes && w.desiredService ? (
+                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                          {w.notes}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void copyBookingLink()}
+                      className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-all active:scale-95 dark:border-zinc-600 dark:bg-zinc-900 dark:text-slate-200"
+                      title="Copier le lien de réservation"
+                    >
+                      <CalendarPlus className="size-4" strokeWidth={1.5} aria-hidden />
+                    </button>
+                    {onOpenAgenda ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenAgenda()}
+                        className="text-[10px] font-semibold uppercase tracking-wide text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        Agenda
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+              {waitlistActive.length === 0 && clientTagsIndicateWaitlist(client) ? (
+                <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 px-3 py-3 dark:border-zinc-700 dark:bg-zinc-800/40">
+                  <Clock className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <span className="rounded-full bg-slate-200/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 dark:bg-zinc-600 dark:text-slate-100">
+                      Sans date
+                    </span>
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                      Client à recontacter ou sans date fixée (tag CRM).
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void copyBookingLink()}
+                    className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-all active:scale-95 dark:border-zinc-600 dark:bg-zinc-900 dark:text-slate-200"
+                    title="Proposer un créneau — copier le lien"
+                  >
+                    <CalendarPlus className="size-4" strokeWidth={1.5} aria-hidden />
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => void copyBookingLink()}
+              className="mt-3 w-full rounded-xl border border-dashed border-slate-200/90 py-2.5 text-center text-[11px] font-semibold text-slate-600 transition-all hover:bg-slate-50 active:scale-[0.99] dark:border-zinc-600 dark:text-slate-300 dark:hover:bg-zinc-800/50"
+            >
+              Proposer un créneau — copier le lien /book
+            </button>
+          </motion.section>
+        ) : null}
+
+        {/* —— Portfolio (galerie) —— */}
+        <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
+          <h4 className={SECTION_TITLE}>Portfolio</h4>
+          {galleryUrls.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Aucune photo enregistrée sur cette fiche ou les rendez-vous liés.
+            </p>
+          ) : (
+            <div className="mt-1 grid grid-cols-3 gap-3">
+              {galleryUrls.map((url, idx) => {
+                const lid = `client-gallery-${idx}-${url.slice(-24)}`;
+                return (
+                  <React.Fragment key={url}>
+                    <LazyClientPhoto
+                      src={url}
+                      alt={`Réalisation ${idx + 1}`}
+                      layoutId={lid}
+                      hideSharedLayout={heroPhoto?.url === url}
+                      onOpen={() => setHeroPhoto({ url, layoutId: lid })}
+                    />
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          )}
+        </motion.section>
+
+        {/* —— Santé & Légal —— */}
+        <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
+          <h4 className={SECTION_TITLE}>Santé & Légal</h4>
+          <p className="mb-3 font-mono text-[10px] text-slate-400 dark:text-slate-500">
+            Référence consentement · appointment_id{' '}
+            <span className="font-semibold text-slate-600 dark:text-slate-400">
+              {primaryUpcoming.id}
+            </span>
+          </p>
+          {consentMissingOnNext && (
+            <div className="mb-4 rounded-2xl border border-amber-200/70 bg-amber-50/60 p-4 shadow-sm backdrop-blur-md dark:border-amber-500/25 dark:bg-amber-950/45 dark:shadow-none">
+              <div className="flex gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-100/90 dark:bg-amber-500/20">
+                  <AlertTriangle
+                    className="size-5 text-amber-600 dark:text-amber-400"
+                    strokeWidth={1.75}
+                    aria-hidden
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-amber-950 dark:text-amber-100">
+                    Consentement manquant
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-amber-900/85 dark:text-amber-200/90">
+                    Le consentement lié au prochain rendez-vous (
+                    {formatAppointmentWhen(primaryUpcoming.date, primaryUpcoming.time)}) n&apos;est
+                    pas signé dans InkFlow. Choisis mail ou SMS — le lien est lié au RDV
+                    (appointment_id ci-dessus).
+                  </p>
+                  {!primaryConsentTargetSynthetic && studioId?.trim() ? (
+                    consentOutreachSentAt ? (
+                      <button
+                        type="button"
+                        onClick={openConsentSender}
+                        className="mt-3 flex w-full min-h-11 flex-col items-start gap-1 rounded-2xl border border-blue-200/90 bg-blue-50/80 px-4 py-3 text-left transition-all active:scale-[0.98] dark:border-blue-500/35 dark:bg-blue-950/40"
+                      >
+                        <span className="inline-flex items-center gap-2 text-sm font-semibold text-blue-900 dark:text-blue-100">
+                          <Clock
+                            className="size-4 shrink-0 text-blue-600 dark:text-blue-400"
+                            strokeWidth={1.75}
+                            aria-hidden
+                          />
+                          Envoyé le {formatConsentOutreachSentAt(consentOutreachSentAt)} — En
+                          attente de signature
+                        </span>
+                        <span className="text-[11px] font-medium text-blue-800/80 dark:text-blue-200/80">
+                          Touche pour renvoyer ou changer de canal
+                        </span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={openConsentSender}
+                        className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-amber-600 px-4 text-sm font-semibold text-white transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-amber-500 dark:text-zinc-950"
+                      >
+                        <Send className="size-4" strokeWidth={1.5} aria-hidden />
+                        Envoyer le consentement
+                      </button>
+                    )
+                  ) : primaryConsentTargetSynthetic && onOpenInkflowDiscussion ? (
+                    <button
+                      type="button"
+                      onClick={() => onOpenInkflowDiscussion()}
+                      className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-amber-600/40 bg-white px-4 text-sm font-semibold text-amber-950 transition-all active:scale-95 dark:bg-zinc-900 dark:text-amber-100"
+                    >
+                      <MessageCircle className="size-4" strokeWidth={1.5} aria-hidden />
+                      Ouvrir la messagerie
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="space-y-3">
+            <div
+              className={`flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${
+                appointment.consentFormSigned
+                  ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-200'
+                  : 'bg-amber-50 text-amber-900 dark:bg-amber-500/15 dark:text-amber-200'
+              }`}
+            >
+              {appointment.consentFormSigned ? (
+                <CheckCircle2 className="size-4 shrink-0" strokeWidth={1.5} />
+              ) : (
+                <FileSignature className="size-4 shrink-0" strokeWidth={1.5} />
+              )}
+              <span className="font-medium">
+                {appointment.consentFormSigned
+                  ? 'Consentement signé (RDV affiché)'
+                  : 'Consentement à collecter pour ce RDV'}
+              </span>
+            </div>
+            <div
+              className={`flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${
+                hasHealthSnapshot
+                  ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-200'
+                  : 'bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-slate-200'
+              }`}
+            >
+              <HeartPulse className="size-4 shrink-0" strokeWidth={1.5} />
+              <span className="font-medium">
+                {hasHealthSnapshot
+                  ? 'Questionnaire santé enregistré'
+                  : 'Questionnaire santé manquant'}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <span className="inline-flex items-center gap-1">
+                <Banknote className="size-3.5" strokeWidth={1.5} />
+                Acompte : {appointment.depositPaid ? 'encaissé' : 'à relancer'}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Euro className="size-3.5" strokeWidth={1.5} />
+                Solde :{' '}
+                {remainingBalance < 1 || appointment.balancePaidAt
+                  ? 'réglé'
+                  : `${remainingBalance.toFixed(2)}€`}
+              </span>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* —— Carte 4 : Notes & préférences —— */}
+        <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
+          <h4 className={SECTION_TITLE}>Notes & préférences</h4>
+          <div className="mt-4 space-y-4 text-sm">
+            {client && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-500 dark:text-slate-400">
                 {formatVisitDate(client.firstVisit) && (
                   <span>
                     1<sup>ère</sup> visite :{' '}
-                    <strong className="text-[var(--text-primary)] font-medium">
+                    <strong className="text-zinc-800 dark:text-white">
                       {formatVisitDate(client.firstVisit)}
                     </strong>
                   </span>
                 )}
                 {formatVisitDate(client.lastVisit) && (
                   <span>
-                    Dernière visite :{' '}
-                    <strong className="text-[var(--text-primary)] font-medium">
+                    Dernière :{' '}
+                    <strong className="text-zinc-800 dark:text-white">
                       {formatVisitDate(client.lastVisit)}
                     </strong>
                   </span>
                 )}
               </div>
-              {client.notes?.trim() && (
-                <p className="text-[var(--text-tertiary)] leading-relaxed border-l-2 border-zinc-300 dark:border-zinc-600 pl-2">
-                  {truncateNote(client.notes, compact ? 120 : 220)}
+            )}
+            {tagPreview.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {tagPreview.map((t) => (
+                  <span
+                    key={t}
+                    className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-zinc-800 dark:text-slate-300"
+                  >
+                    <Tag className="size-3 text-slate-500" strokeWidth={1.5} aria-hidden />
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+            {(client?.notes?.trim() || appointment.notes?.trim()) && (
+              <div className="rounded-xl bg-slate-50/90 p-4 text-slate-700 dark:bg-zinc-800/50 dark:text-slate-200">
+                <p className={SECTION_TITLE}>Notes studio</p>
+                <p className="mt-2 leading-relaxed">
+                  {truncateNote(
+                    client?.notes?.trim() || appointment.notes || '',
+                    compact ? 200 : 400
+                  )}
                 </p>
-              )}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-[var(--border)]">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--bg-hover)]">
-              <Calendar className={ICON_STAT} />
-              <div>
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">
-                  RDV (total)
+              </div>
+            )}
+            {prefsLines.length > 0 && (
+              <ul className="space-y-1.5 text-slate-600 dark:text-slate-300">
+                {prefsLines.map((line) => (
+                  <li key={line} className="flex gap-2">
+                    <Sparkles
+                      className="mt-0.5 size-3.5 shrink-0 text-slate-400"
+                      strokeWidth={1.5}
+                    />
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="rounded-xl bg-slate-50 px-3 py-3 dark:bg-zinc-800/60">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                  RDV total
                 </p>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                <p className="mt-1 text-lg font-black text-zinc-900 dark:text-white">
                   {client?.appointmentsCount ?? 1}
                 </p>
               </div>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--bg-hover)]">
-              <Euro className={ICON_STAT} />
-              <div>
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-medium">
+              <div className="rounded-xl bg-slate-50 px-3 py-3 dark:bg-zinc-800/60">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
                   Dépensé (CRM)
                 </p>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  {client ? `${client.totalSpent}€` : `${appointment.price}€ (ce RDV)`}
+                <p className="mt-1 text-lg font-black text-zinc-900 dark:text-white">
+                  {client ? `${client.totalSpent}€` : `${appointment.price}€`}
                 </p>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Discussion app client (espace client / compte synchronisé) */}
-      {showInkflowClientDiscussion && onOpenInkflowDiscussion && (
-        <div className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden border-l-4 border-l-blue-500">
-          <div className="px-4 py-3 border-b border-[var(--border)] bg-blue-500/5 dark:bg-blue-500/10">
-            <span className="font-semibold text-sm text-[var(--text-primary)] flex items-center gap-2">
-              <MessageCircle className="w-4 h-4 shrink-0 text-blue-700 dark:text-blue-400 stroke-[1.75]" />
-              Discussion InkFlow
-            </span>
-          </div>
-          <div className="p-4 space-y-3">
-            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-              Ce client est passé par{' '}
-              <strong className="text-[var(--text-primary)]">l&apos;app client InkFlow</strong> —
-              vous pouvez continuer l&apos;échange dans la messagerie intégrée.
-            </p>
-            {!inkflowMessagingThreadId && (
-              <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed">
-                Aucun fil encore détecté pour cet e-mail : ouvrez la messagerie pour écrire au
-                client ou retrouver la conversation.
-              </p>
+            {!client?.notes?.trim() && !appointment.notes?.trim() && prefsLines.length === 0 && (
+              <p className="text-slate-500 dark:text-slate-400">Aucune note supplémentaire.</p>
             )}
+          </div>
+        </motion.section>
+
+        {/* —— Discussion InkFlow —— */}
+        {showInkflowClientDiscussion && onOpenInkflowDiscussion && (
+          <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
+            <h4 className={SECTION_TITLE}>Messagerie</h4>
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+              Ce client peut être contacté via l&apos;app client InkFlow.
+            </p>
             <button
               type="button"
               onClick={onOpenInkflowDiscussion}
-              className="flex w-full items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400  active:scale-[0.98] transition-all touch-manipulation"
+              className="mt-4 flex w-full min-h-11 items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-semibold text-white transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-blue-500"
             >
-              <MessageCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />
+              <MessageCircle className="size-4" strokeWidth={1.5} aria-hidden />
               {inkflowMessagingThreadId ? 'Ouvrir la discussion' : 'Aller à la messagerie'}
             </button>
-          </div>
-        </div>
-      )}
+          </motion.section>
+        )}
 
-      {/* Contact */}
-      <div className="rounded-2xl bg-[var(--bg-card)] border border-[var(--border)] overflow-hidden">
-        <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-secondary)]/50">
-          <div className="flex items-center justify-between gap-3">
-            <span className="font-semibold text-sm text-[var(--text-primary)]">
-              Contacter le client
-            </span>
-            <button
-              type="button"
-              onClick={() => void copyContact()}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--border)] px-2.5 text-xs font-semibold text-[var(--text-secondary)] active:scale-[0.98] transition-all"
-            >
-              <Copy className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
-              Copier
-            </button>
-          </div>
-        </div>
-        <div className="flex flex-col gap-3 p-4">
-          <div className="flex flex-wrap gap-2">
-            {appointment.clientEmail && (
-              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
-                <Mail className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
-                <span className="truncate">{appointment.clientEmail}</span>
-              </span>
-            )}
-            {phoneDisplay && (
-              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
-                <Phone className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
-                <span className="truncate">{phoneDisplay}</span>
-              </span>
-            )}
-            {instagramHandle && (
-              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--bg-hover)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
-                <Instagram className="w-3.5 h-3.5 shrink-0 stroke-[1.75]" />
-                <span className="truncate">@{instagramHandle}</span>
-              </span>
-            )}
-            {!hasAnyContactDetail && (
-              <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-                Aucune coordonnée exploitable
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">
-            {showInkflowClientDiscussion ? (
-              <>
-                La discussion InkFlow reste disponible, mais vous pouvez aussi contacter le client
-                directement pour confirmer un détail ou relancer une réponse.
-              </>
-            ) : (
-              <>
-                Contactez le client directement pour confirmer le rendez-vous, envoyer une consigne
-                ou relancer une réponse.
-              </>
-            )}
-          </p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {mailtoHref ? (
-              <a
-                href={mailtoHref}
-                onClick={(e) => {
-                  handleMailtoClick(e, mailtoHref);
-                }}
-                className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all touch-manipulation"
+        {/* Référence RDV courant (contexte) */}
+        {(relativeDayLabel || appointment.service) && (
+          <motion.p
+            variants={sectionVariants}
+            className="text-center text-xs text-slate-400 dark:text-slate-500"
+          >
+            <CalendarDays className="mr-1 inline size-3.5 align-text-bottom" strokeWidth={1.5} />
+            {relativeDayLabel ? `${relativeDayLabel} · ` : null}
+            {whenLabel}
+          </motion.p>
+        )}
+      </motion.div>
+
+      {/* Lightbox hero */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {heroPhoto ? (
+              <motion.div
+                key="hero-backdrop"
+                role="button"
+                tabIndex={0}
+                aria-label="Fermer"
+                className="fixed inset-0 z-[200] flex items-center justify-center bg-black/88 p-4 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setHeroPhoto(null)}
+                onKeyDown={(e) => e.key === 'Escape' && setHeroPhoto(null)}
               >
-                <Mail className="w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
-                E-mail
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={() => toast.error('Adresse e-mail du client invalide ou manquante.')}
-                className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-tertiary)] opacity-60 cursor-not-allowed"
-              >
-                <Mail className="w-4 h-4 shrink-0 stroke-[1.75]" />
-                E-mail
-              </button>
-            )}
-            {telHref ? (
-              <a
-                href={telHref}
-                className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all touch-manipulation"
-              >
-                <Phone className="w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
-                Appeler
-              </a>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-tertiary)] opacity-50 cursor-not-allowed"
-              >
-                <Phone className="w-4 h-4 shrink-0 stroke-[1.75]" />
-                Pas de numéro
-              </button>
-            )}
-            {smsHref && (
-              <a
-                href={smsHref}
-                className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all touch-manipulation"
-              >
-                <MessageCircle className="w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
-                SMS
-              </a>
-            )}
-            {instagramHandle && (
-              <a
-                href={instagramMessageUrl(instagramHandle)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all touch-manipulation"
-              >
-                <Instagram className="w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400 stroke-[1.75]" />
-                Instagram
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+                <motion.img
+                  layoutId={heroPhoto.layoutId}
+                  src={heroPhoto.url}
+                  alt=""
+                  className="max-h-[min(92dvh,920px)] max-w-full rounded-xl object-contain shadow-2xl"
+                  initial={reduceMotion ? false : { scale: 0.92, opacity: 0.85 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={reduceMotion ? undefined : { scale: 0.92, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </motion.div>
+            ) : null}
+          </AnimatePresence>,
+          document.body
+        )}
+
+      {!primaryConsentTargetSynthetic && consentMissingOnNext ? (
+        <ConsentSender
+          isOpen={consentSenderOpen}
+          onClose={() => setConsentSenderOpen(false)}
+          studioId={studioId}
+          studioName={studioName}
+          artistName={artistName}
+          appointment={primaryUpcoming}
+          presets={effectiveConsentPresets}
+          inkflowMessagingThreadId={inkflowMessagingThreadId}
+          onSent={() => void loadConsentOutreach()}
+        />
+      ) : null}
+    </>
   );
 };

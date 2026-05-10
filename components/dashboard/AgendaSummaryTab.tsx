@@ -166,7 +166,7 @@ type DayStripProps = {
 function AgendaDayStrip({ weekDays, selectedYmd, onSelectYmd }: DayStripProps) {
   return (
     <div
-      className="flex snap-x snap-mandatory justify-between gap-1 overflow-x-auto pb-0 pt-0.5 [scrollbar-gutter:stable] [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-1.5 sm:pb-1 sm:pt-1 md:gap-2 [&::-webkit-scrollbar]:hidden"
+      className="scrollbar-hide flex snap-x snap-mandatory justify-between gap-1 overflow-x-auto pb-0 pt-0.5 [scrollbar-gutter:stable] sm:gap-1.5 sm:pb-1 sm:pt-1 md:gap-2"
       style={{ WebkitOverflowScrolling: 'touch' }}
       role="listbox"
       aria-label="Sélection du jour"

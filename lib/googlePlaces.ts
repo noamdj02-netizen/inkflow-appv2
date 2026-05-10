@@ -48,8 +48,12 @@ function friendlyError(_fn: string, raw: string): string {
   if (lower.includes('configuration serveur') || lower.includes('503')) {
     return 'La recherche Google n’est pas activée sur le serveur pour l’instant. Utilisez l’URL ou le Place ID dans les options avancées, ou contactez le support Inkflow.';
   }
-  if (lower.includes('request_denied') || lower.includes('not authorized') || lower.includes('api key')) {
-    return 'Cle Google ou API Places refusee : verifiez la cle et l\'activation Places API dans Google Cloud.';
+  if (
+    lower.includes('request_denied') ||
+    lower.includes('not authorized') ||
+    lower.includes('api key')
+  ) {
+    return "Cle Google ou API Places refusee : verifiez la cle et l'activation Places API dans Google Cloud.";
   }
   if (lower.includes('fetch') || lower.includes('network')) {
     return 'Service Google temporairement indisponible (reseau).';
@@ -235,7 +239,10 @@ async function invokeGoogleBusinessJwt<T>(
 
     if (!res.ok) {
       const hint =
-        (payload && typeof payload === 'object' && typeof payload.error === 'string' && payload.error) ||
+        (payload &&
+          typeof payload === 'object' &&
+          typeof payload.error === 'string' &&
+          payload.error) ||
         text.slice(0, 400);
       return {
         data: parsed ?? null,
@@ -297,56 +304,14 @@ async function invokeGoogleBusinessJwt<T>(
     result = mapHttpToReturn(outcome);
   }
 
-  // #region agent log
-  {
-    const {
-      data: { session: sLog },
-    } = await supabase.auth.getSession();
-    const tok = sLog?.access_token;
-    const jwtMatch =
-      typeof tok === 'string' && tok.length > 0 ? isAccessTokenForCurrentSupabaseProject(tok) : null;
-    const httpStatus =
-      outcome.kind === 'http' ? outcome.res.status : 'network';
-    const errSlice =
-      result.error?.message?.slice(0, 160) ??
-      (outcome.kind === 'http' ? outcome.text.slice(0, 120) : outcome.message.slice(0, 120));
-    const payload = {
-      sessionId: 'df269f',
-      runId: 'post-fix',
-      hypothesisId: 'H1-H5',
-      location: 'lib/googlePlaces.ts:invokeGoogleBusinessJwt',
-      message: 'google-business-auth fetch',
-      data: {
-        action: String(body.action ?? '?'),
-        httpStatus,
-        errSlice,
-        hasInvokeError: Boolean(result.error),
-        hasSession: Boolean(tok),
-        jwtProjectMatchesEnv: jwtMatch,
-        transport: 'fetch',
-      },
-      timestamp: Date.now(),
-    };
-    fetch('http://127.0.0.1:7478/ingest/9ba54e13-e981-4aca-a0ca-1aa98d457b97', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'df269f' },
-      body: JSON.stringify(payload),
-    }).catch(() => {});
-    try {
-      sessionStorage.setItem('__inkflow_dbg_gba', JSON.stringify(payload.data));
-    } catch {
-      /* ignore */
-    }
-  }
-  // #endregion
-
   return result;
 }
 
 /** Genere l'URL OAuth Google Business et redirige l'utilisateur. */
 export async function initiateGoogleBusinessAuth(studioId: string): Promise<string> {
   const { data, error } = await invokeGoogleBusinessJwt<{ authUrl?: string; error?: string }>({
-    action: 'initiate', studioId,
+    action: 'initiate',
+    studioId,
   });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
@@ -357,7 +322,8 @@ export async function initiateGoogleBusinessAuth(studioId: string): Promise<stri
 /** Verifie si le studio a connecte un compte Google Business. */
 export async function getGoogleBusinessStatus(studioId: string): Promise<GoogleBusinessStatus> {
   const { data, error } = await invokeGoogleBusinessJwt<GoogleBusinessStatus & { error?: string }>({
-    action: 'status', studioId,
+    action: 'status',
+    studioId,
   });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
@@ -391,8 +357,7 @@ export async function listGoogleBusinessLocations(
   }
   return {
     locations: Array.isArray(data?.locations) ? data.locations : [],
-    fetchErrors:
-      Array.isArray(data?.errors) && data.errors.length > 0 ? data.errors : undefined,
+    fetchErrors: Array.isArray(data?.errors) && data.errors.length > 0 ? data.errors : undefined,
     accountsCount: typeof data?.accountsCount === 'number' ? data.accountsCount : undefined,
     cached: Boolean(data?.cached),
     rateLimited: Boolean(data?.rateLimited),
@@ -401,9 +366,14 @@ export async function listGoogleBusinessLocations(
 }
 
 /** Enregistre la fiche Google Business choisie. */
-export async function saveGoogleBusinessLocation(studioId: string, locationName: string): Promise<void> {
+export async function saveGoogleBusinessLocation(
+  studioId: string,
+  locationName: string
+): Promise<void> {
   const { data, error } = await invokeGoogleBusinessJwt<{ error?: string }>({
-    action: 'save_location', studioId, locationName,
+    action: 'save_location',
+    studioId,
+    locationName,
   });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
@@ -412,7 +382,8 @@ export async function saveGoogleBusinessLocation(studioId: string, locationName:
 /** Revoque et supprime les tokens Google Business. */
 export async function disconnectGoogleBusiness(studioId: string): Promise<void> {
   const { data, error } = await invokeGoogleBusinessJwt<{ error?: string }>({
-    action: 'disconnect', studioId,
+    action: 'disconnect',
+    studioId,
   });
   if (error) throw new Error(error.message);
   if (data?.error) throw new Error(data.error);
@@ -431,8 +402,14 @@ export async function fetchBusinessPublicReviews(
     action: 'business_public_reviews',
     slug: slug.trim().toLowerCase(),
   });
-  if (error) { console.warn('[google-business]', error.message); return null; }
-  if (data?.error) { console.warn('[google-business]', data.error); return null; }
+  if (error) {
+    console.warn('[google-business]', error.message);
+    return null;
+  }
+  if (data?.error) {
+    console.warn('[google-business]', data.error);
+    return null;
+  }
   if (!data || !data.configured) return null;
   return {
     reviews: Array.isArray(data.reviews) ? (data.reviews as GoogleBusinessReview[]) : [],
@@ -465,7 +442,10 @@ export async function resolveMapsPasteViaEdge(input: string): Promise<string | n
 
 /** Recherche d'etablissements (JWT requis). */
 export async function searchGooglePlaces(query: string): Promise<GooglePlaceSearchResultDTO[]> {
-  const { data, error } = await invokeGooglePlacesJwt<{ results?: GooglePlaceSearchResultDTO[]; error?: string }>({
+  const { data, error } = await invokeGooglePlacesJwt<{
+    results?: GooglePlaceSearchResultDTO[];
+    error?: string;
+  }>({
     action: 'text_search',
     query: query.trim(),
   });

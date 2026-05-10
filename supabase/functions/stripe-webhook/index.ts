@@ -18,6 +18,17 @@ const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET") || "";
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+function inkflowEdgeInvokeHeaders(): Record<string, string> {
+  const h: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+  };
+  const s = (Deno.env.get("INTERNAL_FUNCTION_SECRET") || "").trim();
+  if (s.length >= 12) h["X-Inkflow-Secret"] = s;
+  return h;
+}
+
 /** DSN Sentry (Edge Function uniquement — pas de préfixe VITE_). */
 const SENTRY_DSN = Deno.env.get("SENTRY_DSN") || "";
 
@@ -631,10 +642,7 @@ Deno.serve(async (req: Request) => {
             const pushUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-push-notification`;
             await fetch(pushUrl, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-              },
+              headers: inkflowEdgeInvokeHeaders(),
               body: JSON.stringify({
                 studioId,
                 title:
@@ -682,10 +690,7 @@ Deno.serve(async (req: Request) => {
             };
             const emailRes = await fetch(fnUrl, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-              },
+              headers: inkflowEdgeInvokeHeaders(),
               body: JSON.stringify(emailPayload),
             });
             if (!emailRes.ok) {
@@ -709,10 +714,7 @@ Deno.serve(async (req: Request) => {
               const fnUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/send-deposit-studio-notification`;
               const studioRes = await fetch(fnUrl, {
                 method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-                },
+                headers: inkflowEdgeInvokeHeaders(),
                 body: JSON.stringify({
                   studioEmail,
                   studioName,

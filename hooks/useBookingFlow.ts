@@ -2,8 +2,8 @@
  * Hook centralisant tout l'état et la logique de la page de réservation publique.
  * Extrait de PublicBookingPage.tsx pour réduire sa taille et faciliter les tests.
  */
-import { useState, useEffect, useMemo } from 'react';
-import type { FlashDesign, ProjectRequestFormData } from '../types';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import type { Appointment, FlashDesign, ProjectRequestFormData } from '../types';
 import {
   getStudioPublicBySlug,
   getFlashDesignsFromSupabase,
@@ -184,6 +184,9 @@ export function useBookingFlow(studioSlug: string) {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentVerified, setPaymentVerified] = useState<boolean | null>(null);
 
+  /** RDV pending déjà créé avant paiement (questionnaire santé) — évite double insert + lie health_forms. */
+  const checkoutPreflightAppointmentIdRef = useRef<string | null>(null);
+
   // ── Effects ──────────────────────────────────────────────────────────────────
 
   // Sync flash depuis URL au changement de slug
@@ -252,6 +255,12 @@ export function useBookingFlow(studioSlug: string) {
         }
         setStudioId(row.id);
         setPaymentsOnline(row.paymentsOnline);
+        if (typeof row.globalDepositPercentage === 'number') {
+          setVitrineData((prev) => ({
+            ...(prev ?? {}),
+            globalDepositPercentage: row.globalDepositPercentage,
+          }));
+        }
       })
       .catch(() => {
         setStudioId(null);
@@ -345,23 +354,6 @@ export function useBookingFlow(studioSlug: string) {
     const flash = flashList.find((f) => f.id === selectedFlashId);
     if (flash?.artistId) setSelectedArtistId(flash.artistId);
   }, [selectedFlashId, flashList]);
-
-  // Charger le depositPercentage global depuis availability_settings
-  useEffect(() => {
-    if (!studioId || studioId === 'loading' || !supabaseEnabled) return;
-    void supabase
-      .from('inkflow_studios')
-      .select('availability_settings')
-      .eq('id', studioId)
-      .single()
-      .then(({ data }) => {
-        const pct = (data?.availability_settings as { depositPercentage?: number } | null)
-          ?.depositPercentage;
-        if (typeof pct === 'number') {
-          setVitrineData((prev) => ({ ...prev, globalDepositPercentage: pct }));
-        }
-      });
-  }, [studioId]);
 
   // Charger les disponibilités du studio
   useEffect(() => {
@@ -583,8 +575,10 @@ export function useBookingFlow(studioSlug: string) {
     }
   };
 
-  const saveHealthForm = async (data: HealthFormData): Promise<boolean> => {
+  const saveHealthForm = async (data: HealthFormData, appointmentId: string): Promise<boolean> => {
     if (!studioId || studioId === 'loading') return false;
+    const aptId = appointmentId.trim();
+    if (!aptId) return false;
     try {
       const healthData = {
         allergies: data.allergies,
@@ -602,6 +596,7 @@ export function useBookingFlow(studioSlug: string) {
 
       const { error } = await supabase.from('inkflow_health_forms').insert({
         studio_id: studioId,
+        appointment_id: aptId,
         client_name: data.clientName,
         client_email: form.email,
         client_birthdate: data.clientBirthdate || null,
@@ -654,7 +649,10 @@ export function useBookingFlow(studioSlug: string) {
     setIsSubmitting(true);
     setPaymentError(null);
 
-    const appointmentId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const pref = checkoutPreflightAppointmentIdRef.current;
+    const usedPreflightAppointment = Boolean(pref);
+    const appointmentId = pref ?? `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    if (pref) checkoutPreflightAppointmentIdRef.current = null;
     const clientEmail = form.email.trim();
 
     try {
@@ -667,8 +665,8 @@ export function useBookingFlow(studioSlug: string) {
           ? `${selectedFlash.title || 'Flash'} — ${selectedArtistLabel}`
           : selectedFlash.title || 'Flash';
 
-      if (supabaseEnabled) {
-        await saveAppointmentToSupabase(studioId, {
+      if (supabaseEnabled && !usedPreflightAppointment) {
+        const pendingApt: Appointment = {
           id: appointmentId,
           clientId: '',
           clientName,
@@ -689,7 +687,8 @@ export function useBookingFlow(studioSlug: string) {
           consentFormSigned: false,
           createdAt: now,
           updatedAt: now,
-        });
+        };
+        await saveAppointmentToSupabase(studioId, pendingApt);
       }
 
       let clientPortalUserId: string | undefined;
@@ -753,13 +752,74 @@ export function useBookingFlow(studioSlug: string) {
   };
 
   const handleHealthFormComplete = async (data: HealthFormData) => {
+    if (
+      !form.firstName ||
+      !form.lastName ||
+      !form.email ||
+      !form.phone ||
+      !form.selectedDate ||
+      !form.selectedTime
+    ) {
+      setPaymentError('Données de réservation incomplètes.');
+      return;
+    }
+    if (!selectedFlashId || !selectedFlash || depositAmount == null || !resolvedPlacement) return;
+    if (!studioId || studioId === 'loading') return;
+
     setHealthFormData(data);
-    const saved = await saveHealthForm(data);
-    if (saved) {
-      setHealthFormCompleted(true);
-      setShowHealthForm(false);
-      proceedToPayment();
-    } else {
+    const appointmentId = `apt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const clientName = `${form.firstName} ${form.lastName}`;
+    const clientEmail = form.email.trim();
+    const now = new Date().toISOString();
+    const serviceLabel =
+      selectedArtistLabel != null
+        ? `${selectedFlash.title || 'Flash'} — ${selectedArtistLabel}`
+        : selectedFlash.title || 'Flash';
+
+    try {
+      if (supabaseEnabled) {
+        const pendingApt: Appointment = {
+          id: appointmentId,
+          clientId: '',
+          clientName,
+          clientEmail,
+          clientPhone: form.phone,
+          date: form.selectedDate,
+          time: form.selectedTime,
+          service: serviceLabel,
+          duration: 60,
+          price: selectedFlash.price ?? 0,
+          deposit: depositAmount,
+          depositPaid: false,
+          status: 'pending',
+          tattooType: 'flash',
+          flashId: selectedFlashId,
+          location: 'other',
+          size: 'medium',
+          consentFormSigned: false,
+          createdAt: now,
+          updatedAt: now,
+        };
+        await saveAppointmentToSupabase(studioId, pendingApt);
+      }
+
+      const saved = await saveHealthForm(data, appointmentId);
+      if (saved) {
+        checkoutPreflightAppointmentIdRef.current = appointmentId;
+        setHealthFormCompleted(true);
+        setShowHealthForm(false);
+        await proceedToPayment();
+      } else {
+        if (supabaseEnabled) {
+          await abandonPublicCheckoutAppointment(appointmentId, clientEmail).catch(() => {});
+        }
+        setPaymentError('Erreur lors de la sauvegarde du questionnaire. Veuillez réessayer.');
+      }
+    } catch (e) {
+      console.error('handleHealthFormComplete:', e);
+      if (supabaseEnabled) {
+        await abandonPublicCheckoutAppointment(appointmentId, clientEmail).catch(() => {});
+      }
       setPaymentError('Erreur lors de la sauvegarde du questionnaire. Veuillez réessayer.');
     }
   };

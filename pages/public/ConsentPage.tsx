@@ -15,36 +15,44 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ consentId }) => {
 
   useEffect(() => {
     supabase
-      .from('inkflow_consent_forms')
-      .select('id,signed_at,template,client_name,client_email,appointment_id')
-      .eq('id', consentId)
-      .single()
+      .rpc('get_consent_form_for_public_portal', { p_id: consentId })
       .then(({ data, error }) => {
-        if (error || !data) {
+        const raw = Array.isArray(data) ? data[0] : data;
+        if (error || !raw || typeof raw !== 'object') {
           setConsent(null);
-        } else if (data.signed_at) {
-          setAlreadySigned(true);
         } else {
-          setConsent({
-            template: data.template,
-            clientName: data.client_name,
-            clientEmail: data.client_email,
-            appointmentId: data.appointment_id,
-          });
+          const row = raw as {
+            signed_at?: string | null;
+            template?: string | null;
+            client_name?: string | null;
+            client_email?: string | null;
+            appointment_id?: string | null;
+          };
+          if (row.signed_at) {
+            setAlreadySigned(true);
+          } else if (!row.template?.trim()) {
+            setConsent(null);
+          } else {
+            setConsent({
+              template: row.template,
+              clientName: row.client_name || 'Client',
+              clientEmail: row.client_email || '',
+              appointmentId: row.appointment_id || undefined,
+            });
+          }
         }
         setLoading(false);
       });
   }, [consentId]);
 
   const handleSign = async (payload: { signatureData: string; filledTemplateText: string }) => {
-    await supabase
-      .from('inkflow_consent_forms')
-      .update({
-        signature_data: payload.signatureData,
-        signed_at: new Date().toISOString(),
-        filled_template_text: payload.filledTemplateText,
-      })
-      .eq('id', consentId);
+    const { data: ok, error } = await supabase.rpc('submit_consent_form_signature', {
+      p_id: consentId,
+      p_signature_data: payload.signatureData,
+      p_filled_template_text: payload.filledTemplateText,
+    });
+    if (error) throw new Error(error.message);
+    if (ok !== true) throw new Error('Signature refusée ou formulaire déjà signé.');
   };
 
   const consentSeo = (

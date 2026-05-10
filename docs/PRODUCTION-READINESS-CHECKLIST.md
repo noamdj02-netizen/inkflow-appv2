@@ -3,6 +3,8 @@
 Document **opérationnel** pour valider InkFlow avant mise en mains clients.  
 Code de référence : `vite.config.ts` (**port dev Vite = 3000**), Edge sous `supabase/functions/`.
 
+> **Vue fondateur — MVP « fini » (ce que tu dois faire vs le code) :** [`MVP-FINI-ACTIONS-FOUNDATEUR.md`](./MVP-FINI-ACTIONS-FOUNDATEUR.md)
+
 Voir aussi : [`CALENDAR_SETUP.md`](./CALENDAR_SETUP.md), [`STRIPE-P0-PRODUCTION.md`](./STRIPE-P0-PRODUCTION.md), [`ENV-PRODUCTION.md`](./ENV-PRODUCTION.md), [`CONFIGURATION.md`](./CONFIGURATION.md).
 
 ---

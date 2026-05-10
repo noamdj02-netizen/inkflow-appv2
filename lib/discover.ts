@@ -75,65 +75,77 @@ export interface SearchResult {
   totalPages: number;
 }
 
-// ── SELECT fragment réutilisable ─────────────────────────────────────────────
-const STUDIO_SELECT = `
-  id, slug, name, studio_name, city, city_slug,
-  styles, bio, instagram,
-  price_min, price_max,
-  rating_avg, rating_count,
-  portfolio_cover_url, portfolio_preview,
-  lat, lng, last_active_at, discover_rank
-`.trim();
+function mapDiscoverRpcRow(r: Record<string, unknown>): DiscoverStudio {
+  const preview = r.portfolio_preview;
+  const previewUrls: string[] = Array.isArray(preview)
+    ? (preview as unknown[])
+        .map((x) => (typeof x === 'string' ? x : (x as { url?: string })?.url || ''))
+        .filter(Boolean)
+    : [];
+  return {
+    id: String(r.id ?? ''),
+    slug: String(r.slug ?? ''),
+    name: String(r.name ?? ''),
+    studio_name: String(r.studio_name ?? ''),
+    city: (r.city as string | null) ?? null,
+    city_slug: (r.city_slug as string | null) ?? null,
+    styles: Array.isArray(r.styles) ? (r.styles as string[]) : [],
+    bio: (r.bio as string | null) ?? null,
+    instagram: (r.instagram as string | null) ?? null,
+    price_min: typeof r.price_min === 'number' ? r.price_min : null,
+    price_max: typeof r.price_max === 'number' ? r.price_max : null,
+    rating_avg: Number(r.rating_avg ?? 0),
+    rating_count: Number(r.rating_count ?? 0),
+    portfolio_cover_url: (r.portfolio_cover_url as string | null) ?? null,
+    portfolio_preview: previewUrls,
+    lat: r.lat != null ? Number(r.lat) : null,
+    lng: r.lng != null ? Number(r.lng) : null,
+    last_active_at: (r.last_active_at as string | null) ?? null,
+    discover_rank: Number(r.discover_rank ?? 0),
+  };
+}
 
-// ── Recherche studios ─────────────────────────────────────────────────────────
+// ── Recherche studios (RPC sécurisée — pas de SELECT direct sur inkflow_studios) ──
 export async function searchStudios(params: SearchParams): Promise<SearchResult> {
   const { city, style, q, priceMax, priceMin, sort = 'rank', page = 1, perPage = 12 } = params;
 
-  let query = (supabase as any)
-    .from('inkflow_studios')
-    .select(STUDIO_SELECT, { count: 'exact' })
-    .eq('is_discoverable', true);
+  const { data, error } = await (supabase as any).rpc('search_public_discover_studios', {
+    p_city_slug: city ?? null,
+    p_style: style ?? null,
+    p_q: q ?? null,
+    p_price_max: priceMax ?? null,
+    p_price_min: priceMin ?? null,
+    p_sort: sort,
+    p_page: page,
+    p_per_page: perPage,
+  });
 
-  if (city) query = query.eq('city_slug', city);
-  if (style) query = query.contains('styles', [style]);
-  if (priceMax) query = query.lte('price_min', priceMax);
-  if (priceMin) query = query.gte('price_max', priceMin);
-  if (q) query = query.or(`name.ilike.%${q}%,studio_name.ilike.%${q}%,bio.ilike.%${q}%`);
-
-  const sortMap: Record<string, { col: string; asc: boolean }> = {
-    rank: { col: 'discover_rank', asc: false },
-    rating: { col: 'rating_avg', asc: false },
-    recent: { col: 'last_active_at', asc: false },
-  };
-  const { col, asc } = sortMap[sort] ?? sortMap.rank;
-  query = query.order(col, { ascending: asc }).order('id', { ascending: true });
-
-  const from = (page - 1) * perPage;
-  query = query.range(from, from + perPage - 1);
-
-  const { data, error, count } = await query;
   if (error) throw new Error(error.message);
 
+  const rows = (data ?? []) as Record<string, unknown>[];
+  const total = rows.length > 0 ? Number(rows[0].out_total ?? 0) : 0;
+  const studios = rows.map((row) => {
+    const { out_total: _t, ...rest } = row;
+    return mapDiscoverRpcRow(rest);
+  });
+
   return {
-    studios: (data ?? []) as DiscoverStudio[],
-    total: count ?? 0,
+    studios,
+    total,
     page,
-    totalPages: Math.ceil((count ?? 0) / perPage),
+    totalPages: Math.ceil(total / perPage) || 0,
   };
 }
 
 // ── Studios tendance ──────────────────────────────────────────────────────────
 export async function getTrendingStudios(limit = 8): Promise<DiscoverStudio[]> {
-  const { data, error } = await (supabase as any)
-    .from('inkflow_studios')
-    .select(STUDIO_SELECT)
-    .eq('is_discoverable', true)
-    .gte('rating_count', 1)
-    .order('discover_rank', { ascending: false })
-    .limit(limit);
+  const { data, error } = await (supabase as any).rpc('get_trending_public_discover_studios', {
+    p_limit: limit,
+  });
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as DiscoverStudio[];
+  const rows = (data ?? []) as Record<string, unknown>[];
+  return rows.map((r) => mapDiscoverRpcRow(r));
 }
 
 // ── Villes actives ────────────────────────────────────────────────────────────

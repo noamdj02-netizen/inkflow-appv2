@@ -6,14 +6,19 @@
 import { escapeHtml, wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { rateLimitByIp, verifyTattooerOwnsStudio } from "../_shared/edgeInvokeAuth.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL") || "InkFlow <contact@ink-flow.me>";
 const SITE_URL = (Deno.env.get("SITE_URL") || "https://ink-flow.me").replace(/\/+$/, "");
 const SUPPORT_PHONE = Deno.env.get("SUPPORT_PHONE") || "06 33 43 89 26";
 const SUPPORT_ADDRESS = Deno.env.get("SUPPORT_ADDRESS") || "Paris, France";
+const SUPABASE_URL = (Deno.env.get("SUPABASE_URL") || "").trim();
+const SUPABASE_ANON_KEY = (Deno.env.get("SUPABASE_ANON_KEY") || "").trim();
+const SUPABASE_SERVICE_ROLE_KEY = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim();
 
 interface Payload {
+  studioId: string;
   clientEmail: string;
   clientName: string;
   studioName: string;
@@ -64,8 +69,28 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    if (!rateLimitByIp(req, "send-booking-refusal", 40)) {
+      return new Response(JSON.stringify({ error: "Too many requests" }), {
+        status: 429,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
     const payload: Payload = await req.json();
+    const allowed = await verifyTattooerOwnsStudio(
+      req,
+      payload.studioId,
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
+      SUPABASE_SERVICE_ROLE_KEY,
+    );
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
     const missing: string[] = [];
+    if (!payload?.studioId?.trim?.()) missing.push("studioId");
     if (!payload?.clientEmail?.trim?.()) missing.push("clientEmail");
     if (!payload?.clientName?.trim?.()) missing.push("clientName");
     if (!payload?.studioName?.trim?.()) missing.push("studioName");

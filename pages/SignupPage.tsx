@@ -41,67 +41,76 @@ export const SignupPage: React.FC = () => {
         </header>
 
         <div
-          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-scroll-ios"
           style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           <div className="flex min-h-min min-h-full flex-col justify-start sm:justify-center px-6 sm:px-10 py-6 sm:py-8 pb-8 safe-bottom">
-          <motion.div
-            className="w-full max-w-sm mx-auto"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-          >
-            {/* Logo + Title */}
-            <div className="mb-8">
-              <div className="inline-flex items-center gap-2 mb-6">
-                <Logo className="dark:invert" />
-                <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
+            <motion.div
+              className="w-full max-w-sm mx-auto"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+            >
+              {/* Logo + Title */}
+              <div className="mb-8">
+                <div className="inline-flex items-center gap-2 mb-6">
+                  <Logo className="dark:invert" />
+                  <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
+                </div>
+
+                {/* Badge parrainage */}
+                {hasRef && (
+                  <div className="mb-4">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-800/50">
+                      <Gift
+                        className="w-4 h-4 text-emerald-600 dark:text-emerald-400"
+                        strokeWidth={1.5}
+                      />
+                      <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                        1 mois offert — lien parrainé
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
+                  Ouvre ton compte studio
+                </h1>
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm">
+                  Environ 1 minute · 14 jours d&apos;essai · Sans carte au départ
+                </p>
               </div>
 
-              {/* Badge parrainage */}
-              {hasRef && (
-                <div className="mb-4">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-800/50">
-                    <Gift className="w-4 h-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.5} />
-                    <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
-                      1 mois offert — lien parrainé
-                    </span>
-                  </div>
-                </div>
-              )}
+              <SignupForm />
 
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
-                Ouvre ton compte studio
-              </h1>
-              <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-                Environ 1 minute · 14 jours d&apos;essai · Sans carte au départ
+              <p className="text-center mt-6 text-sm text-zinc-500 dark:text-zinc-400">
+                Vous avez déjà un compte ?{' '}
+                <a
+                  href="/login"
+                  className="font-semibold text-zinc-900 dark:text-white hover:text-zinc-700 dark:hover:text-zinc-200 underline underline-offset-2"
+                >
+                  Se connecter
+                </a>
               </p>
-            </div>
 
-            <SignupForm />
-
-            <p className="text-center mt-6 text-sm text-zinc-500 dark:text-zinc-400">
-              Vous avez déjà un compte ?{' '}
-              <a
-                href="/login"
-                className="font-semibold text-zinc-900 dark:text-white hover:text-zinc-700 dark:hover:text-zinc-200 underline underline-offset-2"
-              >
-                Se connecter
-              </a>
-            </p>
-
-            {/* Garanties */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-xs text-zinc-400 dark:text-zinc-500">
-              {['14 jours gratuits', 'Pas de carte bancaire', 'Annulation facile'].map((g) => (
-                <div key={g} className="flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" strokeWidth="2.5" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>{g}</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+              {/* Garanties */}
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-xs text-zinc-400 dark:text-zinc-500">
+                {['14 jours gratuits', 'Pas de carte bancaire', 'Annulation facile'].map((g) => (
+                  <div key={g} className="flex items-center gap-1.5">
+                    <svg
+                      className="w-3.5 h-3.5 text-emerald-500"
+                      fill="none"
+                      strokeWidth="2.5"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>{g}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -125,9 +134,13 @@ export const SignupPage: React.FC = () => {
         {/* Texte en overlay par-dessus la photo */}
         <div className="absolute bottom-0 left-0 right-0 z-10 px-10 pb-10 pt-16 pointer-events-none">
           <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
-            Votre art mérite<br />le meilleur outil.
+            Votre art mérite
+            <br />
+            le meilleur outil.
           </h2>
-          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">Rejoignez 500+ tatoueurs sur InkFlow.</p>
+          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
+            Rejoignez 500+ tatoueurs sur InkFlow.
+          </p>
         </div>
       </motion.div>
     </motion.div>

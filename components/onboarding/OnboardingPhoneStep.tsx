@@ -62,7 +62,9 @@ export const OnboardingPhoneStep: React.FC<OnboardingPhoneStepProps> = ({
       const emailNorm = userEmail.trim().toLowerCase();
       const prevEmail = (existing.email || '').trim();
       const isDemoEmail =
-        prevEmail.includes('@ink-art.fr') || prevEmail === 'contact@ink-art.fr' || prevEmail.length < 5;
+        prevEmail.includes('@ink-art.fr') ||
+        prevEmail === 'contact@ink-art.fr' ||
+        prevEmail.length < 5;
       await saveVitrineDataToSupabase(studioId, {
         ...existing,
         phone: phone.trim(),
@@ -87,9 +89,14 @@ export const OnboardingPhoneStep: React.FC<OnboardingPhoneStepProps> = ({
       role="dialog"
       aria-labelledby="phone-title"
     >
-      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios">
         <div className="lg:hidden flex-shrink-0 h-28 sm:h-36 relative overflow-hidden safe-top">
-          <img src={heroImg} alt="" className="absolute inset-0 w-full h-full object-cover object-center" loading="eager" />
+          <img
+            src={heroImg}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover object-center"
+            loading="eager"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-black via-transparent to-transparent" />
         </div>
 
@@ -105,12 +112,15 @@ export const OnboardingPhoneStep: React.FC<OnboardingPhoneStepProps> = ({
               <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
             </div>
 
-            <h1 id="phone-title" className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
+            <h1
+              id="phone-title"
+              className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5"
+            >
               Téléphone du studio
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-5 sm:mb-6">
-              Affiché sur ta vitrine et utile pour que les clients te joignent. Tu pourras le modifier dans Paramètres → Page
-              vitrine.
+              Affiché sur ta vitrine et utile pour que les clients te joignent. Tu pourras le
+              modifier dans Paramètres → Page vitrine.
             </p>
 
             {loading ? (
@@ -154,12 +164,19 @@ export const OnboardingPhoneStep: React.FC<OnboardingPhoneStepProps> = ({
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <img src={heroImg} alt="" className="absolute inset-0 w-full min-h-full object-cover object-bottom" loading="eager" />
+        <img
+          src={heroImg}
+          alt=""
+          className="absolute inset-0 w-full min-h-full object-cover object-bottom"
+          loading="eager"
+        />
         <div className="absolute bottom-0 left-0 right-0 z-10 px-10 pb-10 pt-16 pointer-events-none">
           <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
             Reste joignable.
           </h2>
-          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">Un numéro clair pour tes clients.</p>
+          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
+            Un numéro clair pour tes clients.
+          </p>
         </div>
       </motion.div>
     </motion.div>

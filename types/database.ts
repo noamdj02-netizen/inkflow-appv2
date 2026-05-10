@@ -1306,6 +1306,8 @@ export type Database = {
           client_email: string;
           client_ip: string | null;
           client_name: string;
+          consent_outreach_channel: string | null;
+          consent_outreach_sent_at: string | null;
           created_at: string | null;
           filled_template_text: string | null;
           id: string;
@@ -1319,6 +1321,8 @@ export type Database = {
           client_email: string;
           client_ip?: string | null;
           client_name: string;
+          consent_outreach_channel?: string | null;
+          consent_outreach_sent_at?: string | null;
           created_at?: string | null;
           filled_template_text?: string | null;
           id: string;
@@ -1332,6 +1336,8 @@ export type Database = {
           client_email?: string;
           client_ip?: string | null;
           client_name?: string;
+          consent_outreach_channel?: string | null;
+          consent_outreach_sent_at?: string | null;
           created_at?: string | null;
           filled_template_text?: string | null;
           id?: string;
@@ -3791,6 +3797,17 @@ export type Database = {
         Args: { p_client_email: string };
         Returns: number;
       };
+      get_consent_form_for_public_portal: {
+        Args: { p_id: string };
+        Returns: {
+          appointment_id: string | null;
+          client_email: string | null;
+          client_name: string | null;
+          id: string;
+          signed_at: string | null;
+          template: string | null;
+        }[];
+      };
       get_discovery_studios_for_client: {
         Args: {
           limit_count?: number;
@@ -3852,6 +3869,20 @@ export type Database = {
           studio_name: string;
         }[];
       };
+      get_public_studio_info: {
+        Args: { slug_input: string };
+        Returns: {
+          availability_settings: Json;
+          avatar_url: string | null;
+          id: string;
+          name: string;
+          payments_online: boolean;
+          portfolio_cover_url: string | null;
+          slug: string;
+          studio_name: string;
+          vitrine_theme: string;
+        }[];
+      };
       get_public_thread_messages: {
         Args: { p_thread_id: string };
         Returns: {
@@ -3886,12 +3917,13 @@ export type Database = {
       get_studio_public_by_slug: {
         Args: { p_slug: string };
         Returns: {
-          avatar_url: string;
+          availability_settings: Json;
+          avatar_url: string | null;
           id: string;
           name: string;
           payments_online: boolean;
-          portfolio_cover_url: string;
-          siret: string;
+          portfolio_cover_url: string | null;
+          siret: string | null;
           slug: string;
           studio_name: string;
           vitrine_theme: string;
@@ -3900,6 +3932,30 @@ export type Database = {
       get_studio_public_metrics_for_dashboard: {
         Args: { p_studio_id: string };
         Returns: Json;
+      };
+      get_trending_public_discover_studios: {
+        Args: { p_limit?: number };
+        Returns: {
+          bio: string | null;
+          city: string | null;
+          city_slug: string | null;
+          discover_rank: number | null;
+          id: string;
+          instagram: string | null;
+          last_active_at: string | null;
+          lat: number | null;
+          lng: number | null;
+          name: string;
+          portfolio_cover_url: string | null;
+          portfolio_preview: Json;
+          price_max: number | null;
+          price_min: number | null;
+          rating_avg: number | null;
+          rating_count: number | null;
+          slug: string;
+          studio_name: string;
+          styles: string[];
+        }[];
       };
       increment_studio_channel_view: {
         Args: { p_channel: string; p_studio_id: string };
@@ -3921,7 +3977,49 @@ export type Database = {
       };
       inkflow_studio_ids_for_jwt: { Args: never; Returns: string[] };
       process_referral_reward: { Args: { p_referee_id: string }; Returns: Json };
+      search_public_discover_studios: {
+        Args: {
+          p_city_slug?: string | null;
+          p_page?: number | null;
+          p_per_page?: number | null;
+          p_price_max?: number | null;
+          p_price_min?: number | null;
+          p_q?: string | null;
+          p_sort?: string | null;
+          p_style?: string | null;
+        };
+        Returns: {
+          bio: string | null;
+          city: string | null;
+          city_slug: string | null;
+          discover_rank: number | null;
+          id: string;
+          instagram: string | null;
+          last_active_at: string | null;
+          lat: number | null;
+          lng: number | null;
+          name: string;
+          out_total: number;
+          portfolio_cover_url: string | null;
+          portfolio_preview: Json;
+          price_max: number | null;
+          price_min: number | null;
+          rating_avg: number | null;
+          rating_count: number | null;
+          slug: string;
+          studio_name: string;
+          styles: string[];
+        }[];
+      };
       studio_exists: { Args: { sid: string }; Returns: boolean };
+      submit_consent_form_signature: {
+        Args: {
+          p_filled_template_text: string;
+          p_id: string;
+          p_signature_data: string;
+        };
+        Returns: boolean;
+      };
       sync_client_crm_from_portal: {
         Args: { p_avatar_url: string; p_display_name: string };
         Returns: undefined;

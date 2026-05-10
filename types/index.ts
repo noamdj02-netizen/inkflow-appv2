@@ -343,6 +343,11 @@ export interface MessageThread {
   lastMessageAt: string;
   unreadCount: number;
   projectRequestId?: string;
+  /**
+   * RDV lié pour traçabilité juridique du consentement (fil `bk_*` → recap, `pr_*` → projet).
+   * Absent si aucun RDV n’a pu être résolu (consentement générique au fil).
+   */
+  linkedAppointmentId?: string | null;
   /** Photo de profil (démo / affichage) */
   avatar?: string;
 }

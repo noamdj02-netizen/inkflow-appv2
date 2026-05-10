@@ -3843,7 +3843,7 @@ export function ClientDashboard() {
               </div>
             </div>
             <div
-              className="client-home-artists-scroll flex gap-3 overflow-x-auto overscroll-x-contain scroll-pl-1 scroll-pr-4 snap-x snap-mandatory touch-pan-x px-4 py-4 sm:gap-3.5 sm:px-5 sm:py-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="client-home-artists-scroll scrollbar-hide flex gap-3 overflow-x-auto overscroll-x-contain scroll-pl-1 scroll-pr-4 snap-x snap-mandatory touch-pan-x px-4 py-4 sm:gap-3.5 sm:px-5 sm:py-5"
               style={{ WebkitOverflowScrolling: 'touch', background: D.contentCardBg }}
             >
               {loading
@@ -4015,7 +4015,7 @@ export function ClientDashboard() {
                 </p>
               </div>
               <div
-                className="client-home-artists-scroll flex gap-3 overflow-x-auto overscroll-x-contain scroll-pl-1 scroll-pr-4 snap-x snap-mandatory touch-pan-x [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="client-home-artists-scroll scrollbar-hide flex gap-3 overflow-x-auto overscroll-x-contain scroll-pl-1 scroll-pr-4 snap-x snap-mandatory touch-pan-x"
                 style={{ WebkitOverflowScrolling: 'touch' }}
               >
                 {pourToiFlashes.map((row) => {

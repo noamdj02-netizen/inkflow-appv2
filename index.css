@@ -21,11 +21,8 @@
 @import '@fontsource/syne/latin-800.css';
 
 @import 'tailwindcss';
-/* Faux positif d’extraction (regex / stack traces) : pas d’utilitaire réel. */
-@source not inline("[file:line]");
-@source not inline("[-:|\]");
-@source not inline("[-: |]");
-@source not inline("[-:|-|]");
+/* Attention : ne pas écrire dans ce fichier des pseudo-classes factices du type « crochets file deux‑points line »
+   ni des motifs ressemblant à des traces log avec pipe — Tailwind 4 les extrairait comme utilitaires et casserait le build. */
 @source not "./middleware.ts";
 @source not "./instrumentation.ts";
 @source not "./instrumentation-client.ts";
@@ -44,8 +41,8 @@
 @source not "./.claude";
 @source not "./.cursor";
 @source not "./.agents";
-
-@import 'tw-animate-css';
+@source not "./claude-skills";
+@source not "./docs";
 
 @import 'shadcn/tailwind.css';
 
@@ -1370,9 +1367,9 @@ a.dashboard-widget-card:focus-visible {
   animation: slide-up 0.32s var(--ease-ios-spring) forwards;
 }
 
-/* Fond doux pour toutes les pages dashboard (pas seulement overview) */
+/* Fond doux pour toutes les pages dashboard (pas seulement overview) — slate-50 style Planity */
 .app-shell-content.dashboard-pages-bg {
-  background: #fafafa;
+  background: #f8fafc;
 }
 :root[data-theme='dark'] .app-shell-content.dashboard-pages-bg {
   background: #000000;
@@ -2279,6 +2276,11 @@ summary {
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* iOS momentum scroll — utiliser .touch-scroll-ios plutôt qu’un utilitaire Tailwind arbitraire (évite warnings lightningcss). */
+.touch-scroll-ios {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Thèmes vitrine — cartes et bordures adaptés au thème actif */

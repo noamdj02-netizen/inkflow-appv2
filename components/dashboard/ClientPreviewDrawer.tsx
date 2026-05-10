@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { ClientPreviewPanel, type ClientPreviewData } from './ClientPreviewPanel';
 import { sendAftercareEmail } from '../../lib/sendNotification';
+import type { ConsentFormPreset } from '../../lib/consentFormPresets';
 import type { Appointment } from '../../types';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { hapticSuccess } from '../../lib/haptics';
@@ -19,6 +20,9 @@ interface ClientPreviewDrawerProps {
   onClose: () => void;
   data: ClientPreviewData | null;
   studioId: string;
+  /** Nom vitrine / e-mails */
+  studioName?: string;
+  consentPresets?: ConsentFormPreset[];
   artistName: string;
   /** Actions RDV (pour la page Rendez-vous) */
   appointment?: Appointment | null;
@@ -29,6 +33,7 @@ interface ClientPreviewDrawerProps {
   onOpenInkflowDiscussion?: () => void;
   onOpenCloseout?: (appointment: Appointment) => void;
   onOpenAgenda?: () => void;
+  onPromptNewProject?: () => void;
 }
 
 export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
@@ -36,6 +41,8 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
   onClose,
   data,
   studioId,
+  studioName = 'Mon studio',
+  consentPresets,
   artistName,
   appointment,
   onUpdateAppointment,
@@ -44,6 +51,7 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
   onOpenInkflowDiscussion,
   onOpenCloseout,
   onOpenAgenda,
+  onPromptNewProject,
 }) => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
@@ -188,11 +196,15 @@ export const ClientPreviewDrawer: React.FC<ClientPreviewDrawerProps> = ({
             <ClientPreviewPanel
               data={data}
               studioId={studioId}
+              studioName={studioName}
+              consentPresets={consentPresets}
               artistName={artistName}
               compact
               showInkflowClientDiscussion={showInkflowClientDiscussion}
               inkflowMessagingThreadId={inkflowMessagingThreadId}
               onOpenInkflowDiscussion={onOpenInkflowDiscussion}
+              onOpenAgenda={onOpenAgenda}
+              onPromptNewProject={onPromptNewProject}
             />
           </div>
 

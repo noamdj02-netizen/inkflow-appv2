@@ -153,7 +153,7 @@ export const LoginPage: React.FC = () => {
           </header>
 
           <div
-            className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+            className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-scroll-ios"
             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             <div className="flex min-h-min min-h-full flex-col justify-start sm:justify-center px-6 sm:px-10 py-6 sm:py-8 pb-8 safe-bottom">

@@ -56,6 +56,7 @@ type StudioPublicRpcRow = {
   avatar_url?: string | null;
   portfolio_cover_url?: string | null;
   payments_online?: boolean;
+  availability_settings?: Record<string, unknown> | null;
 };
 
 /**
@@ -388,7 +389,15 @@ export async function getVitrineDataFromSupabase(
     .eq('studio_id', studioId)
     .single();
   if (error || !data?.data) return defaultData;
-  return { ...defaultData, ...(data.data as object), slug: defaultData.slug } as VitrineData;
+  const merged = {
+    ...defaultData,
+    ...(data.data as object),
+    slug: defaultData.slug,
+  } as VitrineData;
+  if (!Array.isArray(merged.testimonials)) {
+    merged.testimonials = defaultData.testimonials ?? [];
+  }
+  return merged;
 }
 
 /** Récupère le studio_id à partir du slug (pour la page publique). Utilise la RPC sécurisée pour ne pas exposer les emails. */
@@ -409,12 +418,17 @@ export async function getStudioPublicBySlug(slug: string): Promise<{
   portfolioCoverUrl: string | null;
   /** Stripe Connect prêt — paiements Checkout possibles (même règle que create-checkout-session). */
   paymentsOnline: boolean;
+  /** Pourcentage d’acompte vitrine globale (availability_settings), si défini. */
+  globalDepositPercentage?: number;
 } | null> {
   const { row, error } = await fetchStudioPublicRowBySlug(slug);
   if (error || !row?.id) return null;
   const studioName = String(row.studio_name || '').trim();
   const legalName = String(row.name || '').trim();
   const displayName = studioName || legalName;
+  const pctRaw = (row.availability_settings as { depositPercentage?: unknown } | null)
+    ?.depositPercentage;
+  const globalDepositPercentage = typeof pctRaw === 'number' ? pctRaw : undefined;
   return {
     id: row.id,
     displayName,
@@ -423,6 +437,7 @@ export async function getStudioPublicBySlug(slug: string): Promise<{
     avatarUrl: row.avatar_url ?? null,
     portfolioCoverUrl: row.portfolio_cover_url ?? null,
     paymentsOnline: row.payments_online === true,
+    globalDepositPercentage,
   };
 }
 

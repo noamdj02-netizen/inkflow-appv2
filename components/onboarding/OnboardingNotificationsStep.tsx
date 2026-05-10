@@ -48,7 +48,7 @@ export const OnboardingNotificationsStep: React.FC<OnboardingNotificationsStepPr
       role="dialog"
       aria-labelledby="notif-title"
     >
-      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios">
         <div className="lg:hidden flex-shrink-0 h-28 sm:h-36 relative overflow-hidden safe-top">
           <img
             src={heroImg}

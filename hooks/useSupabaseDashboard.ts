@@ -91,6 +91,8 @@ export const useSupabaseDashboard = () => {
   /** Dernière synchro réussie des listes (RDV, clients, flash, notifs) */
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const initializedRef = useRef(false);
+  /** Aligné sur `retryCount` après un init réussi — évite d’afficher le squelette à chaque re-init (ex. avatar). */
+  const lastSuccessfulRetryRef = useRef(-1);
 
   // Écouter le mode hors-ligne (navigateur)
   useEffect(() => {
@@ -175,14 +177,20 @@ export const useSupabaseDashboard = () => {
       setLastSyncedAt(null);
       setLoading(false);
       initializedRef.current = false;
+      lastSuccessfulRetryRef.current = -1;
+      setRetryCount(0);
       return;
     }
 
+    let cancelled = false;
+
     const init = async () => {
-      setLoading(true);
+      const blockingLoad = !initializedRef.current || retryCount > lastSuccessfulRetryRef.current;
+      if (blockingLoad) setLoading(true);
       try {
         if (useSupabase) {
           const existing = await getStudioByEmail(user.email);
+          if (cancelled) return;
           let sid: string;
           let slug: string;
           if (existing) {
@@ -198,6 +206,7 @@ export const useSupabaseDashboard = () => {
             setStudioOwnerEmail(user.email.trim().toLowerCase());
           } else {
             const collabStudio = await getCollaboratorStudioByEmail(user.email);
+            if (cancelled) return;
             if (collabStudio) {
               sid = collabStudio.id;
               slug = collabStudio.slug;
@@ -210,16 +219,19 @@ export const useSupabaseDashboard = () => {
               );
               setStudioOwnerEmail(collabStudio.studioOwnerEmail.trim().toLowerCase());
               await linkCollaboratorArtistAccountToUser(user.id, user.email);
+              if (cancelled) return;
             } else {
               const created = await ensureStudio(
                 user.email,
                 user.name,
                 user.studioName || 'Mon Studio'
               );
+              if (cancelled) return;
               sid = created.studioId;
               slug = created.slug;
               setSubscriptionStatus('trialing');
               const refreshed = await getStudioByEmail(user.email);
+              if (cancelled) return;
               setTrialEndsAt(refreshed?.trial_ends_at ?? null);
               setStudioCsvImportSlots(
                 refreshed?.csv_import_slots_remaining === undefined
@@ -229,9 +241,13 @@ export const useSupabaseDashboard = () => {
               setStudioOwnerEmail(user.email.trim().toLowerCase());
             }
           }
+          if (cancelled) return;
+
           setStudioId(sid);
           setStudioSlug(slug);
           await retryAsync(() => loadAllData(sid), { maxAttempts: 3, baseDelayMs: 400 });
+          if (cancelled) return;
+
           if (user.email && isInkflowDemoAccount(user.email)) {
             setAppointments(getInkflowDemoStudioAppointments());
             setClients(getInkflowDemoStudioClients());
@@ -240,6 +256,7 @@ export const useSupabaseDashboard = () => {
             setLastSyncedAt(new Date().toISOString());
           }
           initializedRef.current = true;
+          lastSuccessfulRetryRef.current = retryCount;
         } else {
           setStudioId(null);
           setStudioSlug(null);
@@ -247,6 +264,8 @@ export const useSupabaseDashboard = () => {
           setClients(EMPTY_ARRAYS.clients);
           setFlashDesigns(EMPTY_ARRAYS.flash);
           setNotifications(EMPTY_ARRAYS.notifications);
+          initializedRef.current = true;
+          lastSuccessfulRetryRef.current = retryCount;
         }
       } catch (err) {
         const error =
@@ -276,12 +295,16 @@ export const useSupabaseDashboard = () => {
           setNotifications(EMPTY_ARRAYS.notifications);
         }
       } finally {
-        setLoading(false);
+        if (!cancelled && blockingLoad) setLoading(false);
       }
     };
 
     setConnectionError(null);
-    init();
+    void init();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user, useSupabase, loadAllData, retryCount]);
 
   const retry = useCallback(() => {
@@ -294,25 +317,29 @@ export const useSupabaseDashboard = () => {
   const addAppointment = useCallback(
     (appointment: Appointment) => {
       const isFirstApt = appointments.length === 0;
+      const userEmailNorm = user?.email?.trim().toLowerCase() ?? '';
       if (allowSupabaseWrites) {
-        aptMutation.add(appointment, (apt) =>
-          saveAppointmentToSupabase(studioId, apt).then(() => {
-            pushAppointmentToGoogle(studioId, apt.id).catch(() => {});
-            if (isFirstApt) {
-              captureEvent(AnalyticsEvents.FIRST_APPOINTMENT_CREATED, {
-                studio_id: studioId,
-                funnel: 'tattooer_activation',
-              });
-              trackOnboardingFunnel('first_appointment', { studio_id: studioId });
-              trackNorthStarFunnelStep('first_appointment_in_agenda', { studio_id: studioId });
-            }
-          })
+        aptMutation.add(
+          appointment,
+          (apt) =>
+            saveAppointmentToSupabase(studioId, apt).then(() => {
+              pushAppointmentToGoogle(studioId, apt.id).catch(() => {});
+              if (isFirstApt) {
+                captureEvent(AnalyticsEvents.FIRST_APPOINTMENT_CREATED, {
+                  studio_id: studioId,
+                  funnel: 'tattooer_activation',
+                });
+                trackOnboardingFunnel('first_appointment', { studio_id: studioId });
+                trackNorthStarFunnelStep('first_appointment_in_agenda', { studio_id: studioId });
+              }
+            }),
+          studioId && userEmailNorm ? { kind: 'appointment', studioId, userEmailNorm } : undefined
         );
       } else {
         setAppointments((prev) => [...prev, appointment]);
       }
     },
-    [allowSupabaseWrites, studioId, aptMutation, appointments.length]
+    [allowSupabaseWrites, studioId, aptMutation, appointments.length, user?.email]
   );
 
   const updateAppointment = useCallback(
@@ -413,24 +440,28 @@ export const useSupabaseDashboard = () => {
     (client: Omit<Client, 'id'>) => {
       const isFirstClient = clients.length === 0;
       const newClient: Client = { ...client, id: `c${Date.now()}` };
+      const userEmailNorm = user?.email?.trim().toLowerCase() ?? '';
       if (allowSupabaseWrites) {
-        clientMutation.add(newClient, (c) =>
-          saveClientToSupabase(studioId!, c).then(() => {
-            if (isFirstClient) {
-              captureEvent(AnalyticsEvents.FIRST_CLIENT_CREATED, {
-                studio_id: studioId,
-                funnel: 'tattooer_activation',
-              });
-              trackOnboardingFunnel('first_client', { studio_id: studioId! });
-            }
-          })
+        clientMutation.add(
+          newClient,
+          (c) =>
+            saveClientToSupabase(studioId!, c).then(() => {
+              if (isFirstClient) {
+                captureEvent(AnalyticsEvents.FIRST_CLIENT_CREATED, {
+                  studio_id: studioId,
+                  funnel: 'tattooer_activation',
+                });
+                trackOnboardingFunnel('first_client', { studio_id: studioId! });
+              }
+            }),
+          studioId && userEmailNorm ? { kind: 'client', studioId, userEmailNorm } : undefined
         );
       } else {
         setClients((prev) => [...prev, newClient]);
       }
       return newClient.id;
     },
-    [allowSupabaseWrites, studioId, clientMutation, clients.length]
+    [allowSupabaseWrites, studioId, clientMutation, clients.length, user?.email]
   );
 
   const importClientsFromCsvRows = useCallback(

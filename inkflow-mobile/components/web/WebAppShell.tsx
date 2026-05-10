@@ -5,6 +5,7 @@ import { tryParseTapToPayDeepLink } from '@/lib/tapToPayDeepLink';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
+import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
 import WebView, { type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
@@ -90,12 +91,10 @@ async function registerExpoPushWithStudio(accessToken: string, studioId: string)
     return;
   }
   const perm = await Notifications.getPermissionsAsync();
-  let status = perm.status;
-  if (status !== 'granted') {
-    const req = await Notifications.requestPermissionsAsync();
-    status = req.status;
+  if (perm.status !== 'granted') {
+    /* Ne pas ouvrir le dialogue système au chargement — l’utilisateur active les alertes depuis Réglages InkFlow. */
+    return;
   }
-  if (status !== 'granted') return;
 
   const projectId =
     (Constants.expoConfig?.extra?.eas?.projectId as string | undefined) ??
@@ -142,13 +141,17 @@ export default function WebAppShell() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const handleNativePushRegisterMessage = useCallback((event: WebViewMessageEvent) => {
+  const handleWebViewMessage = useCallback((event: WebViewMessageEvent) => {
     try {
       const data = JSON.parse(event.nativeEvent.data) as {
         type?: string;
         accessToken?: string;
         studioId?: string;
       };
+      if (data?.type === 'inkflow_haptic_selection') {
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        return;
+      }
       if (data?.type !== 'inkflow_native_push_register') return;
       const tok = typeof data.accessToken === 'string' ? data.accessToken.trim() : '';
       const sid = typeof data.studioId === 'string' ? data.studioId.trim() : '';
@@ -282,7 +285,7 @@ export default function WebAppShell() {
           },
           default: {},
         })}
-        onMessage={handleNativePushRegisterMessage}
+        onMessage={handleWebViewMessage}
         onShouldStartLoadWithRequest={handleShouldStartLoad}
         onOpenWindow={handleOpenWindow}
         onLoadStart={handleLoadStart}

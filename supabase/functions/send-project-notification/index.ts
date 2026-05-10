@@ -2,6 +2,11 @@ import { createClient } from "npm:@supabase/supabase-js@2.95.3";
 import { sendEmail } from "../_shared/resend.ts";
 import { wrapEmailLayout, escapeHtml, emailInfoBox } from "../_shared/emailLayout.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import {
+  rateLimitByIp,
+  internalFunctionSecretOk,
+  verifyProjectRequestNotificationPayload,
+} from "../_shared/edgeInvokeAuth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -35,6 +40,8 @@ async function notifyArtistPushNewProject(studioId: string, clientName: string):
 }
 
 interface NotificationPayload {
+  /** Ligne inkflow_project_requests à valider (anti-abus). */
+  projectRequestId: string;
   studioId: string;
   clientName: string;
   clientEmail: string;
@@ -104,12 +111,44 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    if (!rateLimitByIp(req, "send-project-notification", 25)) {
+      return new Response(
+        JSON.stringify({ error: "Too many requests" }),
+        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const payload: NotificationPayload = await req.json();
 
-    if (!payload.studioId || !payload.clientName || !payload.clientEmail) {
+    if (!payload.projectRequestId?.trim?.() || !payload.studioId || !payload.clientName || !payload.clientEmail) {
       return new Response(
-        JSON.stringify({ error: "studioId, clientName, and clientEmail are required" }),
+        JSON.stringify({ error: "projectRequestId, studioId, clientName, and clientEmail are required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (
+      !internalFunctionSecretOk(req) &&
+      !(await verifyProjectRequestNotificationPayload(
+        supabase,
+        payload.projectRequestId,
+        payload.studioId,
+        payload.clientEmail,
+        payload.clientName,
+        payload.description ?? "",
+      ))
+    ) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (!payload.description?.trim?.()) {
+      return new Response(
+        JSON.stringify({ error: "description is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 

@@ -72,10 +72,10 @@ export const OnboardingAvatarStep: React.FC<OnboardingAvatarStepProps> = ({
         .from('inkflow-assets')
         .upload(fileName, blob, { upsert: true, contentType: 'image/jpeg' });
 
-          if (uploadError) {
-            toast.error(uploadError.message || "Erreur lors de l'upload");
-            return;
-          }
+      if (uploadError) {
+        toast.error(uploadError.message || "Erreur lors de l'upload");
+        return;
+      }
       const { data: urlData } = supabase.storage.from('inkflow-assets').getPublicUrl(fileName);
       if (!urlData?.publicUrl) {
         toast.error('URL publique introuvable');
@@ -105,11 +105,22 @@ export const OnboardingAvatarStep: React.FC<OnboardingAvatarStepProps> = ({
       role="dialog"
       aria-labelledby="avatar-title"
     >
-      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => void handleFile(e)} />
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => void handleFile(e)}
+      />
 
-      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios">
         <div className="lg:hidden flex-shrink-0 h-28 sm:h-36 relative overflow-hidden safe-top">
-          <img src={heroImg} alt="" className="absolute inset-0 w-full h-full object-cover object-center" loading="eager" />
+          <img
+            src={heroImg}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover object-center"
+            loading="eager"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-black via-transparent to-transparent" />
         </div>
 
@@ -125,11 +136,15 @@ export const OnboardingAvatarStep: React.FC<OnboardingAvatarStepProps> = ({
               <span className="text-xl font-bold text-zinc-900 dark:text-white">InkFlow</span>
             </div>
 
-            <h1 id="avatar-title" className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5">
+            <h1
+              id="avatar-title"
+              className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-1.5"
+            >
               Photo de profil
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-5 sm:mb-6">
-              Logo ou portrait : visible sur ton espace pro et sur la vitrine. Tu pourras la changer dans le menu compte.
+              Logo ou portrait : visible sur ton espace pro et sur la vitrine. Tu pourras la changer
+              dans le menu compte.
             </p>
 
             <div className="flex flex-col items-center gap-4 mb-6">
@@ -142,7 +157,11 @@ export const OnboardingAvatarStep: React.FC<OnboardingAvatarStepProps> = ({
                 disabled={uploading}
                 className="inline-flex items-center justify-center gap-2 min-h-[48px] px-6 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60 active:scale-[0.98] transition-all"
               >
-                {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+                {uploading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Camera className="w-5 h-5" />
+                )}
                 {uploading ? 'Envoi…' : 'Choisir une photo'}
               </button>
             </div>
@@ -165,12 +184,19 @@ export const OnboardingAvatarStep: React.FC<OnboardingAvatarStepProps> = ({
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-        <img src={heroImg} alt="" className="absolute inset-0 w-full min-h-full object-cover object-bottom" loading="eager" />
+        <img
+          src={heroImg}
+          alt=""
+          className="absolute inset-0 w-full min-h-full object-cover object-bottom"
+          loading="eager"
+        />
         <div className="absolute bottom-0 left-0 right-0 z-10 px-10 pb-10 pt-16 pointer-events-none">
           <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
             Mets un visage sur ton studio.
           </h2>
-          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">Ça rassure tes clients.</p>
+          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
+            Ça rassure tes clients.
+          </p>
         </div>
       </motion.div>
     </motion.div>

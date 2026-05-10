@@ -81,27 +81,26 @@ const STATUS_DOT: Record<string, string> = {
 
 const STATUS_STYLES: Record<string, string> = {
   pending:
-    'bg-amber-50 text-amber-700 border border-amber-200/60 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
+    'bg-amber-50 text-amber-800 shadow-sm dark:bg-amber-500/12 dark:text-amber-300 dark:shadow-none',
   confirmed:
-    'bg-blue-50 text-blue-700 border border-blue-200/60 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
+    'bg-blue-50 text-blue-800 shadow-sm dark:bg-blue-500/12 dark:text-blue-300 dark:shadow-none',
   completed:
-    'bg-zinc-50 text-zinc-600 border border-zinc-200/60 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20',
+    'bg-slate-100 text-slate-700 shadow-sm dark:bg-zinc-500/15 dark:text-zinc-300 dark:shadow-none',
   cancelled:
-    'bg-red-50 text-red-600 border border-red-200/60 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
+    'bg-red-50 text-red-700 shadow-sm dark:bg-red-500/12 dark:text-red-300 dark:shadow-none',
   in_progress:
-    'bg-blue-50 text-blue-700 border border-blue-200/60 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
-  no_show:
-    'bg-red-50 text-red-600 border border-red-200/60 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
+    'bg-sky-50 text-sky-800 shadow-sm dark:bg-sky-500/12 dark:text-sky-300 dark:shadow-none',
+  no_show: 'bg-red-50 text-red-700 shadow-sm dark:bg-red-500/12 dark:text-red-300 dark:shadow-none',
 };
 
-/** Bordure gauche carte mobile — repère visuel rapide (statut). */
-const CARD_LEFT_ACCENT: Record<string, string> = {
-  pending: 'border-l-amber-400',
-  confirmed: 'border-l-blue-500',
-  completed: 'border-l-zinc-300 dark:border-l-zinc-600',
-  cancelled: 'border-l-red-400',
-  in_progress: 'border-l-sky-500',
-  no_show: 'border-l-red-500',
+/** Léger repère statut (cartes sans bordure) */
+const STATUS_RING: Record<string, string> = {
+  pending: 'ring-1 ring-amber-200/60 dark:ring-amber-500/25',
+  confirmed: 'ring-1 ring-blue-200/60 dark:ring-blue-500/25',
+  completed: 'ring-1 ring-slate-200/70 dark:ring-zinc-600/40',
+  cancelled: 'ring-1 ring-red-200/60 dark:ring-red-500/25',
+  in_progress: 'ring-1 ring-sky-200/60 dark:ring-sky-500/25',
+  no_show: 'ring-1 ring-red-200/60 dark:ring-red-500/25',
 };
 
 function needsDepositAttention(apt: Appointment): boolean {
@@ -158,6 +157,7 @@ function KpiStatTile({
               'h-5 w-5 shrink-0',
               isActive ? 'text-white' : 'text-zinc-400 dark:text-zinc-500'
             )}
+            strokeWidth={1.5}
             aria-hidden
           />
           <span
@@ -184,6 +184,7 @@ function KpiStatTile({
             'h-4 w-4 shrink-0',
             isActive ? 'text-white' : 'text-zinc-400 dark:text-zinc-500'
           )}
+          strokeWidth={1.5}
           aria-hidden
         />
         <span
@@ -430,7 +431,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
         {/* KPI : période (lun–dim) + en attente — une tuile = un filtre */}
         <div
-          className="rounded-pro-card border border-zinc-200/80 bg-gradient-to-b from-white/95 to-blue-50/40 p-2 shadow-pro dark:border-zinc-800 dark:from-zinc-900/60 dark:to-zinc-950/80 dark:shadow-none sm:p-4"
+          className="rounded-2xl bg-white p-2 shadow-sm dark:bg-zinc-900 dark:shadow-none sm:p-4"
           role="region"
           aria-label="Indicateurs sur la période"
         >
@@ -487,7 +488,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
       <div className="animate-fade-in motion-reduce:animate-none space-y-4 sm:space-y-6 md:space-y-8">
         {/* Barre d’outils : colonne = filtres en dessous des contrôles sur mobile ; sm+ = grille 2 col */}
-        <div className="grid grid-cols-1 gap-2 rounded-pro-card border border-zinc-200/70 bg-white/80 p-2 shadow-pro dark:border-zinc-800 dark:bg-zinc-900/50 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3 sm:p-3">
+        <div className="grid grid-cols-1 gap-2 rounded-2xl bg-white p-2 shadow-sm dark:bg-zinc-900 dark:shadow-none sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3 sm:p-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2 sm:min-h-11">
             <div
               className="inline-flex shrink-0 rounded-pro-card border border-zinc-200/60 bg-zinc-100/90 p-1 dark:border-zinc-700/60 dark:bg-zinc-800/90"
@@ -601,7 +602,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
         {/* Résumé filtre actif */}
         {activeLabel && (
-          <div className="flex flex-wrap items-center gap-2 rounded-pro-card border border-zinc-200/70 bg-zinc-50/90 px-3 py-2 shadow-pro dark:border-zinc-700/80 dark:bg-zinc-900/50 sm:px-4">
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-slate-50/90 px-3 py-2 shadow-sm dark:bg-zinc-900/80 dark:shadow-none sm:px-4">
             <Calendar className="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" aria-hidden />
             <span className="pro-text-small min-w-0 flex-1 tabular-nums text-zinc-600 dark:text-zinc-400">
               {filteredAppointments.length} RDV ·{' '}
@@ -624,7 +625,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
         {/* ── Calendrier mois desktop (largeur suffisante) — grilles type shadcn / 21st */}
         <div className="hidden min-w-0 lg:block">
-          <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
+          <div className="overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-zinc-900 dark:shadow-none">
             <div className="max-h-[min(720px,calc(100vh-14rem))] overflow-y-auto">
               <FullScreenCalendar
                 className="text-zinc-900 dark:text-zinc-50"
@@ -660,8 +661,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             id="agenda-mini-calendar-panel"
             className={`flex-shrink-0 lg:hidden ${showCalendarMobile ? 'block' : 'hidden'}`}
           >
-            <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-[0_2px_12px_-4px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
-              <div className="border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
+            <div className="overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-zinc-900 dark:shadow-none">
+              <div className="border-b border-zinc-100/80 px-4 py-3 dark:border-zinc-800/80">
                 <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                   Calendrier
                 </p>
@@ -700,7 +701,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 onUpdateAppointment={onUpdateAppointment}
               />
             ) : filteredAppointments.length === 0 ? (
-              <div className="rounded-pro-card border border-zinc-200/80 bg-white shadow-pro dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="rounded-pro-card bg-white shadow-sm dark:bg-zinc-900 dark:shadow-none">
                 <EmptyState
                   icon={Calendar}
                   title="Aucun rendez-vous"
@@ -722,8 +723,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 {/* Mobile cards */}
                 <ul className="space-y-3 md:hidden" role="list">
                   {filteredAppointments.map((apt) => {
-                    const leftAccent =
-                      CARD_LEFT_ACCENT[apt.status] || 'border-l-zinc-300 dark:border-l-zinc-600';
+                    const statusRing =
+                      STATUS_RING[apt.status] ?? 'ring-1 ring-slate-200/70 dark:ring-zinc-600/40';
                     const depositDue = needsDepositAttention(apt);
                     return (
                       <li key={apt.id}>
@@ -731,13 +732,13 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                           type="button"
                           onClick={() => onSelectAppointment(apt)}
                           className={cn(
-                            'w-full touch-manipulation overflow-hidden rounded-pro-card border border-zinc-200/80 border-l-4 bg-white text-left shadow-pro transition-shadow duration-150 hover:border-zinc-300 hover:shadow-pro active:scale-[0.99] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600',
-                            leftAccent
+                            'w-full touch-manipulation overflow-hidden rounded-2xl bg-white text-left shadow-sm transition-shadow duration-200 hover:shadow-md active:scale-[0.99] dark:bg-zinc-900 dark:shadow-none',
+                            statusRing
                           )}
                         >
-                          <div className="flex items-center gap-3 p-4">
+                          <div className="flex items-center gap-3 p-6">
                             {/* Avatar */}
-                            <div className="relative w-12 h-12 rounded-2xl bg-zinc-200 dark:bg-zinc-700 flex flex-shrink-0 items-center justify-center overflow-hidden shadow-sm ring-1 ring-zinc-200/60 dark:ring-zinc-600/60">
+                            <div className="relative w-12 h-12 rounded-2xl bg-zinc-200 dark:bg-zinc-700 flex flex-shrink-0 items-center justify-center overflow-hidden shadow-sm dark:shadow-none">
                               <ClientPhotoAvatar
                                 name={apt.clientName}
                                 src={getClientAvatarForAppointment(apt, clients)}
@@ -748,7 +749,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                             {/* Infos */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2 mb-1">
-                                <span className="text-sm font-semibold text-zinc-900 dark:text-white truncate leading-snug">
+                                <span className="text-lg font-bold text-zinc-900 dark:text-white truncate leading-snug">
                                   {apt.clientName}
                                 </span>
                                 <span className="font-bold text-blue-700 dark:text-blue-400 text-sm tabular-nums shrink-0">
@@ -769,7 +770,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                                   {STATUS_LABELS[apt.status] ?? apt.status}
                                 </span>
                                 {depositDue && (
-                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/70 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/25">
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 shadow-sm dark:bg-rose-500/12 dark:text-rose-300 dark:shadow-none">
                                     <CircleDollarSign className="w-3 h-3 shrink-0" aria-hidden />
                                     Acompte
                                   </span>
@@ -778,11 +779,12 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                             </div>
                             <ChevronRight
                               className="w-5 h-5 text-zinc-300 dark:text-zinc-600 shrink-0 self-center"
+                              strokeWidth={1.5}
                               aria-hidden
                             />
                           </div>
                           {/* Export — cibles tactiles ≥ 44px */}
-                          <div className="flex items-stretch justify-end gap-1 px-2 pb-2 border-t border-zinc-100/90 dark:border-zinc-800/90">
+                          <div className="flex items-stretch justify-end gap-1 px-3 pb-3 pt-0">
                             <a
                               href={getGoogleCalendarAddUrl(apt)}
                               target="_blank"
@@ -812,8 +814,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 </ul>
 
                 {/* Desktop table */}
-                <div className="hidden min-w-0 overflow-hidden rounded-pro-card border border-zinc-200/80 bg-white shadow-pro dark:border-zinc-800 dark:bg-zinc-900 md:block">
-                  <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800 sm:px-5">
+                <div className="hidden min-w-0 overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-zinc-900 dark:shadow-none md:block">
+                  <div className="flex items-center justify-between px-4 py-3 sm:px-5">
                     <span className="pro-text-small font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-500">
                       {filteredAppointments.length} rendez-vous
                     </span>
@@ -873,7 +875,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                                   />
                                 </div>
                                 <div>
-                                  <div className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                  <div className="text-lg font-bold text-zinc-900 dark:text-white">
                                     {apt.clientName}
                                   </div>
                                   {apt.clientEmail && (
@@ -910,7 +912,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                                   {STATUS_LABELS[apt.status] ?? apt.status}
                                 </span>
                                 {needsDepositAttention(apt) && (
-                                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/70 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/25">
+                                  <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-50 text-rose-700 shadow-sm dark:bg-rose-500/12 dark:text-rose-300 dark:shadow-none">
                                     <CircleDollarSign className="w-3 h-3" aria-hidden />
                                     Acompte
                                   </span>

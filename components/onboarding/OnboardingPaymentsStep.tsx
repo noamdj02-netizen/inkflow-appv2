@@ -9,7 +9,10 @@ import { supabase } from '../../lib/supabase';
 import { startStripeConnectOnboarding } from '../../lib/stripeClient';
 import { useToast } from '../../contexts/ToastContext';
 import { setWelcomeFlowCheckpoint } from '../../lib/welcomeStorage';
-import { maybeStartStripeConnectResumePoll, registerStripeConnectResumePoll } from '../../lib/stripeConnectResume';
+import {
+  maybeStartStripeConnectResumePoll,
+  registerStripeConnectResumePoll,
+} from '../../lib/stripeConnectResume';
 import { getVitrineShareUrl } from '../../lib/urls';
 
 export interface OnboardingPaymentsStepProps {
@@ -90,7 +93,7 @@ export const OnboardingPaymentsStep: React.FC<OnboardingPaymentsStepProps> = ({
       role="dialog"
       aria-labelledby="payments-title"
     >
-      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios">
         <div className="lg:hidden flex-shrink-0 h-28 sm:h-36 relative overflow-hidden safe-top">
           <img
             src="/images/fallon-michael-EQucs66pts0-unsplash.jpg"
@@ -120,8 +123,8 @@ export const OnboardingPaymentsStep: React.FC<OnboardingPaymentsStepProps> = ({
               Encaissements & vitrine
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-5 sm:mb-6">
-              Dernière étape : connecter Stripe pour recevoir les acomptes, et retrouver ton lien public sans fouiller les
-              paramètres.
+              Dernière étape : connecter Stripe pour recevoir les acomptes, et retrouver ton lien
+              public sans fouiller les paramètres.
             </p>
 
             {loading ? (
@@ -170,13 +173,13 @@ export const OnboardingPaymentsStep: React.FC<OnboardingPaymentsStepProps> = ({
                         </p>
                       ) : connectAccountId ? (
                         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                          Onboarding Stripe en cours ou en vérification. Tu peux continuer dans l’app et finaliser depuis
-                          Paramètres → Paiements.
+                          Onboarding Stripe en cours ou en vérification. Tu peux continuer dans
+                          l’app et finaliser depuis Paramètres → Paiements.
                         </p>
                       ) : (
                         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                          Sans Stripe, les boutons de paiement côté client restent désactivés. Connexion sécurisée (Express) —
-                          l’argent arrive sur ton compte.
+                          Sans Stripe, les boutons de paiement côté client restent désactivés.
+                          Connexion sécurisée (Express) — l’argent arrive sur ton compte.
                         </p>
                       )}
                     </div>
@@ -191,7 +194,9 @@ export const OnboardingPaymentsStep: React.FC<OnboardingPaymentsStepProps> = ({
                         className="w-full min-h-[48px] inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 active:scale-[0.98] transition-all"
                       >
                         {connectBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-                        {connectAccountId ? "Continuer l'activation Stripe" : 'Connecter mon compte Stripe'}
+                        {connectAccountId
+                          ? "Continuer l'activation Stripe"
+                          : 'Connecter mon compte Stripe'}
                       </button>
                     )}
                     {chargesEnabled && connectAccountId && (
@@ -213,7 +218,9 @@ export const OnboardingPaymentsStep: React.FC<OnboardingPaymentsStepProps> = ({
                   onClick={onComplete}
                   className="w-full min-h-[48px] py-3.5 rounded-xl font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
                 >
-                  {chargesEnabled ? 'Accéder au tableau de bord' : 'Accéder au tableau de bord (je connecterai Stripe plus tard)'}
+                  {chargesEnabled
+                    ? 'Accéder au tableau de bord'
+                    : 'Accéder au tableau de bord (je connecterai Stripe plus tard)'}
                 </button>
               </div>
             )}
@@ -237,7 +244,9 @@ export const OnboardingPaymentsStep: React.FC<OnboardingPaymentsStepProps> = ({
           <h2 className="text-white text-2xl font-bold leading-snug mb-1 [text-shadow:0_2px_8px_rgba(0,0,0,0.8)]">
             Tout est prêt.
           </h2>
-          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">Encaisse sereinement.</p>
+          <p className="text-white text-base [text-shadow:0_2px_6px_rgba(0,0,0,0.8)]">
+            Encaisse sereinement.
+          </p>
         </div>
       </motion.div>
     </motion.div>

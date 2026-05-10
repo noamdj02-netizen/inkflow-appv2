@@ -48,7 +48,9 @@ export function getVitrineData(
     const stored = localStorage.getItem(`${STORAGE_PREFIX}${slug}`);
     if (stored) {
       const parsed = JSON.parse(stored) as Partial<VitrineData>;
-      return { ...defaultData, ...parsed, slug };
+      const merged = { ...defaultData, ...parsed, slug };
+      if (!Array.isArray(merged.testimonials)) merged.testimonials = defaultData.testimonials;
+      return merged;
     }
   } catch {}
   return defaultData;

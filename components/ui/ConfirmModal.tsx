@@ -1,4 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 
 interface ConfirmModalProps {
@@ -9,12 +11,23 @@ interface ConfirmModalProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  /** Affiche un spinner et désactive le bouton pendant l'action */
   confirmLoading?: boolean;
-  /** Si false, la modale ne se ferme pas au confirm (le parent appelle onClose quand c'est fini) */
   closeOnConfirm?: boolean;
-  /** danger = bouton rouge (suppression), warning = orange, default = neutre */
   variant?: 'danger' | 'warning' | 'default';
+}
+
+function useMdUp(): boolean {
+  const [mdUp, setMdUp] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const onChange = () => setMdUp(mq.matches);
+    mq.addEventListener('change', onChange);
+    setMdUp(mq.matches);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return mdUp;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -29,9 +42,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   closeOnConfirm = true,
   variant = 'danger',
 }) => {
+  const mdUp = useMdUp();
+  const reduceMotion = useReducedMotion();
+
   useEffect(() => {
     if (isOpen) document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = 'unset'; };
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isOpen]);
 
   useEffect(() => {
@@ -42,60 +60,127 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  const confirmClasses =
+    variant === 'danger'
+      ? 'bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100'
+      : variant === 'warning'
+        ? 'bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100'
+        : 'bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100';
 
-  const confirmClasses = variant === 'danger'
-    ? 'bg-zinc-600 hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-600 text-white'
-    : variant === 'warning'
-      ? 'bg-zinc-600 hover:bg-zinc-700 dark:bg-zinc-500 dark:hover:bg-zinc-600 text-white'
-      : 'bg-[var(--text-primary)] hover:opacity-90 text-white';
+  const spring = reduceMotion
+    ? { duration: 0.01 }
+    : { type: 'spring' as const, damping: 32, stiffness: 380, mass: 0.85 };
 
-  return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto">
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div
-          className="relative bg-[var(--bg-card)] rounded-2xl w-full max-w-md p-6 border border-[var(--border)] animate-slide-up"
-          onClick={(e) => e.stopPropagation()}
-          role="alertdialog"
-          aria-labelledby="confirm-title"
-          aria-describedby="confirm-message"
-        >
-          <div className="flex items-start gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              variant === 'danger' ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400' :
-              variant === 'warning' ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400' :
-              'bg-neutral-100 text-neutral-600 dark:bg-[var(--bg-hover)] dark:text-[var(--text-secondary)]'
-            }`}>
-              <AlertTriangle className="w-6 h-6" />
+  const backdropTransition = reduceMotion
+    ? { duration: 0.12 }
+    : { duration: 0.22, ease: [0.32, 0.72, 0, 1] as const };
+
+  const sheetVariants: Variants = reduceMotion
+    ? {
+        hidden: { opacity: 0 },
+        show: { opacity: 1 },
+        exit: { opacity: 0 },
+      }
+    : mdUp
+      ? {
+          hidden: { opacity: 0, scale: 0.96, x: '-50%', y: '-50%' },
+          show: { opacity: 1, scale: 1, x: '-50%', y: '-50%' },
+          exit: { opacity: 0, scale: 0.98, x: '-50%', y: '-50%' },
+        }
+      : {
+          hidden: { y: '100%' },
+          show: { y: 0 },
+          exit: { y: '100%' },
+        };
+
+  const tree = (
+    <AnimatePresence mode="sync">
+      {isOpen ? (
+        <>
+          <motion.div
+            key="inkflow-confirm-backdrop"
+            role="presentation"
+            className="fixed inset-0 z-[9998] bg-black/55 dark:bg-black/65"
+            aria-hidden="true"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={backdropTransition}
+            onClick={onClose}
+          />
+          <motion.div
+            key="inkflow-confirm-sheet"
+            role="alertdialog"
+            aria-labelledby="confirm-title"
+            aria-describedby="confirm-message"
+            className="fixed inset-x-0 bottom-0 z-[9999] w-full max-md:max-h-[min(88dvh,100%)] overflow-hidden bg-[var(--bg-card)] shadow-[0_-12px_48px_rgba(0,0,0,0.14)] dark:shadow-[0_-12px_48px_rgba(0,0,0,0.45)] max-md:rounded-t-[1.75rem] md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:max-w-md md:rounded-3xl md:shadow-2xl"
+            initial="hidden"
+            animate="show"
+            exit="exit"
+            variants={sheetVariants}
+            transition={spring}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 justify-center pt-2 pb-1 md:hidden" aria-hidden>
+              <div className="h-1 w-10 rounded-full bg-zinc-300/90 dark:bg-zinc-600" />
             </div>
-            <div className="flex-1 min-w-0">
-              <h2 id="confirm-title" className="text-lg font-bold text-[var(--text-primary)] mb-1">
-                {title}
-              </h2>
-              <p id="confirm-message" className="text-sm text-[var(--text-secondary)]">
-                {message}
-              </p>
+            <div className="space-y-5 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 md:p-8 md:pb-8">
+              <div className="flex items-start gap-4">
+                <div
+                  className={`flex size-12 shrink-0 items-center justify-center rounded-2xl ${
+                    variant === 'danger'
+                      ? 'bg-zinc-100 text-amber-600 dark:bg-zinc-800 dark:text-amber-400'
+                      : variant === 'warning'
+                        ? 'bg-zinc-100 text-amber-600 dark:bg-zinc-800 dark:text-amber-400'
+                        : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                  }`}
+                >
+                  <AlertTriangle className="size-6" />
+                </div>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <h2
+                    id="confirm-title"
+                    className="text-xl font-bold leading-tight tracking-tight text-[var(--text-primary)] md:text-2xl"
+                  >
+                    {title}
+                  </h2>
+                  <p
+                    id="confirm-message"
+                    className="text-sm leading-relaxed text-slate-500 dark:text-slate-400"
+                  >
+                    {message}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="min-h-11 w-full rounded-2xl px-4 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-all hover:bg-[var(--bg-hover)] active:scale-95 motion-reduce:active:scale-100 sm:w-auto"
+                >
+                  {cancelLabel}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!confirmLoading) {
+                      onConfirm();
+                      if (closeOnConfirm) onClose();
+                    }
+                  }}
+                  disabled={confirmLoading}
+                  className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all active:scale-95 motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto ${confirmClasses}`}
+                >
+                  {confirmLoading ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {confirmLoading ? 'En cours…' : confirmLabel}
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-3 mt-6 justify-end">
-            <button
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-[var(--border)] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-            >
-              {cancelLabel}
-            </button>
-            <button
-              onClick={() => { if (!confirmLoading) { onConfirm(); if (closeOnConfirm) onClose(); } }}
-              disabled={confirmLoading}
-              className={`px-4 py-2.5 rounded-xl font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${confirmClasses}`}
-            >
-              {confirmLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {confirmLoading ? 'En cours…' : confirmLabel}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+          </motion.div>
+        </>
+      ) : null}
+    </AnimatePresence>
   );
+
+  return createPortal(tree, document.body);
 };

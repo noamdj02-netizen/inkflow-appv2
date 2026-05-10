@@ -41,6 +41,7 @@ import {
   type ConsentFormPreset,
 } from '../../lib/consentFormPresets';
 import type { MessageThread, Message } from '../../types';
+import { pickLinkedAppointmentForProjectRequest } from '../../lib/linkedAppointmentFromContext';
 
 function ConsentPresetChipIcon({ icon }: { icon?: string }) {
   const c = 'w-3 h-3 shrink-0 opacity-90';
@@ -157,17 +158,33 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
             .eq('id', selectedThreadId)
             .maybeSingle();
           if (cancelled) return;
+          let linkedAppointmentId: string | null = null;
+          if (pr?.id) {
+            const { data: prApts } = await supabase
+              .from('inkflow_appointments')
+              .select('id, date, status')
+              .eq('studio_id', studioId)
+              .eq('project_request_id', pr.id);
+            if (!cancelled && prApts?.length) {
+              linkedAppointmentId = pickLinkedAppointmentForProjectRequest(
+                prApts.map((r) => ({ id: r.id, date: r.date, status: r.status || '' })),
+                new Date().toISOString().slice(0, 10)
+              );
+            }
+          }
+          if (cancelled) return;
           setFallbackThread(
             buildFallback({
               clientName: pr?.client_name?.trim() || 'Client',
               clientEmail: pr?.client_email?.trim() || '',
               projectRequestId: pr?.id ?? selectedThreadId,
+              linkedAppointmentId,
             })
           );
         } else if (selectedThreadId.startsWith('bk_')) {
           const { data: bk } = await supabase
             .from('inkflow_bookings')
-            .select('id, client_name, client_email')
+            .select('id, client_name, client_email, recap_appointment_id')
             .eq('studio_id', studioId)
             .eq('id', selectedThreadId)
             .maybeSingle();
@@ -176,6 +193,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
             buildFallback({
               clientName: bk?.client_name?.trim() || 'Client',
               clientEmail: bk?.client_email?.trim() || '',
+              linkedAppointmentId: bk?.recap_appointment_id ?? null,
             })
           );
         } else {
@@ -531,12 +549,15 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
     try {
       const consentFormId = `cf_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       const clientName = (selectedThread?.clientName || 'Client').trim() || 'Client';
+      const appointmentId =
+        (selectedThread?.linkedAppointmentId && selectedThread.linkedAppointmentId.trim()) || null;
       const { error: cErr } = await supabase.from('inkflow_consent_forms').insert({
         id: consentFormId,
         studio_id: studioId,
         client_name: clientName,
         client_email: email,
         template: preset.content,
+        appointment_id: appointmentId,
       });
       if (cErr) {
         toast.error(cErr.message || 'Enregistrement du formulaire impossible.');
@@ -565,7 +586,11 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
         messagePreview: `Formulaire « ${preset.title} » — à remplir dans la conversation Inkflow`,
         threadId: selectedThreadId,
       });
-      toast.success('Formulaire envoyé — le client peut le remplir dans la conversation.');
+      toast.success(
+        appointmentId
+          ? 'Formulaire envoyé (lié au RDV) — le client peut signer dans la conversation.'
+          : 'Formulaire envoyé — sans lien RDV précis ; le client peut signer dans la conversation.'
+      );
       setActiveConsentPreset(null);
       await loadMessages(selectedThreadId);
     } catch {

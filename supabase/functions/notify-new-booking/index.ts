@@ -13,6 +13,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
 import { addPreviewBccToPayload } from "../_shared/resend.ts";
 import { escapeHtml, wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import {
+  rateLimitByIp,
+  verifyBookingNotifyPayload,
+  internalFunctionSecretOk,
+} from "../_shared/edgeInvokeAuth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -42,14 +47,38 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "invalid json" }), { status: 400, headers: corsHeaders });
   }
 
-  const { bookingId, studioId, clientName, clientEmail, description, requestedDate, requestedTime } = payload;
-  if (!studioId || !clientName) {
-    return new Response(JSON.stringify({ error: "missing studioId or clientName" }), { status: 400, headers: corsHeaders });
+  if (!rateLimitByIp(req, "notify-new-booking", 30)) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  // Récupérer l'email + nom du studio
+  if (!internalFunctionSecretOk(req)) {
+    const okBooking = await verifyBookingNotifyPayload(supabase, {
+      bookingId: payload.bookingId,
+      studioId: payload.studioId,
+      clientName: payload.clientName,
+      clientEmail: payload.clientEmail,
+    });
+    if (!okBooking) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+  }
+
+  const { bookingId, studioId, clientName, clientEmail, description, requestedDate, requestedTime } = payload;
+  if (!bookingId || !studioId || !clientName || !clientEmail) {
+    return new Response(JSON.stringify({ error: "missing bookingId, studioId, clientName or clientEmail" }), {
+      status: 400,
+      headers: corsHeaders,
+    });
+  }
+
   const { data: studio, error: studioError } = await supabase
     .from("inkflow_studios")
     .select("email, name, studio_name")
@@ -76,7 +105,7 @@ Deno.serve(async (req: Request) => {
     <p style="${EMAIL_STYLES.label}">Date souhaitée</p>
     <p style="margin:0 0 16px;font-size:15px;font-weight:600;color:#1A202C;">${escapeHtml(dateLabel)}${escapeHtml(timeLabel)}</p>
     <p style="${EMAIL_STYLES.label}">Description du projet</p>
-    <p style="margin:0;font-size:14px;color:#718096;line-height:1.6;">${escapeHtml(description.slice(0, 300))}${description.length > 300 ? "…" : ""}</p>
+    <p style="margin:0;font-size:14px;color:#718096;line-height:1.6;">${escapeHtml(String(description || "").slice(0, 300))}${String(description || "").length > 300 ? "…" : ""}</p>
   `;
 
   const html = wrapEmailLayout({
