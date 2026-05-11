@@ -93,12 +93,16 @@ const FloatingActionMenu = ({
 
   const fabButtonClass =
     'inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-full border-0 p-0 shadow-[0_0_20px_rgba(0,0,0,0.2)] bg-[#11111198] hover:bg-[#111111d1] text-white [&_svg]:text-white';
-  /** Onglet central barre bas : centré, bleu InkFlow, + blanc */
-  const fabButtonBottomNavClass = cn(
-    'inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-full border-0 p-0',
-    'bg-blue-600 text-white shadow-md shadow-blue-600/30 hover:bg-blue-500 active:bg-blue-700',
-    'dark:bg-blue-600 dark:hover:bg-blue-500 dark:shadow-blue-900/40',
-    '[&_svg]:text-white [&_svg]:stroke-white'
+  /** FAB central bottom nav — extension au-dessus de Button default + icon-lg (tokens primary) */
+  const fabBottomNavExtras = cn(
+    'relative isolate size-16 min-h-16 min-w-16 shrink-0 rounded-full border-[3px] border-background p-0',
+    'gap-0 has-data-[icon=inline-start]:pl-0 has-data-[icon=inline-end]:pr-0',
+    "[&_svg:not([class*='size-'])]:size-7",
+    'shadow-[0_8px_24px_-6px_rgb(37_99_235/0.42),0_2px_8px_-2px_rgb(0_0_0/0.12)]',
+    'transition-[transform,box-shadow,filter] hover:brightness-[1.04] hover:shadow-[0_12px_28px_-8px_rgb(37_99_235/0.45)] active:brightness-[0.97]',
+    'motion-reduce:transition-colors motion-reduce:hover:brightness-100',
+    'focus-visible:z-10 focus-visible:!ring-[3px] focus-visible:!ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+    'dark:border-zinc-900 dark:shadow-[0_8px_28px_-6px_rgb(0_0_0/0.55)] dark:hover:shadow-[0_14px_32px_-8px_rgb(0_0_0/0.6)]'
   );
   const menuOptionClass = cn(
     'flex w-full min-w-0 items-center gap-2 border-0 shadow-[0_0_20px_rgba(0,0,0,0.2)]',
@@ -118,7 +122,7 @@ const FloatingActionMenu = ({
       className={cn(
         'max-h-[min(45dvh,20rem)] w-max min-w-[12rem] overflow-y-auto overscroll-contain',
         isBottomNav
-          ? 'absolute bottom-10 right-0 z-[60] mb-2 max-w-[min(90vw,20rem)]'
+          ? 'absolute bottom-[3.35rem] right-0 z-[60] mb-2 max-w-[min(90vw,20rem)]'
           : 'absolute bottom-10 right-0 mb-2'
       )}
     >
@@ -160,19 +164,21 @@ const FloatingActionMenu = ({
       <div
         ref={rootRef}
         className={cn(
-          'relative z-10 flex min-h-[56px] min-w-0 flex-1 items-center justify-center',
+          'relative z-10 flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-end overflow-visible pb-0.5',
           className
         )}
       >
-        <div className="relative w-10 shrink-0">
+        <div className="relative -mt-8 shrink-0">
           <Button
             type="button"
+            variant="default"
+            size="icon-lg"
             onClick={toggle}
             className={cn(
-              fabButtonBottomNavClass,
+              fabBottomNavExtras,
               isNavActive &&
                 !isOpen &&
-                'ring-2 ring-white/50 ring-offset-2 ring-offset-zinc-50 dark:ring-offset-[#0f0f11]'
+                'ring-2 ring-primary/55 ring-offset-2 ring-offset-background dark:ring-primary/65'
             )}
             aria-expanded={isOpen}
             aria-haspopup="menu"
@@ -184,14 +190,9 @@ const FloatingActionMenu = ({
               animate={{ rotate: isOpen ? 45 : 0 }}
               transition={rotTransition}
             >
-              <Plus className="h-6 w-6 text-white" strokeWidth={2.25} aria-hidden />
+              <Plus aria-hidden strokeWidth={2.25} />
             </motion.div>
           </Button>
-          <BadgeNotification
-            count={fabBadgeCount}
-            showCount
-            className="left-auto -right-1.5 -top-0.5"
-          />
           <AnimatePresence>{isOpen && menuPanel}</AnimatePresence>
         </div>
       </div>

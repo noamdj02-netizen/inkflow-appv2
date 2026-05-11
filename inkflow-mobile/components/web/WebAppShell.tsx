@@ -128,6 +128,18 @@ async function openExternalUrl(url: string): Promise<void> {
     return;
   }
 
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      // Schémas type inkflowpro:// — jamais WebBrowser/Safari (page « adresse non valide »).
+      await Linking.openURL(url);
+      return;
+    }
+  } catch {
+    await Linking.openURL(url);
+    return;
+  }
+
   await WebBrowser.openBrowserAsync(url, {
     presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
   });
@@ -266,7 +278,7 @@ export default function WebAppShell() {
         source={{ uri: webAppUrl }}
         style={styles.webView}
         containerStyle={styles.webViewContainer}
-        originWhitelist={['https://*', 'http://*', 'mailto:*', 'tel:*', 'sms:*']}
+        originWhitelist={['https://*', 'http://*', 'mailto:*', 'tel:*', 'sms:*', 'inkflowpro:*']}
         javaScriptEnabled
         domStorageEnabled
         sharedCookiesEnabled

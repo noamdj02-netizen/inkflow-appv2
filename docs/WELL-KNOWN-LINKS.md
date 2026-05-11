@@ -15,6 +15,10 @@ Le Team ID Apple n’est **pas** versionné dans le repo. Dans `apple-app-site-a
 
 Format `appID` : **`{TEAM_ID}.me.inkflow.studio`** (voir `bundleIdentifier` Expo).
 
+### `webcredentials`
+
+Le bloc `webcredentials.apps` doit lister des entrées au format **`{TEAM_ID}.me.inkflow.studio`** (pas le seul numéro Team ID). Vérifie que le préfixe correspond **exactement** à ton compte — sinon modifie ou supprime le bloc `webcredentials` si tu n’utilises pas Password AutoFill lié au domaine.
+
 Serveur :
 
 - MIME type conseillé : **`application/json`** pour l’AASA (certains hébergeurs servent sans type — Apple peut tolérer, mais CDN/Vercel : vérifier les headers).

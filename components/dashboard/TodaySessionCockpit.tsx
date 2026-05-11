@@ -17,6 +17,11 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import type { Appointment, Client, FlashDesign } from '../../types';
 import { appointmentRemainingBalanceEuros } from '../../lib/appointmentBalance';
+import {
+  appointmentWithResolvedFlashPrice,
+  buildPriceSyncUpdates,
+  resolveCanonicalFlashPrice,
+} from '../../lib/flashAppointmentPrice';
 import { cn } from '../../lib/utils';
 
 interface TodaySessionCockpitProps {
@@ -30,6 +35,8 @@ interface TodaySessionCockpitProps {
   onOpenCloseout: (appointment: Appointment) => void;
   onOpenStockTrace: (appointmentId: string, clientId: string | null) => void;
   onOpenAgenda: () => void;
+  /** Accueil mobile — chrome aligné maquette (clair, cartes blanches 32px, label indigo). */
+  mobileMinimalChrome?: boolean;
 }
 
 function formatEuro(value: number): string {
@@ -69,52 +76,6 @@ function statusLabel(status: Appointment['status']): string {
   }
 }
 
-function parseEuroAmountFromText(value: string | undefined): number | null {
-  if (!value) return null;
-  const matches = [...value.matchAll(/(\d+(?:[.,]\d{1,2})?)\s*€/g)];
-  const last = matches.at(-1)?.[1];
-  if (!last) return null;
-  const amount = Number(last.replace(',', '.'));
-  return Number.isFinite(amount) && amount > 0 ? amount : null;
-}
-
-function stripEmbeddedPriceFromService(value: string | undefined): string | undefined {
-  if (!value) return value;
-  const cleaned = value.replace(/\s*[—-]\s*\d+(?:[.,]\d{1,2})?\s*€\s*$/u, '').trim();
-  return cleaned || value;
-}
-
-function resolveCanonicalFlashPrice(
-  appointment: Appointment,
-  flashDesigns: FlashDesign[]
-): { price: number; source: 'catalog' | 'service-label' } | null {
-  if (appointment.tattooType !== 'flash') return null;
-  const flash = appointment.flashId
-    ? flashDesigns.find((design) => design.id === appointment.flashId)
-    : null;
-  if (flash && Number.isFinite(flash.price) && flash.price > 0) {
-    return { price: flash.price, source: 'catalog' };
-  }
-  const priceFromService = parseEuroAmountFromText(appointment.service);
-  return priceFromService ? { price: priceFromService, source: 'service-label' } : null;
-}
-
-function buildPriceSyncUpdates(
-  appointment: Appointment,
-  canonicalPrice: number
-): Partial<Appointment> {
-  const currentDeposit = Number(appointment.deposit) || 0;
-  const cleanedService = stripEmbeddedPriceFromService(appointment.service);
-  const updates: Partial<Appointment> = {
-    price: canonicalPrice,
-    deposit: Math.max(0, Math.min(currentDeposit, canonicalPrice)),
-  };
-  if (cleanedService && cleanedService !== appointment.service) {
-    updates.service = cleanedService;
-  }
-  return updates;
-}
-
 export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
   today,
   appointments,
@@ -126,6 +87,7 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
   onOpenCloseout,
   onOpenStockTrace,
   onOpenAgenda,
+  mobileMinimalChrome = false,
 }) => {
   const syncedAppointmentIdsRef = useRef<Set<string>>(new Set());
   const todaysAppointments = useMemo(
@@ -157,11 +119,8 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
   const displayedAppointment = useMemo<Appointment | null>(() => {
     if (!focusAppointment) return null;
     if (!hasPriceMismatch || !canonicalFlashPrice) return focusAppointment;
-    return {
-      ...focusAppointment,
-      ...buildPriceSyncUpdates(focusAppointment, canonicalFlashPrice.price),
-    };
-  }, [canonicalFlashPrice, focusAppointment, hasPriceMismatch]);
+    return appointmentWithResolvedFlashPrice(focusAppointment, flashDesigns);
+  }, [canonicalFlashPrice, flashDesigns, focusAppointment, hasPriceMismatch]);
   const remainingBalance = displayedAppointment
     ? appointmentRemainingBalanceEuros(displayedAppointment)
     : 0;
@@ -192,30 +151,58 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
       className={cn(
         'ds-glass-widget mb-3 shadow-none ring-0 sm:mb-4',
         /** Évite bg-card (~blanc en dark) qui recouvre le shell glass du DS */
-        'border-0 bg-transparent'
+        'border-0 bg-transparent',
+        mobileMinimalChrome && 'mb-0 sm:mb-4'
       )}
     >
       <CardHeader className="space-y-0 px-3.5 pb-2.5 pt-3.5 sm:space-y-2 sm:px-4 sm:pb-3 sm:pt-4">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
-            <Badge
-              variant="secondary"
-              className="max-w-[min(100%,220px)] gap-1 truncate py-0 text-[10px] font-semibold text-blue-700 dark:text-blue-300 sm:gap-1.5 sm:text-xs"
-            >
-              <ShieldCheck data-icon="inline-start" className="size-3 shrink-0 sm:size-3.5" />
-              <span className="truncate">Cockpit du jour</span>
-            </Badge>
+            {mobileMinimalChrome ? (
+              <div className="flex max-w-[min(100%,220px)] items-center gap-2">
+                <ShieldCheck className="size-3 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                <span className="truncate text-[11px] font-bold uppercase tracking-[0.1em] text-indigo-600 dark:text-indigo-400">
+                  Cockpit du jour
+                </span>
+              </div>
+            ) : (
+              <Badge
+                variant="secondary"
+                className="max-w-[min(100%,220px)] gap-1 truncate py-0 text-[10px] font-semibold text-blue-700 dark:text-blue-300 sm:gap-1.5 sm:text-xs"
+              >
+                <ShieldCheck data-icon="inline-start" className="size-3 shrink-0 sm:size-3.5" />
+                <span className="truncate">Cockpit du jour</span>
+              </Badge>
+            )}
             <div className="min-w-0 pr-0 sm:pr-1">
-              <CardTitle className="text-base font-display font-bold leading-tight tracking-tight text-zinc-950 dark:text-white sm:text-lg md:text-xl">
+              <CardTitle
+                className={cn(
+                  'text-base font-display font-bold leading-tight tracking-tight text-zinc-950 dark:text-white sm:text-lg md:text-xl',
+                  mobileMinimalChrome &&
+                    'text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-lg md:text-xl'
+                )}
+              >
                 {focusAppointment ? 'Prochaine séance' : 'Journée prête'}
               </CardTitle>
-              <CardDescription className="mt-1 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400 sm:text-sm sm:leading-5">
-                <span className="sm:hidden">
-                  Consentement, santé, paiement et stock — même écran.
-                </span>
-                <span className="hidden sm:inline">
-                  Consentement, santé, paiement et stock sans changer d’écran.
-                </span>
+              <CardDescription
+                className={cn(
+                  'mt-1 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400 sm:text-sm sm:leading-5',
+                  mobileMinimalChrome &&
+                    'mt-2 text-sm leading-relaxed text-slate-400 dark:text-zinc-500'
+                )}
+              >
+                {mobileMinimalChrome ? (
+                  'Consentement, santé, paiement et stock — même écran.'
+                ) : (
+                  <>
+                    <span className="sm:hidden">
+                      Consentement, santé, paiement et stock — même écran.
+                    </span>
+                    <span className="hidden sm:inline">
+                      Consentement, santé, paiement et stock sans changer d’écran.
+                    </span>
+                  </>
+                )}
               </CardDescription>
             </div>
           </div>
@@ -225,7 +212,11 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
             size="icon-lg"
             onClick={onOpenAgenda}
             aria-label="Ouvrir l’agenda"
-            className="mt-0.5 shrink-0 rounded-xl border-zinc-200 dark:border-zinc-700 sm:rounded-2xl"
+            className={cn(
+              'mt-0.5 shrink-0 rounded-xl border-zinc-200 dark:border-zinc-700 sm:rounded-2xl',
+              mobileMinimalChrome &&
+                'size-10 rounded-xl border-zinc-100 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900'
+            )}
           >
             <CalendarDays className="size-[18px] sm:size-5" />
           </Button>
@@ -233,29 +224,50 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
       </CardHeader>
 
       <CardContent className="space-y-0 px-3.5 pb-4 pt-0 sm:px-4 sm:pb-5">
-        <div className="ds-glass-panel p-2.5 sm:p-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:mb-2.5">
+        <div
+          className={cn(mobileMinimalChrome ? 'bg-transparent p-0' : 'ds-glass-panel p-2.5 sm:p-3')}
+        >
+          <p
+            className={cn(
+              'mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:mb-2.5',
+              mobileMinimalChrome &&
+                'mb-4 text-[10px] font-bold tracking-[0.05em] text-slate-400 dark:text-zinc-500'
+            )}
+          >
             Aujourd’hui
           </p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div
+            className={cn(
+              'grid grid-cols-2 gap-2 sm:grid-cols-4',
+              mobileMinimalChrome && 'grid-cols-2 gap-4'
+            )}
+          >
             <MetricCard
               icon={<CalendarDays />}
               label="RDV"
               value={todaysAppointments.length.toString()}
+              surfaceClass={mobileMinimalChrome ? 'metric-figma-mobile' : undefined}
             />
             <MetricCard
               icon={<ReceiptText />}
               label="Solde"
               value={sessionsToClose.toString()}
               tone={sessionsToClose > 0 ? 'amber' : 'zinc'}
+              surfaceClass={mobileMinimalChrome ? 'metric-figma-mobile' : undefined}
             />
             <MetricCard
               icon={<CreditCard />}
               label="Pay"
               value={stripeConnectReady ? 'OK' : 'Setup'}
               tone={stripeConnectReady ? 'emerald' : 'amber'}
+              surfaceClass={mobileMinimalChrome ? 'metric-figma-mobile' : undefined}
             />
-            <MetricCard icon={<Package />} label="Lots" value="1 clic" />
+            <MetricCard
+              icon={<Package />}
+              label="Lots"
+              value="1 clic"
+              surfaceClass={mobileMinimalChrome ? 'metric-figma-mobile' : undefined}
+            />
           </div>
 
           <div className="mt-2.5 border-t border-border/60 pt-2.5 sm:mt-3 sm:pt-3">
@@ -383,24 +395,62 @@ interface MetricCardProps {
   label: string;
   value: string;
   tone?: 'zinc' | 'emerald' | 'amber';
+  surfaceClass?: string;
 }
 
-const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, tone = 'zinc' }) => {
+const MetricCard: React.FC<MetricCardProps> = ({
+  icon,
+  label,
+  value,
+  tone = 'zinc',
+  surfaceClass,
+}) => {
   return (
-    <div className="min-w-0 rounded-xl border border-border/60 bg-background/35 p-2 ring-1 ring-black/[0.03] dark:border-zinc-700/65 dark:bg-zinc-950/55 dark:ring-white/[0.06] sm:p-2.5 [&_svg]:size-3 [&_svg]:shrink-0 sm:[&_svg]:size-3.5">
-      <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground sm:text-[11px]">
-        {icon}
+    <div
+      className={cn(
+        'min-w-0 rounded-xl border border-border/60 bg-background/35 p-2 ring-1 ring-black/[0.03] dark:border-zinc-700/65 dark:bg-zinc-950/55 dark:ring-white/[0.06] sm:p-2.5 [&_svg]:size-3 [&_svg]:shrink-0 sm:[&_svg]:size-3.5',
+        surfaceClass === 'metric-figma-mobile' &&
+          'rounded-[32px] border border-zinc-100 bg-white p-6 shadow-[0_1px_1px_rgba(0,0,0,0.05)] ring-0 dark:border-zinc-800 dark:bg-zinc-900/90',
+        surfaceClass && surfaceClass !== 'metric-figma-mobile' ? surfaceClass : undefined
+      )}
+    >
+      <div
+        className={cn(
+          'flex items-center gap-2 text-[10px] font-medium text-muted-foreground sm:text-[11px]',
+          surfaceClass === 'metric-figma-mobile' &&
+            'font-bold uppercase tracking-wide text-slate-400 dark:text-zinc-500'
+        )}
+      >
+        {surfaceClass === 'metric-figma-mobile' ? (
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-zinc-100 bg-white text-indigo-600 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
+            {icon}
+          </span>
+        ) : (
+          icon
+        )}
         <span className="truncate">{label}</span>
       </div>
       <div
         className={cn(
           'mt-0.5 truncate text-[13px] font-bold tabular-nums sm:text-base',
-          tone === 'emerald' && 'text-emerald-700 dark:text-emerald-300',
+          surfaceClass === 'metric-figma-mobile' &&
+            value !== 'OK' &&
+            'mt-4 text-2xl tracking-tight text-slate-900 dark:text-white',
+          surfaceClass === 'metric-figma-mobile' && value === 'OK' && 'mt-4',
+          !(surfaceClass === 'metric-figma-mobile' && value === 'OK') &&
+            tone === 'emerald' &&
+            'text-emerald-700 dark:text-emerald-300',
           tone === 'amber' && 'text-amber-700 dark:text-amber-300',
           tone === 'zinc' && 'text-foreground'
         )}
       >
-        {value}
+        {value === 'OK' && surfaceClass === 'metric-figma-mobile' ? (
+          <span className="inline-flex rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300">
+            OK
+          </span>
+        ) : (
+          value
+        )}
       </div>
     </div>
   );

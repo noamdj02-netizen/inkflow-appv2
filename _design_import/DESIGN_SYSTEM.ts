@@ -200,8 +200,8 @@ const BADGES = {
   decline:
     'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200',
 
-  // Premium / VIP
-  vip: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200',
+  // Premium / VIP (bleu marque — aligné UI accueil)
+  vip: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════

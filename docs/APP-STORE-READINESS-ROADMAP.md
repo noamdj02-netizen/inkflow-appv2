@@ -27,15 +27,20 @@ Objectif : faire percevoir InkFlow comme un système d’exploitation de studio 
 
 ### Tap to Pay Stripe
 
-- Le dashboard web peut encaisser avec Stripe Terminal Web + lecteur physique compatible.
-- Le simulateur Stripe Terminal doit rester optionnel : `VITE_STRIPE_TERMINAL_SIMULATOR=true` uniquement avec des clés Stripe test.
-- Tap to Pay iPhone/Android nécessite le SDK natif Stripe Terminal dans l’app mobile, pas la WebView seule.
-- Implémentation native à prévoir :
-  - ajouter `@stripe/stripe-terminal-react-native` dans `inkflow-mobile` ;
-  - créer un écran natif d’encaissement Tap to Pay ;
-  - transmettre depuis la WebView un `appointmentId` et un `clientSecret` Terminal ;
-  - découvrir le lecteur avec la méthode native Tap to Pay ;
-  - confirmer le PaymentIntent puis laisser le webhook `payment_intent.succeeded` mettre à jour le solde.
+- **Web** : Terminal.js + lecteur Bluetooth (voir `SessionCloseoutSheet.tsx`) ; simulateur optionnel : `VITE_STRIPE_TERMINAL_SIMULATOR=true` **uniquement** avec clés Stripe **test**.
+- **iPhone (Inkflow Pro)** : **`@stripe/stripe-terminal-react-native`** + écran **`inkflow-mobile/app/tap-to-pay.tsx`** + composant **`TapToPaySheet`** (`discoveryMethod: 'tapToPay'`). Edge **`stripe-terminal`** crée le PaymentIntent `card_present` côté Connect.
+- **Handoff** : lien `https://app.ink-flow.me/tap-to-pay?…` → `TapToPayHandoffPage` → deep link `inkflowpro://tap-to-pay` (AASA : remplacer **`REPLACE_WITH_APPLE_TEAM_ID`** dans `public/.well-known/apple-app-site-association`).
+- **Android** : pas de Tap to Pay NFC dans l’app ; lecteur physique ou lien client (message dans `TapToPaySheet`).
+- Après paiement : webhook **`payment_intent.succeeded`** met à jour le solde (comportement existant).
+
+#### Conformité Tap to Pay (Apple / Stripe)
+
+- **Entitlements** : deux profils Apple (dev + publication) pour Tap to Pay on iPhone ; prise de contact Apple **`ttpoientitlements@apple.com`** si délai côté Stripe / provisioning.
+- **App Review** : enregistrements d’écran montrant parcours complet (connexion, conditions si demandées, tap, écran de traitement, succès ou échec clair). Toolkit marketing Apple : Team ID **`Y28TH9SHX7`** (ressources officielles).
+- **Comportement dans l’app** (`TapToPaySheet`) : callbacks Terminal pour **progression des mises à jour lecteur** et **acceptation des conditions** ; libellé explicite **« Traitement du paiement… »** après le tap, avant le résultat ; messages d’erreur FR pour les codes Tap to Pay (`lib/stripeTerminalTapToPayErrors.ts`).
+- **France / Cartes Bancaires** : Edge **`stripe-terminal`** — pour les studios FR (pays `FR` / France, ou SIRET sans pays), le PaymentIntent inclut `payment_method_options.card_present.routing.requested_priority=domestic` (réseau domestique sur cartes co-marquées, voir API Stripe).
+- **Warm-up** : le guide Apple recommande d’initialiser le flux tôt ; ici l’initialisation Terminal se fait à l’ouverture de l’encaissement (pas forcément au cold start) — à documenter si Apple exige un warm-up plus agressif.
+- **Références** : [Stripe — Tap to Pay on iPhone](https://stripe.com/docs/terminal/payments/setup-reader/tap-to-pay) et guide PDF Stripe / Apple (mise à jour lecteur, UX, marchands).
 
 ## 2. Screenshot Story App Store
 

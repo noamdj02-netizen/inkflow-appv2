@@ -97,30 +97,38 @@ function buildCaptionParts(
   return parts.filter(Boolean) as string[];
 }
 
-function writePreparedLabelHtml(
-  w: Window,
-  payload: {
-    qrDataUrl: string;
-    token: string;
-    captionParts: string[];
-    autoPrint: boolean;
-  }
-): void {
+/** Safari / navigateurs mobiles bloquent souvent window.print() dans un 2e onglet ; iframe + geste utilisateur fonctionne mieux. */
+function shouldPreferIframePrint(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/i.test(ua)) return true;
+  if (/Android/i.test(ua)) return true;
+  return (
+    window.matchMedia('(max-width: 768px)').matches &&
+    window.matchMedia('(hover: none), (pointer: coarse)').matches
+  );
+}
+
+function buildLabelDocumentHtml(payload: {
+  qrDataUrl: string;
+  token: string;
+  captionParts: string[];
+  autoPrint: boolean;
+}): string {
   const barcodeSvgOuter = barcodeSvgMarkupForPrint(payload.token) ?? '';
   const captionLine = escapeHtml(payload.captionParts.join(' · ') || 'InkFlow — étiquette lot');
   const hook =
     payload.autoPrint === true
-      ? `setTimeout(function(){ window.focus(); window.print(); }, 180);`
-      : `setTimeout(function(){ window.focus(); }, 50);`;
+      ? `setTimeout(function(){ try { window.focus(); window.print(); } catch (e) {} }, 200);`
+      : `setTimeout(function(){ try { window.focus(); } catch (e) {} }, 50);`;
 
-  w.document.open();
-  w.document.write(`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8"/><title>InkFlow — étiquette</title>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><title>InkFlow — étiquette</title>
 <style>
   @page { margin: 10mm; size: auto; }
-  body { margin: 0; font-family: system-ui, sans-serif; color: #111; background: #fff; }
+  body { margin: 0; font-family: system-ui, sans-serif; color: #111; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .wrap { padding: 16px 10px; text-align: center; max-width: 320px; margin: 0 auto; }
   .cap { font-size: 11px; font-weight: 600; margin: 0 0 12px; line-height: 1.35; }
   img.qr { width: 200px; height: 200px; image-rendering: pixelated; }
@@ -136,7 +144,60 @@ function writePreparedLabelHtml(
   <button type="button" class="print" onclick="window.print()">Imprimer ou enregistrer en PDF</button>
 </div>
 <script>window.addEventListener('load',function(){${hook}});}</${'scr' + 'ipt'}>
-</body></html>`);
+</body></html>`;
+}
+
+/**
+ * Impression fiable sur mobile : iframe cachée (même origine), pas un 2e onglet.
+ */
+function printLabelViaHiddenIframe(html: string): void {
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('title', 'InkFlow — impression étiquette');
+  iframe.style.cssText =
+    'position:fixed;left:0;top:0;width:100vw;height:100vh;border:0;opacity:0;pointer-events:none;z-index:2147483646;';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument;
+  const win = iframe.contentWindow;
+  if (!doc || !win) {
+    iframe.remove();
+    return;
+  }
+  doc.open();
+  doc.write(html);
+  doc.close();
+  const runPrint = (): void => {
+    try {
+      win.focus();
+      win.print();
+    } catch {
+      /* iOS peut refuser sans geste — le bouton déclenche le même flux */
+    }
+    const remove = (): void => {
+      iframe.removeEventListener('afterprint', remove as EventListener);
+      iframe.remove();
+    };
+    iframe.contentWindow?.addEventListener('afterprint', remove as EventListener, { once: true });
+    window.setTimeout(remove, 8000);
+  };
+  if (doc.readyState === 'complete') {
+    requestAnimationFrame(runPrint);
+  } else {
+    win.addEventListener('load', () => requestAnimationFrame(runPrint), { once: true });
+  }
+}
+
+function writePreparedLabelHtml(
+  w: Window,
+  payload: {
+    qrDataUrl: string;
+    token: string;
+    captionParts: string[];
+    autoPrint: boolean;
+  }
+): void {
+  const html = buildLabelDocumentHtml(payload);
+  w.document.open();
+  w.document.write(html);
   w.document.close();
 }
 
@@ -206,11 +267,15 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
       .filter(Boolean)
       .join(' · ');
 
-    const printWin = window.open('', '_blank', 'noopener,noreferrer,width=560,height=720');
+    const mobileLike = shouldPreferIframePrint();
+    /** Fenêtre annexe : uniquement desktop (mobile = pop-up souvent vide + print() inopérant). */
+    const printWin = mobileLike
+      ? null
+      : window.open('', '_blank', 'noopener,noreferrer,width=560,height=720');
     writePrintWindowBusy(printWin);
-    if (!printWin) {
+    if (!mobileLike && !printWin) {
       toast.info(
-        'Les pop-ups semblent bloquées — tu pourras utiliser « Imprimer » après la génération.'
+        'Les pop-ups semblent bloquées — après génération, utilise « Imprimer l’étiquette » dans cette fenêtre.'
       );
     }
 
@@ -252,7 +317,7 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
       });
 
       try {
-        if (printWin && !printWin.closed) {
+        if (!mobileLike && printWin && !printWin.closed) {
           writePreparedLabelHtml(printWin, {
             qrDataUrl,
             token,
@@ -261,13 +326,15 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
           });
         }
       } catch {
-        toast.info('Impression automatique impossible — utilise « Imprimer » dans la modale.');
+        toast.info('Impression automatique impossible — touche « Imprimer l’étiquette ».');
       }
 
       toast.success(
-        printWin && !printWin.closed
-          ? 'Lot enregistré — la fenêtre d’impression s’affiche.'
-          : 'Lot enregistré — utilise « Imprimer » pour rouvrir l’étiquette.'
+        mobileLike
+          ? 'Lot enregistré — touche « Imprimer l’étiquette » pour AirPrint ou enregistrer en PDF.'
+          : printWin && !printWin.closed
+            ? 'Lot enregistré — la fenêtre d’impression s’affiche.'
+            : 'Lot enregistré — touche « Imprimer l’étiquette » si besoin.'
       );
       onSuccess();
     } catch (e) {
@@ -309,9 +376,24 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
       lotManual.expiry_date ?? null
     );
 
+    const html = buildLabelDocumentHtml({
+      qrDataUrl: preview.qrDataUrl,
+      token: preview.token,
+      captionParts,
+      autoPrint: false,
+    });
+
+    if (shouldPreferIframePrint()) {
+      printLabelViaHiddenIframe(html);
+      return;
+    }
+
     const w = window.open('', '_blank', 'noopener,noreferrer,width=560,height=720');
     if (!w) {
-      toast.error('Ouverture de la fenêtre bloquée — autorise les pop-ups pour cette page.');
+      toast.error(
+        'Ouverture de la fenêtre bloquée — utilise Safari/Chrome sans bloqueur de pop-ups, ou réessaie sur mobile avec le bouton Imprimer.'
+      );
+      printLabelViaHiddenIframe(html);
       return;
     }
 
@@ -319,7 +401,7 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
       qrDataUrl: preview.qrDataUrl,
       token: preview.token,
       captionParts,
-      autoPrint: false,
+      autoPrint: true,
     });
   };
 
@@ -328,9 +410,10 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
       {!preview ? (
         <div className="space-y-4 px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Choisis le type puis « Enregistrer et générer » : une fenêtre s’ouvre tout de suite,
-            puis après l’enregistrement l’étiquette s’affiche dedans avec la proposition
-            d’impression. Date et n° lot du panneau Lots & QR restent pris en compte.
+            Choisis le type puis « Enregistrer et générer ». Sur{' '}
+            <span className="font-medium">téléphone</span>, l’impression se lance avec le bouton «
+            Imprimer l’étiquette » (AirPrint / PDF). Sur ordinateur, une fenêtre peut aussi s’ouvrir
+            automatiquement.
           </p>
 
           <div>
@@ -419,9 +502,8 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
             </p>
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center">
-            Une autre fenêtre vient aussi de se lancer avec l’aperçu (impression proposée
-            automatiquement) — utilise Imprimer ci-dessous si besoin ou si les pop-ups étaient
-            bloquées au moment du clic.
+            Le QR et le code-barres ci-dessus sont enregistrés. Utilise le bouton pour ouvrir la
+            feuille d’impression (sur iPhone : partage → Imprimer ou Enregistrer en PDF).
           </p>
           <div className="flex flex-col sm:flex-row flex-wrap gap-2">
             <button
@@ -430,7 +512,7 @@ export const InventoryPrintLabelModal: React.FC<InventoryPrintLabelModalProps> =
               onClick={handlePrint}
             >
               <Printer className="w-4 h-4 shrink-0" />
-              Imprimer à nouveau
+              Imprimer l’étiquette
             </button>
             <button
               type="button"

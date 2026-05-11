@@ -19,6 +19,7 @@ import {
   stripeTerminalEnsureLocation,
   stripeTerminalFetchConnectionSecret,
 } from '@/lib/stripeTerminalBackend';
+import { formatTapToPayTerminalError } from '@/lib/stripeTerminalTapToPayErrors';
 
 export interface TapToPaySheetProps {
   studioId: string;
@@ -30,6 +31,8 @@ export interface TapToPaySheetProps {
 }
 
 function formatStripeError(e: unknown): string {
+  const mapped = formatTapToPayTerminalError(e);
+  if (mapped) return mapped;
   if (checkIfObjectIsStripeError(e)) {
     return e.message;
   }
@@ -41,11 +44,24 @@ function formatStripeError(e: unknown): string {
 }
 
 function TapToPayInner({ studioId, appointmentId, amountEuros, onClose, onPaid }: TapToPaySheetProps) {
-  const { initialize, easyConnect, retrievePaymentIntent, collectPaymentMethod, processPaymentIntent, disconnectReader } =
-    useStripeTerminal();
-
   const [status, setStatus] = useState<string>('Initialisation…');
   const [error, setError] = useState<string | null>(null);
+  const [paidSuccess, setPaidSuccess] = useState(false);
+  const [readerUpdateProgress, setReaderUpdateProgress] = useState<string | null>(null);
+
+  const onReaderSoftwareProgress = useCallback((progress: string) => {
+    setReaderUpdateProgress(progress);
+  }, []);
+
+  const onTermsAcceptance = useCallback(() => {
+    setStatus('Conditions Tap to Pay (Apple) — suis les étapes à l’écran si demandé…');
+  }, []);
+
+  const { initialize, easyConnect, retrievePaymentIntent, collectPaymentMethod, processPaymentIntent, disconnectReader } =
+    useStripeTerminal({
+      onDidReportReaderSoftwareUpdateProgress: onReaderSoftwareProgress,
+      onDidAcceptTermsOfService: onTermsAcceptance,
+    });
   const cancelled = useRef(false);
   const onCloseRef = useRef(onClose);
   const onPaidRef = useRef(onPaid);
@@ -65,6 +81,7 @@ function TapToPayInner({ studioId, appointmentId, amountEuros, onClose, onPaid }
 
     const run = async () => {
       setError(null);
+      setReaderUpdateProgress(null);
 
       const init = await initialize();
       if (cancelled.current) return;
@@ -110,6 +127,7 @@ function TapToPayInner({ studioId, appointmentId, amountEuros, onClose, onPaid }
         await cleanupReader();
         return;
       }
+      setReaderUpdateProgress(null);
 
       setStatus('Synchronisation du paiement…');
       const retrieved = await retrievePaymentIntent(pi.clientSecret);
@@ -143,7 +161,7 @@ function TapToPayInner({ studioId, appointmentId, amountEuros, onClose, onPaid }
         return;
       }
 
-      setStatus('Validation…');
+      setStatus('Traitement du paiement…');
       const processed = await processPaymentIntent({ paymentIntent: collected.paymentIntent });
       if (cancelled.current) return;
       if (processed.error) {
@@ -153,8 +171,8 @@ function TapToPayInner({ studioId, appointmentId, amountEuros, onClose, onPaid }
       }
 
       await cleanupReader();
-      onPaidRef.current?.();
-      onCloseRef.current();
+      setPaidSuccess(true);
+      setStatus('Mise à jour du solde…');
     };
 
     void run().catch((e) => {
@@ -177,32 +195,56 @@ function TapToPayInner({ studioId, appointmentId, amountEuros, onClose, onPaid }
     studioId,
   ]);
 
+  useEffect(() => {
+    if (!paidSuccess) return;
+    const id = setTimeout(() => {
+      onPaidRef.current?.();
+      onCloseRef.current();
+    }, 1800);
+    return () => clearTimeout(id);
+  }, [paidSuccess]);
+
   return (
     <Modal visible transparent animationType="slide">
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.title}>Encaissement Tap to Pay</Text>
-          <Text style={styles.amount}>{amountEuros.toFixed(2)} €</Text>
-          {error ? (
+          {paidSuccess ? (
             <>
-              <Text style={styles.error}>{error}</Text>
-              <Pressable onPress={onClose} style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
-                <Text style={styles.btnText}>Fermer</Text>
-              </Pressable>
+              <Text style={styles.successTitle}>Paiement accepté</Text>
+              <Text style={styles.amount}>{amountEuros.toFixed(2)} €</Text>
+              <Text style={[styles.status, { marginTop: 12 }]}>
+                Le solde sera mis à jour dans l’app. Tu peux fermer dans un instant…
+              </Text>
             </>
           ) : (
             <>
-              <ActivityIndicator size="large" color="#18181b" style={{ marginVertical: 12 }} />
-              <Text style={styles.status}>{status}</Text>
-              <Pressable
-                onPress={() => {
-                  void cleanupReader();
-                  onClose();
-                }}
-                style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}
-              >
-                <Text style={styles.btnSecondaryText}>Annuler</Text>
-              </Pressable>
+              <Text style={styles.title}>Encaissement Tap to Pay</Text>
+              <Text style={styles.amount}>{amountEuros.toFixed(2)} €</Text>
+              {error ? (
+                <>
+                  <Text style={styles.error}>{error}</Text>
+                  <Pressable onPress={onClose} style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}>
+                    <Text style={styles.btnText}>Fermer</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <>
+                  <ActivityIndicator size="large" color="#18181b" style={{ marginVertical: 12 }} />
+                  <Text style={styles.status}>{status}</Text>
+                  {readerUpdateProgress ? (
+                    <Text style={[styles.progressHint, { marginTop: 8 }]}>{readerUpdateProgress}</Text>
+                  ) : null}
+                  <Pressable
+                    onPress={() => {
+                      void cleanupReader();
+                      onClose();
+                    }}
+                    style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}
+                  >
+                    <Text style={styles.btnSecondaryText}>Annuler</Text>
+                  </Pressable>
+                </>
+              )}
             </>
           )}
         </View>
@@ -229,6 +271,12 @@ const styles = StyleSheet.create({
     color: '#18181b',
     textAlign: 'center',
   },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#166534',
+    textAlign: 'center',
+  },
   amount: {
     fontSize: 28,
     fontWeight: '800',
@@ -241,6 +289,12 @@ const styles = StyleSheet.create({
     color: '#52525b',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  progressHint: {
+    fontSize: 13,
+    color: '#71717a',
+    textAlign: 'center',
+    lineHeight: 18,
   },
   error: {
     fontSize: 14,

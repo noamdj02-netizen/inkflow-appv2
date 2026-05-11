@@ -1,9 +1,14 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { CreditCard, Loader2, Package, Smartphone, X } from 'lucide-react';
 import type { Terminal } from '@stripe/terminal-js';
-import type { Appointment } from '../../types';
+import type { Appointment, FlashDesign } from '../../types';
 import { createCheckoutSession } from '../../lib/stripeClient';
 import { appointmentRemainingBalanceEuros } from '../../lib/appointmentBalance';
+import {
+  appointmentWithResolvedFlashPrice,
+  flashPriceNeedsPersist,
+} from '../../lib/flashAppointmentPrice';
+import { saveAppointmentToSupabase } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
 import { isInkflowNativeShellUserAgent } from '../../lib/nativeWebShell';
 import { getCanonicalAppOrigin } from '../../lib/urls';
@@ -18,11 +23,17 @@ export interface SessionCloseoutSheetProps {
   appointment: Appointment | null;
   studioId: string | null;
   studioSlug?: string | null;
+  /** Catalogue flash — aligne le solde avec le cockpit (prix catalogue si `price` en base est 0). */
+  flashDesigns?: FlashDesign[];
+  /** Après sauvegarde du prix flash sur Supabase — garde l’état local cohérent. */
+  onFlashPriceSynced?: (merged: Appointment) => void;
   /** Stripe Connect prêt (même signal que le reste du dashboard). */
   stripeConnectReady: boolean;
   onGoToStockTrace: (appointmentId: string, clientId: string | null) => void;
   /** Après succès TPE : met à jour la fiche locale (le webhook confirme côté serveur). */
   onBalanceMarkedPaid?: (appointmentId: string, paidAtIso: string) => void;
+  /** Après encaissement Terminal réussi : resync dashboard finance + état Stripe Connect (différé pour laisser la BDD valider). */
+  onPostBalancePaymentSync?: () => void;
 }
 
 function isErr<T extends { error: ExposedError }>(r: unknown): r is T {
@@ -33,6 +44,28 @@ function isErr<T extends { error: ExposedError }>(r: unknown): r is T {
 
 interface ExposedError {
   message: string;
+}
+
+/** Messages Stripe Terminal (souvent en anglais) → aide exploitable en FR. */
+function formatStripeTerminalToastMessage(raw: string | undefined, fallback: string): string {
+  const m = (raw || '').trim();
+  const lower = m.toLowerCase();
+  if (
+    lower.includes('only test mode keys') &&
+    (lower.includes('simulator') || lower.includes('simulated'))
+  ) {
+    return (
+      'Simulateur Terminal : Stripe n’accepte que des clés test (sk_test). ' +
+      'Mets STRIPE_SECRET_KEY en sk_test sur Supabase (Edge Functions / stripe-terminal), ou retire VITE_STRIPE_TERMINAL_SIMULATOR dans .env.local pour du live avec un lecteur physique.'
+    );
+  }
+  if (lower.includes('no such payment_intent')) {
+    return (
+      'Paiement introuvable pour ce lecteur (souvent Connect / mauvais compte Stripe). ' +
+      'Déploie la dernière Edge `stripe-terminal`, puis recharge la page et recrée un encaissement.'
+    );
+  }
+  return m || fallback;
 }
 
 function shouldUseTerminalSimulator(): boolean {
@@ -46,6 +79,23 @@ function shouldUseNativeTapToPayIphone(): boolean {
   return /iPhone|iPad|iPod/.test(navigator.userAgent);
 }
 
+function isIosPhoneOrPad(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPhone|iPad|iPod/.test(navigator.userAgent);
+}
+
+/**
+ * iPhone/iPad en Safari ou PWA : pas de lecteur Bluetooth via Terminal.js Web.
+ * Même handoff HTTPS → Inkflow Pro que le shell natif (Tap to Pay NFC).
+ */
+function shouldHandoffIosTapToPayWeb(): boolean {
+  if (shouldUseTerminalSimulator()) return false;
+  if (!isIosPhoneOrPad()) return false;
+  // Déjà couvert par shouldUseNativeTapToPayIphone (return avant).
+  if (isInkflowNativeShellUserAgent(navigator.userAgent)) return false;
+  return true;
+}
+
 /**
  * Après passage du RDV en « terminé » : solde Stripe (Checkout ou Terminal) + raccourci traçabilité matériel.
  */
@@ -55,9 +105,12 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
   appointment,
   studioId,
   studioSlug,
+  flashDesigns = [],
+  onFlashPriceSynced,
   stripeConnectReady,
   onGoToStockTrace,
   onBalanceMarkedPaid,
+  onPostBalancePaymentSync,
 }) => {
   const toast = useToast();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -66,42 +119,68 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
   const isNativeShell =
     typeof navigator !== 'undefined' && isInkflowNativeShellUserAgent(navigator.userAgent);
 
-  const remaining = appointment ? appointmentRemainingBalanceEuros(appointment) : 0;
-  const balanceAlready = Boolean(appointment?.balancePaidAt?.trim()) || remaining < 0.01;
+  /** Libellé du 2ᵉ bouton : sur iOS (hors simulateur dev) on vise Tap to Pay, pas un lecteur BT web. */
+  const terminalButtonPrimaryLabel = (() => {
+    if (shouldUseTerminalSimulator()) return 'Lecteur Stripe (simulateur)';
+    if (typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
+      return 'Tap to Pay / lecteur Stripe';
+    }
+    return 'Lecteur Stripe (Bluetooth ou simulateur)';
+  })();
 
-  const openTapToPayInNativeApp = useCallback(() => {
-    if (!appointment || !studioId) return;
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams({
-      appointment: appointment.id,
-      studio: studioId,
-      amountEuros: remaining.toFixed(2),
-    });
-    const query = params.toString();
+  const displayAppointment = useMemo(
+    () => (appointment ? appointmentWithResolvedFlashPrice(appointment, flashDesigns) : null),
+    [appointment, flashDesigns]
+  );
 
-    // Safari (hors WebView Inkflow Pro) rejette souvent `location.href = inkflowpro://…`
-    // (« adresse non valide »). On passe par une page HTTPS avec un vrai <a href="inkflowpro://…">.
-    if (!isInkflowNativeShellUserAgent(navigator.userAgent)) {
+  const remaining = displayAppointment ? appointmentRemainingBalanceEuros(displayAppointment) : 0;
+  const balanceMarkedPaid = Boolean(appointment?.balancePaidAt?.trim());
+  const balanceAlready = balanceMarkedPaid || remaining < 0.01;
+
+  const persistFlashPriceIfNeeded = useCallback(async (): Promise<{
+    apt: Appointment;
+    remainingEuros: number;
+  } | null> => {
+    if (!appointment || !studioId) return null;
+    const { merged, needsSave } = flashPriceNeedsPersist(appointment, flashDesigns);
+    if (needsSave) {
+      try {
+        await saveAppointmentToSupabase(studioId, merged);
+        onFlashPriceSynced?.(merged);
+      } catch {
+        toast.error('Impossible d’enregistrer le prix du flash. Réessaie.');
+        return null;
+      }
+    }
+    const rem = appointmentRemainingBalanceEuros(merged);
+    return { apt: merged, remainingEuros: rem };
+  }, [appointment, studioId, flashDesigns, onFlashPriceSynced, toast]);
+
+  const openTapToPayInNativeApp = useCallback(
+    (amountEuros: number) => {
+      if (!appointment || !studioId) return;
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams({
+        appointment: appointment.id,
+        studio: studioId,
+        amountEuros: amountEuros.toFixed(2),
+      });
+      const query = params.toString();
+
+      // Toujours passer par HTTPS `/tap-to-pay` : Safari et le WKWebView sans schéma en whitelist
+      // peuvent afficher « adresse non valide » sur `location.href = inkflowpro://…`.
+      // La page handoff charge dans le WebView puis propose un lien (geste utilisateur) vers l’app native.
       const base = getCanonicalAppOrigin().replace(/\/$/, '');
       window.location.assign(`${base}/tap-to-pay?${query}`);
-      return;
-    }
-
-    // WebView shell : interception native côté inkflow-mobile (shouldStartLoad).
-    const deepLink = `inkflowpro://tap-to-pay?${query}`;
-    const startedAt = Date.now();
-    window.location.href = deepLink;
-    window.setTimeout(() => {
-      if (Date.now() - startedAt < 1500) {
-        toast.info(
-          'Si rien ne s’ouvre, installe/ouvre l’app Inkflow Pro puis réessaie (Tap to Pay est natif).'
-        );
-      }
-    }, 900);
-  }, [appointment, studioId, remaining, toast]);
+    },
+    [appointment, studioId]
+  );
 
   const handleStripeBalance = useCallback(async () => {
-    if (!appointment || !studioId || remaining < 1) {
+    const prep = await persistFlashPriceIfNeeded();
+    if (!prep) return;
+    const { apt, remainingEuros } = prep;
+    if (!studioId || remainingEuros < 1) {
       toast.info('Aucun solde à encaisser en ligne pour ce rendez-vous.');
       return;
     }
@@ -114,11 +193,11 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
       const result = await createCheckoutSession({
         studioId,
         studioSlug: studioSlug ?? undefined,
-        appointmentId: appointment.id,
-        amount: remaining,
-        clientName: appointment.clientName,
-        clientEmail: appointment.clientEmail,
-        serviceName: appointment.service || 'Séance',
+        appointmentId: apt.id,
+        amount: remainingEuros,
+        clientName: apt.clientName,
+        clientEmail: apt.clientEmail,
+        serviceName: apt.service || 'Séance',
         type: 'balance',
       });
       if ('error' in result) {
@@ -131,10 +210,13 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
     } finally {
       setCheckoutLoading(false);
     }
-  }, [appointment, studioId, studioSlug, remaining, stripeConnectReady, toast]);
+  }, [persistFlashPriceIfNeeded, studioId, studioSlug, stripeConnectReady, toast]);
 
   const handleTerminalBalance = useCallback(async () => {
-    if (!appointment || !studioId || remaining < 1) {
+    const prep = await persistFlashPriceIfNeeded();
+    if (!prep) return;
+    const { apt, remainingEuros } = prep;
+    if (!studioId || remainingEuros < 1) {
       toast.info('Aucun solde à encaisser pour ce rendez-vous.');
       return;
     }
@@ -146,16 +228,17 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
       toast.error('Terminal Stripe indisponible dans cet environnement.');
       return;
     }
-    // iPhone dans le shell natif : `@stripe/terminal-js` ne peut pas utiliser Tap to Pay — flux SDK natif uniquement.
+    // iPhone dans le shell natif Inkflow Pro : Tap to Pay NFC → flux SDK natif (handoff).
     if (shouldUseNativeTapToPayIphone()) {
-      openTapToPayInNativeApp();
+      openTapToPayInNativeApp(remainingEuros);
       return;
     }
-    // Sur le web (hors shell), on ouvre l’app Inkflow Pro ; simulateur local (Bluetooth) garde terminal-js.
-    if (!isNativeShell && !shouldUseTerminalSimulator()) {
-      openTapToPayInNativeApp();
+    // Safari / PWA sur iPhone : pas de Terminal.js Bluetooth utile → ouvrir la page handoff vers l’app Tap to Pay.
+    if (shouldHandoffIosTapToPayWeb()) {
+      openTapToPayInNativeApp(remainingEuros);
       return;
     }
+    // Web desktop & Android : Terminal.js = lecteur Bluetooth ou simulateur.
 
     setTerminalLoading(true);
     setTerminalStatus(null);
@@ -174,11 +257,13 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
     try {
       const intent = await stripeTerminalCreateBalanceIntent({
         studioId,
-        appointmentId: appointment.id,
-        amountEuros: remaining,
+        appointmentId: apt.id,
+        amountEuros: remainingEuros,
       });
       if ('error' in intent) {
-        toast.error(intent.error);
+        toast.error(
+          formatStripeTerminalToastMessage(intent.error, 'Préparation encaissement impossible.')
+        );
         return;
       }
 
@@ -215,7 +300,12 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
       );
 
       if (isErr<{ error: ExposedError }>(discover)) {
-        toast.error(discover.error.message || 'Découverte des lecteurs impossible.');
+        toast.error(
+          formatStripeTerminalToastMessage(
+            discover.error.message,
+            'Découverte des lecteurs impossible.'
+          )
+        );
         await disconnectSafe();
         return;
       }
@@ -227,7 +317,7 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
             ? 'Aucun lecteur simulé. Utilise des clés Stripe test avec VITE_STRIPE_TERMINAL_SIMULATOR=true.'
             : isNativeShell
               ? 'Aucun lecteur Stripe détecté. Allume ton WisePad / Reader M2, puis réessaie.'
-              : 'Aucun lecteur Stripe détecté. Sur web, passe par « Paiement en ligne » (Stripe Checkout) ou encaisse depuis l’app Inkflow Pro.'
+              : 'Aucun lecteur détecté. Utilise « Lien paiement Stripe » (carte ou Apple Pay) ou connecte un lecteur Bluetooth Stripe.'
         );
         await disconnectSafe();
         return;
@@ -235,7 +325,9 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
 
       const conn = await terminal.connectReader(readers[0]);
       if (isErr<{ error: ExposedError }>(conn)) {
-        toast.error(conn.error.message || 'Connexion lecteur impossible.');
+        toast.error(
+          formatStripeTerminalToastMessage(conn.error.message, 'Connexion lecteur impossible.')
+        );
         await disconnectSafe();
         return;
       }
@@ -246,7 +338,9 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
       });
 
       if (isErr<{ error: ExposedError }>(collected)) {
-        toast.error(collected.error.message || 'Lecture carte interrompue.');
+        toast.error(
+          formatStripeTerminalToastMessage(collected.error.message, 'Lecture carte interrompue.')
+        );
         await disconnectSafe();
         return;
       }
@@ -255,7 +349,12 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
       const processed = await terminal.processPayment(collected.paymentIntent);
 
       if (isErr<{ error: ExposedError }>(processed)) {
-        toast.error(processed.error.message || 'Échec de la confirmation du paiement.');
+        toast.error(
+          formatStripeTerminalToastMessage(
+            processed.error.message,
+            'Échec de la confirmation du paiement.'
+          )
+        );
         await disconnectSafe();
         return;
       }
@@ -267,26 +366,29 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
       } else {
         const paidAt = new Date().toISOString();
         toast.success(`Solde encaissé (${intent.amountEuros.toFixed(2)} €)`);
-        onBalanceMarkedPaid?.(appointment.id, paidAt);
+        onBalanceMarkedPaid?.(apt.id, paidAt);
+        if (typeof window !== 'undefined' && onPostBalancePaymentSync) {
+          window.setTimeout(() => onPostBalancePaymentSync(), 650);
+        }
       }
 
       await disconnectSafe();
       onClose();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      toast.error(msg || 'Erreur Terminal Stripe.');
+      toast.error(formatStripeTerminalToastMessage(msg, 'Erreur Terminal Stripe.'));
       await disconnectSafe();
     } finally {
       setTerminalStatus(null);
       setTerminalLoading(false);
     }
   }, [
-    appointment,
+    persistFlashPriceIfNeeded,
     studioId,
-    remaining,
     stripeConnectReady,
     toast,
     onBalanceMarkedPaid,
+    onPostBalancePaymentSync,
     onClose,
     isNativeShell,
     openTapToPayInNativeApp,
@@ -343,9 +445,15 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
           <p className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-white mt-1">
             {remaining.toFixed(2)} €
           </p>
-          {balanceAlready ? (
+          {balanceMarkedPaid ? (
             <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
-              Solde déjà enregistré comme réglé (ou montant nul).
+              Solde déjà enregistré comme réglé.
+            </p>
+          ) : balanceAlready ? (
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
+              {appointment.tattooType === 'flash'
+                ? 'Solde calculé à 0 € (prix non renseigné ou entièrement couvert). Vérifie le prix / le flash dans l’agenda — avec un prix catalogue, le solde s’affiche ici automatiquement.'
+                : 'Montant restant nul. Modifie le prix du rendez-vous dans l’agenda si tu dois encore encaisser.'}
             </p>
           ) : !appointment.depositPaid ? (
             <p className="text-xs text-amber-700 dark:text-amber-400 mt-2">
@@ -386,11 +494,7 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
             ) : (
               <Smartphone className="w-4 h-4" />
             )}
-            {terminalLoading
-              ? (terminalStatus ?? 'Terminal…')
-              : isNativeShell
-                ? 'Tap to Pay / lecteur Stripe'
-                : 'Tap to Pay (ouvrir Inkflow Pro)'}
+            {terminalLoading ? (terminalStatus ?? 'Terminal…') : terminalButtonPrimaryLabel}
           </button>
 
           <button
@@ -415,8 +519,10 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
             présenter la carte sur ton téléphone.
           </p>
           <p>
-            <strong>Terminal</strong> : lecteur physique Stripe (WisePad 3 / Reader M2) depuis le
-            dashboard web. Tap to Pay iPhone/Android passe par le SDK natif de l’app mobile.
+            <strong>Terminal</strong> : sur ordinateur ou Android, lecteur physique Stripe (WisePad
+            3 / Reader M2) ou simulateur dev. Sur <strong>iPhone</strong>, ce bouton ouvre la page
+            vers l’app <strong>Inkflow Pro</strong> pour le NFC Tap to Pay sans lecteur ; depuis le
+            navigateur tu peux aussi utiliser le <strong>lien paiement</strong> (Apple Pay).
             {shouldUseTerminalSimulator() ? (
               <span className="block mt-1 text-amber-700 dark:text-amber-400">
                 Simulateur activé : utilise uniquement des clés Stripe test (`sk_test`).

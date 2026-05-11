@@ -81,6 +81,7 @@ import { useStudioPrivacy } from '../../contexts/StudioPrivacyContext';
 import { hapticTabChange } from '../../lib/haptics';
 import { StudioCommandPalette } from './StudioCommandPalette';
 import FloatingActionMenu, { type FloatingActionMenuOption } from './FloatingActionMenu';
+import { BadgeNotification } from '@/components/ui/BadgeNotification';
 import { ModulesSettings } from './ModulesSettings';
 import { StudioDataExportCard } from './StudioDataExportCard';
 import { InkflowHelpDrawer, type InkflowHelpContext } from './InkflowHelpDrawer';
@@ -231,7 +232,7 @@ import {
   listGoogleBusinessLocations,
   saveGoogleBusinessLocation,
 } from '../../lib/googlePlaces';
-import { createSubscription } from '../../lib/stripeClient';
+import { createSubscription, syncStripeConnectStatus } from '../../lib/stripeClient';
 import { getSubscription } from '../../lib/subscriptionGuard';
 import { getPlanLimit } from '../../lib/subscriptionPlans';
 import { useToast } from '../../contexts/ToastContext';
@@ -829,6 +830,16 @@ export const DashboardPro: React.FC = () => {
     },
     []
   );
+
+  /** Solde encaissé via Terminal.js : aligne Finance + statut Stripe Connect (tatoueur) après persistance BDD / webhook. */
+  const syncFinanceAfterBalancePaid = useCallback(() => {
+    if (studioId && useSupabase) {
+      void syncStripeConnectStatus(studioId).catch(() => undefined);
+    }
+    window.setTimeout(() => {
+      retry();
+    }, 700);
+  }, [retry, studioId, useSupabase]);
 
   // New feature states — portfolio synced with vitrine (single source of truth)
   const [vitrineData, setVitrineData] = useState<VitrineData | null>(null);
@@ -3745,7 +3756,7 @@ export const DashboardPro: React.FC = () => {
           <div
             className={`app-shell-content min-w-0 overflow-x-hidden ${
               activeTab === 'overview'
-                ? 'px-3 py-3 sm:px-5 sm:py-5 md:px-7 md:py-6 lg:px-8 lg:py-7 xl:px-9 xl:py-7 2xl:px-11 2xl:py-8 dashboard-overview-bg'
+                ? 'px-3 pt-2 pb-3 sm:px-5 sm:py-5 md:px-7 md:py-6 lg:px-8 lg:py-7 xl:px-9 xl:py-7 2xl:px-11 2xl:py-8 dashboard-overview-bg'
                 : 'px-3 py-4 sm:p-6 md:p-8 xl:px-10 2xl:px-12 dashboard-pages-bg'
             }`}
           >
@@ -3877,6 +3888,7 @@ export const DashboardPro: React.FC = () => {
                                       onOpenCloseout={setSessionCloseoutAppointment}
                                       onOpenStockTrace={goToStockTraceFromCloseout}
                                       onOpenAgenda={() => setActiveTab('agenda')}
+                                      mobileMinimalChrome
                                     />
                                   ) : null
                                 }
@@ -5720,11 +5732,11 @@ export const DashboardPro: React.FC = () => {
 
       {/* ====== MOBILE BOTTOM NAVIGATION BAR (Accueil, Agenda, FAB, Clients, Réglages) — Stock dans Actions rapides ====== */}
       <nav
-        className="bottom-nav md:hidden"
+        className="bottom-nav md:hidden dashboard-pro-mobile-bottom-nav"
         role="navigation"
         aria-label="Navigation principale mobile"
       >
-        <div className="mx-auto flex w-full max-w-lg items-stretch justify-between gap-0.5 px-1 pb-1">
+        <div className="dashboard-pro-mobile-bottom-nav__inner mx-auto flex w-full max-w-lg items-stretch justify-between gap-0.5 overflow-visible px-1 pb-1 pt-0.5">
           {/* Accueil */}
           <button
             type="button"
@@ -5733,25 +5745,32 @@ export const DashboardPro: React.FC = () => {
                 setActiveTab('overview');
               })
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'overview'
-                ? 'text-blue-600 dark:text-blue-400'
+                ? 'text-indigo-600 dark:text-indigo-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
             {activeTab === 'overview' && (
               <motion.div
                 layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-2xl bg-zinc-200/95 shadow-sm ring-1 ring-black/[0.04] dark:bg-white/[0.08] dark:ring-white/[0.08]"
+                className="absolute inset-0 rounded-2xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
                 transition={mobileBottomNavPillTransition}
               />
             )}
             <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
-              <LayoutDashboard
-                className="h-[23px] w-[23px] shrink-0"
-                strokeWidth={activeTab === 'overview' ? 2.35 : 1.65}
-                aria-hidden
-              />
+              <span className="relative inline-flex">
+                <LayoutDashboard
+                  className="h-[23px] w-[23px] shrink-0"
+                  strokeWidth={activeTab === 'overview' ? 2.35 : 1.65}
+                  aria-hidden
+                />
+                <BadgeNotification
+                  count={demandes.total}
+                  showCount
+                  className="-right-2 -top-2 left-auto"
+                />
+              </span>
               <span className="max-w-full truncate text-[11px] font-semibold leading-none tracking-tight">
                 Accueil
               </span>
@@ -5765,16 +5784,16 @@ export const DashboardPro: React.FC = () => {
                 setActiveTab('agenda');
               })
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'appointments' || activeTab === 'agenda'
-                ? 'text-blue-600 dark:text-blue-400'
+                ? 'text-indigo-600 dark:text-indigo-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
             {(activeTab === 'appointments' || activeTab === 'agenda') && (
               <motion.div
                 layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-2xl bg-zinc-200/95 shadow-sm ring-1 ring-black/[0.04] dark:bg-white/[0.08] dark:ring-white/[0.08]"
+                className="absolute inset-0 rounded-2xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
                 transition={mobileBottomNavPillTransition}
               />
             )}
@@ -5793,7 +5812,7 @@ export const DashboardPro: React.FC = () => {
           <FloatingActionMenu
             variant="bottomNav"
             isNavActive={activeTab === 'requests' || activeTab === 'stock'}
-            fabBadgeCount={demandes.total}
+            fabBadgeCount={0}
             options={mobileFabActionOptions}
             mainButtonLabel="Actions rapides"
           />
@@ -5805,16 +5824,16 @@ export const DashboardPro: React.FC = () => {
                 setActiveTab('clients');
               })
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'clients'
-                ? 'text-blue-600 dark:text-blue-400'
+                ? 'text-indigo-600 dark:text-indigo-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
             {activeTab === 'clients' && (
               <motion.div
                 layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-2xl bg-zinc-200/95 shadow-sm ring-1 ring-black/[0.04] dark:bg-white/[0.08] dark:ring-white/[0.08]"
+                className="absolute inset-0 rounded-2xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
                 transition={mobileBottomNavPillTransition}
               />
             )}
@@ -5838,16 +5857,16 @@ export const DashboardPro: React.FC = () => {
                 setSettingsTab(isRestricted ? 'billing' : settingsTab);
               }, true)
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#0f0f11] ${
+            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'settings'
-                ? 'text-blue-600 dark:text-blue-400'
+                ? 'text-indigo-600 dark:text-indigo-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
             }`}
           >
             {activeTab === 'settings' && (
               <motion.div
                 layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-2xl bg-zinc-200/95 shadow-sm ring-1 ring-black/[0.04] dark:bg-white/[0.08] dark:ring-white/[0.08]"
+                className="absolute inset-0 rounded-2xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
                 transition={mobileBottomNavPillTransition}
               />
             )}
@@ -5901,11 +5920,21 @@ export const DashboardPro: React.FC = () => {
           appointment={sessionCloseoutAppointment}
           studioId={studioId}
           studioSlug={studioSlug}
+          flashDesigns={flashDesigns}
+          onFlashPriceSynced={(merged) => {
+            setSessionCloseoutAppointment(merged);
+            updateAppointment(merged.id, {
+              price: merged.price,
+              deposit: merged.deposit,
+              ...(merged.service !== undefined ? { service: merged.service } : {}),
+            });
+          }}
           stripeConnectReady={paymentsSetupComplete === true}
           onGoToStockTrace={goToStockTraceFromCloseout}
           onBalanceMarkedPaid={(id, paidAtIso) =>
             updateAppointment(id, { balancePaidAt: paidAtIso })
           }
+          onPostBalancePaymentSync={syncFinanceAfterBalancePaid}
         />
       </Suspense>
       {selectedAppointment ? (

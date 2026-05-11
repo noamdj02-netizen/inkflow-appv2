@@ -24,6 +24,20 @@ const RATE_WINDOW_MS = 60_000;
 
 type Action = "connection_token" | "create_payment_intent" | "ensure_terminal_location";
 
+/** FR / Cartes Bancaires : prioriser le réseau domestique sur cartes co-marquées (Stripe PI `routing.requested_priority`). */
+function shouldPrioritizeDomesticCardPresentRouting(geo: {
+  country: string | null;
+  siret: string | null;
+} | null): boolean {
+  if (!geo) return false;
+  const raw = (geo.country || "").trim();
+  if (!raw && (geo.siret || "").trim()) return true;
+  const u = raw.toUpperCase();
+  if (u === "FR" || u === "FRA" || u === "FRANCE") return true;
+  if (raw.toLowerCase() === "france") return true;
+  return false;
+}
+
 function stripeForm(body: Record<string, string>): string {
   return new URLSearchParams(body).toString();
 }
@@ -435,6 +449,12 @@ Deno.serve(async (req: Request) => {
     const applicationFeeCents =
       CONNECT_FEE_BPS > 0 ? Math.min(amountCents, Math.floor((amountCents * CONNECT_FEE_BPS) / 10000)) : 0;
 
+    const { data: studioGeo } = await supabase
+      .from("inkflow_studios")
+      .select("country, siret")
+      .eq("id", studio.id)
+      .maybeSingle();
+
     const payId = `pay_terminal_${Date.now().toString(36)}_${crypto.randomUUID().slice(0, 10)}`;
     const serviceName =
       typeof aptForClient.service === "string" && aptForClient.service.trim()
@@ -449,6 +469,9 @@ Deno.serve(async (req: Request) => {
         ? aptForClient.client_email.trim().slice(0, 240)
         : "";
 
+    /** Terminal + Connect : le `connection_token` est émis pour le compte **connecté** ; le PaymentIntent
+     * doit être créé sur ce même compte (charge directe + `application_fee_amount` pour la plateforme).
+     * Un PI plateforme + `transfer_data` provoque « No such payment_intent » côté SDK (mauvais compte). */
     const piBody: Record<string, string> = {
       amount: String(amountCents),
       currency: "eur",
@@ -463,13 +486,15 @@ Deno.serve(async (req: Request) => {
       "metadata[service_name]": serviceName,
       ...(clientName ? { "metadata[client_name]": clientName } : {}),
       ...(clientEmail ? { "metadata[client_email]": clientEmail } : {}),
-      "transfer_data[destination]": connectAccountId!,
       ...(applicationFeeCents > 0
         ? { application_fee_amount: String(applicationFeeCents) }
         : {}),
+      ...(shouldPrioritizeDomesticCardPresentRouting(studioGeo)
+        ? { "payment_method_options[card_present][routing][requested_priority]": "domestic" }
+        : {}),
     };
 
-    const piRes = await stripePost("payment_intents", piBody);
+    const piRes = await stripePostForConnectAccount("payment_intents", piBody, connectAccountId!);
     const piText = await piRes.text();
 
     if (!piRes.ok) {
@@ -479,9 +504,9 @@ Deno.serve(async (req: Request) => {
         const parsed = JSON.parse(piText) as { error?: { message?: string } };
         if (parsed.error?.message) userMsg = parsed.error.message;
       } catch {
-        userMsg = piText.slice(0, 220);
+        userMsg = "Erreur Stripe — réessaie ou contacte le support.";
       }
-      return new Response(JSON.stringify({ error: userMsg, details: piText.slice(0, 500) }), {
+      return new Response(JSON.stringify({ error: userMsg }), {
         status: 502,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });

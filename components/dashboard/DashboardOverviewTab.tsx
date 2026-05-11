@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
@@ -36,6 +36,7 @@ import {
   Check,
   Loader2,
   Camera,
+  MessageSquare,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import {
@@ -81,6 +82,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { supabase } from '../../lib/supabase';
@@ -471,7 +473,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   studioId,
   useSupabase = false,
   recentDeposits = [],
-  overviewHeaderBgUrl = null,
+  overviewHeaderBgUrl: _overviewHeaderBgUrl = null,
   onAvatarClick,
   avatarUploading = false,
   flashDesigns = [],
@@ -485,6 +487,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   mobileAfterHero,
 }) => {
   const { privacyMode } = useStudioPrivacy();
+  const pilotageWaveGradId = useId();
   const euro = (n: number) => formatEuroPrivacy(n, privacyMode);
   const prefersReducedMotion = useReducedMotion();
   /**
@@ -607,6 +610,15 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   const upcomingAppointments = appointments
     .filter((a) => a.date > today && ['pending', 'confirmed'].includes(a.status))
     .sort((a, b) => a.date.localeCompare(b.date));
+  /** Aperçu hero : jusqu’à 2 RDV (aujourd’hui puis à venir). */
+  const heroPreviewRdvs = useMemo(() => {
+    const todaySorted = [...todayAppointments].sort((a, b) =>
+      (a.time || '').localeCompare(b.time || '')
+    );
+    const fromToday = todaySorted.slice(0, 2);
+    if (fromToday.length >= 2) return fromToday;
+    return [...fromToday, ...upcomingAppointments.slice(0, 2 - fromToday.length)];
+  }, [todayAppointments, upcomingAppointments]);
   const vipClients = clients.filter((c) => (c.totalSpent ?? 0) >= 500).length;
   const appointmentsThisMonth = appointments.filter((a) =>
     a.date.startsWith(now.toISOString().slice(0, 7))
@@ -720,6 +732,12 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     lastMonthRevenue > 0
       ? Math.round(((safeMonthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
       : null;
+  /** Baisse affichée en gris/bleu doux (pas rouge) : début de mois, pas encore de CA. */
+  const revenueTrendDisplaySoft = useMemo(() => {
+    if (trendRevenue === null || trendRevenue >= 0) return false;
+    if (safeMonthlyRevenue > 0) return false;
+    return now.getDate() <= 15;
+  }, [trendRevenue, safeMonthlyRevenue, now]);
   const trendAppointments =
     lastMonthAppointments > 0
       ? Math.round(((appointmentsThisMonth - lastMonthAppointments) / lastMonthAppointments) * 100)
@@ -938,9 +956,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     });
   }, []);
 
-  /** Photo de couverture vitrine (Paramètres) — bandeau accueil mobile */
-  const overviewCover = overviewHeaderBgUrl?.trim() || null;
-
   /** Desktop KPI — cartes .prodify-card (relief portfolio, aligné index.css) */
   const desktopKpiShell = `prodify-card ${KPI_SHELLS.desktop.outer}`;
   const desktopKpiCaption = KPI_SHELLS.desktop.caption;
@@ -978,9 +993,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   /** Acomptes « En attente » — ambre */
   const iosKpiMetaPillViolet =
     'inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/20 px-2 py-1 text-[11px] font-medium text-amber-900 dark:text-amber-200';
-  /** Compteur VIP — violet (segment premium) */
+  /** Compteur VIP — bleu (lisible sur fond clair, aligné marque) */
   const iosKpiMetaPillAmber =
-    'inline-flex items-center gap-1.5 rounded-full bg-violet-100 dark:bg-violet-500/20 px-2 py-1 text-[11px] font-medium text-violet-900 dark:text-violet-200';
+    'inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-900 dark:text-blue-200';
   /** Pastilles KPI desktop (text-[10px] bold) — cohérents avec le thème zinc du dashboard */
   const kpiPillPending = BADGES.pending;
   const kpiPillNeutral = BADGES.neutral;
@@ -1218,7 +1233,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       <div className="mt-2 min-h-[24px] flex items-end">
                         <span className={kpiPillVipPill}>
                           <Star
-                            className="w-3 h-3 text-violet-600 dark:text-violet-300 shrink-0"
+                            className="w-3 h-3 text-blue-600 dark:text-blue-300 shrink-0"
                             aria-hidden
                           />
                           {vipClients} VIP
@@ -1227,7 +1242,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     ) : (
                       <p className={`mt-1 ${iosKpiMetaPillAmber}`}>
                         <Star
-                          className="w-3.5 h-3.5 text-violet-600 dark:text-violet-300 shrink-0"
+                          className="w-3.5 h-3.5 text-blue-600 dark:text-blue-300 shrink-0"
                           aria-hidden
                         />
                         {vipClients} VIP
@@ -1343,27 +1358,21 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           (un seul arbre sortable actif dans le DndContext).
           ===================================================== */}
         {!isMdUp && (
-          <div className="ds-home-mobile-ambience flex min-w-0 max-w-full flex-col gap-4 overflow-x-hidden bg-transparent pb-[calc(6.75rem+env(safe-area-inset-bottom,0px))] antialiased font-sans [-webkit-font-smoothing:antialiased] sm:gap-6">
+          <div className="ds-home-mobile-ambience flex min-w-0 max-w-full flex-col gap-4 overflow-x-hidden bg-white pb-8 antialiased font-sans [-webkit-font-smoothing:antialiased] dark:bg-transparent sm:gap-6">
             {/* Accueil mobile — référence type CRM (clair, cartes blanches, donut, onglets pilule) */}
-            <div className="px-0 pt-0.5 pb-0 safe-top">
-              <motion.div className="flex flex-col gap-2 sm:gap-3" {...iosSpring(0)}>
-                {/* Hero mobile — inspiré du layout Figma (wallet): gradient + KPI central + actions */}
-                <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary to-indigo-900 text-primary-foreground shadow-sm">
-                  {overviewCover ? (
-                    <div className="pointer-events-none absolute inset-0 opacity-30" aria-hidden>
-                      <img
-                        src={overviewCover}
-                        alt=""
-                        className="h-full w-full object-cover object-center"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </div>
-                  ) : null}
-                  <div className="relative z-[1] px-4 pb-4 pt-3.5">
+            <div className="px-0 pt-0 pb-0">
+              <motion.div className="flex flex-col gap-4 sm:gap-3" {...iosSpring(0)}>
+                {/* Hero mobile — Card + Separator + bloc pilotage (shadcn) */}
+                <Card
+                  size="sm"
+                  className={cn(
+                    'gap-0 overflow-hidden rounded-3xl border border-blue-100/90 bg-card py-0 text-card-foreground shadow-[0_20px_50px_-24px_rgba(37,99,235,0.15),0_8px_24px_-12px_rgba(15,23,42,0.06)] ring-0 dark:border-blue-500/25 dark:bg-zinc-900/95 dark:shadow-[0_20px_50px_-24px_rgba(0,0,0,0.5)]'
+                  )}
+                >
+                  <CardHeader className="gap-0 border-none px-4 pb-2 pt-4 sm:px-5">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/70">
+                      <div className="min-w-0 flex-1 text-left">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-blue-600 dark:text-blue-400">
                           {now.toLocaleDateString('fr-FR', {
                             weekday: 'short',
                             day: 'numeric',
@@ -1372,156 +1381,302 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         </p>
                         <h1
                           id="dashboard-overview-mobile-title"
-                          className="mt-1 text-[16px] font-semibold tracking-tight text-white"
+                          className="font-display mt-0.5 text-xl font-bold leading-tight tracking-tight text-[#2D3436] dark:text-zinc-100 sm:text-[22px]"
                         >
-                          Accueil
+                          {firstName ? `Bonjour ${firstName}` : 'Accueil'}
                         </h1>
+                        <p className="mt-0.5 font-sans text-[11px] leading-snug text-muted-foreground">
+                          {crmMonthRangeLabel}
+                        </p>
                       </div>
-
-                      <motion.button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (onAvatarClick) onAvatarClick();
-                          else setActiveTab('settings');
-                        }}
-                        disabled={avatarUploading}
-                        whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
-                        className="relative size-11 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md shadow-sm touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-                        aria-label={onAvatarClick ? 'Changer la photo de profil' : 'Paramètres'}
-                      >
-                        {user?.avatar ? (
-                          <img src={user.avatar} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-white/15">
-                            {onAvatarClick ? (
-                              <Camera
-                                className="h-4 w-4 text-white/90"
-                                strokeWidth={2}
-                                aria-hidden
-                              />
-                            ) : (
-                              <span className="text-sm font-bold text-white/90">
-                                {firstName ? firstName[0].toUpperCase() : '?'}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {avatarUploading && (
-                          <span className="absolute inset-0 flex items-center justify-center bg-black/40">
-                            <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden />
-                          </span>
-                        )}
-                      </motion.button>
-                    </div>
-
-                    <div className="mt-5 flex flex-col items-center text-center">
-                      <p className="text-[12px] font-medium text-white/70">Pilotage du mois</p>
-                      <p className="mt-1 text-[38px] font-bold leading-none tracking-tight tabular-nums text-white">
-                        {privacyMode ? '••••' : `${safeMonthlyRevenue.toLocaleString('fr-FR')}€`}
-                      </p>
-                      <p className="mt-1 text-[12px] font-medium text-white/70">
-                        {privacyMode
-                          ? 'Prévision ••••'
-                          : `Prévision +${safeMonthlyForecast.toLocaleString('fr-FR')}€`}
-                      </p>
-                    </div>
-
-                    <div className="mt-5 grid grid-cols-2 gap-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setActiveTab('agenda')}
-                        className={cn(
-                          'min-h-[44px] justify-between rounded-2xl px-3 py-2 text-left text-[12px] font-medium',
-                          'bg-white/10 text-white/90 backdrop-blur-md',
-                          'hover:bg-white/15 hover:text-white',
-                          'active:scale-[0.99] transition-[transform,background-color]',
-                          'focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent'
-                        )}
-                      >
-                        <span className="flex min-w-0 items-center gap-2">
-                          <CalendarCheck
-                            data-icon="inline-start"
-                            className="text-white/85"
+                      <CardAction className="flex shrink-0 flex-row gap-1">
+                        <motion.button
+                          type="button"
+                          onClick={() => setActiveTab('finance')}
+                          whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
+                          className="flex size-9 items-center justify-center rounded-xl border border-border bg-card text-primary shadow-[0_8px_20px_-10px_rgba(37,99,235,0.25)] ring-1 ring-black/[0.03] transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:bg-secondary dark:ring-white/10"
+                          aria-label="Finance"
+                        >
+                          <BarChart3
+                            className="size-3.5 shrink-0 text-blue-600 dark:text-blue-400"
+                            strokeWidth={2}
                             aria-hidden
                           />
-                          <span className="truncate">Aujourd’hui</span>
-                        </span>
-                        <span className="tabular-nums font-semibold">
-                          {todayAppointments.length}
-                        </span>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setActiveTab('requests')}
-                        className={cn(
-                          'min-h-[44px] justify-between rounded-2xl px-3 py-2 text-left text-[12px] font-medium',
-                          'bg-white/10 text-white/90 backdrop-blur-md',
-                          'hover:bg-white/15 hover:text-white',
-                          'active:scale-[0.99] transition-[transform,background-color]',
-                          'focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent'
-                        )}
-                      >
-                        <span className="flex min-w-0 items-center gap-2">
-                          <Inbox data-icon="inline-start" className="text-white/85" aria-hidden />
-                          <span className="truncate">Demandes</span>
-                        </span>
-                        <span className="tabular-nums font-semibold">{pendingDemandesCount}</span>
-                      </Button>
+                        </motion.button>
+                        <motion.button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (onAvatarClick) onAvatarClick();
+                            else setActiveTab('settings');
+                          }}
+                          disabled={avatarUploading}
+                          whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
+                          className="relative size-9 shrink-0 overflow-hidden rounded-xl border border-border bg-card shadow-[0_8px_20px_-10px_rgba(37,99,235,0.2)] ring-1 ring-black/[0.03] transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98] dark:bg-secondary dark:ring-white/10"
+                          aria-label={onAvatarClick ? 'Changer la photo de profil' : 'Paramètres'}
+                        >
+                          {user?.avatar ? (
+                            <img src={user.avatar} alt="" className="size-full object-cover" />
+                          ) : (
+                            <div className="flex size-full items-center justify-center bg-muted">
+                              {onAvatarClick ? (
+                                <Camera
+                                  className="size-3.5 text-blue-600 dark:text-blue-400"
+                                  strokeWidth={2}
+                                  aria-hidden
+                                />
+                              ) : (
+                                <span className="text-xs font-bold text-primary">
+                                  {firstName ? firstName[0].toUpperCase() : '?'}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {avatarUploading && (
+                            <span className="absolute inset-0 flex items-center justify-center bg-black/40">
+                              <Loader2 className="size-3.5 animate-spin text-white" aria-hidden />
+                            </span>
+                          )}
+                        </motion.button>
+                      </CardAction>
                     </div>
-                  </div>
+                  </CardHeader>
+                  <Separator className="bg-border opacity-70" />
+                  <CardContent className="flex flex-col gap-3 px-4 py-3 sm:px-5">
+                    <div className="flex gap-2">
+                      <div className="relative min-h-[128px] flex-1 overflow-hidden rounded-xl border border-border bg-muted/35 p-2.5 dark:bg-muted/20">
+                        <svg
+                          className="pointer-events-none absolute inset-x-0 bottom-0 h-14 w-full text-blue-500 dark:text-blue-400"
+                          viewBox="0 0 400 56"
+                          preserveAspectRatio="none"
+                          aria-hidden
+                        >
+                          <defs>
+                            <linearGradient id={pilotageWaveGradId} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="currentColor" stopOpacity="0.22" />
+                              <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            fill={`url(#${pilotageWaveGradId})`}
+                            d="M0 36 Q100 14 200 26 T400 24 V56 H0 Z"
+                          />
+                          <path
+                            fill="none"
+                            stroke="currentColor"
+                            strokeOpacity="0.18"
+                            strokeWidth="1"
+                            d="M0 34 Q100 16 200 24 T400 22"
+                          />
+                        </svg>
+                        <div className="relative z-[1] flex min-h-[112px] flex-col">
+                          <div className="flex flex-wrap items-start justify-between gap-1.5 border-b border-border/80 pb-1.5">
+                            <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                              Pilotage
+                            </span>
+                            {trendRevenue !== null ? (
+                              <Badge
+                                variant="secondary"
+                                className={cn(
+                                  'h-5 gap-0.5 rounded-full px-1.5 py-0 text-[9px] font-semibold tabular-nums',
+                                  trendRevenue >= 0
+                                    ? 'border border-emerald-200/80 bg-emerald-50 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                    : revenueTrendDisplaySoft
+                                      ? 'border border-slate-200/90 bg-slate-100/95 text-slate-600 dark:border-slate-600/60 dark:bg-slate-800/70 dark:text-slate-300'
+                                      : 'border border-rose-200/70 bg-rose-50 text-rose-900 dark:border-rose-900/55 dark:bg-rose-950/40 dark:text-rose-300'
+                                )}
+                              >
+                                {trendRevenue >= 0 ? (
+                                  <TrendingUp
+                                    className="size-2.5"
+                                    data-icon="inline-start"
+                                    aria-hidden
+                                  />
+                                ) : (
+                                  <TrendingDown
+                                    className="size-2.5"
+                                    data-icon="inline-start"
+                                    aria-hidden
+                                  />
+                                )}
+                                {trendRevenue >= 0 ? '+' : ''}
+                                {trendRevenue}% mois dernier
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-1 flex-col items-center justify-center gap-0.5 py-1 text-center">
+                            <span
+                              className={cn(
+                                'font-bold leading-none tracking-tight tabular-nums text-[#2D3436] dark:text-zinc-100',
+                                !privacyMode && safeMonthlyRevenue === 0
+                                  ? 'text-[26px]'
+                                  : 'text-[30px] sm:text-[32px]'
+                              )}
+                            >
+                              {privacyMode
+                                ? '••••'
+                                : `${safeMonthlyRevenue.toLocaleString('fr-FR')}€`}
+                            </span>
+                            <p className="text-[9px] font-medium text-muted-foreground">
+                              {crmMonthRangeLabel}
+                            </p>
+                            <Badge
+                              variant="outline"
+                              className="mt-0.5 rounded-md px-2 py-0.5 text-[10px] font-medium text-primary"
+                            >
+                              {privacyMode
+                                ? 'Prévision ••••'
+                                : `Prévision +${safeMonthlyForecast.toLocaleString('fr-FR')}€`}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex w-[92px] shrink-0 flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('agenda')}
+                          className="flex min-h-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-border bg-muted/30 px-1 py-2 text-center shadow-[0_10px_24px_-12px_rgba(37,99,235,0.12)] transition-all hover:bg-muted/45 active:scale-[0.99] dark:bg-muted/15 dark:hover:bg-muted/25"
+                        >
+                          <CalendarCheck
+                            className="size-4 text-blue-600 dark:text-blue-400"
+                            aria-hidden
+                          />
+                          <span className="font-display text-lg font-bold tabular-nums text-[#2D3436] dark:text-zinc-100">
+                            {todayAppointments.length}
+                          </span>
+                          <span className="font-display text-[10px] font-medium capitalize text-muted-foreground">
+                            Rdv
+                          </span>
+                          <span className="text-[8px] leading-none text-muted-foreground/90">
+                            Aujourd’hui
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('requests')}
+                          className="flex min-h-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-border bg-muted/30 px-1 py-2 text-center shadow-[0_10px_24px_-12px_rgba(37,99,235,0.1)] transition-all hover:bg-muted/45 active:scale-[0.99] dark:bg-muted/15 dark:hover:bg-muted/25"
+                        >
+                          <Inbox className="size-4 text-blue-600 dark:text-blue-400" aria-hidden />
+                          <span className="font-display text-lg font-bold tabular-nums text-[#2D3436] dark:text-zinc-100">
+                            {pendingDemandesCount}
+                          </span>
+                          <span className="font-display text-[10px] font-medium capitalize text-muted-foreground">
+                            Demandes
+                          </span>
+                          <span className="text-[8px] leading-none text-muted-foreground/90">
+                            En attente
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Dock actions — réduit: un CTA principal + secondaires */}
-                  <div className="relative z-[1] px-3 pb-3">
-                    <div className="grid grid-cols-4 gap-2 rounded-3xl border border-white/15 bg-white/10 p-2 backdrop-blur-md">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => {
-                          setSelectedFlash(null);
-                          setShowBookingModal(true);
-                        }}
-                        className="min-h-[52px] flex-col gap-1 rounded-2xl text-white hover:bg-white/15 hover:text-white"
-                      >
-                        <Plus aria-hidden />
-                        <span className="text-[11px] font-medium">RDV</span>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => {
-                          if (vitrineSlug)
-                            window.open(`/studio/${vitrineSlug}`, '_blank', 'noopener,noreferrer');
-                          else setActiveTab('agenda');
-                        }}
-                        className="min-h-[52px] flex-col gap-1 rounded-2xl text-white hover:bg-white/15 hover:text-white"
-                      >
-                        <ExternalLink aria-hidden />
-                        <span className="text-[11px] font-medium">Vitrine</span>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setActiveTab('flash')}
-                        className="min-h-[52px] flex-col gap-1 rounded-2xl text-white hover:bg-white/15 hover:text-white"
-                      >
-                        <Zap aria-hidden />
-                        <span className="text-[11px] font-medium">Flash</span>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setActiveTab('clients')}
-                        className="min-h-[52px] flex-col gap-1 rounded-2xl text-white hover:bg-white/15 hover:text-white"
-                      >
-                        <Users aria-hidden />
-                        <span className="text-[11px] font-medium">Clients</span>
-                      </Button>
-                    </div>
+                {/* Aperçu prochains RDV (compact) */}
+                {heroPreviewRdvs.length > 0 ? (
+                  <div className="rounded-2xl border border-zinc-200/85 bg-white/95 px-3 py-2.5 shadow-[0_14px_36px_-18px_rgba(37,99,235,0.14),0_6px_16px_-8px_rgba(15,23,42,0.06)] dark:border-zinc-800 dark:bg-zinc-900/80">
+                    <p className="mb-2 font-display text-[10px] font-semibold tracking-wide text-zinc-500 dark:text-zinc-400">
+                      Prochains RDV
+                    </p>
+                    <ul className="space-y-1.5">
+                      {heroPreviewRdvs.map((apt) => {
+                        const isToday = apt.date === today;
+                        return (
+                          <li key={apt.id}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedAppointment(apt)}
+                              className="flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-transparent px-2 py-1.5 text-left transition-colors hover:border-zinc-200/90 hover:bg-zinc-50/90 active:scale-[0.99] dark:hover:border-zinc-700 dark:hover:bg-zinc-800/50"
+                            >
+                              <span className="w-11 shrink-0 text-center font-display text-[11px] font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">
+                                {isToday
+                                  ? (apt.time?.slice(0, 5) ?? '—')
+                                  : new Date(apt.date + 'T12:00:00').toLocaleDateString('fr-FR', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                    })}
+                              </span>
+                              <span className="min-w-0 flex-1 truncate font-display text-[13px] font-semibold text-[#2D3436] dark:text-zinc-100">
+                                {apt.clientName}
+                              </span>
+                              <ChevronRight
+                                className="size-4 shrink-0 text-zinc-300 dark:text-zinc-600"
+                                aria-hidden
+                              />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
+                ) : null}
+
+                {/* Actions rapides — primaire plus large, glass léger, accents par icône */}
+                <div className="grid grid-cols-6 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedFlash(null);
+                      setShowBookingModal(true);
+                    }}
+                    className="font-display col-span-3 flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/80 bg-white/95 p-3 shadow-[0_22px_48px_-16px_rgba(37,99,235,0.2),0_10px_28px_-12px_rgba(15,23,42,0.08)] backdrop-blur-sm transition-all active:scale-[0.98] dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-[0_22px_48px_-16px_rgba(0,0,0,0.45)]"
+                  >
+                    <Plus
+                      className="h-6 w-6 text-blue-600 dark:text-blue-400"
+                      aria-hidden
+                      strokeWidth={2}
+                    />
+                    <span className="text-[11px] font-semibold capitalize tracking-tight text-[#2D3436] dark:text-zinc-100">
+                      Nouveau Rdv
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (vitrineSlug)
+                        window.open(`/studio/${vitrineSlug}`, '_blank', 'noopener,noreferrer');
+                      else setActiveTab('agenda');
+                    }}
+                    className="font-display flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/80 bg-white/95 p-2 shadow-[0_20px_44px_-18px_rgba(37,99,235,0.16),0_8px_20px_-10px_rgba(15,23,42,0.06)] backdrop-blur-sm transition-all active:scale-[0.98] dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-none"
+                  >
+                    <ExternalLink
+                      className="h-5 w-5 text-sky-600 dark:text-sky-400"
+                      aria-hidden
+                      strokeWidth={2}
+                    />
+                    <span className="text-[10px] font-semibold capitalize tracking-tight text-[#2D3436] dark:text-zinc-200">
+                      Vitrine
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('flash')}
+                    className="font-display flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/80 bg-white/95 p-2 shadow-[0_20px_44px_-18px_rgba(37,99,235,0.16),0_8px_20px_-10px_rgba(15,23,42,0.06)] backdrop-blur-sm transition-all active:scale-[0.98] dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-none"
+                  >
+                    <Zap
+                      className="h-5 w-5 text-amber-500 dark:text-amber-400"
+                      aria-hidden
+                      strokeWidth={2}
+                    />
+                    <span className="text-[10px] font-semibold capitalize tracking-tight text-[#2D3436] dark:text-zinc-200">
+                      Flash
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('clients')}
+                    className="font-display flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/80 bg-white/95 p-2 shadow-[0_20px_44px_-18px_rgba(37,99,235,0.16),0_8px_20px_-10px_rgba(15,23,42,0.06)] backdrop-blur-sm transition-all active:scale-[0.98] dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-none"
+                  >
+                    <Users
+                      className="h-5 w-5 text-blue-600 dark:text-blue-400"
+                      aria-hidden
+                      strokeWidth={2}
+                    />
+                    <span className="text-[10px] font-semibold capitalize tracking-tight text-[#2D3436] dark:text-zinc-200">
+                      Clients
+                    </span>
+                  </button>
                 </div>
 
                 {pendingDemandesCount > 0 ? (
@@ -1529,23 +1684,24 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     type="button"
                     onClick={() => setActiveTab('requests')}
                     className={cn(
-                      'flex w-full min-h-[44px] items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white/95 px-4 py-2.5 text-left shadow-sm backdrop-blur-sm transition-all active:scale-[0.99]',
-                      'dark:border-zinc-700/70 dark:bg-zinc-900/65'
+                      'flex w-full min-h-[48px] items-center justify-between gap-3 rounded-2xl border-0 px-4 py-3 text-left shadow-[0_16px_40px_-12px_rgba(37,99,235,0.35),0_6px_16px_-6px_rgba(29,78,216,0.22)] transition-all active:scale-[0.99]',
+                      'bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 text-white'
                     )}
                   >
-                    <span className="flex min-w-0 items-center gap-2 text-[13px] font-medium text-zinc-700 dark:text-zinc-200">
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 dark:bg-amber-500/12">
-                        <Inbox className="size-4 text-amber-700 dark:text-amber-300" aria-hidden />
+                    <span className="flex min-w-0 items-center gap-3 text-[13px] font-semibold text-white">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 shadow-sm backdrop-blur-sm">
+                        <MessageSquare
+                          className="size-[18px] text-white"
+                          aria-hidden
+                          strokeWidth={2}
+                        />
                       </span>
-                      <span className="truncate">
+                      <span className="truncate font-display">
                         {pendingDemandesCount}{' '}
                         {pendingDemandesCount === 1 ? 'demande en attente' : 'demandes en attente'}
                       </span>
                     </span>
-                    <ChevronRight
-                      className="size-4 shrink-0 text-zinc-400 dark:text-zinc-500"
-                      aria-hidden
-                    />
+                    <ChevronRight className="size-4 shrink-0 text-white/90" aria-hidden />
                   </button>
                 ) : null}
 
@@ -1559,199 +1715,143 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   animate="visible"
                   className="flex flex-col gap-4 sm:gap-5"
                 >
-                  {/* Carte métrique principale (revenu + rappels lisibles + zone Finance plate) */}
+                  {/* Synthèse mois — tendance, alertes RDV, Stripe (pilotage déjà dans le hero) */}
                   <motion.div variants={mobileSectionVariants}>
-                    <Card size="sm" className={cn(mobileHomeSurface, 'gap-3 py-4')}>
-                      <CardHeader className="flex flex-col gap-3 px-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                    <div
+                      className={cn(
+                        mobileHomeSurface,
+                        'flex flex-col gap-3 rounded-[32px] border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/55'
+                      )}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 pb-3 dark:border-zinc-800">
                         <div className="min-w-0">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
-                            Pilotage du mois
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500">
+                            Synthèse
                           </p>
-                          <CardTitle className="mt-1 text-[17px] font-bold tracking-tight text-zinc-950 dark:text-white">
-                            Revenus, RDV & demandes
-                          </CardTitle>
-                          <CardDescription className="text-[12px]">
+                          <p className="mt-1 text-[13px] text-zinc-600 dark:text-zinc-400">
                             {crmMonthRangeLabel}
-                          </CardDescription>
+                          </p>
                         </div>
-                        <CardAction className="w-full sm:w-auto sm:shrink-0">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setActiveTab('finance')}
+                          className="-my-1 h-9 shrink-0 gap-1 rounded-xl px-2 text-[12px] font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/40"
+                        >
+                          Finance
+                          <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          ['RDV mois', appointmentsThisMonth],
+                          ['Terminés', completedAppointmentsThisMonth],
+                          ['Panier moy.', privacyMode ? '••' : `${averageTicketThisMonth}€`],
+                        ].map(([label, value]) => (
+                          <div
+                            key={label}
+                            className="rounded-2xl border border-zinc-100 bg-zinc-50/90 p-2.5 dark:border-zinc-800 dark:bg-zinc-800/40"
+                          >
+                            <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                              {label}
+                            </p>
+                            <p className="mt-1 text-base font-bold tabular-nums text-zinc-950 dark:text-white">
+                              {value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        {trendRevenue !== null && (
+                          <div className="flex min-w-0 flex-wrap items-end gap-2">
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                'h-auto min-h-8 rounded-2xl px-3 py-1.5 text-[12px] font-semibold tabular-nums',
+                                trendRevenue >= 0
+                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                                  : revenueTrendDisplaySoft
+                                    ? 'bg-slate-100 text-slate-600 dark:bg-slate-800/80 dark:text-slate-300'
+                                    : 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
+                              )}
+                            >
+                              {trendRevenue >= 0 ? (
+                                <TrendingUp data-icon="inline-start" aria-hidden />
+                              ) : (
+                                <TrendingDown data-icon="inline-start" aria-hidden />
+                              )}
+                              {trendRevenue >= 0 ? '+' : ''}
+                              {trendRevenue}% vs mois dernier
+                            </Badge>
+                          </div>
+                        )}
+                        {(rdvAlertUnpaidCount > 0 || rdvAlertBientotCount > 0) && !privacyMode && (
+                          <div
+                            className="flex flex-wrap gap-1"
+                            role="status"
+                            aria-label="Rappels rendez-vous"
+                          >
+                            {rdvAlertUnpaidCount > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => onAlertNavigate?.({ id: 'unpaid', type: 'warning' })}
+                                className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-primary/10 px-3 py-2 text-left text-[11px] font-medium leading-snug text-zinc-950 ring-1 ring-primary/20 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
+                              >
+                                <AlertCircle
+                                  className="h-3.5 w-3.5 shrink-0 text-primary dark:text-sky-400"
+                                  strokeWidth={2}
+                                  aria-hidden
+                                />
+                                <span className="min-w-0 [text-wrap:balance]">
+                                  {rdvAlertUnpaidCount} sans acompte
+                                </span>
+                              </button>
+                            )}
+                            {rdvAlertBientotCount > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => onAlertNavigate?.({ id: '24h', type: 'info' })}
+                                className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-sky-50 px-3 py-2 text-left text-[11px] font-medium leading-snug text-sky-950 ring-1 ring-sky-200/90 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
+                              >
+                                <Clock
+                                  className="h-3.5 w-3.5 shrink-0 text-sky-600 dark:text-cyan-300"
+                                  strokeWidth={2}
+                                  aria-hidden
+                                />
+                                <span className="min-w-0 [text-wrap:balance]">
+                                  {rdvAlertBientotCount} auj. ou demain
+                                </span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {stripeConnectAccountId && useSupabase && (
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => setActiveTab('finance')}
-                            className="min-h-[44px] w-full rounded-2xl sm:min-h-0 sm:w-auto"
+                            onClick={() => void openStripeExpressDashboard()}
+                            disabled={stripeExpressOpening}
+                            title="Tableau de bord Stripe (Express)"
+                            className="min-h-[44px] w-full rounded-2xl border-dashed"
                           >
-                            Finance
-                            <ChevronRight data-icon="inline-end" />
-                          </Button>
-                        </CardAction>
-                      </CardHeader>
-
-                      <CardContent className="flex flex-col gap-3 px-4">
-                        <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-primary to-indigo-900 p-3.5 text-primary-foreground shadow-sm">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-[12px] font-medium text-white/75">
-                                Revenu encaissé
-                              </p>
-                              <p className="mt-1 text-[32px] font-bold leading-none tracking-tight tabular-nums">
-                                {privacyMode
-                                  ? '••••'
-                                  : `${safeMonthlyRevenue.toLocaleString('fr-FR')}€`}
-                              </p>
-                            </div>
-                            <Badge
-                              variant="secondary"
-                              className="h-auto flex-col items-end rounded-2xl px-3 py-2 bg-white/12 text-white border border-white/10"
-                            >
-                              <span className="text-[10px] uppercase tracking-wide opacity-70">
-                                Prévu
-                              </span>
-                              <span className="text-sm font-bold tabular-nums">
-                                {privacyMode
-                                  ? '••••'
-                                  : `+${safeMonthlyForecast.toLocaleString('fr-FR')}€`}
-                              </span>
-                            </Badge>
-                          </div>
-                          <div className="mt-3 grid grid-cols-3 gap-2">
-                            {[
-                              ['RDV mois', appointmentsThisMonth],
-                              ['Terminés', completedAppointmentsThisMonth],
-                              ['Panier moy.', privacyMode ? '••' : `${averageTicketThisMonth}€`],
-                            ].map(([label, value]) => (
-                              <div key={label} className="rounded-2xl bg-white/10 p-2">
-                                <p className="truncate text-[10px] font-medium text-white/70">
-                                  {label}
-                                </p>
-                                <p className="mt-1 text-lg font-bold tabular-nums">{value}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setActiveTab('agenda')}
-                            className="h-auto min-h-[62px] flex-col items-start rounded-2xl px-3 py-2.5"
-                          >
-                            <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-                              <CalendarCheck data-icon="inline-start" />
-                              Aujourd’hui
-                            </span>
-                            <span className="text-2xl font-bold tabular-nums text-zinc-950 dark:text-white">
-                              {todayAppointments.length}
-                            </span>
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setActiveTab('requests')}
-                            className="h-auto min-h-[62px] flex-col items-start rounded-2xl px-3 py-2.5"
-                          >
-                            <span className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-                              <Inbox data-icon="inline-start" />
-                              Demandes
-                            </span>
-                            <span className="text-2xl font-bold tabular-nums text-zinc-950 dark:text-white">
-                              {pendingDemandesCount}
-                            </span>
-                          </Button>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                          {trendRevenue !== null && (
-                            <div className="flex min-w-0 flex-wrap items-end gap-2">
-                              <Badge
-                                variant="secondary"
-                                className={cn(
-                                  'h-6 rounded-2xl text-[12px] font-semibold tabular-nums',
-                                  trendRevenue >= 0
-                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-                                    : 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
-                                )}
-                              >
-                                {trendRevenue >= 0 ? (
-                                  <TrendingUp data-icon="inline-start" aria-hidden />
-                                ) : (
-                                  <TrendingDown data-icon="inline-start" aria-hidden />
-                                )}
-                                {trendRevenue >= 0 ? '+' : ''}
-                                {trendRevenue}% vs mois dernier
-                              </Badge>
-                            </div>
-                          )}
-                          {(rdvAlertUnpaidCount > 0 || rdvAlertBientotCount > 0) &&
-                            !privacyMode && (
-                              <div
-                                className="flex flex-wrap gap-1"
-                                role="status"
-                                aria-label="Rappels rendez-vous"
-                              >
-                                {rdvAlertUnpaidCount > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      onAlertNavigate?.({ id: 'unpaid', type: 'warning' })
-                                    }
-                                    className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-primary/10 px-3 py-2 text-left text-[11px] font-medium leading-snug text-zinc-950 ring-1 ring-primary/20 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
-                                  >
-                                    <AlertCircle
-                                      className="h-3.5 w-3.5 shrink-0 text-primary dark:text-sky-400"
-                                      strokeWidth={2}
-                                      aria-hidden
-                                    />
-                                    <span className="min-w-0 [text-wrap:balance]">
-                                      {rdvAlertUnpaidCount} sans acompte
-                                    </span>
-                                  </button>
-                                )}
-                                {rdvAlertBientotCount > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => onAlertNavigate?.({ id: '24h', type: 'info' })}
-                                    className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-sky-50 px-3 py-2 text-left text-[11px] font-medium leading-snug text-sky-950 ring-1 ring-sky-200/90 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
-                                  >
-                                    <Clock
-                                      className="h-3.5 w-3.5 shrink-0 text-sky-600 dark:text-cyan-300"
-                                      strokeWidth={2}
-                                      aria-hidden
-                                    />
-                                    <span className="min-w-0 [text-wrap:balance]">
-                                      {rdvAlertBientotCount} auj. ou demain
-                                    </span>
-                                  </button>
-                                )}
-                              </div>
+                            {stripeExpressOpening ? (
+                              <Loader2
+                                data-icon="inline-start"
+                                className="animate-spin"
+                                aria-hidden
+                              />
+                            ) : (
+                              <LayoutDashboard data-icon="inline-start" aria-hidden />
                             )}
-                          {stripeConnectAccountId && useSupabase && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => void openStripeExpressDashboard()}
-                              disabled={stripeExpressOpening}
-                              title="Tableau de bord Stripe (Express)"
-                              className="min-h-[44px] w-full rounded-2xl border-dashed"
-                            >
-                              {stripeExpressOpening ? (
-                                <Loader2
-                                  data-icon="inline-start"
-                                  className="animate-spin"
-                                  aria-hidden
-                                />
-                              ) : (
-                                <LayoutDashboard data-icon="inline-start" aria-hidden />
-                              )}
-                              Tableau de bord Stripe
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                            Tableau de bord Stripe
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </motion.div>
 
                   {/* Bloc statistiques : toggle + période + donut */}

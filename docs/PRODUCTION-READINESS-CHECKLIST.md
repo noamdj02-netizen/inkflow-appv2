@@ -83,7 +83,7 @@ Référence : `docs/PLANS-PERMISSIONS.md` (noms plans).
 
 | #     | Contrôle                                                                                                                                                                | OK ? |
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
-| 3.3.1 | Edge **`stripe-connect-onboarding`** + **`create-checkout-session`** (+ terminal si utilisé) déployées                                                                  | ☐    |
+| 3.3.1 | Edge **`stripe-connect-onboarding`** + **`create-checkout-session`** + **`stripe-terminal`** (Tap to Pay / solde en salon) déployées                                    | ☐    |
 | 3.3.2 | Chaque studio payant en ligne : **onboarding Connect terminé**, `stripe_connect_charges_enabled` (ou équivalent) — logique métier dans `lib/studioPaymentConfigured.ts` | ☐    |
 | 3.3.3 | Petit paiement **Live** test : signature webhook OK, **une seule** application d’effet métier (idempotence `inkflow_stripe_processed_events`)                           | ☐    |
 | 3.3.4 | (Optionnel) `INKFLOW_CONNECT_APPLICATION_FEE_BPS` si commission plateforme                                                                                              | ☐    |
@@ -96,6 +96,7 @@ npx supabase functions deploy create-checkout-session
 npx supabase functions deploy create-subscription
 npx supabase functions deploy create-portal-session --no-verify-jwt
 npx supabase functions deploy get-payment-session
+npx supabase functions deploy stripe-terminal --no-verify-jwt
 ```
 
 ### 3.4 Hors code court terme
@@ -149,6 +150,7 @@ npx supabase functions deploy create-portal-session --no-verify-jwt
 npx supabase functions deploy stripe-connect-onboarding
 npx supabase functions deploy stripe-connect-actions
 npx supabase functions deploy get-payment-session
+npx supabase functions deploy stripe-terminal --no-verify-jwt
 npx supabase functions deploy get-studio-availability
 npx supabase functions deploy notify-new-booking --no-verify-jwt
 npx supabase functions deploy google-calendar-auth --no-verify-jwt
