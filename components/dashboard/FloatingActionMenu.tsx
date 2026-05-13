@@ -168,7 +168,8 @@ const FloatingActionMenu = ({
           className
         )}
       >
-        <div className="relative -mt-8 shrink-0">
+        {/* Débord FAB vers le scroll : garder modeste pour limiter masquage au-dessus de la dock mobile */}
+        <div className="relative -mt-6 shrink-0">
           <Button
             type="button"
             variant="default"

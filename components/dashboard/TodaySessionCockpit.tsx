@@ -21,6 +21,7 @@ import {
   appointmentWithResolvedFlashPrice,
   buildPriceSyncUpdates,
   resolveCanonicalFlashPrice,
+  stripEmbeddedPriceFromService,
 } from '../../lib/flashAppointmentPrice';
 import { cn } from '../../lib/utils';
 

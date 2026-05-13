@@ -1731,11 +1731,14 @@ textarea {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 16px) !important;
   }
 
-  /* Dashboard tatoueur — safe areas latérales + scroll tactile (iOS / encoche) */
+  /* Dashboard tatoueur — safe areas latérales + scroll tactile (iOS / encoche).
+     Réserve bas : pilule fixée bottom (12px) + ligne (~56–60px) + FAB -mt-8 (~32px débordement)
+     + marge clic confort (~40px) — évite que la dock / « demandes en attente » passent sous la nav */
   .dashboard-pro-shell .app-shell-content {
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
-    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px) + 22px) !important;
+    padding-bottom: calc(154px + env(safe-area-inset-bottom, 0px)) !important;
+    scroll-padding-bottom: calc(154px + env(safe-area-inset-bottom, 0px));
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
   }
