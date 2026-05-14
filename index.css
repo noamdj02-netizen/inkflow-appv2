@@ -1732,13 +1732,13 @@ textarea {
   }
 
   /* Dashboard tatoueur — safe areas latérales + scroll tactile (iOS / encoche).
-     Réserve bas : pilule fixée bottom (12px) + ligne (~56–60px) + FAB -mt-8 (~32px débordement)
-     + marge clic confort (~40px) — évite que la dock / « demandes en attente » passent sous la nav */
+     Réserve bas : pilule (bottom ~10px) + ligne compacte (~48px) + FAB réduit (-mt-4)
+     + marge confort — évite que la dock / « demandes en attente » passent sous la nav */
   .dashboard-pro-shell .app-shell-content {
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
-    padding-bottom: calc(154px + env(safe-area-inset-bottom, 0px)) !important;
-    scroll-padding-bottom: calc(154px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px)) !important;
+    scroll-padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px));
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
   }
@@ -1768,16 +1768,16 @@ textarea {
     overflow: visible;
     left: 50%;
     right: auto;
-    width: calc(100% - 28px);
+    width: calc(100% - 24px);
     max-width: 34rem;
     transform: translateX(-50%);
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-    min-height: calc(54px + env(safe-area-inset-bottom, 0px));
-    padding-top: 6px;
-    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
-    padding-left: 6px;
-    padding-right: 6px;
-    border-radius: 40px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    min-height: calc(48px + env(safe-area-inset-bottom, 0px));
+    padding-top: 4px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    padding-left: 4px;
+    padding-right: 4px;
+    border-radius: 28px;
     border: 1px solid rgba(226, 232, 240, 0.95);
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: saturate(140%) blur(18px);

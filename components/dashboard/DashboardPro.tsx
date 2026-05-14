@@ -5736,7 +5736,7 @@ export const DashboardPro: React.FC = () => {
         role="navigation"
         aria-label="Navigation principale mobile"
       >
-        <div className="dashboard-pro-mobile-bottom-nav__inner mx-auto flex w-full max-w-lg items-stretch justify-between gap-0.5 overflow-visible px-1 pb-1 pt-0.5">
+        <div className="dashboard-pro-mobile-bottom-nav__inner mx-auto flex w-full max-w-lg items-stretch justify-between gap-0.5 overflow-visible px-0.5 pb-0.5 pt-px">
           {/* Accueil */}
           <button
             type="button"
@@ -5745,7 +5745,7 @@ export const DashboardPro: React.FC = () => {
                 setActiveTab('overview');
               })
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
+            className={`relative flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'overview'
                 ? 'text-indigo-600 dark:text-indigo-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -5754,14 +5754,14 @@ export const DashboardPro: React.FC = () => {
             {activeTab === 'overview' && (
               <motion.div
                 layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-2xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
+                className="absolute inset-0 rounded-xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
                 transition={mobileBottomNavPillTransition}
               />
             )}
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5">
               <span className="relative inline-flex">
                 <LayoutDashboard
-                  className="h-[23px] w-[23px] shrink-0"
+                  className="size-5 shrink-0"
                   strokeWidth={activeTab === 'overview' ? 2.35 : 1.65}
                   aria-hidden
                 />
@@ -5784,7 +5784,7 @@ export const DashboardPro: React.FC = () => {
                 setActiveTab('agenda');
               })
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
+            className={`relative flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'appointments' || activeTab === 'agenda'
                 ? 'text-indigo-600 dark:text-indigo-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -5793,13 +5793,13 @@ export const DashboardPro: React.FC = () => {
             {(activeTab === 'appointments' || activeTab === 'agenda') && (
               <motion.div
                 layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-2xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
+                className="absolute inset-0 rounded-xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
                 transition={mobileBottomNavPillTransition}
               />
             )}
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5">
               <Calendar
-                className="h-[23px] w-[23px] shrink-0"
+                className="size-5 shrink-0"
                 strokeWidth={activeTab === 'appointments' || activeTab === 'agenda' ? 2.35 : 1.65}
                 aria-hidden
               />
@@ -5824,7 +5824,7 @@ export const DashboardPro: React.FC = () => {
                 setActiveTab('clients');
               })
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
+            className={`relative flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'clients'
                 ? 'text-indigo-600 dark:text-indigo-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -5833,13 +5833,13 @@ export const DashboardPro: React.FC = () => {
             {activeTab === 'clients' && (
               <motion.div
                 layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-2xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
+                className="absolute inset-0 rounded-xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
                 transition={mobileBottomNavPillTransition}
               />
             )}
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5">
               <Users
-                className="h-[23px] w-[23px] shrink-0"
+                className="size-5 shrink-0"
                 strokeWidth={activeTab === 'clients' ? 2.35 : 1.65}
                 aria-hidden
               />
@@ -5857,7 +5857,7 @@ export const DashboardPro: React.FC = () => {
                 setSettingsTab(isRestricted ? 'billing' : settingsTab);
               }, true)
             }
-            className={`relative flex min-h-[56px] min-w-0 flex-1 flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
+            className={`relative flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'settings'
                 ? 'text-indigo-600 dark:text-indigo-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -5866,13 +5866,13 @@ export const DashboardPro: React.FC = () => {
             {activeTab === 'settings' && (
               <motion.div
                 layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-2xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
+                className="absolute inset-0 rounded-xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
                 transition={mobileBottomNavPillTransition}
               />
             )}
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5">
               <Settings
-                className="h-[23px] w-[23px] shrink-0"
+                className="size-5 shrink-0"
                 strokeWidth={activeTab === 'settings' ? 2.35 : 1.65}
                 aria-hidden
               />
