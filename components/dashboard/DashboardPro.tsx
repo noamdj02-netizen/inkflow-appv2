@@ -50,6 +50,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseSync } from '../../hooks/useSupabaseSync';
 import { useProjectRequests } from '../../hooks/useProjectRequests';
 import { useInkflowNativeShellPushBridge } from '../../hooks/useInkflowNativeShellPushBridge';
+import { useInkflowNativeShellSessionBridge } from '../../hooks/useInkflowNativeShellSessionBridge';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useIncomingBookings } from '../../hooks/useIncomingBookings';
 import { usePendingDemandesCounts } from '../../hooks/usePendingDemandesCounts';
@@ -473,6 +474,7 @@ export const DashboardPro: React.FC = () => {
     refetch: refetchBookings,
   } = useIncomingBookings(studioId, useSupabase ?? false, demoAccountMode);
   usePushNotifications(studioId, { demoMode: demoAccountMode });
+  useInkflowNativeShellSessionBridge({ demoMode: demoAccountMode });
   useInkflowNativeShellPushBridge(studioId, { demoMode: demoAccountMode });
   const demandes = usePendingDemandesCounts(appointments, bookings, projectRequests);
   const {
@@ -3424,7 +3426,7 @@ export const DashboardPro: React.FC = () => {
             />
           )}
           {useSupabase && isOnline && !connectionError && lastSyncedAt && (
-            <div className="bg-zinc-100/90 dark:bg-zinc-900/50 border-b border-zinc-200/80 dark:border-zinc-800 px-4 py-1.5 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
+            <div className="dashboard-pro-sync-strip bg-zinc-100/90 dark:bg-zinc-900/50 border-b border-zinc-200/80 dark:border-zinc-800 px-4 py-1 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 flex flex-wrap items-center justify-between gap-2 flex-shrink-0 sm:py-1.5">
               <span>
                 Dernière synchro des données :{' '}
                 <time
@@ -3448,7 +3450,7 @@ export const DashboardPro: React.FC = () => {
           <header
             className={`app-shell-header safe-top px-4 sm:px-5 md:px-6 flex items-center justify-between gap-2 sm:gap-4 transition-all duration-300 shrink-0 overflow-visible ${
               activeTab === 'overview'
-                ? 'min-h-[52px] sm:min-h-0 h-12 sm:h-14 border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 shadow-[0_1px_0_0_rgba(15,23,42,0.06)] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
+                ? 'min-h-[48px] sm:min-h-0 h-11 sm:h-14 border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 shadow-[0_1px_0_0_rgba(15,23,42,0.06)] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
                 : 'dashboard-pro-header-dark h-14 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
             }`}
           >

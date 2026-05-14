@@ -8,7 +8,9 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "doctor": "npx --yes expo-doctor"
+    "doctor": "npx --yes expo-doctor",
+    "eas:build:ios": "eas build --platform ios --profile production",
+    "eas:submit:ios": "eas submit --platform ios --profile production"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -17,6 +19,7 @@
     "@supabase/supabase-js": "^2.98.0",
     "expo": "~55.0.19",
     "expo-constants": "~55.0.7",
+    "expo-dev-client": "~55.0.33",
     "expo-device": "^55.0.16",
     "expo-font": "~55.0.4",
     "expo-haptics": "~55.0.14",
@@ -43,6 +46,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eas-cli": "^18.12.3",
     "typescript": "~5.9.2"
   },
   "private": true

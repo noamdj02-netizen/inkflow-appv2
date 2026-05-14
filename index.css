@@ -1762,6 +1762,24 @@ textarea {
   .dashboard-pro-shell .app-shell-header {
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+    min-height: 2.75rem;
+  }
+
+  /* Moins d’air mort sous l’encoche : la strip synchro est déjà sous la safe area du shell ;
+     éviter que .safe-top sur le header ré-applique presque toute l’encoche (grand trou blanc). */
+  .dashboard-pro-shell .dashboard-pro-sync-strip {
+    padding-top: 0.125rem;
+    padding-bottom: 0.125rem;
+  }
+
+  .dashboard-pro-shell .app-shell-header.safe-top {
+    padding-top: 0.25rem !important;
+  }
+
+  .dashboard-pro-shell
+    .app-shell-main:not(:has(.dashboard-pro-sync-strip))
+    .app-shell-header.safe-top {
+    padding-top: max(0.5rem, env(safe-area-inset-top, 0px)) !important;
   }
 
   .dashboard-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {

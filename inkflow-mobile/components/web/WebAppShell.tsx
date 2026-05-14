@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter, type Href } from 'expo-router';
-import { tryParseTapToPayDeepLink } from '@/lib/tapToPayDeepLink';
+import { tryParseTapToPayAppHttpsUrl, tryParseTapToPayDeepLink } from '@/lib/tapToPayDeepLink';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
 import WebView, { type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type {
   ShouldStartLoadRequest,
   WebViewErrorEvent,
@@ -158,10 +159,22 @@ export default function WebAppShell() {
       const data = JSON.parse(event.nativeEvent.data) as {
         type?: string;
         accessToken?: string;
+        refreshToken?: string;
         studioId?: string;
       };
       if (data?.type === 'inkflow_haptic_selection') {
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        return;
+      }
+      if (data?.type === 'inkflow_native_supabase_sign_out') {
+        if (isSupabaseConfigured() && supabase) void supabase.auth.signOut();
+        return;
+      }
+      if (data?.type === 'inkflow_native_supabase_session') {
+        const access = typeof data.accessToken === 'string' ? data.accessToken.trim() : '';
+        const refresh = typeof data.refreshToken === 'string' ? data.refreshToken.trim() : '';
+        if (!access || !refresh || !isSupabaseConfigured() || !supabase) return;
+        void supabase.auth.setSession({ access_token: access, refresh_token: refresh });
         return;
       }
       if (data?.type !== 'inkflow_native_push_register') return;
@@ -185,6 +198,20 @@ export default function WebAppShell() {
             appointment: tap.appointmentId,
             studio: tap.studioId,
             amountEuros: tap.amountEuros.toFixed(2),
+          }).toString();
+          router.push(`/tap-to-pay?${q}` as Href);
+        }
+        return true;
+      }
+
+      const tapHttps = tryParseTapToPayAppHttpsUrl(url);
+      if (tapHttps) {
+        setLoadError(null);
+        if (!(typeof pathname === 'string' && pathname.includes('tap-to-pay'))) {
+          const q = new URLSearchParams({
+            appointment: tapHttps.appointmentId,
+            studio: tapHttps.studioId,
+            amountEuros: tapHttps.amountEuros.toFixed(2),
           }).toString();
           router.push(`/tap-to-pay?${q}` as Href);
         }
@@ -220,6 +247,29 @@ export default function WebAppShell() {
         return true;
       }
 
+      try {
+        const tapHttps = tryParseTapToPayAppHttpsUrl(request.url);
+        if (tapHttps) {
+          setLoadError(null);
+          if (!(typeof pathname === 'string' && pathname.includes('tap-to-pay'))) {
+            const q = new URLSearchParams({
+              appointment: tapHttps.appointmentId,
+              studio: tapHttps.studioId,
+              amountEuros: tapHttps.amountEuros.toFixed(2),
+            }).toString();
+            router.push(`/tap-to-pay?${q}` as Href);
+          }
+          return false;
+        }
+
+        const parsed = new URL(request.url);
+        if (parsed.protocol === 'https:' && ALLOWED_WEB_HOSTS.has(parsed.hostname)) {
+          return true;
+        }
+      } catch {
+        /* URL invalide — laisser la WebView / autres garde-fous gérer */
+      }
+
       if (openMappedDeepLink(request.url)) {
         return false;
       }
@@ -231,7 +281,7 @@ export default function WebAppShell() {
 
       return true;
     },
-    [openMappedDeepLink],
+    [openMappedDeepLink, pathname, router],
   );
 
   const handleOpenWindow = useCallback((event: WebViewOpenWindowEvent) => {
