@@ -22,11 +22,11 @@ const fallback =
         Cette section est indisponible
       </h2>
       <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-1">{label}</p>
-      {import.meta.env.DEV && error?.message && (
+      {error?.message ? (
         <p className="text-xs text-left text-red-800/80 dark:text-red-300/90 font-mono break-all bg-red-100/50 dark:bg-red-900/20 rounded-lg p-2 mb-4">
           {error.message}
         </p>
-      )}
+      ) : null}
       <button
         type="button"
         onClick={reset}

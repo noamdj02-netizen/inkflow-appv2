@@ -1,4 +1,13 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useRef,
+  lazy,
+  Suspense,
+} from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -80,6 +89,7 @@ import { PushNotificationsSettings } from '../settings/PushNotificationsSettings
 import { VitrineLinkButton } from './VitrineLinkButton';
 import { useStudioPrivacy } from '../../contexts/StudioPrivacyContext';
 import { hapticTabChange } from '../../lib/haptics';
+import { shouldShowWelcomeFlow } from '@/lib/shouldShowWelcomeFlow';
 import { StudioCommandPalette } from './StudioCommandPalette';
 import FloatingActionMenu, { type FloatingActionMenuOption } from './FloatingActionMenu';
 import { BadgeNotification } from '@/components/ui/BadgeNotification';
@@ -197,7 +207,7 @@ import type { ClientPreviewData } from './ClientPreviewPanel';
 import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
 import { DashboardTabErrorBoundary } from './DashboardTabErrorBoundary';
 import { PendingCriticalWritesBanner } from './PendingCriticalWritesBanner';
-import { shouldShowWelcomeFlow } from '../../lib/shouldShowWelcomeFlow';
+import { isInkflowNativeShellUserAgent } from '../../lib/nativeWebShell';
 import { isJustSignedUp } from '../../lib/welcomeStorage';
 import { supabase } from '../../lib/supabase';
 import { pickLinkedAppointmentForProjectRequest } from '../../lib/linkedAppointmentFromContext';
@@ -529,6 +539,12 @@ export const DashboardPro: React.FC = () => {
   const [helpDrawerOpen, setHelpDrawerOpen] = useState(false);
   /** Menu compact header (aide + thème), mobile uniquement (max-sm) */
   const [headerMoreMenuOpen, setHeaderMoreMenuOpen] = useState(false);
+  /** WebView Inkflow Pro (Expo) — UA `InkflowProShell` : en-tête accueil plus compact que le mobile navigateur */
+  const [isInkflowProShell, setIsInkflowProShell] = useState(false);
+  useLayoutEffect(() => {
+    if (typeof navigator === 'undefined') return;
+    setIsInkflowProShell(isInkflowNativeShellUserAgent(navigator.userAgent));
+  }, []);
   const { privacyMode, togglePrivacyMode } = useStudioPrivacy();
 
   const helpContext: InkflowHelpContext = useMemo(() => {
@@ -2511,7 +2527,9 @@ export const DashboardPro: React.FC = () => {
   }, []);
 
   return (
-    <div className="app-shell dashboard-pro-shell bg-zinc-50 dark:bg-black">
+    <div
+      className={`app-shell dashboard-pro-shell bg-zinc-50 dark:bg-black${isInkflowProShell ? ' dashboard-pro-inkflow-pro-shell' : ''}`}
+    >
       {showWelcome && (
         <Suspense
           fallback={
@@ -3426,7 +3444,13 @@ export const DashboardPro: React.FC = () => {
             />
           )}
           {useSupabase && isOnline && !connectionError && lastSyncedAt && (
-            <div className="dashboard-pro-sync-strip bg-zinc-100/90 dark:bg-zinc-900/50 border-b border-zinc-200/80 dark:border-zinc-800 px-4 py-1 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 flex flex-wrap items-center justify-between gap-2 flex-shrink-0 sm:py-1.5">
+            <div
+              className={`dashboard-pro-sync-strip bg-zinc-100/90 dark:bg-zinc-900/50 border-b border-zinc-200/80 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 flex flex-wrap items-center justify-between flex-shrink-0 sm:text-xs ${
+                isInkflowProShell
+                  ? 'px-3 py-0.5 text-[10px] gap-1.5 sm:px-4 sm:py-1 sm:gap-2'
+                  : 'px-4 py-1 text-[11px] gap-2 sm:py-1.5'
+              }`}
+            >
               <span>
                 Dernière synchro des données :{' '}
                 <time
@@ -3448,24 +3472,30 @@ export const DashboardPro: React.FC = () => {
           )}
           {/* Header — verre dépoli (backdrop-blur) pour s’intégrer au canvas dashboard, contrôles inchangés */}
           <header
-            className={`app-shell-header safe-top px-4 sm:px-5 md:px-6 flex items-center justify-between gap-2 sm:gap-4 transition-all duration-300 shrink-0 overflow-visible ${
+            className={`app-shell-header safe-top sm:px-5 md:px-6 flex items-center justify-between transition-all duration-300 shrink-0 overflow-visible ${
               activeTab === 'overview'
-                ? 'min-h-[48px] sm:min-h-0 h-11 sm:h-14 border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 shadow-[0_1px_0_0_rgba(15,23,42,0.06)] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
-                : 'dashboard-pro-header-dark h-14 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
+                ? isInkflowProShell
+                  ? 'px-3 gap-1 sm:gap-4 min-h-0 max-sm:py-1 sm:min-h-0 h-10 sm:h-14 border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 shadow-[0_1px_0_0_rgba(15,23,42,0.06)] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
+                  : 'px-4 gap-2 sm:gap-4 min-h-[48px] sm:min-h-0 h-11 sm:h-14 border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 shadow-[0_1px_0_0_rgba(15,23,42,0.06)] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
+                : 'dashboard-pro-header-dark px-3 sm:px-5 md:px-6 gap-2 sm:gap-4 h-14 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
             }`}
           >
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-              {/* Hamburger — toujours visible sur mobile/tablette */}
+            <div
+              className={`flex items-center min-w-0 flex-1 ${isInkflowProShell ? 'gap-1.5 sm:gap-3' : 'gap-2 sm:gap-3'}`}
+            >
+              {/* Hamburger — compact dans Inkflow Pro ; mobile navigateur un peu plus aéré */}
               <button
                 type="button"
                 onClick={() => {
                   setSidebarOpen(true);
                   setHeaderMoreMenuOpen(false);
                 }}
-                className="lg:hidden p-2.5 -ml-1 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
+                className="lg:hidden p-2 -ml-0.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
                 aria-label="Ouvrir le menu"
               >
-                <Menu className="w-6 h-6 text-[var(--text-secondary)]" />
+                <Menu
+                  className={`sm:w-6 sm:h-6 text-[var(--text-secondary)] ${isInkflowProShell ? 'w-5 h-5' : 'w-6 h-6'}`}
+                />
               </button>
               {activeTab === 'overview' ? (
                 <>
@@ -3473,19 +3503,30 @@ export const DashboardPro: React.FC = () => {
                     <span className="sr-only">{tabHeroModel.title}</span>
                   ) : null}
                   {/* Mobile / tablette : marque visible sur l’écran d’accueil (desktop : logo dans la sidebar) */}
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1 lg:hidden">
+                  <div className="flex items-center gap-2 min-w-0 flex-1 lg:hidden">
                     <Logo
-                      size="sm"
-                      className="rounded-xl flex-shrink-0 shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                      size={isInkflowProShell ? 'xs' : 'sm'}
+                      className={`flex-shrink-0 shadow-sm ring-1 ring-black/5 dark:ring-white/10 ${isInkflowProShell ? 'rounded-lg sm:rounded-xl' : 'rounded-xl'}`}
                     />
-                    <div className="min-w-0 flex flex-col justify-center leading-tight">
-                      <span className="font-bold text-[17px] sm:text-lg tracking-tight text-zinc-900 dark:text-white truncate">
-                        InkFlow
-                      </span>
-                      <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 truncate">
-                        Accueil
-                      </span>
-                    </div>
+                    {isInkflowProShell ? (
+                      <div className="min-w-0 flex flex-row flex-wrap items-center gap-x-2 gap-y-0 leading-none">
+                        <span className="font-bold text-[15px] sm:text-lg tracking-tight text-zinc-900 dark:text-white truncate">
+                          InkFlow
+                        </span>
+                        <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                          Accueil
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="min-w-0 flex flex-col justify-center leading-tight">
+                        <span className="font-bold text-[17px] sm:text-lg tracking-tight text-zinc-900 dark:text-white truncate">
+                          InkFlow
+                        </span>
+                        <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 truncate">
+                          Accueil
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="hidden lg:block flex-1 min-w-0" aria-hidden />
                 </>
@@ -3504,7 +3545,9 @@ export const DashboardPro: React.FC = () => {
                 </h2>
               )}
             </div>
-            <div className="flex items-center gap-1 sm:gap-3 md:gap-4 flex-shrink-0">
+            <div
+              className={`flex items-center flex-shrink-0 ${isInkflowProShell ? 'gap-0.5 sm:gap-2 md:gap-4' : 'gap-1 sm:gap-3 md:gap-4'}`}
+            >
               {/* Barre de recherche globale (style Command Palette) — desktop only */}
               <button
                 type="button"
@@ -3529,10 +3572,16 @@ export const DashboardPro: React.FC = () => {
                   setShowPlanningSheet(true);
                   setHeaderMoreMenuOpen(false);
                 }}
-                className="xl:hidden p-2.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
+                className="xl:hidden p-2 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
                 aria-label="Ouvrir le planning"
               >
-                <Calendar className="w-5 h-5 text-[var(--text-secondary)]" />
+                <Calendar
+                  className={
+                    isInkflowProShell
+                      ? 'w-[18px] h-[18px] sm:w-5 sm:h-5 text-[var(--text-secondary)]'
+                      : 'w-5 h-5 text-[var(--text-secondary)]'
+                  }
+                />
               </button>
               <button
                 type="button"
@@ -3571,7 +3620,7 @@ export const DashboardPro: React.FC = () => {
                     setHeaderMoreMenuOpen((o) => !o);
                     setShowProfileDropdown(false);
                   }}
-                  className={`flex p-2.5 rounded-xl hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] items-center justify-center transition-colors touch-manipulation ${
+                  className={`flex p-2 rounded-xl hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] items-center justify-center transition-colors touch-manipulation ${
                     headerMoreMenuOpen
                       ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white'
                       : 'text-[var(--text-secondary)]'
@@ -3580,7 +3629,10 @@ export const DashboardPro: React.FC = () => {
                   aria-haspopup="menu"
                   aria-label="Plus d’options"
                 >
-                  <MoreHorizontal className="w-6 h-6" strokeWidth={1.75} />
+                  <MoreHorizontal
+                    className={isInkflowProShell ? 'w-5 h-5 sm:w-6 sm:h-6' : 'w-6 h-6'}
+                    strokeWidth={1.75}
+                  />
                 </button>
                 {headerMoreMenuOpen && (
                   <>
@@ -3591,7 +3643,11 @@ export const DashboardPro: React.FC = () => {
                     />
                     <div
                       className="fixed right-3 z-[55] w-[min(calc(100vw-1.5rem),17rem)] rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-xl py-2 sm:hidden"
-                      style={{ top: 'max(calc(env(safe-area-inset-top, 0px) + 3.5rem), 3.75rem)' }}
+                      style={{
+                        top: isInkflowProShell
+                          ? 'max(calc(env(safe-area-inset-top, 0px) + 2.75rem), 3.25rem)'
+                          : 'max(calc(env(safe-area-inset-top, 0px) + 3.5rem), 3.75rem)',
+                      }}
                       role="menu"
                     >
                       <button
@@ -3662,7 +3718,11 @@ export const DashboardPro: React.FC = () => {
                   triggerAriaLabel="Notifications"
                   titleLabel="Notifications"
                   markAllReadLabel="Tout lire"
-                  buttonClassName="!h-auto !min-h-[44px] !min-w-[44px] !w-auto !rounded-full border-0 bg-transparent shadow-none hover:bg-white/60 dark:hover:bg-white/10 px-2.5 text-[#6B7280] dark:text-[var(--text-secondary)] [&_svg]:text-[#6B7280] dark:[&_svg]:text-[var(--text-secondary)]"
+                  buttonClassName={
+                    isInkflowProShell
+                      ? '!h-auto !min-h-[44px] !min-w-[44px] !w-auto !rounded-full border-0 bg-transparent shadow-none hover:bg-white/60 dark:hover:bg-white/10 px-2 sm:px-2.5 text-[#6B7280] dark:text-[var(--text-secondary)] [&_svg]:text-[#6B7280] dark:[&_svg]:text-[var(--text-secondary)] max-sm:[&_svg]:!size-[18px]'
+                      : '!h-auto !min-h-[44px] !min-w-[44px] !w-auto !rounded-full border-0 bg-transparent shadow-none hover:bg-white/60 dark:hover:bg-white/10 px-2.5 text-[#6B7280] dark:text-[var(--text-secondary)] [&_svg]:text-[#6B7280] dark:[&_svg]:text-[var(--text-secondary)]'
+                  }
                   popoverClassName="border border-zinc-200/90 bg-white dark:bg-zinc-950 dark:border-zinc-800 shadow-xl shadow-black/10 sm:!w-[min(100vw-2rem,24rem)]"
                 />
               </div>
@@ -3758,7 +3818,7 @@ export const DashboardPro: React.FC = () => {
           <div
             className={`app-shell-content min-w-0 overflow-x-hidden ${
               activeTab === 'overview'
-                ? 'px-3 pt-2 pb-3 sm:px-5 sm:py-5 md:px-7 md:py-6 lg:px-8 lg:py-7 xl:px-9 xl:py-7 2xl:px-11 2xl:py-8 dashboard-overview-bg'
+                ? `${isInkflowProShell ? 'px-3 pt-1.5 pb-3' : 'px-3 pt-2 pb-3'} sm:px-5 sm:py-5 md:px-7 md:py-6 lg:px-8 lg:py-7 xl:px-9 xl:py-7 2xl:px-11 2xl:py-8 dashboard-overview-bg`
                 : 'px-3 py-4 sm:p-6 md:p-8 xl:px-10 2xl:px-12 dashboard-pages-bg'
             }`}
           >
@@ -5738,7 +5798,7 @@ export const DashboardPro: React.FC = () => {
         role="navigation"
         aria-label="Navigation principale mobile"
       >
-        <div className="dashboard-pro-mobile-bottom-nav__inner mx-auto flex w-full max-w-lg items-stretch justify-between gap-0.5 overflow-visible px-0.5 pb-0.5 pt-px">
+        <div className="dashboard-pro-mobile-bottom-nav__inner mx-auto flex w-full max-w-lg items-stretch justify-between gap-0 overflow-visible px-0 py-0">
           {/* Accueil */}
           <button
             type="button"
@@ -5747,7 +5807,7 @@ export const DashboardPro: React.FC = () => {
                 setActiveTab('overview');
               })
             }
-            className={`relative flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
+            className={`relative flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'overview'
                 ? 'text-indigo-600 dark:text-indigo-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -5763,7 +5823,7 @@ export const DashboardPro: React.FC = () => {
             <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5">
               <span className="relative inline-flex">
                 <LayoutDashboard
-                  className="size-5 shrink-0"
+                  className="size-[18px] shrink-0"
                   strokeWidth={activeTab === 'overview' ? 2.35 : 1.65}
                   aria-hidden
                 />
@@ -5773,7 +5833,7 @@ export const DashboardPro: React.FC = () => {
                   className="-right-2 -top-2 left-auto"
                 />
               </span>
-              <span className="max-w-full truncate text-[11px] font-semibold leading-none tracking-tight">
+              <span className="max-w-full truncate text-[10px] font-semibold leading-none tracking-tight">
                 Accueil
               </span>
             </span>
@@ -5786,7 +5846,7 @@ export const DashboardPro: React.FC = () => {
                 setActiveTab('agenda');
               })
             }
-            className={`relative flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
+            className={`relative flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'appointments' || activeTab === 'agenda'
                 ? 'text-indigo-600 dark:text-indigo-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -5801,11 +5861,11 @@ export const DashboardPro: React.FC = () => {
             )}
             <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5">
               <Calendar
-                className="size-5 shrink-0"
+                className="size-[18px] shrink-0"
                 strokeWidth={activeTab === 'appointments' || activeTab === 'agenda' ? 2.35 : 1.65}
                 aria-hidden
               />
-              <span className="max-w-full truncate text-[11px] font-semibold leading-none tracking-tight">
+              <span className="max-w-full truncate text-[10px] font-semibold leading-none tracking-tight">
                 Agenda
               </span>
             </span>
@@ -5813,6 +5873,7 @@ export const DashboardPro: React.FC = () => {
 
           <FloatingActionMenu
             variant="bottomNav"
+            compactBottomNavFab={isInkflowProShell}
             isNavActive={activeTab === 'requests' || activeTab === 'stock'}
             fabBadgeCount={0}
             options={mobileFabActionOptions}
@@ -5826,7 +5887,7 @@ export const DashboardPro: React.FC = () => {
                 setActiveTab('clients');
               })
             }
-            className={`relative flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
+            className={`relative flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'clients'
                 ? 'text-indigo-600 dark:text-indigo-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -5841,11 +5902,11 @@ export const DashboardPro: React.FC = () => {
             )}
             <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5">
               <Users
-                className="size-5 shrink-0"
+                className="size-[18px] shrink-0"
                 strokeWidth={activeTab === 'clients' ? 2.35 : 1.65}
                 aria-hidden
               />
-              <span className="max-w-full truncate text-[11px] font-semibold leading-none tracking-tight">
+              <span className="max-w-full truncate text-[10px] font-semibold leading-none tracking-tight">
                 Clients
               </span>
             </span>
@@ -5859,7 +5920,7 @@ export const DashboardPro: React.FC = () => {
                 setSettingsTab(isRestricted ? 'billing' : settingsTab);
               }, true)
             }
-            className={`relative flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
+            className={`relative flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'settings'
                 ? 'text-indigo-600 dark:text-indigo-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -5874,11 +5935,11 @@ export const DashboardPro: React.FC = () => {
             )}
             <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5">
               <Settings
-                className="size-5 shrink-0"
+                className="size-[18px] shrink-0"
                 strokeWidth={activeTab === 'settings' ? 2.35 : 1.65}
                 aria-hidden
               />
-              <span className="max-w-full truncate text-[11px] font-semibold leading-none tracking-tight">
+              <span className="max-w-full truncate text-[10px] font-semibold leading-none tracking-tight">
                 Réglages
               </span>
             </span>

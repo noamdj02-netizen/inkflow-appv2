@@ -1,17 +1,19 @@
 import React, { useId } from 'react';
 
 interface LogoProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }
 
 const sizeToPx: Record<NonNullable<LogoProps['size']>, number> = {
+  xs: 28,
   sm: 32,
   md: 40,
   lg: 48,
 };
 
 const sizeClasses = {
+  xs: 'w-7 h-7 max-h-7 max-w-7',
   sm: 'w-8 h-8 max-h-8 max-w-8',
   md: 'w-10 h-10 max-h-10 max-w-10',
   lg: 'w-12 h-12 max-h-12 max-w-12',

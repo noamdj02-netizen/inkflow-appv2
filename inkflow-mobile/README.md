@@ -6,7 +6,7 @@ Shell **Expo** qui embarque le dashboard web (`app.ink-flow.me`) + routes native
 
 - Node 20+
 - Compte Expo / EAS pour les builds store
-- Fichier **`.env`** à la racine de `inkflow-mobile/` (voir `.env.example`) : `EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY` — **obligatoire** pour Tap to Pay (Edge `stripe-terminal`). Sinon : erreur *Supabase non configuré* puis *Couldn’t fetch connection token*. Après modification : `npx expo start --clear`.
+- Fichier **`.env`** à la racine de `inkflow-mobile/` (voir `.env.example`) : `EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY` — **obligatoire** pour Tap to Pay / Checkout (Edge `stripe-terminal`, `create-checkout-session`). Sinon : erreurs *Supabase non configuré* / *Couldn’t fetch connection token*. Après modification : `npx expo start --clear`.
 - Builds **EAS** : déclarer les mêmes variables (`eas secret:create` ou `env` dans `eas.json`) pour que la release les embarque.
 
 ## Scripts
@@ -17,7 +17,7 @@ Shell **Expo** qui embarque le dashboard web (`app.ink-flow.me`) + routes native
 | `npm run typecheck` | Vérif TypeScript          |
 | `npm run ios` / `android` | Lanceur sim / appareil |
 
-**Expo Go** : pas de module natif Stripe Terminal — la route Tap to Pay affiche un message d’info. Pour un vrai test encaissement : **development build** EAS + `.env` Supabase + session InkFlow valide.
+**Expo Go** : pas de NFC Tap to Pay (Terminal natif). La modale propose **Stripe Checkout** (carte / Apple Pay) pour encaisser le solde tant que tu es connecté (session native synchronisée). Pour le **vrai** Tap to Pay iPhone : **development build ou prod** EAS + `.env` Supabase.
 
 Build production (EAS est en **devDependency** du projet — pas besoin d’installer `eas` en global) :
 

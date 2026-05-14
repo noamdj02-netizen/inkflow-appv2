@@ -15,11 +15,13 @@ import type {
   WebViewErrorEvent,
   WebViewHttpErrorEvent,
   WebViewOpenWindowEvent,
+  WebViewProgressEvent,
 } from 'react-native-webview/lib/WebViewTypes';
 
 const WEB_APP_BASE_URL = 'https://app.ink-flow.me';
 const WEB_APP_URL = `${WEB_APP_BASE_URL}/dashboard`;
 const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, '');
+const SUPABASE_ANON_KEY = (process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
 const ALLOWED_WEB_HOSTS = new Set(['app.ink-flow.me']);
 const SYSTEM_SCHEMES = ['mailto:', 'tel:', 'sms:'];
 
@@ -82,6 +84,25 @@ function shouldOpenExternally(url: string): boolean {
   }
 }
 
+/** `send-push-notification` met `url` dans `data` Expo — souvent chemin relatif `/dashboard?…`. */
+function resolvePushTargetWebUrl(raw: unknown): string | null {
+  const s = typeof raw === 'string' ? raw.trim() : '';
+  if (!s) return null;
+  if (s.startsWith('https://') || s.startsWith('http://')) {
+    try {
+      const u = new URL(s);
+      if (ALLOWED_WEB_HOSTS.has(u.hostname)) return u.toString();
+    } catch {
+      return null;
+    }
+    return null;
+  }
+  if (s.startsWith('/')) {
+    return `${WEB_APP_BASE_URL.replace(/\/$/, '')}${s}`;
+  }
+  return null;
+}
+
 let lastRegisteredExpoPushToken: string | null = null;
 
 async function registerExpoPushWithStudio(accessToken: string, studioId: string): Promise<void> {
@@ -91,35 +112,56 @@ async function registerExpoPushWithStudio(accessToken: string, studioId: string)
     }
     return;
   }
-  const perm = await Notifications.getPermissionsAsync();
-  if (perm.status !== 'granted') {
-    /* Ne pas ouvrir le dialogue système au chargement — l’utilisateur active les alertes depuis Réglages InkFlow. */
+  if (!SUPABASE_ANON_KEY) {
+    if (__DEV__) {
+      console.warn('[WebAppShell] EXPO_PUBLIC_SUPABASE_ANON_KEY manquant — register-native-device non appelé.');
+    }
     return;
   }
+  try {
+    let perm = await Notifications.getPermissionsAsync();
+    if (perm.status === 'undetermined') {
+      perm = await Notifications.requestPermissionsAsync();
+    }
+    if (perm.status !== 'granted') {
+      if (__DEV__) {
+        console.warn(
+          '[WebAppShell] Notifications non autorisées — active-les pour Expo Go (Paramètres → Inkflow Pro).'
+        );
+      }
+      return;
+    }
 
-  const projectId =
-    (Constants.expoConfig?.extra?.eas?.projectId as string | undefined) ??
-    Constants.easConfig?.projectId;
-  const tokenRes = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
-  const expoToken = tokenRes.data;
-  if (!expoToken) return;
-  if (lastRegisteredExpoPushToken === expoToken) return;
-  lastRegisteredExpoPushToken = expoToken;
+    const projectId =
+      (Constants.expoConfig?.extra?.eas?.projectId as string | undefined) ??
+      Constants.easConfig?.projectId;
+    const tokenRes = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
+    const expoToken = tokenRes.data;
+    if (!expoToken) return;
+    if (lastRegisteredExpoPushToken === expoToken) return;
+    lastRegisteredExpoPushToken = expoToken;
 
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/register-native-device`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({
-      token: expoToken,
-      platform: Platform.OS,
-      studio_id: studioId,
-    }),
-  });
-  if (!res.ok && __DEV__) {
-    console.warn('[WebAppShell] register-native-device', res.status, await res.text());
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/register-native-device`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({
+        token: expoToken,
+        platform: Platform.OS,
+        studio_id: studioId,
+      }),
+    });
+    if (!res.ok && __DEV__) {
+      console.warn('[WebAppShell] register-native-device', res.status, await res.text());
+    }
+  } catch (e) {
+    if (__DEV__) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn('[WebAppShell] push registration (réseau ou Expo) :', msg);
+    }
   }
 }
 
@@ -153,6 +195,29 @@ export default function WebAppShell() {
   const [webAppUrl, setWebAppUrl] = useState(WEB_APP_URL);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const loadFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearLoadingFallback = useCallback(() => {
+    if (loadFallbackTimerRef.current != null) {
+      clearTimeout(loadFallbackTimerRef.current);
+      loadFallbackTimerRef.current = null;
+    }
+  }, []);
+
+  const armLoadingFallback = useCallback(() => {
+    clearLoadingFallback();
+    loadFallbackTimerRef.current = setTimeout(() => {
+      loadFallbackTimerRef.current = null;
+      setIsLoading(false);
+    }, 22000);
+  }, [clearLoadingFallback]);
+
+  useEffect(() => () => clearLoadingFallback(), [clearLoadingFallback]);
+
+  /** Nouvelle navigation : filet si onLoadEnd / WKWebView ne finalise pas (souvent visible en prod iOS + SPA). */
+  useEffect(() => {
+    armLoadingFallback();
+  }, [webAppUrl, armLoadingFallback]);
 
   const handleWebViewMessage = useCallback((event: WebViewMessageEvent) => {
     try {
@@ -167,14 +232,20 @@ export default function WebAppShell() {
         return;
       }
       if (data?.type === 'inkflow_native_supabase_sign_out') {
-        if (isSupabaseConfigured() && supabase) void supabase.auth.signOut();
+        if (isSupabaseConfigured() && supabase) {
+          void supabase.auth.signOut().catch(() => {
+            /* évite rejet non géré si hors-ligne */
+          });
+        }
         return;
       }
       if (data?.type === 'inkflow_native_supabase_session') {
         const access = typeof data.accessToken === 'string' ? data.accessToken.trim() : '';
         const refresh = typeof data.refreshToken === 'string' ? data.refreshToken.trim() : '';
         if (!access || !refresh || !isSupabaseConfigured() || !supabase) return;
-        void supabase.auth.setSession({ access_token: access, refresh_token: refresh });
+        void supabase.auth.setSession({ access_token: access, refresh_token: refresh }).catch(() => {
+          /* hors-ligne / refresh : pas d’écran rouge LogBox */
+        });
         return;
       }
       if (data?.type !== 'inkflow_native_push_register') return;
@@ -241,6 +312,31 @@ export default function WebAppShell() {
     return () => subscription.remove();
   }, [openMappedDeepLink]);
 
+  /** Tap sur une notification (ou cold start via notification) → même WebView que la prod. */
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const applyNotificationResponse = (
+      response: Notifications.NotificationResponse | null | undefined
+    ) => {
+      if (!response) return;
+      const data = response.notification.request.content.data as Record<string, unknown> | undefined;
+      const target =
+        resolvePushTargetWebUrl(data?.url) ?? resolvePushTargetWebUrl(data?.actionUrl);
+      if (!target) return;
+      setLoadError(null);
+      setWebAppUrl(target);
+    };
+
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      applyNotificationResponse(response);
+    });
+
+    void Notifications.getLastNotificationResponseAsync().then(applyNotificationResponse);
+
+    return () => sub.remove();
+  }, []);
+
   const handleShouldStartLoad = useCallback(
     (request: ShouldStartLoadRequest) => {
       if (!request.url || request.url === 'about:blank') {
@@ -294,31 +390,59 @@ export default function WebAppShell() {
   const handleLoadStart = useCallback(() => {
     setIsLoading(true);
     setLoadError(null);
-  }, []);
+    armLoadingFallback();
+  }, [armLoadingFallback]);
 
   const handleLoadEnd = useCallback(() => {
+    clearLoadingFallback();
     setIsLoading(false);
-  }, []);
+  }, [clearLoadingFallback]);
 
-  const handleError = useCallback((event: WebViewErrorEvent) => {
-    setIsLoading(false);
-    setLoadError(event.nativeEvent.description || 'Impossible de charger InkFlow.');
-  }, []);
+  const handleLoadProgress = useCallback(
+    (event: WebViewProgressEvent) => {
+      if (event.nativeEvent.progress >= 1) {
+        clearLoadingFallback();
+        setIsLoading(false);
+      }
+    },
+    [clearLoadingFallback]
+  );
 
-  const handleHttpError = useCallback((event: WebViewHttpErrorEvent) => {
-    setIsLoading(false);
-    setLoadError(event.nativeEvent.description || `Erreur HTTP ${event.nativeEvent.statusCode}`);
-  }, []);
+  const handleError = useCallback(
+    (event: WebViewErrorEvent) => {
+      clearLoadingFallback();
+      setIsLoading(false);
+      setLoadError(event.nativeEvent.description || 'Impossible de charger InkFlow.');
+    },
+    [clearLoadingFallback]
+  );
 
-  const handleNavigationStateChange = useCallback((_navigationState: WebViewNavigation) => {
-    setLoadError(null);
-  }, []);
+  const handleHttpError = useCallback(
+    (event: WebViewHttpErrorEvent) => {
+      clearLoadingFallback();
+      setIsLoading(false);
+      setLoadError(event.nativeEvent.description || `Erreur HTTP ${event.nativeEvent.statusCode}`);
+    },
+    [clearLoadingFallback]
+  );
+
+  const handleNavigationStateChange = useCallback(
+    (nav: WebViewNavigation) => {
+      setLoadError(null);
+      if (!nav.loading) {
+        clearLoadingFallback();
+        setIsLoading(false);
+      }
+    },
+    [clearLoadingFallback]
+  );
 
   const handleRetry = useCallback(() => {
     setLoadError(null);
     setIsLoading(true);
+    armLoadingFallback();
     webViewRef.current?.reload();
-  }, []);
+  }, [armLoadingFallback]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -338,7 +462,7 @@ export default function WebAppShell() {
         mediaPlaybackRequiresUserAction={false}
         pullToRefreshEnabled
         setSupportMultipleWindows={false}
-        startInLoadingState
+        startInLoadingState={false}
         decelerationRate="normal"
         applicationNameForUserAgent="InkflowProShell"
         {...Platform.select({
@@ -351,6 +475,7 @@ export default function WebAppShell() {
         onShouldStartLoadWithRequest={handleShouldStartLoad}
         onOpenWindow={handleOpenWindow}
         onLoadStart={handleLoadStart}
+        onLoadProgress={handleLoadProgress}
         onLoadEnd={handleLoadEnd}
         onError={handleError}
         onHttpError={handleHttpError}

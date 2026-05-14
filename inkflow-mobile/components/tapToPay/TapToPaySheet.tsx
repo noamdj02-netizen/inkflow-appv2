@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
-import React, { useEffect, useState } from 'react';
+import * as WebBrowser from 'expo-web-browser';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -11,6 +12,10 @@ import {
   View,
 } from 'react-native';
 
+import {
+  createBalanceCheckoutSession,
+  loadAppointmentCheckoutContext,
+} from '@/lib/createBalanceCheckout';
 import type { TapToPaySheetImplProps, TapToPaySheetProps } from './TapToPaySheet.impl';
 
 export type { TapToPaySheetProps, TapToPaySheetImplProps } from './TapToPaySheet.impl';
@@ -43,12 +48,90 @@ function sharedModalLayout(
   );
 }
 
-function TapToPayExpoGoPlaceholder(props: TapToPaySheetProps) {
-  return sharedModalLayout(
-    'Tap to Pay',
-    'Stripe Terminal n’est pas inclus dans Expo Go. Pour tester l’encaissement, lance un build EAS (development ou production) sur iPhone, ou ouvre ce flux depuis une build installée.',
-    props.onClose,
-    'fade'
+/**
+ * Expo Go : pas de binaire Stripe Terminal — encaissement réel via Stripe Checkout (carte / Apple Pay).
+ */
+function TapToPayExpoGoCheckout(props: TapToPaySheetProps) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const openCheckout = useCallback(async () => {
+    setErr(null);
+    setBusy(true);
+    try {
+      const ctx = await loadAppointmentCheckoutContext(props.studioId, props.appointmentId);
+      if (!ctx.ok) {
+        setErr(ctx.error);
+        return;
+      }
+      const session = await createBalanceCheckoutSession({
+        studioId: props.studioId,
+        studioSlug: ctx.studioSlug,
+        appointmentId: props.appointmentId,
+        amountEuros: props.amountEuros,
+        clientName: ctx.clientName,
+        clientEmail: ctx.clientEmail,
+        serviceName: ctx.serviceName,
+      });
+      if ('error' in session) {
+        setErr(session.error);
+        return;
+      }
+      await WebBrowser.openBrowserAsync(session.url, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+      });
+      props.onClose();
+    } catch {
+      setErr('Impossible d’ouvrir le paiement. Réessaie.');
+    } finally {
+      setBusy(false);
+    }
+  }, [props.amountEuros, props.appointmentId, props.onClose, props.studioId]);
+
+  return (
+    <Modal visible transparent animationType="fade">
+      <View style={sharedStyles.backdrop}>
+        <View style={sharedStyles.card}>
+          <Text style={sharedStyles.title}>Encaisser le solde</Text>
+          <Text style={[sharedStyles.body, { marginTop: 10 }]}>
+            Expo Go ne peut pas utiliser le NFC Tap to Pay (module natif Stripe). Tu peux encaisser
+            ce montant avec Stripe Checkout : carte bancaire ou Apple Pay dans la fenêtre qui
+            s’ouvre.
+          </Text>
+          <Text style={[sharedStyles.meta, { marginTop: 8 }]}>
+            {props.amountEuros.toFixed(2)} € · RDV {props.appointmentId.slice(0, 8)}…
+          </Text>
+          {err ? <Text style={sharedStyles.errorText}>{err}</Text> : null}
+          <Pressable
+            onPress={openCheckout}
+            disabled={busy}
+            style={({ pressed }) => [
+              sharedStyles.btn,
+              { marginTop: 16 },
+              busy && sharedStyles.btnDisabled,
+              pressed && !busy && sharedStyles.btnPressed,
+            ]}
+          >
+            {busy ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={sharedStyles.btnText}>Payer avec Stripe</Text>
+            )}
+          </Pressable>
+          <Pressable
+            onPress={props.onClose}
+            disabled={busy}
+            style={({ pressed }) => [sharedStyles.btnSecondary, pressed && sharedStyles.btnPressed]}
+          >
+            <Text style={sharedStyles.btnSecondaryText}>Annuler</Text>
+          </Pressable>
+          <Text style={[sharedStyles.hint, { marginTop: 14 }]}>
+            Pour le vrai Tap to Pay iPhone : build EAS (development client) avec le plugin Stripe
+            Terminal.
+          </Text>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -109,7 +192,7 @@ export function TapToPaySheet(props: TapToPaySheetProps) {
   }, []);
 
   if (isExpoGo) {
-    return <TapToPayExpoGoPlaceholder {...props} />;
+    return <TapToPayExpoGoCheckout {...props} />;
   }
 
   if (Platform.OS !== 'ios') {
@@ -173,4 +256,14 @@ const sharedStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnSecondaryText: { color: '#71717a', fontSize: 15, fontWeight: '600' },
+  btnDisabled: { opacity: 0.65 },
+  meta: { fontSize: 13, color: '#71717a', textAlign: 'center' },
+  errorText: {
+    marginTop: 12,
+    fontSize: 13,
+    color: '#b91c1c',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  hint: { fontSize: 11, color: '#a1a1aa', textAlign: 'center', lineHeight: 16 },
 });

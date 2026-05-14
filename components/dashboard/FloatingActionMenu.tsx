@@ -19,6 +19,8 @@ type FloatingActionMenuProps = {
   variant?: 'floating' | 'bottomNav';
   isNavActive?: boolean;
   fabBadgeCount?: number;
+  /** true = FAB / dock resserrés (enveloppe native Inkflow Pro, UA InkflowProShell) */
+  compactBottomNavFab?: boolean;
 };
 
 /** Aligné sur le snippet produit (rotation +) */
@@ -46,6 +48,7 @@ const FloatingActionMenu = ({
   variant = 'floating',
   isNavActive = false,
   fabBadgeCount = 0,
+  compactBottomNavFab = false,
 }: FloatingActionMenuProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -95,9 +98,11 @@ const FloatingActionMenu = ({
     'inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-full border-0 p-0 shadow-[0_0_20px_rgba(0,0,0,0.2)] bg-[#11111198] hover:bg-[#111111d1] text-white [&_svg]:text-white';
   /** FAB central bottom nav — extension au-dessus de Button default + icon-lg (tokens primary) */
   const fabBottomNavExtras = cn(
-    'relative isolate size-14 min-h-14 min-w-14 shrink-0 rounded-full border-2 border-background p-0',
+    'relative isolate shrink-0 rounded-full border-2 border-background p-0',
     'gap-0 has-data-[icon=inline-start]:pl-0 has-data-[icon=inline-end]:pr-0',
-    "[&_svg:not([class*='size-'])]:size-6",
+    compactBottomNavFab
+      ? 'size-12 min-h-12 min-w-12 [&_svg:not([class*="size-"])]:size-5'
+      : 'size-14 min-h-14 min-w-14 [&_svg:not([class*="size-"])]:size-6',
     'shadow-[0_8px_24px_-6px_rgb(37_99_235/0.42),0_2px_8px_-2px_rgb(0_0_0/0.12)]',
     'transition-[transform,box-shadow,filter] hover:brightness-[1.04] hover:shadow-[0_12px_28px_-8px_rgb(37_99_235/0.45)] active:brightness-[0.97]',
     'motion-reduce:transition-colors motion-reduce:hover:brightness-100',
@@ -122,7 +127,10 @@ const FloatingActionMenu = ({
       className={cn(
         'max-h-[min(45dvh,20rem)] w-max min-w-[12rem] overflow-y-auto overscroll-contain',
         isBottomNav
-          ? 'absolute bottom-[2.85rem] right-0 z-[60] mb-2 max-w-[min(90vw,20rem)]'
+          ? cn(
+              'absolute right-0 z-[60] mb-2 max-w-[min(90vw,20rem)]',
+              compactBottomNavFab ? 'bottom-[2.5rem]' : 'bottom-[2.85rem]'
+            )
           : 'absolute bottom-10 right-0 mb-2'
       )}
     >
@@ -164,12 +172,13 @@ const FloatingActionMenu = ({
       <div
         ref={rootRef}
         className={cn(
-          'relative z-10 flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-end overflow-visible pb-px',
+          'relative z-10 flex min-w-0 flex-1 flex-col items-center justify-end overflow-visible pb-px',
+          compactBottomNavFab ? 'min-h-[40px]' : 'min-h-[44px]',
           className
         )}
       >
         {/* Débord FAB vers le scroll : modeste pour limiter masquage au-dessus de la dock mobile */}
-        <div className="relative -mt-4 shrink-0">
+        <div className={cn('relative shrink-0', compactBottomNavFab ? '-mt-3' : '-mt-4')}>
           <Button
             type="button"
             variant="default"

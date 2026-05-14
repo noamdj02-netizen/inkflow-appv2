@@ -1732,15 +1732,20 @@ textarea {
   }
 
   /* Dashboard tatoueur — safe areas latérales + scroll tactile (iOS / encoche).
-     Réserve bas : pilule (bottom ~10px) + ligne compacte (~48px) + FAB réduit (-mt-4)
-     + marge confort — évite que la dock / « demandes en attente » passent sous la nav */
+     Réserve bas : dock compacte (~42px pilule + FAB 48px, -mt-3) — moins de vide qu’avant */
   .dashboard-pro-shell .app-shell-content {
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
-    padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px)) !important;
-    scroll-padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px));
+    /* Navigateur mobile : dock + FAB un peu plus hauts ; enveloppe Inkflow Pro = réserve réduite */
+    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important;
+    scroll-padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .app-shell-content {
+    padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px)) !important;
+    scroll-padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Fond accueil mobile : neutre (pas de halos bleu / bande au-dessus du hero) */
@@ -1762,7 +1767,12 @@ textarea {
   .dashboard-pro-shell .app-shell-header {
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+    /* Mobile navigateur : garde un minimum lisible ; Inkflow Pro = 0 (hauteur pilotée par Tailwind h-10) */
     min-height: 2.75rem;
+  }
+
+  .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .app-shell-header {
+    min-height: 0;
   }
 
   /* Moins d’air mort sous l’encoche : la strip synchro est déjà sous la safe area du shell ;
@@ -1776,12 +1786,18 @@ textarea {
     padding-top: 0.25rem !important;
   }
 
+  .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .app-shell-header.safe-top {
+    padding-top: 0.125rem !important;
+  }
+
   .dashboard-pro-shell
     .app-shell-main:not(:has(.dashboard-pro-sync-strip))
     .app-shell-header.safe-top {
     padding-top: max(0.5rem, env(safe-area-inset-top, 0px)) !important;
   }
 
+  /* Pilule ancrée au bord physique : safe area uniquement en padding (pas en bottom),
+     sinon bande claire sous la barre sur iOS / WebView. */
   .dashboard-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
     overflow: visible;
     left: 50%;
@@ -1789,13 +1805,13 @@ textarea {
     width: calc(100% - 24px);
     max-width: 34rem;
     transform: translateX(-50%);
-    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-    min-height: calc(48px + env(safe-area-inset-bottom, 0px));
+    bottom: 0;
+    min-height: 46px;
     padding-top: 4px;
-    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
     padding-left: 4px;
     padding-right: 4px;
-    border-radius: 28px;
+    border-radius: 24px;
     border: 1px solid rgba(226, 232, 240, 0.95);
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: saturate(140%) blur(18px);
@@ -1806,6 +1822,16 @@ textarea {
       0 3px 10px rgba(15, 23, 42, 0.04),
       inset 0 1px 0 rgba(255, 255, 255, 0.65);
     border-top: none !important;
+  }
+
+  .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
+    bottom: 0;
+    min-height: 42px;
+    padding-top: 2px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    padding-left: 3px;
+    padding-right: 3px;
+    border-radius: 22px;
   }
   .dashboard-pro-shell .dashboard-pro-mobile-bottom-nav__inner {
     touch-action: manipulation;
