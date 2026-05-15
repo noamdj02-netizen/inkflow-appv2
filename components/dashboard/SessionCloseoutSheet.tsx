@@ -10,7 +10,7 @@ import {
 } from '../../lib/flashAppointmentPrice';
 import { saveAppointmentToSupabase } from '../../lib/supabaseDashboard';
 import { useToast } from '../../contexts/ToastContext';
-import { isInkflowNativeShellUserAgent } from '../../lib/nativeWebShell';
+import { isInkflowProShellClient } from '../../lib/nativeWebShell';
 import { getCanonicalAppOrigin } from '../../lib/urls';
 import {
   stripeTerminalCreateBalanceIntent,
@@ -74,7 +74,7 @@ function shouldUseTerminalSimulator(): boolean {
 
 function shouldUseNativeTapToPayIphone(): boolean {
   if (typeof navigator === 'undefined') return false;
-  if (!isInkflowNativeShellUserAgent(navigator.userAgent)) return false;
+  if (!isInkflowProShellClient()) return false;
   if (shouldUseTerminalSimulator()) return false;
   return /iPhone|iPad|iPod/.test(navigator.userAgent);
 }
@@ -92,7 +92,7 @@ function shouldHandoffIosTapToPayWeb(): boolean {
   if (shouldUseTerminalSimulator()) return false;
   if (!isIosPhoneOrPad()) return false;
   // Déjà couvert par shouldUseNativeTapToPayIphone (return avant).
-  if (isInkflowNativeShellUserAgent(navigator.userAgent)) return false;
+  if (isInkflowProShellClient()) return false;
   return true;
 }
 
@@ -116,8 +116,7 @@ export const SessionCloseoutSheet: React.FC<SessionCloseoutSheetProps> = ({
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [terminalLoading, setTerminalLoading] = useState(false);
   const [terminalStatus, setTerminalStatus] = useState<string | null>(null);
-  const isNativeShell =
-    typeof navigator !== 'undefined' && isInkflowNativeShellUserAgent(navigator.userAgent);
+  const isNativeShell = typeof navigator !== 'undefined' && isInkflowProShellClient();
 
   /** Libellé du 2ᵉ bouton : sur iOS (hors simulateur dev) on vise Tap to Pay, pas un lecteur BT web. */
   const terminalButtonPrimaryLabel = (() => {

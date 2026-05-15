@@ -5,7 +5,7 @@
 import { useEffect, useRef } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { isInkflowNativeShellUserAgent } from '../lib/nativeWebShell';
+import { isInkflowProShellClient } from '../lib/nativeWebShell';
 
 interface UseInkflowNativeShellSessionBridgeOptions {
   demoMode?: boolean;
@@ -20,7 +20,7 @@ export function useInkflowNativeShellSessionBridge(
   useEffect(() => {
     if (demoMode) return;
     if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
-    if (!isInkflowNativeShellUserAgent(navigator.userAgent)) return;
+    if (!isInkflowProShellClient()) return;
     const bridge = (
       window as Window & {
         ReactNativeWebView?: { postMessage: (payload: string) => void };

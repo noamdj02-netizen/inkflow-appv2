@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { tryParseTapToPayAppHttpsUrl, tryParseTapToPayDeepLink } from '@/lib/tapToPayDeepLink';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import * as WebBrowser from 'expo-web-browser';
 import WebView, { type WebViewMessageEvent, type WebViewNavigation } from 'react-native-webview';
+import { WebAppLaunchOverlay } from '@/components/web/WebAppLaunchOverlay';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type {
   ShouldStartLoadRequest,
@@ -465,6 +466,11 @@ export default function WebAppShell() {
         startInLoadingState={false}
         decelerationRate="normal"
         applicationNameForUserAgent="InkflowProShell"
+        injectedJavaScriptBeforeContentLoaded={
+          Platform.OS === 'web'
+            ? undefined
+            : "window.__INKFLOW_PRO_SHELL__=true;true;"
+        }
         {...Platform.select({
           ios: {
             contentInsetAdjustmentBehavior: 'never' as const,
@@ -483,12 +489,7 @@ export default function WebAppShell() {
         onNavigationStateChange={handleNavigationStateChange}
       />
 
-      {isLoading && !loadError ? (
-        <View style={styles.loadingOverlay} pointerEvents="none">
-          <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Chargement d’InkFlow…</Text>
-        </View>
-      ) : null}
+      {!loadError ? <WebAppLaunchOverlay visible={isLoading} /> : null}
 
       {loadError ? (
         <View style={styles.errorOverlay}>
@@ -512,27 +513,15 @@ export default function WebAppShell() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'transparent',
   },
   webViewContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'transparent',
   },
   webView: {
     flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-    gap: 12,
-  },
-  loadingText: {
-    color: '#52525b',
-    fontSize: 15,
-    fontWeight: '600',
+    backgroundColor: 'transparent',
   },
   errorOverlay: {
     ...StyleSheet.absoluteFillObject,

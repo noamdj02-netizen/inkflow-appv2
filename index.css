@@ -1448,6 +1448,12 @@ select,
   padding-left: var(--sal);
   padding-right: var(--sar);
 }
+
+/* Inkflow Pro (WebView) : #root/.app-root ont --sab par défaut → bande claire sous la nav fixe. */
+#root:has(.dashboard-pro-inkflow-pro-shell),
+.app-root:has(.dashboard-pro-inkflow-pro-shell) {
+  padding-bottom: 0 !important;
+}
 /* Enfants directs de .app-root remplissent la hauteur (login, spinner, etc.) */
 .app-root > * {
   flex: 1;
@@ -1796,8 +1802,7 @@ textarea {
     padding-top: max(0.5rem, env(safe-area-inset-top, 0px)) !important;
   }
 
-  /* Pilule ancrée au bord physique : safe area uniquement en padding (pas en bottom),
-     sinon bande claire sous la barre sur iOS / WebView. */
+  /* Dock mobile — Safari / PWA (pas l’enveloppe native). */
   .dashboard-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
     overflow: visible;
     left: 50%;
@@ -1824,25 +1829,41 @@ textarea {
     border-top: none !important;
   }
 
+  /* Inkflow Pro (Expo / WebView) : capsule flottante, pas collée aux bords latéraux. */
   .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
-    bottom: 0;
-    min-height: 42px;
-    padding-top: 2px;
-    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
-    padding-left: 3px;
-    padding-right: 3px;
-    border-radius: 22px;
+    width: calc(100% - 48px);
+    max-width: 22rem;
+    min-height: 48px;
+    padding-top: 8px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow:
+      0 12px 42px rgba(15, 23, 42, 0.14),
+      0 6px 20px rgba(37, 99, 235, 0.1),
+      0 2px 8px rgba(15, 23, 42, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.65);
   }
+
+  /* Enveloppe native : pas de padding-bottom sur #root (évite double safe area + trou). */
+  body.dashboard-pro-inkflow-native #root,
+  body.dashboard-pro-inkflow-native .app-root {
+    padding-bottom: 0 !important;
+  }
+
   .dashboard-pro-shell .dashboard-pro-mobile-bottom-nav__inner {
     touch-action: manipulation;
     -webkit-overflow-scrolling: touch;
   }
   :root[data-theme='dark'] .dashboard-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
     border-color: rgba(63, 63, 70, 0.9);
-    background: rgba(24, 24, 27, 0.86);
+    background: rgba(24, 24, 27, 0.92);
     box-shadow:
-      0 14px 48px rgba(0, 0, 0, 0.45),
-      0 4px 12px rgba(0, 0, 0, 0.3),
+      0 14px 48px rgba(0, 0, 0, 0.5),
+      0 6px 20px rgba(0, 0, 0, 0.35),
+      0 2px 8px rgba(0, 0, 0, 0.25),
       inset 0 1px 0 rgba(255, 255, 255, 0.07);
   }
 }

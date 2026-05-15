@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User, Building2, Gift, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { GoogleSignInButton } from '../GoogleSignInButton';
+import { AppleSignInButton } from '../AppleSignInButton';
 import { signupSchema } from '../../lib/authValidation';
 import { getAuthErrorMessage } from './LoginForm';
 import { LANDING_TERMS_URL, LANDING_PRIVACY_URL, getPostSignupDashboardPath } from '../../lib/urls';
@@ -37,12 +38,14 @@ export const SignupForm: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [inviteStudioLabel, setInviteStudioLabel] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const { signup, loginWithGoogle, isGoogleAuthEnabled } = useAuth();
+  const { signup, loginWithGoogle, loginWithApple, isGoogleAuthEnabled, isAppleAuthEnabled } =
+    useAuth();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -126,45 +129,76 @@ export const SignupForm: React.FC = () => {
     }
   };
 
-  const oauthBlock = isGoogleAuthEnabled ? (
-    <>
-      <GoogleSignInButton
-        className="border-zinc-300 hover:border-zinc-400 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white dark:hover:bg-zinc-700"
-        onClick={async () => {
-          setError('');
-          setGoogleLoading(true);
-          try {
-            try {
-              sessionStorage.setItem(
-                REDIRECT_AFTER_LOGIN_KEY,
-                getPostSignupDashboardPath(window.location.search)
-              );
-            } catch {
-              /* ignore */
-            }
-            markJustSignedUp();
-            await loginWithGoogle();
-          } catch (err) {
-            setError(getAuthErrorMessage(err));
-          } finally {
-            setGoogleLoading(false);
-          }
-        }}
-        disabled={loading || googleLoading}
-        label={googleLoading ? 'Redirection…' : "S'inscrire avec Google"}
-      />
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-zinc-200 dark:border-zinc-700" />
+  const oauthBlock =
+    isGoogleAuthEnabled || isAppleAuthEnabled ? (
+      <>
+        <div className="flex flex-col gap-2">
+          {isGoogleAuthEnabled && (
+            <GoogleSignInButton
+              className="border-zinc-300 hover:border-zinc-400 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white dark:hover:bg-zinc-700"
+              onClick={async () => {
+                setError('');
+                setGoogleLoading(true);
+                try {
+                  try {
+                    sessionStorage.setItem(
+                      REDIRECT_AFTER_LOGIN_KEY,
+                      getPostSignupDashboardPath(window.location.search)
+                    );
+                  } catch {
+                    /* ignore */
+                  }
+                  markJustSignedUp();
+                  await loginWithGoogle();
+                } catch (err) {
+                  setError(getAuthErrorMessage(err));
+                } finally {
+                  setGoogleLoading(false);
+                }
+              }}
+              disabled={loading || googleLoading || appleLoading}
+              label={googleLoading ? 'Redirection…' : "S'inscrire avec Google"}
+            />
+          )}
+          {isAppleAuthEnabled && (
+            <AppleSignInButton
+              onClick={async () => {
+                setError('');
+                setAppleLoading(true);
+                try {
+                  try {
+                    sessionStorage.setItem(
+                      REDIRECT_AFTER_LOGIN_KEY,
+                      getPostSignupDashboardPath(window.location.search)
+                    );
+                  } catch {
+                    /* ignore */
+                  }
+                  markJustSignedUp();
+                  await loginWithApple();
+                } catch (err) {
+                  setError(getAuthErrorMessage(err));
+                } finally {
+                  setAppleLoading(false);
+                }
+              }}
+              disabled={loading || googleLoading || appleLoading}
+              label={appleLoading ? 'Redirection…' : "S'inscrire avec Apple"}
+            />
+          )}
         </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-white dark:bg-black text-zinc-500 dark:text-zinc-400">
-            ou avec votre e-mail
-          </span>
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-zinc-200 dark:border-zinc-700" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-4 bg-white dark:bg-black text-zinc-500 dark:text-zinc-400">
+              ou avec votre e-mail
+            </span>
+          </div>
         </div>
-      </div>
-    </>
-  ) : null;
+      </>
+    ) : null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">

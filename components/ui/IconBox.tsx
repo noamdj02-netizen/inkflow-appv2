@@ -8,6 +8,7 @@ import type { LucideIcon } from 'lucide-react';
 export type IconBoxVariant =
   | 'surface'
   | 'inverse'
+  | 'primary'
   | 'purple'
   | 'green'
   | 'blue'
@@ -20,6 +21,8 @@ const variantClass: Record<IconBoxVariant, string> = {
   surface:
     'bg-zinc-100 dark:bg-zinc-800/90 border border-zinc-200/90 dark:border-zinc-700/80 text-zinc-600 dark:text-zinc-300',
   inverse: 'bg-zinc-800 border border-zinc-700/60 text-zinc-200',
+  primary:
+    'bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 text-primary',
   purple:
     'bg-purple-50 dark:bg-purple-500/12 border border-purple-200/70 dark:border-purple-500/25 text-purple-600 dark:text-purple-400',
   green:

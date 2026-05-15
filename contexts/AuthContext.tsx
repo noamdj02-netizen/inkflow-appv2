@@ -19,6 +19,7 @@ import { useSupabaseEnabled } from '../hooks/useSupabaseEnabled';
 import { DEMO_ACCOUNT_EMAIL } from '../data/demoData';
 import { isInkflowInternalStaffEmail } from '../lib/inkflowInternalStaff';
 import { resetPosthogIdentity } from '../lib/analytics/posthogInit';
+import { isAppleSignInEnabled } from '../lib/appleAuthFeature';
 
 /** sessionStorage : session fermée faute d’e-mail confirmé (garde-fou côté app). */
 export const INKFLOW_EMAIL_UNVERIFIED_KEY = 'inkflow_email_unverified';
@@ -90,6 +91,7 @@ interface AuthContextType {
   authLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  loginWithApple: () => Promise<void>;
   signup: (
     email: string,
     password: string,
@@ -104,6 +106,7 @@ interface AuthContextType {
   updateUser: (updates: Partial<User>) => void;
   isAuthenticated: boolean;
   isGoogleAuthEnabled: boolean;
+  isAppleAuthEnabled: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -260,6 +263,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo },
+    });
+    if (error) throw new Error(error.message);
+  }, [isSupabaseAuthEnabled]);
+
+  const loginWithApple = useCallback(async () => {
+    if (!isSupabaseAuthEnabled || !isAppleSignInEnabled()) return;
+    const redirectTo = getAuthCallbackRedirectTo();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo,
+        /** Préfère l’UI Apple en français quand supporté */
+        queryParams: { locale: 'fr_FR' },
+      },
     });
     if (error) throw new Error(error.message);
   }, [isSupabaseAuthEnabled]);
@@ -450,18 +467,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       authLoading,
       login,
       loginWithGoogle,
+      loginWithApple,
       signup,
       resendSignupConfirmation,
       logout,
       updateUser,
       isAuthenticated: !!user,
       isGoogleAuthEnabled: isSupabaseAuthEnabled,
+      isAppleAuthEnabled: isSupabaseAuthEnabled && isAppleSignInEnabled(),
     }),
     [
       user,
       authLoading,
       login,
       loginWithGoogle,
+      loginWithApple,
       signup,
       resendSignupConfirmation,
       logout,

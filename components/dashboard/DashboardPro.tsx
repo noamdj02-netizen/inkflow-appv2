@@ -75,17 +75,7 @@ import { useBreakpointMd } from '../../hooks/useMediaQuery';
 import { Modal } from '../ui/Modal';
 import { LazyImageCropModal } from '../ui/lazyImageCropModal';
 import { ImageCropModalSuspenseFallback } from '../ui/skeleton';
-import { CareSheetsSettings } from './CareSheetsSettings';
-import { PaymentsSettings } from './PaymentsSettings';
-import { FinanceDisplaySettings } from './FinanceDisplaySettings';
-import { BillingSettings } from './BillingSettings';
 import { PaywallView } from './PaywallView';
-import { AvailabilitySettings } from '../settings/AvailabilitySettings';
-import { VitrineSettings } from '../settings/VitrineSettings';
-import { SlugSettings } from '../settings/SlugSettings';
-import { GeoSettings } from '../settings/GeoSettings';
-import { InstagramConnect } from '../settings/InstagramConnect';
-import { PushNotificationsSettings } from '../settings/PushNotificationsSettings';
 import { VitrineLinkButton } from './VitrineLinkButton';
 import { useStudioPrivacy } from '../../contexts/StudioPrivacyContext';
 import { hapticTabChange } from '../../lib/haptics';
@@ -93,8 +83,6 @@ import { shouldShowWelcomeFlow } from '@/lib/shouldShowWelcomeFlow';
 import { StudioCommandPalette } from './StudioCommandPalette';
 import FloatingActionMenu, { type FloatingActionMenuOption } from './FloatingActionMenu';
 import { BadgeNotification } from '@/components/ui/BadgeNotification';
-import { ModulesSettings } from './ModulesSettings';
-import { StudioDataExportCard } from './StudioDataExportCard';
 import { InkflowHelpDrawer, type InkflowHelpContext } from './InkflowHelpDrawer';
 import type { StudioDashboardPreferences } from '../../types/studioPreferences';
 import { DEFAULT_STUDIO_DASHBOARD_PREFERENCES } from '../../types/studioPreferences';
@@ -112,6 +100,77 @@ import {
   trackOnboardingFunnel,
   trackNorthStarFunnelStep,
 } from '../../lib/analytics/capture';
+import type { LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
+import { AddWidgetModal } from './DashboardWidgets';
+import { useDashboardWidgets } from '../../hooks/useDashboardWidgets';
+import { DashboardTabHero, type DashboardOverviewHeroMeta } from './DashboardTabHero';
+import { ThemeToggle } from '../ThemeToggle';
+import {
+  Appointment,
+  FlashDesign,
+  BookingFormData,
+  WaitlistEntry,
+  ArtistAccount,
+  LoyaltyEntry,
+  MessageThread,
+  type SubscriptionPlan,
+} from '../../types';
+import type { ClientPreviewData } from './ClientPreviewPanel';
+import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
+import { DashboardTabErrorBoundary } from './DashboardTabErrorBoundary';
+import { PendingCriticalWritesBanner } from './PendingCriticalWritesBanner';
+import { isInkflowProShellClient } from '../../lib/nativeWebShell';
+import { isJustSignedUp } from '../../lib/welcomeStorage';
+import { supabase } from '../../lib/supabase';
+import { pickLinkedAppointmentForProjectRequest } from '../../lib/linkedAppointmentFromContext';
+import {
+  isSyntheticClientPreviewAppointmentId,
+  messageThreadIdFromSyntheticPreviewAppointmentId,
+  syntheticAppointmentFromBooking,
+  syntheticAppointmentFromProjectRequest,
+  type ClientFicheDemandeSource,
+} from '../../lib/clientPreviewFromDemande';
+import {
+  getWaitlistFromSupabase,
+  addWaitlistEntryToSupabase,
+  updateWaitlistStatusInSupabase,
+  deleteWaitlistEntryFromSupabase,
+  ensureStudio,
+  getDashboardPreferencesFromSupabase,
+  fetchLoyaltyEntriesFromSupabase,
+  fetchPointsLoyaltySettingsFromSupabase,
+  syncLoyaltyEntriesToSupabase,
+  savePointsLoyaltySettingsToSupabase,
+} from '../../lib/supabaseDashboard';
+import { syncArtistAccountsToSupabase } from '../../lib/inkflowArtistsSync';
+import {
+  fetchArtistAccountsForStudio,
+  upsertArtistAccountsToSupabase,
+} from '../../lib/inkflowArtistAccountsDb';
+import { sendCollaboratorInviteEmail } from '../../lib/collaboratorInvite';
+import {
+  syncStudioGoogleReviewsCache,
+  initiateGoogleBusinessAuth,
+  disconnectGoogleBusiness,
+  listGoogleBusinessLocations,
+  saveGoogleBusinessLocation,
+} from '../../lib/googlePlaces';
+import { createSubscription, syncStripeConnectStatus } from '../../lib/stripeClient';
+import { getSubscription } from '../../lib/subscriptionGuard';
+import { getPlanLimit } from '../../lib/subscriptionPlans';
+import { useToast } from '../../contexts/ToastContext';
+import { useTheme } from 'next-themes';
+import {
+  getVitrineSlug,
+  getVitrineDataAsync,
+  saveVitrineDataAsync,
+} from '../../lib/vitrineStorage';
+import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
+import { isGoogleBusinessOAuthUiEnabled } from '../../lib/googleBusinessOAuth';
+import { getVitrineShareUrl } from '../../lib/urls';
+import { safeJsonParse } from '../../lib/utils';
+import { completeGoogleAuth } from '../../lib/googleCalendar';
+import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
 const FinanceDashboard = lazy(() =>
   import('./FinanceDashboard').then((m) => ({ default: m.FinanceDashboard }))
@@ -186,79 +245,50 @@ const LazyEtablissementPage = lazy(() =>
 const LazySessionCloseoutSheet = lazy(() =>
   import('./SessionCloseoutSheet').then((m) => ({ default: m.SessionCloseoutSheet }))
 );
-import type { LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
-import { AddWidgetModal } from './DashboardWidgets';
-import { useDashboardWidgets } from '../../hooks/useDashboardWidgets';
-import { DashboardTabHero, type DashboardOverviewHeroMeta } from './DashboardTabHero';
-import { ThemeToggle } from '../ThemeToggle';
-import { ConsentFormEditor } from '../consent/ConsentFormEditor';
-import { CalendarSettings } from './CalendarSettings';
-import {
-  Appointment,
-  FlashDesign,
-  BookingFormData,
-  WaitlistEntry,
-  ArtistAccount,
-  LoyaltyEntry,
-  MessageThread,
-  type SubscriptionPlan,
-} from '../../types';
-import type { ClientPreviewData } from './ClientPreviewPanel';
-import { DashboardLoadingSkeleton } from '../common/LoadingSkeleton';
-import { DashboardTabErrorBoundary } from './DashboardTabErrorBoundary';
-import { PendingCriticalWritesBanner } from './PendingCriticalWritesBanner';
-import { isInkflowNativeShellUserAgent } from '../../lib/nativeWebShell';
-import { isJustSignedUp } from '../../lib/welcomeStorage';
-import { supabase } from '../../lib/supabase';
-import { pickLinkedAppointmentForProjectRequest } from '../../lib/linkedAppointmentFromContext';
-import {
-  isSyntheticClientPreviewAppointmentId,
-  messageThreadIdFromSyntheticPreviewAppointmentId,
-  syntheticAppointmentFromBooking,
-  syntheticAppointmentFromProjectRequest,
-  type ClientFicheDemandeSource,
-} from '../../lib/clientPreviewFromDemande';
-import {
-  getWaitlistFromSupabase,
-  addWaitlistEntryToSupabase,
-  updateWaitlistStatusInSupabase,
-  deleteWaitlistEntryFromSupabase,
-  ensureStudio,
-  getDashboardPreferencesFromSupabase,
-  fetchLoyaltyEntriesFromSupabase,
-  fetchPointsLoyaltySettingsFromSupabase,
-  syncLoyaltyEntriesToSupabase,
-  savePointsLoyaltySettingsToSupabase,
-} from '../../lib/supabaseDashboard';
-import { syncArtistAccountsToSupabase } from '../../lib/inkflowArtistsSync';
-import {
-  fetchArtistAccountsForStudio,
-  upsertArtistAccountsToSupabase,
-} from '../../lib/inkflowArtistAccountsDb';
-import { sendCollaboratorInviteEmail } from '../../lib/collaboratorInvite';
-import {
-  syncStudioGoogleReviewsCache,
-  initiateGoogleBusinessAuth,
-  disconnectGoogleBusiness,
-  listGoogleBusinessLocations,
-  saveGoogleBusinessLocation,
-} from '../../lib/googlePlaces';
-import { createSubscription, syncStripeConnectStatus } from '../../lib/stripeClient';
-import { getSubscription } from '../../lib/subscriptionGuard';
-import { getPlanLimit } from '../../lib/subscriptionPlans';
-import { useToast } from '../../contexts/ToastContext';
-import { useTheme } from 'next-themes';
-import {
-  getVitrineSlug,
-  getVitrineDataAsync,
-  saveVitrineDataAsync,
-} from '../../lib/vitrineStorage';
-import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
-import { isGoogleBusinessOAuthUiEnabled } from '../../lib/googleBusinessOAuth';
-import { getVitrineShareUrl } from '../../lib/urls';
-import { safeJsonParse } from '../../lib/utils';
-import { completeGoogleAuth } from '../../lib/googleCalendar';
-import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
+const LazyCareSheetsSettings = lazy(() =>
+  import('./CareSheetsSettings').then((m) => ({ default: m.CareSheetsSettings }))
+);
+const LazyPaymentsSettings = lazy(() =>
+  import('./PaymentsSettings').then((m) => ({ default: m.PaymentsSettings }))
+);
+const LazyFinanceDisplaySettings = lazy(() =>
+  import('./FinanceDisplaySettings').then((m) => ({ default: m.FinanceDisplaySettings }))
+);
+const LazyBillingSettings = lazy(() =>
+  import('./BillingSettings').then((m) => ({ default: m.BillingSettings }))
+);
+const LazyAvailabilitySettings = lazy(() =>
+  import('../settings/AvailabilitySettings').then((m) => ({ default: m.AvailabilitySettings }))
+);
+const LazyVitrineSettings = lazy(() =>
+  import('../settings/VitrineSettings').then((m) => ({ default: m.VitrineSettings }))
+);
+const LazySlugSettings = lazy(() =>
+  import('../settings/SlugSettings').then((m) => ({ default: m.SlugSettings }))
+);
+const LazyGeoSettings = lazy(() =>
+  import('../settings/GeoSettings').then((m) => ({ default: m.GeoSettings }))
+);
+const LazyInstagramConnect = lazy(() =>
+  import('../settings/InstagramConnect').then((m) => ({ default: m.InstagramConnect }))
+);
+const LazyPushNotificationsSettings = lazy(() =>
+  import('../settings/PushNotificationsSettings').then((m) => ({
+    default: m.PushNotificationsSettings,
+  }))
+);
+const LazyModulesSettings = lazy(() =>
+  import('./ModulesSettings').then((m) => ({ default: m.ModulesSettings }))
+);
+const LazyStudioDataExportCard = lazy(() =>
+  import('./StudioDataExportCard').then((m) => ({ default: m.StudioDataExportCard }))
+);
+const LazyConsentFormEditor = lazy(() =>
+  import('../consent/ConsentFormEditor').then((m) => ({ default: m.ConsentFormEditor }))
+);
+const LazyCalendarSettings = lazy(() =>
+  import('./CalendarSettings').then((m) => ({ default: m.CalendarSettings }))
+);
 
 type TabId =
   | 'overview'
@@ -540,11 +570,20 @@ export const DashboardPro: React.FC = () => {
   /** Menu compact header (aide + thème), mobile uniquement (max-sm) */
   const [headerMoreMenuOpen, setHeaderMoreMenuOpen] = useState(false);
   /** WebView Inkflow Pro (Expo) — UA `InkflowProShell` : en-tête accueil plus compact que le mobile navigateur */
-  const [isInkflowProShell, setIsInkflowProShell] = useState(false);
+  const [isInkflowProShell, setIsInkflowProShell] = useState(() =>
+    typeof window !== 'undefined' ? isInkflowProShellClient() : false
+  );
   useLayoutEffect(() => {
-    if (typeof navigator === 'undefined') return;
-    setIsInkflowProShell(isInkflowNativeShellUserAgent(navigator.userAgent));
+    if (typeof window === 'undefined') return;
+    setIsInkflowProShell(isInkflowProShellClient());
   }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (!isInkflowProShell) return;
+    document.body.classList.add('dashboard-pro-inkflow-native');
+    return () => document.body.classList.remove('dashboard-pro-inkflow-native');
+  }, [isInkflowProShell]);
   const { privacyMode, togglePrivacyMode } = useStudioPrivacy();
 
   const helpContext: InkflowHelpContext = useMemo(() => {
@@ -3447,7 +3486,7 @@ export const DashboardPro: React.FC = () => {
             <div
               className={`dashboard-pro-sync-strip bg-zinc-100/90 dark:bg-zinc-900/50 border-b border-zinc-200/80 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 flex flex-wrap items-center justify-between flex-shrink-0 sm:text-xs ${
                 isInkflowProShell
-                  ? 'px-3 py-0.5 text-[10px] gap-1.5 sm:px-4 sm:py-1 sm:gap-2'
+                  ? 'px-2.5 py-0 text-[10px] gap-1 sm:px-4 sm:py-0.5 sm:gap-2'
                   : 'px-4 py-1 text-[11px] gap-2 sm:py-1.5'
               }`}
             >
@@ -3475,9 +3514,11 @@ export const DashboardPro: React.FC = () => {
             className={`app-shell-header safe-top sm:px-5 md:px-6 flex items-center justify-between transition-all duration-300 shrink-0 overflow-visible ${
               activeTab === 'overview'
                 ? isInkflowProShell
-                  ? 'px-3 gap-1 sm:gap-4 min-h-0 max-sm:py-1 sm:min-h-0 h-10 sm:h-14 border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 shadow-[0_1px_0_0_rgba(15,23,42,0.06)] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
+                  ? 'px-2.5 gap-1 sm:gap-4 min-h-0 max-sm:py-0.5 sm:min-h-0 h-9 sm:h-14 border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 shadow-[0_1px_0_0_rgba(15,23,42,0.06)] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
                   : 'px-4 gap-2 sm:gap-4 min-h-[48px] sm:min-h-0 h-11 sm:h-14 border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 shadow-[0_1px_0_0_rgba(15,23,42,0.06)] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
-                : 'dashboard-pro-header-dark px-3 sm:px-5 md:px-6 gap-2 sm:gap-4 h-14 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
+                : isInkflowProShell
+                  ? 'dashboard-pro-header-dark px-2.5 sm:px-5 md:px-6 gap-1.5 sm:gap-4 h-11 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
+                  : 'dashboard-pro-header-dark px-3 sm:px-5 md:px-6 gap-2 sm:gap-4 h-14 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
             }`}
           >
             <div
@@ -3645,7 +3686,7 @@ export const DashboardPro: React.FC = () => {
                       className="fixed right-3 z-[55] w-[min(calc(100vw-1.5rem),17rem)] rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-xl py-2 sm:hidden"
                       style={{
                         top: isInkflowProShell
-                          ? 'max(calc(env(safe-area-inset-top, 0px) + 2.75rem), 3.25rem)'
+                          ? 'max(calc(env(safe-area-inset-top, 0px) + 2.4rem), 2.9rem)'
                           : 'max(calc(env(safe-area-inset-top, 0px) + 3.5rem), 3.75rem)',
                       }}
                       role="menu"
@@ -4931,11 +4972,13 @@ export const DashboardPro: React.FC = () => {
                                         />
                                       )}
                                       {studioId && studioSlug && (
-                                        <SlugSettings
-                                          studioId={studioId}
-                                          currentSlug={studioSlug}
-                                          onSlugUpdated={refreshStudioSlug}
-                                        />
+                                        <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                          <LazySlugSettings
+                                            studioId={studioId}
+                                            currentSlug={studioSlug}
+                                            onSlugUpdated={refreshStudioSlug}
+                                          />
+                                        </Suspense>
                                       )}
                                     </div>
                                   </section>
@@ -4961,43 +5004,45 @@ export const DashboardPro: React.FC = () => {
                                       </p>
                                     </div>
                                     {studioId && (
-                                      <GeoSettings
-                                        studioId={studioId}
-                                        studioSlug={studioSlug ?? ''}
-                                        studioAddress={
-                                          vitrineData?.address?.split('\n')[0]?.trim() ?? ''
-                                        }
-                                        onGeoAddressSynced={async (nextAddress) => {
-                                          if (
-                                            !user?.email ||
-                                            !user?.studioName ||
-                                            !nextAddress.trim()
-                                          )
-                                            return;
-                                          const slug =
-                                            studioSlug != null && studioSlug !== ''
-                                              ? studioSlug
-                                              : getVitrineSlug(user.studioName);
-                                          const base = vitrineData ?? defaultVitrineData(slug);
-                                          const newData: VitrineData = {
-                                            ...base,
-                                            address: nextAddress.trim(),
-                                          };
-                                          try {
-                                            await saveVitrineDataAsync(
-                                              slug,
-                                              newData,
-                                              user.email,
-                                              user.studioName
-                                            );
-                                            setVitrineData(newData);
-                                          } catch {
-                                            toast.warning(
-                                              'Position enregistrée. La mise à jour de l’adresse sur la vitrine a échoué — réessayez depuis l’onglet Page vitrine.'
-                                            );
+                                      <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                        <LazyGeoSettings
+                                          studioId={studioId}
+                                          studioSlug={studioSlug ?? ''}
+                                          studioAddress={
+                                            vitrineData?.address?.split('\n')[0]?.trim() ?? ''
                                           }
-                                        }}
-                                      />
+                                          onGeoAddressSynced={async (nextAddress) => {
+                                            if (
+                                              !user?.email ||
+                                              !user?.studioName ||
+                                              !nextAddress.trim()
+                                            )
+                                              return;
+                                            const slug =
+                                              studioSlug != null && studioSlug !== ''
+                                                ? studioSlug
+                                                : getVitrineSlug(user.studioName);
+                                            const base = vitrineData ?? defaultVitrineData(slug);
+                                            const newData: VitrineData = {
+                                              ...base,
+                                              address: nextAddress.trim(),
+                                            };
+                                            try {
+                                              await saveVitrineDataAsync(
+                                                slug,
+                                                newData,
+                                                user.email,
+                                                user.studioName
+                                              );
+                                              setVitrineData(newData);
+                                            } catch {
+                                              toast.warning(
+                                                'Position enregistrée. La mise à jour de l’adresse sur la vitrine a échoué — réessayez depuis l’onglet Page vitrine.'
+                                              );
+                                            }
+                                          }}
+                                        />
+                                      </Suspense>
                                     )}
                                   </section>
 
@@ -5017,12 +5062,14 @@ export const DashboardPro: React.FC = () => {
                                           Fichiers CSV pour sauvegarde ou comptabilité.
                                         </p>
                                       </div>
-                                      <StudioDataExportCard
-                                        studioId={studioId}
-                                        studioSlug={studioSlug}
-                                        clients={clients}
-                                        appointments={appointments}
-                                      />
+                                      <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                        <LazyStudioDataExportCard
+                                          studioId={studioId}
+                                          studioSlug={studioSlug}
+                                          clients={clients}
+                                          appointments={appointments}
+                                        />
+                                      </Suspense>
                                     </section>
                                   )}
 
@@ -5051,18 +5098,22 @@ export const DashboardPro: React.FC = () => {
                                         </p>
                                       </div>
                                       <div className="p-6">
-                                        <PushNotificationsSettings studioId={studioId} />
+                                        <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                          <LazyPushNotificationsSettings studioId={studioId} />
+                                        </Suspense>
                                       </div>
                                     </div>
                                   </section>
                                 </div>
                               )}
                               {settingsTab === 'modules' && studioId && (
-                                <ModulesSettings
-                                  studioId={studioId}
-                                  value={dashboardPreferences}
-                                  onChange={setDashboardPreferences}
-                                />
+                                <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                  <LazyModulesSettings
+                                    studioId={studioId}
+                                    value={dashboardPreferences}
+                                    onChange={setDashboardPreferences}
+                                  />
+                                </Suspense>
                               )}
                               {settingsTab === 'modules' && !studioId && (
                                 <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 max-w-xl">
@@ -5072,47 +5123,59 @@ export const DashboardPro: React.FC = () => {
                                 </div>
                               )}
                               {settingsTab === 'payments' && (
-                                <PaymentsSettings
-                                  studioId={studioId}
-                                  userEmail={user?.email}
-                                  studioName={user?.studioName}
-                                />
+                                <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                  <LazyPaymentsSettings
+                                    studioId={studioId}
+                                    userEmail={user?.email}
+                                    studioName={user?.studioName}
+                                  />
+                                </Suspense>
                               )}
                               {settingsTab === 'finance_display' && (
-                                <FinanceDisplaySettings
-                                  studioId={studioId}
-                                  useSupabase={useSupabase ?? false}
-                                />
+                                <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                  <LazyFinanceDisplaySettings
+                                    studioId={studioId}
+                                    useSupabase={useSupabase ?? false}
+                                  />
+                                </Suspense>
                               )}
                               {settingsTab === 'billing' && (
-                                <BillingSettings
-                                  studioId={studioId}
-                                  userEmail={user?.email || ''}
-                                  trialEndsAt={trialEndsAt}
-                                  studioSubscriptionStatus={subscriptionStatus}
-                                  onStudioSubscriptionRefresh={refreshStudioSubscription}
-                                />
+                                <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                  <LazyBillingSettings
+                                    studioId={studioId}
+                                    userEmail={user?.email || ''}
+                                    trialEndsAt={trialEndsAt}
+                                    studioSubscriptionStatus={subscriptionStatus}
+                                    onStudioSubscriptionRefresh={refreshStudioSubscription}
+                                  />
+                                </Suspense>
                               )}
                               {settingsTab === 'care' && (
-                                <CareSheetsSettings
-                                  userEmail={user?.email}
-                                  studioName={user?.studioName}
-                                />
+                                <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                  <LazyCareSheetsSettings
+                                    userEmail={user?.email}
+                                    studioName={user?.studioName}
+                                  />
+                                </Suspense>
                               )}
                               {settingsTab === 'consent' && (
-                                <ConsentFormEditor
-                                  templates={consentTemplates}
-                                  onSave={setConsentTemplates}
-                                />
+                                <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                  <LazyConsentFormEditor
+                                    templates={consentTemplates}
+                                    onSave={setConsentTemplates}
+                                  />
+                                </Suspense>
                               )}
                               {settingsTab === 'availability' && studioId && (
-                                <AvailabilitySettings
-                                  studioId={studioId}
-                                  onSave={() => {
-                                    setAvailabilitySetupComplete(true);
-                                    toast.success('Disponibilités enregistrées');
-                                  }}
-                                />
+                                <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                  <LazyAvailabilitySettings
+                                    studioId={studioId}
+                                    onSave={() => {
+                                      setAvailabilitySetupComplete(true);
+                                      toast.success('Disponibilités enregistrées');
+                                    }}
+                                  />
+                                </Suspense>
                               )}
                               {settingsTab === 'availability' && !studioId && (
                                 <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 max-w-xl">
@@ -5248,56 +5311,62 @@ export const DashboardPro: React.FC = () => {
                                 </Suspense>
                               )}
                               {settingsTab === 'calendar' && (
-                                <CalendarSettings
-                                  studioId={studioId || ''}
-                                  appointments={appointments}
-                                  onToast={(msg, type) =>
-                                    type === 'success' ? toast.success(msg) : toast.error(msg)
-                                  }
-                                />
+                                <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                  <LazyCalendarSettings
+                                    studioId={studioId || ''}
+                                    appointments={appointments}
+                                    onToast={(msg, type) =>
+                                      type === 'success' ? toast.success(msg) : toast.error(msg)
+                                    }
+                                  />
+                                </Suspense>
                               )}
                               {settingsTab === 'vitrine' &&
                                 ((user?.studioName || generalStudioName)?.trim() ? (
-                                  <VitrineSettings
-                                    studioName={(
-                                      user?.studioName ||
-                                      generalStudioName ||
-                                      ''
-                                    ).trim()}
-                                    userEmail={user.email}
-                                    studioSlug={studioSlug}
-                                    studioId={studioId}
-                                    googleBusinessConnected={googleBusinessConnected}
-                                    googleBusinessLocationName={googleBusinessLocationName}
-                                    googleBusinessNeedsLocationSelection={
-                                      googleBusinessNeedsLocationSelection
-                                    }
-                                    googleBusinessLocations={googleBusinessLocations}
-                                    loadingGoogleBusinessLocations={loadingGoogleBusinessLocations}
-                                    googleBusinessLocationsHint={googleBusinessLocationsHint}
-                                    onConnectGoogleBusiness={
-                                      studioId && useSupabase && googleBusinessOAuthUi
-                                        ? handleConnectGoogleBusiness
-                                        : undefined
-                                    }
-                                    onDisconnectGoogleBusiness={
-                                      studioId &&
-                                      useSupabase &&
-                                      (googleBusinessOAuthUi || googleBusinessConnected)
-                                        ? handleDisconnectGoogleBusiness
-                                        : undefined
-                                    }
-                                    onSelectGoogleBusinessLocation={
-                                      studioId && useSupabase && googleBusinessOAuthUi
-                                        ? handleSelectGoogleBusinessLocation
-                                        : undefined
-                                    }
-                                    onLoadGoogleBusinessLocations={
-                                      studioId && useSupabase && googleBusinessOAuthUi
-                                        ? loadGoogleBusinessLocations
-                                        : undefined
-                                    }
-                                  />
+                                  <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                    <LazyVitrineSettings
+                                      studioName={(
+                                        user?.studioName ||
+                                        generalStudioName ||
+                                        ''
+                                      ).trim()}
+                                      userEmail={user.email}
+                                      studioSlug={studioSlug}
+                                      studioId={studioId}
+                                      googleBusinessConnected={googleBusinessConnected}
+                                      googleBusinessLocationName={googleBusinessLocationName}
+                                      googleBusinessNeedsLocationSelection={
+                                        googleBusinessNeedsLocationSelection
+                                      }
+                                      googleBusinessLocations={googleBusinessLocations}
+                                      loadingGoogleBusinessLocations={
+                                        loadingGoogleBusinessLocations
+                                      }
+                                      googleBusinessLocationsHint={googleBusinessLocationsHint}
+                                      onConnectGoogleBusiness={
+                                        studioId && useSupabase && googleBusinessOAuthUi
+                                          ? handleConnectGoogleBusiness
+                                          : undefined
+                                      }
+                                      onDisconnectGoogleBusiness={
+                                        studioId &&
+                                        useSupabase &&
+                                        (googleBusinessOAuthUi || googleBusinessConnected)
+                                          ? handleDisconnectGoogleBusiness
+                                          : undefined
+                                      }
+                                      onSelectGoogleBusinessLocation={
+                                        studioId && useSupabase && googleBusinessOAuthUi
+                                          ? handleSelectGoogleBusinessLocation
+                                          : undefined
+                                      }
+                                      onLoadGoogleBusinessLocations={
+                                        studioId && useSupabase && googleBusinessOAuthUi
+                                          ? loadGoogleBusinessLocations
+                                          : undefined
+                                      }
+                                    />
+                                  </Suspense>
                                 ) : (
                                   <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 max-w-xl">
                                     <p className="text-sm text-zinc-700 dark:text-zinc-300">
@@ -5307,7 +5376,9 @@ export const DashboardPro: React.FC = () => {
                                   </div>
                                 ))}
                               {settingsTab === 'messagerie' && studioId && (
-                                <InstagramConnect studioId={studioId} />
+                                <Suspense fallback={<DashboardLoadingSkeleton />}>
+                                  <LazyInstagramConnect studioId={studioId} />
+                                </Suspense>
                               )}
                             </div>
                           </DashboardTabErrorBoundary>

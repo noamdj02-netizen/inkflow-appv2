@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertCircle, Loader2, Check, Eye, EyeOff } from 'lucide-react';
 import { useAuth, REDIRECT_AFTER_LOGIN_KEY } from '../../contexts/AuthContext';
 import { GoogleSignInButton } from '../GoogleSignInButton';
+import { AppleSignInButton } from '../AppleSignInButton';
 import { loginSchema } from '../../lib/authValidation';
 import { resolvePostLoginPath } from '../../lib/postLoginRedirect';
 import { getPostSignupDashboardPath } from '../../lib/urls';
@@ -52,9 +53,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const { login, loginWithGoogle, isGoogleAuthEnabled } = useAuth();
+  const { login, loginWithGoogle, loginWithApple, isGoogleAuthEnabled, isAppleAuthEnabled } =
+    useAuth();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -250,8 +253,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
         )}
       </button>
 
-      {/* ── Google ── */}
-      {isGoogleAuthEnabled && (
+      {/* ── Google / Apple ── */}
+      {(isGoogleAuthEnabled || isAppleAuthEnabled) && (
         <>
           <div className="relative my-2">
             <div className="absolute inset-0 flex items-center">
@@ -263,31 +266,60 @@ export const LoginForm: React.FC<LoginFormProps> = ({ prefillEmail, onEmailChang
               </span>
             </div>
           </div>
-
-          <GoogleSignInButton
-            className="min-h-[50px] text-[15px]"
-            onClick={async () => {
-              setError('');
-              setGoogleLoading(true);
-              try {
-                try {
-                  sessionStorage.setItem(
-                    REDIRECT_AFTER_LOGIN_KEY,
-                    getPostSignupDashboardPath(window.location.search)
-                  );
-                } catch {
-                  /* ignore */
-                }
-                await loginWithGoogle();
-              } catch (err) {
-                setError(getAuthErrorMessage(err));
-              } finally {
-                setGoogleLoading(false);
-              }
-            }}
-            disabled={loading || googleLoading}
-            label={googleLoading ? 'Redirection…' : 'Se connecter avec Google'}
-          />
+          <div className="flex flex-col gap-2">
+            {isGoogleAuthEnabled && (
+              <GoogleSignInButton
+                className="min-h-[50px] text-[15px]"
+                onClick={async () => {
+                  setError('');
+                  setGoogleLoading(true);
+                  try {
+                    try {
+                      sessionStorage.setItem(
+                        REDIRECT_AFTER_LOGIN_KEY,
+                        getPostSignupDashboardPath(window.location.search)
+                      );
+                    } catch {
+                      /* ignore */
+                    }
+                    await loginWithGoogle();
+                  } catch (err) {
+                    setError(getAuthErrorMessage(err));
+                  } finally {
+                    setGoogleLoading(false);
+                  }
+                }}
+                disabled={loading || googleLoading || appleLoading}
+                label={googleLoading ? 'Redirection…' : 'Se connecter avec Google'}
+              />
+            )}
+            {isAppleAuthEnabled && (
+              <AppleSignInButton
+                className="min-h-[50px] text-[15px]"
+                onClick={async () => {
+                  setError('');
+                  setAppleLoading(true);
+                  try {
+                    try {
+                      sessionStorage.setItem(
+                        REDIRECT_AFTER_LOGIN_KEY,
+                        getPostSignupDashboardPath(window.location.search)
+                      );
+                    } catch {
+                      /* ignore */
+                    }
+                    await loginWithApple();
+                  } catch (err) {
+                    setError(getAuthErrorMessage(err));
+                  } finally {
+                    setAppleLoading(false);
+                  }
+                }}
+                disabled={loading || googleLoading || appleLoading}
+                label={appleLoading ? 'Redirection…' : 'Se connecter avec Apple'}
+              />
+            )}
+          </div>
         </>
       )}
     </form>

@@ -16,6 +16,7 @@ import {
 import { SEO } from '../../components/SEO';
 import { Logo } from '../../components/Logo';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
+import { AppleSignInButton } from '../../components/AppleSignInButton';
 import { getAuthErrorMessage } from '../../components/auth/LoginForm';
 import { getClientEmailConfirmRedirectTo, getClientPortalOAuthRedirectTo } from '../../lib/urls';
 import { supabase } from '../../lib/supabase';
@@ -23,6 +24,7 @@ import { clientNeedsPassword } from '../../lib/clientAuth';
 import { isClientPortalFullyReady } from '../../lib/clientOnboardingGate';
 import { consumeSupabaseAuthUrlError } from '../../lib/supabaseAuthUrl';
 import { CLIENT_DASHBOARD_THEME } from '../../lib/clientDashboardTheme';
+import { isAppleSignInEnabled } from '../../lib/appleAuthFeature';
 import { pathForClientDashboardTab } from '../../lib/clientDashboardRoutes';
 import { useSupabaseEnabled } from '../../hooks/useSupabaseEnabled';
 import type { User } from '@supabase/supabase-js';
@@ -53,6 +55,7 @@ export const ClientPortalLoginPage: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('boot');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [error, setError] = useState('');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
@@ -160,6 +163,25 @@ export const ClientPortalLoginPage: React.FC = () => {
       setError(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    if (!isSupabaseEnabled || !isAppleSignInEnabled()) return;
+    setAppleLoading(true);
+    setError('');
+    try {
+      const { error: oauthErr } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: getClientPortalOAuthRedirectTo(),
+          queryParams: { locale: 'fr_FR' },
+        },
+      });
+      if (oauthErr) throw oauthErr;
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+      setAppleLoading(false);
     }
   };
 
@@ -471,14 +493,28 @@ export const ClientPortalLoginPage: React.FC = () => {
                   <form onSubmit={handleLogin} className="space-y-3">
                     {isSupabaseEnabled && (
                       <>
-                        <GoogleSignInButton
-                          className="min-h-[50px] text-[15px] active:scale-[0.98] transition-all"
-                          onClick={() => void handleGoogleLogin()}
-                          disabled={loading || googleLoading}
-                          label={
-                            googleLoading ? 'Redirection vers Google…' : 'Se connecter avec Google'
-                          }
-                        />
+                        <div className="flex flex-col gap-2">
+                          <GoogleSignInButton
+                            className="min-h-[50px] text-[15px] active:scale-[0.98] transition-all"
+                            onClick={() => void handleGoogleLogin()}
+                            disabled={loading || googleLoading || appleLoading}
+                            label={
+                              googleLoading
+                                ? 'Redirection vers Google…'
+                                : 'Se connecter avec Google'
+                            }
+                          />
+                          {isAppleSignInEnabled() ? (
+                            <AppleSignInButton
+                              className="min-h-[50px] text-[15px] active:scale-[0.98] transition-all"
+                              onClick={() => void handleAppleLogin()}
+                              disabled={loading || googleLoading || appleLoading}
+                              label={
+                                appleLoading ? 'Redirection vers Apple…' : 'Se connecter avec Apple'
+                              }
+                            />
+                          ) : null}
+                        </div>
                         <div className="relative my-1">
                           <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-zinc-200" />
@@ -502,7 +538,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="toi@exemple.com"
                         required
-                        disabled={googleLoading}
+                        disabled={googleLoading || appleLoading}
                         className={inputClass}
                       />
                     </div>
@@ -516,7 +552,7 @@ export const ClientPortalLoginPage: React.FC = () => {
                         onChange={(e) => setLoginPassword(e.target.value)}
                         placeholder="Mot de passe"
                         required
-                        disabled={googleLoading}
+                        disabled={googleLoading || appleLoading}
                         className={inputClass}
                       />
                     </div>

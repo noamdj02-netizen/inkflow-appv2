@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { isInkflowNativeShellUserAgent } from '../lib/nativeWebShell';
+import { isInkflowProShellClient } from '../lib/nativeWebShell';
 
 interface UseInkflowNativeShellPushBridgeOptions {
   demoMode?: boolean;
@@ -23,7 +23,7 @@ export function useInkflowNativeShellPushBridge(
   useEffect(() => {
     if (demoMode || !studioId) return;
     if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
-    if (!isInkflowNativeShellUserAgent(navigator.userAgent)) return;
+    if (!isInkflowProShellClient()) return;
     const bridge = (
       window as Window & {
         ReactNativeWebView?: { postMessage: (payload: string) => void };

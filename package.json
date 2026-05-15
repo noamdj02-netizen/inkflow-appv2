@@ -129,7 +129,6 @@
     "@commitlint/config-conventional": "^19.8.1",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.51.0",
-    "@react-email/ui": "^6.0.0",
     "@types/canvas-confetti": "^1.9.0",
     "@types/jsbarcode": "^3.11.4",
     "@types/node": "^22.14.0",

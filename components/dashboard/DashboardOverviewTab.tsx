@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
   Inbox,
@@ -72,17 +72,13 @@ import { StudioSetupChecklist } from './StudioSetupChecklist';
 import { BADGES, BUTTONS, KPI_SHELLS, TYPOGRAPHY } from './DashboardOverviewDesignSystem';
 import { IconBox } from '../ui/IconBox';
 import { LANDING_PRICING_URL } from '../../lib/urls';
+import {
+  DASHBOARD_OVERVIEW_HERO_ROTATE_MS,
+  DASHBOARD_OVERVIEW_HERO_TIPS,
+} from '../../lib/dashboardOverviewHeroTips';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardAction, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { supabase } from '../../lib/supabase';
@@ -473,7 +469,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   studioId,
   useSupabase = false,
   recentDeposits = [],
-  overviewHeaderBgUrl: _overviewHeaderBgUrl = null,
+  overviewHeaderBgUrl = null,
   onAvatarClick,
   avatarUploading = false,
   flashDesigns = [],
@@ -535,6 +531,25 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     }),
     [prefersReducedMotion]
   );
+
+  /** Conseils rotatifs — même liste / rythme que le bandeau desktop (`DashboardTabHero`) */
+  const mobileHeroTips = useMemo(
+    () => DASHBOARD_OVERVIEW_HERO_TIPS.filter((line): line is string => Boolean(line?.trim())),
+    []
+  );
+  const [mobileHeroTipIndex, setMobileHeroTipIndex] = useState(0);
+  const mobileHeroTipInterval = prefersReducedMotion
+    ? Math.max(DASHBOARD_OVERVIEW_HERO_ROTATE_MS, 60_000)
+    : Math.min(Math.max(DASHBOARD_OVERVIEW_HERO_ROTATE_MS, 15_000), 30_000);
+
+  useEffect(() => {
+    if (mobileHeroTips.length === 0) return;
+    const n = mobileHeroTips.length;
+    const id = window.setInterval(() => {
+      setMobileHeroTipIndex((i) => (i + 1) % n);
+    }, mobileHeroTipInterval);
+    return () => window.clearInterval(id);
+  }, [mobileHeroTips.length, mobileHeroTipInterval]);
 
   const trialDaysRemaining = useMemo(() => getTrialDaysRemaining(trialEndsAt), [trialEndsAt]);
 
@@ -984,6 +999,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     'text-[14px] min-[400px]:text-[15px] font-medium text-numeric-muted leading-none tabular-nums select-none';
   /** 44×44 pt zone tactile (HIG) */
   const iosKpiIconBtn = BUTTONS.icon;
+  /** Icônes Lucide — une seule teinte (aligné `primary` / thème) */
+  const overviewIcon = 'text-primary';
   /** Métadonnées sous le chiffre — pastille type footnote iOS */
   const iosKpiMetaPill =
     'inline-flex items-center rounded-full bg-zinc-100/95 dark:bg-zinc-800/90 px-2 py-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-300';
@@ -993,9 +1010,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   /** Acomptes « En attente » — ambre */
   const iosKpiMetaPillViolet =
     'inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/20 px-2 py-1 text-[11px] font-medium text-amber-900 dark:text-amber-200';
-  /** Compteur VIP — bleu (lisible sur fond clair, aligné marque) */
+  /** Compteur VIP — aligné `primary` */
   const iosKpiMetaPillAmber =
-    'inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-900 dark:text-blue-200';
+    'inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-medium text-primary dark:bg-primary/20 dark:text-primary';
   /** Pastilles KPI desktop (text-[10px] bold) — cohérents avec le thème zinc du dashboard */
   const kpiPillPending = BADGES.pending;
   const kpiPillNeutral = BADGES.neutral;
@@ -1037,11 +1054,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     aria-label="Finances"
                   >
                     <ArrowUpRight
-                      className={
-                        isMdUp
-                          ? 'w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400'
-                          : 'w-4 h-4 text-zinc-600 dark:text-zinc-400'
-                      }
+                      className={cn(isMdUp ? 'w-3.5 h-3.5' : 'w-4 h-4', overviewIcon)}
                     />
                   </button>
                 </div>
@@ -1139,11 +1152,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     aria-label="Finances"
                   >
                     <ArrowUpRight
-                      className={
-                        isMdUp
-                          ? 'w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400'
-                          : 'w-4 h-4 text-zinc-600 dark:text-zinc-400'
-                      }
+                      className={cn(isMdUp ? 'w-3.5 h-3.5' : 'w-4 h-4', overviewIcon)}
                     />
                   </button>
                 </div>
@@ -1206,11 +1215,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     aria-label="Clients"
                   >
                     <ArrowUpRight
-                      className={
-                        isMdUp
-                          ? 'w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400'
-                          : 'w-4 h-4 text-zinc-600 dark:text-zinc-400'
-                      }
+                      className={cn(isMdUp ? 'w-3.5 h-3.5' : 'w-4 h-4', overviewIcon)}
                     />
                   </button>
                 </div>
@@ -1232,19 +1237,13 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     isMdUp ? (
                       <div className="mt-2 min-h-[24px] flex items-end">
                         <span className={kpiPillVipPill}>
-                          <Star
-                            className="w-3 h-3 text-blue-600 dark:text-blue-300 shrink-0"
-                            aria-hidden
-                          />
+                          <Star className={cn('w-3 h-3 shrink-0', overviewIcon)} aria-hidden />
                           {vipClients} VIP
                         </span>
                       </div>
                     ) : (
                       <p className={`mt-1 ${iosKpiMetaPillAmber}`}>
-                        <Star
-                          className="w-3.5 h-3.5 text-blue-600 dark:text-blue-300 shrink-0"
-                          aria-hidden
-                        />
+                        <Star className={cn('w-3.5 h-3.5 shrink-0', overviewIcon)} aria-hidden />
                         {vipClients} VIP
                       </p>
                     )
@@ -1288,11 +1287,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     aria-label="Agenda"
                   >
                     <ArrowUpRight
-                      className={
-                        isMdUp
-                          ? 'w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400'
-                          : 'w-4 h-4 text-zinc-600 dark:text-zinc-400'
-                      }
+                      className={cn(isMdUp ? 'w-3.5 h-3.5' : 'w-4 h-4', overviewIcon)}
                     />
                   </button>
                 </div>
@@ -1362,92 +1357,192 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             {/* Accueil mobile — référence type CRM (clair, cartes blanches, donut, onglets pilule) */}
             <div className="px-0 pt-0 pb-0">
               <motion.div className="flex flex-col gap-4 sm:gap-3" {...iosSpring(0)}>
-                {/* Hero mobile — Card + Separator + bloc pilotage (shadcn) */}
+                {/* Hero mobile — Card (shadow) → bloc pilotage */}
                 <Card
                   size="sm"
                   className={cn(
                     'gap-0 overflow-hidden rounded-3xl border border-blue-100/90 bg-card py-0 text-card-foreground shadow-[0_20px_50px_-24px_rgba(37,99,235,0.15),0_8px_24px_-12px_rgba(15,23,42,0.06)] ring-0 dark:border-blue-500/25 dark:bg-zinc-900/95 dark:shadow-[0_20px_50px_-24px_rgba(0,0,0,0.5)]'
                   )}
                 >
-                  <CardHeader className="gap-0 border-none px-4 pb-2 pt-4 sm:px-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1 text-left">
-                        <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-blue-600 dark:text-blue-400">
-                          {now.toLocaleDateString('fr-FR', {
-                            weekday: 'short',
-                            day: 'numeric',
-                            month: 'short',
-                          })}
-                        </p>
-                        <h1
-                          id="dashboard-overview-mobile-title"
-                          className="font-display mt-0.5 text-xl font-bold leading-tight tracking-tight text-[#2D3436] dark:text-zinc-100 sm:text-[22px]"
-                        >
-                          {firstName ? `Bonjour ${firstName}` : 'Accueil'}
-                        </h1>
-                        <p className="mt-0.5 font-sans text-[11px] leading-snug text-muted-foreground">
-                          {crmMonthRangeLabel}
-                        </p>
+                  <CardHeader
+                    className={cn(
+                      'relative gap-0 overflow-hidden border-none px-4 pb-2 sm:px-5',
+                      overviewHeaderBgUrl
+                        ? 'min-h-[120px] rounded-t-3xl pt-4 pb-3'
+                        : 'rounded-t-3xl pt-4'
+                    )}
+                  >
+                    {overviewHeaderBgUrl ? (
+                      <img
+                        src={overviewHeaderBgUrl}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="absolute inset-0 z-0 h-full w-full min-h-[120px] object-cover"
+                      />
+                    ) : null}
+                    <div className="relative z-[2] flex flex-col gap-2.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1 text-left">
+                          <p
+                            className={cn(
+                              'text-[9px] font-bold uppercase tracking-[0.14em]',
+                              overviewHeaderBgUrl
+                                ? 'text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]'
+                                : 'text-primary'
+                            )}
+                          >
+                            {now.toLocaleDateString('fr-FR', {
+                              weekday: 'short',
+                              day: 'numeric',
+                              month: 'short',
+                            })}
+                          </p>
+                          <h1
+                            id="dashboard-overview-mobile-title"
+                            className={cn(
+                              'font-display mt-0.5 text-xl font-bold leading-tight tracking-tight sm:text-[22px]',
+                              overviewHeaderBgUrl
+                                ? 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]'
+                                : 'text-[#2D3436] dark:text-zinc-100'
+                            )}
+                          >
+                            {firstName ? `Bonjour ${firstName}` : 'Accueil'}
+                          </h1>
+                          <p
+                            className={cn(
+                              'mt-0.5 font-sans text-[11px] leading-snug',
+                              overviewHeaderBgUrl
+                                ? 'text-white/85 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]'
+                                : 'text-muted-foreground'
+                            )}
+                          >
+                            {crmMonthRangeLabel}
+                          </p>
+                        </div>
+                        <CardAction className="flex shrink-0 flex-row gap-1">
+                          <motion.button
+                            type="button"
+                            onClick={() => setActiveTab('finance')}
+                            whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
+                            className={cn(
+                              'flex size-9 items-center justify-center rounded-xl border text-primary shadow-[0_8px_20px_-10px_rgba(37,99,235,0.25)] ring-1 transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                              overviewHeaderBgUrl
+                                ? 'border-white/35 bg-white/95 ring-black/10 backdrop-blur-sm dark:bg-zinc-900/90 dark:ring-white/15'
+                                : 'border-border bg-card ring-black/[0.03] dark:bg-secondary dark:ring-white/10'
+                            )}
+                            aria-label="Finance"
+                          >
+                            <BarChart3
+                              className={cn('size-3.5 shrink-0', overviewIcon)}
+                              strokeWidth={2}
+                              aria-hidden
+                            />
+                          </motion.button>
+                          <motion.button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (onAvatarClick) onAvatarClick();
+                              else setActiveTab('settings');
+                            }}
+                            disabled={avatarUploading}
+                            whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
+                            className={cn(
+                              'relative size-9 shrink-0 overflow-hidden rounded-xl border shadow-[0_8px_20px_-10px_rgba(37,99,235,0.2)] ring-1 transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98]',
+                              overviewHeaderBgUrl
+                                ? 'border-white/35 bg-white/95 ring-black/10 backdrop-blur-sm dark:bg-zinc-900/90 dark:ring-white/15'
+                                : 'border-border bg-card ring-black/[0.03] dark:bg-secondary dark:ring-white/10'
+                            )}
+                            aria-label={onAvatarClick ? 'Changer la photo de profil' : 'Paramètres'}
+                          >
+                            {user?.avatar ? (
+                              <img src={user.avatar} alt="" className="size-full object-cover" />
+                            ) : (
+                              <div className="flex size-full items-center justify-center bg-muted">
+                                {onAvatarClick ? (
+                                  <Camera
+                                    className={cn('size-3.5', overviewIcon)}
+                                    strokeWidth={2}
+                                    aria-hidden
+                                  />
+                                ) : (
+                                  <span className="text-xs font-bold text-primary">
+                                    {firstName ? firstName[0].toUpperCase() : '?'}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {avatarUploading && (
+                              <span className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                <Loader2 className="size-3.5 animate-spin text-white" aria-hidden />
+                              </span>
+                            )}
+                          </motion.button>
+                        </CardAction>
                       </div>
-                      <CardAction className="flex shrink-0 flex-row gap-1">
-                        <motion.button
-                          type="button"
-                          onClick={() => setActiveTab('finance')}
-                          whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
-                          className="flex size-9 items-center justify-center rounded-xl border border-border bg-card text-primary shadow-[0_8px_20px_-10px_rgba(37,99,235,0.25)] ring-1 ring-black/[0.03] transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:bg-secondary dark:ring-white/10"
-                          aria-label="Finance"
+                      {mobileHeroTips.length > 0 ? (
+                        <div
+                          className={cn(
+                            'min-w-0 w-full pt-2',
+                            overviewHeaderBgUrl
+                              ? 'mt-0.5 px-0 py-0'
+                              : 'mt-1 rounded-xl bg-zinc-50/90 px-2 py-1.5 dark:bg-zinc-800/40'
+                          )}
+                          role="status"
+                          aria-live="polite"
+                          aria-atomic="true"
                         >
-                          <BarChart3
-                            className="size-3.5 shrink-0 text-blue-600 dark:text-blue-400"
-                            strokeWidth={2}
-                            aria-hidden
-                          />
-                        </motion.button>
-                        <motion.button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (onAvatarClick) onAvatarClick();
-                            else setActiveTab('settings');
-                          }}
-                          disabled={avatarUploading}
-                          whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
-                          className="relative size-9 shrink-0 overflow-hidden rounded-xl border border-border bg-card shadow-[0_8px_20px_-10px_rgba(37,99,235,0.2)] ring-1 ring-black/[0.03] transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98] dark:bg-secondary dark:ring-white/10"
-                          aria-label={onAvatarClick ? 'Changer la photo de profil' : 'Paramètres'}
-                        >
-                          {user?.avatar ? (
-                            <img src={user.avatar} alt="" className="size-full object-cover" />
-                          ) : (
-                            <div className="flex size-full items-center justify-center bg-muted">
-                              {onAvatarClick ? (
-                                <Camera
-                                  className="size-3.5 text-blue-600 dark:text-blue-400"
-                                  strokeWidth={2}
-                                  aria-hidden
-                                />
-                              ) : (
-                                <span className="text-xs font-bold text-primary">
-                                  {firstName ? firstName[0].toUpperCase() : '?'}
-                                </span>
+                          <p
+                            className={cn(
+                              'mb-1 text-[9px] font-semibold uppercase tracking-wider',
+                              overviewHeaderBgUrl
+                                ? 'text-white/60 drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]'
+                                : 'text-zinc-400 dark:text-zinc-500'
+                            )}
+                          >
+                            Conseil du moment
+                          </p>
+                          <AnimatePresence mode="wait" initial={false}>
+                            <motion.p
+                              key={mobileHeroTipIndex}
+                              className={cn(
+                                'm-0 text-pretty text-[11px] leading-snug sm:text-[13px]',
+                                overviewHeaderBgUrl
+                                  ? 'text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]'
+                                  : 'text-zinc-600 dark:text-zinc-300'
                               )}
-                            </div>
-                          )}
-                          {avatarUploading && (
-                            <span className="absolute inset-0 flex items-center justify-center bg-black/40">
-                              <Loader2 className="size-3.5 animate-spin text-white" aria-hidden />
-                            </span>
-                          )}
-                        </motion.button>
-                      </CardAction>
+                              initial={prefersReducedMotion ? false : { opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                              transition={{
+                                duration: prefersReducedMotion ? 0.12 : 0.32,
+                                ease: [0.25, 0.1, 0.25, 1],
+                              }}
+                            >
+                              {mobileHeroTips[mobileHeroTipIndex]}
+                            </motion.p>
+                          </AnimatePresence>
+                        </div>
+                      ) : null}
                     </div>
                   </CardHeader>
-                  <Separator className="bg-border opacity-70" />
-                  <CardContent className="flex flex-col gap-3 px-4 py-3 sm:px-5">
+                  <CardContent
+                    className={cn(
+                      'flex flex-col gap-3 px-4 sm:px-5',
+                      overviewHeaderBgUrl
+                        ? 'border-t-0 bg-transparent pt-0 pb-3 shadow-none'
+                        : 'py-3'
+                    )}
+                  >
                     <div className="flex gap-2">
                       <div className="relative min-h-[128px] flex-1 overflow-hidden rounded-xl border border-border bg-muted/35 p-2.5 dark:bg-muted/20">
                         <svg
-                          className="pointer-events-none absolute inset-x-0 bottom-0 h-14 w-full text-blue-500 dark:text-blue-400"
+                          className={cn(
+                            'pointer-events-none absolute inset-x-0 bottom-0 h-14 w-full',
+                            overviewIcon
+                          )}
                           viewBox="0 0 400 56"
                           preserveAspectRatio="none"
                           aria-hidden
@@ -1538,10 +1633,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           onClick={() => setActiveTab('agenda')}
                           className="flex min-h-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-border bg-muted/30 px-1 py-2 text-center shadow-[0_10px_24px_-12px_rgba(37,99,235,0.12)] transition-all hover:bg-muted/45 active:scale-[0.99] dark:bg-muted/15 dark:hover:bg-muted/25"
                         >
-                          <CalendarCheck
-                            className="size-4 text-blue-600 dark:text-blue-400"
-                            aria-hidden
-                          />
+                          <CalendarCheck className={cn('size-4', overviewIcon)} aria-hidden />
                           <span className="font-display text-lg font-bold tabular-nums text-[#2D3436] dark:text-zinc-100">
                             {todayAppointments.length}
                           </span>
@@ -1557,7 +1649,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           onClick={() => setActiveTab('requests')}
                           className="flex min-h-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl border border-border bg-muted/30 px-1 py-2 text-center shadow-[0_10px_24px_-12px_rgba(37,99,235,0.1)] transition-all hover:bg-muted/45 active:scale-[0.99] dark:bg-muted/15 dark:hover:bg-muted/25"
                         >
-                          <Inbox className="size-4 text-blue-600 dark:text-blue-400" aria-hidden />
+                          <Inbox className={cn('size-4', overviewIcon)} aria-hidden />
                           <span className="font-display text-lg font-bold tabular-nums text-[#2D3436] dark:text-zinc-100">
                             {pendingDemandesCount}
                           </span>
@@ -1622,11 +1714,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     }}
                     className="font-display col-span-3 flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/80 bg-white/95 p-3 shadow-[0_22px_48px_-16px_rgba(37,99,235,0.2),0_10px_28px_-12px_rgba(15,23,42,0.08)] backdrop-blur-sm transition-all active:scale-[0.98] dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-[0_22px_48px_-16px_rgba(0,0,0,0.45)]"
                   >
-                    <Plus
-                      className="h-6 w-6 text-blue-600 dark:text-blue-400"
-                      aria-hidden
-                      strokeWidth={2}
-                    />
+                    <Plus className={cn('h-6 w-6', overviewIcon)} aria-hidden strokeWidth={2} />
                     <span className="text-[11px] font-semibold capitalize tracking-tight text-[#2D3436] dark:text-zinc-100">
                       Nouveau Rdv
                     </span>
@@ -1641,7 +1729,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     className="font-display flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/80 bg-white/95 p-2 shadow-[0_20px_44px_-18px_rgba(37,99,235,0.16),0_8px_20px_-10px_rgba(15,23,42,0.06)] backdrop-blur-sm transition-all active:scale-[0.98] dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-none"
                   >
                     <ExternalLink
-                      className="h-5 w-5 text-sky-600 dark:text-sky-400"
+                      className={cn('h-5 w-5', overviewIcon)}
                       aria-hidden
                       strokeWidth={2}
                     />
@@ -1654,11 +1742,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     onClick={() => setActiveTab('flash')}
                     className="font-display flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/80 bg-white/95 p-2 shadow-[0_20px_44px_-18px_rgba(37,99,235,0.16),0_8px_20px_-10px_rgba(15,23,42,0.06)] backdrop-blur-sm transition-all active:scale-[0.98] dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-none"
                   >
-                    <Zap
-                      className="h-5 w-5 text-amber-500 dark:text-amber-400"
-                      aria-hidden
-                      strokeWidth={2}
-                    />
+                    <Zap className={cn('h-5 w-5', overviewIcon)} aria-hidden strokeWidth={2} />
                     <span className="text-[10px] font-semibold capitalize tracking-tight text-[#2D3436] dark:text-zinc-200">
                       Flash
                     </span>
@@ -1668,11 +1752,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     onClick={() => setActiveTab('clients')}
                     className="font-display flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-2xl border border-white/80 bg-white/95 p-2 shadow-[0_20px_44px_-18px_rgba(37,99,235,0.16),0_8px_20px_-10px_rgba(15,23,42,0.06)] backdrop-blur-sm transition-all active:scale-[0.98] dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-none"
                   >
-                    <Users
-                      className="h-5 w-5 text-blue-600 dark:text-blue-400"
-                      aria-hidden
-                      strokeWidth={2}
-                    />
+                    <Users className={cn('h-5 w-5', overviewIcon)} aria-hidden strokeWidth={2} />
                     <span className="text-[10px] font-semibold capitalize tracking-tight text-[#2D3436] dark:text-zinc-200">
                       Clients
                     </span>
@@ -1737,7 +1817,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           variant="ghost"
                           size="sm"
                           onClick={() => setActiveTab('finance')}
-                          className="-my-1 h-9 shrink-0 gap-1 rounded-xl px-2 text-[12px] font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/40"
+                          className="-my-1 h-9 shrink-0 gap-1 rounded-xl px-2 text-[12px] font-semibold text-primary hover:bg-primary/10 dark:hover:bg-primary/15"
                         >
                           Finance
                           <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
@@ -1801,7 +1881,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                 className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-primary/10 px-3 py-2 text-left text-[11px] font-medium leading-snug text-zinc-950 ring-1 ring-primary/20 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
                               >
                                 <AlertCircle
-                                  className="h-3.5 w-3.5 shrink-0 text-primary dark:text-sky-400"
+                                  className={cn('h-3.5 w-3.5 shrink-0', overviewIcon)}
                                   strokeWidth={2}
                                   aria-hidden
                                 />
@@ -1814,10 +1894,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                               <button
                                 type="button"
                                 onClick={() => onAlertNavigate?.({ id: '24h', type: 'info' })}
-                                className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-sky-50 px-3 py-2 text-left text-[11px] font-medium leading-snug text-sky-950 ring-1 ring-sky-200/90 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
+                                className="inline-flex min-h-[44px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-primary/5 px-3 py-2 text-left text-[11px] font-medium leading-snug text-foreground ring-1 ring-primary/20 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-0 dark:bg-zinc-800/95 dark:text-zinc-100 dark:ring-1 dark:ring-zinc-600/50"
                               >
                                 <Clock
-                                  className="h-3.5 w-3.5 shrink-0 text-sky-600 dark:text-cyan-300"
+                                  className={cn('h-3.5 w-3.5 shrink-0', overviewIcon)}
                                   strokeWidth={2}
                                   aria-hidden
                                 />
@@ -2103,7 +2183,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                               </p>
                             </div>
                             <ChevronRight
-                              className={`w-5 h-5 flex-shrink-0 ${needsDeposit ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-300 dark:text-zinc-600'}`}
+                              className={cn(
+                                'w-5 h-5 shrink-0',
+                                needsDeposit ? overviewIcon : 'text-zinc-300 dark:text-zinc-600'
+                              )}
                               aria-hidden
                             />
                           </button>
@@ -2204,7 +2287,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                 {client.name}
                               </span>
                               {(client.totalSpent ?? 0) >= 500 && (
-                                <Star className="w-3.5 h-3.5 text-blue-600 fill-blue-600/90 dark:text-blue-400 dark:fill-blue-400/80 shrink-0" />
+                                <Star className="w-3.5 h-3.5 shrink-0 fill-primary/85 text-primary" />
                               )}
                             </div>
                             <span className="text-[15px] text-zinc-500 dark:text-zinc-400">
@@ -2313,15 +2396,15 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
             {/* Edit Mode Banner */}
             {isEditMode && (
               <div className="px-0 mb-4">
-                <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 dark:bg-primary/10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-col gap-3 min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-4 min-w-0">
                     <div className="flex items-center gap-3 min-w-0">
-                      <IconBox icon={Move} variant="blue" size="md" />
+                      <IconBox icon={Move} variant="primary" size="md" />
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                        <p className="text-sm font-semibold text-foreground">
                           Mode personnalisation
                         </p>
-                        <p className="text-xs text-blue-600 dark:text-blue-400">
+                        <p className="text-xs text-muted-foreground">
                           Glissez les widgets ou ajoutez-en de nouveaux
                         </p>
                       </div>
@@ -2329,7 +2412,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowWidgetPicker(true)}
-                      className="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 shrink-0 w-full min-[520px]:w-auto"
+                      className="flex min-h-[44px] w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-colors hover:bg-primary/90 sm:w-auto"
                     >
                       <Plus className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
                       Ajouter un widget
@@ -2486,7 +2569,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                           setSelectedFlash(null);
                                           setShowBookingModal(true);
                                         }}
-                                        className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                                        className="text-sm font-semibold text-primary hover:underline"
                                       >
                                         + Ajouter un RDV
                                       </button>
@@ -2524,9 +2607,9 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                             {apt.clientName}
                                           </span>
                                           <span
-                                            className={`inline-flex items-center justify-center min-w-[1.75rem] min-h-[1.75rem] rounded-lg ${
+                                            className={`inline-flex min-h-[1.75rem] min-w-[1.75rem] items-center justify-center rounded-lg ${
                                               apt.status === 'confirmed'
-                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
+                                                ? 'bg-primary/15 text-primary dark:bg-primary/25 dark:text-primary'
                                                 : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
                                             }`}
                                             title={
@@ -2582,8 +2665,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                               <div className="prodify-card p-6">
                                 <div className="flex items-center justify-between mb-5">
                                   <div className="flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-500/20">
-                                      <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                    <div className="p-2.5 rounded-xl bg-primary/10 dark:bg-primary/20">
+                                      <TrendingUp className={cn('w-5 h-5', overviewIcon)} />
                                     </div>
                                     <p className="text-sm font-semibold text-zinc-900 dark:text-white">
                                       Stats rapides
@@ -2591,7 +2674,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                   </div>
                                 </div>
                                 <div className="grid grid-cols-3 gap-4">
-                                  <div className="text-center p-3 rounded-2xl bg-blue-50 dark:bg-blue-500/10">
+                                  <div className="text-center p-3 rounded-2xl bg-primary/5 dark:bg-primary/10">
                                     <p className="text-2xl font-bold text-primary tabular-nums">
                                       {confirmedApts}
                                     </p>
@@ -2607,7 +2690,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                       En attente
                                     </p>
                                   </div>
-                                  <div className="text-center p-3 rounded-2xl bg-blue-50 dark:bg-blue-500/10">
+                                  <div className="text-center p-3 rounded-2xl bg-primary/5 dark:bg-primary/10">
                                     <p className="text-2xl font-bold text-numeric tabular-nums">
                                       {privacyMode ? '••••' : `${avgPrice}€`}
                                     </p>
@@ -2646,8 +2729,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                               <div className="prodify-card p-6">
                                 <div className="flex items-center justify-between mb-5">
                                   <div className="flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-500/20">
-                                      <CalendarCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                    <div className="p-2.5 rounded-xl bg-primary/10 dark:bg-primary/20">
+                                      <CalendarCheck className={cn('w-5 h-5', overviewIcon)} />
                                     </div>
                                     <p className="text-sm font-semibold text-zinc-900 dark:text-white">
                                       7 prochains jours
@@ -2666,25 +2749,25 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                       key={day.date}
                                       className={`flex-1 text-center p-3 rounded-xl transition-colors ${
                                         i === 0
-                                          ? 'bg-blue-600 text-white'
+                                          ? 'bg-primary text-primary-foreground'
                                           : day.count > 0
                                             ? 'bg-zinc-100 dark:bg-zinc-800'
                                             : 'bg-zinc-50 dark:bg-zinc-800/50'
                                       }`}
                                     >
                                       <p
-                                        className={`text-[10px] uppercase font-semibold ${i === 0 ? 'text-white/70' : 'text-zinc-400 dark:text-zinc-500'}`}
+                                        className={`text-[10px] uppercase font-semibold ${i === 0 ? 'text-primary-foreground/70' : 'text-zinc-400 dark:text-zinc-500'}`}
                                       >
                                         {day.dayName}
                                       </p>
                                       <p
-                                        className={`text-lg font-bold ${i === 0 ? '' : 'text-zinc-900 dark:text-white'}`}
+                                        className={`text-lg font-bold ${i === 0 ? 'text-primary-foreground' : 'text-zinc-900 dark:text-white'}`}
                                       >
                                         {day.dayNum}
                                       </p>
                                       {day.count > 0 && (
                                         <p
-                                          className={`text-[10px] font-semibold mt-1 ${i === 0 ? 'text-white/80' : 'text-blue-600 dark:text-blue-400'}`}
+                                          className={`text-[10px] font-semibold mt-1 ${i === 0 ? 'text-primary-foreground/80' : 'text-primary'}`}
                                         >
                                           {day.count} RDV
                                         </p>
@@ -2769,7 +2852,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                                 </span>
                                                 {(client.totalSpent ?? 0) >= 500 && (
                                                   <Star
-                                                    className="w-4 h-4 shrink-0 text-blue-600 fill-blue-600/90"
+                                                    className="w-4 h-4 shrink-0 fill-primary/85 text-primary"
                                                     strokeWidth={2}
                                                   />
                                                 )}
@@ -2852,8 +2935,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                               className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] transition-all text-left group"
                             >
                               <div className="flex items-center gap-4">
-                                <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-500/10">
-                                  <Inbox className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                <div className="rounded-xl bg-primary/10 p-3 dark:bg-primary/20">
+                                  <Inbox className={cn('w-5 h-5', overviewIcon)} />
                                 </div>
                                 <div className="flex-1">
                                   <p className="text-sm font-semibold text-zinc-900 dark:text-white">
@@ -2876,8 +2959,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           >
                             <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
                               <div className="flex items-center gap-4">
-                                <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-500/10">
-                                  <Check className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                <div className="rounded-xl bg-primary/10 p-3 dark:bg-primary/20">
+                                  <Check className={cn('w-5 h-5', overviewIcon)} />
                                 </div>
                                 <div className="flex-1">
                                   <p className="text-sm font-semibold text-zinc-900 dark:text-white">
@@ -2915,8 +2998,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           >
                             <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
                               <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-500/20">
-                                  <Award className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                <div className="rounded-xl bg-primary/10 p-2.5 dark:bg-primary/20">
+                                  <Award className={cn('w-5 h-5', overviewIcon)} />
                                 </div>
                                 <p className="text-sm font-semibold text-zinc-900 dark:text-white">
                                   Services populaires
@@ -2929,7 +3012,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                       <span
                                         className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
                                           i === 0
-                                            ? 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400'
+                                            ? 'bg-primary/15 text-primary dark:bg-primary/25 dark:text-primary'
                                             : i === 1
                                               ? 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300'
                                               : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
@@ -3120,8 +3203,8 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               <div className="p-6 overflow-y-auto flex-1 min-h-0 overscroll-contain">
                 {availableToAdd.length === 0 ? (
                   <div className="text-center py-12">
-                    <div className="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
-                      <Check className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 dark:bg-primary/20">
+                      <Check className={cn('h-8 w-8', overviewIcon)} />
                     </div>
                     <p className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
                       Tous les widgets sont actifs
@@ -3147,14 +3230,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                   key={widget.id}
                                   type="button"
                                   onClick={() => handleAddWidget(widget.id)}
-                                  className="flex items-start gap-3 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left group"
+                                  className="group flex items-start gap-3 rounded-2xl border border-zinc-200 p-4 text-left transition-all hover:border-primary hover:bg-primary/5 dark:border-zinc-800 dark:hover:bg-primary/10"
                                 >
-                                  <div
-                                    className={`p-2.5 rounded-xl bg-${widget.color}-100 dark:bg-${widget.color}-500/20 group-hover:scale-110 transition-transform`}
-                                  >
-                                    <Icon
-                                      className={`w-5 h-5 text-${widget.color}-600 dark:text-${widget.color}-400`}
-                                    />
+                                  <div className="rounded-xl bg-primary/10 p-2.5 transition-transform group-hover:scale-110 dark:bg-primary/20">
+                                    <Icon className={cn('w-5 h-5', overviewIcon)} />
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
@@ -3164,7 +3243,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                       {widget.description}
                                     </p>
                                   </div>
-                                  <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+                                  <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-primary transition-colors flex-shrink-0" />
                                 </button>
                               );
                             })}
@@ -3187,14 +3266,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                   key={widget.id}
                                   type="button"
                                   onClick={() => handleAddWidget(widget.id)}
-                                  className="w-full flex items-center gap-4 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left group"
+                                  className="group flex w-full items-center gap-4 rounded-2xl border border-zinc-200 p-4 text-left transition-all hover:border-primary hover:bg-primary/5 dark:border-zinc-800 dark:hover:bg-primary/10"
                                 >
-                                  <div
-                                    className={`p-3 rounded-xl bg-${widget.color}-100 dark:bg-${widget.color}-500/20 group-hover:scale-110 transition-transform`}
-                                  >
-                                    <Icon
-                                      className={`w-6 h-6 text-${widget.color}-600 dark:text-${widget.color}-400`}
-                                    />
+                                  <div className="rounded-xl bg-primary/10 p-3 transition-transform group-hover:scale-110 dark:bg-primary/20">
+                                    <Icon className={cn('size-6', overviewIcon)} />
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold text-zinc-900 dark:text-white">
@@ -3204,7 +3279,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                       {widget.description}
                                     </p>
                                   </div>
-                                  <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors" />
+                                  <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-primary transition-colors" />
                                 </button>
                               );
                             })}
@@ -3227,14 +3302,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                   key={widget.id}
                                   type="button"
                                   onClick={() => handleAddWidget(widget.id)}
-                                  className="flex items-start gap-3 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all text-left group"
+                                  className="group flex items-start gap-3 rounded-2xl border border-zinc-200 p-4 text-left transition-all hover:border-primary hover:bg-primary/5 dark:border-zinc-800 dark:hover:bg-primary/10"
                                 >
-                                  <div
-                                    className={`p-2.5 rounded-xl bg-${widget.color}-100 dark:bg-${widget.color}-500/20 group-hover:scale-110 transition-transform`}
-                                  >
-                                    <Icon
-                                      className={`w-5 h-5 text-${widget.color}-600 dark:text-${widget.color}-400`}
-                                    />
+                                  <div className="rounded-xl bg-primary/10 p-2.5 transition-transform group-hover:scale-110 dark:bg-primary/20">
+                                    <Icon className={cn('w-5 h-5', overviewIcon)} />
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
@@ -3244,7 +3315,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                                       {widget.description}
                                     </p>
                                   </div>
-                                  <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+                                  <Plus className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-primary transition-colors flex-shrink-0" />
                                 </button>
                               );
                             })}

@@ -21,6 +21,7 @@ import type { User } from '@supabase/supabase-js';
 import { SEO } from '../../components/SEO';
 import { Logo } from '../../components/Logo';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
+import { AppleSignInButton } from '../../components/AppleSignInButton';
 import { HealthQuestionnaireForm, type HealthFormData } from '../../components/booking/HealthQuestionnaireForm';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -47,6 +48,7 @@ import {
   getClientPortalOAuthRedirectTo,
   LANDING_URL,
 } from '../../lib/urls';
+import { isAppleSignInEnabled } from '../../lib/appleAuthFeature';
 
 const inputClass =
   'w-full px-4 py-3 rounded-xl text-sm border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-emerald-500/25 focus:border-emerald-500 min-h-[44px]';
@@ -59,6 +61,7 @@ export const ClientAccountHubPage: React.FC = () => {
   const [magicLoading, setMagicLoading] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   const [hasProStudio, setHasProStudio] = useState<boolean | null>(null);
 
@@ -163,6 +166,23 @@ export const ClientAccountHubPage: React.FC = () => {
       cancelled = true;
     };
   }, [user, loadHealthAndAvatar]);
+
+  const handleApple = async () => {
+    if (!isAppleSignInEnabled()) return;
+    setAppleLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: getClientPortalOAuthRedirectTo({ studioSlug: studioFromQuery }),
+          queryParams: { locale: 'fr_FR' },
+        },
+      });
+      if (error) toast.error(error.message);
+    } finally {
+      setAppleLoading(false);
+    }
+  };
 
   const handleGoogle = async () => {
     setGoogleLoading(true);
@@ -407,16 +427,29 @@ export const ClientAccountHubPage: React.FC = () => {
                 Connexion rapide
               </p>
               <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-                Google ou lien magique par e-mail — aucun mot de passe obligatoire pour commencer.
+                Google{isAppleSignInEnabled() ? ', Apple' : ''} ou lien magique par e-mail — aucun mot de
+                passe obligatoire pour commencer.
               </p>
-              <GoogleSignInButton
-                label="Continuer avec Google"
-                disabled={googleLoading}
-                onClick={() => void handleGoogle()}
-                className="active:scale-[0.98] transition-all"
-              />
-              {googleLoading ? (
-                <p className="text-center text-xs text-zinc-500 mt-2">Redirection vers Google…</p>
+              <div className="flex flex-col gap-2">
+                <GoogleSignInButton
+                  label="Continuer avec Google"
+                  disabled={googleLoading || appleLoading}
+                  onClick={() => void handleGoogle()}
+                  className="active:scale-[0.98] transition-all"
+                />
+                {isAppleSignInEnabled() ? (
+                  <AppleSignInButton
+                    label="Continuer avec Apple"
+                    disabled={googleLoading || appleLoading}
+                    onClick={() => void handleApple()}
+                    className="active:scale-[0.98] transition-all"
+                  />
+                ) : null}
+              </div>
+              {googleLoading || appleLoading ? (
+                <p className="text-center text-xs text-zinc-500 mt-2">
+                  {googleLoading ? 'Redirection vers Google…' : 'Redirection vers Apple…'}
+                </p>
               ) : null}
             </div>
 
