@@ -168,7 +168,12 @@ import {
 import { defaultVitrineData } from '../../lib/vitrineStorageDefault';
 import { isGoogleBusinessOAuthUiEnabled } from '../../lib/googleBusinessOAuth';
 import { getVitrineShareUrl } from '../../lib/urls';
-import { safeJsonParse } from '../../lib/utils';
+import { cn, safeJsonParse } from '../../lib/utils';
+import {
+  dashboardListPanel,
+  dashboardListRowCompact,
+  dashboardTileIcon,
+} from './ui/dashboardChrome';
 import { completeGoogleAuth } from '../../lib/googleCalendar';
 import type { VitrineData, VitrinePortfolioItem } from '../../types/vitrine';
 
@@ -496,7 +501,6 @@ export const DashboardPro: React.FC = () => {
     loading,
     isOnline,
     connectionError,
-    lastSyncedAt,
     retry,
   } = useSupabaseSync();
   const {
@@ -608,11 +612,6 @@ export const DashboardPro: React.FC = () => {
   const prefersReducedMotion = useReducedMotion();
   /** Aligné sur `DashboardOverviewTab` (768px) — hero « Vue d’ensemble » shell uniquement md+ */
   const isMdUp = useBreakpointMd();
-  /** Pastille onglet bas (layoutId) — ressort léger ; 0ms si reduced motion */
-  const mobileBottomNavPillTransition = prefersReducedMotion
-    ? { duration: 0 }
-    : { type: 'spring' as const, stiffness: 420, damping: 36, mass: 0.78 };
-
   const dashboardPanelKey = useMemo(() => {
     if (activeTab === 'settings') return `settings-${settingsTab}`;
     if (activeTab === 'clients') return `clients-${clientsView}`;
@@ -3332,7 +3331,7 @@ export const DashboardPro: React.FC = () => {
                           className={`w-full flex items-center gap-2 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-all ${activeTab === 'etablissement' ? 'text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-800/50' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800/50'}`}
                         >
                           <span
-                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'etablissement' ? 'bg-violet-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeTab === 'etablissement' ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                           />
                           Établissement
                         </button>
@@ -3482,33 +3481,6 @@ export const DashboardPro: React.FC = () => {
               onAfterRetrySuccess={retry}
             />
           )}
-          {useSupabase && isOnline && !connectionError && lastSyncedAt && (
-            <div
-              className={`dashboard-pro-sync-strip bg-zinc-100/90 dark:bg-zinc-900/50 border-b border-zinc-200/80 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 flex flex-wrap items-center justify-between flex-shrink-0 sm:text-xs ${
-                isInkflowProShell
-                  ? 'px-2.5 py-0 text-[10px] gap-1 sm:px-4 sm:py-0.5 sm:gap-2'
-                  : 'px-4 py-1 text-[11px] gap-2 sm:py-1.5'
-              }`}
-            >
-              <span>
-                Dernière synchro des données :{' '}
-                <time
-                  dateTime={lastSyncedAt}
-                  className="font-medium text-zinc-600 dark:text-zinc-300"
-                >
-                  {new Date(lastSyncedAt).toLocaleString('fr-FR', {
-                    day: 'numeric',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </time>
-              </span>
-              <span className="hidden sm:inline text-zinc-400 dark:text-zinc-500">
-                Les changements temps réel mettent à jour l’affichage automatiquement.
-              </span>
-            </div>
-          )}
           {/* Header — verre dépoli (backdrop-blur) pour s’intégrer au canvas dashboard, contrôles inchangés */}
           <header
             className={`app-shell-header safe-top sm:px-5 md:px-6 flex items-center justify-between transition-all duration-300 shrink-0 overflow-visible ${
@@ -3593,7 +3565,7 @@ export const DashboardPro: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setCommandPaletteOpen(true)}
-                className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200/90 dark:border-white/10 bg-white/70 dark:bg-zinc-900/50 backdrop-blur-sm hover:border-violet-500/40 dark:hover:border-violet-400/25 hover:bg-white/90 dark:hover:bg-zinc-900/65 transition-colors duration-100 w-64 lg:w-72 text-left shadow-sm shadow-black/[0.04] dark:shadow-black/20"
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200/90 dark:border-white/10 bg-white/70 dark:bg-zinc-900/50 backdrop-blur-sm hover:border-blue-500/40 dark:hover:border-blue-400/25 hover:bg-white/90 dark:hover:bg-zinc-900/65 transition-colors duration-100 w-64 lg:w-72 text-left shadow-sm shadow-black/[0.04] dark:shadow-black/20"
               >
                 <Search
                   className="w-4 h-4 text-zinc-600 dark:text-zinc-300 flex-shrink-0"
@@ -3627,7 +3599,7 @@ export const DashboardPro: React.FC = () => {
               <button
                 type="button"
                 onClick={togglePrivacyMode}
-                className={`hidden sm:flex p-2.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] items-center justify-center transition-colors duration-100 ${privacyMode ? 'text-violet-600 dark:text-violet-400' : 'text-[var(--text-secondary)]'}`}
+                className={`hidden sm:flex p-2.5 rounded-lg hover:bg-[var(--bg-hover)] flex-shrink-0 min-w-[44px] min-h-[44px] items-center justify-center transition-colors duration-100 ${privacyMode ? 'text-blue-600 dark:text-blue-400' : 'text-[var(--text-secondary)]'}`}
                 title={
                   privacyMode ? 'Afficher les montants' : 'Mode atelier — masquer les montants'
                 }
@@ -4496,12 +4468,8 @@ export const DashboardPro: React.FC = () => {
 
                               {/* En-tête : home = titre + sous-titre, sous-page = retour + titre de l'onglet */}
                               {settingsTab === 'home' ? (
-                                <div className="relative overflow-hidden rounded-2xl border border-zinc-200/90 dark:border-zinc-800 bg-gradient-to-br from-zinc-50 via-white to-zinc-50/80 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 p-6 sm:p-8 mb-6 sm:mb-8">
-                                  <div
-                                    className="absolute top-0 right-0 w-40 h-40 sm:w-56 sm:h-56 rounded-full bg-blue-500/10 dark:bg-blue-400/5 blur-3xl pointer-events-none"
-                                    aria-hidden
-                                  />
-                                  <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                                <div className="mb-6 rounded-2xl border border-zinc-100 bg-white p-6 dark:border-zinc-900 dark:bg-zinc-950/40 sm:mb-8 sm:p-8">
+                                  <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                                     <div className="min-w-0">
                                       <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-2">
                                         Centre de configuration
@@ -4529,7 +4497,7 @@ export const DashboardPro: React.FC = () => {
                                           href={`/studio/${studioSlug}`}
                                           target="_blank"
                                           rel="noreferrer"
-                                          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 transition-all active:scale-[0.98] shadow-sm"
+                                          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 transition-all active:scale-[0.98]"
                                         >
                                           <ExternalLink className="w-4 h-4 shrink-0" />
                                           Voir la vitrine
@@ -4648,7 +4616,7 @@ export const DashboardPro: React.FC = () => {
                                                 {group.label}
                                               </h2>
                                             </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            <div className={cn(dashboardListPanel)}>
                                               {visibleItems.map((tabId) => {
                                                 const meta = SETTINGS_TAB_META[tabId];
                                                 const Icon = meta.Icon;
@@ -4657,24 +4625,23 @@ export const DashboardPro: React.FC = () => {
                                                     key={tabId}
                                                     type="button"
                                                     onClick={() => setSettingsTab(tabId)}
-                                                    className={`group text-left p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-all duration-150 active:scale-[0.98] ${c.card}`}
+                                                    className={cn(
+                                                      dashboardListRowCompact,
+                                                      'text-left active:scale-[0.99]'
+                                                    )}
                                                   >
-                                                    <div className="flex items-start gap-3">
-                                                      <div
-                                                        className={`p-2 rounded-xl shrink-0 ${c.icon}`}
-                                                      >
-                                                        <Icon className="w-4 h-4" />
-                                                      </div>
-                                                      <div className="min-w-0 flex-1">
-                                                        <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-tight">
-                                                          {meta.label}
-                                                        </p>
-                                                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug line-clamp-2">
-                                                          {meta.description}
-                                                        </p>
-                                                      </div>
-                                                      <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-500 dark:group-hover:text-zinc-400 shrink-0 mt-0.5 transition-colors" />
+                                                    <span className={dashboardTileIcon}>
+                                                      <Icon className="size-4" />
+                                                    </span>
+                                                    <div className="min-w-0 flex-1">
+                                                      <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-tight">
+                                                        {meta.label}
+                                                      </p>
+                                                      <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-zinc-500 dark:text-zinc-400">
+                                                        {meta.description}
+                                                      </p>
                                                     </div>
+                                                    <ChevronRight className="size-4 shrink-0 text-zinc-300 dark:text-zinc-600" />
                                                   </button>
                                                 );
                                               })}
@@ -4722,15 +4689,15 @@ export const DashboardPro: React.FC = () => {
                                               <img
                                                 src={user.avatar}
                                                 alt="Avatar"
-                                                className="w-24 h-24 rounded-2xl object-cover border-2 border-zinc-200 dark:border-zinc-700 shadow-sm"
+                                                className="size-24 rounded-full object-cover border border-zinc-100 ring-2 ring-zinc-100 dark:border-zinc-800 dark:ring-zinc-800"
                                               />
                                             ) : (
-                                              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-700 border-2 border-dashed border-zinc-300 dark:border-zinc-600 flex items-center justify-center">
+                                              <div className="flex size-24 items-center justify-center rounded-full border border-dashed border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800">
                                                 <Camera className="w-8 h-8 text-zinc-400 dark:text-zinc-500" />
                                               </div>
                                             )}
                                             {avatarUploading && (
-                                              <div className="absolute inset-0 rounded-2xl bg-black/50 flex items-center justify-center">
+                                              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50">
                                                 <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                               </div>
                                             )}
@@ -5878,24 +5845,17 @@ export const DashboardPro: React.FC = () => {
                 setActiveTab('overview');
               })
             }
-            className={`relative flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
+            className={`relative flex min-h-[40px] min-w-0 flex-1 flex-col items-center justify-center gap-0 overflow-hidden rounded-lg px-0 pt-[3px] pb-0.5 transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'overview'
-                ? 'text-indigo-600 dark:text-indigo-400'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                ? 'text-white'
+                : 'text-zinc-500 hover:text-zinc-300 dark:text-zinc-500 dark:hover:text-zinc-300'
             }`}
           >
-            {activeTab === 'overview' && (
-              <motion.div
-                layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
-                transition={mobileBottomNavPillTransition}
-              />
-            )}
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5">
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0">
               <span className="relative inline-flex">
                 <LayoutDashboard
-                  className="size-[18px] shrink-0"
-                  strokeWidth={activeTab === 'overview' ? 2.35 : 1.65}
+                  className="size-[15px] shrink-0 text-current"
+                  strokeWidth={activeTab === 'overview' ? 1.75 : 1.25}
                   aria-hidden
                 />
                 <BadgeNotification
@@ -5904,7 +5864,14 @@ export const DashboardPro: React.FC = () => {
                   className="-right-2 -top-2 left-auto"
                 />
               </span>
-              <span className="max-w-full truncate text-[10px] font-semibold leading-none tracking-tight">
+              <span
+                className={cn(
+                  'pro-text-small mt-px max-w-full truncate leading-none tracking-tight antialiased',
+                  activeTab === 'overview'
+                    ? '[font-weight:var(--pro-weight-medium)]'
+                    : '[font-weight:var(--pro-weight-regular)] text-zinc-500'
+                )}
+              >
                 Accueil
               </span>
             </span>
@@ -5917,26 +5884,26 @@ export const DashboardPro: React.FC = () => {
                 setActiveTab('agenda');
               })
             }
-            className={`relative flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
+            className={`relative flex min-h-[40px] min-w-0 flex-1 flex-col items-center justify-center gap-0 overflow-hidden rounded-lg px-0 pt-[3px] pb-0.5 transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'appointments' || activeTab === 'agenda'
-                ? 'text-indigo-600 dark:text-indigo-400'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                ? 'text-white'
+                : 'text-zinc-500 hover:text-zinc-300 dark:text-zinc-500 dark:hover:text-zinc-300'
             }`}
           >
-            {(activeTab === 'appointments' || activeTab === 'agenda') && (
-              <motion.div
-                layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
-                transition={mobileBottomNavPillTransition}
-              />
-            )}
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5">
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0">
               <Calendar
-                className="size-[18px] shrink-0"
-                strokeWidth={activeTab === 'appointments' || activeTab === 'agenda' ? 2.35 : 1.65}
+                className="size-[15px] shrink-0 text-current"
+                strokeWidth={activeTab === 'appointments' || activeTab === 'agenda' ? 1.75 : 1.25}
                 aria-hidden
               />
-              <span className="max-w-full truncate text-[10px] font-semibold leading-none tracking-tight">
+              <span
+                className={cn(
+                  'pro-text-small mt-px max-w-full truncate leading-none tracking-tight antialiased',
+                  activeTab === 'appointments' || activeTab === 'agenda'
+                    ? '[font-weight:var(--pro-weight-medium)]'
+                    : '[font-weight:var(--pro-weight-regular)] text-zinc-500'
+                )}
+              >
                 Agenda
               </span>
             </span>
@@ -5958,26 +5925,26 @@ export const DashboardPro: React.FC = () => {
                 setActiveTab('clients');
               })
             }
-            className={`relative flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
+            className={`relative flex min-h-[40px] min-w-0 flex-1 flex-col items-center justify-center gap-0 overflow-hidden rounded-lg px-0 pt-[3px] pb-0.5 transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'clients'
-                ? 'text-indigo-600 dark:text-indigo-400'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                ? 'text-white'
+                : 'text-zinc-500 hover:text-zinc-300 dark:text-zinc-500 dark:hover:text-zinc-300'
             }`}
           >
-            {activeTab === 'clients' && (
-              <motion.div
-                layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
-                transition={mobileBottomNavPillTransition}
-              />
-            )}
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5">
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0">
               <Users
-                className="size-[18px] shrink-0"
-                strokeWidth={activeTab === 'clients' ? 2.35 : 1.65}
+                className="size-[15px] shrink-0 text-current"
+                strokeWidth={activeTab === 'clients' ? 1.75 : 1.25}
                 aria-hidden
               />
-              <span className="max-w-full truncate text-[10px] font-semibold leading-none tracking-tight">
+              <span
+                className={cn(
+                  'pro-text-small mt-px max-w-full truncate leading-none tracking-tight antialiased',
+                  activeTab === 'clients'
+                    ? '[font-weight:var(--pro-weight-medium)]'
+                    : '[font-weight:var(--pro-weight-regular)] text-zinc-500'
+                )}
+              >
                 Clients
               </span>
             </span>
@@ -5991,26 +5958,26 @@ export const DashboardPro: React.FC = () => {
                 setSettingsTab(isRestricted ? 'billing' : settingsTab);
               }, true)
             }
-            className={`relative flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/45 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
+            className={`relative flex min-h-[40px] min-w-0 flex-1 flex-col items-center justify-center gap-0 overflow-hidden rounded-lg px-0 pt-[3px] pb-0.5 transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
               activeTab === 'settings'
-                ? 'text-indigo-600 dark:text-indigo-400'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                ? 'text-white'
+                : 'text-zinc-500 hover:text-zinc-300 dark:text-zinc-500 dark:hover:text-zinc-300'
             }`}
           >
-            {activeTab === 'settings' && (
-              <motion.div
-                layoutId="dashboard-mobile-bottom-nav-pill"
-                className="absolute inset-0 rounded-xl bg-indigo-50 shadow-sm ring-1 ring-indigo-200/50 dark:bg-indigo-950/35 dark:ring-indigo-500/20"
-                transition={mobileBottomNavPillTransition}
-              />
-            )}
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5">
+            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0">
               <Settings
-                className="size-[18px] shrink-0"
-                strokeWidth={activeTab === 'settings' ? 2.35 : 1.65}
+                className="size-[15px] shrink-0 text-current"
+                strokeWidth={activeTab === 'settings' ? 1.75 : 1.25}
                 aria-hidden
               />
-              <span className="max-w-full truncate text-[10px] font-semibold leading-none tracking-tight">
+              <span
+                className={cn(
+                  'pro-text-small mt-px max-w-full truncate leading-none tracking-tight antialiased',
+                  activeTab === 'settings'
+                    ? '[font-weight:var(--pro-weight-medium)]'
+                    : '[font-weight:var(--pro-weight-regular)] text-zinc-500'
+                )}
+              >
                 Réglages
               </span>
             </span>

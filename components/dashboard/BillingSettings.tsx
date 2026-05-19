@@ -225,18 +225,13 @@ const BillingPlanPricingCard: React.FC<BillingPlanPricingCardProps> = ({
   isSubscribing,
   onSubscribe,
 }) => {
-  const iconAccent =
-    plan.color === 'blue'
-      ? 'text-blue-600 dark:text-blue-400'
-      : plan.color === 'violet'
-        ? 'text-violet-600 dark:text-violet-400'
-        : 'text-amber-700 dark:text-amber-400';
+  const iconAccent = 'text-blue-600 dark:text-blue-400';
 
   return (
     <Card
       size="sm"
       className={cn(
-        'relative h-full gap-6 rounded-2xl border-border bg-card py-6 shadow-sm sm:py-8',
+        'relative h-full gap-6 rounded-2xl border-zinc-100 bg-white py-6 dark:border-zinc-900 dark:bg-zinc-950/40 max-sm:shadow-none sm:py-8',
         plan.popular &&
           'border-primary/40 shadow-[0_22px_50px_-24px_rgba(15,23,42,0.28)] ring-1 ring-primary/20 dark:border-primary/35 dark:shadow-[0_28px_64px_-32px_rgba(0,0,0,0.45)] dark:ring-primary/25',
         !plan.popular &&
@@ -509,7 +504,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
 
       {/* Current Plan Status — carte style landing */}
       {active && subscription && (
-        <div className="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 border-l-4 border-l-blue-500">
+        <div className="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 border-l-4 border-l-zinc-200 500">
           <div className="flex items-start gap-4">
             <div className="p-3 rounded-xl bg-blue-100/80 dark:bg-blue-500/20 flex-shrink-0">
               <Check className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -532,7 +527,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
 
       {/* Trial Warning — carte style landing */}
       {!active && (
-        <div className="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 border-l-4 border-l-amber-500">
+        <div className="rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 border-l-4 border-l-zinc-200 500">
           <div className="flex items-start gap-4">
             <div className="p-3 rounded-xl bg-amber-100/80 dark:bg-amber-500/20 flex-shrink-0">
               <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
@@ -727,7 +722,7 @@ export const BillingSettings: React.FC<BillingSettingsProps> = ({
             <p className="text-xs text-zinc-500 dark:text-zinc-400">Gratuit, sans CB</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 border-l-4 border-l-blue-500">
+        <div className="flex items-center gap-3 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 border-l-4 border-l-zinc-200 500">
           <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/15">
             <Database className="w-5 h-5 text-blue-700 dark:text-blue-400" />
           </div>

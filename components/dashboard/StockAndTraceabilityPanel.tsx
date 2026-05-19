@@ -899,7 +899,7 @@ export const StockAndTraceabilityPanel: React.FC<StockAndTraceabilityPanelProps>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 space-y-4 border-l-4 border-l-emerald-500">
+          <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 space-y-4 border-l-4 border-l-zinc-200 500">
             <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
               <QrCode className="w-5 h-5" />
               Lots & QR

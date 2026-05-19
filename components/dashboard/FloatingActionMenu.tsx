@@ -98,16 +98,17 @@ const FloatingActionMenu = ({
     'inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-full border-0 p-0 shadow-[0_0_20px_rgba(0,0,0,0.2)] bg-[#11111198] hover:bg-[#111111d1] text-white [&_svg]:text-white';
   /** FAB central bottom nav — extension au-dessus de Button default + icon-lg (tokens primary) */
   const fabBottomNavExtras = cn(
-    'relative isolate shrink-0 rounded-full border-2 border-background p-0',
+    'relative isolate shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0 text-white',
     'gap-0 has-data-[icon=inline-start]:pl-0 has-data-[icon=inline-end]:pr-0',
     compactBottomNavFab
-      ? 'size-12 min-h-12 min-w-12 [&_svg:not([class*="size-"])]:size-5'
-      : 'size-14 min-h-14 min-w-14 [&_svg:not([class*="size-"])]:size-6',
-    'shadow-[0_8px_24px_-6px_rgb(37_99_235/0.42),0_2px_8px_-2px_rgb(0_0_0/0.12)]',
-    'transition-[transform,box-shadow,filter] hover:brightness-[1.04] hover:shadow-[0_12px_28px_-8px_rgb(37_99_235/0.45)] active:brightness-[0.97]',
-    'motion-reduce:transition-colors motion-reduce:hover:brightness-100',
-    'focus-visible:z-10 focus-visible:!ring-[3px] focus-visible:!ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-    'dark:border-zinc-900 dark:shadow-[0_8px_28px_-6px_rgb(0_0_0/0.55)] dark:hover:shadow-[0_14px_32px_-8px_rgb(0_0_0/0.6)]'
+      ? 'size-11 min-h-11 min-w-11 [&_svg:not([class*="size-"])]:size-[1.125rem]'
+      : 'size-12 min-h-12 min-w-12 [&_svg:not([class*="size-"])]:size-5',
+    'shadow-[0_4px_20px_rgba(0,0,0,0.28)]',
+    'transition-all duration-300 ease-out',
+    'hover:border-zinc-700 hover:shadow-[0_8px_28px_rgba(0,0,0,0.38)]',
+    'active:scale-[0.96] motion-reduce:active:scale-100',
+    'focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-zinc-600 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
+    '[&_svg]:stroke-[1.75]'
   );
   const menuOptionClass = cn(
     'flex w-full min-w-0 items-center gap-2 border-0 shadow-[0_0_20px_rgba(0,0,0,0.2)]',
@@ -129,7 +130,7 @@ const FloatingActionMenu = ({
         isBottomNav
           ? cn(
               'absolute right-0 z-[60] mb-2 max-w-[min(90vw,20rem)]',
-              compactBottomNavFab ? 'bottom-[2.5rem]' : 'bottom-[2.85rem]'
+              compactBottomNavFab ? 'bottom-[2.1rem]' : 'bottom-[2.55rem]'
             )
           : 'absolute bottom-10 right-0 mb-2'
       )}
@@ -172,23 +173,21 @@ const FloatingActionMenu = ({
       <div
         ref={rootRef}
         className={cn(
-          'relative z-10 flex min-w-0 flex-1 flex-col items-center justify-end overflow-visible pb-px',
-          compactBottomNavFab ? 'min-h-[40px]' : 'min-h-[44px]',
+          'relative z-10 flex min-w-0 flex-1 flex-col items-center justify-end overflow-visible pb-0',
+          compactBottomNavFab ? 'min-h-[36px]' : 'min-h-[42px]',
           className
         )}
       >
         {/* Débord FAB vers le scroll : modeste pour limiter masquage au-dessus de la dock mobile */}
-        <div className={cn('relative shrink-0', compactBottomNavFab ? '-mt-3' : '-mt-4')}>
+        <div className={cn('relative shrink-0', compactBottomNavFab ? '-mt-1.5' : '-mt-2.5')}>
           <Button
             type="button"
-            variant="default"
+            variant="ghost"
             size="icon-lg"
             onClick={toggle}
             className={cn(
               fabBottomNavExtras,
-              isNavActive &&
-                !isOpen &&
-                'ring-2 ring-primary/55 ring-offset-2 ring-offset-background dark:ring-primary/65'
+              isNavActive && !isOpen && 'ring-1 ring-zinc-600 ring-offset-2 ring-offset-zinc-950'
             )}
             aria-expanded={isOpen}
             aria-haspopup="menu"
@@ -200,7 +199,7 @@ const FloatingActionMenu = ({
               animate={{ rotate: isOpen ? 45 : 0 }}
               transition={rotTransition}
             >
-              <Plus aria-hidden strokeWidth={2.25} />
+              <Plus aria-hidden strokeWidth={2} />
             </motion.div>
           </Button>
           <AnimatePresence>{isOpen && menuPanel}</AnimatePresence>

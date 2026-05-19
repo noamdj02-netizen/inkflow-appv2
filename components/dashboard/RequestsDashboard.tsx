@@ -56,6 +56,20 @@ import { AcceptProjectModal } from './AcceptProjectModal';
 import { hapticSuccess } from '../../lib/haptics';
 import { trimAvatarUrl } from '../../lib/appointmentClientDisplay';
 import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
+import { cn } from '@/lib/utils';
+import {
+  bookingStatusBadgeClass,
+  dashboardAvatarFrame,
+  dashboardAvatarSm,
+  dashboardBtnAccent,
+  dashboardBtnPrimary,
+  dashboardBtnSecondary,
+  dashboardIconButton,
+  dashboardListPanel,
+  dashboardListRow,
+  dashboardStatusBadge,
+  projectStatusBadgeClass,
+} from './ui/dashboardChrome';
 
 /** Sous-onglet Demandes — « inbox » = file d’attente unifiée (option A). */
 export type RequestsSubTabId = 'inbox' | 'rdv' | 'bookings' | 'projects' | 'history';
@@ -120,14 +134,13 @@ const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
 
 /** Bordure gauche par source — aligné patterns AppointmentsView (repère visuel rapide). */
 const SOURCE_ACCENT = {
-  agenda: 'border-l-amber-500',
-  vitrineFlash: 'border-l-amber-400',
-  vitrineCustom: 'border-l-violet-500',
-  brief: 'border-l-violet-600',
+  agenda: 'border-l-blue-500',
+  vitrineFlash: 'border-l-blue-400',
+  vitrineCustom: 'border-l-blue-500',
+  brief: 'border-l-blue-600',
 } as const;
 
-const FICHE_CLIENT_ICON_BTN =
-  'inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 active:scale-[0.98] transition-all touch-manipulation';
+const FICHE_CLIENT_ICON_BTN = `${dashboardIconButton} touch-manipulation`;
 
 function RequestsListErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
@@ -170,11 +183,11 @@ const AgendaRequestCardView: React.FC<AgendaRequestCardViewProps> = ({
   studioId,
   onOpenClientFiche,
 }) => (
-  <div
-    className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm border-l-4 ${SOURCE_ACCENT.agenda} p-5 sm:p-6 flex flex-col gap-4 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/25 transition-colors`}
-  >
+  <div className={dashboardListRow}>
     <div className="flex flex-col sm:flex-row sm:items-start gap-4 min-w-0">
-      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-200/90 ring-1 ring-zinc-300/80 dark:bg-zinc-800 dark:ring-zinc-600/80">
+      <div
+        className={cn(dashboardAvatarFrame, dashboardAvatarSm, 'flex items-center justify-center')}
+      >
         <ClientPhotoAvatar
           name={apt.clientName}
           src={getAvatar(apt.clientEmail, apt.clientId, apt.clientName)}
@@ -210,9 +223,7 @@ const AgendaRequestCardView: React.FC<AgendaRequestCardViewProps> = ({
             {apt.price}€
           </span>
         </div>
-        <span className="inline-block mt-3 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
-          En attente
-        </span>
+        <span className={cn('mt-3', dashboardStatusBadge.pending)}>En attente</span>
       </div>
     </div>
 
@@ -221,7 +232,10 @@ const AgendaRequestCardView: React.FC<AgendaRequestCardViewProps> = ({
         <button
           type="button"
           onClick={onAccept}
-          className="flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all text-sm shadow-sm"
+          className={cn(
+            dashboardBtnAccent,
+            'flex min-h-[44px] flex-1 sm:flex-initial gap-2 text-sm shadow-none'
+          )}
         >
           <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" /> Accepter
         </button>
@@ -1310,7 +1324,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               </div>
             </div>
             <div className="flex gap-2 min-w-0 sm:col-span-1">
-              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-violet-500" aria-hidden />
+              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-hidden />
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-100">
                   Brief sans date
@@ -1360,7 +1374,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           id="requests-panel"
           role="tabpanel"
           aria-labelledby={`requests-tab-${activeTab}`}
-          className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm overflow-hidden"
+          className={dashboardListPanel}
         >
           {activeTab === 'inbox' && (
             <>
@@ -1375,19 +1389,19 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               ) : null}
               {inboxNothingToShow && !bookingsLoading && !projectRequestsLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
-                    <Inbox className="w-8 h-8 text-slate-400 dark:text-slate-500" aria-hidden />
+                  <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
+                    <Inbox className="w-8 h-8 text-zinc-400 dark:text-zinc-500" aria-hidden />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
                     Rien à afficher avec ces filtres
                   </h3>
-                  <p className="text-slate-500 dark:text-slate-400 max-w-sm text-sm">
+                  <p className="text-zinc-500 dark:text-zinc-400 max-w-sm text-sm">
                     Essayez &quot;Tout&quot; ou &quot;Tous types&quot;, ou ouvrez une source (bouton
                     « Sources du studio »).
                   </p>
                 </div>
               ) : (
-                <div className="p-3 sm:p-4 space-y-6">
+                <div className="space-y-6 p-1 sm:p-2">
                   {inboxAgendaList.length > 0 && (
                     <section
                       className="space-y-2"
@@ -1399,7 +1413,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                           ({inboxAgendaList.length})
                         </span>
                       </h3>
-                      <div className="space-y-3">
+                      <div className={dashboardListPanel}>
                         {inboxAgendaList.map((apt) => (
                           <AgendaRequestCardView
                             key={apt.id}
@@ -1440,7 +1454,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       {bookingsLoading ? (
                         <RequestsBookingsListSkeleton />
                       ) : (
-                        <div className="flex flex-col gap-2.5 sm:gap-3 min-w-0 -mx-0.5 sm:mx-0">
+                        <div className={dashboardListPanel}>
                           {inboxBookList.map((bk) => {
                             const thumbUrl = (bk.referenceImages && bk.referenceImages[0]) || null;
                             const crmAvatar = getAvatar(bk.clientEmail, undefined, bk.clientName);
@@ -1461,10 +1475,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                 ? SOURCE_ACCENT.vitrineFlash
                                 : SOURCE_ACCENT.vitrineCustom;
                             return (
-                              <div
-                                key={bk.id}
-                                className={`p-3.5 sm:p-5 md:p-6 flex flex-col lg:flex-row lg:items-start gap-3 sm:gap-4 group rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm border-l-4 ${vitrineAccent} hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors touch-manipulation min-w-0`}
-                              >
+                              <div key={bk.id} className={dashboardListRow}>
                                 <div className="flex flex-1 min-w-0 gap-2 items-start">
                                   <button
                                     type="button"
@@ -1473,7 +1484,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                   >
                                     <div className="flex gap-3 sm:gap-4 items-start md:items-center min-w-0 w-full">
                                       <div
-                                        className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 shrink-0 ${isProfileThumb ? 'rounded-full' : 'rounded-xl'} bg-slate-100 dark:bg-zinc-800 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700`}
+                                        className={cn(
+                                          dashboardAvatarFrame,
+                                          dashboardAvatarSm,
+                                          'sm:size-14 md:size-16'
+                                        )}
                                       >
                                         {displayThumb ? (
                                           <img
@@ -1484,16 +1499,16 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                             className="w-full h-full object-cover"
                                           />
                                         ) : (
-                                          <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
+                                          <span className="w-full h-full flex items-center justify-center text-zinc-400 dark:text-zinc-500">
                                             <FileText className="w-6 h-6 sm:w-8 sm:h-8" />
                                           </span>
                                         )}
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <div className="font-semibold text-base sm:text-lg text-slate-900 dark:text-white break-words">
+                                        <div className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-white break-words">
                                           {bk.clientName}
                                         </div>
-                                        <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-start gap-2 min-w-0">
+                                        <div className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-start gap-2 min-w-0">
                                           <Mail className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                                           <span className="min-w-0 truncate sm:whitespace-normal sm:break-words">
                                             {bk.clientEmail}
@@ -1532,17 +1547,17 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                             </span>
                                           )}
                                           {size && (
-                                            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
+                                            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-50 text-violet-800 dark:bg-blue-500/20 dark:text-blue-400">
                                               <Ruler className="w-3 h-3" />{' '}
                                               {formatSizeForBadge(size)}
                                             </span>
                                           )}
                                         </div>
-                                        <p className="mt-2 sm:mt-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 line-clamp-1 sm:line-clamp-2">
+                                        <p className="mt-2 sm:mt-2.5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 line-clamp-1 sm:line-clamp-2">
                                           {bk.description}
                                         </p>
-                                        <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-                                          <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
+                                        <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
+                                          <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
                                             {new Date(bk.requestedDate).toLocaleDateString(
                                               'fr-FR',
                                               {
@@ -1551,7 +1566,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                             )}
                                           </span>
                                           {bk.requestedTime && (
-                                            <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
+                                            <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
                                               {bk.requestedTime === 'morning'
                                                 ? 'Matin'
                                                 : bk.requestedTime === 'afternoon'
@@ -1569,7 +1584,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                               : bk.status === 'confirmed' ||
                                                   bk.status === 'accepted'
                                                 ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
-                                                : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-slate-400'
+                                                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
                                           }`}
                                         >
                                           {BOOKING_STATUS_LABELS[bk.status] || bk.status}
@@ -1596,7 +1611,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                 </div>
                                 {bk.status === 'pending' && (
                                   <div
-                                    className="flex-shrink-0 w-full lg:w-[min(100%,20.5rem)] xl:w-[22rem] pt-2.5 sm:pt-3 mt-0.5 border-t border-slate-100 dark:border-zinc-800 lg:pt-0 lg:mt-0 lg:border-t-0 lg:ml-auto"
+                                    className="flex-shrink-0 w-full lg:w-[min(100%,20.5rem)] xl:w-[22rem] pt-2.5 sm:pt-3 mt-0.5 border-t border-zinc-100 dark:border-zinc-800 lg:pt-0 lg:mt-0 lg:border-t-0 lg:ml-auto"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     <div
@@ -1662,7 +1677,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                             href={instagramMessageUrl(igHandle)}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] sm:min-w-[7rem] sm:flex-1 justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl bg-gradient-to-r from-pink-500/15 to-purple-500/15 border border-pink-200/80 dark:border-pink-500/30 text-pink-700 dark:text-pink-300 text-sm font-semibold  active:scale-[0.98] transition-all"
+                                            className={cn(
+                                              dashboardBtnSecondary,
+                                              'min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] gap-1.5 px-2.5 py-2 text-sm sm:min-w-[7rem]'
+                                            )}
                                             onClick={(e) => e.stopPropagation()}
                                           >
                                             <AtSign className="w-4 h-4 shrink-0" /> IG
@@ -1714,7 +1732,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                           <Loader2 className="w-6 h-6 animate-spin inline text-zinc-400" />
                         </div>
                       ) : (
-                        <div className="flex flex-col gap-4 min-h-0">
+                        <div className={dashboardListPanel}>
                           {inboxProjectList.map((pr) => {
                             const thumbUrl = (pr.referenceImages && pr.referenceImages[0]) || null;
                             const reqType = inferRequestType(pr.description, pr.placement);
@@ -1723,10 +1741,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                               pr.description
                             );
                             return (
-                              <div
-                                key={pr.id}
-                                className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm border-l-4 ${SOURCE_ACCENT.brief} p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors touch-manipulation`}
-                              >
+                              <div key={pr.id} className={dashboardListRow}>
                                 <div className="flex flex-1 min-w-0 gap-2 items-start md:items-center w-full md:w-auto">
                                   <button
                                     type="button"
@@ -1734,7 +1749,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                     className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto"
                                   >
                                     <div className="flex gap-4 items-start md:items-center">
-                                      <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700">
+                                      <div className={cn(dashboardAvatarFrame, 'size-16')}>
                                         {thumbUrl ? (
                                           <img
                                             src={thumbUrl}
@@ -1744,22 +1759,22 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                             className="w-full h-full object-cover"
                                           />
                                         ) : (
-                                          <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
+                                          <span className="w-full h-full flex items-center justify-center text-zinc-400 dark:text-zinc-500">
                                             <FileText className="w-8 h-8" />
                                           </span>
                                         )}
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <div className="font-semibold text-lg text-slate-900 dark:text-white">
+                                        <div className="font-semibold text-lg text-zinc-900 dark:text-white">
                                           {pr.clientName}
                                         </div>
-                                        <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                                        <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-2 flex-wrap">
                                           <span className="flex items-center gap-1.5">
                                             <Mail className="w-3.5 h-3.5 shrink-0" />
                                             {pr.clientEmail}
                                           </span>
                                           {igProject && (
-                                            <span className="text-slate-500 dark:text-slate-400 text-xs">
+                                            <span className="text-zinc-500 dark:text-zinc-400 text-xs">
                                               @{igProject}
                                             </span>
                                           )}
@@ -1780,16 +1795,16 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                             </span>
                                           )}
                                           {pr.size && (
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-50 text-violet-800 dark:bg-blue-500/20 dark:text-blue-400">
                                               <Ruler className="w-3 h-3" />{' '}
                                               {formatSizeForBadge(pr.size)}
                                             </span>
                                           )}
                                         </div>
-                                        <p className="mt-2.5 text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
+                                        <p className="mt-2.5 text-sm text-zinc-700 dark:text-zinc-300 line-clamp-2">
                                           {pr.description}
                                         </p>
-                                        <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                                        <div className="mt-2 text-xs text-zinc-400 dark:text-zinc-500">
                                           {new Date(pr.createdAt).toLocaleString('fr-FR', {
                                             dateStyle: 'medium',
                                             timeStyle: 'short',
@@ -1884,18 +1899,18 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
           {activeTab === 'rdv' &&
             (pendingAppointments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
-                  <Calendar className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+                <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
+                  <Calendar className="w-8 h-8 text-zinc-400 dark:text-zinc-500" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
                   Aucun créneau agenda en attente
                 </h3>
-                <p className="text-slate-500 dark:text-slate-400 max-w-sm text-sm">
+                <p className="text-zinc-500 dark:text-zinc-400 max-w-sm text-sm">
                   Les RDV en attente de validation (agenda) apparaissent ici.
                 </p>
               </div>
             ) : (
-              <div className="p-3 sm:p-4 space-y-3">
+              <div className={dashboardListPanel}>
                 {pendingAppointments.map((apt) => (
                   <AgendaRequestCardView
                     key={apt.id}
@@ -1930,13 +1945,13 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 <RequestsBookingsListSkeleton />
               ) : pendingBookings.length === 0 && bookings.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
-                    <Clock className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+                  <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-5">
+                    <Clock className="w-8 h-8 text-zinc-400 dark:text-zinc-500" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
                     Aucune demande page book
                   </h3>
-                  <p className="text-slate-500 dark:text-slate-400 max-w-sm text-sm">
+                  <p className="text-zinc-500 dark:text-zinc-400 max-w-sm text-sm">
                     Quand un client réserve un flash ou un créneau sur votre page /book, la demande
                     s’affiche ici.
                   </p>
@@ -1944,21 +1959,21 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               ) : (
                 <div className="flex flex-col gap-2.5 sm:gap-3 p-2.5 sm:p-4 min-w-0">
                   {/* Sous-filtres : Toutes / Flash / Sur-mesure (créneau /book) */}
-                  <div className="flex gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-hide rounded-xl border border-slate-200/80 dark:border-zinc-700 bg-slate-50/60 dark:bg-zinc-800/30 px-2.5 py-2 sm:px-3 sm:py-2.5 touch-pan-x">
+                  <div className="flex gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-hide rounded-xl border border-zinc-200/80 dark:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-800/30 px-2.5 py-2 sm:px-3 sm:py-2.5 touch-pan-x">
                     <button
                       onClick={() => setBookingSubTab('all')}
                       className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                         bookingSubTab === 'all'
-                          ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900'
-                          : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600'
+                          ? 'bg-zinc-800 text-white dark:bg-white dark:text-zinc-900'
+                          : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600'
                       }`}
                     >
                       Toutes
                       <span
                         className={`min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full ${
                           bookingSubTab === 'all'
-                            ? 'bg-white/20 text-white dark:bg-slate-900/20 dark:text-slate-900'
-                            : 'bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-slate-300'
+                            ? 'bg-white/20 text-white dark:bg-zinc-900/20 dark:text-zinc-900'
+                            : 'bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
                         }`}
                       >
                         {bookingsChronological.length}
@@ -1969,7 +1984,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                         bookingSubTab === 'flash'
                           ? 'bg-amber-500 text-white'
-                          : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-zinc-700 hover:border-amber-300 dark:hover:border-amber-600'
+                          : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:border-amber-300 dark:hover:border-amber-600'
                       }`}
                     >
                       <Sparkles className="w-3 h-3" /> Flash
@@ -1989,8 +2004,8 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       onClick={() => setBookingSubTab('custom')}
                       className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                         bookingSubTab === 'custom'
-                          ? 'bg-violet-600 text-white'
-                          : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-zinc-700 hover:border-violet-300 dark:hover:border-violet-600'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-600'
                       }`}
                       title="Sur-mesure avec créneau choisi sur /book (différent de l’onglet Brief sans date)"
                     >
@@ -2000,7 +2015,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                           className={`min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full ${
                             bookingSubTab === 'custom'
                               ? 'bg-white/25 text-white'
-                              : 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-400'
+                              : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400'
                           }`}
                         >
                           {pendingCustomBookings.length}
@@ -2010,261 +2025,269 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                   </div>
                   {filteredBookings.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                      <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
+                      <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
                         {bookingSubTab === 'flash' ? (
                           <Sparkles className="w-6 h-6 text-amber-400" />
                         ) : (
-                          <FileText className="w-6 h-6 text-slate-400 dark:text-slate-500" />
+                          <FileText className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
                         )}
                       </div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">
                         {bookingSubTab === 'flash'
                           ? 'Aucune demande Flash pour le moment.'
                           : 'Aucune demande sur-mesure (page book) pour le moment.'}
                       </p>
                     </div>
                   ) : (
-                    filteredBookings.map((bk) => {
-                      const thumbUrl = (bk.referenceImages && bk.referenceImages[0]) || null;
-                      const crmAvatar = getAvatar(bk.clientEmail, undefined, bk.clientName);
-                      const displayThumb =
-                        trimAvatarUrl(bk.clientAvatarUrl) || crmAvatar || thumbUrl;
-                      const isProfileThumb = Boolean(bk.clientAvatarUrl || crmAvatar);
-                      const reqType = inferRequestType(bk.description);
-                      const placement = bk.placement;
-                      const size = bk.size;
-                      const stampRwBk = stampRewardForEmail(bk.clientEmail);
-                      const igHandle = parseInstagramHandle(undefined, bk.description);
-                      const bookingMailtoHref = buildMailtoHref(
-                        bk.clientEmail,
-                        'Votre demande de tatouage'
-                      );
-                      const vitrineAccent =
-                        reqType === 'flash'
-                          ? SOURCE_ACCENT.vitrineFlash
-                          : SOURCE_ACCENT.vitrineCustom;
-                      return (
-                        <div
-                          key={bk.id}
-                          className={`p-3.5 sm:p-5 md:p-6 flex flex-col lg:flex-row lg:items-start gap-3 sm:gap-4 group rounded-2xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 shadow-sm border-l-4 ${vitrineAccent} hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors touch-manipulation min-w-0`}
-                        >
-                          <div className="flex flex-1 min-w-0 gap-2 items-start">
-                            <button
-                              type="button"
-                              onClick={() => setSheetItem({ ...bk, _type: 'booking' })}
-                              className="flex flex-1 min-w-0 text-left w-full lg:flex-initial lg:min-w-0 lg:max-w-[min(100%,42rem)] xl:max-w-[min(100%,48rem)]"
-                            >
-                              <div className="flex gap-3 sm:gap-4 items-start md:items-center min-w-0 w-full">
-                                <div
-                                  className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 shrink-0 ${isProfileThumb ? 'rounded-full' : 'rounded-xl'} bg-slate-100 dark:bg-zinc-800 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700`}
-                                >
-                                  {displayThumb ? (
-                                    <img
-                                      src={displayThumb}
-                                      alt=""
-                                      loading="lazy"
-                                      decoding="async"
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                                      <FileText className="w-6 h-6 sm:w-8 sm:h-8" />
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-semibold text-base sm:text-lg text-slate-900 dark:text-white break-words">
-                                    {bk.clientName}
-                                  </div>
-                                  <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-start gap-2 min-w-0">
-                                    <Mail className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                                    <span className="min-w-0 truncate sm:whitespace-normal sm:break-words">
-                                      {bk.clientEmail}
-                                    </span>
-                                  </div>
-                                  {stampRwBk && (
-                                    <div className="mt-2 sm:mt-2.5 flex items-start gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-blue-200/90 bg-blue-50/90 dark:border-blue-500/35 dark:bg-blue-500/10 px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm text-blue-900 dark:text-blue-100">
-                                      <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
-                                      <span className="leading-snug">
-                                        <span className="hidden sm:inline">
-                                          Avantage fidélité :{' '}
-                                        </span>
-                                        <span className="sm:hidden">Fidélité </span>
-                                        <strong>{stampRwBk.amountEuros}€</strong>
-                                        <span className="hidden sm:inline"> — code </span>
-                                        <span className="sm:hidden"> · </span>
-                                        <code className="font-mono text-[10px] sm:text-xs bg-white/70 dark:bg-blue-950/40 px-1 sm:px-1.5 py-0.5 rounded-md">
-                                          {stampRwBk.promoCode}
-                                        </code>
-                                      </span>
-                                    </div>
-                                  )}
-                                  <div className="flex flex-wrap gap-1.5 mt-2 sm:mt-2.5">
-                                    <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
-                                      {reqType === 'flash' ? (
-                                        <Sparkles className="w-3 h-3" />
-                                      ) : (
-                                        <FileText className="w-3 h-3" />
-                                      )}
-                                      {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
-                                    </span>
-                                    {placement && (
-                                      <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
-                                        <MapPin className="w-3 h-3" />{' '}
-                                        {formatPlacementForBadge(placement)}
-                                      </span>
-                                    )}
-                                    {size && (
-                                      <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
-                                        <Ruler className="w-3 h-3" /> {formatSizeForBadge(size)}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="mt-2 sm:mt-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300 line-clamp-1 sm:line-clamp-2">
-                                    {bk.description}
-                                  </p>
-                                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-                                    <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
-                                      {new Date(bk.requestedDate).toLocaleDateString('fr-FR', {
-                                        dateStyle: 'medium',
-                                      })}
-                                    </span>
-                                    {bk.requestedTime && (
-                                      <span className="bg-slate-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
-                                        {bk.requestedTime === 'morning'
-                                          ? 'Matin'
-                                          : bk.requestedTime === 'afternoon'
-                                            ? 'Après-midi'
-                                            : bk.requestedTime === 'evening'
-                                              ? 'Soirée'
-                                              : bk.requestedTime}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span
-                                    className={`inline-block mt-2 sm:mt-3 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${
-                                      bk.status === 'pending'
-                                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
-                                        : bk.status === 'confirmed' || bk.status === 'accepted'
-                                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
-                                          : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-slate-400'
-                                    }`}
-                                  >
-                                    {BOOKING_STATUS_LABELS[bk.status] || bk.status}
-                                  </span>
-                                </div>
-                              </div>
-                            </button>
-                            {onOpenClientFicheFromDemande && (
+                    <div className={dashboardListPanel}>
+                      {filteredBookings.map((bk) => {
+                        const thumbUrl = (bk.referenceImages && bk.referenceImages[0]) || null;
+                        const crmAvatar = getAvatar(bk.clientEmail, undefined, bk.clientName);
+                        const displayThumb =
+                          trimAvatarUrl(bk.clientAvatarUrl) || crmAvatar || thumbUrl;
+                        const isProfileThumb = Boolean(bk.clientAvatarUrl || crmAvatar);
+                        const reqType = inferRequestType(bk.description);
+                        const placement = bk.placement;
+                        const size = bk.size;
+                        const stampRwBk = stampRewardForEmail(bk.clientEmail);
+                        const igHandle = parseInstagramHandle(undefined, bk.description);
+                        const bookingMailtoHref = buildMailtoHref(
+                          bk.clientEmail,
+                          'Votre demande de tatouage'
+                        );
+                        return (
+                          <div
+                            key={bk.id}
+                            className={cn(dashboardListRow, 'touch-manipulation min-w-0')}
+                          >
+                            <div className="flex flex-1 min-w-0 gap-2 items-start">
                               <button
                                 type="button"
-                                title="Fiche client complète"
-                                aria-label="Fiche client complète"
-                                onClick={() =>
-                                  onOpenClientFicheFromDemande({ kind: 'booking', booking: bk })
-                                }
-                                className={FICHE_CLIENT_ICON_BTN}
+                                onClick={() => setSheetItem({ ...bk, _type: 'booking' })}
+                                className="flex flex-1 min-w-0 text-left w-full lg:flex-initial lg:min-w-0 lg:max-w-[min(100%,42rem)] xl:max-w-[min(100%,48rem)]"
                               >
-                                <User className="w-5 h-5 shrink-0" aria-hidden />
-                              </button>
-                            )}
-                          </div>
-                          {bk.status === 'pending' && (
-                            <div
-                              className="flex-shrink-0 w-full lg:w-[min(100%,20.5rem)] xl:w-[22rem] pt-2.5 sm:pt-3 mt-0.5 border-t border-slate-100 dark:border-zinc-800 lg:pt-0 lg:mt-0 lg:border-t-0 lg:ml-auto"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <div
-                                className="rounded-xl sm:rounded-2xl border border-zinc-200/90 dark:border-zinc-700/90 bg-zinc-50/90 dark:bg-zinc-900/45 p-2.5 sm:p-3.5 shadow-sm space-y-2 sm:space-y-3"
-                                role="group"
-                                aria-label="Actions pour cette demande vitrine"
-                              >
-                                <div className="flex flex-wrap gap-2">
-                                  <button
-                                    type="button"
-                                    title="Envoie un email de confirmation au client sans exiger d’acompte."
-                                    onClick={() => handleConfirmBooking(bk)}
-                                    className="flex min-h-[44px] min-w-[min(100%,10rem)] flex-1 basis-[8.5rem] justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all text-sm shadow-sm"
+                                <div className="flex gap-3 sm:gap-4 items-start md:items-center min-w-0 w-full">
+                                  <div
+                                    className={cn(
+                                      dashboardAvatarFrame,
+                                      dashboardAvatarSm,
+                                      'sm:size-14 md:size-16'
+                                    )}
                                   >
-                                    <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />
-                                    <span className="truncate">Confirmer</span>
-                                  </button>
-                                  {studioId && onAddAppointment && (
-                                    <button
-                                      type="button"
-                                      onClick={() => openDepositModalForBooking(bk)}
-                                      className="flex min-h-[44px] min-w-[min(100%,10rem)] flex-1 basis-[8.5rem] justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800/70 text-zinc-900 dark:text-zinc-100 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all text-sm"
-                                    >
-                                      <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" />
-                                      <span className="truncate">
-                                        Acompte
-                                        <span className="hidden min-[380px]:inline"> (Stripe)</span>
+                                    {displayThumb ? (
+                                      <img
+                                        src={displayThumb}
+                                        alt=""
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <span className="w-full h-full flex items-center justify-center text-zinc-400 dark:text-zinc-500">
+                                        <FileText className="w-6 h-6 sm:w-8 sm:h-8" />
                                       </span>
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => setRejectPending({ kind: 'booking', bk })}
-                                    className="flex min-h-[44px] min-w-[min(100%,10rem)] flex-1 basis-[8.5rem] justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200/90 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/35 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm"
-                                  >
-                                    <XCircle className="w-4 h-4 shrink-0" />
-                                    <span className="truncate">Refuser</span>
-                                  </button>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-white break-words">
+                                      {bk.clientName}
+                                    </div>
+                                    <div className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-start gap-2 min-w-0">
+                                      <Mail className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                      <span className="min-w-0 truncate sm:whitespace-normal sm:break-words">
+                                        {bk.clientEmail}
+                                      </span>
+                                    </div>
+                                    {stampRwBk && (
+                                      <div className="mt-2 sm:mt-2.5 flex items-start gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-blue-200/90 bg-blue-50/90 dark:border-blue-500/35 dark:bg-blue-500/10 px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm text-blue-900 dark:text-blue-100">
+                                        <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                                        <span className="leading-snug">
+                                          <span className="hidden sm:inline">
+                                            Avantage fidélité :{' '}
+                                          </span>
+                                          <span className="sm:hidden">Fidélité </span>
+                                          <strong>{stampRwBk.amountEuros}€</strong>
+                                          <span className="hidden sm:inline"> — code </span>
+                                          <span className="sm:hidden"> · </span>
+                                          <code className="font-mono text-[10px] sm:text-xs bg-white/70 dark:bg-blue-950/40 px-1 sm:px-1.5 py-0.5 rounded-md">
+                                            {stampRwBk.promoCode}
+                                          </code>
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div className="flex flex-wrap gap-1.5 mt-2 sm:mt-2.5">
+                                      <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
+                                        {reqType === 'flash' ? (
+                                          <Sparkles className="w-3 h-3" />
+                                        ) : (
+                                          <FileText className="w-3 h-3" />
+                                        )}
+                                        {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
+                                      </span>
+                                      {placement && (
+                                        <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
+                                          <MapPin className="w-3 h-3" />{' '}
+                                          {formatPlacementForBadge(placement)}
+                                        </span>
+                                      )}
+                                      {size && (
+                                        <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-50 text-violet-800 dark:bg-blue-500/20 dark:text-blue-400">
+                                          <Ruler className="w-3 h-3" /> {formatSizeForBadge(size)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="mt-2 sm:mt-2.5 text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 line-clamp-1 sm:line-clamp-2">
+                                      {bk.description}
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
+                                      <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
+                                        {new Date(bk.requestedDate).toLocaleDateString('fr-FR', {
+                                          dateStyle: 'medium',
+                                        })}
+                                      </span>
+                                      {bk.requestedTime && (
+                                        <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 sm:px-2 py-0.5 rounded">
+                                          {bk.requestedTime === 'morning'
+                                            ? 'Matin'
+                                            : bk.requestedTime === 'afternoon'
+                                              ? 'Après-midi'
+                                              : bk.requestedTime === 'evening'
+                                                ? 'Soirée'
+                                                : bk.requestedTime}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span
+                                      className={`inline-block mt-2 sm:mt-3 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${
+                                        bk.status === 'pending'
+                                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                                          : bk.status === 'confirmed' || bk.status === 'accepted'
+                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
+                                            : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                                      }`}
+                                    >
+                                      {BOOKING_STATUS_LABELS[bk.status] || bk.status}
+                                    </span>
+                                  </div>
                                 </div>
-
+                              </button>
+                              {onOpenClientFicheFromDemande && (
+                                <button
+                                  type="button"
+                                  title="Fiche client complète"
+                                  aria-label="Fiche client complète"
+                                  onClick={() =>
+                                    onOpenClientFicheFromDemande({ kind: 'booking', booking: bk })
+                                  }
+                                  className={FICHE_CLIENT_ICON_BTN}
+                                >
+                                  <User className="w-5 h-5 shrink-0" aria-hidden />
+                                </button>
+                              )}
+                            </div>
+                            {bk.status === 'pending' && (
+                              <div
+                                className="flex-shrink-0 w-full lg:w-[min(100%,20.5rem)] xl:w-[22rem] pt-2.5 sm:pt-3 mt-0.5 border-t border-zinc-100 dark:border-zinc-800 lg:pt-0 lg:mt-0 lg:border-t-0 lg:ml-auto"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <div
-                                  className="hidden sm:block h-px bg-zinc-200/80 dark:bg-zinc-700/80"
-                                  aria-hidden="true"
-                                />
-
-                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                                  {onOpenProjectDiscussion && (
+                                  className="rounded-xl sm:rounded-2xl border border-zinc-200/90 dark:border-zinc-700/90 bg-zinc-50/90 dark:bg-zinc-900/45 p-2.5 sm:p-3.5 shadow-sm space-y-2 sm:space-y-3"
+                                  role="group"
+                                  aria-label="Actions pour cette demande vitrine"
+                                >
+                                  <div className="flex flex-wrap gap-2">
                                     <button
                                       type="button"
-                                      aria-label="Ouvrir Messagerie InkFlow"
-                                      onClick={() => onOpenProjectDiscussion(bk.id)}
-                                      className="flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] sm:min-w-[7rem] sm:flex-1 justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 font-semibold text-sm  active:scale-[0.98] transition-all shadow-sm"
+                                      title="Envoie un email de confirmation au client sans exiger d’acompte."
+                                      onClick={() => handleConfirmBooking(bk)}
+                                      className="flex min-h-[44px] min-w-[min(100%,10rem)] flex-1 basis-[8.5rem] justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all text-sm shadow-sm"
                                     >
-                                      <MessageCircle className="w-4 h-4 shrink-0" />
-                                      <span className="truncate">Messagerie</span>
+                                      <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />
+                                      <span className="truncate">Confirmer</span>
                                     </button>
-                                  )}
-                                  {igHandle && (
-                                    <a
-                                      href={instagramMessageUrl(igHandle)}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] sm:min-w-[7rem] sm:flex-1 justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl bg-gradient-to-r from-pink-500/15 to-purple-500/15 border border-pink-200/80 dark:border-pink-500/30 text-pink-700 dark:text-pink-300 text-sm font-semibold  active:scale-[0.98] transition-all"
-                                      onClick={(e) => e.stopPropagation()}
+                                    {studioId && onAddAppointment && (
+                                      <button
+                                        type="button"
+                                        onClick={() => openDepositModalForBooking(bk)}
+                                        className="flex min-h-[44px] min-w-[min(100%,10rem)] flex-1 basis-[8.5rem] justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800/70 text-zinc-900 dark:text-zinc-100 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all text-sm"
+                                      >
+                                        <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" />
+                                        <span className="truncate">
+                                          Acompte
+                                          <span className="hidden min-[380px]:inline">
+                                            {' '}
+                                            (Stripe)
+                                          </span>
+                                        </span>
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => setRejectPending({ kind: 'booking', bk })}
+                                      className="flex min-h-[44px] min-w-[min(100%,10rem)] flex-1 basis-[8.5rem] justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200/90 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/35 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm"
                                     >
-                                      <AtSign className="w-4 h-4 shrink-0" /> IG
+                                      <XCircle className="w-4 h-4 shrink-0" />
+                                      <span className="truncate">Refuser</span>
+                                    </button>
+                                  </div>
+
+                                  <div
+                                    className="hidden sm:block h-px bg-zinc-200/80 dark:bg-zinc-700/80"
+                                    aria-hidden="true"
+                                  />
+
+                                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                                    {onOpenProjectDiscussion && (
+                                      <button
+                                        type="button"
+                                        aria-label="Ouvrir Messagerie InkFlow"
+                                        onClick={() => onOpenProjectDiscussion(bk.id)}
+                                        className="flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] sm:min-w-[7rem] sm:flex-1 justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 font-semibold text-sm  active:scale-[0.98] transition-all shadow-sm"
+                                      >
+                                        <MessageCircle className="w-4 h-4 shrink-0" />
+                                        <span className="truncate">Messagerie</span>
+                                      </button>
+                                    )}
+                                    {igHandle && (
+                                      <a
+                                        href={instagramMessageUrl(igHandle)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={cn(
+                                          dashboardBtnSecondary,
+                                          'min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] gap-1.5 px-2.5 py-2 text-sm sm:min-w-[7rem]'
+                                        )}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <AtSign className="w-4 h-4 shrink-0" /> IG
+                                      </a>
+                                    )}
+                                    <a
+                                      href={bookingMailtoHref ?? '#'}
+                                      className="flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] sm:min-w-[7rem] sm:flex-1 justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white/80 dark:bg-zinc-800/50 text-zinc-800 dark:text-zinc-200 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all touch-manipulation"
+                                      aria-disabled={!bookingMailtoHref}
+                                      onClick={(e) => {
+                                        if (!bookingMailtoHref) {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          toast.error(
+                                            'Adresse e-mail du client invalide ou manquante.'
+                                          );
+                                          return;
+                                        }
+                                        handleMailtoClick(e, bookingMailtoHref);
+                                      }}
+                                    >
+                                      <Mail className="w-4 h-4 shrink-0" /> Email
                                     </a>
-                                  )}
-                                  <a
-                                    href={bookingMailtoHref ?? '#'}
-                                    className="flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] sm:min-w-[7rem] sm:flex-1 justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white/80 dark:bg-zinc-800/50 text-zinc-800 dark:text-zinc-200 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all touch-manipulation"
-                                    aria-disabled={!bookingMailtoHref}
-                                    onClick={(e) => {
-                                      if (!bookingMailtoHref) {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        toast.error(
-                                          'Adresse e-mail du client invalide ou manquante.'
-                                        );
-                                        return;
-                                      }
-                                      handleMailtoClick(e, bookingMailtoHref);
-                                    }}
-                                  >
-                                    <Mail className="w-4 h-4 shrink-0" /> Email
-                                  </a>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               )}
@@ -2281,20 +2304,20 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
               )}
               {pendingProjects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 sm:py-20 px-6 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center mb-5 ring-1 ring-slate-200/60 dark:ring-zinc-700">
-                    <FileText className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+                  <div className="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-5 ring-1 ring-zinc-200/60 dark:ring-zinc-700">
+                    <FileText className="w-8 h-8 text-zinc-400 dark:text-zinc-500" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
                     Aucun brief sans date
                   </h3>
-                  <p className="text-slate-500 dark:text-slate-400 max-w-md text-sm leading-relaxed">
+                  <p className="text-zinc-500 dark:text-zinc-400 max-w-md text-sm leading-relaxed">
                     Les demandes envoyées via le formulaire « projet » (sans créneau /book)
                     apparaissent ici — ce n’est pas la même liste que la page book.
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-4 p-3 sm:p-4 min-h-0">
-                  <div className="shrink-0 rounded-xl border border-zinc-200/80 dark:border-zinc-700/80 px-4 py-3 bg-zinc-50/90 dark:bg-zinc-800/40">
+                <div className="flex min-h-0 flex-col gap-4 p-3 sm:p-4">
+                  <div className="shrink-0 rounded-2xl border border-zinc-100 bg-white px-4 py-3 dark:border-zinc-900 dark:bg-zinc-950/40">
                     <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium flex items-start gap-2">
                       <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400 stroke-[1.75]" />
                       <span>
@@ -2310,151 +2333,156 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                       </span>
                     </p>
                   </div>
-                  {pendingProjects.map((pr) => {
-                    const thumbUrl = (pr.referenceImages && pr.referenceImages[0]) || null;
-                    const reqType = inferRequestType(pr.description, pr.placement);
-                    const igProject = parseInstagramHandle(pr.clientInstagram, pr.description);
-                    return (
-                      <div
-                        key={pr.id}
-                        className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm border-l-4 ${SOURCE_ACCENT.brief} p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors touch-manipulation`}
-                      >
-                        <div className="flex flex-1 min-w-0 gap-2 items-start md:items-center w-full md:w-auto">
-                          <button
-                            type="button"
-                            onClick={() => setSheetItem({ ...pr, _type: 'project' })}
-                            className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto"
-                          >
-                            <div className="flex gap-4 items-start md:items-center">
-                              <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden ring-1 ring-slate-200/80 dark:ring-zinc-700">
-                                {thumbUrl ? (
-                                  <img
-                                    src={thumbUrl}
-                                    alt=""
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <span className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                                    <FileText className="w-8 h-8" />
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-lg text-slate-900 dark:text-white">
-                                  {pr.clientName}
-                                </div>
-                                <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
-                                  <span className="flex items-center gap-1.5">
-                                    <Mail className="w-3.5 h-3.5 shrink-0" />
-                                    {pr.clientEmail}
-                                  </span>
-                                  {igProject && (
-                                    <span className="text-slate-500 dark:text-slate-400 text-xs">
-                                      @{igProject}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex flex-wrap gap-1.5 mt-2.5">
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
-                                    {reqType === 'flash' ? (
-                                      <Sparkles className="w-3 h-3" />
-                                    ) : (
-                                      <FileText className="w-3 h-3" />
-                                    )}
-                                    {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
-                                  </span>
-                                  {pr.placement && (
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
-                                      <MapPin className="w-3 h-3" />{' '}
-                                      {formatPlacementForBadge(pr.placement)}
-                                    </span>
-                                  )}
-                                  {pr.size && (
-                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-400">
-                                      <Ruler className="w-3 h-3" /> {formatSizeForBadge(pr.size)}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="mt-2.5 text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
-                                  {pr.description}
-                                </p>
-                                <div className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                                  {new Date(pr.createdAt).toLocaleString('fr-FR', {
-                                    dateStyle: 'medium',
-                                    timeStyle: 'short',
-                                  })}
-                                </div>
-                                <span className="inline-block mt-3 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
-                                  Nouvelle
-                                </span>
-                              </div>
-                            </div>
-                          </button>
-                          {onOpenClientFicheFromDemande && (
+                  <div className={dashboardListPanel}>
+                    {pendingProjects.map((pr) => {
+                      const thumbUrl = (pr.referenceImages && pr.referenceImages[0]) || null;
+                      const reqType = inferRequestType(pr.description, pr.placement);
+                      const igProject = parseInstagramHandle(pr.clientInstagram, pr.description);
+                      return (
+                        <div
+                          key={pr.id}
+                          className={cn(
+                            dashboardListRow,
+                            'touch-manipulation md:flex-row md:items-center'
+                          )}
+                        >
+                          <div className="flex flex-1 min-w-0 gap-2 items-start md:items-center w-full md:w-auto">
                             <button
                               type="button"
-                              title="Fiche client complète"
-                              aria-label="Fiche client complète"
-                              onClick={() =>
-                                onOpenClientFicheFromDemande({ kind: 'project', project: pr })
-                              }
-                              className={FICHE_CLIENT_ICON_BTN}
+                              onClick={() => setSheetItem({ ...pr, _type: 'project' })}
+                              className="flex flex-1 min-w-0 text-left w-full md:flex-initial md:w-auto"
                             >
-                              <User className="w-5 h-5 shrink-0" aria-hidden />
+                              <div className="flex gap-4 items-start md:items-center">
+                                <div className={cn(dashboardAvatarFrame, 'size-16')}>
+                                  {thumbUrl ? (
+                                    <img
+                                      src={thumbUrl}
+                                      alt=""
+                                      loading="lazy"
+                                      decoding="async"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="w-full h-full flex items-center justify-center text-zinc-400 dark:text-zinc-500">
+                                      <FileText className="w-8 h-8" />
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-lg text-zinc-900 dark:text-white">
+                                    {pr.clientName}
+                                  </div>
+                                  <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                                    <span className="flex items-center gap-1.5">
+                                      <Mail className="w-3.5 h-3.5 shrink-0" />
+                                      {pr.clientEmail}
+                                    </span>
+                                    {igProject && (
+                                      <span className="text-zinc-500 dark:text-zinc-400 text-xs">
+                                        @{igProject}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5 mt-2.5">
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
+                                      {reqType === 'flash' ? (
+                                        <Sparkles className="w-3 h-3" />
+                                      ) : (
+                                        <FileText className="w-3 h-3" />
+                                      )}
+                                      {reqType === 'flash' ? 'Flash' : 'Sur-mesure'}
+                                    </span>
+                                    {pr.placement && (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400">
+                                        <MapPin className="w-3 h-3" />{' '}
+                                        {formatPlacementForBadge(pr.placement)}
+                                      </span>
+                                    )}
+                                    {pr.size && (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-50 text-violet-800 dark:bg-blue-500/20 dark:text-blue-400">
+                                        <Ruler className="w-3 h-3" /> {formatSizeForBadge(pr.size)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="mt-2.5 text-sm text-zinc-700 dark:text-zinc-300 line-clamp-2">
+                                    {pr.description}
+                                  </p>
+                                  <div className="mt-2 text-xs text-zinc-400 dark:text-zinc-500">
+                                    {new Date(pr.createdAt).toLocaleString('fr-FR', {
+                                      dateStyle: 'medium',
+                                      timeStyle: 'short',
+                                    })}
+                                  </div>
+                                  <span className="inline-block mt-3 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
+                                    Nouvelle
+                                  </span>
+                                </div>
+                              </div>
                             </button>
-                          )}
-                        </div>
-                        <div
-                          className="flex flex-col gap-3 flex-shrink-0 w-full md:w-auto md:max-w-sm md:ml-4"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div className="space-y-2">
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 px-0.5">
-                              Actions
-                            </p>
-                            <div className="flex flex-col gap-2">
-                              {studioId && (
-                                <button
-                                  type="button"
-                                  onClick={() => setAcceptProjectTarget(pr)}
-                                  className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-all text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
-                                >
-                                  <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />{' '}
-                                  Accepter le projet
-                                </button>
-                              )}
+                            {onOpenClientFicheFromDemande && (
                               <button
                                 type="button"
-                                onClick={() => onOpenProjectDiscussion?.(`pr_${pr.id}`)}
-                                className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-900 font-semibold shadow-sm hover:bg-zinc-50 active:scale-[0.98] transition-all text-sm dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
+                                title="Fiche client complète"
+                                aria-label="Fiche client complète"
+                                onClick={() =>
+                                  onOpenClientFicheFromDemande({ kind: 'project', project: pr })
+                                }
+                                className={FICHE_CLIENT_ICON_BTN}
                               >
-                                <MessageCircle className="w-4 h-4 shrink-0" /> Messagerie InkFlow
+                                <User className="w-5 h-5 shrink-0" aria-hidden />
                               </button>
-                              {studioId && onAddAppointment && (
+                            )}
+                          </div>
+                          <div
+                            className="flex flex-col gap-3 flex-shrink-0 w-full md:w-auto md:max-w-sm md:ml-4"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="space-y-2">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 px-0.5">
+                                Actions
+                              </p>
+                              <div className="flex flex-col gap-2">
+                                {studioId && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setAcceptProjectTarget(pr)}
+                                    className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-all text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
+                                  >
+                                    <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />{' '}
+                                    Accepter le projet
+                                  </button>
+                                )}
                                 <button
                                   type="button"
-                                  onClick={() => openDepositModalForProject(pr)}
-                                  className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
+                                  onClick={() => onOpenProjectDiscussion?.(`pr_${pr.id}`)}
+                                  className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-900 font-semibold shadow-sm hover:bg-zinc-50 active:scale-[0.98] transition-all text-sm dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
                                 >
-                                  <CreditCard className="w-4 h-4 shrink-0" /> Lien d&apos;acompte
-                                  (Stripe)
+                                  <MessageCircle className="w-4 h-4 shrink-0" /> Messagerie InkFlow
                                 </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => setRejectPending({ kind: 'project', pr })}
-                                className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm"
-                              >
-                                <XCircle className="w-4 h-4 shrink-0" /> Refuser
-                              </button>
+                                {studioId && onAddAppointment && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openDepositModalForProject(pr)}
+                                    className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
+                                  >
+                                    <CreditCard className="w-4 h-4 shrink-0" /> Lien d&apos;acompte
+                                    (Stripe)
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setRejectPending({ kind: 'project', pr })}
+                                  className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm"
+                                >
+                                  <XCircle className="w-4 h-4 shrink-0" /> Refuser
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </>
@@ -2474,7 +2502,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 </p>
               </div>
             ) : (
-              <div className="p-3 sm:p-4 space-y-3">
+              <div className={dashboardListPanel}>
                 {historyAppointments.map((apt) => {
                   const stampRw = stampRewardForEmail(apt.clientEmail);
                   const statusLabel =
@@ -2484,10 +2512,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                         ? 'Annulé'
                         : STATUS_LABELS[apt.status] || apt.status;
                   return (
-                    <div
-                      key={apt.id}
-                      className={`rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 shadow-sm border-l-4 ${SOURCE_ACCENT.agenda} p-5 sm:p-6 flex flex-col gap-4 hover:bg-zinc-50/80 dark:hover:bg-zinc-800/25 transition-colors`}
-                    >
+                    <div key={apt.id} className={cn(dashboardListRow, 'gap-4')}>
                       <div className="flex flex-col sm:flex-row sm:items-start gap-4 min-w-0">
                         <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-200/90 ring-1 ring-zinc-300/80 dark:bg-zinc-800 dark:ring-zinc-600/80">
                           <ClientPhotoAvatar
@@ -2582,9 +2607,11 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                               <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" /> Acompte
                             </button>
                           )}
-                          {user && <DevisButton appointment={apt} artist={user} />}
+                          {user && (
+                            <DevisButton appointment={apt} artist={user} studioId={studioId} />
+                          )}
                           {apt.status === 'confirmed' && user && (
-                            <InvoiceButton appointment={apt} artist={user} />
+                            <InvoiceButton appointment={apt} artist={user} studioId={studioId} />
                           )}
                         </div>
                       </div>

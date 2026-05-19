@@ -188,6 +188,50 @@
   }
 
   /* ==========================================================
+     InkFlow UI — zinc + bleu électrique (toute l’app Pro)
+     Miroir de components/dashboard/ui/dashboardChrome.ts
+     ========================================================== */
+  .ink-page {
+    @apply bg-zinc-50 dark:bg-zinc-950;
+  }
+  .ink-card {
+    @apply overflow-hidden rounded-2xl border border-zinc-100 bg-white dark:border-zinc-900 dark:bg-zinc-950/40;
+  }
+  .ink-list-panel {
+    @apply overflow-hidden rounded-2xl border border-zinc-100 bg-white divide-y divide-zinc-100 dark:border-zinc-900 dark:bg-zinc-950/40 dark:divide-zinc-900/50;
+  }
+  .ink-list-row {
+    @apply flex w-full min-h-[52px] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-zinc-50/90 dark:hover:bg-zinc-900/50;
+  }
+  .ink-icon-muted {
+    @apply size-4 shrink-0 text-zinc-500 dark:text-zinc-400;
+  }
+  .ink-icon-strong {
+    @apply size-4 shrink-0 text-zinc-900 dark:text-zinc-100;
+  }
+  .ink-section-title {
+    @apply text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500;
+  }
+  .ink-page-title {
+    font-family:
+      'Plus Jakarta Sans',
+      'Inter',
+      system-ui,
+      -apple-system,
+      sans-serif;
+    @apply text-2xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-3xl;
+  }
+  .ink-btn-primary {
+    @apply inline-flex min-h-11 items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-50 dark:bg-white dark:text-zinc-950;
+  }
+  .ink-btn-accent {
+    @apply inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50 dark:bg-blue-500;
+  }
+  .ink-btn-secondary {
+    @apply inline-flex min-h-11 items-center justify-center rounded-xl border border-zinc-100 bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition-all hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100;
+  }
+
+  /* ==========================================================
      Dashboard Pro — Glass Widget Shell (Figma 387:178)
      Usage: wrap widgets/cockpit with `.ds-glass-widget`
      ========================================================== */
@@ -1351,10 +1395,10 @@ a.dashboard-widget-card:focus-visible {
 
 /* Fond doux pour toutes les pages dashboard (pas seulement overview) — slate-50 style Planity */
 .app-shell-content.dashboard-pages-bg {
-  background: #f8fafc;
+  background: #fafafa;
 }
 :root[data-theme='dark'] .app-shell-content.dashboard-pages-bg {
-  background: #000000;
+  background: #09090b;
 }
 
 /* Page Paramètres — style landing Framer (respiration, typo, cartes) */
@@ -1738,35 +1782,41 @@ textarea {
   }
 
   /* Dashboard tatoueur — safe areas latérales + scroll tactile (iOS / encoche).
-     Réserve bas : dock compacte (~42px pilule + FAB 48px, -mt-3) — moins de vide qu’avant */
+     Réserve bas : dock resserrée (~34px) + FAB, alignée au padding-bottom ajusté */
   .dashboard-pro-shell .app-shell-content {
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
     /* Navigateur mobile : dock + FAB un peu plus hauts ; enveloppe Inkflow Pro = réserve réduite */
-    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important;
-    scroll-padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px)) !important;
+    scroll-padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
   }
 
   .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .app-shell-content {
-    padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px)) !important;
-    scroll-padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+    /* Hauteur effective du dock = 40px (boutons) + max(8px, safe-area).
+       On laisse +8px de respiration sous le dernier élément scrollable. */
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+    scroll-padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Fond accueil mobile : neutre (pas de halos bleu / bande au-dessus du hero) */
-  .dashboard-pro-shell .app-shell-content.dashboard-overview-bg {
-    background-color: #ffffff;
+  .dashboard-pro-shell .app-shell-content.dashboard-overview-bg,
+  .dashboard-pro-shell .app-shell-content.dashboard-pages-bg {
+    background-color: #fafafa;
     background-image: none;
   }
-  .dashboard-pro-shell .app-shell-content.dashboard-overview-bg::after {
+  .dashboard-pro-shell .app-shell-content.dashboard-overview-bg::after,
+  .dashboard-pro-shell .app-shell-content.dashboard-pages-bg::after {
     opacity: 0;
   }
-  :root[data-theme='dark'] .dashboard-pro-shell .app-shell-content.dashboard-overview-bg {
-    background-color: #000000;
+  :root[data-theme='dark'] .dashboard-pro-shell .app-shell-content.dashboard-overview-bg,
+  :root[data-theme='dark'] .dashboard-pro-shell .app-shell-content.dashboard-pages-bg {
+    background-color: #09090b;
     background-image: none;
   }
-  :root[data-theme='dark'] .dashboard-pro-shell .app-shell-content.dashboard-overview-bg::after {
+  :root[data-theme='dark'] .dashboard-pro-shell .app-shell-content.dashboard-overview-bg::after,
+  :root[data-theme='dark'] .dashboard-pro-shell .app-shell-content.dashboard-pages-bg::after {
     opacity: 0;
   }
 
@@ -1781,70 +1831,51 @@ textarea {
     min-height: 0;
   }
 
-  /* Moins d’air mort sous l’encoche : la strip synchro est déjà sous la safe area du shell ;
-     éviter que .safe-top sur le header ré-applique presque toute l’encoche (grand trou blanc). */
-  .dashboard-pro-shell .dashboard-pro-sync-strip {
-    padding-top: 0.125rem;
-    padding-bottom: 0.125rem;
-  }
-
   .dashboard-pro-shell .app-shell-header.safe-top {
-    padding-top: 0.25rem !important;
-  }
-
-  .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .app-shell-header.safe-top {
-    padding-top: 0.125rem !important;
-  }
-
-  .dashboard-pro-shell
-    .app-shell-main:not(:has(.dashboard-pro-sync-strip))
-    .app-shell-header.safe-top {
     padding-top: max(0.5rem, env(safe-area-inset-top, 0px)) !important;
   }
 
-  /* Dock mobile — Safari / PWA (pas l’enveloppe native). */
+  /* Dock mobile — Safari / PWA (pas l’enveloppe native).
+     Padding bas calé sur la safe-area iPhone (home-indicator) mais
+     planché à 8px pour les devices sans encoche — équivalent CSS de
+     `paddingBottom: insets.bottom || 8` (react-native-safe-area-context). */
   .dashboard-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
     overflow: visible;
     left: 50%;
     right: auto;
-    width: calc(100% - 24px);
+    width: calc(100% - 4px);
     max-width: 34rem;
     transform: translateX(-50%);
     bottom: 0;
-    min-height: 46px;
-    padding-top: 4px;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-    padding-left: 4px;
-    padding-right: 4px;
-    border-radius: 24px;
-    border: 1px solid rgba(226, 232, 240, 0.95);
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: saturate(140%) blur(18px);
-    -webkit-backdrop-filter: saturate(140%) blur(18px);
+    min-height: 0;
+    padding-top: 2px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
+    padding-left: 0;
+    padding-right: 0;
+    border-radius: 16px;
+    border: 1px solid rgb(39 39 42);
+    background: rgb(9 9 11);
     box-shadow:
-      0 14px 44px rgba(37, 99, 235, 0.1),
-      0 8px 28px rgba(15, 23, 42, 0.06),
-      0 3px 10px rgba(15, 23, 42, 0.04),
-      inset 0 1px 0 rgba(255, 255, 255, 0.65);
+      0 12px 40px rgba(0, 0, 0, 0.35),
+      0 4px 12px rgba(0, 0, 0, 0.2);
     border-top: none !important;
   }
 
   /* Inkflow Pro (Expo / WebView) : capsule flottante, pas collée aux bords latéraux. */
   .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
-    width: calc(100% - 48px);
-    max-width: 22rem;
-    min-height: 48px;
-    padding-top: 8px;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-    padding-left: 8px;
-    padding-right: 8px;
+    width: calc(100% - 4px);
+    max-width: none;
+    min-height: 0;
+    padding-top: 2px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
+    padding-left: 0;
+    padding-right: 0;
     border-radius: 9999px;
-    background: rgba(255, 255, 255, 0.92);
+    background: rgb(9 9 11);
+    border: 1px solid rgb(39 39 42);
     box-shadow:
-      0 12px 42px rgba(15, 23, 42, 0.14),
-      0 6px 20px rgba(37, 99, 235, 0.1),
-      0 2px 8px rgba(15, 23, 42, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.65);
+      0 14px 44px rgba(0, 0, 0, 0.4),
+      0 4px 14px rgba(0, 0, 0, 0.25);
   }
 
   /* Enveloppe native : pas de padding-bottom sur #root (évite double safe area + trou). */
@@ -1858,13 +1889,11 @@ textarea {
     -webkit-overflow-scrolling: touch;
   }
   :root[data-theme='dark'] .dashboard-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
-    border-color: rgba(63, 63, 70, 0.9);
-    background: rgba(24, 24, 27, 0.92);
+    border-color: rgb(39 39 42);
+    background: rgb(9 9 11);
     box-shadow:
-      0 14px 48px rgba(0, 0, 0, 0.5),
-      0 6px 20px rgba(0, 0, 0, 0.35),
-      0 2px 8px rgba(0, 0, 0, 0.25),
-      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      0 14px 48px rgba(0, 0, 0, 0.55),
+      0 4px 14px rgba(0, 0, 0, 0.35);
   }
 }
 

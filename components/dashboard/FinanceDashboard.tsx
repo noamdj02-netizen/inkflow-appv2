@@ -1053,7 +1053,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({
                     {formatEuroPrivacy(t.amount, privacyMode)}
                   </span>
                   {t.type === 'rdv' && t.appointment && user && (
-                    <InvoiceButton appointment={t.appointment} artist={user} />
+                    <InvoiceButton appointment={t.appointment} artist={user} studioId={studioId} />
                   )}
                 </div>
               </div>

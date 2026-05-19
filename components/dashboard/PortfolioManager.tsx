@@ -413,17 +413,17 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
+          <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
             Portfolio & Vitrine
           </h2>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-zinc-500 mt-1">
             {items.length} {items.length > 1 ? 'réalisations' : 'réalisation'} — Prenez une photo,
             elle apparaît sur votre vitrine et peut être partagée sur Instagram
           </p>
         </div>
         <button
           onClick={() => setShowUpload(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-medium text-sm hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-[0.98] shadow-sm"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium text-sm hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all active:scale-[0.98] shadow-sm"
         >
           <Plus className="w-4 h-4" />
           Ajouter une photo
@@ -449,16 +449,16 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       ) : null}
 
       {/* Filters toolbar */}
-      <div className="flex flex-wrap items-center gap-3 p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]">
-        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+      <div className="flex flex-wrap items-center gap-3 p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]">
+        <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
           <Filter className="w-4 h-4" />
           <span className="text-sm font-medium">Filtres</span>
         </div>
-        <div className="h-5 w-px bg-slate-200 dark:bg-zinc-700" />
+        <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-all"
+          className="px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 transition-all"
         >
           <option value="all">Tous les styles</option>
           {CATEGORIES.map((c) => (
@@ -471,7 +471,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           <select
             value={filterArtist}
             onChange={(e) => setFilterArtist(e.target.value)}
-            className="px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-xl text-sm bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-white/10 transition-all"
+            className="px-3 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 transition-all"
           >
             <option value="all">Tous les artistes</option>
             {artists.map((a) => (
@@ -488,7 +488,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
             className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all active:scale-[0.98] touch-manipulation min-h-[40px] ${
               deleteMode
                 ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
-                : 'bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-700'
+                : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'
             }`}
             aria-pressed={deleteMode}
             title={deleteMode ? 'Désactiver le mode suppression' : 'Supprimer en tapant une photo'}
@@ -503,7 +503,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                 setFilterCategory('all');
                 setFilterArtist('all');
               }}
-              className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline underline-offset-2"
+              className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 underline underline-offset-2"
             >
               Réinitialiser filtres
             </button>
@@ -513,14 +513,14 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
 
       {/* Empty state */}
       {filtered.length === 0 ? (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] p-12 text-center">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] p-12 text-center">
           <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 dark:from-zinc-800 dark:to-zinc-900 flex items-center justify-center">
-            <Sparkles className="w-10 h-10 text-slate-300 dark:text-zinc-600" />
+            <Sparkles className="w-10 h-10 text-zinc-300 dark:text-zinc-600" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
             {items.length === 0 ? 'Votre portfolio est vide' : 'Aucun résultat'}
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-6">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto mb-6">
             {items.length === 0
               ? 'Commencez par ajouter vos plus belles réalisations pour attirer de nouveaux clients.'
               : 'Aucune photo ne correspond aux filtres sélectionnés.'}
@@ -528,7 +528,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           {items.length === 0 && (
             <button
               onClick={() => setShowUpload(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-medium text-sm hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-[0.98]"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium text-sm hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all active:scale-[0.98]"
             >
               <Upload className="w-4 h-4" />
               Ajouter votre première photo
@@ -540,7 +540,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           {filtered.map((item, index) => (
             <div
               key={item.id}
-              className={`group relative aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-zinc-800 border border-slate-200/80 dark:border-zinc-700 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-lg transition-shadow duration-300 ${
+              className={`group relative aspect-square rounded-2xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-lg transition-shadow duration-300 ${
                 deleteMode
                   ? 'ring-2 ring-red-400 dark:ring-red-600 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900'
                   : ''
@@ -626,24 +626,24 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
         >
           <div
-            className="bg-white dark:bg-zinc-900 rounded-2xl max-w-lg w-full my-auto p-6 border border-slate-200/80 dark:border-zinc-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            className="bg-white dark:bg-zinc-900 rounded-2xl max-w-lg w-full my-auto p-6 border border-zinc-200/80 dark:border-zinc-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6 flex-shrink-0">
               <div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
                   Ajouter au portfolio
                 </h3>
-                <p className="text-sm text-slate-500 mt-0.5">Partagez votre dernière réalisation</p>
+                <p className="text-sm text-zinc-500 mt-0.5">Partagez votre dernière réalisation</p>
               </div>
               <button
                 onClick={() => {
                   setShowUpload(false);
                   setImageLoading(false);
                 }}
-                className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >
-                <X className="w-5 h-5 text-slate-500" />
+                <X className="w-5 h-5 text-zinc-500" />
               </button>
             </div>
             <div className="space-y-4">
@@ -657,14 +657,14 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                 onClick={() => fileRef.current?.click()}
                 className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
                   dragOver
-                    ? 'border-slate-900 dark:border-white bg-slate-50 dark:bg-zinc-800'
-                    : 'border-slate-300 dark:border-zinc-700 hover:border-slate-400 dark:hover:border-zinc-600 hover:bg-slate-50 dark:hover:bg-zinc-800/50'
+                    ? 'border-zinc-900 dark:border-white bg-zinc-50 dark:bg-zinc-800'
+                    : 'border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
                 }`}
               >
                 {imageLoading ? (
                   <div className="flex flex-col items-center gap-3 py-8">
-                    <Loader2 className="w-10 h-10 text-slate-400 animate-spin" />
-                    <p className="text-sm text-slate-500">Chargement de l'image...</p>
+                    <Loader2 className="w-10 h-10 text-zinc-400 animate-spin" />
+                    <p className="text-sm text-zinc-500">Chargement de l'image...</p>
                   </div>
                 ) : newItem.url ? (
                   <div className="relative inline-block">
@@ -699,18 +699,18 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                       <button
                         type="button"
                         onClick={() => fileRef.current?.click()}
-                        className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors"
+                        className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                       >
-                        <Upload className="w-8 h-8 text-slate-500 dark:text-zinc-400" />
-                        <span className="text-xs font-medium text-slate-600 dark:text-zinc-300">
+                        <Upload className="w-8 h-8 text-zinc-500 dark:text-zinc-400" />
+                        <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                           Galerie
                         </span>
                       </button>
                     </div>
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Glissez une image ici
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-zinc-500">
                       ou utilisez l'appareil photo / la galerie
                     </p>
                   </>
@@ -760,14 +760,14 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
               )}
 
               {recentAppointments.length > 0 && (
-                <div className="p-3 bg-slate-50 dark:bg-zinc-800/50 rounded-xl">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                     Lier à un RDV (optionnel)
                   </label>
                   <select
                     value={newItem.appointmentId}
                     onChange={(e) => setNewItem((p) => ({ ...p, appointmentId: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-300 text-sm"
+                    className="w-full px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm"
                   >
                     <option value="">Aucun</option>
                     {recentAppointments.map((apt) => (
@@ -779,12 +779,12 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                 </div>
               )}
 
-              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-zinc-800/50 rounded-xl">
+              <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Photo "avant"
                   </label>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-zinc-500">
                     Optionnel - pour montrer la transformation
                   </p>
                 </div>
@@ -793,7 +793,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                   className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                     newItem.beforeUrl
                       ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                      : 'bg-white dark:bg-zinc-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-zinc-600 hover:bg-slate-100 dark:hover:bg-zinc-600'
+                      : 'bg-white dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-600'
                   }`}
                 >
                   {newItem.beforeUrl ? (
@@ -817,7 +817,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
               <select
                 value={newItem.category}
                 onChange={(e) => setNewItem((p) => ({ ...p, category: e.target.value }))}
-                className="w-full px-4 py-3 border border-slate-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-white/10"
+                className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10"
               >
                 <option value="">Style / catégorie</option>
                 {CATEGORIES.map((c) => (
@@ -831,7 +831,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                 <select
                   value={newItem.artist}
                   onChange={(e) => setNewItem((p) => ({ ...p, artist: e.target.value }))}
-                  className="w-full px-4 py-3 border border-slate-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-white/10"
+                  className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10"
                 >
                   {artists.map((a) => (
                     <option key={a} value={a}>
@@ -846,7 +846,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                 value={newItem.description}
                 onChange={(e) => setNewItem((p) => ({ ...p, description: e.target.value }))}
                 placeholder="Description de la réalisation"
-                className="w-full px-4 py-3 border border-slate-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-white/10"
+                className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10"
               />
 
               <input
@@ -854,13 +854,13 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                 value={newItem.tags}
                 onChange={(e) => setNewItem((p) => ({ ...p, tags: e.target.value }))}
                 placeholder="Tags (séparés par des virgules)"
-                className="w-full px-4 py-3 border border-slate-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-white/10"
+                className="w-full px-4 py-3 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10"
               />
 
               <button
                 onClick={handleAdd}
                 disabled={!newItem.url || !newItem.category || uploading || imageLoading}
-                className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-semibold hover:bg-slate-800 dark:hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                className="w-full py-3 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 {uploading ? (
                   <>
@@ -875,7 +875,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                 )}
               </button>
               {(!newItem.url || !newItem.category) && !uploading && !imageLoading && (
-                <p className="text-xs text-center text-slate-500 dark:text-zinc-400 mt-2">
+                <p className="text-xs text-center text-zinc-500 dark:text-zinc-400 mt-2">
                   {!newItem.url && !newItem.category
                     ? 'Prends ou choisis une image, valide le cadrage, puis sélectionne un style.'
                     : !newItem.url

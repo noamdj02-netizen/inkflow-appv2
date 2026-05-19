@@ -11,6 +11,7 @@ import {
   Copy,
   Euro,
   FileSignature,
+  FileText,
   HeartPulse,
   Instagram,
   Mail,
@@ -38,6 +39,13 @@ import { supabase } from '../../lib/supabase';
 import { CONSENT_FORM_PRESETS, type ConsentFormPreset } from '../../lib/consentFormPresets';
 import { isSyntheticClientPreviewAppointmentId } from '../../lib/clientPreviewFromDemande';
 import { ConsentSender } from '../consent/ConsentSender';
+import { ClientDossierDocuments } from './ClientDossierDocuments';
+import {
+  dashboardCardSurface,
+  dashboardIconMuted,
+  dashboardSectionTitle,
+  dashboardStatusBadge,
+} from './ui/dashboardChrome';
 
 export interface ClientPreviewData {
   appointment: Appointment;
@@ -82,7 +90,7 @@ const STATUS_BADGE_CLASS: Record<Appointment['status'], string> = {
   pending: 'bg-amber-100/90 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200',
   confirmed: 'bg-blue-100/90 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200',
   in_progress: 'bg-sky-100/90 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200',
-  completed: 'bg-slate-100/90 text-slate-700 dark:bg-slate-500/20 dark:text-slate-200',
+  completed: 'bg-zinc-100/90 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-200',
   cancelled: 'bg-red-100/90 text-red-800 dark:bg-red-500/20 dark:text-red-200',
   no_show: 'bg-orange-100/90 text-orange-800 dark:bg-orange-500/20 dark:text-orange-200',
 };
@@ -108,22 +116,19 @@ const SIZE_LABELS: Record<Appointment['size'], string> = {
   extra_large: 'Très grand',
 };
 
-const ICON_FINE = 'shrink-0 text-slate-500 dark:text-slate-400';
-/** Libellé de section — charte finition Apple CRM */
-const SECTION_TITLE =
-  'text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 dark:text-slate-500 mb-2';
+const ICON_FINE = `shrink-0 ${dashboardIconMuted}`;
+const SECTION_TITLE = `${dashboardSectionTitle} mb-2`;
 
 const TIMELINE_DOT: Record<Appointment['status'], string> = {
   completed: 'bg-emerald-500 ring-2 ring-emerald-200/80 dark:ring-emerald-500/30',
   cancelled: 'bg-red-500 ring-2 ring-red-200/80 dark:ring-red-500/30',
   no_show: 'bg-orange-500 ring-2 ring-orange-200/80 dark:ring-orange-500/30',
-  pending: 'bg-slate-400 ring-2 ring-slate-200 dark:ring-slate-600',
+  pending: 'bg-zinc-400 ring-2 ring-zinc-200 dark:ring-zinc-600',
   confirmed: 'bg-blue-500 ring-2 ring-blue-200/80 dark:ring-blue-500/25',
   in_progress: 'bg-sky-500 ring-2 ring-sky-200/80 dark:ring-sky-500/25',
 };
 
-const cardSurface =
-  'rounded-2xl bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06),0_4px_14px_rgba(15,23,42,0.04)] dark:bg-zinc-900 dark:shadow-[0_2px_12px_rgba(0,0,0,0.35)]';
+const cardSurface = `${dashboardCardSurface} p-0`;
 
 function formatDurationMinutes(mins: number): string {
   if (!Number.isFinite(mins) || mins <= 0) return '—';
@@ -271,7 +276,7 @@ function LazyClientPhoto({
     <div className="aspect-square w-full">
       {hideSharedLayout ? (
         <div
-          className="h-full w-full animate-pulse rounded-xl bg-slate-200/80 dark:bg-zinc-700/80"
+          className="h-full w-full animate-pulse rounded-xl bg-zinc-200/80 dark:bg-zinc-700/80"
           aria-hidden
         />
       ) : (
@@ -279,11 +284,11 @@ function LazyClientPhoto({
           type="button"
           layoutId={layoutId}
           onClick={onOpen}
-          className="relative h-full w-full overflow-hidden rounded-xl bg-slate-100 text-left dark:bg-zinc-800"
+          className="relative h-full w-full overflow-hidden rounded-xl bg-zinc-100 text-left dark:bg-zinc-800"
         >
           {!loaded && (
             <div
-              className="absolute inset-0 animate-pulse bg-slate-200/80 dark:bg-zinc-700/80"
+              className="absolute inset-0 animate-pulse bg-zinc-200/80 dark:bg-zinc-700/80"
               aria-hidden
             />
           )}
@@ -532,11 +537,11 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         >
           <p className={SECTION_TITLE}>Identité</p>
           <div className="flex items-start gap-4">
-            <div className="flex size-[3.75rem] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-200 shadow-sm dark:bg-zinc-700">
+            <div className="flex size-[3.75rem] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-zinc-200 shadow-sm dark:bg-zinc-700">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="" className="size-full object-cover" loading="lazy" />
               ) : (
-                <span className="text-2xl font-black text-slate-600 dark:text-slate-200">
+                <span className="text-2xl font-black text-zinc-600 dark:text-zinc-200">
                   {avatarLetter}
                 </span>
               )}
@@ -550,7 +555,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                   <a
                     href={telHref}
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-slate-100 p-3 text-slate-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-slate-200"
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-zinc-100 p-3 text-zinc-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-zinc-200"
                     aria-label="Appeler"
                   >
                     <Phone className="size-5" strokeWidth={1.5} aria-hidden />
@@ -560,7 +565,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                   <a
                     href={smsHref}
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-slate-100 p-3 text-slate-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-slate-200"
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-zinc-100 p-3 text-zinc-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-zinc-200"
                     aria-label="Envoyer un SMS"
                   >
                     <MessageCircle className="size-5" strokeWidth={1.5} aria-hidden />
@@ -569,7 +574,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 {client?.status === 'vip' && (
-                  <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-800 dark:bg-violet-500/20 dark:text-violet-200">
+                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-violet-800 dark:bg-blue-500/20 dark:text-blue-200">
                     {CLIENT_STATUS_LABEL.vip}
                   </span>
                 )}
@@ -580,12 +585,12 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                   </span>
                 )}
                 {client && client.status !== 'vip' && (
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-300">
+                  <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600 dark:bg-white/10 dark:text-zinc-300">
                     {CLIENT_STATUS_LABEL[client.status]}
                   </span>
                 )}
               </div>
-              <div className="mt-4 space-y-2 text-sm text-slate-500 dark:text-slate-400">
+              <div className="mt-4 space-y-2 text-sm text-zinc-500 dark:text-zinc-400">
                 {appointment.clientEmail ? (
                   <p className="flex min-w-0 items-center gap-2">
                     <Mail className={`size-4 ${ICON_FINE}`} strokeWidth={1.5} aria-hidden />
@@ -613,7 +618,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                       e.stopPropagation();
                       handleMailtoClick(e, mailtoHref);
                     }}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-slate-200"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-zinc-200"
                   >
                     <Mail className="size-3.5" strokeWidth={1.5} aria-hidden />
                     E-mail
@@ -625,7 +630,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                     e.stopPropagation();
                     void copyContact();
                   }}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-slate-200"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-full bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-zinc-200"
                 >
                   <Copy className="size-3.5" strokeWidth={1.5} aria-hidden />
                   Copier
@@ -636,7 +641,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-slate-200"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full bg-zinc-100 px-4 py-2 text-xs font-semibold text-zinc-700 transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-zinc-800 dark:text-zinc-200"
                   >
                     <Instagram className="size-3.5" strokeWidth={1.5} aria-hidden />
                     Instagram
@@ -652,14 +657,14 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
           <h4 className={SECTION_TITLE}>Prochains rendez-vous</h4>
           <div className="mt-4 space-y-4">
             {upcomingSorted.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
                 Aucun rendez-vous à venir pour ce client.
               </p>
             ) : (
               upcomingSorted.slice(0, compact ? 2 : 4).map((apt) => (
                 <div
                   key={apt.id}
-                  className={`rounded-xl bg-slate-50/90 p-4 dark:bg-zinc-800/50 ${apt.id === appointment.id ? 'ring-2 ring-blue-500/30' : ''}`}
+                  className={`rounded-xl bg-zinc-50/90 p-4 dark:bg-zinc-800/50 ${apt.id === appointment.id ? 'ring-2 ring-blue-500/30' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span
@@ -668,7 +673,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                       {STATUS_LABELS[apt.status]}
                     </span>
                     {formatRelativeCalendarDay(apt.date) ? (
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                      <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                         {formatRelativeCalendarDay(apt.date)}
                       </span>
                     ) : null}
@@ -676,10 +681,10 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                   <p className="mt-2 text-sm font-semibold capitalize text-zinc-900 dark:text-white">
                     {formatAppointmentWhen(apt.date, apt.time)}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
                     {apt.service || '—'}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
                     <span className="inline-flex items-center gap-1">
                       <Clock className="size-3.5" strokeWidth={1.5} />
                       {formatDurationMinutes(apt.duration)}
@@ -693,17 +698,17 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               ))
             )}
           </div>
-          <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4 dark:border-zinc-800">
-            <div className="flex items-center gap-1.5 rounded-xl bg-slate-100/80 px-2.5 py-1.5 text-xs dark:bg-zinc-800">
+          <div className="mt-5 flex flex-wrap gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+            <div className="flex items-center gap-1.5 rounded-xl bg-zinc-100/80 px-2.5 py-1.5 text-xs dark:bg-zinc-800">
               <Euro className={`size-3.5 ${ICON_FINE}`} strokeWidth={1.5} />
-              <span className="text-slate-500">Prix</span>
+              <span className="text-zinc-500">Prix</span>
               <span className="font-bold text-zinc-900 dark:text-white">
                 {primaryUpcoming.price}€
               </span>
             </div>
-            <div className="flex items-center gap-1.5 rounded-xl bg-slate-100/80 px-2.5 py-1.5 text-xs dark:bg-zinc-800">
+            <div className="flex items-center gap-1.5 rounded-xl bg-zinc-100/80 px-2.5 py-1.5 text-xs dark:bg-zinc-800">
               <Banknote className={`size-3.5 ${ICON_FINE}`} strokeWidth={1.5} />
-              <span className="text-slate-500">Acompte</span>
+              <span className="text-zinc-500">Acompte</span>
               <span className="font-bold text-zinc-900 dark:text-white">
                 {primaryUpcoming.deposit}€
                 {primaryUpcoming.depositPaid ? (
@@ -715,9 +720,9 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                 )}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 rounded-xl bg-slate-100/80 px-2.5 py-1.5 text-xs dark:bg-zinc-800">
+            <div className="flex items-center gap-1.5 rounded-xl bg-zinc-100/80 px-2.5 py-1.5 text-xs dark:bg-zinc-800">
               <WalletCards className={`size-3.5 ${ICON_FINE}`} strokeWidth={1.5} />
-              <span className="text-slate-500">Solde</span>
+              <span className="text-zinc-500">Solde</span>
               <span className="font-bold text-zinc-900 dark:text-white">
                 {appointmentRemainingBalanceEuros(primaryUpcoming).toFixed(2)}€
               </span>
@@ -729,7 +734,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
           <h4 className={SECTION_TITLE}>Historique des rendez-vous</h4>
           {pastSorted.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Aucun rendez-vous passé ou clôturé sur cette fiche.
             </p>
           ) : (
@@ -744,16 +749,16 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                         aria-hidden
                       />
                       {!isLast ? (
-                        <span className="mt-1 w-px flex-1 min-h-[12px] bg-slate-200 dark:bg-zinc-700" />
+                        <span className="mt-1 w-px flex-1 min-h-[12px] bg-zinc-200 dark:bg-zinc-700" />
                       ) : null}
                     </div>
                     <div className={`min-w-0 flex-1 pb-5 ${isLast ? 'pb-0' : ''}`}>
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
                           {STATUS_LABELS[apt.status]}
                         </p>
                         {formatRelativeCalendarDay(apt.date) ? (
-                          <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                          <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
                             {formatRelativeCalendarDay(apt.date)}
                           </span>
                         ) : null}
@@ -761,10 +766,10 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                       <p className="mt-0.5 text-sm font-semibold text-zinc-900 dark:text-white">
                         {formatAppointmentWhen(apt.date, apt.time)}
                       </p>
-                      <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-300">
+                      <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-300">
                         {apt.service || '—'}
                       </p>
-                      <p className="mt-1 font-mono text-[10px] text-slate-400 dark:text-slate-500">
+                      <p className="mt-1 font-mono text-[10px] text-zinc-400 dark:text-zinc-500">
                         appointment_id · {apt.id}
                       </p>
                     </div>
@@ -783,7 +788,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                 <button
                   type="button"
                   onClick={() => onPromptNewProject()}
-                  className="mt-1 inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-slate-500 transition-all hover:bg-slate-100/80 hover:text-slate-800 active:scale-[0.98] motion-reduce:active:scale-100 dark:text-slate-400 dark:hover:bg-zinc-800/60 dark:hover:text-slate-200"
+                  className="mt-1 inline-flex min-h-10 items-center gap-1.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-zinc-500 transition-all hover:bg-zinc-100/80 hover:text-zinc-800 active:scale-[0.98] motion-reduce:active:scale-100 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-200"
                 >
                   <Plus className="size-3.5" strokeWidth={2} aria-hidden />
                   Nouveau projet
@@ -796,31 +801,31 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                     key={pr.id}
                     className={`rounded-2xl border border-blue-100/90 bg-blue-50/50 py-4 pl-4 pr-4 dark:border-blue-500/20 dark:bg-blue-950/30 ${
                       pr.status === 'pending'
-                        ? 'border-l-4 border-l-blue-600'
-                        : 'border-l-4 border-l-blue-400'
+                        ? 'border-l-4 border-l-zinc-200 600'
+                        : 'border-l-4 border-l-zinc-200 400'
                     }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-800 dark:bg-blue-500/15 dark:text-blue-200">
                         {pr.status === 'pending' ? 'Brief en attente' : 'Brief accepté'}
                       </span>
-                      <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">
+                      <span className="font-mono text-[10px] text-zinc-400 dark:text-zinc-500">
                         project_request_id · {pr.id}
                       </span>
                     </div>
                     <p className="mt-2 text-sm font-semibold leading-snug text-zinc-900 dark:text-white">
                       {truncateNote(pr.description, compact ? 140 : 220)}
                     </p>
-                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-600 dark:text-zinc-300">
                       {(pr.placement || pr.estimatedSize || pr.size) && (
                         <span>
-                          <span className="text-slate-400">Zone · </span>
+                          <span className="text-zinc-400">Zone · </span>
                           {[pr.placement, pr.estimatedSize || pr.size].filter(Boolean).join(' · ')}
                         </span>
                       )}
                       {pr.budget ? (
                         <span>
-                          <span className="text-slate-400">Budget · </span>
+                          <span className="text-zinc-400">Budget · </span>
                           {pr.budget}
                         </span>
                       ) : null}
@@ -843,7 +848,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               <button
                 type="button"
                 onClick={() => onPromptNewProject()}
-                className="mt-3 inline-flex min-h-10 items-center gap-1.5 text-[11px] font-semibold text-slate-500 transition-all hover:text-slate-800 active:scale-[0.98] dark:text-slate-400 dark:hover:text-slate-200"
+                className="mt-3 inline-flex min-h-10 items-center gap-1.5 text-[11px] font-semibold text-zinc-500 transition-all hover:text-zinc-800 active:scale-[0.98] dark:text-zinc-400 dark:hover:text-zinc-200"
               >
                 <Plus className="size-3.5" strokeWidth={2} aria-hidden />
                 Nouveau projet
@@ -860,19 +865,19 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               {waitlistActive.map((w) => (
                 <div
                   key={w.id}
-                  className="flex items-start gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 px-3 py-3 dark:border-zinc-700 dark:bg-zinc-800/40"
+                  className="flex items-start gap-3 rounded-xl border border-zinc-200/80 bg-zinc-50/60 px-3 py-3 dark:border-zinc-700 dark:bg-zinc-800/40"
                 >
                   <div className="flex min-w-0 flex-1 gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-200/80 dark:bg-zinc-700">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-200/80 dark:bg-zinc-700">
                       <Clock
-                        className="size-5 text-slate-600 dark:text-slate-300"
+                        className="size-5 text-zinc-600 dark:text-zinc-300"
                         strokeWidth={1.5}
                         aria-hidden
                       />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-slate-200/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 dark:bg-zinc-600 dark:text-slate-100">
+                        <span className="rounded-full bg-zinc-200/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-zinc-700 dark:bg-zinc-600 dark:text-zinc-100">
                           Sans date
                         </span>
                         <span className="truncate text-xs font-semibold text-zinc-800 dark:text-zinc-100">
@@ -880,7 +885,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                         </span>
                       </div>
                       {w.notes && w.desiredService ? (
-                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
                           {w.notes}
                         </p>
                       ) : null}
@@ -890,7 +895,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                     <button
                       type="button"
                       onClick={() => void copyBookingLink()}
-                      className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-all active:scale-95 dark:border-zinc-600 dark:bg-zinc-900 dark:text-slate-200"
+                      className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 transition-all active:scale-95 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200"
                       title="Copier le lien de réservation"
                     >
                       <CalendarPlus className="size-4" strokeWidth={1.5} aria-hidden />
@@ -908,20 +913,20 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                 </div>
               ))}
               {waitlistActive.length === 0 && clientTagsIndicateWaitlist(client) ? (
-                <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 px-3 py-3 dark:border-zinc-700 dark:bg-zinc-800/40">
-                  <Clock className="size-5 shrink-0 text-slate-500" strokeWidth={1.5} aria-hidden />
+                <div className="flex items-center gap-3 rounded-xl border border-zinc-200/80 bg-zinc-50/60 px-3 py-3 dark:border-zinc-700 dark:bg-zinc-800/40">
+                  <Clock className="size-5 shrink-0 text-zinc-500" strokeWidth={1.5} aria-hidden />
                   <div className="min-w-0 flex-1">
-                    <span className="rounded-full bg-slate-200/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 dark:bg-zinc-600 dark:text-slate-100">
+                    <span className="rounded-full bg-zinc-200/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-zinc-700 dark:bg-zinc-600 dark:text-zinc-100">
                       Sans date
                     </span>
-                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                    <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
                       Client à recontacter ou sans date fixée (tag CRM).
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => void copyBookingLink()}
-                    className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition-all active:scale-95 dark:border-zinc-600 dark:bg-zinc-900 dark:text-slate-200"
+                    className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 transition-all active:scale-95 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200"
                     title="Proposer un créneau — copier le lien"
                   >
                     <CalendarPlus className="size-4" strokeWidth={1.5} aria-hidden />
@@ -932,7 +937,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
             <button
               type="button"
               onClick={() => void copyBookingLink()}
-              className="mt-3 w-full rounded-xl border border-dashed border-slate-200/90 py-2.5 text-center text-[11px] font-semibold text-slate-600 transition-all hover:bg-slate-50 active:scale-[0.99] dark:border-zinc-600 dark:text-slate-300 dark:hover:bg-zinc-800/50"
+              className="mt-3 w-full rounded-xl border border-dashed border-zinc-200/90 py-2.5 text-center text-[11px] font-semibold text-zinc-600 transition-all hover:bg-zinc-50 active:scale-[0.99] dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800/50"
             >
               Proposer un créneau — copier le lien /book
             </button>
@@ -943,7 +948,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
           <h4 className={SECTION_TITLE}>Portfolio</h4>
           {galleryUrls.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Aucune photo enregistrée sur cette fiche ou les rendez-vous liés.
             </p>
           ) : (
@@ -969,9 +974,9 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         {/* —— Santé & Légal —— */}
         <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
           <h4 className={SECTION_TITLE}>Santé & Légal</h4>
-          <p className="mb-3 font-mono text-[10px] text-slate-400 dark:text-slate-500">
+          <p className="mb-3 font-mono text-[10px] text-zinc-400 dark:text-zinc-500">
             Référence consentement · appointment_id{' '}
-            <span className="font-semibold text-slate-600 dark:text-slate-400">
+            <span className="font-semibold text-zinc-600 dark:text-zinc-400">
               {primaryUpcoming.id}
             </span>
           </p>
@@ -1062,7 +1067,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               className={`flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${
                 hasHealthSnapshot
                   ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-200'
-                  : 'bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-slate-200'
+                  : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
               }`}
             >
               <HeartPulse className="size-4 shrink-0" strokeWidth={1.5} />
@@ -1072,7 +1077,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                   : 'Questionnaire santé manquant'}
               </span>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex flex-wrap gap-2 text-xs text-zinc-500 dark:text-zinc-400">
               <span className="inline-flex items-center gap-1">
                 <Banknote className="size-3.5" strokeWidth={1.5} />
                 Acompte : {appointment.depositPaid ? 'encaissé' : 'à relancer'}
@@ -1093,7 +1098,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
           <h4 className={SECTION_TITLE}>Notes & préférences</h4>
           <div className="mt-4 space-y-4 text-sm">
             {client && (
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-500 dark:text-slate-400">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-zinc-500 dark:text-zinc-400">
                 {formatVisitDate(client.firstVisit) && (
                   <span>
                     1<sup>ère</sup> visite :{' '}
@@ -1117,16 +1122,16 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                 {tagPreview.map((t) => (
                   <span
                     key={t}
-                    className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-zinc-800 dark:text-slate-300"
+                    className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
                   >
-                    <Tag className="size-3 text-slate-500" strokeWidth={1.5} aria-hidden />
+                    <Tag className="size-3 text-zinc-500" strokeWidth={1.5} aria-hidden />
                     {t}
                   </span>
                 ))}
               </div>
             )}
             {(client?.notes?.trim() || appointment.notes?.trim()) && (
-              <div className="rounded-xl bg-slate-50/90 p-4 text-slate-700 dark:bg-zinc-800/50 dark:text-slate-200">
+              <div className="rounded-xl bg-zinc-50/90 p-4 text-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-200">
                 <p className={SECTION_TITLE}>Notes studio</p>
                 <p className="mt-2 leading-relaxed">
                   {truncateNote(
@@ -1137,11 +1142,11 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               </div>
             )}
             {prefsLines.length > 0 && (
-              <ul className="space-y-1.5 text-slate-600 dark:text-slate-300">
+              <ul className="space-y-1.5 text-zinc-600 dark:text-zinc-300">
                 {prefsLines.map((line) => (
                   <li key={line} className="flex gap-2">
                     <Sparkles
-                      className="mt-0.5 size-3.5 shrink-0 text-slate-400"
+                      className="mt-0.5 size-3.5 shrink-0 text-zinc-400"
                       strokeWidth={1.5}
                     />
                     {line}
@@ -1150,16 +1155,16 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               </ul>
             )}
             <div className="grid grid-cols-2 gap-3 pt-2">
-              <div className="rounded-xl bg-slate-50 px-3 py-3 dark:bg-zinc-800/60">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+              <div className="rounded-xl bg-zinc-50 px-3 py-3 dark:bg-zinc-800/60">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-400">
                   RDV total
                 </p>
                 <p className="mt-1 text-lg font-black text-zinc-900 dark:text-white">
                   {client?.appointmentsCount ?? 1}
                 </p>
               </div>
-              <div className="rounded-xl bg-slate-50 px-3 py-3 dark:bg-zinc-800/60">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+              <div className="rounded-xl bg-zinc-50 px-3 py-3 dark:bg-zinc-800/60">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-400">
                   Dépensé (CRM)
                 </p>
                 <p className="mt-1 text-lg font-black text-zinc-900 dark:text-white">
@@ -1168,16 +1173,29 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               </div>
             </div>
             {!client?.notes?.trim() && !appointment.notes?.trim() && prefsLines.length === 0 && (
-              <p className="text-slate-500 dark:text-slate-400">Aucune note supplémentaire.</p>
+              <p className="text-zinc-500 dark:text-zinc-400">Aucune note supplémentaire.</p>
             )}
           </div>
         </motion.section>
+
+        {/* —— Dossier : devis & reçus PDF —— */}
+        {client?.id && (
+          <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
+            <h4 className={`${SECTION_TITLE} flex items-center gap-2`}>
+              <FileText className="size-4 text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+              Documents (devis & reçus)
+            </h4>
+            <div className="mt-4">
+              <ClientDossierDocuments studioId={studioId} clientId={client.id} />
+            </div>
+          </motion.section>
+        )}
 
         {/* —— Discussion InkFlow —— */}
         {showInkflowClientDiscussion && onOpenInkflowDiscussion && (
           <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
             <h4 className={SECTION_TITLE}>Messagerie</h4>
-            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
               Ce client peut être contacté via l&apos;app client InkFlow.
             </p>
             <button
@@ -1195,7 +1213,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         {(relativeDayLabel || appointment.service) && (
           <motion.p
             variants={sectionVariants}
-            className="text-center text-xs text-slate-400 dark:text-slate-500"
+            className="text-center text-xs text-zinc-400 dark:text-zinc-500"
           >
             <CalendarDays className="mr-1 inline size-3.5 align-text-bottom" strokeWidth={1.5} />
             {relativeDayLabel ? `${relativeDayLabel} · ` : null}

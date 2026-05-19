@@ -103,7 +103,7 @@ export function PendingCriticalWritesBanner({
             <p className="text-sm font-bold leading-snug text-zinc-900 dark:text-white">
               Synchro interrompue
             </p>
-            <p className="mt-0.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+            <p className="mt-0.5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
               {items.length === 1
                 ? 'Une création n’a peut‑être pas été enregistrée sur le serveur.'
                 : `${items.length} créations en attente — renvoie sans risque de doublon.`}

@@ -37,7 +37,7 @@ export const FinancePilotageSettingsForm: React.FC<FinancePilotageSettingsFormPr
     <div className="space-y-8">
       {!hideLegalDisclaimer ? (
         <div
-          className={`rounded-2xl border border-amber-500/40 border-l-4 border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20 text-sm text-zinc-700 dark:text-zinc-300 ${
+          className={`rounded-2xl border border-amber-200/80 dark:border-amber-900/40  bg-amber-50/50 dark:bg-amber-950/20 text-sm text-zinc-700 dark:text-zinc-300 ${
             compactLegalDisclaimer ? 'px-4 py-2.5' : 'px-4 py-3'
           }`}
         >

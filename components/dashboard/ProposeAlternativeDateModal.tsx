@@ -325,7 +325,7 @@ export const ProposeAlternativeDateModal: React.FC<ProposeAlternativeDateModalPr
                 type="button"
                 disabled={!selectedSlot}
                 onClick={() => void handleInstagram()}
-                className="min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500/15 to-purple-500/15 border border-pink-200/80 dark:border-pink-500/30 text-pink-800 dark:text-pink-200 font-semibold px-4 py-2.5 active:scale-[0.98] transition-all disabled:opacity-50"
+                className="min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r border border-zinc-100 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 border border-pink-200/80 dark:border-pink-500/30 text-pink-800 dark:text-pink-200 font-semibold px-4 py-2.5 active:scale-[0.98] transition-all disabled:opacity-50"
               >
                 <Copy className="w-4 h-4 shrink-0" />
                 <AtSign className="w-4 h-4 shrink-0" />

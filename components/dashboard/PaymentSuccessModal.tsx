@@ -133,7 +133,7 @@ export const PaymentSuccessModal: React.FC<PaymentSuccessModalProps> = ({
                   ) : (
                     <span className="inline-flex flex-wrap items-center gap-2">
                       <span>Félicitations, {displayName}&nbsp;!</span>
-                      <Sparkles className="w-6 h-6 shrink-0 text-violet-400" aria-hidden />
+                      <Sparkles className="w-6 h-6 shrink-0 text-blue-400" aria-hidden />
                     </span>
                   )}
                 </h2>

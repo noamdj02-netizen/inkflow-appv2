@@ -106,8 +106,8 @@ export const DashboardInsightsColumn: React.FC<DashboardInsightsColumnProps> = (
     >
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-zinc-200/90 bg-white/90 px-3 py-2.5 backdrop-blur-sm dark:border-zinc-800/90 dark:bg-zinc-950/90">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-500/20">
-            <BarChart3 className="h-4 w-4 text-violet-600 dark:text-violet-400" aria-hidden />
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/20">
+            <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden />
           </div>
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -220,7 +220,7 @@ export const DashboardInsightsColumn: React.FC<DashboardInsightsColumnProps> = (
             ].map((row, idx) => (
               <li key={row.step} className="flex gap-2">
                 <div className="flex flex-col items-center">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-800 dark:bg-violet-500/20 dark:text-violet-200">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-violet-800 dark:bg-blue-500/20 dark:text-blue-200">
                     {row.step}
                   </div>
                   {idx < 2 && (

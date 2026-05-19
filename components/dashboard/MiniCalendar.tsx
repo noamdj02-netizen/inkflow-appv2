@@ -75,13 +75,13 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
       className={`${className} ${
         isDark
           ? 'bg-transparent'
-          : 'bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]'
+          : 'bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)]'
       }`}
     >
       {/* Header */}
       <div
         className={`px-4 py-3 flex items-center justify-between ${
-          isDark ? 'border-b border-zinc-700' : 'border-b border-slate-100 dark:border-zinc-800'
+          isDark ? 'border-b border-zinc-700' : 'border-b border-zinc-100 dark:border-zinc-800'
         }`}
       >
         <button
@@ -90,7 +90,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
           className={`p-2 rounded-xl transition-colors ${
             isDark
               ? 'hover:bg-zinc-800 text-zinc-400 hover:text-white'
-              : 'hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+              : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
           }`}
           aria-label="Mois précédent"
         >
@@ -99,14 +99,14 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
         <div className="text-center">
           <span
             className={`text-sm font-semibold capitalize ${
-              isDark ? 'text-zinc-100' : 'text-slate-900 dark:text-white'
+              isDark ? 'text-zinc-100' : 'text-zinc-900 dark:text-white'
             }`}
           >
             {monthLabel}
           </span>
           {appointmentsThisMonth > 0 && (
             <p
-              className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-slate-500 dark:text-zinc-500'}`}
+              className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-500 dark:text-zinc-500'}`}
             >
               {appointmentsThisMonth} jours avec RDV
             </p>
@@ -118,7 +118,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
           className={`p-2 rounded-xl transition-colors ${
             isDark
               ? 'hover:bg-zinc-800 text-zinc-400 hover:text-white'
-              : 'hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+              : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
           }`}
           aria-label="Mois suivant"
         >
@@ -137,10 +137,10 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
                 i === 5 || i === 6
                   ? isDark
                     ? 'text-zinc-600'
-                    : 'text-slate-400 dark:text-zinc-600'
+                    : 'text-zinc-400 dark:text-zinc-600'
                   : isDark
                     ? 'text-zinc-500'
-                    : 'text-slate-500 dark:text-zinc-500'
+                    : 'text-zinc-500 dark:text-zinc-500'
               }`}
             >
               {wd}
@@ -179,14 +179,14 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
                           : isPast
                             ? isDark
                               ? 'text-zinc-600 hover:bg-zinc-800/50'
-                              : 'text-slate-400 dark:text-zinc-600 hover:bg-slate-50 dark:hover:bg-zinc-800/50'
+                              : 'text-zinc-400 dark:text-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
                             : isWeekend
                               ? isDark
                                 ? 'text-zinc-500 hover:bg-zinc-800'
-                                : 'text-slate-500 dark:text-zinc-500 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                                : 'text-zinc-500 dark:text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                               : isDark
                                 ? 'text-zinc-300 hover:bg-zinc-800'
-                                : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800'
+                                : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                     }
                     ${hasAppointments && !isSelected ? 'font-semibold' : ''}
                   `}

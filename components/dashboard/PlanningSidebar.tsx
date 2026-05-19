@@ -659,12 +659,12 @@ export const PlanningSidebar: React.FC<PlanningSidebarProps> = ({
             {/* Clients */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-violet-50 dark:bg-violet-500/10">
-                  <Users className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+                <div className="p-1.5 rounded-lg bg-violet-50 dark:bg-blue-500/10">
+                  <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <span className="text-xs text-zinc-600 dark:text-zinc-400">Clients uniques</span>
               </div>
-              <span className="text-sm font-bold text-violet-600 dark:text-violet-400 tabular-nums">
+              <span className="text-sm font-bold text-blue-600 dark:text-blue-400 tabular-nums">
                 {monthStats.uniqueClients}
               </span>
             </div>

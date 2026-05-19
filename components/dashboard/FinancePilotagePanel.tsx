@@ -529,7 +529,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 border-l-4 border-l-emerald-500">
+        <div className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900/50 p-5">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               CA encaissé (ta base : {prefs.amount_input_basis.toUpperCase()})
@@ -549,7 +549,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
             HT {formatEUR(ht)} · TTC {formatEUR(ttc)}
           </p>
         </div>
-        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 border-l-4 border-l-blue-500">
+        <div className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900/50 p-5">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Net estimé (cotisations + impôt VL éventuel)
@@ -580,9 +580,9 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5">
+      <div className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900/50 p-5">
         <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          <TrendingUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
           <h3 className="font-semibold text-zinc-900 dark:text-white">
             Plafond CA auto-entrepreneur
           </h3>
@@ -615,11 +615,11 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
         ) : null}
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 space-y-5 border-l-4 border-l-violet-500">
+      <div className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900/50 p-5 sm:p-6 space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <CalendarClock className="w-5 h-5 text-violet-600 dark:text-violet-400 shrink-0" />
+              <CalendarClock className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
               <h3 className="font-semibold text-zinc-900 dark:text-white">
                 Rappels d’échéances (perso)
               </h3>
@@ -691,9 +691,9 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
         ) : null}
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 space-y-4 border-l-4 border-l-amber-500">
+      <div className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900/50 p-5 sm:p-6 space-y-4">
         <div className="flex items-start gap-2">
-          <Scale className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <Scale className="w-5 h-5 text-zinc-700 dark:text-zinc-300 shrink-0 mt-0.5" />
           <div className="min-w-0">
             <h3 className="font-semibold text-zinc-900 dark:text-white">Réconciliation rapide</h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
@@ -748,9 +748,9 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
         ) : null}
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 space-y-4 border-l-4 border-l-slate-500">
+      <div className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900/50 p-5 sm:p-6 space-y-4 ">
         <div className="flex items-start gap-2">
-          <FileText className="w-5 h-5 text-slate-600 dark:text-slate-400 shrink-0 mt-0.5" />
+          <FileText className="w-5 h-5 text-zinc-600 dark:text-zinc-400 shrink-0 mt-0.5" />
           <div>
             <h3 className="font-semibold text-zinc-900 dark:text-white">
               Exports compta (mois courant)
@@ -794,7 +794,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
         onPendingCountChange={setChecklistPendingCount}
       />
 
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 space-y-6 border-l-4 border-l-sky-500">
+      <div className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900/50 p-5 space-y-6 ">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300 mb-1.5">
             Tatoueur indépendant
@@ -836,7 +836,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
 
       <div
         id="pilotage-bonnes-pratiques-atelier"
-        className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 space-y-4 border-l-4 border-l-emerald-500 scroll-mt-24"
+        className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900/50 p-5 space-y-4 scroll-mt-24"
       >
         <div className="flex items-start gap-2">
           <ClipboardList className="w-5 h-5 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
@@ -868,7 +868,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
         </ul>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 space-y-4">
+      <div className="rounded-2xl border border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-900/50 p-5 space-y-4">
         <h3 className="font-semibold text-zinc-900 dark:text-white">
           Charges directes (marge pédagogique)
         </h3>
@@ -937,7 +937,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
         )}
       </div>
 
-      <details className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/40 border-l-4 border-l-zinc-400 open:bg-white dark:open:bg-zinc-900/50">
+      <details className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/40  open:bg-white dark:open:bg-zinc-900/50">
         <summary className="flex cursor-pointer select-none items-start gap-3 list-none rounded-2xl p-5 sm:p-6 min-h-[44px] text-left [&::-webkit-details-marker]:hidden active:scale-[0.99] transition-all">
           <FileText className="w-5 h-5 text-zinc-500 shrink-0 mt-0.5" />
           <span className="min-w-0 flex-1">
@@ -978,7 +978,7 @@ export const FinancePilotagePanel: React.FC<FinancePilotagePanelProps> = ({
         </div>
       </details>
 
-      <details className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 border-l-4 border-l-indigo-500 open:bg-white dark:open:bg-zinc-900/50">
+      <details className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30  open:bg-white dark:open:bg-zinc-900/50">
         <summary className="flex cursor-pointer select-none items-center gap-3 list-none rounded-2xl p-5 sm:p-6 min-h-[44px] text-left [&::-webkit-details-marker]:hidden">
           <SlidersHorizontal className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
           <span className="min-w-0 flex-1">

@@ -108,7 +108,7 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({
         </button>
       </div>
 
-      <div className="rounded-2xl border border-[var(--border)] border-l-4 border-l-blue-500/80 bg-[var(--bg-card)] p-4 sm:p-5">
+      <div className="rounded-2xl border border-[var(--border)] border-l-4 border-l-zinc-200 500/80 bg-[var(--bg-card)] p-4 sm:p-5">
         <div className="flex gap-3">
           <div className="shrink-0 p-2 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400">
             <Mail className="w-5 h-5" />

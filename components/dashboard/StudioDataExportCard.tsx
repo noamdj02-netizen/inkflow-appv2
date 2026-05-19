@@ -112,7 +112,7 @@ export const StudioDataExportCard: React.FC<StudioDataExportCardProps> = ({
           type="button"
           onClick={exportJson}
           disabled={isBusy}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-violet-200 dark:border-violet-800 text-sm font-semibold text-violet-800 dark:text-violet-200 bg-violet-50 dark:bg-violet-950/40 hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none min-h-[44px] sm:min-w-[200px]"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-blue-200 dark:border-blue-800 text-sm font-semibold text-violet-800 dark:text-blue-200 bg-violet-50 dark:bg-blue-950/40 hover:bg-blue-50 dark:hover:bg-violet-900/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none min-h-[44px] sm:min-w-[200px]"
         >
           {busy === 'json' ? (
             <Loader2 className="w-4 h-4 animate-spin" aria-hidden />

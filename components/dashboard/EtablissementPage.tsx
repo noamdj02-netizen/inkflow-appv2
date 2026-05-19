@@ -61,7 +61,7 @@ const ROLES: { id: TeamRole; label: string; icon: React.ReactNode; color: string
       id: 'tatoueur',
       label: 'Tatoueur',
       icon: <Hammer className="w-3.5 h-3.5" />,
-      color: 'text-violet-600 bg-violet-50 dark:bg-violet-500/10 dark:text-violet-400',
+      color: 'text-blue-600 bg-violet-50 dark:bg-blue-500/10 dark:text-blue-400',
       desc: 'Gère son planning, ses clients et flashs',
     },
     {
@@ -375,7 +375,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
               value={identity.studioName}
               onChange={(e) => setIdentity((p) => ({ ...p, studioName: e.target.value }))}
               placeholder="Ex: Studio Noir & Encre"
-              className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+              className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-blue-400 transition-all"
             />
           </div>
 
@@ -393,7 +393,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
                 value={identity.firstName}
                 onChange={(e) => setIdentity((p) => ({ ...p, firstName: e.target.value }))}
                 placeholder="Jade"
-                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-blue-400 transition-all"
               />
             </div>
             <div>
@@ -405,7 +405,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
                 value={identity.lastName}
                 onChange={(e) => setIdentity((p) => ({ ...p, lastName: e.target.value }))}
                 placeholder="Torres"
-                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-blue-400 transition-all"
               />
             </div>
           </div>
@@ -423,7 +423,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
               value={identity.artistName}
               onChange={(e) => setIdentity((p) => ({ ...p, artistName: e.target.value }))}
               placeholder="Ex: @jadeinktattoo"
-              className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 transition-all"
+              className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-blue-400 transition-all"
             />
           </div>
 
@@ -447,7 +447,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
                     ? 'border-red-400 dark:border-red-500 focus:ring-red-500/20'
                     : siretClean.length === 14 && siretValid
                       ? 'border-blue-400 dark:border-blue-500 focus:ring-blue-500/20'
-                      : 'border-zinc-200 dark:border-zinc-700 focus:ring-violet-500/30 focus:border-violet-400'
+                      : 'border-zinc-200 dark:border-zinc-700 focus:ring-violet-500/30 focus:border-blue-400'
                 }`}
               />
               {siretClean.length === 14 && (
@@ -1119,7 +1119,7 @@ export const EtablissementPage: React.FC<EtablissementPageProps> = ({
               <Upload className="w-3.5 h-3.5" />
               Documents légaux
             </p>
-            <button className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:border-violet-400 dark:hover:border-violet-500 hover:text-violet-600 dark:hover:text-violet-400 transition-all text-sm font-medium active:scale-[0.98]">
+            <button className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all text-sm font-medium active:scale-[0.98]">
               <Upload className="w-4 h-4" />
               Déposer un document (PDF, max 5 Mo)
             </button>

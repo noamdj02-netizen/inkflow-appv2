@@ -85,7 +85,7 @@ const STATUS_STYLES: Record<string, string> = {
   confirmed:
     'bg-blue-50 text-blue-800 shadow-sm dark:bg-blue-500/12 dark:text-blue-300 dark:shadow-none',
   completed:
-    'bg-slate-100 text-slate-700 shadow-sm dark:bg-zinc-500/15 dark:text-zinc-300 dark:shadow-none',
+    'bg-zinc-100 text-zinc-700 shadow-sm dark:bg-zinc-500/15 dark:text-zinc-300 dark:shadow-none',
   cancelled:
     'bg-red-50 text-red-700 shadow-sm dark:bg-red-500/12 dark:text-red-300 dark:shadow-none',
   in_progress:
@@ -97,7 +97,7 @@ const STATUS_STYLES: Record<string, string> = {
 const STATUS_RING: Record<string, string> = {
   pending: 'ring-1 ring-amber-200/60 dark:ring-amber-500/25',
   confirmed: 'ring-1 ring-blue-200/60 dark:ring-blue-500/25',
-  completed: 'ring-1 ring-slate-200/70 dark:ring-zinc-600/40',
+  completed: 'ring-1 ring-zinc-200/70 dark:ring-zinc-600/40',
   cancelled: 'ring-1 ring-red-200/60 dark:ring-red-500/25',
   in_progress: 'ring-1 ring-sky-200/60 dark:ring-sky-500/25',
   no_show: 'ring-1 ring-red-200/60 dark:ring-red-500/25',
@@ -602,7 +602,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
 
         {/* Résumé filtre actif */}
         {activeLabel && (
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-slate-50/90 px-3 py-2 shadow-sm dark:bg-zinc-900/80 dark:shadow-none sm:px-4">
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-zinc-50/90 px-3 py-2 shadow-sm dark:bg-zinc-900/80 dark:shadow-none sm:px-4">
             <Calendar className="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" aria-hidden />
             <span className="pro-text-small min-w-0 flex-1 tabular-nums text-zinc-600 dark:text-zinc-400">
               {filteredAppointments.length} RDV ·{' '}
@@ -724,7 +724,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                 <ul className="space-y-3 md:hidden" role="list">
                   {filteredAppointments.map((apt) => {
                     const statusRing =
-                      STATUS_RING[apt.status] ?? 'ring-1 ring-slate-200/70 dark:ring-zinc-600/40';
+                      STATUS_RING[apt.status] ?? 'ring-1 ring-zinc-200/70 dark:ring-zinc-600/40';
                     const depositDue = needsDepositAttention(apt);
                     return (
                       <li key={apt.id}>
@@ -940,7 +940,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                                       e.stopPropagation();
                                       onUpdateAppointment(apt, { status: 'completed' });
                                     }}
-                                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-zinc-600 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
                                     title="Terminer"
                                   >
                                     <CheckCheck className="w-3 h-3" /> Terminer
@@ -951,7 +951,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                                  className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
                                   title="Google Agenda"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
@@ -961,7 +961,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                                     e.stopPropagation();
                                     downloadICS(apt);
                                   }}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                                  className="p-1.5 rounded-lg text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
                                   title=".ics"
                                 >
                                   <Download className="w-3.5 h-3.5" />

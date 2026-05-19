@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import {
+  AlertCircle,
   AlertTriangle,
+  Check,
   CalendarDays,
   CheckCircle2,
   Clock,
@@ -134,6 +136,20 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
     displayedAppointment?.consentFormSigned && hasHealthSnapshot && displayedAppointment.depositPaid
   );
 
+  const remainingBalanceToCollect = useMemo(
+    () =>
+      todaysAppointments.reduce((sum, apt) => {
+        if (apt.balancePaidAt) return sum;
+        return sum + appointmentRemainingBalanceEuros(apt);
+      }, 0),
+    [todaysAppointments]
+  );
+
+  const handleLaunchSessionFlow = () => {
+    if (displayedAppointment) onSelectAppointment(displayedAppointment);
+    else onOpenAgenda();
+  };
+
   useEffect(() => {
     if (!focusAppointment || !canonicalFlashPrice || !hasPriceMismatch || !onSyncAppointmentPrice) {
       return;
@@ -145,6 +161,75 @@ export const TodaySessionCockpit: React.FC<TodaySessionCockpitProps> = ({
       buildPriceSyncUpdates(focusAppointment, canonicalFlashPrice.price)
     );
   }, [canonicalFlashPrice, focusAppointment, hasPriceMismatch, onSyncAppointmentPrice]);
+
+  if (mobileMinimalChrome) {
+    const sessionChecks = [
+      { label: 'Consentement signé', done: Boolean(displayedAppointment?.consentFormSigned) },
+      { label: 'Questionnaire médical validé', done: hasHealthSnapshot },
+      { label: 'Acompte Stripe perçu', done: Boolean(displayedAppointment?.depositPaid) },
+    ] as const;
+
+    return (
+      <div className="space-y-2 w-full">
+        <div className="flex items-center gap-2 px-1">
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+            Cockpit de contrôle
+          </span>
+          <span className="size-1.5 rounded-full bg-blue-600" aria-hidden />
+        </div>
+        <div className="rounded-2xl border border-zinc-100 bg-white p-5 dark:border-zinc-900 dark:bg-zinc-950/40 space-y-5">
+          <div className="grid grid-cols-2 gap-4 pb-4 border-b border-zinc-100 dark:border-zinc-900/60">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
+                Session du jour
+              </p>
+              <p className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 tabular-nums">
+                {todaysAppointments.length}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
+                Reste à encaisser
+              </p>
+              <p className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400 tabular-nums">
+                {formatEuro(remainingBalanceToCollect)}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
+              Vérifications obligatoires
+            </h4>
+            <div className="space-y-2">
+              {sessionChecks.map((check) => (
+                <div key={check.label} className="flex items-center justify-between py-1 text-sm">
+                  <span className="font-medium text-zinc-500 dark:text-zinc-400">
+                    {check.label}
+                  </span>
+                  {check.done ? (
+                    <span className="flex size-5 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+                      <Check className="size-3" aria-hidden strokeWidth={2.5} />
+                    </span>
+                  ) : (
+                    <span className="flex size-5 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-500">
+                      <AlertCircle className="size-3" aria-hidden strokeWidth={2.5} />
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleLaunchSessionFlow}
+            className="flex h-11 w-full items-center justify-center rounded-xl bg-zinc-900 text-sm font-medium text-white transition-all active:scale-[0.98] dark:bg-white dark:text-zinc-950"
+          >
+            Ouvrir la fiche de session
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card

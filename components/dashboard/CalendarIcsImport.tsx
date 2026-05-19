@@ -280,7 +280,7 @@ export const CalendarIcsImport: React.FC<CalendarIcsImportProps> = ({
         onDrop={onDrop}
         className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-colors ${
           dragOver
-            ? 'border-violet-500 bg-violet-500/5'
+            ? 'border-blue-500 bg-blue-500/5'
             : 'border-[var(--border)] bg-[var(--bg-card-secondary)]'
         }`}
       >
@@ -294,7 +294,7 @@ export const CalendarIcsImport: React.FC<CalendarIcsImportProps> = ({
             e.target.value = '';
           }}
         />
-        <Upload className="w-8 h-8 mx-auto text-violet-500 mb-2" />
+        <Upload className="w-8 h-8 mx-auto text-blue-500 mb-2" />
         <p className="text-sm font-medium text-[var(--text-primary)]">
           Glissez un fichier .ics ici
         </p>

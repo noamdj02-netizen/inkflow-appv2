@@ -138,7 +138,7 @@ export const AcceptProjectModal: React.FC<AcceptProjectModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Accepter un projet" size="md">
       <div className="mx-auto w-full max-w-lg space-y-6 text-[var(--text-primary)]">
         {/* Client — carte légère, accent gauche */}
-        <div className="rounded-2xl border border-zinc-200/90 border-l-4 border-l-blue-500 bg-zinc-50/90 py-4 pl-4 pr-4 shadow-sm dark:border-zinc-800 dark:border-l-blue-500 dark:bg-zinc-900/40">
+        <div className="rounded-2xl border border-zinc-200/90 border-l-4 border-l-zinc-200 500 bg-zinc-50/90 py-4 pl-4 pr-4 shadow-sm dark:border-zinc-800 dark:border-l-blue-500 dark:bg-zinc-900/40">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-500">
             Client
           </p>

@@ -91,13 +91,15 @@ export const StudioCommandPalette: React.FC<StudioCommandPaletteProps> = ({
         </div>
 
         <div className="max-h-[min(60vh,420px)] overflow-y-auto overscroll-contain py-1">
-          <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Actions</p>
+          <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+            Actions
+          </p>
           <button
             type="button"
             onClick={() => run(() => onNewBooking())}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-zinc-800 dark:text-zinc-200 hover:bg-violet-500/10 dark:hover:bg-violet-500/15 transition-colors duration-100"
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-sm text-zinc-800 dark:text-zinc-200 hover:bg-blue-500/10 dark:hover:bg-blue-500/15 transition-colors duration-100"
           >
-            <UserPlus className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
+            <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
             <span>Nouveau rendez-vous</span>
           </button>
           <button
@@ -127,7 +129,9 @@ export const StudioCommandPalette: React.FC<StudioCommandPaletteProps> = ({
 
           {filtered.length > 0 && (
             <>
-              <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Clients</p>
+              <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                Clients
+              </p>
               {filtered.map((c) => (
                 <button
                   key={c.id}
@@ -141,7 +145,11 @@ export const StudioCommandPalette: React.FC<StudioCommandPaletteProps> = ({
                 >
                   <div className="w-8 h-8 rounded-md border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-xs font-semibold text-zinc-600 dark:text-zinc-300 shrink-0 bg-zinc-50 dark:bg-zinc-900">
                     {c.avatar ? (
-                      <img src={c.avatar} alt="" className="w-full h-full object-cover rounded-md" />
+                      <img
+                        src={c.avatar}
+                        alt=""
+                        className="w-full h-full object-cover rounded-md"
+                      />
                     ) : (
                       c.name.charAt(0).toUpperCase()
                     )}

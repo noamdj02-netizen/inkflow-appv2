@@ -107,7 +107,7 @@ export function DashboardTabHero({
             aria-hidden
           />
           <div
-            className="pointer-events-none absolute -right-4 bottom-0 size-24 rounded-full bg-violet-500/15 blur-2xl dark:bg-violet-500/10"
+            className="pointer-events-none absolute -right-4 bottom-0 size-24 rounded-full bg-blue-500/15 blur-2xl dark:bg-blue-500/10"
             aria-hidden
           />
         </>
@@ -174,13 +174,13 @@ export function DashboardTabHero({
                   type="button"
                   onClick={overviewMeta.onOpenRequests}
                   className={cn(
-                    'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-all active:scale-[0.98] sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs',
+                    'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 transition-all active:scale-[0.98] sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs',
                     hasCover
-                      ? 'border-rose-300/50 bg-rose-500/20 text-rose-50 hover:bg-rose-500/30'
-                      : 'border-rose-200/90 bg-rose-50 text-rose-800 hover:bg-rose-100/90 dark:border-rose-500/30 dark:bg-rose-500/15 dark:text-rose-200 dark:hover:bg-rose-500/25'
+                      ? 'bg-amber-500/15 text-amber-50 ring-amber-300/30 hover:bg-amber-500/25'
+                      : 'bg-amber-50/90 text-amber-900/85 ring-amber-100/90 hover:bg-amber-50 dark:bg-amber-500/10 dark:text-amber-100/90 dark:ring-amber-500/20'
                   )}
                 >
-                  <AlertCircle className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" strokeWidth={2} />
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" strokeWidth={1.75} />
                   {overviewMeta.unpaidCount} sans acompte
                 </button>
               )}
@@ -189,13 +189,16 @@ export function DashboardTabHero({
                   type="button"
                   onClick={overviewMeta.onOpenAgenda}
                   className={cn(
-                    'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-all active:scale-[0.98] sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs',
+                    'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 transition-all active:scale-[0.98] sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs',
                     hasCover
-                      ? 'border-sky-300/50 bg-sky-500/20 text-sky-50 hover:bg-sky-500/30'
-                      : 'border-sky-200/90 bg-sky-50 text-sky-800 hover:bg-sky-100/90 dark:border-sky-500/35 dark:bg-sky-500/15 dark:text-sky-200 dark:hover:bg-sky-500/25'
+                      ? 'bg-white/10 text-zinc-100 ring-white/20 hover:bg-white/15'
+                      : 'bg-zinc-100/90 text-zinc-600 ring-zinc-200/80 hover:bg-zinc-100 dark:bg-zinc-800/70 dark:text-zinc-300 dark:ring-zinc-700/60'
                   )}
                 >
-                  <CalendarCheck className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" strokeWidth={2} />
+                  <CalendarCheck
+                    className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
+                    strokeWidth={1.75}
+                  />
                   {overviewMeta.todayOrTomorrowCount} RDV bientôt
                 </button>
               )}

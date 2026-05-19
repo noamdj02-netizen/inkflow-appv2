@@ -13,9 +13,9 @@ export const FiscalDeclarationCalendar: React.FC<FiscalDeclarationCalendarProps>
   const hints = useMemo(() => getDeclarationDeadlineHints(frequency, 3, new Date()), [frequency]);
 
   return (
-    <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 border-l-4 border-l-violet-500">
+    <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 border-l-4 border-l-zinc-200 500">
       <div className="flex items-start gap-2 mb-3">
-        <CalendarDays className="w-5 h-5 text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
+        <CalendarDays className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
         <div>
           <h3 className="font-semibold text-zinc-900 dark:text-white">
             Prochains rappels indicatifs URSSAF
@@ -45,7 +45,7 @@ export const FiscalDeclarationCalendar: React.FC<FiscalDeclarationCalendarProps>
         href="https://www.autoentrepreneur.urssaf.fr/"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-violet-700 dark:text-violet-300 hover:underline active:scale-[0.98] transition-all"
+        className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-blue-700 dark:text-blue-300 hover:underline active:scale-[0.98] transition-all"
       >
         Ouvrir le portail auto-entrepreneur
         <ExternalLink className="w-4 h-4 shrink-0" />
