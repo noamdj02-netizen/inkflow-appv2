@@ -18,6 +18,8 @@
     "ci": "npm run lint && npm run typecheck && npm run check:p0-supabase && npm run build",
     "prepare": "husky",
     "preview": "vite preview",
+    "expo:start": "cd inkflow-mobile && npx expo start",
+    "expo:start:clear": "cd inkflow-mobile && npx expo start --clear",
     "generate-pwa-assets": "pwa-assets-generator --config pwa-assets.config.ts",
     "emit-pwa-splash-head": "node scripts/emit-pwa-apple-splash-head.mjs",
     "generate-pwa-icons": "node scripts/generate-pwa-icons.mjs",
@@ -40,6 +42,7 @@
     "qa:sentry-build": "node scripts/qa-dashboard-ready.mjs sentry-build",
     "qa:quick-wins": "node scripts/qa-dashboard-ready.mjs quick-wins",
     "qa:dashboard": "node scripts/qa-dashboard-ready.mjs all",
+    "repomix:pack": "repomix . --output .repomix/inkflow-pack.xml --ignore node_modules/**,dist/**,test-results/**,playwright-report/**,.vercel/**,inkflow-mobile/node_modules/**,apps/**/node_modules/**,**/*.lock",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > types/database.ts",
@@ -89,9 +92,10 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "framer-motion": "^12.34.3",
+    "framer-motion": "^12.39.0",
     "ical.js": "^2.2.1",
     "jsbarcode": "^3.12.3",
+    "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
@@ -147,6 +151,7 @@
     "lint-staged": "^15.5.2",
     "prettier": "^3.8.3",
     "react-email": "6.0.0",
+    "repomix": "^1.14.0",
     "rollup-plugin-visualizer": "^7.0.1",
     "sharp": "^0.34.5",
     "typescript": "~5.8.2",
@@ -160,5 +165,23 @@
       "prettier --write"
     ],
     "*.{css,json,md}": "prettier --write"
-  }
+  },
+  "description": "Une application complète pour gérer votre studio de tatouage : réservations, paiements, galerie Flash, et CRM client.",
+  "main": ".figma-logo-code.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib",
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noamdj02-netizen/inkflow-appv2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/noamdj02-netizen/inkflow-appv2/issues"
+  },
+  "homepage": "https://github.com/noamdj02-netizen/inkflow-appv2#readme"
 }
