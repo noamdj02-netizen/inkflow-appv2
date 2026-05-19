@@ -88,6 +88,8 @@ export const useSupabaseDashboard = () => {
   );
   const [connectionError, setConnectionError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  /** Dernière synchro réussie des listes (RDV, clients, flash, notifs) */
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const initializedRef = useRef(false);
   /** Aligné sur `retryCount` après un init réussi — évite d’afficher le squelette à chaque re-init (ex. avatar). */
   const lastSuccessfulRetryRef = useRef(-1);
@@ -159,6 +161,7 @@ export const useSupabaseDashboard = () => {
     setClients(clis);
     setFlashDesigns(flash);
     setNotifications(notifs);
+    setLastSyncedAt(new Date().toISOString());
   }, []);
 
   useEffect(() => {
@@ -171,6 +174,7 @@ export const useSupabaseDashboard = () => {
       setTrialEndsAt(null);
       setStudioCsvImportSlots(undefined);
       setStudioOwnerEmail(null);
+      setLastSyncedAt(null);
       setLoading(false);
       initializedRef.current = false;
       lastSuccessfulRetryRef.current = -1;
@@ -249,6 +253,7 @@ export const useSupabaseDashboard = () => {
             setClients(getInkflowDemoStudioClients());
             setFlashDesigns(getInkflowDemoFlashDesigns());
             setNotifications(getInkflowDemoNotifications());
+            setLastSyncedAt(new Date().toISOString());
           }
           initializedRef.current = true;
           lastSuccessfulRetryRef.current = retryCount;
@@ -568,6 +573,7 @@ export const useSupabaseDashboard = () => {
     demoAccountMode: isDemoAccountUser,
     isOnline,
     connectionError,
+    lastSyncedAt,
     retry,
     addAppointment,
     updateAppointment,

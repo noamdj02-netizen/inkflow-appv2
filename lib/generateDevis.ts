@@ -1,25 +1,37 @@
 /**
- * generateDevis — Génère un PDF de devis professionnel pour tatoueurs.
- *
- * Inclut : numérotation auto, validité 30j, TVA art. 293B CGI,
- * zones de signature client + artiste.
+ * Devis PDF InkFlow — zinc + bleu électrique, sauvegarde dossier client optionnelle.
  */
-
 import type { Appointment } from '../types';
 import type { User } from '../types';
+import { downloadBlobAsFile } from './studioDataExport';
+import { savePdfToClientDossier } from './clientDossierDocuments';
+import {
+  PDF_DOC,
+  pdfDrawDocumentFooter,
+  pdfDrawDocumentHeader,
+  pdfFillPageBg,
+} from './pdfDocumentTheme';
+import { PDF_INK, pdfSetTextColor } from './pdfTypography';
 
 export interface DevisOptions {
   appointment: Appointment;
   artist: User;
   projectDescription?: string;
   notes?: string;
+  studioId?: string | null;
+}
+
+export interface BuiltPdfDocument {
+  blob: Blob;
+  filename: string;
+  documentNumber: string;
 }
 
 function pad(n: number, len = 2): string {
   return String(n).padStart(len, '0');
 }
 
-function devisNumber(appointmentId: string): string {
+export function devisNumber(appointmentId: string): string {
   const now = new Date();
   const suffix = appointmentId.slice(-4).toUpperCase();
   return `INK-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${suffix}`;
@@ -43,10 +55,10 @@ function frDatePlus30(): string {
 
 function trunc(s: string, max: number): string {
   if (!s) return '';
-  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
 
-export async function generateDevis(opts: DevisOptions): Promise<void> {
+export async function buildDevisPdf(opts: DevisOptions): Promise<BuiltPdfDocument> {
   const { appointment: apt, artist, projectDescription, notes } = opts;
   const { default: jsPDF } = await import('jspdf');
 
@@ -61,106 +73,83 @@ export async function generateDevis(opts: DevisOptions): Promise<void> {
   const emissionDate = frDateNow();
   const validityDate = frDatePlus30();
 
-  // Couleurs
-  const OCRE_R = 201, OCRE_G = 169, OCRE_B = 110;
-  const DARK_R = 23, DARK_G = 23, DARK_B = 23;
-  const MUTED_R = 120, MUTED_G = 113, MUTED_B = 108;
-  const BORDER_R = 220, BORDER_G = 214, BORDER_B = 204;
+  pdfFillPageBg(doc, W, H);
 
-  // Fond
-  doc.setFillColor(250, 248, 245);
-  doc.rect(0, 0, W, H, 'F');
+  let y = pdfDrawDocumentHeader(doc, {
+    w: W,
+    left: L,
+    right: R,
+    studioName: trunc(artist.studioName || 'InkFlow', 28),
+    docTitle: 'DEVIS',
+    docNumber: devNum,
+  });
 
-  // Header sombre
-  doc.setFillColor(DARK_R, DARK_G, DARK_B);
-  doc.rect(0, 0, W, 38, 'F');
-  doc.setFillColor(OCRE_R, OCRE_G, OCRE_B);
-  doc.rect(0, 38, W, 1.5, 'F');
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text(trunc(artist.studioName || 'InkFlow', 28), L, 24);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(201, 185, 155);
-  doc.text('Tatouage sur mesure', L, 31);
-
-  doc.setTextColor(OCRE_R, OCRE_G, OCRE_B);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.text('DEVIS', R, 22, { align: 'right' });
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(180, 170, 150);
-  doc.text(`N° ${devNum}`, R, 29, { align: 'right' });
-
-  // Dates
-  let y = 50;
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(MUTED_R, MUTED_G, MUTED_B);
+  pdfSetTextColor(doc, PDF_INK.muted);
   doc.text("Date d'émission : ", L, y);
-  doc.setTextColor(DARK_R, DARK_G, DARK_B);
+  pdfSetTextColor(doc, PDF_INK.ink);
   doc.setFont('helvetica', 'bold');
   doc.text(emissionDate, L + 35, y);
 
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(MUTED_R, MUTED_G, MUTED_B);
+  pdfSetTextColor(doc, PDF_INK.muted);
   doc.text("Valable jusqu'au : ", COL2, y);
-  doc.setTextColor(DARK_R, DARK_G, DARK_B);
+  pdfSetTextColor(doc, PDF_INK.ink);
   doc.setFont('helvetica', 'bold');
   doc.text(validityDate, COL2 + 35, y);
 
   y += 12;
 
-  // Blocs Studio / Client
   const blockTop = y;
   const blockH = 36;
 
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(BORDER_R, BORDER_G, BORDER_B);
-  doc.setLineWidth(0.3);
-  doc.roundedRect(L, blockTop, 80, blockH, 2, 2, 'FD');
+  const drawPartyCard = (x: number, label: string, lines: string[]) => {
+    doc.setFillColor(...PDF_DOC.cardBg);
+    doc.setDrawColor(...PDF_DOC.border);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(x, blockTop, 80, blockH, 2, 2, 'FD');
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    pdfSetTextColor(doc, PDF_DOC.accent);
+    doc.text(label, x + 4, blockTop + 6);
+    lines.forEach((line, i) => {
+      doc.setFont('helvetica', i === 0 ? 'bold' : 'normal');
+      doc.setFontSize(i === 0 ? 9.5 : 8.5);
+      pdfSetTextColor(doc, i === 0 ? PDF_INK.ink : PDF_INK.muted);
+      doc.text(line, x + 4, blockTop + 13 + i * 6);
+    });
+  };
 
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(OCRE_R, OCRE_G, OCRE_B);
-  doc.text('ARTISTE / STUDIO', L + 4, blockTop + 6);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9.5);
-  doc.setTextColor(DARK_R, DARK_G, DARK_B);
-  doc.text(trunc(artist.studioName || 'Studio', 30), L + 4, blockTop + 13);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(MUTED_R, MUTED_G, MUTED_B);
-  if (artist.email) doc.text(trunc(artist.email, 35), L + 4, blockTop + 20);
   const siretOrPhone = artist.siret
     ? `SIRET ${artist.siret.replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, '$1 $2 $3 $4')}`
-    : artist.phone ? String(artist.phone) : '';
-  if (siretOrPhone) doc.text(siretOrPhone, L + 4, blockTop + 26);
+    : artist.phone
+      ? String(artist.phone)
+      : '';
 
-  const clientX = COL2 - 5;
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(clientX, blockTop, 80, blockH, 2, 2, 'FD');
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(OCRE_R, OCRE_G, OCRE_B);
-  doc.text('CLIENT', clientX + 4, blockTop + 6);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9.5);
-  doc.setTextColor(DARK_R, DARK_G, DARK_B);
-  doc.text(trunc(apt.clientName || 'Client', 30), clientX + 4, blockTop + 13);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(MUTED_R, MUTED_G, MUTED_B);
-  if (apt.clientEmail) doc.text(trunc(apt.clientEmail, 35), clientX + 4, blockTop + 20);
-  if (apt.clientPhone) doc.text(apt.clientPhone, clientX + 4, blockTop + 26);
+  drawPartyCard(
+    L,
+    'ARTISTE / STUDIO',
+    [
+      trunc(artist.studioName || 'Studio', 30),
+      ...(artist.email ? [trunc(artist.email, 35)] : []),
+      ...(siretOrPhone ? [siretOrPhone] : []),
+    ].filter(Boolean)
+  );
+
+  drawPartyCard(
+    COL2 - 5,
+    'CLIENT',
+    [
+      trunc(apt.clientName || 'Client', 30),
+      ...(apt.clientEmail ? [trunc(apt.clientEmail, 35)] : []),
+      ...(apt.clientPhone ? [apt.clientPhone] : []),
+    ].filter(Boolean)
+  );
 
   y = blockTop + blockH + 10;
 
-  // Section Prestation
-  doc.setFillColor(DARK_R, DARK_G, DARK_B);
+  doc.setFillColor(...PDF_DOC.tableHeadBg);
   doc.rect(L, y, R - L, 7, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
@@ -168,10 +157,12 @@ export async function generateDevis(opts: DevisOptions): Promise<void> {
   doc.text('PRESTATION', L + 3, y + 4.8);
   y += 7;
 
-  const C1 = L, C2 = L + 60, C3 = R - 28;
-  doc.setFillColor(245, 241, 234);
+  const C1 = L;
+  const C2 = L + 60;
+  const C3 = R - 28;
+  doc.setFillColor(...PDF_DOC.tableSubheadBg);
   doc.rect(L, y, R - L, 6, 'F');
-  doc.setTextColor(MUTED_R, MUTED_G, MUTED_B);
+  pdfSetTextColor(doc, PDF_INK.muted);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.text('SERVICE', C1 + 3, y + 4.2);
@@ -180,21 +171,21 @@ export async function generateDevis(opts: DevisOptions): Promise<void> {
   y += 6;
 
   const rowH = projectDescription ? 26 : 18;
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(BORDER_R, BORDER_G, BORDER_B);
+  doc.setFillColor(...PDF_DOC.cardBg);
+  doc.setDrawColor(...PDF_DOC.border);
   doc.setLineWidth(0.25);
   doc.rect(L, y, R - L, rowH, 'FD');
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.setTextColor(DARK_R, DARK_G, DARK_B);
+  pdfSetTextColor(doc, PDF_INK.ink);
   doc.text(trunc(apt.service || 'Tatouage', 22), C1 + 3, y + 7);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(MUTED_R, MUTED_G, MUTED_B);
+  pdfSetTextColor(doc, PDF_INK.muted);
   const details: string[] = [];
-  if (apt.date) details.push(`Séance : ${frDate(apt.date)}${apt.time ? ' à ' + apt.time : ''}`);
+  if (apt.date) details.push(`Séance : ${frDate(apt.date)}${apt.time ? ` à ${apt.time}` : ''}`);
   if (apt.duration) details.push(`Durée estimée : ${apt.duration} min`);
   if (apt.location && apt.location !== 'other') details.push(`Placement : ${apt.location}`);
   if (apt.size) details.push(`Taille : ${apt.size}`);
@@ -208,23 +199,35 @@ export async function generateDevis(opts: DevisOptions): Promise<void> {
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.setTextColor(DARK_R, DARK_G, DARK_B);
+  pdfSetTextColor(doc, PDF_INK.ink);
   doc.text(`${apt.price.toLocaleString('fr-FR')} €`, C3, y + 7, { align: 'right' });
 
   y += rowH;
 
-  // Tableau financier (aligné à droite)
   const deposit = apt.deposit || 0;
   const remaining = Math.max(0, apt.price - deposit);
   const depositPct = deposit > 0 && apt.price > 0 ? Math.round((deposit / apt.price) * 100) : 0;
 
-  interface FinRow { label: string; value: string; bold?: boolean; accent?: boolean }
+  interface FinRow {
+    label: string;
+    value: string;
+    bold?: boolean;
+    accent?: boolean;
+  }
   const finRows: FinRow[] = [
     { label: 'Total HT', value: `${apt.price.toLocaleString('fr-FR')} €` },
     { label: 'TVA (exonération art. 293B CGI)', value: '0,00 €' },
     { label: 'TOTAL TTC', value: `${apt.price.toLocaleString('fr-FR')} €`, bold: true },
-    { label: `Acompte (${depositPct}%)`, value: `${deposit.toLocaleString('fr-FR')} €`, accent: true },
-    { label: 'Reste à payer à la séance', value: `${remaining.toLocaleString('fr-FR')} €`, bold: true },
+    {
+      label: `Acompte (${depositPct}%)`,
+      value: `${deposit.toLocaleString('fr-FR')} €`,
+      accent: true,
+    },
+    {
+      label: 'Reste à payer à la séance',
+      value: `${remaining.toLocaleString('fr-FR')} €`,
+      bold: true,
+    },
   ];
 
   const finW = 105;
@@ -233,117 +236,143 @@ export async function generateDevis(opts: DevisOptions): Promise<void> {
 
   finRows.forEach((row) => {
     if (row.accent) {
-      doc.setFillColor(OCRE_R, OCRE_G, OCRE_B);
+      doc.setFillColor(...PDF_DOC.accent);
     } else if (row.bold) {
-      doc.setFillColor(245, 241, 234);
+      doc.setFillColor(...PDF_DOC.tableSubheadBg);
     } else {
-      doc.setFillColor(255, 255, 255);
+      doc.setFillColor(...PDF_DOC.cardBg);
     }
-    doc.setDrawColor(BORDER_R, BORDER_G, BORDER_B);
+    doc.setDrawColor(...PDF_DOC.border);
     doc.setLineWidth(0.25);
     doc.rect(finX, y, finW, rh, 'FD');
 
     doc.setFontSize(8);
     doc.setFont('helvetica', row.bold ? 'bold' : 'normal');
-    doc.setTextColor(row.accent ? 23 : (row.bold ? DARK_R : MUTED_R), row.accent ? 23 : (row.bold ? DARK_G : MUTED_G), row.accent ? 23 : (row.bold ? DARK_B : MUTED_B));
+    if (row.accent) {
+      doc.setTextColor(255, 255, 255);
+    } else {
+      pdfSetTextColor(doc, row.bold ? PDF_INK.ink : PDF_INK.muted);
+    }
     doc.text(row.label, finX + 3, y + 4.5);
 
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(row.accent ? 23 : DARK_R, row.accent ? 23 : DARK_G, row.accent ? 23 : DARK_B);
+    if (row.accent) {
+      doc.setTextColor(255, 255, 255);
+    } else {
+      pdfSetTextColor(doc, PDF_INK.ink);
+    }
     doc.text(row.value, R - 2, y + 4.5, { align: 'right' });
     y += rh;
   });
 
   y += 10;
 
-  // Notes
   const noteText = notes || apt.notes || '';
   if (noteText) {
     const noteLines = doc.splitTextToSize(noteText, R - L - 6);
     const noteH = 10 + noteLines.length * 5;
-    doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(BORDER_R, BORDER_G, BORDER_B);
+    doc.setFillColor(...PDF_DOC.cardBg);
+    doc.setDrawColor(...PDF_DOC.border);
     doc.roundedRect(L, y, R - L, noteH, 2, 2, 'FD');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
-    doc.setTextColor(OCRE_R, OCRE_G, OCRE_B);
+    pdfSetTextColor(doc, PDF_DOC.accent);
     doc.text('NOTES', L + 3, y + 5.5);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
-    doc.setTextColor(DARK_R, DARK_G, DARK_B);
+    pdfSetTextColor(doc, PDF_INK.ink);
     doc.text(noteLines, L + 3, y + 11);
     y += noteH + 8;
   }
 
-  // Conditions
   const conditions = [
     "• Ce devis est valable 30 jours à compter de la date d'émission.",
     "• L'acompte est requis pour confirmer le rendez-vous et réserver le créneau.",
     "• L'acompte n'est pas remboursable en cas d'annulation moins de 48h avant la séance.",
-    "• Le tatoueur est exonéré de TVA (art. 293B du Code Général des Impôts).",
+    '• Le tatoueur est exonéré de TVA (art. 293B du Code Général des Impôts).',
   ];
   const condH = 8 + conditions.length * 5;
-  doc.setFillColor(249, 246, 240);
-  doc.setDrawColor(BORDER_R, BORDER_G, BORDER_B);
+  doc.setFillColor(...PDF_DOC.rowAltBg);
+  doc.setDrawColor(...PDF_DOC.border);
   doc.roundedRect(L, y, R - L, condH, 2, 2, 'FD');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
-  doc.setTextColor(MUTED_R, MUTED_G, MUTED_B);
+  pdfSetTextColor(doc, PDF_INK.muted);
   doc.text('CONDITIONS GÉNÉRALES', L + 3, y + 5);
   conditions.forEach((c, i) => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
-    doc.setTextColor(MUTED_R, MUTED_G, MUTED_B);
+    pdfSetTextColor(doc, PDF_INK.muted);
     doc.text(c, L + 3, y + 11 + i * 5);
   });
 
   y += condH + 12;
 
-  // Signatures
-  if (y > H - 55) { doc.addPage(); doc.setFillColor(250, 248, 245); doc.rect(0, 0, W, H, 'F'); y = 20; }
+  if (y > H - 55) {
+    doc.addPage();
+    pdfFillPageBg(doc, W, H);
+    y = 20;
+  }
 
   const sigW = 78;
   const sigH = 28;
 
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(BORDER_R, BORDER_G, BORDER_B);
-  doc.roundedRect(L, y, sigW, sigH, 2, 2, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(OCRE_R, OCRE_G, OCRE_B);
-  doc.text("Signature de l'artiste", L + 3, y + 6);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(MUTED_R, MUTED_G, MUTED_B);
-  doc.text(artist.studioName || '', L + 3, y + 12);
-  doc.setDrawColor(BORDER_R, BORDER_G, BORDER_B);
-  doc.setLineWidth(0.3);
-  doc.line(L + 3, y + sigH - 4, L + sigW - 3, y + sigH - 4);
+  const drawSig = (x: number, title: string, subtitle: string) => {
+    doc.setFillColor(...PDF_DOC.cardBg);
+    doc.setDrawColor(...PDF_DOC.border);
+    doc.roundedRect(x, y, sigW, sigH, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    pdfSetTextColor(doc, PDF_DOC.accent);
+    doc.text(title, x + 3, y + 6);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    pdfSetTextColor(doc, PDF_INK.muted);
+    doc.text(subtitle, x + 3, y + 12);
+    doc.setDrawColor(...PDF_DOC.border);
+    doc.setLineWidth(0.3);
+    doc.line(x + 3, y + sigH - 4, x + sigW - 3, y + sigH - 4);
+  };
 
-  const sigX2 = R - sigW;
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(sigX2, y, sigW, sigH, 2, 2, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(OCRE_R, OCRE_G, OCRE_B);
-  doc.text('Bon pour accord — Client', sigX2 + 3, y + 6);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(MUTED_R, MUTED_G, MUTED_B);
-  doc.text(trunc(apt.clientName || '', 28), sigX2 + 3, y + 12);
-  doc.line(sigX2 + 3, y + sigH - 4, sigX2 + sigW - 3, y + sigH - 4);
+  drawSig(L, "Signature de l'artiste", artist.studioName || '');
+  drawSig(R - sigW, 'Bon pour accord — Client', trunc(apt.clientName || '', 28));
 
-  // Footer
-  doc.setFillColor(DARK_R, DARK_G, DARK_B);
-  doc.rect(0, H - 14, W, 14, 'F');
-  doc.setFillColor(OCRE_R, OCRE_G, OCRE_B);
-  doc.rect(0, H - 14, W, 1, 'F');
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(160, 150, 130);
-  doc.text(`Devis N° ${devNum} — Émis le ${emissionDate} via InkFlow (app.ink-flow.me)`, W / 2, H - 5.5, { align: 'center' });
+  pdfDrawDocumentFooter(doc, {
+    w: W,
+    h: H,
+    line: `Devis N° ${devNum} — Émis le ${emissionDate} via InkFlow (app.ink-flow.me)`,
+  });
 
-  // Téléchargement
   const filename = `Devis_${devNum}_${(apt.clientName || 'client').replace(/\s+/g, '_')}.pdf`;
-  doc.save(filename);
+  const blob = doc.output('blob');
+
+  return { blob, filename, documentNumber: devNum };
+}
+
+export interface GenerateDevisResult {
+  savedToDossier: boolean;
+  dossierError?: string;
+}
+
+/** Génère, télécharge et enregistre le devis dans le dossier client si possible. */
+export async function generateDevis(opts: DevisOptions): Promise<GenerateDevisResult> {
+  const built = await buildDevisPdf(opts);
+  downloadBlobAsFile(built.filename, built.blob);
+
+  const clientId = opts.appointment.clientId?.trim();
+  if (!opts.studioId || !clientId) {
+    return { savedToDossier: false };
+  }
+
+  const saved = await savePdfToClientDossier({
+    studioId: opts.studioId,
+    clientId,
+    filename: built.filename,
+    blob: built.blob,
+  });
+
+  if ('error' in saved) {
+    return { savedToDossier: false, dossierError: saved.error };
+  }
+  return { savedToDossier: true };
 }

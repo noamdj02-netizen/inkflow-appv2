@@ -888,11 +888,11 @@ export const PublicStudioPagePro: React.FC<PublicStudioPageProProps> = ({ studio
                   <img
                     src={heroAvatar}
                     alt={`Photo du studio ${studioName}`}
-                    className="w-24 h-24 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white/95 shadow-2xl object-cover flex-shrink-0 max-md:ring-2 max-md:ring-white/20"
+                    className="w-24 h-24 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white/95 shadow-md object-cover flex-shrink-0 max-md:ring-2 max-md:ring-white/20"
                   />
                 ) : (
                   <div
-                    className="w-24 h-24 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white/40 shadow-2xl flex-shrink-0 flex items-center justify-center bg-white/10 text-white text-2xl sm:text-3xl md:text-4xl font-bold max-md:ring-2 max-md:ring-white/15"
+                    className="w-24 h-24 sm:w-28 sm:h-28 md:w-40 md:h-40 rounded-2xl sm:rounded-3xl border-4 border-white/40 shadow-md flex-shrink-0 flex items-center justify-center bg-white/10 text-white text-2xl sm:text-3xl md:text-4xl font-bold max-md:ring-2 max-md:ring-white/15"
                     aria-hidden
                   >
                     {studioName.slice(0, 2).toUpperCase()}

@@ -86,6 +86,12 @@
       "sourceType": "github",
       "computedHash": "a186d6cad8c75ff61efa8d70cf3ba2246bfbf62bba157b433d13c516557f81ac"
     },
+    "higgsfield-product-photoshoot": {
+      "source": "higgsfield-ai/skills",
+      "sourceType": "github",
+      "skillPath": "higgsfield-product-photoshoot/SKILL.md",
+      "computedHash": "128d1926c2a70ad1c08e7de17e4b7485a2ada9a02ce3e7cad80053311d619ce7"
+    },
     "market-pulse": {
       "source": "eronred/aso-skills",
       "sourceType": "github",
@@ -106,6 +112,12 @@
       "sourceType": "github",
       "skillPath": "skills/reactive-programming/SKILL.md",
       "computedHash": "747cef359002fa06d23794648a84fe9dc59ff9fbe7a60d19d14a31878e1538df"
+    },
+    "repomix-explorer": {
+      "source": "yamadashy/repomix",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/repomix-explorer/SKILL.md",
+      "computedHash": "13eb769ba1b7446d46304e02ae77ea416eb49def9b651954957808d181ec9298"
     },
     "site-architecture": {
       "source": "coreyhaines31/marketingskills",

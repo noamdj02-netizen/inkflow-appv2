@@ -112,7 +112,7 @@ const inputBase =
   'w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-colors';
 const inputLight = 'border border-neutral-200 focus:ring-neutral-900';
 const inputDark =
-  'border border-zinc-700 bg-zinc-800/50 text-white placeholder:text-zinc-400 focus:ring-violet-500 focus:border-zinc-600';
+  'border border-zinc-700 bg-zinc-800/50 text-white placeholder:text-zinc-400 focus:ring-blue-500 focus:border-zinc-600';
 
 // ─── Step indicator ───────────────────────────────────────────────
 const STEPS = [
@@ -134,11 +134,11 @@ function StepIndicator({ step, isDark }: { step: 1 | 2; isDark: boolean }) {
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
                   isDone
                     ? isDark
-                      ? 'bg-violet-600 text-white'
+                      ? 'bg-blue-600 text-white'
                       : 'bg-neutral-900 text-white'
                     : isActive
                       ? isDark
-                        ? 'bg-violet-600 text-white ring-4 ring-violet-500/20'
+                        ? 'bg-blue-600 text-white ring-4 ring-blue-500/20'
                         : 'bg-neutral-900 text-white ring-4 ring-neutral-900/10'
                       : isDark
                         ? 'bg-zinc-800 text-zinc-500 border border-zinc-700'
@@ -178,7 +178,7 @@ function StepIndicator({ step, isDark }: { step: 1 | 2; isDark: boolean }) {
                 className={`flex-1 h-px mx-4 transition-all duration-500 ${
                   isDone
                     ? isDark
-                      ? 'bg-violet-600'
+                      ? 'bg-blue-600'
                       : 'bg-neutral-900'
                     : isDark
                       ? 'bg-zinc-700'
@@ -574,7 +574,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
               type="button"
               onClick={handleNextStep}
               className={`flex-1 px-6 py-3 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                isDark ? 'bg-violet-600 hover:bg-violet-700' : 'bg-neutral-900 hover:bg-neutral-800'
+                isDark ? 'bg-blue-600 hover:bg-blue-700' : 'bg-neutral-900 hover:bg-neutral-800'
               }`}
             >
               Choisir mon créneau
@@ -671,7 +671,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
                                 : 'text-neutral-300 cursor-not-allowed'
                               : selected
                                 ? isDark
-                                  ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20'
+                                  ? 'bg-blue-600 text-white shadow-lg shadow-violet-500/20'
                                   : 'bg-neutral-900 text-white shadow-md'
                                 : isDark
                                   ? 'text-zinc-300 hover:bg-zinc-700'
@@ -687,7 +687,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
                                     ? 'bg-zinc-700'
                                     : 'bg-neutral-300'
                                   : isDark
-                                    ? 'bg-violet-500'
+                                    ? 'bg-blue-600'
                                     : 'bg-neutral-600'
                               }`}
                             />
@@ -725,7 +725,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
                     className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
                       requestedTime === time
                         ? isDark
-                          ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20'
+                          ? 'bg-blue-600 text-white shadow-lg shadow-violet-500/20'
                           : 'bg-neutral-900 text-white shadow-md'
                         : isDark
                           ? 'border border-zinc-600 text-zinc-300 hover:border-zinc-500 hover:bg-zinc-700'
@@ -764,7 +764,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
             <input
               type="checkbox"
               {...register('smsConfirmationOptIn')}
-              className={`mt-1 w-4 h-4 rounded border-neutral-300 focus:ring-2 shrink-0 ${isDark ? 'text-violet-600 focus:ring-violet-500' : 'text-neutral-900 focus:ring-neutral-900'}`}
+              className={`mt-1 w-4 h-4 rounded border-neutral-300 focus:ring-2 shrink-0 ${isDark ? 'text-blue-600 focus:ring-blue-500' : 'text-neutral-900 focus:ring-neutral-900'}`}
             />
             <span className="text-sm">
               Recevoir un <strong>SMS</strong> de confirmation (lien vers la page de détail). Case à
@@ -778,7 +778,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
             <input
               type="checkbox"
               {...register('acceptTerms')}
-              className={`mt-1 w-4 h-4 rounded border-neutral-300 focus:ring-2 ${isDark ? 'text-violet-600 focus:ring-violet-500' : 'text-neutral-900 focus:ring-neutral-900'}`}
+              className={`mt-1 w-4 h-4 rounded border-neutral-300 focus:ring-2 ${isDark ? 'text-blue-600 focus:ring-blue-500' : 'text-neutral-900 focus:ring-neutral-900'}`}
             />
             <span className="text-sm">
               J&apos;accepte les{' '}
@@ -831,7 +831,7 @@ export const VitrineBookingForm: React.FC<VitrineBookingFormProps> = ({
               type="submit"
               disabled={isSubmitting || !canSubmit}
               className={`flex-1 px-6 py-3 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                isDark ? 'bg-violet-600 hover:bg-violet-700' : 'bg-neutral-900 hover:bg-neutral-800'
+                isDark ? 'bg-blue-600 hover:bg-blue-700' : 'bg-neutral-900 hover:bg-neutral-800'
               }`}
             >
               {isSubmitting ? 'Envoi en cours...' : submitLabel}

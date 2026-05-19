@@ -205,7 +205,7 @@ export function PublicBookingRecapPage({ recapToken }: PublicBookingRecapPagePro
             <p className="text-sm">Chargement…</p>
           </div>
         ) : error ? (
-          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 shadow-sm">
+          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6 ">
             <div className="flex gap-3">
               <AlertCircle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" aria-hidden />
               <div>
@@ -234,7 +234,7 @@ export function PublicBookingRecapPage({ recapToken }: PublicBookingRecapPagePro
               </p>
             </header>
 
-            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 shadow-sm space-y-5 border-l-4 border-l-emerald-500">
+            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 shadow-sm space-y-5 ">
               <div className="flex gap-3">
                 <Calendar className="w-5 h-5 text-zinc-500 shrink-0 mt-0.5" aria-hidden />
                 <div>

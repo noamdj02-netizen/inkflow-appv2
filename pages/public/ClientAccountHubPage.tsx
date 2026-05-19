@@ -372,7 +372,7 @@ export const ClientAccountHubPage: React.FC = () => {
           </div>
 
           {studioFromQuery ? (
-            <div className="mb-6 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/40 px-4 py-3 shadow-sm">
+            <div className="mb-6 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/40 px-4 py-3 ">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed min-w-0">
                   Pour suivre ton dossier après une réservation depuis cette vitrine : connecte-toi ci-dessous.
@@ -668,7 +668,7 @@ export const ClientAccountHubPage: React.FC = () => {
           </section>
         ) : null}
 
-        <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 shadow-sm border-l-4 border-l-emerald-500">
+        <section className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-5 sm:p-6 shadow-sm ">
           <h2 className="text-lg font-semibold">Profil</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1 mb-4">
             Ta photo apparaît sur tes demandes quand tu es connecté depuis la vitrine.

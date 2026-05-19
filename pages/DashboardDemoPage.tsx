@@ -1555,8 +1555,8 @@ export const DashboardDemoPage: React.FC = () => {
                     </div>
                     <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
                       <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-500/10">
-                          <Wallet className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                        <div className="p-2 rounded-xl bg-violet-50 dark:bg-blue-600/10">
+                          <Wallet className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                         </div>
                         <span className="text-xs font-medium text-zinc-500 dark:text-zinc-500">
                           Acomptes
@@ -1859,8 +1859,8 @@ export const DashboardDemoPage: React.FC = () => {
                       className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] transition-all text-left group"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-violet-100 dark:bg-violet-500/10">
-                          <Inbox className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                        <div className="p-3 rounded-xl bg-violet-100 dark:bg-blue-600/10">
+                          <Inbox className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-semibold text-zinc-900 dark:text-white">

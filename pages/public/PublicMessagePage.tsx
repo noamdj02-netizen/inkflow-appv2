@@ -472,7 +472,7 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
                   {msg.senderName}
                 </div>
                 {structured?.kind === 'payment_card' ? (
-                  <div className="rounded-2xl border border-neutral-200 border-l-4 border-l-amber-500 bg-white p-4 space-y-3 shadow-sm select-text">
+                  <div className="rounded-2xl border border-neutral-200  bg-white p-4 space-y-3  select-text">
                     <div className="flex items-center gap-2 text-neutral-900">
                       <CreditCard className="w-5 h-5 text-amber-600 shrink-0" />
                       <span className="text-sm font-semibold">
@@ -490,7 +490,7 @@ export const PublicMessagePage: React.FC<PublicMessagePageProps> = ({ threadId }
                     </a>
                   </div>
                 ) : structured?.kind === 'payment_receipt' ? (
-                  <div className="rounded-2xl border border-neutral-200 border-l-4 border-l-emerald-600 bg-white p-4 space-y-2 shadow-sm select-text">
+                  <div className="rounded-2xl border border-neutral-200  bg-white p-4 space-y-2 shadow-sm select-text">
                     <div className="flex items-center gap-2 text-neutral-900">
                       <CheckCheck className="w-5 h-5 text-emerald-600 shrink-0" />
                       <span className="text-sm font-semibold">

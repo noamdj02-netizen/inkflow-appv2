@@ -28,7 +28,7 @@ type SlideAccent = 'blue' | 'emerald' | 'violet';
 const ACCENT_RING: Record<SlideAccent, string> = {
   blue: 'ring-blue-500/15 bg-blue-50/90 text-blue-700',
   emerald: 'ring-emerald-500/15 bg-emerald-50/90 text-emerald-800',
-  violet: 'ring-violet-500/15 bg-violet-50/90 text-violet-800',
+  violet: 'ring-blue-500/15 bg-violet-50/90 text-blue-800',
 };
 
 const SLIDE_CONTENT: {
@@ -95,10 +95,7 @@ const SLIDE_CONTENT: {
 
 function HeroMockCards() {
   return (
-    <div
-      className="relative mt-6 mb-1 select-none pointer-events-none"
-      aria-hidden
-    >
+    <div className="relative mt-6 mb-1 select-none pointer-events-none" aria-hidden>
       <div className="relative mx-auto max-w-[280px] sm:max-w-[320px]">
         <div
           className="absolute -right-1 -top-2 w-[88%] rounded-2xl border border-zinc-200/80 bg-white p-3 shadow-md rotate-[2deg] z-0"
@@ -229,9 +226,7 @@ export const ClientWelcomeOnboardingPage: React.FC = () => {
       </a>
 
       <header className="relative z-20 flex-shrink-0 border-b border-zinc-200/70 bg-white/85 pb-3 pt-[max(12px,env(safe-area-inset-top))] shadow-sm backdrop-blur-md">
-        <div
-          className="flex w-full items-center justify-between gap-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-6 sm:pr-6"
-        >
+        <div className="flex w-full items-center justify-between gap-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-6 sm:pr-6">
           {/* Bloc marque à gauche : retour + logo + titres (alignés start) */}
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button
@@ -354,15 +349,15 @@ export const ClientWelcomeOnboardingPage: React.FC = () => {
 
               {isLast && (
                 <div className="mt-8 space-y-3">
-                  <div className="flex items-start gap-3 rounded-2xl border border-violet-200/80 bg-violet-50/60 px-4 py-3 text-sm text-violet-950">
+                  <div className="flex items-start gap-3 rounded-2xl border border-blue-200/80 bg-violet-50/60 px-4 py-3 text-sm text-blue-950">
                     <Heart
-                      className="h-5 w-5 shrink-0 text-violet-600 mt-0.5"
+                      className="h-5 w-5 shrink-0 text-blue-600 mt-0.5"
                       strokeWidth={1.75}
                       aria-hidden
                     />
                     <p className="leading-snug">
-                      Pas de mot de passe tout de suite : tu recevras un <strong>lien sécurisé</strong> par
-                      e-mail pour te connecter.
+                      Pas de mot de passe tout de suite : tu recevras un{' '}
+                      <strong>lien sécurisé</strong> par e-mail pour te connecter.
                     </p>
                   </div>
                   <a
@@ -425,9 +420,7 @@ export const ClientWelcomeOnboardingPage: React.FC = () => {
                   aria-label={`Aller à l’écran ${i + 1}`}
                   onClick={() => setStep(i)}
                   className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 ${
-                    i === step
-                      ? 'px-4 py-2'
-                      : 'p-2 opacity-70 hover:opacity-100'
+                    i === step ? 'px-4 py-2' : 'p-2 opacity-70 hover:opacity-100'
                   }`}
                 >
                   <span

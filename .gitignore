@@ -57,6 +57,11 @@ supabase/.temp
 # Sentry Config File
 .env.sentry-build-plugin
 
+# Repomix (skill repomix-explorer) — packs codebase pour analyse IA
+.repomix/
+repomix-output.xml
+repomix-output.*
+
 # UI UX Pro Max (skill) — fichiers générés par --persist
 /design-system/
 .cursor/skills/**/__pycache__/

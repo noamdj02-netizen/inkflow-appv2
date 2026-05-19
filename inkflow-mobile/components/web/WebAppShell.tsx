@@ -136,8 +136,20 @@ async function registerExpoPushWithStudio(accessToken: string, studioId: string)
     const projectId =
       (Constants.expoConfig?.extra?.eas?.projectId as string | undefined) ??
       Constants.easConfig?.projectId;
-    const tokenRes = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
-    const expoToken = tokenRes.data;
+    let expoToken: string | undefined;
+    try {
+      const tokenRes = await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined
+      );
+      expoToken = tokenRes.data;
+    } catch {
+      if (__DEV__) {
+        console.warn(
+          '[WebAppShell] Jeton Expo Push indisponible (réseau / Expo Go) — inscription push ignorée.'
+        );
+      }
+      return;
+    }
     if (!expoToken) return;
     if (lastRegisteredExpoPushToken === expoToken) return;
     lastRegisteredExpoPushToken = expoToken;
@@ -253,7 +265,9 @@ export default function WebAppShell() {
       const tok = typeof data.accessToken === 'string' ? data.accessToken.trim() : '';
       const sid = typeof data.studioId === 'string' ? data.studioId.trim() : '';
       if (!tok || !sid) return;
-      void registerExpoPushWithStudio(tok, sid);
+      void registerExpoPushWithStudio(tok, sid).catch(() => {
+        /* déjà journalisé dans registerExpoPushWithStudio ; évite rejet async → LogBox */
+      });
     } catch {
       /* ignore malformed */
     }

@@ -262,7 +262,7 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
           type="button"
           onClick={handleSaveClick}
           disabled={!canSave}
-          className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] min-h-[44px]"
+          className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold bg-blue-600 text-white hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] min-h-[44px]"
         >
           {saving ? (
             <>
@@ -311,7 +311,7 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
                         <button
                           key={s}
                           onClick={() => pickSuggestion(s)}
-                          className="px-3 py-1 rounded-lg text-xs font-semibold bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30 hover:bg-violet-100 dark:hover:bg-violet-500/20 transition-colors active:scale-95"
+                          className="px-3 py-1 rounded-lg text-xs font-semibold bg-violet-50 dark:bg-violet-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 hover:bg-violet-100 dark:hover:bg-violet-500/20 transition-colors active:scale-95"
                         >
                           {s}
                         </button>
@@ -364,7 +364,7 @@ export const SlugSettings: React.FC<SlugSettingsProps> = ({
               type="button"
               disabled={saving}
               onClick={handleConfirmSlugChange}
-              className="min-h-[44px] rounded-xl bg-violet-600 px-4 py-2.5 font-semibold text-white transition-all hover:bg-violet-700 active:scale-[0.98] disabled:opacity-50"
+              className="min-h-[44px] rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white transition-all hover:bg-violet-700 active:scale-[0.98] disabled:opacity-50"
             >
               {saving ? 'Enregistrement…' : 'Confirmer et enregistrer'}
             </button>

@@ -442,17 +442,17 @@ export const PublicBookingPage: React.FC<PublicBookingPageProps> = ({ studioSlug
               className="group w-full min-h-[100px] rounded-2xl border border-ink-border border-l-[4px] border-l-violet-500 bg-ink-surface p-4 sm:p-5 text-left shadow-sm flex items-stretch gap-3 sm:gap-4 transition-all duration-200 hover:border-ink-accent/40 hover:shadow-md active:scale-[0.99] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-bg"
             >
               <div
-                className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-violet-500/10 flex items-center justify-center flex-shrink-0 self-center ring-1 ring-violet-500/15"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-blue-600/10 flex items-center justify-center flex-shrink-0 self-center ring-1 ring-blue-500/15"
                 aria-hidden
               >
-                <Pencil className="w-6 h-6 sm:w-7 sm:h-7 text-violet-600" strokeWidth={1.5} />
+                <Pencil className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" strokeWidth={1.5} />
               </div>
               <div className="flex-1 min-w-0 py-0.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-ink-text text-base tracking-tight">
                     Projet sur mesure
                   </span>
-                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-violet-800/90 bg-violet-100/90 px-2 py-0.5 rounded-md">
+                  <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-blue-800/90 bg-violet-100/90 px-2 py-0.5 rounded-md">
                     Sur mesure
                   </span>
                 </div>

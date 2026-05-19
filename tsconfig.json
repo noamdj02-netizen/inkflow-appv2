@@ -29,6 +29,7 @@
     "pages/_error.tsx",
     "claude-skills",
     "mon-app",
-    "video"
+    "video",
+    "docs/build-partner"
   ]
 }

@@ -817,7 +817,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
             <Instagram className="w-5 h-5" />
             Connecter Instagram
           </a>
-          <p className="text-xs text-slate-400 dark:text-zinc-600">
+          <p className="text-xs text-zinc-400 dark:text-zinc-600">
             Paramètres → Messagerie pour configurer la connexion
           </p>
         </div>
@@ -1155,7 +1155,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                           </span>
                         )}
                         {healthLine === 'none' && (
-                          <span className="inline-flex items-center rounded-md border border-zinc-200/90 dark:border-zinc-700 bg-slate-50/80 dark:bg-zinc-800/80 px-1.5 py-0.5 text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 shrink-0">
+                          <span className="inline-flex items-center rounded-md border border-zinc-200/90 dark:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-800/80 px-1.5 py-0.5 text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 shrink-0">
                             Pas de questionnaire santé
                           </span>
                         )}
@@ -1167,7 +1167,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                                 selectedThread.projectRequestId ?? selectedThreadId
                               )
                             }
-                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-2 py-1 text-[10px] sm:text-[11px] font-medium text-slate-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 active:scale-[0.98] transition-all shrink-0 min-h-[32px]"
+                            className="inline-flex items-center gap-1 rounded-md border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-2 py-1 text-[10px] sm:text-[11px] font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 active:scale-[0.98] transition-all shrink-0 min-h-[32px]"
                           >
                             <FileText className="w-3 h-3 shrink-0" aria-hidden />
                             Voir le projet
@@ -1178,7 +1178,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                           <button
                             type="button"
                             onClick={() => onOpenLinkedBookingRequest(selectedThreadId)}
-                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-2 py-1 text-[10px] sm:text-[11px] font-medium text-slate-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 active:scale-[0.98] transition-all shrink-0 min-h-[32px]"
+                            className="inline-flex items-center gap-1 rounded-md border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 px-2 py-1 text-[10px] sm:text-[11px] font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 active:scale-[0.98] transition-all shrink-0 min-h-[32px]"
                           >
                             <FileText className="w-3 h-3 shrink-0" aria-hidden />
                             <span className="hidden min-[380px]:inline">
@@ -1284,7 +1284,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                         onClick={() =>
                           setNewMessage((prev) => (prev ? `${prev} ${template}` : template))
                         }
-                        className="text-xs px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-all active:scale-[0.98]"
+                        className="text-xs px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-[0.98]"
                       >
                         {template.slice(0, 35)}…
                       </button>
@@ -1354,7 +1354,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                     <button
                       type="button"
                       onClick={() => setSelectedThreadId(null)}
-                      className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-slate-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
+                      className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
                     >
                       Retour à la liste
                     </button>
@@ -1447,7 +1447,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                 setDirectContactConsent(false);
                 setDirectContactDraft('');
               }}
-              className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 active:scale-[0.98] transition-all"
+              className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 active:scale-[0.98] transition-all"
             >
               Annuler
             </button>
@@ -1495,7 +1495,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
               <button
                 type="button"
                 onClick={() => copyConsentPresetPlain(activeConsentPreset)}
-                className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all inline-flex items-center gap-2"
+                className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all inline-flex items-center gap-2"
               >
                 <Copy className="w-4 h-4" aria-hidden />
                 Copier le texte
@@ -1504,7 +1504,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
                 type="button"
                 disabled={sending}
                 onClick={() => insertConsentPresetInComposer(activeConsentPreset)}
-                className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 active:scale-[0.98] transition-all"
+                className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 active:scale-[0.98] transition-all"
               >
                 Insérer texte brut
               </button>
@@ -1535,7 +1535,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-600 dark:text-zinc-400">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Montant de l&apos;acompte pour ce projet. Un message avec le lien Stripe sera ajouté au
             fil.
           </p>
@@ -1557,7 +1557,7 @@ export const MessagingTab: React.FC<MessagingTabProps> = ({
               type="button"
               disabled={paymentBusy}
               onClick={() => setPaymentModalOpen(false)}
-              className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 active:scale-[0.98] transition-all"
+              className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 active:scale-[0.98] transition-all"
             >
               Annuler
             </button>
