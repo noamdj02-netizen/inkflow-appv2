@@ -13,6 +13,12 @@
  * → Envoie un email de relance au CLIENT avec le lien de paiement existant.
  * → Met à jour reminder_sent_at sur l'appointment pour ne pas renvoyer.
  *
+ * Passe 1b (12h après la 1re relance) :
+ *   - reminder_sent_at NOT NULL, deposit_reminder_followup_sent_at IS NULL
+ * → 2e relance « dernier rappel » avant annulation.
+ *
+ * Annulation : 12h après la 2e relance (36h après création si relances à J+12h / J+24h).
+ *
  * Scheduling : cron `0 * * * *` (migrations pg_cron + net.http_post).
  */
 
@@ -48,6 +54,7 @@ function buildReminderEmail(
   service: string | null,
   depositAmount: number | null,
   depositLink: string,
+  urgent = false,
 ): string {
   const safeService = service ? escapeHtml(service) : "Tatouage";
   const safeDate = escapeHtml(date);
@@ -64,16 +71,19 @@ function buildReminderEmail(
   const bodyHtml = emailInfoBox(detailsHtml);
 
   return wrapEmailLayout({
-    tag: "RELANCE ACOMPTE",
+    tag: urgent ? "DERNIER RAPPEL" : "RELANCE ACOMPTE",
     titleBlue: "Votre réservation",
-    titleBlack: "attend votre acompte",
+    titleBlack: urgent ? "— acompte toujours en attente" : "attend votre acompte",
     subtitle: studioName,
     greetingName: clientName,
-    introLine:
-      `Votre demande de RDV chez ${studioName} est bien enregistrée, mais l'acompte de ${amountLabel} n'a pas encore été réglé.`,
+    introLine: urgent
+      ? `Dernier rappel : l'acompte de ${amountLabel} pour votre RDV chez ${studioName} n'est toujours pas réglé. Sans paiement rapidement, le créneau sera libéré.`
+      : `Votre demande de RDV chez ${studioName} est bien enregistrée, mais l'acompte de ${amountLabel} n'a pas encore été réglé.`,
     bodyHtml,
     button: { text: `Payer l'acompte (${amountLabel})`, url: depositLink },
-    buttonSubtext: "Sans paiement, votre créneau pourrait être libéré.",
+    buttonSubtext: urgent
+      ? "Répondez aujourd'hui pour conserver votre place."
+      : "Sans paiement, votre créneau pourrait être libéré.",
   });
 }
 
@@ -86,9 +96,21 @@ async function sendReminderEmail(
   service: string | null,
   depositAmount: number | null,
   depositLink: string,
+  urgent = false,
 ): Promise<void> {
-  const html = buildReminderEmail(clientName, studioName, date, time, service, depositAmount, depositLink);
-  const subject = `Rappel : votre acompte est en attente — ${studioName}`;
+  const html = buildReminderEmail(
+    clientName,
+    studioName,
+    date,
+    time,
+    service,
+    depositAmount,
+    depositLink,
+    urgent,
+  );
+  const subject = urgent
+    ? `Dernier rappel acompte — ${studioName}`
+    : `Rappel : votre acompte est en attente — ${studioName}`;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -200,15 +222,66 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // ── Passe 2 : annulation automatique 24h après la relance ──────────────────
-  // RDV avec reminder_sent_at > 12h et toujours deposit_paid = false → annulé
+  // ── Passe 1b : 2e relance 12h après la 1re ─────────────────────────────────
+  const { data: followupRows, error: followupFetchError } = await supabase
+    .from("inkflow_appointments")
+    .select(`
+      id,
+      client_name,
+      client_email,
+      date,
+      time,
+      service,
+      deposit_link,
+      deposit_amount,
+      studio_id,
+      inkflow_studios ( name )
+    `)
+    .in("status", ["pending", "confirmed"])
+    .eq("deposit_paid", false)
+    .not("reminder_sent_at", "is", null)
+    .lt("reminder_sent_at", twelveHoursAgo)
+    .is("deposit_reminder_followup_sent_at", null)
+    .not("deposit_link", "is", null)
+    .not("client_email", "is", null);
+
+  if (!followupFetchError && followupRows?.length) {
+    for (const apt of followupRows as AppointmentRow[]) {
+      if (!apt.deposit_link || !apt.client_email) continue;
+      const studioName =
+        (apt.inkflow_studios as { name: string | null } | null)?.name || "Votre studio";
+      try {
+        await sendReminderEmail(
+          apt.client_email,
+          apt.client_name,
+          studioName,
+          apt.date,
+          apt.time,
+          apt.service,
+          apt.deposit_amount,
+          apt.deposit_link,
+          true,
+        );
+        await supabase
+          .from("inkflow_appointments")
+          .update({ deposit_reminder_followup_sent_at: new Date().toISOString() })
+          .eq("id", apt.id);
+        results.push({ id: apt.id, status: "sent", reason: "followup" });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        results.push({ id: apt.id, status: "error", reason: `followup: ${msg}` });
+      }
+    }
+  }
+
+  // ── Passe 2 : annulation 12h après la 2e relance ───────────────────────────
   const { data: toCancel, error: cancelFetchError } = await supabase
     .from("inkflow_appointments")
     .select("id, client_name, client_email, date, studio_id, inkflow_studios ( name )")
     .in("status", ["pending", "confirmed"])
     .eq("deposit_paid", false)
-    .not("reminder_sent_at", "is", null)
-    .lt("reminder_sent_at", twelveHoursAgo);  // relance envoyée il y a > 12h → 24h total
+    .not("deposit_reminder_followup_sent_at", "is", null)
+    .lt("deposit_reminder_followup_sent_at", twelveHoursAgo);
 
   if (!cancelFetchError && toCancel && toCancel.length > 0) {
     for (const apt of toCancel as AppointmentRow[]) {
@@ -218,7 +291,7 @@ Deno.serve(async (req: Request) => {
         .eq("id", apt.id);
 
       if (!cancelError) {
-        results.push({ id: apt.id, status: "skipped", reason: "auto-cancelled: deposit unpaid 24h" });
+        results.push({ id: apt.id, status: "skipped", reason: "auto-cancelled: deposit unpaid after followup" });
         console.log(`remind-unpaid-deposits: auto-cancelled apt ${apt.id}`);
 
         // Email d'annulation au client (si email disponible)
@@ -231,7 +304,7 @@ Deno.serve(async (req: Request) => {
             subtitle: studioName,
             greetingName: apt.client_name,
             introLine:
-              `Votre demande de RDV du ${apt.date} chez ${studioName} a été annulée car l'acompte n'a pas été réglé dans les 24 heures.`,
+              `Votre demande de RDV du ${apt.date} chez ${studioName} a été annulée car l'acompte n'a pas été réglé après nos relances.`,
             bodyHtml: `<p style="${EMAIL_STYLES.textMuted}">Pour prendre un nouveau rendez-vous, contactez directement le studio.</p>`,
             hideAppPromo: true,
           });

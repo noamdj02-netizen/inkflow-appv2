@@ -40,8 +40,51 @@ import { ClientAddModal } from './ClientAddModal';
 import { IconBox, inlineIconClass } from '../ui/IconBox';
 import { ClientListMobileRow } from './ClientListMobileRow';
 import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
+import {
+  inkBtnPrimary,
+  inkIconActionBtn,
+  inkOledCard,
+  inkOledStack,
+  inkStatCard,
+  inkStatLabel,
+  inkStatValueRevenue,
+  inkStatValueVip,
+  inkStatValueVolume,
+  inkSubtitle,
+} from '@/lib/inkDesignTokens';
+import { cn } from '@/lib/utils';
 
 const NOTES_KEY = (clientId: string) => `inkflow-notes-${clientId}`;
+
+type ClientKpiTone = 'volume' | 'revenue' | 'vip';
+
+function clientKpiValueClass(tone: ClientKpiTone): string {
+  if (tone === 'revenue') return inkStatValueRevenue;
+  if (tone === 'vip') return inkStatValueVip;
+  return inkStatValueVolume;
+}
+
+interface ClientKpiCardProps {
+  label: string;
+  value: React.ReactNode;
+  tone: ClientKpiTone;
+  icon: typeof User;
+  iconVariant: 'blue' | 'amber' | 'emerald' | 'sky';
+}
+
+function ClientKpiCard({ label, value, tone, icon, iconVariant }: ClientKpiCardProps) {
+  return (
+    <div className={cn(inkStatCard, 'dashboard-widget-card')}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <span className={inkStatLabel}>{label}</span>
+          <p className={clientKpiValueClass(tone)}>{value}</p>
+        </div>
+        <IconBox icon={icon} variant={iconVariant} size="sm" />
+      </div>
+    </div>
+  );
+}
 
 interface ClientListProps {
   clients: Client[];
@@ -348,7 +391,7 @@ export const ClientList: React.FC<ClientListProps> = ({
                 className={`flex items-center justify-center gap-1.5 sm:gap-2 min-h-[48px] min-w-0 px-3 sm:px-5 py-2.5 rounded-xl text-[13px] sm:text-sm font-semibold transition-all active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-950 ${
                   clientLimitReached
                     ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed focus-visible:ring-zinc-400/30'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:text-white dark:hover:bg-blue-400 focus-visible:ring-blue-500/50'
+                    : `${inkBtnPrimary} focus-visible:ring-blue-500/50`
                 }`}
               >
                 <UserPlus className="w-[18px] h-[18px] shrink-0" strokeWidth={2} aria-hidden />
@@ -421,7 +464,7 @@ export const ClientList: React.FC<ClientListProps> = ({
               placeholder="Rechercher un client..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full min-h-[48px] sm:min-h-0 pl-10 pr-4 py-3 sm:py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+              className="w-full min-h-[48px] rounded-[20px] border-0 bg-white pl-10 pr-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 transition-all focus:outline-none focus:ring-2 focus:ring-[#3b82f6]/40 dark:bg-black dark:text-white dark:placeholder:text-[#737373] sm:min-h-0 sm:py-2.5 sm:text-sm"
               aria-label="Rechercher un client"
               autoComplete="off"
             />
@@ -430,7 +473,7 @@ export const ClientList: React.FC<ClientListProps> = ({
             <button
               type="button"
               onClick={() => setSortBy((s) => (s === 'recent' ? 'alpha' : 'recent'))}
-              className="shrink-0 min-h-[44px] px-2.5 sm:px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 inline-flex items-center justify-center gap-1.5 font-medium transition-all text-xs sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35"
+              className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-1.5 rounded-[20px] border-0 bg-zinc-100 px-2.5 py-2 text-xs font-medium text-zinc-600 transition-all hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/35 dark:bg-white/[0.05] dark:text-[#737373] dark:hover:text-white sm:px-3 sm:text-sm"
               title={sortBy === 'recent' ? 'Trier par nom (A-Z)' : 'Trier par dernière visite'}
             >
               {sortBy === 'recent' ? (
@@ -461,8 +504,8 @@ export const ClientList: React.FC<ClientListProps> = ({
                   onClick={() => setFilterStatus(status)}
                   className={`shrink-0 min-h-[44px] px-3.5 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/35 ${
                     filterStatus === status
-                      ? 'bg-blue-600 text-white shadow-sm dark:bg-blue-500'
-                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                      ? 'bg-blue-600 text-white shadow-sm dark:bg-[#3b82f6] dark:text-white'
+                      : 'border-0 bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-white/[0.05] dark:text-[#737373] dark:hover:text-white'
                   }`}
                 >
                   {status === 'all'
@@ -479,59 +522,43 @@ export const ClientList: React.FC<ClientListProps> = ({
 
       {/* KPI + liste — animate séparé pour ne pas affecter un futur en-tête sticky (transform) */}
       <div className="animate-fade-in motion-reduce:animate-none space-y-6">
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div className="dashboard-widget-card rounded-2xl p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                Total clients
-              </span>
-              <IconBox icon={User} variant="blue" size="sm" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50">
-              {clients.length}
-            </div>
-          </div>
-          <div className="dashboard-widget-card rounded-2xl p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                VIP
-              </span>
-              <IconBox icon={Tag} variant="amber" size="sm" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold tabular-nums tracking-tight text-amber-700 dark:text-amber-300">
-              {clients.filter((c) => c.status === 'vip').length}
-            </div>
-          </div>
-          <div className="dashboard-widget-card rounded-2xl p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                Revenus
-              </span>
-              <IconBox icon={Wallet} variant="emerald" size="sm" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold tabular-nums tracking-tight text-emerald-700 dark:text-emerald-300">
-              {formatEuroPrivacy(
-                clients.reduce((sum, c) => sum + c.totalSpent, 0),
-                privacyMode
-              )}
-            </div>
-          </div>
-          <div className="dashboard-widget-card rounded-2xl p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs sm:text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                RDV totaux
-              </span>
-              <IconBox icon={CalendarDays} variant="sky" size="sm" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold tabular-nums tracking-tight text-sky-700 dark:text-sky-300">
-              {clients.reduce((sum, c) => sum + c.appointmentsCount, 0)}
-            </div>
-          </div>
+        {/* KPI Cards — chiffres 24px bold, labels 14px #737373 */}
+        <div className="ink-oled-stack grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-5">
+          <ClientKpiCard
+            label="Total clients"
+            value={clients.length}
+            tone="volume"
+            icon={User}
+            iconVariant="blue"
+          />
+          <ClientKpiCard
+            label="VIP"
+            value={clients.filter((c) => c.status === 'vip').length}
+            tone="vip"
+            icon={Tag}
+            iconVariant="amber"
+          />
+          <ClientKpiCard
+            label="Revenus"
+            value={formatEuroPrivacy(
+              clients.reduce((sum, c) => sum + c.totalSpent, 0),
+              privacyMode
+            )}
+            tone="revenue"
+            icon={Wallet}
+            iconVariant="emerald"
+          />
+          <ClientKpiCard
+            label="RDV totaux"
+            value={clients.reduce((sum, c) => sum + c.appointmentsCount, 0)}
+            tone="volume"
+            icon={CalendarDays}
+            iconVariant="sky"
+          />
         </div>
 
         {/* Mobile: Client Cards (swipe : appel + archiver) */}
-        <div className="space-y-3 md:hidden">
+        <div className={cn('overflow-hidden md:hidden p-2', inkOledCard, inkOledStack)}>
           {sortedClients.map((client) => (
             <ClientListMobileRow
               key={client.id}
@@ -608,12 +635,12 @@ export const ClientList: React.FC<ClientListProps> = ({
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border-0 dark:bg-white/[0.05]">
                               <ClientPhotoAvatar
                                 name={client.name}
                                 src={client.avatar}
                                 className="h-full w-full"
-                                textClassName="text-[13px] font-bold text-blue-600 dark:text-blue-400"
+                                textClassName="text-[13px] font-bold text-zinc-700 dark:text-[#f5f5f5]"
                               />
                             </div>
                             <div>
@@ -656,9 +683,7 @@ export const ClientList: React.FC<ClientListProps> = ({
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getClientStatusColor(client.status)}`}
-                          >
+                          <span className={getClientStatusColor(client.status)}>
                             {getStatusIcon(client.status)}
                             {client.status === 'vip'
                               ? 'VIP'
@@ -666,12 +691,12 @@ export const ClientList: React.FC<ClientListProps> = ({
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm font-semibold text-[var(--text-primary)]">
+                          <div className="text-2xl font-bold tabular-nums text-zinc-900 dark:text-white">
                             {client.appointmentsCount}
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                          <div className="text-2xl font-bold tabular-nums text-emerald-700 dark:text-[#34D399]">
                             {formatEuroPrivacy(client.totalSpent, privacyMode)}
                           </div>
                         </td>
@@ -684,15 +709,12 @@ export const ClientList: React.FC<ClientListProps> = ({
                         </td>
                         <td className="px-6 py-4">
                           <button
+                            type="button"
                             onClick={() => setSelectedClient(client)}
-                            className="btn-outline inline-flex items-center gap-2 px-3 py-2 min-h-[44px] text-sm font-medium"
+                            className={inkIconActionBtn}
+                            aria-label={`Voir ${client.name}`}
                           >
-                            <Eye
-                              className="w-[18px] h-[18px] shrink-0"
-                              strokeWidth={2}
-                              aria-hidden
-                            />{' '}
-                            Voir
+                            <Eye className="size-4" strokeWidth={1.75} aria-hidden />
                           </button>
                         </td>
                       </tr>

@@ -56,13 +56,13 @@ export function BentoKpiQuickTile({
       aria-labelledby="bento-kpi-heading"
     >
       <div className="flex items-center gap-3">
-        <span className="flex size-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+        <span className="flex size-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-200">
           <BarChart3 className="size-5" aria-hidden />
         </span>
         <div>
           <h2
             id="bento-kpi-heading"
-            className="text-sm font-semibold text-zinc-900 dark:text-zinc-100"
+            className="text-sm font-semibold text-zinc-900 dark:text-white"
           >
             Indicateurs rapides
           </h2>
@@ -96,7 +96,7 @@ export function BentoKpiQuickTile({
           onClick={onOpenFinance}
           className={cn(
             microHover,
-            'inline-flex min-h-11 shrink-0 items-center justify-center gap-1 self-stretch rounded-xl border border-zinc-100 bg-white px-3 text-xs font-medium text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 sm:self-center'
+            'inline-flex min-h-11 shrink-0 items-center justify-center gap-1 self-stretch rounded-[20px] border-0 bg-white px-3 text-xs font-medium text-zinc-800 dark:bg-white/[0.05] dark:text-[#3b82f6] sm:self-center'
           )}
         >
           Détails

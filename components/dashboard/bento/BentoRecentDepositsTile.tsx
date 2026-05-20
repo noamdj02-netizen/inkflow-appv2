@@ -68,7 +68,7 @@ export function BentoRecentDepositsTile({
             onClick={onOpenFinance}
             className={cn(
               microHover,
-              'inline-flex min-h-11 items-center gap-1 rounded-xl border border-zinc-100 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200'
+              'inline-flex min-h-11 items-center gap-1 rounded-[20px] border-0 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 dark:bg-white/[0.05] dark:text-[#3b82f6]'
             )}
           >
             Finance
@@ -78,7 +78,7 @@ export function BentoRecentDepositsTile({
       </div>
 
       {deposits.length === 0 ? (
-        <p className="mt-4 rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+        <p className="mt-4 rounded-[20px] border-0 px-4 py-8 text-center text-xs text-zinc-500 dark:bg-white/[0.03] dark:text-[#737373]">
           Aucun acompte récent dans cette liste — les paiements Stripe apparaîtront ici dès
           encaissement.
         </p>

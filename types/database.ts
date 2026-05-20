@@ -500,6 +500,7 @@ export type Database = {
           price: number | null;
           project_request_id: string | null;
           reminder_sent_at: string | null;
+          deposit_reminder_followup_sent_at: string | null;
           service: string;
           size: string | null;
           status: string | null;
@@ -536,6 +537,7 @@ export type Database = {
           price?: number | null;
           project_request_id?: string | null;
           reminder_sent_at?: string | null;
+          deposit_reminder_followup_sent_at?: string | null;
           service: string;
           size?: string | null;
           status?: string | null;
@@ -572,6 +574,7 @@ export type Database = {
           price?: number | null;
           project_request_id?: string | null;
           reminder_sent_at?: string | null;
+          deposit_reminder_followup_sent_at?: string | null;
           service?: string;
           size?: string | null;
           status?: string | null;
@@ -3167,6 +3170,8 @@ export type Database = {
           onboarding_reminder_stripe_sent_at: string | null;
           onboarding_step: number;
           onboarding_welcome_sent_at: string | null;
+          onboarding_vitrine_link_shared_at: string | null;
+          pending_inbox_digest_sent_at: string | null;
           studio_id: string;
           updated_at: string | null;
         };
@@ -3179,6 +3184,8 @@ export type Database = {
           onboarding_reminder_stripe_sent_at?: string | null;
           onboarding_step?: number;
           onboarding_welcome_sent_at?: string | null;
+          onboarding_vitrine_link_shared_at?: string | null;
+          pending_inbox_digest_sent_at?: string | null;
           studio_id: string;
           updated_at?: string | null;
         };
@@ -3189,6 +3196,8 @@ export type Database = {
           onboarding_reminder_flash_sent_at?: string | null;
           onboarding_reminder_profile_sent_at?: string | null;
           onboarding_reminder_stripe_sent_at?: string | null;
+          onboarding_vitrine_link_shared_at?: string | null;
+          pending_inbox_digest_sent_at?: string | null;
           onboarding_step?: number;
           onboarding_welcome_sent_at?: string | null;
           studio_id?: string;

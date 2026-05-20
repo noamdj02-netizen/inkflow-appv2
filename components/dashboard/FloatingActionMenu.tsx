@@ -95,7 +95,7 @@ const FloatingActionMenu = ({
     reduceMotion ? { duration: 0.1 } : { duration: 0.3, delay: index * 0.05 };
 
   const fabButtonClass =
-    'inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-full border-0 p-0 shadow-[0_0_20px_rgba(0,0,0,0.2)] bg-[#11111198] hover:bg-[#111111d1] text-white [&_svg]:text-white';
+    'inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded-full border-0 p-0 bg-zinc-900 text-white shadow-[0_4px_24px_rgba(0,0,0,0.45)] hover:bg-zinc-800 [&_svg]:text-white';
   /** FAB central bottom nav — extension au-dessus de Button default + icon-lg (tokens primary) */
   const fabBottomNavExtras = cn(
     'relative isolate shrink-0 rounded-full border border-zinc-800 bg-zinc-900 p-0 text-white',
@@ -110,10 +110,16 @@ const FloatingActionMenu = ({
     'focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-zinc-600 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
     '[&_svg]:stroke-[1.75]'
   );
+  const menuPanelShell = cn(
+    'rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl',
+    'dark:border-zinc-700 dark:bg-[#161616] dark:shadow-[0_12px_40px_rgba(0,0,0,0.75)]'
+  );
   const menuOptionClass = cn(
-    'flex w-full min-w-0 items-center gap-2 border-0 shadow-[0_0_20px_rgba(0,0,0,0.2)]',
-    'rounded-xl bg-[#11111198] px-3 py-2 hover:bg-[#111111d1] backdrop-blur-sm',
-    'text-left text-sm font-medium text-white [&_svg]:shrink-0'
+    'flex h-auto min-h-10 w-full min-w-0 items-center gap-2.5 border-0 px-3 py-2.5',
+    'rounded-xl bg-zinc-100 text-left text-sm font-medium text-zinc-900 shadow-none',
+    'hover:bg-zinc-200',
+    'dark:bg-[#222222] dark:text-[#f5f5f5] dark:hover:bg-[#2a2a2a]',
+    '[&_svg]:shrink-0 [&_svg]:text-zinc-600 dark:[&_svg]:text-[#a3a3a3]'
   );
 
   const menuPanel = (
@@ -135,7 +141,7 @@ const FloatingActionMenu = ({
           : 'absolute bottom-10 right-0 mb-2'
       )}
     >
-      <div className="flex flex-col items-end gap-2">
+      <div className={cn(menuPanelShell, 'flex flex-col items-stretch gap-1.5')}>
         {options.map((option, index) => (
           <motion.div
             key={`${option.label}-${index}`}
@@ -150,7 +156,7 @@ const FloatingActionMenu = ({
               role="menuitem"
               onClick={() => runOption(option.onClick)}
               size="sm"
-              className={cn(menuOptionClass, 'relative h-auto min-h-9 py-2')}
+              className={cn(menuOptionClass, 'relative')}
             >
               {option.Icon}
               <span className="min-w-0 flex-1 whitespace-normal [text-wrap:pretty]">
@@ -170,41 +176,57 @@ const FloatingActionMenu = ({
 
   if (isBottomNav) {
     return (
-      <div
-        ref={rootRef}
-        className={cn(
-          'relative z-10 flex min-w-0 flex-1 flex-col items-center justify-end overflow-visible pb-0',
-          compactBottomNavFab ? 'min-h-[36px]' : 'min-h-[42px]',
-          className
-        )}
-      >
-        {/* Débord FAB vers le scroll : modeste pour limiter masquage au-dessus de la dock mobile */}
-        <div className={cn('relative shrink-0', compactBottomNavFab ? '-mt-1.5' : '-mt-2.5')}>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-lg"
-            onClick={toggle}
-            className={cn(
-              fabBottomNavExtras,
-              isNavActive && !isOpen && 'ring-1 ring-zinc-600 ring-offset-2 ring-offset-zinc-950'
-            )}
-            aria-expanded={isOpen}
-            aria-haspopup="menu"
-            aria-controls={isOpen ? menuId : undefined}
-            aria-label={mainButtonLabel}
-          >
-            <motion.div
-              className="inline-flex"
-              animate={{ rotate: isOpen ? 45 : 0 }}
-              transition={rotTransition}
+      <>
+        <AnimatePresence>
+          {isOpen ? (
+            <motion.button
+              type="button"
+              key="fab-menu-scrim"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: reduceMotion ? 0.01 : 0.2 }}
+              className="fixed inset-0 z-[48] cursor-default border-0 bg-black/65 dark:bg-black/70"
+              aria-label="Fermer le menu d'actions"
+              onClick={() => setIsOpen(false)}
+            />
+          ) : null}
+        </AnimatePresence>
+        <div
+          ref={rootRef}
+          className={cn(
+            'relative z-[60] flex min-w-0 flex-1 flex-col items-center justify-end overflow-visible pb-0',
+            compactBottomNavFab ? 'min-h-[36px]' : 'min-h-[42px]',
+            className
+          )}
+        >
+          <div className={cn('relative shrink-0', compactBottomNavFab ? '-mt-1.5' : '-mt-2.5')}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-lg"
+              onClick={toggle}
+              className={cn(
+                fabBottomNavExtras,
+                isNavActive && !isOpen && 'ring-1 ring-zinc-600 ring-offset-2 ring-offset-zinc-950'
+              )}
+              aria-expanded={isOpen}
+              aria-haspopup="menu"
+              aria-controls={isOpen ? menuId : undefined}
+              aria-label={mainButtonLabel}
             >
-              <Plus aria-hidden strokeWidth={2} />
-            </motion.div>
-          </Button>
-          <AnimatePresence>{isOpen && menuPanel}</AnimatePresence>
+              <motion.div
+                className="inline-flex"
+                animate={{ rotate: isOpen ? 45 : 0 }}
+                transition={rotTransition}
+              >
+                <Plus aria-hidden strokeWidth={2} />
+              </motion.div>
+            </Button>
+            <AnimatePresence>{isOpen && menuPanel}</AnimatePresence>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 

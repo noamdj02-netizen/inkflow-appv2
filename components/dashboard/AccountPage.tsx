@@ -102,7 +102,7 @@ const Row: React.FC<RowProps> = ({
     className={cn(
       dashboardListRowCompact,
       'text-left active:scale-[0.99]',
-      danger && 'text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30',
+      danger && 'text-red-400/80 hover:bg-zinc-900 dark:text-red-400/80 dark:hover:bg-zinc-900',
       !danger && 'text-zinc-900 dark:text-zinc-100',
       disabled && 'cursor-not-allowed opacity-40'
     )}

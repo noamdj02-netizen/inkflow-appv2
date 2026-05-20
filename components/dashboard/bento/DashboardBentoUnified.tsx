@@ -39,6 +39,7 @@ export interface DashboardBentoUnifiedProps {
   privacyMode: boolean;
   formatEuro: (n: number) => string;
   onOpenFinance: () => void;
+  onOpenVitrine: () => void;
   onOpenAgenda: () => void;
   onOpenRequests: () => void;
   onNewAppointment: () => void;
@@ -73,6 +74,7 @@ export function DashboardBentoUnified({
   privacyMode,
   formatEuro,
   onOpenFinance,
+  onOpenVitrine,
   onOpenAgenda,
   onOpenRequests,
   onNewAppointment,
@@ -127,7 +129,7 @@ export function DashboardBentoUnified({
         heroSubtitle={crmMonthRangeLabel}
         heroTips={mobileHeroTips}
         heroTipIndex={mobileHeroTipIndex}
-        onOpenFinance={onOpenFinance}
+        onOpenVitrine={onOpenVitrine}
         userAvatarUrl={userAvatarUrl}
         avatarUploading={avatarUploading}
         onAvatarPress={onAvatarPress}
@@ -138,10 +140,10 @@ export function DashboardBentoUnified({
         pendingRequestsCount={pendingRequestsCount}
         onOpenAgenda={onOpenAgenda}
         onOpenRequests={onOpenRequests}
-        className="mt-6 px-4 md:mx-0 md:mt-5 md:px-0"
+        className="mt-3 px-4 md:mx-0 md:mt-5 md:px-0"
       />
 
-      <div className="mt-4 grid grid-cols-1 gap-4 px-4 md:mx-0 md:mt-5 md:grid-cols-12 md:grid-rows-[minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-5 md:px-0">
+      <div className="ink-oled-stack mt-4 grid grid-cols-1 gap-5 px-4 md:mx-0 md:mt-5 md:grid-cols-12 md:grid-rows-[minmax(0,1fr)_minmax(0,1fr)_auto] md:gap-6 md:px-0">
         <BentoAgendaTodayTile
           todayLabel={todayLabel}
           slots={todaySlots}

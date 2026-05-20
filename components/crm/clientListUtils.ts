@@ -1,27 +1,27 @@
 /**
- * Fonctions utilitaires pour ClientList — extraites pour allèger le composant principal.
+ * Utilitaires ClientList — badges pastels, pas de fonds alternés.
  */
 import type { ProjectRequest, ProjectRequestStatus } from '../../types';
+import {
+  inkBadgeError,
+  inkBadgeNeutral,
+  inkBadgePrimary,
+  inkBadgeSuccess,
+} from '@/lib/inkDesignTokens';
 
-export function projectStatusMeta(status: ProjectRequestStatus): { label: string; className: string } {
+export function projectStatusMeta(status: ProjectRequestStatus): {
+  label: string;
+  className: string;
+} {
   switch (status) {
     case 'pending':
-      return {
-        label: 'En attente',
-        className: 'bg-zinc-200/90 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-200',
-      };
+      return { label: 'En attente', className: inkBadgeNeutral };
     case 'accepted':
-      return {
-        label: 'Acceptée',
-        className: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
-      };
+      return { label: 'Acceptée', className: inkBadgeSuccess };
     case 'rejected':
-      return {
-        label: 'Refusée',
-        className: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800/80 dark:text-zinc-500',
-      };
+      return { label: 'Refusée', className: inkBadgeError };
     default:
-      return { label: status, className: 'bg-zinc-100 text-zinc-600' };
+      return { label: status, className: inkBadgeNeutral };
   }
 }
 
@@ -52,27 +52,20 @@ export function groupProjectRequestsByClient(requests: ProjectRequest[]): Array<
   return groups;
 }
 
+/** Badge statut client — fond pastel (opacité), radius 8px */
 export function getClientStatusColor(status: string): string {
   switch (status) {
     case 'vip':
+      return inkBadgePrimary;
     case 'active':
-      return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30';
+      return inkBadgeSuccess;
     case 'inactive':
     default:
-      return 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700';
+      return inkBadgeNeutral;
   }
 }
 
-/** Bordure gauche carte mobile — aligné AppointmentsView / Demandes (repère statut). */
-export function getClientCardLeftAccent(status: string): string {
-  switch (status) {
-    case 'vip':
-      return 'border-l-violet-500';
-    case 'active':
-      return 'border-l-emerald-500';
-    case 'inactive':
-      return 'border-l-zinc-400 dark:border-l-zinc-600';
-    default:
-      return 'border-l-zinc-300 dark:border-l-zinc-600';
-  }
+/** @deprecated Liste unifiée par bordure — plus d’accent border-l */
+export function getClientCardLeftAccent(_status: string): string {
+  return '';
 }

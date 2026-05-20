@@ -53,6 +53,18 @@ import { parseInstagramHandle, instagramMessageUrl } from '../../lib/instagramUt
 import { buildMailtoHref, handleMailtoClick } from '../../lib/mailto';
 import { ProposeAlternativeDateModal } from './ProposeAlternativeDateModal';
 import { AcceptProjectModal } from './AcceptProjectModal';
+import { InboxTreatNextBar } from './InboxTreatNextBar';
+import { InboxQuickActions } from './InboxQuickActions';
+import { pickFirstPendingInboxItem } from '@/lib/inboxQuickAction';
+import { sortInboxBySla, inboxSlaUrgencyLabel } from '@/lib/inboxSlaSort';
+import {
+  consumeOpenInboxAfterDemo,
+  createDemoInboxBooking,
+  DEMO_INBOX_BOOKING_ID,
+  isDemoInboxBooking,
+  isDemoInboxPreviewActive,
+  setDemoInboxPreviewActive,
+} from '@/lib/demoInboxPreview';
 import { hapticSuccess } from '../../lib/haptics';
 import { trimAvatarUrl } from '../../lib/appointmentClientDisplay';
 import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
@@ -223,52 +235,58 @@ const AgendaRequestCardView: React.FC<AgendaRequestCardViewProps> = ({
             {apt.price}€
           </span>
         </div>
-        <span className={cn('mt-3', dashboardStatusBadge.pending)}>En attente</span>
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <span className={cn(dashboardStatusBadge.pending)}>En attente</span>
+          {apt.createdAt && inboxSlaUrgencyLabel(apt.createdAt) ? (
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-800 dark:bg-red-500/20 dark:text-red-300">
+              <Clock className="size-3 shrink-0" aria-hidden />
+              {inboxSlaUrgencyLabel(apt.createdAt)}
+            </span>
+          ) : null}
+        </div>
       </div>
     </div>
 
-    <div className="flex flex-col gap-2 sm:items-end sm:ml-14">
-      <div className="flex flex-wrap gap-2 w-full sm:justify-end">
-        <button
-          type="button"
-          onClick={onAccept}
-          className={cn(
-            dashboardBtnAccent,
-            'flex min-h-[44px] flex-1 sm:flex-initial gap-2 text-sm shadow-none'
-          )}
-        >
-          <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" /> Accepter
-        </button>
-        <button
-          type="button"
-          onClick={onRefuse}
-          className="flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 dark:border-red-500/35 bg-white dark:bg-zinc-900/40 text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm"
-        >
-          <XCircle className="w-4 h-4 shrink-0 stroke-[1.75]" /> Refuser
-        </button>
-      </div>
-      {(studioId || (apt.projectRequestId && onOpenDiscussion)) && (
-        <div className="flex flex-wrap gap-2 w-full sm:justify-end">
-          {studioId && (
-            <button
-              type="button"
-              onClick={onDeposit}
-              className="flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-800 dark:text-zinc-200 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all text-sm"
-            >
-              <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" /> Acompte
-            </button>
-          )}
-          {apt.projectRequestId && onOpenDiscussion && (
-            <button
-              type="button"
-              onClick={() => onOpenDiscussion(`pr_${apt.projectRequestId}`)}
-              className="flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 font-semibold  active:scale-[0.98] transition-all text-sm shadow-sm"
-            >
-              <MessageCircle className="w-4 h-4 shrink-0 stroke-[1.75]" /> Discussion
-            </button>
-          )}
-        </div>
-      )}
+    <div className="flex flex-col gap-2 sm:items-end sm:ml-14 w-full sm:max-w-md">
+      <InboxQuickActions
+        primary={{
+          key: 'accept',
+          label: 'Accepter',
+          onClick: onAccept,
+          variant: 'primary',
+          icon: <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+        }}
+        secondary={[
+          ...(studioId
+            ? [
+                {
+                  key: 'deposit',
+                  label: 'Acompte',
+                  onClick: onDeposit,
+                  icon: <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+                },
+              ]
+            : []),
+          ...(apt.projectRequestId && onOpenDiscussion
+            ? [
+                {
+                  key: 'discussion',
+                  label: 'Discussion',
+                  onClick: () => onOpenDiscussion(`pr_${apt.projectRequestId}`),
+                  variant: 'primary' as const,
+                  icon: <MessageCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+                },
+              ]
+            : []),
+          {
+            key: 'refuse',
+            label: 'Refuser',
+            onClick: onRefuse,
+            variant: 'danger',
+            icon: <XCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />,
+          },
+        ]}
+      />
     </div>
     {onOpenClientFiche && (
       <div className="w-full sm:ml-14 pt-1">
@@ -367,6 +385,7 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   const [inboxQueueScope, setInboxQueueScope] = useState<'action' | 'all'>('action');
   const [inboxKind, setInboxKind] = useState<'all' | 'flash' | 'manual'>('all');
   const [sourcesModalOpen, setSourcesModalOpen] = useState(false);
+  const [demoPreviewTick, setDemoPreviewTick] = useState(0);
 
   const selectTab = useCallback(
     (tab: RequestsSubTabId) => {
@@ -381,6 +400,14 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     if (!initialTab) return;
     setActiveTab(initialTab);
   }, [initialTab]);
+
+  useEffect(() => {
+    if (consumeOpenInboxAfterDemo()) {
+      selectTab('inbox');
+      setInboxQueueScope('action');
+      setDemoPreviewTick((t) => t + 1);
+    }
+  }, [selectTab]);
 
   // Modale « Générer lien acompte » Stripe (RDV existant)
   const [depositModalAppointment, setDepositModalAppointment] = useState<Appointment | null>(null);
@@ -479,16 +506,24 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   const byCreatedAtDesc = <T extends { createdAt: string }>(a: T, b: T) =>
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 
-  const pendingAppointments = appointments
-    .filter((a) => a.status === 'pending')
-    .sort((a, b) => (a.createdAt && b.createdAt ? byCreatedAtDesc(a, b) : 0));
+  const pendingAppointments = useMemo(
+    () => sortInboxBySla(appointments.filter((a) => a.status === 'pending')),
+    [appointments]
+  );
   const historyAppointments = appointments
     .filter((a) => !['pending'].includes(a.status))
     .sort((a, b) => (a.createdAt && b.createdAt ? byCreatedAtDesc(a, b) : 0));
-  const pendingProjects = projectRequests
-    .filter((p) => p.status === 'pending')
-    .sort(byCreatedAtDesc);
-  const pendingBookings = bookings.filter((b) => b.status === 'pending');
+  const pendingProjects = useMemo(
+    () => sortInboxBySla(projectRequests.filter((p) => p.status === 'pending')),
+    [projectRequests]
+  );
+
+  const pendingBookings = useMemo(() => {
+    const base = sortInboxBySla(bookings.filter((b) => b.status === 'pending'));
+    if (!studioId || !isDemoInboxPreviewActive()) return base;
+    if (base.some((b) => b.id === DEMO_INBOX_BOOKING_ID)) return base;
+    return [createDemoInboxBooking(studioId), ...base];
+  }, [bookings, studioId, demoPreviewTick]);
   const bookingsChronological = [...bookings].sort(byCreatedAtDesc);
   const flashBookings = bookingsChronological.filter(
     (b) => inferRequestType(b.description) === 'flash'
@@ -570,6 +605,17 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     return 'Vue large : demandes book et briefs (y compris déjà répondues côté vitrine, hors historique agenda).';
   }, [inboxQueueScope, pendingAppointments.length, pendingBookings.length, pendingProjects.length]);
 
+  const inboxPendingTotal =
+    pendingAppointments.length + pendingBookings.length + pendingProjects.length;
+
+  const firstInboxTarget = useMemo(
+    () =>
+      activeTab === 'inbox' && inboxQueueScope === 'action'
+        ? pickFirstPendingInboxItem(pendingBookings, pendingAppointments, pendingProjects)
+        : null,
+    [activeTab, inboxQueueScope, pendingBookings, pendingAppointments, pendingProjects]
+  );
+
   const handleConfirm = async (apt: Appointment) => {
     if (!studioId) {
       toast.error('Studio inconnu — reconnecte-toi.');
@@ -647,6 +693,12 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   };
 
   const handleConfirmBooking = async (bk: Booking) => {
+    if (isDemoInboxBooking(bk.id)) {
+      setDemoInboxPreviewActive(false);
+      setDemoPreviewTick((t) => t + 1);
+      toast.success('Exemple retiré — partage ton lien vitrine pour recevoir une vraie demande.');
+      return;
+    }
     const threadUrl = inkflowPublicMessagesUrl(bk.id);
 
     const notifyConfirmed = (sent: { ok: boolean; smsSent?: boolean; error?: string }) => {
@@ -769,6 +821,12 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   };
 
   const handleRejectBooking = async (bk: Booking) => {
+    if (isDemoInboxBooking(bk.id)) {
+      setDemoInboxPreviewActive(false);
+      setDemoPreviewTick((t) => t + 1);
+      toast.info('Exemple retiré.');
+      return;
+    }
     try {
       await onUpdateBookingStatus?.(bk.id, 'rejected');
       if (!studioId) {
@@ -788,6 +846,19 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
     }
   };
 
+  const handleInboxPrimary = () => {
+    if (!firstInboxTarget) return;
+    if (firstInboxTarget.source === 'booking') {
+      void handleConfirmBooking(firstInboxTarget.item);
+      return;
+    }
+    if (firstInboxTarget.source === 'agenda') {
+      void handleConfirm(firstInboxTarget.item);
+      return;
+    }
+    setAcceptProjectTarget(firstInboxTarget.item);
+  };
+
   const openDepositModal = (apt: Appointment) => {
     setDepositModalBooking(null);
     setDepositModalProject(null);
@@ -798,6 +869,10 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
   };
 
   const openDepositModalForBooking = (bk: Booking) => {
+    if (isDemoInboxBooking(bk.id)) {
+      toast.info('C’est un exemple — l’acompte Stripe s’applique aux vraies demandes.');
+      return;
+    }
     setDepositModalAppointment(null);
     setDepositModalBooking(bk);
     setDepositModalProject(null);
@@ -1280,6 +1355,13 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                 </span>
                 <ChevronRight className="w-4 h-4 shrink-0 text-zinc-400" aria-hidden />
               </button>
+              {firstInboxTarget ? (
+                <InboxTreatNextBar
+                  totalPending={inboxPendingTotal}
+                  target={firstInboxTarget}
+                  onPrimary={handleInboxPrimary}
+                />
+              ) : null}
             </div>
           )}
 
@@ -1577,18 +1659,32 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                             </span>
                                           )}
                                         </div>
-                                        <span
-                                          className={`inline-block mt-2 sm:mt-3 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${
-                                            bk.status === 'pending'
-                                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
-                                              : bk.status === 'confirmed' ||
-                                                  bk.status === 'accepted'
-                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
-                                                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                                          }`}
-                                        >
-                                          {BOOKING_STATUS_LABELS[bk.status] || bk.status}
-                                        </span>
+                                        <div className="mt-2 sm:mt-3 flex flex-wrap items-center gap-1.5">
+                                          {isDemoInboxBooking(bk.id) ? (
+                                            <span className="inline-block rounded-full bg-violet-100 px-2.5 py-0.5 text-[11px] font-semibold text-violet-800 dark:bg-violet-500/20 dark:text-violet-300 sm:px-3 sm:py-1 sm:text-xs">
+                                              Exemple
+                                            </span>
+                                          ) : null}
+                                          <span
+                                            className={`inline-block px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold ${
+                                              bk.status === 'pending'
+                                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'
+                                                : bk.status === 'confirmed' ||
+                                                    bk.status === 'accepted'
+                                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'
+                                                  : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                                            }`}
+                                          >
+                                            {BOOKING_STATUS_LABELS[bk.status] || bk.status}
+                                          </span>
+                                          {bk.status === 'pending' &&
+                                          inboxSlaUrgencyLabel(bk.createdAt) ? (
+                                            <span className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-800 dark:bg-red-500/20 dark:text-red-300 sm:text-[11px]">
+                                              <Clock className="size-3 shrink-0" aria-hidden />
+                                              {inboxSlaUrgencyLabel(bk.createdAt)}
+                                            </span>
+                                          ) : null}
+                                        </div>
                                       </div>
                                     </div>
                                   </button>
@@ -1614,97 +1710,87 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                     className="flex-shrink-0 w-full lg:w-[min(100%,20.5rem)] xl:w-[22rem] pt-2.5 sm:pt-3 mt-0.5 border-t border-zinc-100 dark:border-zinc-800 lg:pt-0 lg:mt-0 lg:border-t-0 lg:ml-auto"
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    <div
-                                      className="rounded-xl sm:rounded-2xl border border-zinc-200/90 dark:border-zinc-700/90 bg-zinc-50/90 dark:bg-zinc-900/45 p-2.5 sm:p-3.5 shadow-sm space-y-2 sm:space-y-3"
-                                      role="group"
-                                      aria-label="Actions pour cette demande vitrine"
-                                    >
-                                      <div className="flex flex-wrap gap-2">
-                                        <button
-                                          type="button"
-                                          title="Envoie un email de confirmation au client sans exiger d’acompte."
-                                          onClick={() => handleConfirmBooking(bk)}
-                                          className="flex min-h-[44px] min-w-[min(100%,10rem)] flex-1 basis-[8.5rem] justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 active:scale-[0.98] transition-all text-sm shadow-sm"
-                                        >
-                                          <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />
-                                          <span className="truncate">Confirmer</span>
-                                        </button>
-                                        {studioId && onAddAppointment && (
-                                          <button
-                                            type="button"
-                                            onClick={() => openDepositModalForBooking(bk)}
-                                            className="flex min-h-[44px] min-w-[min(100%,10rem)] flex-1 basis-[8.5rem] justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800/70 text-zinc-900 dark:text-zinc-100 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all text-sm"
-                                          >
-                                            <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" />
-                                            <span className="truncate">
-                                              Acompte
-                                              <span className="hidden min-[380px]:inline">
-                                                {' '}
-                                                (Stripe)
-                                              </span>
-                                            </span>
-                                          </button>
-                                        )}
-                                        <button
-                                          type="button"
-                                          onClick={() => setRejectPending({ kind: 'booking', bk })}
-                                          className="flex min-h-[44px] min-w-[min(100%,10rem)] flex-1 basis-[8.5rem] justify-center items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200/90 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/35 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm"
-                                        >
-                                          <XCircle className="w-4 h-4 shrink-0" />
-                                          <span className="truncate">Refuser</span>
-                                        </button>
-                                      </div>
-
-                                      <div
-                                        className="hidden sm:block h-px bg-zinc-200/80 dark:bg-zinc-700/80"
-                                        aria-hidden="true"
+                                    <div className="rounded-xl sm:rounded-2xl border border-zinc-200/90 dark:border-zinc-700/90 bg-zinc-50/90 dark:bg-zinc-900/45 p-2.5 sm:p-3.5 shadow-sm">
+                                      <InboxQuickActions
+                                        groupLabel="Actions pour cette demande vitrine"
+                                        primary={{
+                                          key: 'confirm',
+                                          label: 'Confirmer',
+                                          title:
+                                            'Envoie un email de confirmation au client sans exiger d’acompte.',
+                                          onClick: () => void handleConfirmBooking(bk),
+                                          variant: 'primary',
+                                          icon: (
+                                            <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />
+                                          ),
+                                        }}
+                                        secondary={[
+                                          ...(studioId && onAddAppointment
+                                            ? [
+                                                {
+                                                  key: 'deposit',
+                                                  label: 'Acompte (Stripe)',
+                                                  onClick: () => openDepositModalForBooking(bk),
+                                                  icon: (
+                                                    <CreditCard className="w-4 h-4 shrink-0 stroke-[1.75]" />
+                                                  ),
+                                                },
+                                              ]
+                                            : []),
+                                          {
+                                            key: 'refuse',
+                                            label: 'Refuser',
+                                            onClick: () =>
+                                              setRejectPending({ kind: 'booking', bk }),
+                                            variant: 'danger' as const,
+                                            icon: <XCircle className="w-4 h-4 shrink-0" />,
+                                          },
+                                          ...(onOpenProjectDiscussion
+                                            ? [
+                                                {
+                                                  key: 'msg',
+                                                  label: 'Messagerie',
+                                                  onClick: () => onOpenProjectDiscussion(bk.id),
+                                                  variant: 'primary' as const,
+                                                  icon: (
+                                                    <MessageCircle className="w-4 h-4 shrink-0" />
+                                                  ),
+                                                },
+                                              ]
+                                            : []),
+                                          ...(igHandle
+                                            ? [
+                                                {
+                                                  key: 'ig',
+                                                  label: 'IG',
+                                                  onClick: () => {
+                                                    window.open(
+                                                      instagramMessageUrl(igHandle),
+                                                      '_blank',
+                                                      'noopener,noreferrer'
+                                                    );
+                                                  },
+                                                  icon: <AtSign className="w-4 h-4 shrink-0" />,
+                                                },
+                                              ]
+                                            : []),
+                                          {
+                                            key: 'email',
+                                            label: 'Email',
+                                            onClick: () => {
+                                              if (!bookingMailtoHref) {
+                                                toast.error(
+                                                  'Adresse e-mail du client invalide ou manquante.'
+                                                );
+                                                return;
+                                              }
+                                              window.location.href = bookingMailtoHref;
+                                            },
+                                            hidden: !bookingMailtoHref,
+                                            icon: <Mail className="w-4 h-4 shrink-0" />,
+                                          },
+                                        ]}
                                       />
-
-                                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                                        {onOpenProjectDiscussion && (
-                                          <button
-                                            type="button"
-                                            aria-label="Ouvrir Messagerie InkFlow"
-                                            onClick={() => onOpenProjectDiscussion(bk.id)}
-                                            className="flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] sm:min-w-[7rem] sm:flex-1 justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 font-semibold text-sm  active:scale-[0.98] transition-all shadow-sm"
-                                          >
-                                            <MessageCircle className="w-4 h-4 shrink-0" />
-                                            <span className="truncate">Messagerie</span>
-                                          </button>
-                                        )}
-                                        {igHandle && (
-                                          <a
-                                            href={instagramMessageUrl(igHandle)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className={cn(
-                                              dashboardBtnSecondary,
-                                              'min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] gap-1.5 px-2.5 py-2 text-sm sm:min-w-[7rem]'
-                                            )}
-                                            onClick={(e) => e.stopPropagation()}
-                                          >
-                                            <AtSign className="w-4 h-4 shrink-0" /> IG
-                                          </a>
-                                        )}
-                                        <a
-                                          href={bookingMailtoHref ?? '#'}
-                                          className="flex min-h-[44px] min-w-[calc(50%-0.25rem)] flex-1 basis-[calc(50%-0.25rem)] sm:min-w-[7rem] sm:flex-1 justify-center items-center gap-1.5 px-2.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white/80 dark:bg-zinc-800/50 text-zinc-800 dark:text-zinc-200 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all touch-manipulation"
-                                          aria-disabled={!bookingMailtoHref}
-                                          onClick={(e) => {
-                                            if (!bookingMailtoHref) {
-                                              e.preventDefault();
-                                              e.stopPropagation();
-                                              toast.error(
-                                                'Adresse e-mail du client invalide ou manquante.'
-                                              );
-                                              return;
-                                            }
-                                            handleMailtoClick(e, bookingMailtoHref);
-                                          }}
-                                        >
-                                          <Mail className="w-4 h-4 shrink-0" /> Email
-                                        </a>
-                                      </div>
                                     </div>
                                   </div>
                                 )}
@@ -1843,45 +1929,67 @@ export const RequestsDashboard: React.FC<RequestsDashboardProps> = ({
                                     <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400 px-0.5">
                                       Actions
                                     </p>
-                                    <div className="flex flex-col gap-2">
-                                      {studioId && pr.status === 'pending' && (
-                                        <button
-                                          type="button"
-                                          onClick={() => setAcceptProjectTarget(pr)}
-                                          className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700 active:scale-[0.98] transition-all text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
-                                        >
-                                          <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />{' '}
-                                          Accepter le projet
-                                        </button>
-                                      )}
+                                    {pr.status === 'pending' ? (
+                                      <InboxQuickActions
+                                        groupLabel="Actions brief"
+                                        primary={
+                                          studioId
+                                            ? {
+                                                key: 'accept',
+                                                label: 'Accepter le projet',
+                                                onClick: () => setAcceptProjectTarget(pr),
+                                                variant: 'primary',
+                                                icon: (
+                                                  <CheckCircle className="w-4 h-4 shrink-0 stroke-[1.75]" />
+                                                ),
+                                              }
+                                            : {
+                                                key: 'msg',
+                                                label: 'Messagerie',
+                                                onClick: () =>
+                                                  onOpenProjectDiscussion?.(`pr_${pr.id}`),
+                                                variant: 'primary',
+                                                icon: (
+                                                  <MessageCircle className="w-4 h-4 shrink-0" />
+                                                ),
+                                              }
+                                        }
+                                        secondary={[
+                                          {
+                                            key: 'msg',
+                                            label: 'Messagerie',
+                                            onClick: () => onOpenProjectDiscussion?.(`pr_${pr.id}`),
+                                            icon: <MessageCircle className="w-4 h-4 shrink-0" />,
+                                          },
+                                          ...(studioId && onAddAppointment
+                                            ? [
+                                                {
+                                                  key: 'deposit',
+                                                  label: 'Acompte (Stripe)',
+                                                  onClick: () => openDepositModalForProject(pr),
+                                                  icon: <CreditCard className="w-4 h-4 shrink-0" />,
+                                                },
+                                              ]
+                                            : []),
+                                          {
+                                            key: 'refuse',
+                                            label: 'Refuser',
+                                            onClick: () =>
+                                              setRejectPending({ kind: 'project', pr }),
+                                            variant: 'danger' as const,
+                                            icon: <XCircle className="w-4 h-4 shrink-0" />,
+                                          },
+                                        ]}
+                                      />
+                                    ) : (
                                       <button
                                         type="button"
                                         onClick={() => onOpenProjectDiscussion?.(`pr_${pr.id}`)}
-                                        className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-900 font-semibold shadow-sm hover:bg-zinc-50 active:scale-[0.98] transition-all text-sm dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
+                                        className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 shadow-sm transition-all active:scale-[0.98] dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100"
                                       >
                                         <MessageCircle className="w-4 h-4 shrink-0" /> Messagerie
-                                        InkFlow
                                       </button>
-                                      {studioId && onAddAppointment && pr.status === 'pending' && (
-                                        <button
-                                          type="button"
-                                          onClick={() => openDepositModalForProject(pr)}
-                                          className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all"
-                                        >
-                                          <CreditCard className="w-4 h-4 shrink-0" /> Lien
-                                          d&apos;acompte (Stripe)
-                                        </button>
-                                      )}
-                                      {pr.status === 'pending' && (
-                                        <button
-                                          type="button"
-                                          onClick={() => setRejectPending({ kind: 'project', pr })}
-                                          className="flex min-h-[44px] w-full items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-red-600 font-semibold hover:bg-red-50 border border-red-200 dark:bg-zinc-800 dark:text-red-400 dark:border-red-500/30 dark:hover:bg-red-500/10 active:scale-[0.98] transition-all text-sm"
-                                        >
-                                          <XCircle className="w-4 h-4 shrink-0" /> Refuser
-                                        </button>
-                                      )}
-                                    </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>

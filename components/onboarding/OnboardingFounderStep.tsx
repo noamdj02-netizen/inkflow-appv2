@@ -33,17 +33,15 @@ export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ on
   const canContinue = secondsLeft <= 0;
 
   return (
-    <motion.div
-      className="fixed inset-0 z-[100] flex flex-col lg:flex-row min-h-0 h-[100dvh] max-h-[100dvh] overflow-hidden bg-white dark:bg-black"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+    <div
+      className="fixed inset-0 z-[200] flex flex-col lg:flex-row min-h-0 h-[100dvh] max-h-[100dvh] overflow-hidden bg-white dark:bg-zinc-950"
       role="dialog"
       aria-labelledby="founder-title"
       aria-describedby="founder-note"
+      aria-modal="true"
     >
       {/* Left — Contenu */}
-      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios bg-white dark:bg-zinc-950">
         {/* Hero compact mobile */}
         <div className="lg:hidden flex-shrink-0 h-32 sm:h-40 relative overflow-hidden safe-top">
           <img
@@ -125,6 +123,6 @@ export const OnboardingFounderStep: React.FC<OnboardingFounderStepProps> = ({ on
           </p>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };

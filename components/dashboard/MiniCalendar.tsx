@@ -171,11 +171,11 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
                     relative aspect-square rounded-xl text-xs font-medium flex items-center justify-center transition-all
                     ${
                       isSelected
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                        ? 'bg-white font-semibold text-black shadow-none'
                         : isToday
                           ? isDark
-                            ? 'bg-blue-500/20 text-blue-300 font-bold ring-2 ring-blue-500/30'
-                            : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold ring-2 ring-blue-500/30'
+                            ? 'bg-zinc-900 font-bold text-white ring-1 ring-zinc-700'
+                            : 'bg-zinc-100 font-bold text-zinc-900 ring-1 ring-zinc-300 dark:bg-zinc-900 dark:text-white dark:ring-zinc-700'
                           : isPast
                             ? isDark
                               ? 'text-zinc-600 hover:bg-zinc-800/50'
@@ -196,7 +196,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
                   {hasAppointments && !isSelected && (
                     <span
                       className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
-                        isDark ? 'bg-blue-400' : 'bg-blue-500'
+                        isDark ? 'bg-zinc-400' : 'bg-zinc-500'
                       }`}
                     />
                   )}
@@ -204,7 +204,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
                   {isToday && !isSelected && (
                     <span
                       className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full ${
-                        isDark ? 'bg-blue-500' : 'bg-blue-600'
+                        isDark ? 'bg-white' : 'bg-zinc-900'
                       }`}
                     />
                   )}
@@ -220,12 +220,10 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
           onClick={onToday}
           className={`w-full mt-3 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 ${
             isTodaySelected
-              ? isDark
-                ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20'
-                : 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+              ? 'border border-zinc-700 bg-zinc-900 text-white dark:border-zinc-700 dark:bg-zinc-900'
               : isDark
-                ? 'text-blue-300 border border-blue-500/30 hover:bg-blue-500/10'
-                : 'text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-500/10'
+                ? 'border border-zinc-800 text-zinc-300 hover:bg-zinc-900'
+                : 'border border-zinc-200 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900'
           }`}
         >
           <Calendar className="w-3.5 h-3.5" />

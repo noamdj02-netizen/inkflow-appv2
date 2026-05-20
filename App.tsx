@@ -154,9 +154,9 @@ const InkflowThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     /* @ts-expect-error next-themes ThemeProvider children — React 19 compat */
     <ThemeProvider
       attribute="data-theme"
-      defaultTheme="light"
+      defaultTheme="system"
       storageKey="inkflow-theme"
-      enableSystem={false}
+      enableSystem
       forcedTheme={isDashboardPro ? undefined : 'light'}
     >
       {children}

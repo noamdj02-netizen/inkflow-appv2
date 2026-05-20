@@ -192,13 +192,13 @@
      Miroir de components/dashboard/ui/dashboardChrome.ts
      ========================================================== */
   .ink-page {
-    @apply bg-zinc-50 dark:bg-zinc-950;
+    @apply bg-zinc-50 dark:bg-black;
   }
   .ink-card {
-    @apply overflow-hidden rounded-2xl border border-zinc-100 bg-white dark:border-zinc-900 dark:bg-zinc-950/40;
+    @apply overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950;
   }
   .ink-list-panel {
-    @apply overflow-hidden rounded-2xl border border-zinc-100 bg-white divide-y divide-zinc-100 dark:border-zinc-900 dark:bg-zinc-950/40 dark:divide-zinc-900/50;
+    @apply overflow-hidden rounded-2xl border border-zinc-200 bg-white divide-y divide-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:divide-zinc-800/80;
   }
   .ink-list-row {
     @apply flex w-full min-h-[52px] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-zinc-50/90 dark:hover:bg-zinc-900/50;
@@ -225,7 +225,7 @@
     @apply inline-flex min-h-11 items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-50 dark:bg-white dark:text-zinc-950;
   }
   .ink-btn-accent {
-    @apply inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50 dark:bg-blue-500;
+    @apply inline-flex min-h-11 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-50;
   }
   .ink-btn-secondary {
     @apply inline-flex min-h-11 items-center justify-center rounded-xl border border-zinc-100 bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition-all hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100;
@@ -439,33 +439,58 @@ video {
   --chart-bg: #ffffff;
 }
 
-/* Mode Sombre (Dark) — premium minimaliste (body black, cards zinc-950, sans ombre) */
+/* Mode Sombre (Dark) — OLED True Black InkFlow */
 :root[data-theme='dark'] {
-  /* shadcn / CTA : même primaire blue-600 + blanc (next-themes = data-theme, pas .dark) */
-  --primary: #2563eb;
+  --ink-bg: #000000;
+  --ink-surface: #000000;
+  --ink-border: transparent;
+  --ink-text: #ffffff;
+  --ink-text-muted: #737373;
+  --ink-primary: #3b82f6;
+  --ink-success: #22c55e;
+  --ink-error: #ef4444;
+  --ink-radius-card: 20px;
+  --ink-radius-badge: 8px;
+  --primary: #3b82f6;
   --primary-foreground: #ffffff;
-  --sidebar-primary: #2563eb;
+  --sidebar-primary: #3b82f6;
   --sidebar-primary-foreground: #ffffff;
-  --ring: rgba(37, 99, 235, 0.45);
+  --ring: rgba(59, 130, 246, 0.35);
   --chart-1: #60a5fa;
   --chart-2: #3b82f6;
   --chart-3: #2563eb;
   --chart-4: #1d4ed8;
   --chart-5: #93c5fd;
-  --numeric: oklch(0.94 0.03 264);
-  --numeric-muted: oklch(0.62 0.045 264);
+  --numeric: #ffffff;
+  --numeric-muted: #737373;
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #000000;
+  --card-foreground: #ffffff;
+  --popover: #000000;
+  --popover-foreground: #ffffff;
+  --muted: #000000;
+  --muted-foreground: #737373;
+  --secondary: #000000;
+  --secondary-foreground: #ffffff;
+  --accent: #000000;
+  --accent-foreground: #ffffff;
+  --border: transparent;
+  --input: transparent;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
   --bg-primary: #000000;
-  --bg-secondary: #09090b;
-  --bg-sidebar: #0a0a0a;
-  --bg-card: #0f0f11;
-  --bg-card-secondary: #18181b;
-  --bg-card-elevated: #1f1f23;
-  --bg-card-dark: #18181b;
-  --bg-hover: rgba(255, 255, 255, 0.06);
-  --bg-hover-strong: rgba(255, 255, 255, 0.1);
-  --text-primary: #fafafa;
-  --text-secondary: #d4d4d8;
-  --text-tertiary: #a1a1aa;
+  --bg-secondary: #000000;
+  --bg-sidebar: #000000;
+  --bg-card: #000000;
+  --bg-card-secondary: #000000;
+  --bg-card-elevated: #000000;
+  --bg-card-dark: #000000;
+  --bg-hover: rgba(255, 255, 255, 0.04);
+  --bg-hover-strong: rgba(255, 255, 255, 0.07);
+  --text-primary: #ffffff;
+  --text-secondary: #737373;
+  --text-tertiary: #737373;
   --text-on-dark: #ffffff;
   --orange: #71717a;
   --orange-hover: #52525b;
@@ -477,15 +502,67 @@ video {
   --blue-light: #60a5fa;
   --magenta: #71717a;
   --magenta-hover: #8b5cf6;
-  --border: #27272a;
-  --border-light: #3f3f46;
+  --border: transparent;
+  --border-light: transparent;
   --border-focus: rgba(59, 130, 246, 0.5);
   --shadow-sm: transparent;
   --shadow-md: transparent;
   --shadow-lg: transparent;
   --chart-grid: rgba(255, 255, 255, 0.08);
   --chart-text: #a1a1aa;
-  --chart-bg: #09090b;
+  --chart-bg: #000000;
+}
+
+/* OLED — cartes flottantes sans bordure (accueil, agenda, clients) */
+:root[data-theme='dark'] .ink-oled-card {
+  border: none !important;
+  background-color: #0a0a0a;
+  border-radius: 20px;
+  background-image: radial-gradient(
+    ellipse 100% 70% at 50% -10%,
+    rgba(255, 255, 255, 0.07) 0%,
+    rgba(255, 255, 255, 0.025) 45%,
+    transparent 65%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+/* Cartes RDV / contenus — un cran au-dessus du fond */
+:root[data-theme='dark'] .ink-oled-elevated {
+  border: none !important;
+  background-color: #111111;
+  border-radius: 20px;
+  background-image: radial-gradient(
+    ellipse 100% 80% at 50% -15%,
+    rgba(255, 255, 255, 0.09) 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 70%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 32px -12px rgba(0, 0, 0, 0.6);
+}
+:root[data-theme='dark'] .ink-oled-glass {
+  border: none !important;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background-image: radial-gradient(
+    ellipse 90% 50% at 50% 0%,
+    rgba(255, 255, 255, 0.04) 0%,
+    transparent 50%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+:root[data-theme='dark'] .ink-oled-stack {
+  gap: 1.25rem;
+}
+:root[data-theme='dark'] .app-shell-content.dashboard-pages-bg {
+  background: #000000;
+}
+:root[data-theme='dark'] .dashboard-overview-bg {
+  background-color: #000000;
+  background-image: none;
 }
 
 /* Theme toggle — palette premium (Notion/Linear/Vercel), douce et accessible */
@@ -735,11 +812,8 @@ video {
 }
 /* Thème nuit : canvas neutre (zinc) — halos discrets, lisibilité > effet « néon » */
 :root[data-theme='dark'] .dashboard-overview-bg {
-  background-color: #09090b;
-  background-image:
-    radial-gradient(ellipse 100% 55% at 50% -18%, rgba(255, 255, 255, 0.045), transparent 52%),
-    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(59, 130, 246, 0.04), transparent 45%),
-    linear-gradient(180deg, #0c0c0e 0%, #08080a 38%, #000000 100%);
+  background-color: #000000;
+  background-image: none;
 }
 :root[data-theme='dark'] .dashboard-overview-bg::after {
   opacity: 0.04;
@@ -885,18 +959,19 @@ video {
     0 10px 28px -8px rgba(0, 0, 0, 0.1);
 }
 :root[data-theme='dark'] .dashboard-widget-card {
-  background: #18181b;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 1rem;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.45),
-    0 8px 28px -6px rgba(0, 0, 0, 0.55);
+  background: #000000;
+  border: none;
+  border-radius: 20px;
+  background-image: radial-gradient(
+    ellipse 100% 65% at 50% -12%,
+    rgba(255, 255, 255, 0.05) 0%,
+    transparent 55%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 :root[data-theme='dark'] .dashboard-widget-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.5),
-    0 14px 40px -8px rgba(0, 0, 0, 0.45);
+  border: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 /* Cartes cliquables (bouton / lien) — anneau focus visible */
@@ -1266,12 +1341,13 @@ a.dashboard-widget-card:focus-visible {
     opacity var(--duration-press) var(--ease-ios);
 }
 :root[data-theme='dark'] .btn-outline {
-  border: 1px solid #3f3f46;
+  border: none;
   color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
 }
 :root[data-theme='dark'] .btn-outline:hover {
-  border-color: #52525b;
-  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
 }
 .card-dash {
   background: var(--bg-card);
@@ -1342,9 +1418,10 @@ a.dashboard-widget-card:focus-visible {
     0 0 0 1px rgba(99, 102, 241, 0.5) inset;
 }
 :root[data-theme='dark'] .input-dash {
-  background: #18181b;
-  border: 1px solid #27272a;
+  background: #000000;
+  border: none;
   color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 :root[data-theme='dark'] .input-dash:focus {
   border-color: rgba(255, 255, 255, 0.5);
@@ -1398,7 +1475,7 @@ a.dashboard-widget-card:focus-visible {
   background: #fafafa;
 }
 :root[data-theme='dark'] .app-shell-content.dashboard-pages-bg {
-  background: #09090b;
+  background: #000000;
 }
 
 /* Page Paramètres — style landing Framer (respiration, typo, cartes) */
@@ -1771,8 +1848,8 @@ textarea {
   border-top: 1px solid var(--border);
 }
 :root[data-theme='dark'] .bottom-nav {
-  background: #0f0f11;
-  border-top-color: rgba(255, 255, 255, 0.07);
+  background: #000000;
+  border-top-color: rgb(39 39 42);
 }
 
 /* Content area: réserve espace pour la bottom nav + safe area iOS + respiration (évite contenu caché) */
@@ -1812,7 +1889,7 @@ textarea {
   }
   :root[data-theme='dark'] .dashboard-pro-shell .app-shell-content.dashboard-overview-bg,
   :root[data-theme='dark'] .dashboard-pro-shell .app-shell-content.dashboard-pages-bg {
-    background-color: #09090b;
+    background-color: #000000;
     background-image: none;
   }
   :root[data-theme='dark'] .dashboard-pro-shell .app-shell-content.dashboard-overview-bg::after,
@@ -1841,41 +1918,38 @@ textarea {
      `paddingBottom: insets.bottom || 8` (react-native-safe-area-context). */
   .dashboard-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
     overflow: visible;
-    left: 50%;
-    right: auto;
-    width: calc(100% - 4px);
-    max-width: 34rem;
-    transform: translateX(-50%);
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: none;
+    transform: none;
     bottom: 0;
     min-height: 0;
     padding-top: 2px;
     padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
     padding-left: 0;
     padding-right: 0;
-    border-radius: 16px;
-    border: 1px solid rgb(39 39 42);
-    background: rgb(9 9 11);
-    box-shadow:
-      0 12px 40px rgba(0, 0, 0, 0.35),
-      0 4px 12px rgba(0, 0, 0, 0.2);
-    border-top: none !important;
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid #3f3f46;
+    background: #141416;
+    box-shadow: none;
   }
 
-  /* Inkflow Pro (Expo / WebView) : capsule flottante, pas collée aux bords latéraux. */
+  /* Inkflow Pro (Expo / WebView) — même barre pleine largeur, fond noir. */
   .dashboard-pro-shell.dashboard-pro-inkflow-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
-    width: calc(100% - 4px);
+    width: 100%;
     max-width: none;
     min-height: 0;
     padding-top: 2px;
     padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
     padding-left: 0;
     padding-right: 0;
-    border-radius: 9999px;
-    background: rgb(9 9 11);
-    border: 1px solid rgb(39 39 42);
-    box-shadow:
-      0 14px 44px rgba(0, 0, 0, 0.4),
-      0 4px 14px rgba(0, 0, 0, 0.25);
+    border-radius: 0;
+    background: #141416;
+    border: none;
+    border-top: 1px solid #3f3f46;
+    box-shadow: none;
   }
 
   /* Enveloppe native : pas de padding-bottom sur #root (évite double safe area + trou). */
@@ -1887,13 +1961,16 @@ textarea {
   .dashboard-pro-shell .dashboard-pro-mobile-bottom-nav__inner {
     touch-action: manipulation;
     -webkit-overflow-scrolling: touch;
+    min-height: 48px;
+  }
+
+  .dashboard-pro-shell .dashboard-pro-mobile-bottom-nav button {
+    -webkit-tap-highlight-color: transparent;
   }
   :root[data-theme='dark'] .dashboard-pro-shell .bottom-nav.dashboard-pro-mobile-bottom-nav {
-    border-color: rgb(39 39 42);
-    background: rgb(9 9 11);
-    box-shadow:
-      0 14px 48px rgba(0, 0, 0, 0.55),
-      0 4px 14px rgba(0, 0, 0, 0.35);
+    border-top-color: #3f3f46;
+    background: #141416;
+    box-shadow: none;
   }
 }
 

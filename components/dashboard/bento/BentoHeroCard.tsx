@@ -1,10 +1,12 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { BarChart3, Loader2, Sparkles } from 'lucide-react';
+import { ExternalLink, Loader2, Sparkles, X } from 'lucide-react';
 import { LANDING_PRICING_URL } from '@/lib/urls';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { glassPanel, microHover, subscriptionPill } from './bentoStyles';
+
+const HERO_TIP_DISMISS_KEY = 'inkflow-hero-tip-dismissed';
 
 export interface BentoHeroCardProps {
   firstName?: string;
@@ -20,7 +22,8 @@ export interface BentoHeroCardProps {
   heroSubtitle?: string;
   heroTips?: string[];
   heroTipIndex?: number;
-  onOpenFinance?: () => void;
+  /** Ouvre la vitrine publique du studio (nouvel onglet). */
+  onOpenVitrine?: () => void;
   userAvatarUrl?: string | null;
   avatarUploading?: boolean;
   onAvatarPress?: () => void;
@@ -37,13 +40,20 @@ export function BentoHeroCard({
   heroSubtitle = '',
   heroTips = [],
   heroTipIndex = 0,
-  onOpenFinance,
+  onOpenVitrine,
   userAvatarUrl = null,
   avatarUploading = false,
   onAvatarPress,
 }: BentoHeroCardProps) {
   const reduceMotion = useReducedMotion();
   const prefersReducedMotion = Boolean(reduceMotion);
+  const [tipDismissed, setTipDismissed] = useState(
+    () => typeof window !== 'undefined' && localStorage.getItem(HERO_TIP_DISMISS_KEY) === '1'
+  );
+  const dismissTip = useCallback(() => {
+    localStorage.setItem(HERO_TIP_DISMISS_KEY, '1');
+    setTipDismissed(true);
+  }, []);
 
   const greetingWord = useMemo(() => {
     const h = new Date().getHours();
@@ -64,7 +74,7 @@ export function BentoHeroCard({
 
   const displayName = firstName?.trim() || 'toi';
 
-  const showMobileImmersive = Boolean(referenceDate != null && onOpenFinance);
+  const showMobileImmersive = Boolean(referenceDate != null && onOpenVitrine);
 
   const dateCaption = referenceDate
     ? referenceDate
@@ -81,12 +91,12 @@ export function BentoHeroCard({
   const desktopStack = (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-zinc-400">
           Accueil studio
         </p>
         <h2
           id="bento-hero-title"
-          className="font-display mt-2 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl"
+          className="font-display mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white sm:text-3xl"
         >
           {greetingWord}, <span className="text-zinc-700 dark:text-zinc-200">{displayName}</span>
         </h2>
@@ -136,10 +146,10 @@ export function BentoHeroCard({
   );
 
   return (
-    <motion.header {...motionProps} className={cn('w-full', className)}>
+    <motion.header {...motionProps} className={cn('w-full max-md:mt-2', className)}>
       {showMobileImmersive ? (
         <>
-          <div className="relative isolate w-full overflow-hidden rounded-b-[2.5rem] pb-6 md:hidden">
+          <div className="relative isolate w-full overflow-hidden rounded-b-[2.5rem] bg-zinc-950 md:hidden">
             {headerBackgroundUrl ? (
               <img
                 src={headerBackgroundUrl}
@@ -148,12 +158,10 @@ export function BentoHeroCard({
                 decoding="async"
                 className="pointer-events-none absolute inset-0 z-0 size-full object-cover object-[center_24%]"
               />
-            ) : (
-              <div className="pointer-events-none absolute inset-0 z-0 bg-zinc-950" aria-hidden />
-            )}
+            ) : null}
             <div className="pointer-events-none absolute inset-0 z-[1] bg-black/35" aria-hidden />
 
-            <div className="relative z-[2] mb-2 px-5 pt-[max(3rem,env(safe-area-inset-top,0px))]">
+            <div className="relative z-[2] px-5 pb-4 pt-[max(3rem,env(safe-area-inset-top,0px))]">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-400">
@@ -172,12 +180,12 @@ export function BentoHeroCard({
                 <div className="flex shrink-0 flex-row items-center gap-1.5">
                   <motion.button
                     type="button"
-                    onClick={onOpenFinance}
+                    onClick={onOpenVitrine}
                     whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
-                    className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-zinc-900/30 text-blue-400 backdrop-blur-md transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
-                    aria-label="Finance"
+                    className="flex size-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-white transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                    aria-label="Ma vitrine"
                   >
-                    <BarChart3 className="size-5 shrink-0" strokeWidth={2} aria-hidden />
+                    <ExternalLink className="size-5 shrink-0" strokeWidth={2} aria-hidden />
                   </motion.button>
                   <motion.button
                     type="button"
@@ -211,31 +219,41 @@ export function BentoHeroCard({
               </div>
             </div>
 
-            {heroTips.length > 0 ? (
+            {heroTips.length > 0 && !tipDismissed ? (
               <motion.div
                 role="status"
                 aria-live="polite"
                 aria-atomic="true"
-                className="relative z-[2] mx-4 mt-4 rounded-2xl border border-white/10 bg-zinc-950/30 p-4 backdrop-blur-md"
+                className="relative z-[2] mx-4 mt-3 flex items-start gap-2 rounded-2xl border border-zinc-800 bg-zinc-950 p-2.5"
               >
-                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Conseil du moment
-                </p>
+                <Sparkles
+                  className="mt-0.5 size-3.5 shrink-0 text-zinc-400"
+                  strokeWidth={1.5}
+                  aria-hidden
+                />
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.p
                     key={heroTipIndex}
-                    className="mt-3 text-sm leading-relaxed text-white/90"
-                    initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+                    className="min-w-0 flex-1 line-clamp-2 text-xs leading-snug text-zinc-300"
+                    initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -3 }}
                     transition={{
-                      duration: prefersReducedMotion ? 0.12 : 0.28,
+                      duration: prefersReducedMotion ? 0.12 : 0.24,
                       ease: [0.25, 0.1, 0.25, 1],
                     }}
                   >
                     {tipText}
                   </motion.p>
                 </AnimatePresence>
+                <button
+                  type="button"
+                  onClick={dismissTip}
+                  className="flex size-7 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-900 hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-[0.98]"
+                  aria-label="Masquer le conseil"
+                >
+                  <X className="size-3.5" strokeWidth={1.5} aria-hidden />
+                </button>
               </motion.div>
             ) : null}
           </div>

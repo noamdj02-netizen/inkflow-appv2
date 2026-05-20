@@ -81,7 +81,8 @@ import { useStudioPrivacy } from '../../contexts/StudioPrivacyContext';
 import { hapticTabChange } from '../../lib/haptics';
 import { shouldShowWelcomeFlow } from '@/lib/shouldShowWelcomeFlow';
 import { StudioCommandPalette } from './StudioCommandPalette';
-import FloatingActionMenu, { type FloatingActionMenuOption } from './FloatingActionMenu';
+import { type FloatingActionMenuOption } from './FloatingActionMenu';
+import { DashboardMobileBottomNav } from './DashboardMobileBottomNav';
 import { BadgeNotification } from '@/components/ui/BadgeNotification';
 import { InkflowHelpDrawer, type InkflowHelpContext } from './InkflowHelpDrawer';
 import type { StudioDashboardPreferences } from '../../types/studioPreferences';
@@ -104,7 +105,7 @@ import type { LoyaltySettings as LoyaltySettingsType } from './LoyaltyManager';
 import { AddWidgetModal } from './DashboardWidgets';
 import { useDashboardWidgets } from '../../hooks/useDashboardWidgets';
 import { DashboardTabHero, type DashboardOverviewHeroMeta } from './DashboardTabHero';
-import { ThemeToggle } from '../ThemeToggle';
+import { AppearanceMenuOptions, AppearanceMenuToggle } from '../ThemeToggle';
 import {
   Appointment,
   FlashDesign,
@@ -225,9 +226,6 @@ const LazyClientPreviewDrawer = lazy(() =>
 );
 const LazyDashboardOverviewTab = lazy(() =>
   import('./DashboardOverviewTab').then((m) => ({ default: m.DashboardOverviewTab }))
-);
-const LazyTodaySessionCockpit = lazy(() =>
-  import('./TodaySessionCockpit').then((m) => ({ default: m.TodaySessionCockpit }))
 );
 const LazyPlanningSidebar = lazy(() =>
   import('./PlanningSidebar').then((m) => ({ default: m.PlanningSidebar }))
@@ -2569,31 +2567,39 @@ export const DashboardPro: React.FC = () => {
       className={`app-shell dashboard-pro-shell bg-zinc-50 dark:bg-black${isInkflowProShell ? ' dashboard-pro-inkflow-pro-shell' : ''}`}
     >
       {showWelcome && (
-        <Suspense
-          fallback={
-            <div
-              className="fixed inset-0 z-[200] flex items-center justify-center bg-zinc-950/50"
-              role="status"
-              aria-live="polite"
-            >
-              <span className="text-sm text-white">Chargement de l&apos;accueil…</span>
-            </div>
-          }
-        >
-          <LazyWelcomeOnboardingFlow
-            userScopedId={welcomeUserKey}
-            studioId={studioId}
-            studioSlug={studioSlug}
-            userEmail={user.email}
-            initialStudioName={user.studioName || generalStudioName || 'Mon studio'}
-            onAvatarUrlUpdated={(url) => updateUser({ avatar: url })}
-            onStudioNameUpdated={(name) => updateUser({ studioName: name })}
-            onComplete={(newStudioName) => {
-              setWelcomeComplete(true);
-              if (newStudioName) updateUser({ studioName: newStudioName });
-            }}
+        <>
+          <div
+            className="fixed inset-0 z-[150] bg-white dark:bg-zinc-950 pointer-events-none"
+            aria-hidden
           />
-        </Suspense>
+          <Suspense
+            fallback={
+              <div
+                className="fixed inset-0 z-[200] flex items-center justify-center bg-white dark:bg-zinc-950"
+                role="status"
+                aria-live="polite"
+              >
+                <span className="text-sm text-zinc-600 dark:text-zinc-300">
+                  Chargement de l&apos;accueil…
+                </span>
+              </div>
+            }
+          >
+            <LazyWelcomeOnboardingFlow
+              userScopedId={welcomeUserKey}
+              studioId={studioId}
+              studioSlug={studioSlug}
+              userEmail={user.email}
+              initialStudioName={user.studioName || generalStudioName || 'Mon studio'}
+              onAvatarUrlUpdated={(url) => updateUser({ avatar: url })}
+              onStudioNameUpdated={(name) => updateUser({ studioName: name })}
+              onComplete={(newStudioName) => {
+                setWelcomeComplete(true);
+                if (newStudioName) updateUser({ studioName: newStudioName });
+              }}
+            />
+          </Suspense>
+        </>
       )}
       {/* Mobile overlay — backdrop semi-transparent (zone cliquable pour fermer) */}
       {sidebarOpen && (
@@ -3486,8 +3492,8 @@ export const DashboardPro: React.FC = () => {
             className={`app-shell-header safe-top sm:px-5 md:px-6 flex items-center justify-between transition-all duration-300 shrink-0 overflow-visible ${
               activeTab === 'overview'
                 ? isInkflowProShell
-                  ? 'px-2.5 gap-1 sm:gap-4 min-h-0 max-sm:py-0.5 sm:min-h-0 h-9 sm:h-14 border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 shadow-[0_1px_0_0_rgba(15,23,42,0.06)] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
-                  : 'px-4 gap-2 sm:gap-4 min-h-[48px] sm:min-h-0 h-11 sm:h-14 border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 shadow-[0_1px_0_0_rgba(15,23,42,0.06)] dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
+                  ? 'px-2.5 gap-1 sm:gap-4 min-h-0 max-sm:py-0.5 sm:min-h-0 h-9 sm:h-14 max-md:border-b-0 max-md:shadow-none border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 md:shadow-[0_1px_0_0_rgba(15,23,42,0.06)] md:dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
+                  : 'px-4 gap-2 sm:gap-4 min-h-[48px] sm:min-h-0 h-11 sm:h-14 max-md:border-b-0 max-md:shadow-none border-b border-zinc-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-950/50 backdrop-blur-[10px] supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-zinc-950/40 md:shadow-[0_1px_0_0_rgba(15,23,42,0.06)] md:dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]'
                 : isInkflowProShell
                   ? 'dashboard-pro-header-dark px-2.5 sm:px-5 md:px-6 gap-1.5 sm:gap-4 h-11 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
                   : 'dashboard-pro-header-dark px-3 sm:px-5 md:px-6 gap-2 sm:gap-4 h-14 sm:h-16 border-b border-[var(--border)] bg-white/80 supports-[backdrop-filter]:bg-white/65 backdrop-blur-[10px] dark:bg-transparent'
@@ -3620,9 +3626,7 @@ export const DashboardPro: React.FC = () => {
                 >
                   <HelpCircle className="w-5 h-5" />
                 </button>
-                <div className="flex items-center justify-center" title="Mode clair ou sombre">
-                  <ThemeToggle />
-                </div>
+                <AppearanceMenuToggle />
               </div>
 
               {/* max-sm : aide + thème regroupés (menu Plus) */}
@@ -3675,9 +3679,8 @@ export const DashboardPro: React.FC = () => {
                         <HelpCircle className="w-5 h-5 shrink-0 text-zinc-500" />
                         Aide et raccourcis
                       </button>
-                      <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-zinc-100 dark:border-zinc-800">
-                        <span className="text-sm text-zinc-600 dark:text-zinc-400">Apparence</span>
-                        <ThemeToggle />
+                      <div className="border-t border-zinc-100 py-1 dark:border-zinc-800">
+                        <AppearanceMenuOptions onSelect={() => setHeaderMoreMenuOpen(false)} />
                       </div>
                     </div>
                   </>
@@ -3878,20 +3881,6 @@ export const DashboardPro: React.FC = () => {
                         <div className="min-w-0">
                           <DashboardTabErrorBoundary sectionLabel="La vue d’ensemble n’a pas pu être chargée.">
                             <Suspense fallback={<DashboardLoadingSkeleton />}>
-                              {isMdUp ? (
-                                <LazyTodaySessionCockpit
-                                  today={today}
-                                  appointments={appointments}
-                                  clients={clients}
-                                  flashDesigns={flashDesigns}
-                                  stripeConnectReady={paymentsSetupComplete === true}
-                                  onSyncAppointmentPrice={handleOverviewUpdateAppointment}
-                                  onSelectAppointment={setSelectedAppointment}
-                                  onOpenCloseout={setSessionCloseoutAppointment}
-                                  onOpenStockTrace={goToStockTraceFromCloseout}
-                                  onOpenAgenda={() => setActiveTab('agenda')}
-                                />
-                              ) : null}
                               <LazyDashboardOverviewTab
                                 pageTitleInShell={Boolean(!loading && isMdUp)}
                                 now={now}
@@ -3940,6 +3929,7 @@ export const DashboardPro: React.FC = () => {
                                 setSelectedFlash={setSelectedFlash}
                                 setShowWidgetModal={setShowWidgetModal}
                                 pendingDemandesCount={demandes.total}
+                                bookings={bookings}
                                 recentDeposits={recentDeposits}
                                 overviewHeaderBgUrl={vitrineData?.coverImage ?? null}
                                 onAvatarClick={() => avatarInputRef.current?.click()}
@@ -3950,23 +3940,6 @@ export const DashboardPro: React.FC = () => {
                                 onSetupNavigate={handleSetupNavigate}
                                 studioSubscriptionStatus={subscriptionStatus ?? undefined}
                                 trialEndsAt={trialEndsAt ?? undefined}
-                                mobileAfterHero={
-                                  !isMdUp ? (
-                                    <LazyTodaySessionCockpit
-                                      today={today}
-                                      appointments={appointments}
-                                      clients={clients}
-                                      flashDesigns={flashDesigns}
-                                      stripeConnectReady={paymentsSetupComplete === true}
-                                      onSyncAppointmentPrice={handleOverviewUpdateAppointment}
-                                      onSelectAppointment={setSelectedAppointment}
-                                      onOpenCloseout={setSessionCloseoutAppointment}
-                                      onOpenStockTrace={goToStockTraceFromCloseout}
-                                      onOpenAgenda={() => setActiveTab('agenda')}
-                                      mobileMinimalChrome
-                                    />
-                                  ) : null
-                                }
                                 onOpenBilling={() => {
                                   setActiveTab('settings');
                                   setSettingsTab('billing');
@@ -5830,160 +5803,37 @@ export const DashboardPro: React.FC = () => {
         </>
       )}
 
-      {/* ====== MOBILE BOTTOM NAVIGATION BAR (Accueil, Agenda, FAB, Clients, Réglages) — Stock dans Actions rapides ====== */}
-      <nav
-        className="bottom-nav md:hidden dashboard-pro-mobile-bottom-nav"
-        role="navigation"
-        aria-label="Navigation principale mobile"
-      >
-        <div className="dashboard-pro-mobile-bottom-nav__inner mx-auto flex w-full max-w-lg items-stretch justify-between gap-0 overflow-visible px-0 py-0">
-          {/* Accueil */}
-          <button
-            type="button"
-            onClick={() =>
-              handleSidebarNav(() => {
-                setActiveTab('overview');
-              })
-            }
-            className={`relative flex min-h-[40px] min-w-0 flex-1 flex-col items-center justify-center gap-0 overflow-hidden rounded-lg px-0 pt-[3px] pb-0.5 transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
-              activeTab === 'overview'
-                ? 'text-white'
-                : 'text-zinc-500 hover:text-zinc-300 dark:text-zinc-500 dark:hover:text-zinc-300'
-            }`}
-          >
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0">
-              <span className="relative inline-flex">
-                <LayoutDashboard
-                  className="size-[15px] shrink-0 text-current"
-                  strokeWidth={activeTab === 'overview' ? 1.75 : 1.25}
-                  aria-hidden
-                />
-                <BadgeNotification
-                  count={demandes.total}
-                  showCount
-                  className="-right-2 -top-2 left-auto"
-                />
-              </span>
-              <span
-                className={cn(
-                  'pro-text-small mt-px max-w-full truncate leading-none tracking-tight antialiased',
-                  activeTab === 'overview'
-                    ? '[font-weight:var(--pro-weight-medium)]'
-                    : '[font-weight:var(--pro-weight-regular)] text-zinc-500'
-                )}
-              >
-                Accueil
-              </span>
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              handleSidebarNav(() => {
-                setActiveTab('agenda');
-              })
-            }
-            className={`relative flex min-h-[40px] min-w-0 flex-1 flex-col items-center justify-center gap-0 overflow-hidden rounded-lg px-0 pt-[3px] pb-0.5 transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
-              activeTab === 'appointments' || activeTab === 'agenda'
-                ? 'text-white'
-                : 'text-zinc-500 hover:text-zinc-300 dark:text-zinc-500 dark:hover:text-zinc-300'
-            }`}
-          >
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0">
-              <Calendar
-                className="size-[15px] shrink-0 text-current"
-                strokeWidth={activeTab === 'appointments' || activeTab === 'agenda' ? 1.75 : 1.25}
-                aria-hidden
-              />
-              <span
-                className={cn(
-                  'pro-text-small mt-px max-w-full truncate leading-none tracking-tight antialiased',
-                  activeTab === 'appointments' || activeTab === 'agenda'
-                    ? '[font-weight:var(--pro-weight-medium)]'
-                    : '[font-weight:var(--pro-weight-regular)] text-zinc-500'
-                )}
-              >
-                Agenda
-              </span>
-            </span>
-          </button>
-
-          <FloatingActionMenu
-            variant="bottomNav"
-            compactBottomNavFab={isInkflowProShell}
-            isNavActive={activeTab === 'requests' || activeTab === 'stock'}
-            fabBadgeCount={0}
-            options={mobileFabActionOptions}
-            mainButtonLabel="Actions rapides"
-          />
-
-          <button
-            type="button"
-            onClick={() =>
-              handleSidebarNav(() => {
-                setActiveTab('clients');
-              })
-            }
-            className={`relative flex min-h-[40px] min-w-0 flex-1 flex-col items-center justify-center gap-0 overflow-hidden rounded-lg px-0 pt-[3px] pb-0.5 transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
-              activeTab === 'clients'
-                ? 'text-white'
-                : 'text-zinc-500 hover:text-zinc-300 dark:text-zinc-500 dark:hover:text-zinc-300'
-            }`}
-          >
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0">
-              <Users
-                className="size-[15px] shrink-0 text-current"
-                strokeWidth={activeTab === 'clients' ? 1.75 : 1.25}
-                aria-hidden
-              />
-              <span
-                className={cn(
-                  'pro-text-small mt-px max-w-full truncate leading-none tracking-tight antialiased',
-                  activeTab === 'clients'
-                    ? '[font-weight:var(--pro-weight-medium)]'
-                    : '[font-weight:var(--pro-weight-regular)] text-zinc-500'
-                )}
-              >
-                Clients
-              </span>
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              handleSidebarNav(() => {
-                setActiveTab('settings');
-                setSettingsTab(isRestricted ? 'billing' : settingsTab);
-              }, true)
-            }
-            className={`relative flex min-h-[40px] min-w-0 flex-1 flex-col items-center justify-center gap-0 overflow-hidden rounded-lg px-0 pt-[3px] pb-0.5 transition-colors duration-150 touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-offset-[#18181b] ${
-              activeTab === 'settings'
-                ? 'text-white'
-                : 'text-zinc-500 hover:text-zinc-300 dark:text-zinc-500 dark:hover:text-zinc-300'
-            }`}
-          >
-            <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-0">
-              <Settings
-                className="size-[15px] shrink-0 text-current"
-                strokeWidth={activeTab === 'settings' ? 1.75 : 1.25}
-                aria-hidden
-              />
-              <span
-                className={cn(
-                  'pro-text-small mt-px max-w-full truncate leading-none tracking-tight antialiased',
-                  activeTab === 'settings'
-                    ? '[font-weight:var(--pro-weight-medium)]'
-                    : '[font-weight:var(--pro-weight-regular)] text-zinc-500'
-                )}
-              >
-                Réglages
-              </span>
-            </span>
-          </button>
-        </div>
-      </nav>
+      <DashboardMobileBottomNav
+        activeOverview={activeTab === 'overview'}
+        activeAgenda={activeTab === 'appointments' || activeTab === 'agenda'}
+        activeClients={activeTab === 'clients'}
+        activeSettings={activeTab === 'settings'}
+        demandesBadgeCount={demandes.total}
+        onSelectOverview={() =>
+          handleSidebarNav(() => {
+            setActiveTab('overview');
+          })
+        }
+        onSelectAgenda={() =>
+          handleSidebarNav(() => {
+            setActiveTab('agenda');
+          })
+        }
+        onSelectClients={() =>
+          handleSidebarNav(() => {
+            setActiveTab('clients');
+          })
+        }
+        onSelectSettings={() =>
+          handleSidebarNav(() => {
+            setActiveTab('settings');
+            setSettingsTab(isRestricted ? 'billing' : settingsTab);
+          }, true)
+        }
+        fabOptions={mobileFabActionOptions}
+        fabNavActive={activeTab === 'requests' || activeTab === 'stock'}
+        compactFab={isInkflowProShell}
+      />
 
       <InkflowHelpDrawer
         isOpen={helpDrawerOpen}

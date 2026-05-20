@@ -1,9 +1,10 @@
-import { CalendarClock, ArrowUpRight, Sparkles } from 'lucide-react';
+import { CalendarClock, ArrowUpRight, PenLine } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import type { TodaySlot } from './types';
 import { BentoAvatar } from './BentoAvatar';
 import {
+  bentoActionBtn,
   bentoBadge,
   bentoListBlock,
   bentoListDivided,
@@ -92,8 +93,12 @@ export function BentoAgendaTodayTile({
 
       <div className="mt-5 flex flex-1 flex-col overflow-y-auto pr-1">
         {slots.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 px-4 py-10 text-center dark:border-zinc-800">
-            <Sparkles className="mb-2 size-8 text-zinc-400 dark:text-zinc-500" aria-hidden />
+          <div className="flex flex-1 flex-col items-center justify-center rounded-[20px] border-0 px-4 py-10 text-center dark:bg-white/[0.03]">
+            <PenLine
+              className="mb-2 size-8 text-zinc-400 dark:text-zinc-500"
+              strokeWidth={1.5}
+              aria-hidden
+            />
             <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
               Journée plus légère
             </p>
@@ -104,10 +109,7 @@ export function BentoAgendaTodayTile({
               <button
                 type="button"
                 onClick={onNewAppointment}
-                className={cn(
-                  microHover,
-                  'min-h-11 rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100'
-                )}
+                className={cn(microHover, bentoActionBtn)}
               >
                 Nouveau RDV
               </button>
@@ -116,7 +118,7 @@ export function BentoAgendaTodayTile({
                 onClick={onOpenFlashTab}
                 className={cn(
                   microHover,
-                  'min-h-11 rounded-xl border border-zinc-100 bg-white px-4 py-2 text-sm font-medium text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100'
+                  'min-h-11 rounded-[20px] border-0 bg-white px-4 py-2 text-sm font-medium text-zinc-800 dark:bg-white/[0.05] dark:text-white'
                 )}
               >
                 Flashs vitrine

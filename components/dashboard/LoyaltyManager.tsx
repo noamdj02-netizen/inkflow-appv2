@@ -1,16 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Award,
-  Star,
-  Gift,
-  TrendingUp,
-  Settings,
-  Users,
-  Plus,
-  Pencil,
-  Trash2,
-  Mail,
-} from 'lucide-react';
+import { Award, Star, Gift, TrendingUp, Settings, Users, Plus, Pencil, Trash2 } from 'lucide-react';
 import type { LoyaltyEntry, Client, LoyaltyTier } from '../../types';
 
 interface LoyaltyManagerProps {
@@ -106,29 +95,6 @@ export const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({
         >
           <Settings className="w-4 h-4" /> Configurer
         </button>
-      </div>
-
-      <div className="rounded-2xl border border-[var(--border)] border-l-4 border-l-zinc-200 500/80 bg-[var(--bg-card)] p-4 sm:p-5">
-        <div className="flex gap-3">
-          <div className="shrink-0 p-2 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400">
-            <Mail className="w-5 h-5" />
-          </div>
-          <div className="min-w-0 space-y-1">
-            <p className="text-sm font-semibold text-[var(--text-primary)]">
-              Emails post-seance (MVP)
-            </p>
-            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-              J+1 soins, J+7 check-up et J+30 retour sont envoyes automatiquement par la fonction
-              Edge{' '}
-              <code className="text-xs text-[var(--text-primary)] bg-[var(--bg-hover)] px-1.5 py-0.5 rounded-md">
-                send-loyalty-emails
-              </code>{' '}
-              (cron quotidien). Verifie dans Supabase que le job pg_cron pointe vers ton projet (
-              <code className="text-xs">…/functions/v1/send-loyalty-emails</code>
-              ), pas une URL d&apos;un autre environnement.
-            </p>
-          </div>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

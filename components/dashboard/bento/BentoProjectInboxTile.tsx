@@ -81,7 +81,7 @@ export function BentoProjectInboxTile({
       </div>
 
       {requests.length === 0 ? (
-        <p className="mt-4 rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+        <p className="mt-4 rounded-[20px] border-0 px-4 py-8 text-center text-xs text-zinc-500 dark:bg-white/[0.03] dark:text-[#737373]">
           Aucune demande projet en attente — ta vitrine est à jour sur ce flux.
         </p>
       ) : (

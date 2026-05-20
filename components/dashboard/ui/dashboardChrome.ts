@@ -1,87 +1,73 @@
+import { inkOledCard, inkOledStack, inkSubtitle, inkTitle } from '@/lib/inkDesignTokens';
 import { cn } from '@/lib/utils';
 
-/** Fond page dashboard mobile (light). */
-export const dashboardPageBg = 'bg-zinc-50 dark:bg-zinc-950';
+/** Fond page dashboard — OLED true black */
+export const dashboardPageBg = 'bg-zinc-50 dark:bg-black';
 
-/** Carte light — blanc pur + bordure zinc-100. */
-export const dashboardCard =
-  'overflow-hidden rounded-2xl border border-zinc-100 bg-white dark:border-white/10 dark:bg-zinc-900/30 dark:backdrop-blur-md';
+/** Carte flottante — 20px, sans bordure en dark */
+export const dashboardCard = cn(inkOledCard);
 
-/** Groupe type Réglages iOS / liste native — une carte, séparateurs internes. */
-export const dashboardSettingsGroup = cn(
-  dashboardCard,
-  'dark:bg-zinc-950/40 dark:backdrop-blur-none'
-);
+/** Groupe liste — espacement, pas de dividers en dark */
+export const dashboardSettingsGroup = cn(dashboardCard, 'dark:divide-y-0');
 
-export const dashboardSettingsDivide = 'divide-y divide-zinc-100 dark:divide-zinc-900/50';
+export const dashboardSettingsDivide = 'divide-y divide-zinc-100 dark:divide-y-0';
 
-/** Liste — bloc parent unique (Demandes, dépôts, réglages). */
-export const dashboardListPanel = cn(dashboardSettingsGroup, dashboardSettingsDivide);
+/** Liste — bloc parent */
+export const dashboardListPanel = cn(dashboardSettingsGroup, 'dark:flex dark:flex-col dark:gap-3');
 
-/** Ligne dans une liste groupée. */
+/** Ligne dans une liste groupée */
 export const dashboardListRow =
-  'flex w-full flex-col gap-3 px-4 py-3.5 text-left transition-colors hover:bg-zinc-50/90 active:scale-[0.99] dark:hover:bg-zinc-900/50 sm:flex-row sm:items-start sm:gap-4';
+  'flex w-full flex-col gap-3 px-4 py-4 text-left transition-colors hover:bg-zinc-50/90 active:scale-[0.99] dark:hover:bg-white/[0.04] sm:flex-row sm:items-start sm:gap-4';
 
 export const dashboardListRowCompact =
-  'flex w-full min-h-[52px] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-zinc-50/90 dark:hover:bg-zinc-900/50';
+  'flex w-full min-h-[52px] items-center gap-3 px-4 py-4 transition-colors hover:bg-zinc-50/90 dark:hover:bg-white/[0.04]';
 
-/** Icône ligne réglages — monochrome (spec mobile premium). */
 export const dashboardSettingsRowIcon =
-  'flex size-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100';
+  'flex size-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-900 dark:bg-white/[0.06] dark:text-[#3b82f6]';
 
-/** Icône ligne réglages — accent bleu électrique uniquement. */
-export const dashboardSettingsRowIconAccent =
-  'flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400';
+export const dashboardSettingsRowIconAccent = dashboardSettingsRowIcon;
 
-/** Icône tuile header — monochrome (pas d’avatar). */
 export const dashboardTileIcon =
-  'flex size-10 shrink-0 items-center justify-center rounded-xl border border-zinc-100 bg-zinc-100 text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100';
+  'flex size-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-900 dark:border-0 dark:bg-white/[0.05] dark:text-[#3b82f6]';
 
-/** Icône accent bleu électrique (seul accent couleur autorisé hors badges pastel). */
-export const dashboardTileIconAccent =
-  'flex size-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400';
+export const dashboardTileIconAccent = dashboardTileIcon;
 
-/** Avatar / initiales — cercle parfait. */
 export const dashboardAvatarFrame =
-  'relative shrink-0 overflow-hidden rounded-full bg-zinc-100 ring-1 ring-zinc-100 dark:bg-zinc-900 dark:ring-zinc-800';
+  'relative shrink-0 overflow-hidden rounded-full bg-zinc-100 ring-0 dark:bg-white/[0.06]';
 
 export const dashboardAvatarSm = 'size-12';
 export const dashboardAvatarMd = 'size-14 sm:size-16';
 
 export const dashboardBtnPrimary =
-  'inline-flex min-h-11 items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100';
+  'inline-flex min-h-11 items-center justify-center rounded-[20px] border-0 bg-[#3b82f6] px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-blue-500 active:scale-[0.98] disabled:opacity-50';
 
-export const dashboardBtnAccent =
-  'inline-flex min-h-11 items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-400';
+export const dashboardBtnAccent = dashboardBtnPrimary;
 
 export const dashboardBtnSecondary =
-  'inline-flex min-h-11 items-center justify-center rounded-xl border border-zinc-100 bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition-all hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900';
+  'inline-flex min-h-11 items-center justify-center rounded-[20px] border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition-all hover:bg-zinc-50 active:scale-[0.98] dark:border-0 dark:bg-white/[0.05] dark:text-white dark:hover:bg-white/[0.08]';
 
 export const dashboardBtnDanger =
-  'inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-zinc-100 bg-white px-4 py-2.5 text-sm font-medium text-rose-600 transition-all hover:bg-rose-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-950 dark:text-rose-400 dark:hover:bg-rose-950/30';
+  'inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[20px] border-0 bg-black px-4 py-2.5 text-sm font-medium text-[#ef4444] transition-all hover:bg-white/[0.04] active:scale-[0.98]';
 
-/** Barre d’actions fixe bas d’écran (fiche détail mobile). */
 export const dashboardStickyActionBar =
-  'shrink-0 border-t border-zinc-100 bg-white/95 px-4 pt-3 backdrop-blur-md dark:border-zinc-900 dark:bg-zinc-950/95 pb-[max(12px,env(safe-area-inset-bottom,0px))]';
+  'shrink-0 border-0 bg-white/95 px-4 pt-3 backdrop-blur-md dark:bg-black/90 pb-[max(12px,env(safe-area-inset-bottom,0px))]';
 
-/** Tuile KPI pilotage (sans ombre / dégradé). */
 export const dashboardStatTile =
-  'relative flex min-h-[108px] w-full flex-col justify-end overflow-hidden rounded-2xl border border-zinc-100 bg-white p-4 text-left transition-colors active:scale-[0.98] dark:border-zinc-900 dark:bg-zinc-950/40';
+  'relative flex min-h-[108px] w-full flex-col justify-end overflow-hidden rounded-[20px] border border-zinc-200 bg-white p-4 text-left transition-colors active:scale-[0.98] dark:border-0 dark:bg-black ink-oled-card';
 
 export const dashboardStatIconBadge =
-  'absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border border-zinc-100 bg-zinc-50 text-zinc-800 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200';
+  'absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border-0 bg-zinc-50 text-[#3b82f6] dark:bg-white/[0.06] dark:text-[#3b82f6]';
 
-/** Badges statut — pill pastel, texte contrasté. */
 export const dashboardStatusBadge = {
-  new: 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400',
+  new: 'inline-flex items-center rounded-lg px-2.5 py-0.5 text-xs font-semibold bg-zinc-100 text-zinc-700 dark:bg-white/5 dark:text-[#737373]',
   pending:
-    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/35 dark:text-amber-300',
+    'inline-flex items-center rounded-lg px-2.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400',
   active:
-    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
+    'inline-flex items-center rounded-lg px-2.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-800 dark:bg-[#3b82f6]/15 dark:text-[#3b82f6]',
   neutral:
-    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-400',
+    'inline-flex items-center rounded-lg px-2.5 py-0.5 text-xs font-semibold bg-zinc-100 text-zinc-600 dark:bg-white/5 dark:text-[#737373]',
   danger:
-    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/35 dark:text-rose-400',
+    'inline-flex items-center rounded-lg px-2.5 py-0.5 text-xs font-semibold bg-rose-50 text-rose-800 dark:bg-[#ef4444]/15 dark:text-[#ef4444]',
 } as const;
 
 export function bookingStatusBadgeClass(status: string): string {
@@ -99,25 +85,21 @@ export function projectStatusBadgeClass(status: string): string {
   return dashboardStatusBadge.neutral;
 }
 
-/** En-tête de page dashboard (Paramètres, CRM, etc.). */
 export const dashboardPageHeader =
-  'font-display text-2xl font-bold tracking-tight text-zinc-900 dark:text-white sm:text-3xl';
+  'font-display text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white sm:text-3xl';
 
-export const dashboardPageSubtitle =
-  'mt-1.5 max-w-2xl text-sm text-zinc-500 dark:text-zinc-400 sm:text-base';
+export const dashboardPageSubtitle = cn('mt-1.5 max-w-2xl text-sm sm:text-base', inkSubtitle);
 
-/** Titre de section (uppercase discret). */
 export const dashboardSectionTitle =
-  'text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-400 dark:text-zinc-500';
+  'text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400 dark:text-[#737373]';
 
-/** Icône inline monochrome (lucide dans listes / labels). */
-export const dashboardIconMuted = 'size-4 shrink-0 text-zinc-500 dark:text-zinc-400';
+export const dashboardIconMuted = 'size-4 shrink-0 text-zinc-500 dark:text-[#737373]';
 
-export const dashboardIconStrong = 'size-4 shrink-0 text-zinc-900 dark:text-zinc-100';
+export const dashboardIconStrong = 'size-4 shrink-0 text-zinc-900 dark:text-white';
 
-/** Bouton icône 44px (fiche client, actions ligne). */
 export const dashboardIconButton =
-  'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-100 bg-white text-zinc-900 transition-all hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900';
+  'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border-0 bg-white text-[#3b82f6] transition-all hover:bg-zinc-50 active:scale-[0.98] dark:bg-white/[0.05] dark:text-[#3b82f6] dark:hover:bg-white/[0.08]';
 
-/** Surface carte CRM (sans ombre lourde). */
 export const dashboardCardSurface = dashboardCard;
+
+export { inkOledStack };

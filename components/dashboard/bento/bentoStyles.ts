@@ -1,6 +1,7 @@
 /**
- * Tokens Bento — alignés sur `dashboardChrome` (mobile premium, zinc + bleu électrique).
+ * Tokens Bento — OLED true black, cartes flottantes sans bordure.
  */
+import { inkOledCard } from '@/lib/inkDesignTokens';
 import {
   dashboardListPanel,
   dashboardSettingsDivide,
@@ -9,14 +10,12 @@ import {
   dashboardStatusBadge,
 } from '../ui/dashboardChrome';
 
-/** Carte Bento — ombre diffuse, sans bordure grise (aligné accueil mobile premium). */
-export const glassPanel =
-  'overflow-hidden rounded-2xl border-0 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:bg-zinc-950 dark:shadow-[0_8px_30px_rgb(0,0,0,0.28)]';
+/** Carte Bento — relief radial subtil en dark */
+export const glassPanel = inkOledCard;
 
 export const bentoStatTile = dashboardStatTile;
 export const bentoStatIconBadge = dashboardStatIconBadge;
 
-/** Liste interne — pas de double bordure (parent `glassPanel` porte la carte). */
 export const bentoListBlock = 'overflow-hidden';
 
 export const bentoListDivided = dashboardSettingsDivide;
@@ -27,6 +26,10 @@ export const bentoBadge =
   'inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold';
 
 export const microHover = 'transition-all duration-200 active:scale-[0.98]';
+
+/** Bouton action premium (remplace bleu). */
+export const bentoActionBtn =
+  'min-h-11 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-zinc-800 active:scale-[0.98]';
 
 export { dashboardListPanel, dashboardStatusBadge };
 

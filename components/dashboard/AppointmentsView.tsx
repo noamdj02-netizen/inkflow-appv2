@@ -28,6 +28,14 @@ import { EmptyState } from '../common/EmptyState';
 import { downloadICS, getGoogleCalendarAddUrl } from '../../lib/googleCalendar';
 import { getClientAvatarForAppointment } from '../../lib/appointmentClientDisplay';
 import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
+import {
+  APPOINTMENT_CARD_INACTIVE,
+  APPOINTMENT_CARD_SURFACE,
+  APPOINTMENT_LEFT_ACCENT,
+  APPOINTMENT_STATUS_BADGE,
+  APPOINTMENT_STATUS_DOT,
+  APPOINTMENT_STATUS_LABELS,
+} from '@/lib/inkAppointmentStatus';
 
 type ViewMode = 'list' | 'calendar';
 type StatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled';
@@ -61,47 +69,10 @@ function formatDateLabel(dateStr: string): string {
   });
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'En attente',
-  confirmed: 'Confirmé',
-  completed: 'Terminé',
-  cancelled: 'Annulé',
-  in_progress: 'En cours',
-  no_show: 'Absent',
-};
-
-const STATUS_DOT: Record<string, string> = {
-  pending: 'bg-amber-400',
-  confirmed: 'bg-blue-400',
-  completed: 'bg-zinc-400 dark:bg-zinc-500',
-  cancelled: 'bg-red-500',
-  in_progress: 'bg-blue-400',
-  no_show: 'bg-red-500',
-};
-
-const STATUS_STYLES: Record<string, string> = {
-  pending:
-    'bg-amber-50 text-amber-800 shadow-sm dark:bg-amber-500/12 dark:text-amber-300 dark:shadow-none',
-  confirmed:
-    'bg-blue-50 text-blue-800 shadow-sm dark:bg-blue-500/12 dark:text-blue-300 dark:shadow-none',
-  completed:
-    'bg-zinc-100 text-zinc-700 shadow-sm dark:bg-zinc-500/15 dark:text-zinc-300 dark:shadow-none',
-  cancelled:
-    'bg-red-50 text-red-700 shadow-sm dark:bg-red-500/12 dark:text-red-300 dark:shadow-none',
-  in_progress:
-    'bg-sky-50 text-sky-800 shadow-sm dark:bg-sky-500/12 dark:text-sky-300 dark:shadow-none',
-  no_show: 'bg-red-50 text-red-700 shadow-sm dark:bg-red-500/12 dark:text-red-300 dark:shadow-none',
-};
-
-/** Léger repère statut (cartes sans bordure) */
-const STATUS_RING: Record<string, string> = {
-  pending: 'ring-1 ring-amber-200/60 dark:ring-amber-500/25',
-  confirmed: 'ring-1 ring-blue-200/60 dark:ring-blue-500/25',
-  completed: 'ring-1 ring-zinc-200/70 dark:ring-zinc-600/40',
-  cancelled: 'ring-1 ring-red-200/60 dark:ring-red-500/25',
-  in_progress: 'ring-1 ring-sky-200/60 dark:ring-sky-500/25',
-  no_show: 'ring-1 ring-red-200/60 dark:ring-red-500/25',
-};
+const STATUS_LABELS = APPOINTMENT_STATUS_LABELS;
+const STATUS_DOT = APPOINTMENT_STATUS_DOT;
+const STATUS_STYLES = APPOINTMENT_STATUS_BADGE;
+const CARD_LEFT_ACCENT = APPOINTMENT_LEFT_ACCENT;
 
 function needsDepositAttention(apt: Appointment): boolean {
   if (apt.deposit <= 0) return false;
@@ -119,10 +90,10 @@ function getThisWeekYmdBounds(): { start: string; end: string } {
 
 const kpiTileButtonClass = (active: boolean) =>
   cn(
-    'flex min-h-[52px] min-w-0 border px-3 py-2.5 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:min-h-[76px] sm:flex-col sm:items-center sm:justify-center sm:px-3 sm:py-2.5 sm:text-center rounded-pro-card',
+    'ink-oled-card flex min-h-[52px] min-w-0 rounded-[20px] border-0 px-3 py-2.5 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3b82f6]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:min-h-[76px] sm:flex-col sm:items-center sm:justify-center sm:px-3 sm:py-2.5 sm:text-center',
     active
-      ? 'border-blue-600 bg-pro-cta text-white shadow-pro dark:border-blue-500 dark:bg-blue-500'
-      : 'border-zinc-200/80 bg-white/95 text-zinc-900 hover:border-blue-200/80 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-100 dark:hover:border-zinc-600'
+      ? 'bg-[#3b82f6]/10 text-zinc-900 dark:bg-[#3b82f6]/10 dark:text-white'
+      : 'bg-white/95 text-zinc-900 hover:bg-white dark:bg-black dark:text-white dark:hover:bg-white/[0.03]'
   );
 
 type KpiStatTileProps = {
@@ -504,7 +475,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                   className={cn(
                     'min-h-11 min-w-[4.5rem] rounded-pro-btn px-3 text-xs font-medium transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900 sm:min-h-9',
                     viewMode === m
-                      ? 'border border-zinc-200/80 bg-white text-zinc-900 shadow-pro dark:border-zinc-600 dark:bg-zinc-700 dark:text-white'
+                      ? 'border border-zinc-200/80 bg-white text-zinc-900 shadow-pro dark:border-[#3b82f6]/40 dark:bg-[#3b82f6]/10 dark:text-[#f5f5f5]'
                       : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'
                   )}
                 >
@@ -519,8 +490,8 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
               className={cn(
                 'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-pro-btn border px-2 text-xs font-medium transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 lg:hidden',
                 showCalendarMobile
-                  ? 'border-blue-200 bg-blue-50 text-pro-accent dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400'
-                  : 'border-zinc-200/80 bg-white text-zinc-600 shadow-pro dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400'
+                  ? 'border-0 bg-[#3b82f6]/10 text-[#3b82f6] dark:bg-[#3b82f6]/10 dark:text-[#3b82f6]'
+                  : 'border-0 bg-white text-zinc-600 shadow-pro dark:bg-black dark:text-[#737373]'
               )}
               aria-expanded={showCalendarMobile}
               aria-controls="agenda-mini-calendar-panel"
@@ -721,10 +692,9 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
             ) : (
               <>
                 {/* Mobile cards */}
-                <ul className="space-y-3 md:hidden" role="list">
+                <ul className="ink-oled-stack space-y-0 md:hidden" role="list">
                   {filteredAppointments.map((apt) => {
-                    const statusRing =
-                      STATUS_RING[apt.status] ?? 'ring-1 ring-zinc-200/70 dark:ring-zinc-600/40';
+                    const isInactive = apt.status === 'cancelled' || apt.status === 'no_show';
                     const depositDue = needsDepositAttention(apt);
                     return (
                       <li key={apt.id}>
@@ -732,13 +702,14 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                           type="button"
                           onClick={() => onSelectAppointment(apt)}
                           className={cn(
-                            'w-full touch-manipulation overflow-hidden rounded-2xl bg-white text-left shadow-sm transition-shadow duration-200 hover:shadow-md active:scale-[0.99] dark:bg-zinc-900 dark:shadow-none',
-                            statusRing
+                            'w-full touch-manipulation overflow-hidden text-left transition-colors active:scale-[0.99]',
+                            APPOINTMENT_CARD_SURFACE,
+                            isInactive && APPOINTMENT_CARD_INACTIVE
                           )}
                         >
                           <div className="flex items-center gap-3 p-6">
                             {/* Avatar */}
-                            <div className="relative w-12 h-12 rounded-2xl bg-zinc-200 dark:bg-zinc-700 flex flex-shrink-0 items-center justify-center overflow-hidden shadow-sm dark:shadow-none">
+                            <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border-0 dark:bg-white/[0.05]">
                               <ClientPhotoAvatar
                                 name={apt.clientName}
                                 src={getClientAvatarForAppointment(apt, clients)}
@@ -749,15 +720,15 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                             {/* Infos */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2 mb-1">
-                                <span className="text-lg font-bold text-zinc-900 dark:text-white truncate leading-snug">
+                                <span className="truncate text-lg font-bold leading-snug text-zinc-900 dark:text-white">
                                   {apt.clientName}
                                 </span>
-                                <span className="font-bold text-blue-700 dark:text-blue-400 text-sm tabular-nums shrink-0">
+                                <span className="shrink-0 text-sm font-bold tabular-nums text-zinc-900 dark:text-white">
                                   {apt.price}€
                                 </span>
                               </div>
                               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums shrink-0">
+                                <span className="shrink-0 text-xs tabular-nums text-zinc-500 dark:text-[#737373]">
                                   {apt.date}
                                   {apt.time ? ` · ${apt.time}` : ''}
                                 </span>
@@ -790,7 +761,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-500/10 text-xs font-medium transition-colors active:scale-[0.98]"
+                              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-white active:scale-[0.98] dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
                               title="Ouvrir dans Google Agenda"
                             >
                               <ExternalLink className="w-4 h-4 shrink-0" /> Agenda
@@ -801,7 +772,7 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
                                 e.stopPropagation();
                                 downloadICS(apt);
                               }}
-                              className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-500/10 text-xs font-medium transition-colors active:scale-[0.98]"
+                              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-white active:scale-[0.98] dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
                               title="Télécharger le fichier .ics"
                             >
                               <Download className="w-4 h-4 shrink-0" /> .ics

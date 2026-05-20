@@ -1,10 +1,19 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { Phone, Eye, Archive, Star } from 'lucide-react';
+import React from 'react';
+import { Archive, ChevronRight, Phone, Star } from 'lucide-react';
 import type { Client } from '../../types';
-import { getClientStatusColor, getClientCardLeftAccent } from './clientListUtils';
+import { getClientStatusColor } from './clientListUtils';
 import { formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 import { hapticSuccess } from '../../lib/haptics';
 import { ClientPhotoAvatar } from '../common/ClientPhotoAvatar';
+import {
+  inkIconActionBtn,
+  inkListRow,
+  inkMetricRevenue,
+  inkMetricVolume,
+  inkStatLabel,
+  inkSubtitle,
+  inkTitle,
+} from '@/lib/inkDesignTokens';
 
 function phoneHref(raw: string): string {
   const d = (raw || '').replace(/\s/g, '').replace(/^0/, '+33');
@@ -12,9 +21,6 @@ function phoneHref(raw: string): string {
   if (/^\d{10}$/.test(d)) return `tel:+33${d.slice(1)}`;
   return `tel:${raw}`;
 }
-
-const SWIPE_MAX = 152;
-const REVEAL = 120;
 
 interface ClientListMobileRowProps {
   client: Client;
@@ -24,9 +30,7 @@ interface ClientListMobileRowProps {
   canArchive: boolean;
 }
 
-/**
- * Ligne client mobile : swipe pour Appeler (tel:) ou archiver (statut inactif).
- */
+/** Ligne client — séparateur #262626, actions icônes uniquement. */
 export const ClientListMobileRow: React.FC<ClientListMobileRowProps> = ({
   client,
   privacyMode,
@@ -34,155 +38,87 @@ export const ClientListMobileRow: React.FC<ClientListMobileRowProps> = ({
   onArchive,
   canArchive,
 }) => {
-  const [offset, setOffset] = useState(0);
-  const startX = useRef(0);
-  const startOff = useRef(0);
-  const dragging = useRef(false);
-  const leftAccent = getClientCardLeftAccent(client.status);
-
-  const getStatusIcon = (status: string) => {
-    if (status === 'vip') {
-      return (
-        <Star
-          className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 fill-blue-600/15 dark:fill-blue-400/15"
-          strokeWidth={2}
-          aria-hidden
-        />
-      );
-    }
-    return null;
-  };
-
-  const closeSwipe = useCallback(() => {
-    setOffset(0);
-  }, []);
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    dragging.current = true;
-    startX.current = e.touches[0].clientX;
-    startOff.current = offset;
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!dragging.current) return;
-    const dx = e.touches[0].clientX - startX.current;
-    const next = Math.max(-SWIPE_MAX, Math.min(0, startOff.current + dx));
-    setOffset(next);
-  };
-
-  const onTouchEnd = () => {
-    if (!dragging.current) return;
-    dragging.current = false;
-    if (offset < -REVEAL / 2) {
-      setOffset(-REVEAL);
-    } else {
-      setOffset(0);
-    }
-  };
+  const statusBadgeClass = getClientStatusColor(client.status);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl touch-pan-y">
-      <div
-        className="absolute inset-y-0 right-0 z-0 flex w-[152px] max-w-[42vw] border-l border-zinc-200/80 dark:border-zinc-700"
-        aria-hidden
-      >
-        <a
-          href={phoneHref(client.phone)}
-          onClick={() => hapticSuccess()}
-          className="flex flex-1 min-w-0 items-center justify-center gap-1 bg-blue-600 text-white text-xs font-semibold active:opacity-90 dark:bg-blue-500"
+    <div className={inkListRow}>
+      <div className="flex items-center gap-3 px-5 py-4">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left active:scale-[0.99]"
         >
-          <Phone className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-          Appeler
-        </a>
-        {canArchive ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              hapticSuccess();
-              onArchive();
-              closeSwipe();
-            }}
-            className="flex flex-1 min-w-0 items-center justify-center gap-1 bg-zinc-500 text-white text-xs font-semibold active:opacity-90"
-          >
-            <Archive className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-            Archiver
-          </button>
-        ) : (
-          <div className="flex flex-1 min-w-0 items-center justify-center bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-400 text-[10px] font-medium text-center px-0.5">
-            Inactif
-          </div>
-        )}
-      </div>
-      <div
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onOpen();
-          }
-        }}
-        onClick={() => {
-          if (offset < -20) {
-            closeSwipe();
-            return;
-          }
-          onOpen();
-        }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onTouchCancel={onTouchEnd}
-        style={{ transform: `translateX(${offset}px)` }}
-        className={`relative z-10 w-full text-left touch-pan-y bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 border-l-4 ${leftAccent} shadow-sm p-5 rounded-2xl`}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border-0 dark:bg-white/[0.05]">
             <ClientPhotoAvatar
               name={client.name}
               src={client.avatar}
-              className="h-full w-full"
-              textClassName="text-lg font-bold text-blue-600 dark:text-blue-400"
+              className="size-full"
+              textClassName="text-sm font-semibold text-zinc-700 dark:text-white"
             />
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold truncate text-[var(--text-primary)]">
-                {client.name}
-              </span>
-              <span
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border flex-shrink-0 ${getClientStatusColor(client.status)}`}
-              >
-                {getStatusIcon(client.status)}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`truncate ${inkTitle}`}>{client.name}</span>
+              <span className={statusBadgeClass}>
+                {client.status === 'vip' ? (
+                  <Star className="size-3 fill-blue-500/20 text-blue-500" aria-hidden />
+                ) : null}
                 {client.status === 'vip'
                   ? 'VIP'
                   : client.status.charAt(0).toUpperCase() + client.status.slice(1)}
               </span>
             </div>
-            <div className="text-sm text-[var(--text-secondary)] truncate mt-0.5">
-              {client.email}
+            <p className={`mt-0.5 truncate text-sm ${inkSubtitle}`}>{client.email}</p>
+            <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className={`text-sm ${inkMetricVolume}`}>{client.appointmentsCount} RDV</span>
+              <span className={`text-base ${inkMetricRevenue}`}>
+                {formatEuroPrivacy(client.totalSpent, privacyMode)}
+              </span>
+              <span className={inkStatLabel}>
+                {client.lastVisit
+                  ? new Date(client.lastVisit).toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'short',
+                    })
+                  : 'Jamais'}
+              </span>
             </div>
           </div>
-          <Eye
-            className="w-[18px] h-[18px] text-[var(--text-tertiary)] flex-shrink-0"
-            strokeWidth={2}
-            aria-hidden
-          />
-        </div>
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border)] text-sm">
-          <span className="text-[var(--text-secondary)]">{client.appointmentsCount} RDV</span>
-          <span className="font-bold tabular-nums text-blue-600 dark:text-blue-400">
-            {formatEuroPrivacy(client.totalSpent, privacyMode)}
-          </span>
-          <span className="text-[var(--text-tertiary)] text-xs">
-            {client.lastVisit
-              ? new Date(client.lastVisit).toLocaleDateString('fr-FR', {
-                  day: 'numeric',
-                  month: 'short',
-                })
-              : 'Jamais'}
-          </span>
+        </button>
+
+        <div className="flex shrink-0 items-center gap-1">
+          {client.phone ? (
+            <a
+              href={phoneHref(client.phone)}
+              onClick={() => hapticSuccess()}
+              className={inkIconActionBtn}
+              aria-label={`Appeler ${client.name}`}
+            >
+              <Phone className="size-4" strokeWidth={1.75} aria-hidden />
+            </a>
+          ) : null}
+          {canArchive ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                hapticSuccess();
+                onArchive();
+              }}
+              className={inkIconActionBtn}
+              aria-label={`Archiver ${client.name}`}
+            >
+              <Archive className="size-4" strokeWidth={1.75} aria-hidden />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onOpen}
+            className={inkIconActionBtn}
+            aria-label={`Ouvrir ${client.name}`}
+          >
+            <ChevronRight className="size-4" strokeWidth={1.75} aria-hidden />
+          </button>
         </div>
       </div>
     </div>

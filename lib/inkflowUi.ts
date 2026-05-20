@@ -37,6 +37,53 @@ export {
 } from '../components/dashboard/ui/dashboardChrome';
 
 /** Alias sémantiques (même tokens). */
+export { InkCard, inkCardVariants } from '../components/ui/ink-card';
+export { InkButton, inkButtonVariants } from '../components/ui/ink-button';
+export { InkBadge, inkBadgeVariants } from '../components/ui/ink-badge';
+export {
+  APPOINTMENT_STATUS_LABELS,
+  APPOINTMENT_LEFT_ACCENT,
+  APPOINTMENT_STATUS_DOT,
+  APPOINTMENT_STATUS_BADGE,
+  APPOINTMENT_CARD_SURFACE,
+  APPOINTMENT_CARD_INACTIVE,
+} from './inkAppointmentStatus';
+export {
+  INK,
+  inkOledCard,
+  inkOledGlass,
+  inkOledStack,
+  inkSurfaceCard,
+  inkTitle,
+  inkSubtitle,
+  inkStatCard,
+  inkStatLabel,
+  inkStatValueBase,
+  inkStatValueVolume,
+  inkStatValueRevenue,
+  inkStatValueVip,
+  inkMetricRevenue,
+  inkMetricVolume,
+  inkBadgeBase,
+  inkBadgePrimary,
+  inkBadgeSuccess,
+  inkBadgeError,
+  inkBadgeNeutral,
+  inkIconActionBtn,
+} from './inkDesignTokens';
+
+export {
+  inkDarkPage,
+  inkDarkCard,
+  inkDarkCardRaised,
+  inkDarkTextPrimary,
+  inkDarkTextSecondary,
+  inkDarkCancelledCard,
+  inkDarkCancelledBadge,
+  inkDarkCtaSubtle,
+  inkDarkSegmentActive,
+} from './inkDarkSurfaces';
+
 export {
   dashboardPageBg as inkPageBg,
   dashboardCard as inkCard,

@@ -10,7 +10,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
-import { addPreviewBccToPayload } from "../_shared/resend.ts";
+import { addPreviewBccToPayload, sendEmail } from "../_shared/resend.ts";
 import { escapeHtml, wrapEmailLayout, emailInfoBox, EMAIL_STYLES } from "../_shared/emailLayout.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import {
@@ -141,6 +141,24 @@ Deno.serve(async (req: Request) => {
     console.error("notify-new-booking: Resend error", res.status, txt);
     return new Response(JSON.stringify({ error: "email failed", detail: txt }), { status: 500, headers: corsHeaders });
   }
+
+  const clientAckHtml = wrapEmailLayout({
+    tag: "DEMANDE REÇUE",
+    title: "Demande envoyée",
+    subtitle: studioName,
+    greetingName: clientName.split(" ")[0] || "Bonjour",
+    introLine: `Votre demande de rendez-vous chez ${studioName} a bien été reçue.`,
+    bodyHtml: emailInfoBox(
+      `<p style="margin:0;font-size:14px;color:#718096;line-height:1.6;">L'artiste vous répondra dès que possible par email. Pensez à vérifier vos spams si vous n'avez pas de nouvelles sous 48 h.</p>`,
+    ),
+    hideAppPromo: true,
+  });
+
+  void sendEmail({
+    to: [clientEmail],
+    subject: `Demande bien reçue — ${studioName}`,
+    html: clientAckHtml,
+  }).catch((e) => console.warn("notify-new-booking: client ack failed", e));
 
   console.log(`notify-new-booking: sent to ${studio.email} for booking ${bookingId}`);
   return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...corsHeaders } });

@@ -81,15 +81,13 @@ export const OnboardingPhoneStep: React.FC<OnboardingPhoneStepProps> = ({
   };
 
   return (
-    <motion.div
-      className="fixed inset-0 z-[100] flex flex-col lg:flex-row min-h-0 h-[100dvh] max-h-[100dvh] overflow-hidden bg-white dark:bg-black"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+    <div
+      className="fixed inset-0 z-[200] flex flex-col lg:flex-row min-h-0 h-[100dvh] max-h-[100dvh] overflow-hidden bg-white dark:bg-zinc-950"
       role="dialog"
       aria-labelledby="phone-title"
+      aria-modal="true"
     >
-      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios">
+      <div className="flex-1 flex flex-col min-h-0 max-h-full overflow-y-auto overscroll-y-contain touch-pan-y touch-scroll-ios bg-white dark:bg-zinc-950">
         <div className="lg:hidden flex-shrink-0 h-28 sm:h-36 relative overflow-hidden safe-top">
           <img
             src={heroImg}
@@ -179,6 +177,6 @@ export const OnboardingPhoneStep: React.FC<OnboardingPhoneStepProps> = ({
           </p>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };

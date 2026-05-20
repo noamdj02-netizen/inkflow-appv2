@@ -92,6 +92,9 @@ verify_jwt = false
 [functions.onboarding-automation]
 verify_jwt = false
 
+[functions.remind-tattooer-pending-inbox]
+verify_jwt = false
+
 # Webhook Resend (Svix) — signature RESEND_WEBHOOK_SECRET, pas de JWT.
 [functions.resend-webhook]
 verify_jwt = false

@@ -38,6 +38,17 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { APPOINTMENT_CARD_INACTIVE } from '@/lib/inkAppointmentStatus';
+import {
+  inkMeta,
+  inkOledControl,
+  inkOledElevated,
+  inkOledGlass,
+  inkOledSurfaceMuted,
+  inkSubtitle,
+  inkTitle,
+} from '@/lib/inkDesignTokens';
+import { inkDarkCtaSubtle, inkDarkSegmentActive } from '@/lib/inkDarkSurfaces';
 
 type SummaryRange = 'day' | 'week' | 'month';
 
@@ -93,8 +104,9 @@ const AgendaSummaryAppointmentCard: React.FC<SummaryAppointmentCardProps> = ({
         data-slot="agenda-apt-row"
         size="sm"
         className={cn(
-          'ring-1 ring-foreground/5 transition-[transform,box-shadow] duration-200 hover:shadow-md',
-          cancelled && 'opacity-60'
+          'shadow-none ring-0 transition-[transform,opacity] duration-200',
+          inkOledElevated,
+          cancelled && APPOINTMENT_CARD_INACTIVE
         )}
       >
         <CardContent className="p-0">
@@ -105,12 +117,17 @@ const AgendaSummaryAppointmentCard: React.FC<SummaryAppointmentCardProps> = ({
           >
             <Avatar className="size-12">
               {avatarUrl ? <AvatarImage src={avatarUrl} alt="" className="object-cover" /> : null}
-              <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">
+              <AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary dark:bg-[#3b82f6]/20 dark:text-[#60A5FA]">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1 py-0.5">
-              <p className="truncate text-sm font-semibold leading-snug tracking-tight sm:text-base">
+              <p
+                className={cn(
+                  'truncate text-sm leading-snug tracking-tight sm:text-base',
+                  inkTitle
+                )}
+              >
                 {apt.clientName}
               </p>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -135,9 +152,11 @@ const AgendaSummaryAppointmentCard: React.FC<SummaryAppointmentCardProps> = ({
                   {LOCATION_FR[apt.location] ?? apt.location}
                 </Badge>
               </div>
-              <p className="mt-1.5 line-clamp-1 text-xs font-medium leading-tight text-muted-foreground">
+              <p className={cn('mt-1.5 line-clamp-1 text-xs font-medium leading-tight', inkMeta)}>
                 {cancelled ? (
-                  <span className="text-destructive">{STATUS_FR[apt.status] ?? apt.status}</span>
+                  <span className="text-red-600 dark:text-[#ef4444]">
+                    {STATUS_FR[apt.status] ?? apt.status}
+                  </span>
                 ) : needsDeposit ? (
                   <span className="text-amber-700 dark:text-amber-300">Acompte dû</span>
                 ) : (
@@ -146,7 +165,7 @@ const AgendaSummaryAppointmentCard: React.FC<SummaryAppointmentCardProps> = ({
               </p>
             </div>
             <div className="flex shrink-0 flex-col items-end justify-center self-stretch text-right">
-              <p className="text-xs font-medium tabular-nums text-foreground/90 sm:text-sm">
+              <p className="text-xs font-semibold tabular-nums text-zinc-700 dark:text-white sm:text-sm">
                 {formatTimeRange(apt)}
               </p>
             </div>
@@ -184,17 +203,17 @@ function AgendaDayStrip({ weekDays, selectedYmd, onSelectYmd }: DayStripProps) {
             className={cn(
               'flex h-[3rem] w-[3rem] shrink-0 snap-center flex-col items-center justify-center rounded-full border-2 text-center font-sans transition-[transform,box-shadow,background-color] active:scale-[0.97] min-[400px]:h-[3.25rem] min-[400px]:w-[3.25rem] sm:h-14 sm:w-14 focus-visible:ring-2 focus-visible:ring-ring/50',
               selected
-                ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/25'
-                : 'border-border bg-card text-foreground shadow-sm',
+                ? 'border-0 bg-[#3b82f6] text-white shadow-md shadow-[#3b82f6]/30'
+                : 'border-0 bg-zinc-100 text-zinc-900 shadow-none dark:bg-white/[0.08] dark:text-white',
               cell.isToday &&
                 !selected &&
-                'ring-2 ring-primary/30 ring-offset-2 ring-offset-background'
+                'ring-2 ring-[#3b82f6]/40 ring-offset-2 ring-offset-black dark:ring-offset-black'
             )}
           >
             <span
               className={cn(
                 'text-[9px] font-bold uppercase leading-none tracking-tight',
-                selected ? 'text-primary-foreground/90' : 'text-muted-foreground'
+                selected ? 'text-white/90' : 'text-zinc-500 dark:text-[#a3a3a3]'
               )}
             >
               {cell.wk2}
@@ -202,7 +221,7 @@ function AgendaDayStrip({ weekDays, selectedYmd, onSelectYmd }: DayStripProps) {
             <span
               className={cn(
                 'mt-0.5 text-base font-bold tabular-nums leading-none',
-                selected ? 'text-primary-foreground' : 'text-foreground'
+                selected ? 'text-white' : 'text-zinc-900 dark:text-white'
               )}
             >
               {cell.dayNum}
@@ -246,7 +265,7 @@ function AgendaMonthGrid({
 
   return (
     <div
-      className="rounded-2xl border border-border bg-card p-2 text-card-foreground shadow-sm ring-1 ring-foreground/5"
+      className={cn(inkOledSurfaceMuted, 'p-2 text-card-foreground shadow-none ring-0')}
       role="grid"
       aria-label="Calendrier du mois"
     >
@@ -271,7 +290,7 @@ function AgendaMonthGrid({
                 'relative flex min-h-[40px] flex-col items-center justify-center rounded-xl text-[12px] font-semibold tabular-nums transition-colors',
                 !cell.inM && 'pointer-events-none text-zinc-300 dark:text-zinc-600',
                 cell.inM &&
-                  'text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100/90 dark:hover:bg-zinc-800/80',
+                  'text-zinc-900 dark:text-white hover:bg-zinc-100/90 dark:hover:bg-white/[0.1]',
                 cell.inM &&
                   isFocus &&
                   'bg-primary text-primary-foreground ring-1 ring-primary hover:bg-primary',
@@ -400,8 +419,12 @@ export function AgendaSummaryTab({
     if (range === 'month' && monthScope === 'day' && monthFilterYmd) {
       return inPeriod.filter((a) => a.date === monthFilterYmd);
     }
+    // Semaine : un jour choisi sur le bandeau → filtrer la liste (sinon toute la semaine)
+    if (range === 'week' && weekStripYmd) {
+      return inPeriod.filter((a) => a.date === weekStripYmd);
+    }
     return inPeriod;
-  }, [range, monthScope, monthFilterYmd, inPeriod]);
+  }, [range, monthScope, monthFilterYmd, weekStripYmd, inPeriod]);
 
   const byDay = useMemo(() => {
     const m = new Map<string, Appointment[]>();
@@ -508,9 +531,15 @@ export function AgendaSummaryTab({
             <EmptyMedia variant="icon">
               <Calendar strokeWidth={1.5} aria-hidden />
             </EmptyMedia>
-            <EmptyTitle className="text-base">Aucun rendez-vous sur cette période</EmptyTitle>
+            <EmptyTitle className="text-base">
+              {range === 'week' && weekStripYmd
+                ? 'Aucun rendez-vous ce jour'
+                : 'Aucun rendez-vous sur cette période'}
+            </EmptyTitle>
             <EmptyDescription>
-              Passez en semaine ou en mois, ou ouvrez le planning complet pour ajouter un créneau.
+              {range === 'week' && weekStripYmd
+                ? 'Choisis un autre jour sur le bandeau ou crée un créneau dans le planning.'
+                : 'Passez en semaine ou en mois, ou ouvrez le planning complet pour ajouter un créneau.'}
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent className="flex-row flex-wrap justify-center gap-2 sm:gap-3">
@@ -532,15 +561,19 @@ export function AgendaSummaryTab({
 
     if (range === 'week') {
       return (
-        <ul className="space-y-5">
+        <ul className="space-y-6">
           {dayHeaders.map((dateStr) => {
             const list = byDay.get(dateStr);
             if (!list || list.length === 0) return null;
             const isTodayH = dateStr === today;
             return (
               <li key={dateStr}>
-                <p className="mb-2.5 flex flex-wrap items-baseline gap-2 text-[11px] font-bold tracking-wide text-muted-foreground">
-                  <span className={cn(isTodayH ? 'text-primary' : 'text-foreground/80')}>
+                <p className="mb-3 flex flex-wrap items-baseline gap-2 text-[11px] font-bold tracking-wide">
+                  <span
+                    className={cn(
+                      isTodayH ? 'text-[#3b82f6]' : 'text-zinc-600 dark:text-[#a3a3a3]'
+                    )}
+                  >
                     {formatDayGroupLabel(dateStr, false)}
                   </span>
                   {isTodayH && (
@@ -552,7 +585,7 @@ export function AgendaSummaryTab({
                     </Badge>
                   )}
                 </p>
-                <ul className="flex flex-col gap-2.5">
+                <ul className="flex flex-col gap-3">
                   {list.map((apt) => (
                     <AgendaSummaryAppointmentCard
                       key={apt.id}
@@ -578,8 +611,12 @@ export function AgendaSummaryTab({
             const isTodayH = dateStr === today;
             return (
               <li key={dateStr}>
-                <p className="mb-2 flex flex-wrap items-baseline gap-2 text-[11px] font-bold tracking-wide text-muted-foreground">
-                  <span className={cn(isTodayH ? 'text-primary' : 'text-foreground/80')}>
+                <p className="mb-3 flex flex-wrap items-baseline gap-2 text-[11px] font-bold tracking-wide">
+                  <span
+                    className={cn(
+                      isTodayH ? 'text-[#3b82f6]' : 'text-zinc-600 dark:text-[#a3a3a3]'
+                    )}
+                  >
                     {formatDayGroupLabel(dateStr, true)}
                   </span>
                   {isTodayH && (
@@ -591,7 +628,7 @@ export function AgendaSummaryTab({
                     </Badge>
                   )}
                 </p>
-                <ul className="flex flex-col gap-2.5">
+                <ul className="flex flex-col gap-3">
                   {list.map((apt) => (
                     <AgendaSummaryAppointmentCard
                       key={apt.id}
@@ -633,25 +670,37 @@ export function AgendaSummaryTab({
           type="single"
           value={range}
           onValueChange={(v) => v && handleRangeChange(v as SummaryRange)}
-          className="grid w-full min-w-0 max-w-none grid-cols-3 gap-0.5 rounded-full border border-border bg-muted/90 p-0.5 md:max-w-md"
+          className={cn(
+            'grid w-full min-w-0 max-w-none grid-cols-3 gap-1 rounded-full border-0 p-1 md:max-w-md',
+            inkOledControl
+          )}
           variant="default"
           size="default"
         >
           <ToggleGroupItem
             value="day"
-            className="min-h-9 w-full min-w-0 rounded-full border-0 text-xs font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm md:min-h-11 md:text-[13px]"
+            className={cn(
+              'min-h-9 w-full min-w-0 rounded-full border-0 text-xs font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm md:min-h-11 md:text-[13px]',
+              inkDarkSegmentActive
+            )}
           >
             Jour
           </ToggleGroupItem>
           <ToggleGroupItem
             value="week"
-            className="min-h-9 w-full min-w-0 rounded-full border-0 text-xs font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm md:min-h-11 md:text-[13px]"
+            className={cn(
+              'min-h-9 w-full min-w-0 rounded-full border-0 text-xs font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm md:min-h-11 md:text-[13px]',
+              inkDarkSegmentActive
+            )}
           >
             Semaine
           </ToggleGroupItem>
           <ToggleGroupItem
             value="month"
-            className="min-h-9 w-full min-w-0 rounded-full border-0 text-xs font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm md:min-h-11 md:text-[13px]"
+            className={cn(
+              'min-h-9 w-full min-w-0 rounded-full border-0 text-xs font-semibold text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm md:min-h-11 md:text-[13px]',
+              inkDarkSegmentActive
+            )}
           >
             Mois
           </ToggleGroupItem>
@@ -664,7 +713,7 @@ export function AgendaSummaryTab({
               variant="outline"
               size="icon"
               onClick={goPrev}
-              className="size-9 shrink-0 touch-manipulation md:size-10"
+              className="size-9 shrink-0 touch-manipulation border-0 dark:bg-white/[0.08] dark:text-white md:size-10"
               aria-label="Période précédente"
             >
               <ChevronLeft data-icon="inline-start" strokeWidth={2} aria-hidden />
@@ -674,14 +723,14 @@ export function AgendaSummaryTab({
               variant="outline"
               size="icon"
               onClick={goNext}
-              className="size-9 shrink-0 touch-manipulation md:size-10"
+              className="size-9 shrink-0 touch-manipulation border-0 dark:bg-white/[0.08] dark:text-white md:size-10"
               aria-label="Période suivante"
             >
               <ChevronRight data-icon="inline-start" strokeWidth={2} aria-hidden />
             </Button>
           </div>
 
-          <p className="min-w-0 flex-1 truncate text-center text-[11px] font-semibold leading-tight text-foreground md:hidden">
+          <p className="min-w-0 flex-1 truncate text-center text-[11px] font-semibold leading-tight text-zinc-900 dark:text-white md:hidden">
             {periodLabel}
           </p>
 
@@ -720,14 +769,18 @@ export function AgendaSummaryTab({
         </div>
       </div>
 
-      <p className="mt-2 hidden text-balance text-center text-sm font-semibold text-foreground md:mt-3 md:block md:text-left md:text-base md:leading-tight">
+      <p className="mt-2 hidden text-balance text-center text-sm font-semibold text-zinc-900 dark:text-white md:mt-3 md:block md:text-left md:text-base md:leading-tight">
         {periodLabel}
       </p>
 
       <div className="mt-2 flex flex-wrap items-center justify-center gap-2 md:mt-2.5 md:justify-start">
         <Badge
           variant="secondary"
-          className="h-auto max-w-full gap-1 border border-border/80 px-2 py-1 text-[11px] font-normal leading-snug text-muted-foreground md:gap-1.5 md:px-2.5 md:py-1.5 md:text-xs"
+          className={cn(
+            'h-auto max-w-full gap-1 border-0 px-2 py-1 text-[11px] font-normal leading-snug md:gap-1.5 md:px-2.5 md:py-1.5 md:text-xs',
+            inkMeta,
+            'dark:bg-white/[0.06]'
+          )}
         >
           <ListOrdered className="size-3 shrink-0 text-muted-foreground md:size-4" aria-hidden />
           <span className="min-w-0">
@@ -741,7 +794,7 @@ export function AgendaSummaryTab({
 
       <div className="mt-3 flex flex-col gap-3 md:mt-5 md:gap-4">
         {showDayStrip && (
-          <div className="rounded-xl border border-border/80 bg-card/80 px-1 py-1.5 shadow-sm ring-1 ring-foreground/5 md:rounded-2xl md:px-1.5 md:py-2.5">
+          <div className={cn(inkOledSurfaceMuted, 'px-2 py-2 md:px-3 md:py-3')}>
             <AgendaDayStrip
               weekDays={stripWeekDays}
               selectedYmd={selectedYmdForStrip}
@@ -788,10 +841,16 @@ export function AgendaSummaryTab({
               variant="outline"
               onClick={onOpenFullPlanning}
               aria-label="Ouvrir le planning complet : vues semaine et mois, recherche, calendrier"
-              className="flex h-auto min-h-12 w-full flex-col items-stretch justify-center gap-1 rounded-2xl border-blue-200/90 bg-background px-4 py-3 text-left text-sm font-semibold !whitespace-normal text-balance leading-snug text-blue-800 shadow-sm transition-colors hover:bg-blue-50 dark:border-blue-500/40 dark:bg-transparent dark:text-blue-200 dark:hover:bg-blue-500/10"
+              className={cn(
+                'flex h-auto min-h-12 w-full flex-col items-stretch justify-center gap-1 rounded-[20px] border-0 px-4 py-3.5 text-left text-sm font-semibold !whitespace-normal text-balance leading-snug shadow-none transition-colors hover:opacity-95',
+                inkOledGlass,
+                inkDarkCtaSubtle
+              )}
             >
-              <span className="text-pretty">Ouvrir le planning complet</span>
-              <span className="text-xs font-medium leading-relaxed text-muted-foreground sm:text-sm">
+              <span className="text-pretty text-zinc-900 dark:text-white">
+                Ouvrir le planning complet
+              </span>
+              <span className={cn('text-xs font-medium leading-relaxed sm:text-sm', inkSubtitle)}>
                 Semaine, mois, recherche, calendrier
               </span>
             </Button>

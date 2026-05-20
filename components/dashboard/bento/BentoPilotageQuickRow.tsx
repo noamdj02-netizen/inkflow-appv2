@@ -77,7 +77,7 @@ export function BentoPilotageQuickRow({
         value={todayAppointmentsCount}
         label="RDV aujourd'hui"
         icon={CalendarCheck}
-        iconClassName="text-blue-600 dark:text-blue-400"
+        iconClassName="text-zinc-700 dark:text-zinc-300"
         onClick={onOpenAgenda}
         ariaLabel={`${todayAppointmentsCount} rendez-vous aujourd'hui — ouvrir l'agenda`}
       />

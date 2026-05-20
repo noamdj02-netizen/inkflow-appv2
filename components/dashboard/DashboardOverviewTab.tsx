@@ -7,8 +7,6 @@ import {
   LayoutGrid,
   LayoutDashboard,
   Calendar,
-  UserPlus,
-  CreditCard,
   Clock,
   ChevronRight,
   ChevronDown,
@@ -62,12 +60,18 @@ import {
 } from '../../lib/dashboardWidgetOrder';
 import { useStudioPrivacy, formatEuroPrivacy } from '../../contexts/StudioPrivacyContext';
 import { useBreakpointMd } from '../../hooks/useMediaQuery';
-import type { Appointment, Client, FlashDesign, ProjectRequest } from '../../types';
+import type { Appointment, Booking, Client, FlashDesign, ProjectRequest } from '../../types';
 import type { DashboardWidget } from './DashboardWidgets';
 import { StudioSetupChecklist } from './StudioSetupChecklist';
+import { FirstBookingGoalCard } from './FirstBookingGoalCard';
+import { FirstBookingWizard } from './FirstBookingWizard';
+import { DashboardOverviewDesktopLayout } from './overview/DashboardOverviewDesktopLayout';
+import { DashboardOverviewClientsPanel } from './overview/DashboardOverviewClientsPanel';
+import { markOpenInboxAfterDemo, setDemoInboxPreviewActive } from '@/lib/demoInboxPreview';
 import { BADGES, BUTTONS, KPI_SHELLS, TYPOGRAPHY } from './DashboardOverviewDesignSystem';
 import { IconBox } from '../ui/IconBox';
-import { LANDING_PRICING_URL } from '../../lib/urls';
+import { getVitrineShareUrl, LANDING_PRICING_URL } from '../../lib/urls';
+import { getVitrineSlug } from '../../lib/vitrineStorage';
 import {
   DASHBOARD_OVERVIEW_HERO_ROTATE_MS,
   DASHBOARD_OVERVIEW_HERO_TIPS,
@@ -77,6 +81,13 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
+import {
+  INK_DONUT_DEMANDES,
+  INK_DONUT_RDV,
+  inkDonutLegendLabel,
+  inkDonutLegendValue,
+  inkOledCard,
+} from '@/lib/inkDesignTokens';
 import { supabase } from '../../lib/supabase';
 import { createStripeExpressLoginLink } from '../../lib/stripeClient';
 import { useToast } from '../../contexts/ToastContext';
@@ -219,9 +230,9 @@ function getTodayRowTint(status: Appointment['status']) {
   if (status === 'pending' || status === 'in_progress') {
     return {
       ...base,
-      timeBg: 'bg-blue-50 dark:bg-blue-950/40',
-      hour: 'text-blue-700 dark:text-blue-300',
-      minute: 'text-blue-600/80 dark:text-blue-400/80',
+      timeBg: 'bg-zinc-100/90 dark:bg-zinc-900/80',
+      hour: 'text-zinc-700 dark:text-zinc-200',
+      minute: 'text-zinc-500 dark:text-zinc-400',
     };
   }
   return base;
@@ -434,8 +445,8 @@ export interface DashboardOverviewTabProps {
   onOpenBilling?: () => void;
   /** `true` quand le bandeau héros (DashboardPro) porte le titre de page « Vue d’ensemble » (md+) — le salut desktop passe en `h2` pour l’accessibilité */
   pageTitleInShell?: boolean;
-  /** Contenu mobile placé juste après le héros pour garder le visuel d’accueil en premier. */
-  mobileAfterHero?: React.ReactNode;
+  /** Réservations vitrine — objectif « première résa ». */
+  bookings?: Booking[];
 }
 
 export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
@@ -458,7 +469,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   visibleAlerts,
   rdvAlertUnpaidCount = 0,
   rdvAlertBientotCount = 0,
-  setDismissedAlerts,
+  setDismissedAlerts: _setDismissedAlerts,
   setActiveTab,
   onAlertNavigate,
   setSelectedAppointment,
@@ -482,9 +493,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   trialEndsAt,
   onOpenBilling,
   pageTitleInShell: _pageTitleInShell = false,
-  mobileAfterHero,
+  bookings = [],
 }) => {
   const { privacyMode } = useStudioPrivacy();
+  const [firstBookingWizardOpen, setFirstBookingWizardOpen] = useState(false);
   const pilotageWaveGradId = useId();
   const euro = (n: number) => formatEuroPrivacy(n, privacyMode);
   const prefersReducedMotion = useReducedMotion();
@@ -687,13 +699,12 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
 
     if (insightView === 'rdv') {
       const ap = appointments.filter((a) => inRange(a.date));
-      /* Nuances de bleu (type CRM) — « Terminés » en bleu plein, lisible sur fond clair */
       const segments: { name: string; value: number; color: string }[] = [
-        { name: 'Confirmés', value: 0, color: '#10b981' },
-        { name: 'En attente', value: 0, color: '#a1a1aa' },
-        { name: 'En cours', value: 0, color: '#52525b' },
-        { name: 'Terminés', value: 0, color: '#18181b' },
-        { name: 'Autres', value: 0, color: '#d4d4d8' },
+        { name: 'Confirmés', value: 0, color: INK_DONUT_RDV.confirmed },
+        { name: 'En attente', value: 0, color: INK_DONUT_RDV.pending },
+        { name: 'En cours', value: 0, color: INK_DONUT_RDV.in_progress },
+        { name: 'Terminés', value: 0, color: INK_DONUT_RDV.completed },
+        { name: 'Autres', value: 0, color: INK_DONUT_RDV.other },
       ];
       const idx = (s: Appointment['status']) => {
         if (s === 'confirmed') return 0;
@@ -724,10 +735,10 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       if (p.status in tally) tally[p.status] += 1;
     }
     const dem = [
-      { name: 'En attente', value: tally.pending, color: '#a1a1aa' },
-      { name: 'Acceptées', value: tally.accepted, color: '#52525b' },
-      { name: 'Confirmées', value: tally.confirmed, color: '#10b981' },
-      { name: 'Refusées', value: tally.rejected, color: '#d4d4d8' },
+      { name: 'En attente', value: tally.pending, color: INK_DONUT_DEMANDES.pending },
+      { name: 'Acceptées', value: tally.accepted, color: INK_DONUT_DEMANDES.accepted },
+      { name: 'Confirmées', value: tally.confirmed, color: INK_DONUT_DEMANDES.confirmed },
+      { name: 'Refusées', value: tally.rejected, color: INK_DONUT_DEMANDES.rejected },
     ];
     return dem.filter((s) => s.value > 0);
   }, [insightView, insightPeriod, appointments, projectRequests, currentMonthStr, today]);
@@ -973,29 +984,29 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   }, []);
 
   /** Desktop KPI — cartes .prodify-card (relief portfolio, aligné index.css) */
-  const desktopKpiShell = `prodify-card ${KPI_SHELLS.desktop.outer}`;
+  const desktopKpiShell = `prodify-card h-full flex flex-col ${KPI_SHELLS.desktop.outer}`;
   const desktopKpiCaption = KPI_SHELLS.desktop.caption;
   const desktopKpiIconBtn = KPI_SHELLS.desktop.icon;
   /** Home mobile — widgets au même "glass shell" (Figma 387:178) */
   const crmCard =
-    'overflow-hidden rounded-2xl border-0 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:bg-zinc-950 dark:shadow-[0_8px_30px_rgb(0,0,0,0.28)]';
+    'ink-oled-card overflow-hidden rounded-[20px] border border-zinc-200 bg-white dark:border-0 dark:bg-black';
   const mobileHomeSurface =
-    'rounded-2xl border-0 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:bg-zinc-950 dark:shadow-[0_8px_30px_rgb(0,0,0,0.28)]';
+    'ink-oled-card rounded-[20px] border border-zinc-200 bg-white dark:border-0 dark:bg-black';
   const bentoSoftAlertChip =
     'inline-flex min-h-[36px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-amber-50/90 px-3 py-1.5 text-[11px] font-medium leading-snug text-amber-900/80 ring-1 ring-amber-100/90 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:bg-amber-500/10 dark:text-amber-100/90 dark:ring-amber-500/20';
   const bentoSoftInfoChip =
     'inline-flex min-h-[36px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-zinc-100/90 px-3 py-1.5 text-[11px] font-medium leading-snug text-zinc-600 ring-1 ring-zinc-200/80 transition [transition-property:transform,background-color] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:bg-zinc-800/70 dark:text-zinc-300 dark:ring-zinc-700/60';
-  const crmCardHeader =
-    'px-4 py-3 flex items-baseline justify-between border-b border-zinc-100/90 dark:border-zinc-900/80';
-  const crmSectionTitle = 'text-[16px] font-semibold tracking-tight text-foreground';
-  const crmListLink = 'text-[13px] font-medium text-muted-foreground hover:text-foreground';
-  const bentoMicroMeta = 'text-[11px] font-medium text-zinc-400 dark:text-zinc-500';
+  const crmCardHeader = 'flex items-baseline justify-between px-4 py-3 dark:border-0';
+  const crmSectionTitle = 'text-base font-semibold tracking-tight text-zinc-900 dark:text-white';
+  const crmListLink =
+    'text-[13px] font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200';
+  const bentoMicroMeta = 'text-[11px] font-medium text-zinc-400 dark:text-[#737373]';
   const bentoStatTray =
-    'rounded-2xl bg-zinc-50/90 p-2 ring-1 ring-zinc-100/80 dark:bg-zinc-900/35 dark:ring-zinc-800/70';
+    'rounded-[20px] border-0 bg-zinc-50/80 p-2 dark:bg-black dark:bg-white/[0.03]';
   const bentoStatCell =
-    'flex flex-col justify-end rounded-xl bg-white px-2.5 py-3 shadow-[0_1px_3px_rgb(0,0,0,0.04)] dark:bg-zinc-950/70 dark:shadow-none';
+    'flex flex-col justify-end rounded-[20px] border-0 bg-white px-2.5 py-3 dark:bg-white/[0.04]';
   const bentoStripeLinkBtn =
-    'inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-zinc-100 bg-zinc-50/90 px-4 py-2.5 text-[13px] font-medium text-zinc-600 transition-all hover:bg-zinc-100 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400/40 focus-visible:ring-offset-2 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-300 dark:hover:bg-zinc-900/80 dark:focus-visible:ring-offset-zinc-950';
+    'inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-[13px] font-medium text-white transition-all hover:bg-zinc-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700 focus-visible:ring-offset-2 focus-visible:ring-offset-black';
 
   const mobileKpiOuter = KPI_SHELLS.mobile.outer;
   const mobileKpiInner = KPI_SHELLS.mobile.inner;
@@ -1015,7 +1026,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
   /** 44×44 pt zone tactile (HIG) */
   const iosKpiIconBtn = BUTTONS.icon;
   /** Icônes Lucide — une seule teinte (aligné `primary` / thème) */
-  const overviewIcon = 'text-primary';
+  const overviewIcon = 'text-zinc-600 dark:text-zinc-400';
   /** Métadonnées sous le chiffre — pastille type footnote iOS */
   const iosKpiMetaPill =
     'inline-flex items-center rounded-full bg-zinc-100/95 dark:bg-zinc-800/90 px-2 py-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-300';
@@ -1360,6 +1371,49 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
     }
   };
 
+  const openVitrineInNewTab = useCallback(() => {
+    const slug =
+      studioSlug != null && studioSlug.trim() !== ''
+        ? studioSlug.trim()
+        : getVitrineSlug(user?.studioName ?? '');
+    if (!slug) return;
+    window.open(getVitrineShareUrl(slug), '_blank', 'noopener,noreferrer');
+  }, [studioSlug, user?.studioName]);
+
+  const vitrineShareUrl = useMemo(() => {
+    const slug =
+      studioSlug != null && studioSlug.trim() !== ''
+        ? studioSlug.trim()
+        : getVitrineSlug(user?.studioName ?? '');
+    return slug ? getVitrineShareUrl(slug) : '';
+  }, [studioSlug, user?.studioName]);
+
+  const firstBookingGoalInput = useMemo(
+    () => ({
+      studioSlug,
+      flashDesigns,
+      appointments,
+      bookings,
+      availabilitySetupComplete,
+      paymentsSetupComplete,
+    }),
+    [
+      studioSlug,
+      flashDesigns,
+      appointments,
+      bookings,
+      availabilitySetupComplete,
+      paymentsSetupComplete,
+    ]
+  );
+
+  const handleActivateInboxDemo = useCallback(() => {
+    if (!studioId?.trim()) return;
+    setDemoInboxPreviewActive(true);
+    markOpenInboxAfterDemo();
+    setActiveTab('requests');
+  }, [studioId, setActiveTab]);
+
   const showArtistBento = Boolean(useSupabase && studioId?.trim());
   const artistBentoBlock: React.ReactNode = showArtistBento ? (
     <DashboardBentoUnified
@@ -1389,6 +1443,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
       privacyMode={privacyMode}
       formatEuro={euro}
       onOpenFinance={() => setActiveTab('finance')}
+      onOpenVitrine={openVitrineInNewTab}
       onOpenAgenda={() => setActiveTab('agenda')}
       onOpenRequests={() => setActiveTab('requests')}
       onNewAppointment={() => setShowBookingModal(true)}
@@ -1404,7 +1459,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           (un seul arbre sortable actif dans le DndContext).
           ===================================================== */}
         {!isMdUp && (
-          <div className="ds-home-mobile-ambience flex min-w-0 max-w-full flex-col gap-4 overflow-x-hidden bg-zinc-50 pb-8 antialiased font-sans [-webkit-font-smoothing:antialiased] dark:bg-zinc-950 sm:gap-6">
+          <motion.div className="ink-oled-stack ds-home-mobile-ambience flex min-w-0 max-w-full flex-col gap-5 overflow-x-hidden bg-zinc-50 pb-8 antialiased font-sans [-webkit-font-smoothing:antialiased] dark:bg-black sm:gap-6">
             {/* Accueil mobile — référence type CRM (clair, cartes blanches, donut, onglets pilule) */}
             <div className="px-0 pt-0 pb-0">
               <motion.div className="flex flex-col gap-4 sm:gap-3" {...iosSpring(0)}>
@@ -1414,7 +1469,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     className="relative isolate min-w-0 w-full"
                   >
                     <div
-                      className="pointer-events-none absolute left-1/2 top-0 h-[220px] w-[min(100%,440px)] -translate-x-1/2 rounded-full bg-emerald-500/[0.08] blur-[90px] dark:bg-emerald-900/15"
+                      className="pointer-events-none absolute left-1/2 top-0 h-[180px] w-[min(100%,400px)] -translate-x-1/2 rounded-full bg-white/[0.03] blur-[80px] dark:bg-white/[0.04]"
                       aria-hidden
                     />
                     {artistBentoBlock}
@@ -1430,7 +1485,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                     heroSubtitle={crmMonthRangeLabel}
                     heroTips={mobileHeroTips}
                     heroTipIndex={mobileHeroTipIndex}
-                    onOpenFinance={() => setActiveTab('finance')}
+                    onOpenVitrine={openVitrineInNewTab}
                     userAvatarUrl={user?.avatar ?? null}
                     avatarUploading={avatarUploading}
                     onAvatarPress={() => {
@@ -1601,7 +1656,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                           </span>
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+                          <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-0.5 text-xs font-semibold text-zinc-200">
                             Nouveau
                           </span>
                           <ChevronRight className="size-4 shrink-0 text-zinc-400" aria-hidden />
@@ -1609,8 +1664,6 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       </button>
                     </div>
                   ) : null}
-
-                  {mobileAfterHero ? <div className="mb-6 min-w-0">{mobileAfterHero}</div> : null}
                 </div>
               </motion.div>
             </div>
@@ -1625,8 +1678,27 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               </div>
             )}
 
-            {onSetupNavigate && (
-              <div className="px-0 rounded-2xl shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
+            {visibleAlerts.length > 0 ? (
+              <div className="px-0">
+                <OverviewActivityAlerts
+                  alerts={visibleAlerts}
+                  setDismissedAlerts={_setDismissedAlerts}
+                  onAlertNavigate={onAlertNavigate}
+                />
+              </div>
+            ) : null}
+
+            {onSetupNavigate ? (
+              <div className="flex flex-col gap-3 px-0">
+                <FirstBookingGoalCard
+                  {...firstBookingGoalInput}
+                  studioId={studioId}
+                  pendingDemandesCount={pendingDemandesCount}
+                  onOpenWizard={() => setFirstBookingWizardOpen(true)}
+                  onOpenDemandes={() => setActiveTab('requests')}
+                  onActivateDemo={studioId ? handleActivateInboxDemo : undefined}
+                  onGoTo={onSetupNavigate}
+                />
                 <StudioSetupChecklist
                   studioSlug={studioSlug}
                   flashDesigns={flashDesigns}
@@ -1636,7 +1708,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                   onGoTo={onSetupNavigate}
                 />
               </div>
-            )}
+            ) : null}
 
             {/* Mode widgets — même logique que desktop (KPI réordonnables) */}
             {isEditMode && (
@@ -1998,14 +2070,14 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
               </motion.div>
 
               <motion.div variants={mobileSectionVariants}>
-                <div className={cn(mobileHomeSurface, 'p-4')}>
+                <div className={cn(inkOledCard, 'border-0 p-5')}>
                   <div className="flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
                     <div className="flex flex-1 gap-1 rounded-full bg-zinc-100/90 p-1 ring-1 ring-inset ring-zinc-900/[0.04] dark:bg-black/35 dark:ring-zinc-800">
                       <button
                         type="button"
                         onClick={() => setInsightView('rdv')}
                         className={cn(
-                          'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                          'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
                           insightView === 'rdv'
                             ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-white dark:ring-1 dark:ring-inset dark:ring-zinc-700'
                             : 'text-zinc-500 dark:text-zinc-500'
@@ -2017,7 +2089,7 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         type="button"
                         onClick={() => setInsightView('demandes')}
                         className={cn(
-                          'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                          'flex min-h-[44px] flex-1 items-center justify-center rounded-full px-2 text-center text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
                           insightView === 'demandes'
                             ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-white dark:ring-1 dark:ring-inset dark:ring-zinc-700'
                             : 'text-zinc-500 dark:text-zinc-500'
@@ -2057,19 +2129,23 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                       : `Semaine : ${crmWeekRangeLabel}`}
                   </p>
                   {insightDonutData.length > 0 ? (
-                    <div className="mt-4 flex flex-col items-stretch gap-4 min-[420px]:flex-row min-[420px]:items-center">
-                      <div className="mx-auto w-full max-w-[200px] min-[420px]:mx-0 min-[420px]:w-[200px] min-[420px]:shrink-0">
-                        <div className="h-[200px] w-full min-[420px]:h-[180px]">
+                    <div className="mt-5 flex flex-col items-stretch gap-5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:gap-6">
+                      <div className="mx-auto flex w-full max-w-[220px] items-center justify-center min-[420px]:mx-0 min-[420px]:w-[200px] min-[420px]:shrink-0">
+                        <div className="aspect-square h-[200px] w-full max-w-[200px] min-[420px]:h-[180px]">
                           <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                            <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
                               <Pie
                                 data={insightDonutData}
                                 dataKey="value"
                                 nameKey="name"
-                                innerRadius="58%"
-                                outerRadius="88%"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius="56%"
+                                outerRadius="86%"
                                 paddingAngle={2}
+                                cornerRadius={3}
                                 stroke="none"
+                                isAnimationActive={false}
                               >
                                 {insightDonutData.map((entry) => (
                                   <Cell key={entry.name} fill={entry.color} />
@@ -2080,27 +2156,20 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                         </div>
                       </div>
                       <ul
-                        className="flex min-w-0 flex-1 flex-col justify-center gap-2.5"
+                        className="flex min-w-0 flex-1 flex-col justify-center gap-3 py-1"
                         aria-label="Légende"
                       >
                         {insightDonutData.map((row) => (
-                          <li
-                            key={row.name}
-                            className="flex items-center justify-between gap-3 text-xs"
-                          >
-                            <span className="flex min-w-0 items-center gap-2">
+                          <li key={row.name} className="flex items-center justify-between gap-4">
+                            <span className="flex min-w-0 items-center gap-2.5">
                               <span
-                                className="h-2 w-2 shrink-0 rounded-full ring-1 ring-zinc-900/5"
+                                className="size-2.5 shrink-0 rounded-full"
                                 style={{ backgroundColor: row.color }}
                                 aria-hidden
                               />
-                              <span className="truncate font-medium text-zinc-600 dark:text-zinc-300">
-                                {row.name}
-                              </span>
+                              <span className={inkDonutLegendLabel}>{row.name}</span>
                             </span>
-                            <span className="shrink-0 font-semibold tabular-nums text-zinc-900 dark:text-white">
-                              {row.value}
-                            </span>
+                            <span className={inkDonutLegendValue}>{row.value}</span>
                           </li>
                         ))}
                       </ul>
@@ -2126,850 +2195,726 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
                 </motion.div>
               )}
             </motion.div>
-          </div>
+          </motion.div>
         )}
 
         {/* =====================================================
           DESKTOP LAYOUT — monté uniquement si isMdUp (pas de doublon d’IDs avec la vue mobile)
           ===================================================== */}
         {isMdUp && (
-          <div className="min-h-full w-full max-w-[min(1800px,100%)] mx-auto isolate">
-            {/* ===== HEADER — typo display + hiérarchie type showcase ===== */}
-            <div className="px-0 pt-5 pb-5 md:pt-6 md:pb-6 2xl:pt-7 2xl:pb-7">
-              <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-center lg:justify-start lg:gap-6 2xl:gap-7">
-                {/* Widgets uniquement : Flash / Vitrine / Nouveau RDV sont dans la barre d’app et le FAB. */}
-                <div className="flex w-full min-w-0 shrink-0 flex-wrap items-center justify-start gap-1.5 rounded-2xl border border-zinc-200/90 bg-white/90 p-1.5 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset,0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-zinc-900/[0.04] backdrop-blur-md dark:border-zinc-800/90 dark:bg-zinc-900/55 dark:ring-white/[0.06] dark:shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_4px_12px_rgba(0,0,0,0.15)]">
-                  <button
-                    onClick={() => setIsEditMode(!isEditMode)}
-                    className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-all active:scale-[0.98] ${
-                      isEditMode
-                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20 hover:bg-blue-700'
-                        : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/90 dark:hover:bg-zinc-800/80'
-                    }`}
-                  >
-                    <LayoutGrid className="w-3.5 h-3.5" />
-                    {isEditMode ? 'Terminer' : 'Widgets'}
-                  </button>
-                </div>
+          <DashboardOverviewDesktopLayout
+            toolbar={
+              <div className="flex w-full min-w-0 flex-wrap items-center justify-start gap-1.5 rounded-2xl border border-zinc-200/90 bg-white/90 p-1.5 shadow-sm ring-1 ring-zinc-900/[0.04] dark:border-zinc-800/90 dark:bg-zinc-900/55 dark:ring-white/[0.06]">
+                <button
+                  type="button"
+                  onClick={() => setIsEditMode(!isEditMode)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-all active:scale-[0.98] ${
+                    isEditMode
+                      ? 'border border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800'
+                      : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100/90 dark:hover:bg-zinc-800/80'
+                  }`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  {isEditMode ? 'Terminer' : 'Widgets'}
+                </button>
               </div>
-              {trialBannerMessage && (
-                <div className="mt-5">
-                  <OverviewTrialBanner message={trialBannerMessage} onOpenBilling={onOpenBilling} />
-                </div>
-              )}
-
-              {visibleAlerts.length > 0 && (
-                <div className="mt-4 md:mt-5">
-                  <OverviewActivityAlerts
-                    alerts={visibleAlerts}
-                    setDismissedAlerts={setDismissedAlerts}
-                    onAlertNavigate={onAlertNavigate}
+            }
+            trialBanner={
+              trialBannerMessage ? (
+                <OverviewTrialBanner message={trialBannerMessage} onOpenBilling={onOpenBilling} />
+              ) : undefined
+            }
+            unpaidAlertCount={0}
+            onViewUnpaidAppointments={() => setActiveTab('agenda')}
+            kpiRow={
+              <SortableContext items={layout.kpiOrder} strategy={rectSortingStrategy}>
+                {layout.kpiOrder.map((widgetId) => renderKpiWidget(widgetId))}
+              </SortableContext>
+            }
+            onboarding={
+              onSetupNavigate ? (
+                <div className="flex flex-col gap-3">
+                  <FirstBookingGoalCard
+                    {...firstBookingGoalInput}
+                    studioId={studioId}
+                    pendingDemandesCount={pendingDemandesCount}
+                    onOpenWizard={() => setFirstBookingWizardOpen(true)}
+                    onOpenDemandes={() => setActiveTab('requests')}
+                    onActivateDemo={studioId ? handleActivateInboxDemo : undefined}
+                    onGoTo={onSetupNavigate}
+                  />
+                  <StudioSetupChecklist
+                    studioSlug={studioSlug}
+                    flashDesigns={flashDesigns}
+                    appointments={appointments}
+                    availabilitySetupComplete={availabilitySetupComplete}
+                    paymentsSetupComplete={paymentsSetupComplete}
+                    onGoTo={onSetupNavigate}
                   />
                 </div>
-              )}
-            </div>
-
-            {onSetupNavigate && (
-              <div className="px-0 pb-4">
-                <StudioSetupChecklist
-                  studioSlug={studioSlug}
-                  flashDesigns={flashDesigns}
-                  appointments={appointments}
-                  availabilitySetupComplete={availabilitySetupComplete}
-                  paymentsSetupComplete={paymentsSetupComplete}
-                  onGoTo={onSetupNavigate}
-                />
-              </div>
-            )}
-
-            {/* Edit Mode Banner */}
-            {isEditMode && (
-              <div className="px-0 mb-4">
-                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 dark:bg-primary/10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex flex-col gap-3 min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-4 min-w-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <IconBox icon={Move} variant="primary" size="md" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground">
-                          Mode personnalisation
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Glissez les widgets ou ajoutez-en de nouveaux
-                        </p>
+              ) : undefined
+            }
+            sidebar={
+              <DashboardOverviewClientsPanel
+                topClients={topClients}
+                recentDeposits={recentDeposits}
+                privacyMode={privacyMode}
+                tab={rightPanelTab}
+                onTabChange={setRightPanelTab}
+                onOpenClients={() => setActiveTab('clients')}
+                onOpenFinance={() => setActiveTab('finance')}
+                onNewClient={() => setActiveTab('clients')}
+                onSelectAppointment={setSelectedAppointment}
+              />
+            }
+            extraContent={
+              <>
+                {isEditMode ? (
+                  <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 dark:bg-primary/10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-3 min-[520px]:flex-row min-[520px]:items-center min-[520px]:gap-4 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <IconBox icon={Move} variant="primary" size="md" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground">
+                            Mode personnalisation
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Glissez les widgets ou ajoutez-en de nouveaux
+                          </p>
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowWidgetPicker(true)}
+                        className="flex min-h-[44px] w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-colors hover:bg-primary/90 sm:w-auto"
+                      >
+                        <Plus className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
+                        Ajouter un widget
+                      </button>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setShowWidgetPicker(true)}
-                      className="flex min-h-[44px] w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-colors hover:bg-primary/90 sm:w-auto"
+                      onClick={() => setIsEditMode(false)}
+                      className="min-h-[44px] px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors shrink-0 w-full sm:w-auto"
                     >
-                      <Plus className="w-[18px] h-[18px] shrink-0" strokeWidth={2} />
-                      Ajouter un widget
+                      Terminer
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditMode(false)}
-                    className="min-h-[44px] px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors shrink-0 w-full sm:w-auto"
-                  >
-                    Terminer
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ===== MAIN GRID ===== */}
-            <div className="px-0 pb-8 md:pb-10 2xl:pb-12">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 lg:gap-8 2xl:gap-9 items-start [contain:layout]">
-                {/* ====== LEFT COLUMN (8/12) ====== */}
-                <div className="lg:col-span-8 space-y-5 md:space-y-6 min-w-0">
-                  {/* KPI Row — Sortable */}
-                  <SortableContext items={layout.kpiOrder} strategy={rectSortingStrategy}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-3.5 md:gap-4 2xl:gap-4 items-stretch min-w-0 [grid-auto-rows:minmax(0,1fr)]">
-                      {layout.kpiOrder.map((widgetId) => renderKpiWidget(widgetId))}
-                    </div>
-                  </SortableContext>
-
-                  {showArtistBento && artistBentoBlock ? (
-                    <div className="relative isolate min-w-0 pt-1">
-                      <div
-                        className="pointer-events-none absolute left-1/2 top-0 h-[280px] w-[min(640px,92%)] -translate-x-1/2 rounded-full bg-emerald-500/[0.07] blur-[100px] dark:bg-emerald-900/12"
-                        aria-hidden
-                      />
-                      {artistBentoBlock}
-                    </div>
-                  ) : null}
-
-                  {/* Left Column Widgets — Sortable */}
-                  <SortableContext items={layout.leftColumn} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-6">
-                      {layout.leftColumn.map((widgetId) => {
-                        if (widgetId === 'revenue-chart') {
-                          return (
-                            <OverviewSortableWidget
-                              key={widgetId}
-                              id={widgetId}
-                              isEditMode={isEditMode}
-                              onRemoveWidget={handleRemoveWidget}
-                            >
-                              <div className="prodify-card rounded-[1.25rem] p-6 ring-1 ring-inset ring-zinc-900/[0.04] dark:ring-white/[0.05]">
-                                <div className="flex items-center justify-between mb-4">
-                                  <div>
-                                    <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 tracking-wide uppercase">
-                                      Évolution du revenu
-                                    </p>
-                                    <div className="flex items-baseline gap-2 flex-wrap">
-                                      <p className="text-2xl font-bold text-numeric tabular-nums">
-                                        {euro(periodRevenue ?? totalRevenue)}
+                ) : null}
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8 [contain:layout]">
+                  <div className="space-y-6 lg:col-span-8 min-w-0">
+                    <SortableContext
+                      items={layout.leftColumn.filter((id) => id !== 'appointments-list')}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {layout.leftColumn
+                        .filter((id) => id !== 'appointments-list')
+                        .map((widgetId) => {
+                          if (widgetId === 'revenue-chart') {
+                            return (
+                              <OverviewSortableWidget
+                                key={widgetId}
+                                id={widgetId}
+                                isEditMode={isEditMode}
+                                onRemoveWidget={handleRemoveWidget}
+                              >
+                                <div className="prodify-card rounded-[1.25rem] p-6 ring-1 ring-inset ring-zinc-900/[0.04] dark:ring-white/[0.05]">
+                                  <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                      <p className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 tracking-wide uppercase">
+                                        Évolution du revenu
                                       </p>
-                                      {periodTrend !== null && (
-                                        <span
-                                          className={`text-sm font-semibold tabular-nums ${periodTrend >= 0 ? 'text-primary' : 'text-destructive'}`}
-                                        >
-                                          {periodTrend >= 0 ? '+' : ''}
-                                          {periodTrend}%
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <button
-                                    onClick={() => setActiveTab('finance')}
-                                    className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 transition-colors"
-                                  >
-                                    Détails{' '}
-                                    <ArrowUpRight className="w-4 h-4 shrink-0" strokeWidth={2} />
-                                  </button>
-                                </div>
-                                <RevenueChart
-                                  appointments={appointments}
-                                  totalRevenue={totalRevenue}
-                                  onPeriodChange={handlePeriodChange}
-                                  privacyMode={privacyMode}
-                                />
-                              </div>
-                            </OverviewSortableWidget>
-                          );
-                        }
-                        if (widgetId === 'appointments-list') {
-                          return (
-                            <OverviewSortableWidget
-                              key={widgetId}
-                              id={widgetId}
-                              isEditMode={isEditMode}
-                              onRemoveWidget={handleRemoveWidget}
-                            >
-                              <div className="prodify-card overflow-hidden">
-                                <div className="px-6 py-5 flex items-center justify-between">
-                                  <div>
-                                    <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 tracking-tight">
-                                      Aujourd'hui
-                                    </p>
-                                    <p className="text-lg font-semibold text-numeric mt-0.5 tabular-nums">
-                                      {todayAppointments.length} rendez-vous
-                                    </p>
-                                  </div>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedFlash(null);
-                                      setShowBookingModal(true);
-                                    }}
-                                    className="p-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-                                  >
-                                    <Plus className="w-5 h-5" />
-                                  </button>
-                                </div>
-
-                                <div className="px-6 pb-6">
-                                  {todayAppointments.length > 0 ? (
-                                    <div className="space-y-3">
-                                      {todayAppointments.map((apt) => (
-                                        <button
-                                          key={apt.id}
-                                          onClick={() => setSelectedAppointment(apt)}
-                                          className="w-full flex items-center gap-4 p-4 rounded-2xl bg-zinc-50/80 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all text-left group"
-                                        >
-                                          <div className="flex-shrink-0 w-12 text-center">
-                                            <p className="text-lg font-bold text-numeric tabular-nums">
-                                              {apt.time?.split(':')[0] || '--'}
-                                            </p>
-                                            <p className="text-[10px] font-medium text-zinc-400 uppercase">
-                                              :{apt.time?.split(':')[1] || '00'}
-                                            </p>
-                                          </div>
-                                          <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
-                                              {apt.clientName}
-                                            </p>
-                                            <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                                              {apt.service || 'Tatouage'}
-                                            </p>
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            {apt.price && (
-                                              <span className="text-sm font-semibold text-numeric tabular-nums">
-                                                {privacyMode ? '••••' : `${apt.price}€`}
-                                              </span>
-                                            )}
-                                            <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
-                                          </div>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div className="text-center py-10">
-                                      <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                                        <Calendar className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
-                                      </div>
-                                      <p className="text-sm font-medium text-zinc-500 dark:text-zinc-500 mb-3">
-                                        Aucun RDV aujourd'hui
-                                      </p>
-                                      <button
-                                        onClick={() => {
-                                          setSelectedFlash(null);
-                                          setShowBookingModal(true);
-                                        }}
-                                        className="text-sm font-semibold text-primary hover:underline"
-                                      >
-                                        + Ajouter un RDV
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {upcomingAppointments.length > 0 && (
-                                  <div className="px-6 py-5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20">
-                                    <div className="flex items-center justify-between mb-4">
-                                      <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
-                                        À venir
-                                      </span>
-                                      <button
-                                        onClick={() => setActiveTab('agenda')}
-                                        className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-                                      >
-                                        Voir tout
-                                      </button>
-                                    </div>
-                                    <div className="space-y-2">
-                                      {upcomingAppointments.slice(0, 3).map((apt) => (
-                                        <button
-                                          key={apt.id}
-                                          onClick={() => setSelectedAppointment(apt)}
-                                          className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white dark:hover:bg-zinc-800 transition-colors text-left"
-                                        >
-                                          <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 min-w-[3.5rem]">
-                                            {new Date(apt.date + 'T00:00').toLocaleDateString(
-                                              'fr-FR',
-                                              { day: 'numeric', month: 'short' }
-                                            )}
-                                          </span>
-                                          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate flex-1">
-                                            {apt.clientName}
-                                          </span>
-                                          <span
-                                            className={`inline-flex min-h-[1.75rem] min-w-[1.75rem] items-center justify-center rounded-lg ${
-                                              apt.status === 'confirmed'
-                                                ? 'bg-primary/15 text-primary dark:bg-primary/25 dark:text-primary'
-                                                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                                            }`}
-                                            title={
-                                              apt.status === 'confirmed' ? 'Confirmé' : 'En attente'
-                                            }
-                                          >
-                                            {apt.status === 'confirmed' ? (
-                                              <Check
-                                                className="w-3.5 h-3.5"
-                                                strokeWidth={2.5}
-                                                aria-hidden
-                                              />
-                                            ) : (
-                                              <Clock
-                                                className="w-3.5 h-3.5"
-                                                strokeWidth={2}
-                                                aria-hidden
-                                              />
-                                            )}
-                                          </span>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </OverviewSortableWidget>
-                          );
-                        }
-
-                        if (widgetId === 'quick-stats') {
-                          const confirmedApts = appointments.filter(
-                            (a) => a.status === 'confirmed'
-                          ).length;
-                          const pendingApts = appointments.filter(
-                            (a) => a.status === 'pending'
-                          ).length;
-                          const avgPrice =
-                            appointments.length > 0
-                              ? Math.round(
-                                  appointments.reduce((sum, a) => sum + (a.price || 0), 0) /
-                                    appointments.length
-                                )
-                              : 0;
-
-                          return (
-                            <OverviewSortableWidget
-                              key={widgetId}
-                              id={widgetId}
-                              isEditMode={isEditMode}
-                              onRemoveWidget={handleRemoveWidget}
-                            >
-                              <div className="prodify-card p-6">
-                                <div className="flex items-center justify-between mb-5">
-                                  <div className="flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-primary/10 dark:bg-primary/20">
-                                      <TrendingUp className={cn('w-5 h-5', overviewIcon)} />
-                                    </div>
-                                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                                      Stats rapides
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-4">
-                                  <div className="text-center p-3 rounded-2xl bg-primary/5 dark:bg-primary/10">
-                                    <p className="text-2xl font-bold text-primary tabular-nums">
-                                      {confirmedApts}
-                                    </p>
-                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                                      Confirmés
-                                    </p>
-                                  </div>
-                                  <div className="text-center p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80">
-                                    <p className="text-2xl font-bold text-numeric tabular-nums">
-                                      {pendingApts}
-                                    </p>
-                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                                      En attente
-                                    </p>
-                                  </div>
-                                  <div className="text-center p-3 rounded-2xl bg-primary/5 dark:bg-primary/10">
-                                    <p className="text-2xl font-bold text-numeric tabular-nums">
-                                      {privacyMode ? '••••' : `${avgPrice}€`}
-                                    </p>
-                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                                      Prix moy.
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </OverviewSortableWidget>
-                          );
-                        }
-
-                        if (widgetId === 'upcoming-week') {
-                          const next7Days = Array.from({ length: 7 }, (_, i) => {
-                            const date = new Date(now);
-                            date.setDate(date.getDate() + i);
-                            const dateStr = date.toISOString().slice(0, 10);
-                            const dayApts = appointments.filter((a) => a.date === dateStr);
-                            return {
-                              date: dateStr,
-                              dayName: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
-                              dayNum: date.getDate(),
-                              count: dayApts.length,
-                              revenue: dayApts.reduce((sum, a) => sum + (a.price || 0), 0),
-                            };
-                          });
-
-                          return (
-                            <OverviewSortableWidget
-                              key={widgetId}
-                              id={widgetId}
-                              isEditMode={isEditMode}
-                              onRemoveWidget={handleRemoveWidget}
-                            >
-                              <div className="prodify-card p-6">
-                                <div className="flex items-center justify-between mb-5">
-                                  <div className="flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-primary/10 dark:bg-primary/20">
-                                      <CalendarCheck className={cn('w-5 h-5', overviewIcon)} />
-                                    </div>
-                                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                                      7 prochains jours
-                                    </p>
-                                  </div>
-                                  <button
-                                    onClick={() => setActiveTab('agenda')}
-                                    className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-                                  >
-                                    Voir tout
-                                  </button>
-                                </div>
-                                <div className="flex gap-2">
-                                  {next7Days.map((day, i) => (
-                                    <div
-                                      key={day.date}
-                                      className={`flex-1 text-center p-3 rounded-xl transition-colors ${
-                                        i === 0
-                                          ? 'bg-primary text-primary-foreground'
-                                          : day.count > 0
-                                            ? 'bg-zinc-100 dark:bg-zinc-800'
-                                            : 'bg-zinc-50 dark:bg-zinc-800/50'
-                                      }`}
-                                    >
-                                      <p
-                                        className={`text-[10px] uppercase font-semibold ${i === 0 ? 'text-primary-foreground/70' : 'text-zinc-400 dark:text-zinc-500'}`}
-                                      >
-                                        {day.dayName}
-                                      </p>
-                                      <p
-                                        className={`text-lg font-bold ${i === 0 ? 'text-primary-foreground' : 'text-zinc-900 dark:text-white'}`}
-                                      >
-                                        {day.dayNum}
-                                      </p>
-                                      {day.count > 0 && (
-                                        <p
-                                          className={`text-[10px] font-semibold mt-1 ${i === 0 ? 'text-primary-foreground/80' : 'text-primary'}`}
-                                        >
-                                          {day.count} RDV
+                                      <div className="flex items-baseline gap-2 flex-wrap">
+                                        <p className="text-2xl font-bold text-numeric tabular-nums">
+                                          {euro(periodRevenue ?? totalRevenue)}
                                         </p>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </OverviewSortableWidget>
-                          );
-                        }
-
-                        return null;
-                      })}
-                    </div>
-                  </SortableContext>
-                </div>
-
-                {/* ====== RIGHT COLUMN (4/12) ====== */}
-                <SortableContext items={layout.rightColumn} strategy={verticalListSortingStrategy}>
-                  <div className="lg:col-span-4 space-y-5 md:space-y-6 min-w-0">
-                    {layout.rightColumn.map((widgetId) => {
-                      if (widgetId === 'clients-deposits') {
-                        return (
-                          <OverviewSortableWidget
-                            key={widgetId}
-                            id={widgetId}
-                            isEditMode={isEditMode}
-                            onRemoveWidget={handleRemoveWidget}
-                          >
-                            <div className="prodify-card overflow-hidden">
-                              <div className="px-5 pt-5 pb-0">
-                                <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800">
-                                  <button
-                                    onClick={() => setRightPanelTab('clients')}
-                                    className={`flex-1 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${rightPanelTab === 'clients' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400'}`}
-                                  >
-                                    Clients
-                                  </button>
-                                  <button
-                                    onClick={() => setRightPanelTab('deposits')}
-                                    className={`flex-1 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${rightPanelTab === 'deposits' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400'}`}
-                                  >
-                                    Acomptes
-                                  </button>
-                                </div>
-                              </div>
-                              <div className="p-5">
-                                {rightPanelTab === 'clients' ? (
-                                  <>
-                                    <button
-                                      onClick={() => setActiveTab('clients')}
-                                      className="w-full flex items-center gap-3 p-3 mb-3 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all"
-                                    >
-                                      <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                                        <UserPlus className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
-                                      </div>
-                                      <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                                        Nouveau client
-                                      </span>
-                                    </button>
-                                    {topClients.length > 0 ? (
-                                      <div className="space-y-1">
-                                        {topClients.slice(0, 5).map((client) => (
-                                          <button
-                                            key={client.id}
-                                            onClick={() => setActiveTab('clients')}
-                                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors text-left"
+                                        {periodTrend !== null && (
+                                          <span
+                                            className={`text-sm font-semibold tabular-nums ${periodTrend >= 0 ? 'text-primary' : 'text-destructive'}`}
                                           >
-                                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800">
-                                              <ClientPhotoAvatar
-                                                name={client.name}
-                                                src={client.avatar}
-                                                className="h-full w-full"
-                                                textClassName="text-sm font-semibold text-zinc-600 dark:text-zinc-300"
-                                              />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                              <div className="flex items-center gap-1.5">
-                                                <span className="text-sm font-medium text-zinc-900 dark:text-white truncate">
-                                                  {client.name}
-                                                </span>
-                                                {(client.totalSpent ?? 0) >= 500 && (
-                                                  <Star
-                                                    className="w-4 h-4 shrink-0 fill-primary/85 text-primary"
-                                                    strokeWidth={2}
-                                                  />
-                                                )}
-                                              </div>
-                                              <span className="text-xs text-zinc-500 dark:text-zinc-500">
-                                                {privacyMode ? '••••' : `${client.totalSpent}€`}
-                                              </span>
-                                            </div>
-                                          </button>
-                                        ))}
+                                            {periodTrend >= 0 ? '+' : ''}
+                                            {periodTrend}%
+                                          </span>
+                                        )}
                                       </div>
-                                    ) : (
-                                      <p className="text-sm text-zinc-400 text-center py-6">
-                                        Aucun client
+                                    </div>
+                                    <button
+                                      onClick={() => setActiveTab('finance')}
+                                      className="text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 transition-colors"
+                                    >
+                                      Détails{' '}
+                                      <ArrowUpRight className="w-4 h-4 shrink-0" strokeWidth={2} />
+                                    </button>
+                                  </div>
+                                  <RevenueChart
+                                    appointments={appointments}
+                                    totalRevenue={totalRevenue}
+                                    onPeriodChange={handlePeriodChange}
+                                    privacyMode={privacyMode}
+                                  />
+                                </div>
+                              </OverviewSortableWidget>
+                            );
+                          }
+                          if (widgetId === 'appointments-list') {
+                            return (
+                              <OverviewSortableWidget
+                                key={widgetId}
+                                id={widgetId}
+                                isEditMode={isEditMode}
+                                onRemoveWidget={handleRemoveWidget}
+                              >
+                                <div className="prodify-card overflow-hidden">
+                                  <div className="px-6 py-5 flex items-center justify-between">
+                                    <div>
+                                      <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 tracking-tight">
+                                        Aujourd'hui
                                       </p>
-                                    )}
-                                  </>
-                                ) : (
-                                  <>
-                                    {recentDeposits.length > 0 ? (
-                                      <div className="space-y-2">
-                                        {recentDeposits.slice(0, 5).map((apt) => (
+                                      <p className="text-lg font-semibold text-numeric mt-0.5 tabular-nums">
+                                        {todayAppointments.length} rendez-vous
+                                      </p>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedFlash(null);
+                                        setShowBookingModal(true);
+                                      }}
+                                      className="p-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                                    >
+                                      <Plus className="w-5 h-5" />
+                                    </button>
+                                  </div>
+
+                                  <div className="px-6 pb-6">
+                                    {todayAppointments.length > 0 ? (
+                                      <div className="space-y-3">
+                                        {todayAppointments.map((apt) => (
                                           <button
                                             key={apt.id}
                                             onClick={() => setSelectedAppointment(apt)}
-                                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors text-left"
+                                            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-zinc-50/80 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all text-left group"
                                           >
-                                            <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700/60 flex items-center justify-center flex-shrink-0">
-                                              <CreditCard className="w-4 h-4 text-zinc-300" />
+                                            <div className="flex-shrink-0 w-12 text-center">
+                                              <p className="text-lg font-bold text-numeric tabular-nums">
+                                                {apt.time?.split(':')[0] || '--'}
+                                              </p>
+                                              <p className="text-[10px] font-medium text-zinc-400 uppercase">
+                                                :{apt.time?.split(':')[1] || '00'}
+                                              </p>
                                             </div>
-                                            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate flex-1">
-                                              {apt.clientName || 'Client'}
-                                            </span>
-                                            <span className="text-sm font-bold text-numeric tabular-nums">
-                                              {privacyMode ? '+••••' : `+${apt.deposit}€`}
-                                            </span>
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
+                                                {apt.clientName}
+                                              </p>
+                                              <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                                                {apt.service || 'Tatouage'}
+                                              </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              {apt.price && (
+                                                <span className="text-sm font-semibold text-numeric tabular-nums">
+                                                  {privacyMode ? '••••' : `${apt.price}€`}
+                                                </span>
+                                              )}
+                                              <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
+                                            </div>
                                           </button>
                                         ))}
                                       </div>
                                     ) : (
-                                      <div className="text-center py-8">
-                                        <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
-                                          <Wallet className="w-5 h-5 text-zinc-400" />
+                                      <div className="text-center py-10">
+                                        <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                                          <Calendar className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
                                         </div>
-                                        <p className="text-sm text-zinc-400">
-                                          Aucun acompte récent
+                                        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-500 mb-3">
+                                          Aucun RDV aujourd'hui
                                         </p>
+                                        <button
+                                          onClick={() => {
+                                            setSelectedFlash(null);
+                                            setShowBookingModal(true);
+                                          }}
+                                          className="text-sm font-semibold text-primary hover:underline"
+                                        >
+                                          + Ajouter un RDV
+                                        </button>
                                       </div>
                                     )}
-                                  </>
-                                )}
-                              </div>
-                              <div className="px-5 pb-5">
-                                <button
-                                  onClick={() =>
-                                    setActiveTab(
-                                      rightPanelTab === 'clients' ? 'clients' : 'finance'
-                                    )
-                                  }
-                                  className="w-full py-2.5 rounded-xl text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-                                >
-                                  Voir tout →
-                                </button>
-                              </div>
-                            </div>
-                          </OverviewSortableWidget>
-                        );
-                      }
+                                  </div>
 
-                      if (widgetId === 'requests-pending') {
-                        return pendingDemandesCount > 0 ? (
-                          <OverviewSortableWidget
-                            key={widgetId}
-                            id={widgetId}
-                            isEditMode={isEditMode}
-                            onRemoveWidget={handleRemoveWidget}
-                          >
-                            <button
-                              onClick={() => !isEditMode && setActiveTab('requests')}
-                              className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] transition-all text-left group"
-                            >
-                              <div className="flex items-center gap-4">
-                                <div className="rounded-xl bg-primary/10 p-3 dark:bg-primary/20">
-                                  <Inbox className={cn('w-5 h-5', overviewIcon)} />
+                                  {upcomingAppointments.length > 0 && (
+                                    <div className="px-6 py-5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/20">
+                                      <div className="flex items-center justify-between mb-4">
+                                        <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                                          À venir
+                                        </span>
+                                        <button
+                                          onClick={() => setActiveTab('agenda')}
+                                          className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                                        >
+                                          Voir tout
+                                        </button>
+                                      </div>
+                                      <div className="space-y-2">
+                                        {upcomingAppointments.slice(0, 3).map((apt) => (
+                                          <button
+                                            key={apt.id}
+                                            onClick={() => setSelectedAppointment(apt)}
+                                            className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white dark:hover:bg-zinc-800 transition-colors text-left"
+                                          >
+                                            <span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500 min-w-[3.5rem]">
+                                              {new Date(apt.date + 'T00:00').toLocaleDateString(
+                                                'fr-FR',
+                                                { day: 'numeric', month: 'short' }
+                                              )}
+                                            </span>
+                                            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300 truncate flex-1">
+                                              {apt.clientName}
+                                            </span>
+                                            <span
+                                              className={`inline-flex min-h-[1.75rem] min-w-[1.75rem] items-center justify-center rounded-lg ${
+                                                apt.status === 'confirmed'
+                                                  ? 'bg-primary/15 text-primary dark:bg-primary/25 dark:text-primary'
+                                                  : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                                              }`}
+                                              title={
+                                                apt.status === 'confirmed'
+                                                  ? 'Confirmé'
+                                                  : 'En attente'
+                                              }
+                                            >
+                                              {apt.status === 'confirmed' ? (
+                                                <Check
+                                                  className="w-3.5 h-3.5"
+                                                  strokeWidth={2.5}
+                                                  aria-hidden
+                                                />
+                                              ) : (
+                                                <Clock
+                                                  className="w-3.5 h-3.5"
+                                                  strokeWidth={2}
+                                                  aria-hidden
+                                                />
+                                              )}
+                                            </span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="flex-1">
-                                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                                    {pendingDemandesCount} demandes
-                                  </p>
-                                  <p className="text-xs text-zinc-500 dark:text-zinc-500">
-                                    En attente de réponse
-                                  </p>
-                                </div>
-                                <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
-                              </div>
-                            </button>
-                          </OverviewSortableWidget>
-                        ) : (
-                          <OverviewSortableWidget
-                            key={widgetId}
-                            id={widgetId}
-                            isEditMode={isEditMode}
-                            onRemoveWidget={handleRemoveWidget}
-                          >
-                            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
-                              <div className="flex items-center gap-4">
-                                <div className="rounded-xl bg-primary/10 p-3 dark:bg-primary/20">
-                                  <Check className={cn('w-5 h-5', overviewIcon)} />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Aucune demande
-                                  </p>
-                                  <p className="text-xs text-zinc-500 dark:text-zinc-500">
-                                    Tout est à jour !
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </OverviewSortableWidget>
-                        );
-                      }
+                              </OverviewSortableWidget>
+                            );
+                          }
 
-                      if (widgetId === 'top-services') {
-                        const serviceStats = appointments.reduce(
-                          (acc, apt) => {
-                            const service = apt.service || 'Tatouage';
-                            acc[service] = (acc[service] || 0) + 1;
-                            return acc;
-                          },
-                          {} as Record<string, number>
-                        );
-                        const topServices = Object.entries<number>(serviceStats)
-                          .sort((a, b) => b[1] - a[1])
-                          .slice(0, 3);
+                          if (widgetId === 'quick-stats') {
+                            const confirmedApts = appointments.filter(
+                              (a) => a.status === 'confirmed'
+                            ).length;
+                            const pendingApts = appointments.filter(
+                              (a) => a.status === 'pending'
+                            ).length;
+                            const avgPrice =
+                              appointments.length > 0
+                                ? Math.round(
+                                    appointments.reduce((sum, a) => sum + (a.price || 0), 0) /
+                                      appointments.length
+                                  )
+                                : 0;
 
-                        return (
-                          <OverviewSortableWidget
-                            key={widgetId}
-                            id={widgetId}
-                            isEditMode={isEditMode}
-                            onRemoveWidget={handleRemoveWidget}
-                          >
-                            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
-                              <div className="flex items-center gap-3 mb-4">
-                                <div className="rounded-xl bg-primary/10 p-2.5 dark:bg-primary/20">
-                                  <Award className={cn('w-5 h-5', overviewIcon)} />
+                            return (
+                              <OverviewSortableWidget
+                                key={widgetId}
+                                id={widgetId}
+                                isEditMode={isEditMode}
+                                onRemoveWidget={handleRemoveWidget}
+                              >
+                                <div className="prodify-card p-6">
+                                  <div className="flex items-center justify-between mb-5">
+                                    <div className="flex items-center gap-3">
+                                      <div className="p-2.5 rounded-xl bg-primary/10 dark:bg-primary/20">
+                                        <TrendingUp className={cn('w-5 h-5', overviewIcon)} />
+                                      </div>
+                                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                        Stats rapides
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-4">
+                                    <div className="text-center p-3 rounded-2xl bg-primary/5 dark:bg-primary/10">
+                                      <p className="text-2xl font-bold text-primary tabular-nums">
+                                        {confirmedApts}
+                                      </p>
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                        Confirmés
+                                      </p>
+                                    </div>
+                                    <div className="text-center p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80">
+                                      <p className="text-2xl font-bold text-numeric tabular-nums">
+                                        {pendingApts}
+                                      </p>
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                        En attente
+                                      </p>
+                                    </div>
+                                    <div className="text-center p-3 rounded-2xl bg-primary/5 dark:bg-primary/10">
+                                      <p className="text-2xl font-bold text-numeric tabular-nums">
+                                        {privacyMode ? '••••' : `${avgPrice}€`}
+                                      </p>
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                        Prix moy.
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
-                                <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                                  Services populaires
-                                </p>
-                              </div>
-                              {topServices.length > 0 ? (
-                                <div className="space-y-2">
-                                  {topServices.map(([service, count], i) => (
-                                    <div key={service} className="flex items-center gap-3">
-                                      <span
-                                        className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
+                              </OverviewSortableWidget>
+                            );
+                          }
+
+                          if (widgetId === 'upcoming-week') {
+                            const next7Days = Array.from({ length: 7 }, (_, i) => {
+                              const date = new Date(now);
+                              date.setDate(date.getDate() + i);
+                              const dateStr = date.toISOString().slice(0, 10);
+                              const dayApts = appointments.filter((a) => a.date === dateStr);
+                              return {
+                                date: dateStr,
+                                dayName: date.toLocaleDateString('fr-FR', { weekday: 'short' }),
+                                dayNum: date.getDate(),
+                                count: dayApts.length,
+                                revenue: dayApts.reduce((sum, a) => sum + (a.price || 0), 0),
+                              };
+                            });
+
+                            return (
+                              <OverviewSortableWidget
+                                key={widgetId}
+                                id={widgetId}
+                                isEditMode={isEditMode}
+                                onRemoveWidget={handleRemoveWidget}
+                              >
+                                <div className="prodify-card p-6">
+                                  <div className="flex items-center justify-between mb-5">
+                                    <div className="flex items-center gap-3">
+                                      <div className="p-2.5 rounded-xl bg-primary/10 dark:bg-primary/20">
+                                        <CalendarCheck className={cn('w-5 h-5', overviewIcon)} />
+                                      </div>
+                                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                        7 prochains jours
+                                      </p>
+                                    </div>
+                                    <button
+                                      onClick={() => setActiveTab('agenda')}
+                                      className="text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                                    >
+                                      Voir tout
+                                    </button>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    {next7Days.map((day, i) => (
+                                      <div
+                                        key={day.date}
+                                        className={`flex-1 text-center p-3 rounded-xl transition-colors ${
                                           i === 0
-                                            ? 'bg-primary/15 text-primary dark:bg-primary/25 dark:text-primary'
-                                            : i === 1
-                                              ? 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300'
-                                              : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+                                            ? 'bg-primary text-primary-foreground'
+                                            : day.count > 0
+                                              ? 'bg-zinc-100 dark:bg-zinc-800'
+                                              : 'bg-zinc-50 dark:bg-zinc-800/50'
                                         }`}
                                       >
-                                        {i + 1}
-                                      </span>
-                                      <span className="flex-1 text-sm text-zinc-700 dark:text-zinc-300 truncate">
-                                        {service}
-                                      </span>
-                                      <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                                        {count} RDV
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-sm text-zinc-400 text-center py-4">
-                                  Pas encore de données
-                                </p>
-                              )}
-                            </div>
-                          </OverviewSortableWidget>
-                        );
-                      }
-
-                      if (widgetId === 'goals-progress') {
-                        const monthlyGoal = 5000;
-                        const progress = Math.min((safeMonthlyRevenue / monthlyGoal) * 100, 100);
-
-                        return (
-                          <OverviewSortableWidget
-                            key={widgetId}
-                            id={widgetId}
-                            isEditMode={isEditMode}
-                            onRemoveWidget={handleRemoveWidget}
-                          >
-                            <div className="rounded-2xl border border-zinc-100 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/50">
-                              <div className="flex items-center gap-3 mb-4">
-                                <div className="flex size-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400">
-                                  <Target className="w-5 h-5" />
-                                </div>
-                                <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                                  Objectif mensuel
-                                </p>
-                              </div>
-                              <div className="mb-3">
-                                <div className="flex items-end justify-between mb-2">
-                                  <span className="text-2xl font-bold text-zinc-900 dark:text-white">
-                                    {euro(safeMonthlyRevenue)}
-                                  </span>
-                                  <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                                    /{' '}
-                                    {privacyMode
-                                      ? '••••'
-                                      : `${monthlyGoal.toLocaleString('fr-FR')}€`}
-                                  </span>
-                                </div>
-                                <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-blue-600 rounded-full transition-all duration-500 dark:bg-blue-500"
-                                    style={{ width: `${progress}%` }}
-                                  />
-                                </div>
-                              </div>
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                                {Math.round(progress)}% de l'objectif atteint
-                              </p>
-                            </div>
-                          </OverviewSortableWidget>
-                        );
-                      }
-
-                      if (widgetId === 'flash-promo') {
-                        return (
-                          <OverviewSortableWidget
-                            key={widgetId}
-                            id={widgetId}
-                            isEditMode={isEditMode}
-                            onRemoveWidget={handleRemoveWidget}
-                          >
-                            <button
-                              onClick={() => setActiveTab('flash')}
-                              type="button"
-                              className="w-full rounded-2xl border border-zinc-100 bg-white p-5 text-left transition-all active:scale-[0.98] hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:bg-zinc-900"
-                            >
-                              <div className="flex items-center gap-3 mb-3">
-                                <div className="flex size-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400">
-                                  <Zap className="w-5 h-5" />
-                                </div>
-                                <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                                  Flash Designs
-                                </p>
-                              </div>
-                              <p className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">
-                                {customWidgets.length || 0} designs
-                              </p>
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                                Gérez vos flash disponibles →
-                              </p>
-                            </button>
-                          </OverviewSortableWidget>
-                        );
-                      }
-
-                      if (widgetId === 'loyalty-program') {
-                        const vipCount = clients.filter((c) => (c.totalSpent ?? 0) >= 500).length;
-
-                        return (
-                          <OverviewSortableWidget
-                            key={widgetId}
-                            id={widgetId}
-                            isEditMode={isEditMode}
-                            onRemoveWidget={handleRemoveWidget}
-                          >
-                            <div className="rounded-2xl border border-zinc-100 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/50">
-                              <div className="flex items-center gap-3 mb-3">
-                                <div className="flex size-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400">
-                                  <Gift className="w-5 h-5" />
-                                </div>
-                                <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                                  Programme fidélité
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <div>
-                                  <p className="text-3xl font-bold text-zinc-900 dark:text-white">
-                                    {vipCount}
-                                  </p>
-                                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                                    Clients VIP
-                                  </p>
-                                </div>
-                                <div className="flex-1 flex justify-end">
-                                  <div className="flex -space-x-2">
-                                    {topClients.slice(0, 3).map((c) => (
-                                      <div
-                                        key={c.id}
-                                        className="w-10 h-10 rounded-full bg-zinc-100 border-2 border-white dark:bg-zinc-800 dark:border-zinc-900 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200"
-                                      >
-                                        {c.name?.charAt(0)}
+                                        <p
+                                          className={`text-[10px] uppercase font-semibold ${i === 0 ? 'text-primary-foreground/70' : 'text-zinc-400 dark:text-zinc-500'}`}
+                                        >
+                                          {day.dayName}
+                                        </p>
+                                        <p
+                                          className={`text-lg font-bold ${i === 0 ? 'text-primary-foreground' : 'text-zinc-900 dark:text-white'}`}
+                                        >
+                                          {day.dayNum}
+                                        </p>
+                                        {day.count > 0 && (
+                                          <p
+                                            className={`text-[10px] font-semibold mt-1 ${i === 0 ? 'text-primary-foreground/80' : 'text-primary'}`}
+                                          >
+                                            {day.count} RDV
+                                          </p>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
                                 </div>
-                              </div>
-                            </div>
-                          </OverviewSortableWidget>
-                        );
-                      }
+                              </OverviewSortableWidget>
+                            );
+                          }
 
-                      return null;
-                    })}
+                          return null;
+                        })}
+                    </SortableContext>
                   </div>
-                </SortableContext>
-              </div>
-            </div>
-          </div>
+
+                  <div className="space-y-6 lg:col-span-4 min-w-0">
+                    <SortableContext
+                      items={layout.rightColumn.filter((id) => id !== 'clients-deposits')}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {layout.rightColumn
+                        .filter((id) => id !== 'clients-deposits')
+                        .map((widgetId) => {
+                          if (widgetId === 'requests-pending') {
+                            return pendingDemandesCount > 0 ? (
+                              <OverviewSortableWidget
+                                key={widgetId}
+                                id={widgetId}
+                                isEditMode={isEditMode}
+                                onRemoveWidget={handleRemoveWidget}
+                              >
+                                <button
+                                  onClick={() => !isEditMode && setActiveTab('requests')}
+                                  className="w-full bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] transition-all text-left group"
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <div className="rounded-xl bg-primary/10 p-3 dark:bg-primary/20">
+                                      <Inbox className={cn('w-5 h-5', overviewIcon)} />
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                        {pendingDemandesCount} demandes
+                                      </p>
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-500">
+                                        En attente de réponse
+                                      </p>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-zinc-300 dark:text-zinc-600 group-hover:text-zinc-400 dark:group-hover:text-zinc-500 transition-colors" />
+                                  </div>
+                                </button>
+                              </OverviewSortableWidget>
+                            ) : (
+                              <OverviewSortableWidget
+                                key={widgetId}
+                                id={widgetId}
+                                isEditMode={isEditMode}
+                                onRemoveWidget={handleRemoveWidget}
+                              >
+                                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                                  <div className="flex items-center gap-4">
+                                    <div className="rounded-xl bg-primary/10 p-3 dark:bg-primary/20">
+                                      <Check className={cn('w-5 h-5', overviewIcon)} />
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                        Aucune demande
+                                      </p>
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-500">
+                                        Tout est à jour !
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </OverviewSortableWidget>
+                            );
+                          }
+
+                          if (widgetId === 'top-services') {
+                            const serviceStats = appointments.reduce(
+                              (acc, apt) => {
+                                const service = apt.service || 'Tatouage';
+                                acc[service] = (acc[service] || 0) + 1;
+                                return acc;
+                              },
+                              {} as Record<string, number>
+                            );
+                            const topServices = Object.entries<number>(serviceStats)
+                              .sort((a, b) => b[1] - a[1])
+                              .slice(0, 3);
+
+                            return (
+                              <OverviewSortableWidget
+                                key={widgetId}
+                                id={widgetId}
+                                isEditMode={isEditMode}
+                                onRemoveWidget={handleRemoveWidget}
+                              >
+                                <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)]">
+                                  <div className="flex items-center gap-3 mb-4">
+                                    <div className="rounded-xl bg-primary/10 p-2.5 dark:bg-primary/20">
+                                      <Award className={cn('w-5 h-5', overviewIcon)} />
+                                    </div>
+                                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                      Services populaires
+                                    </p>
+                                  </div>
+                                  {topServices.length > 0 ? (
+                                    <div className="space-y-2">
+                                      {topServices.map(([service, count], i) => (
+                                        <div key={service} className="flex items-center gap-3">
+                                          <span
+                                            className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
+                                              i === 0
+                                                ? 'bg-primary/15 text-primary dark:bg-primary/25 dark:text-primary'
+                                                : i === 1
+                                                  ? 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300'
+                                                  : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+                                            }`}
+                                          >
+                                            {i + 1}
+                                          </span>
+                                          <span className="flex-1 text-sm text-zinc-700 dark:text-zinc-300 truncate">
+                                            {service}
+                                          </span>
+                                          <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                                            {count} RDV
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-zinc-400 text-center py-4">
+                                      Pas encore de données
+                                    </p>
+                                  )}
+                                </div>
+                              </OverviewSortableWidget>
+                            );
+                          }
+
+                          if (widgetId === 'goals-progress') {
+                            const monthlyGoal = 5000;
+                            const progress = Math.min(
+                              (safeMonthlyRevenue / monthlyGoal) * 100,
+                              100
+                            );
+
+                            return (
+                              <OverviewSortableWidget
+                                key={widgetId}
+                                id={widgetId}
+                                isEditMode={isEditMode}
+                                onRemoveWidget={handleRemoveWidget}
+                              >
+                                <div className="rounded-2xl border border-zinc-100 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/50">
+                                  <div className="flex items-center gap-3 mb-4">
+                                    <div className="flex size-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400">
+                                      <Target className="w-5 h-5" />
+                                    </div>
+                                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                      Objectif mensuel
+                                    </p>
+                                  </div>
+                                  <div className="mb-3">
+                                    <div className="flex items-end justify-between mb-2">
+                                      <span className="text-2xl font-bold text-zinc-900 dark:text-white">
+                                        {euro(safeMonthlyRevenue)}
+                                      </span>
+                                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                                        /{' '}
+                                        {privacyMode
+                                          ? '••••'
+                                          : `${monthlyGoal.toLocaleString('fr-FR')}€`}
+                                      </span>
+                                    </div>
+                                    <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full bg-blue-600 rounded-full transition-all duration-500 dark:bg-blue-500"
+                                        style={{ width: `${progress}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                    {Math.round(progress)}% de l'objectif atteint
+                                  </p>
+                                </div>
+                              </OverviewSortableWidget>
+                            );
+                          }
+
+                          if (widgetId === 'flash-promo') {
+                            return (
+                              <OverviewSortableWidget
+                                key={widgetId}
+                                id={widgetId}
+                                isEditMode={isEditMode}
+                                onRemoveWidget={handleRemoveWidget}
+                              >
+                                <button
+                                  onClick={() => setActiveTab('flash')}
+                                  type="button"
+                                  className="w-full rounded-2xl border border-zinc-100 bg-white p-5 text-left transition-all active:scale-[0.98] hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:bg-zinc-900"
+                                >
+                                  <div className="flex items-center gap-3 mb-3">
+                                    <div className="flex size-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400">
+                                      <Zap className="w-5 h-5" />
+                                    </div>
+                                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                      Flash Designs
+                                    </p>
+                                  </div>
+                                  <p className="text-2xl font-bold mb-1 text-zinc-900 dark:text-white">
+                                    {customWidgets.length || 0} designs
+                                  </p>
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                    Gérez vos flash disponibles →
+                                  </p>
+                                </button>
+                              </OverviewSortableWidget>
+                            );
+                          }
+
+                          if (widgetId === 'loyalty-program') {
+                            const vipCount = clients.filter(
+                              (c) => (c.totalSpent ?? 0) >= 500
+                            ).length;
+
+                            return (
+                              <OverviewSortableWidget
+                                key={widgetId}
+                                id={widgetId}
+                                isEditMode={isEditMode}
+                                onRemoveWidget={handleRemoveWidget}
+                              >
+                                <div className="rounded-2xl border border-zinc-100 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/50">
+                                  <div className="flex items-center gap-3 mb-3">
+                                    <div className="flex size-10 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-400">
+                                      <Gift className="w-5 h-5" />
+                                    </div>
+                                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                      Programme fidélité
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <div>
+                                      <p className="text-3xl font-bold text-zinc-900 dark:text-white">
+                                        {vipCount}
+                                      </p>
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                        Clients VIP
+                                      </p>
+                                    </div>
+                                    <div className="flex-1 flex justify-end">
+                                      <div className="flex -space-x-2">
+                                        {topClients.slice(0, 3).map((c) => (
+                                          <div
+                                            key={c.id}
+                                            className="w-10 h-10 rounded-full bg-zinc-100 border-2 border-white dark:bg-zinc-800 dark:border-zinc-900 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200"
+                                          >
+                                            {c.name?.charAt(0)}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </OverviewSortableWidget>
+                            );
+                          }
+
+                          return null;
+                        })}
+                    </SortableContext>
+                  </div>
+                </div>
+              </>
+            }
+          />
         )}
       </DndContext>
 
@@ -3141,6 +3086,21 @@ export const DashboardOverviewTab: React.FC<DashboardOverviewTabProps> = ({
           </>,
           document.body
         )}
+
+      {onSetupNavigate ? (
+        <FirstBookingWizard
+          isOpen={firstBookingWizardOpen}
+          onClose={() => setFirstBookingWizardOpen(false)}
+          vitrineUrl={vitrineShareUrl}
+          studioId={studioId}
+          goalInput={firstBookingGoalInput}
+          onGoToVitrineSettings={() => onSetupNavigate('settings-vitrine')}
+          onGoToAvailability={() => onSetupNavigate('settings-availability')}
+          onGoToFlash={() => onSetupNavigate('flash')}
+          onOpenDemandes={() => setActiveTab('requests')}
+          onActivateDemo={studioId ? handleActivateInboxDemo : undefined}
+        />
+      ) : null}
     </>
   );
 };

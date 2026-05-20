@@ -974,38 +974,30 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
         {/* —— Santé & Légal —— */}
         <motion.section variants={sectionVariants} className={`${cardSurface} p-6`}>
           <h4 className={SECTION_TITLE}>Santé & Légal</h4>
-          <p className="mb-3 font-mono text-[10px] text-zinc-400 dark:text-zinc-500">
-            Référence consentement · appointment_id{' '}
-            <span className="font-semibold text-zinc-600 dark:text-zinc-400">
-              {primaryUpcoming.id}
-            </span>
-          </p>
           {consentMissingOnNext && (
-            <div className="mb-4 rounded-2xl border border-amber-200/70 bg-amber-50/60 p-4 shadow-sm backdrop-blur-md dark:border-amber-500/25 dark:bg-amber-950/45 dark:shadow-none">
+            <div className="mb-4 rounded-2xl border border-orange-200/80 bg-orange-50/50 p-4 dark:border-orange-500/25 dark:bg-orange-950/35">
               <div className="flex gap-3">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-100/90 dark:bg-amber-500/20">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 dark:bg-orange-500/20">
                   <AlertTriangle
-                    className="size-5 text-amber-600 dark:text-amber-400"
+                    className="size-5 text-orange-700 dark:text-orange-300"
                     strokeWidth={1.75}
                     aria-hidden
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-amber-950 dark:text-amber-100">
+                  <p className="text-sm font-bold text-zinc-900 dark:text-white">
                     Consentement manquant
                   </p>
-                  <p className="mt-1 text-xs leading-relaxed text-amber-900/85 dark:text-amber-200/90">
-                    Le consentement lié au prochain rendez-vous (
-                    {formatAppointmentWhen(primaryUpcoming.date, primaryUpcoming.time)}) n&apos;est
-                    pas signé dans InkFlow. Choisis mail ou SMS — le lien est lié au RDV
-                    (appointment_id ci-dessus).
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+                    Le formulaire de consentement lié à ce rendez-vous n&apos;a pas encore été signé
+                    par le client.
                   </p>
                   {!primaryConsentTargetSynthetic && studioId?.trim() ? (
                     consentOutreachSentAt ? (
                       <button
                         type="button"
                         onClick={openConsentSender}
-                        className="mt-3 flex w-full min-h-11 flex-col items-start gap-1 rounded-2xl border border-blue-200/90 bg-blue-50/80 px-4 py-3 text-left transition-all active:scale-[0.98] dark:border-blue-500/35 dark:bg-blue-950/40"
+                        className="mt-3 flex w-full min-h-11 flex-col items-start gap-1 rounded-xl border border-blue-200/90 bg-blue-50/80 px-4 py-3 text-left transition-all active:scale-[0.98] dark:border-blue-500/35 dark:bg-blue-950/40"
                       >
                         <span className="inline-flex items-center gap-2 text-sm font-semibold text-blue-900 dark:text-blue-100">
                           <Clock
@@ -1016,7 +1008,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                           Envoyé le {formatConsentOutreachSentAt(consentOutreachSentAt)} — En
                           attente de signature
                         </span>
-                        <span className="text-[11px] font-medium text-blue-800/80 dark:text-blue-200/80">
+                        <span className="text-xs font-medium text-blue-800/80 dark:text-blue-200/80">
                           Touche pour renvoyer ou changer de canal
                         </span>
                       </button>
@@ -1024,7 +1016,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                       <button
                         type="button"
                         onClick={openConsentSender}
-                        className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-amber-600 px-4 text-sm font-semibold text-white transition-all active:scale-95 motion-reduce:active:scale-100 dark:bg-amber-500 dark:text-zinc-950"
+                        className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-orange-700 active:scale-[0.98] motion-reduce:active:scale-100 dark:bg-orange-600 dark:hover:bg-orange-500"
                       >
                         <Send className="size-4" strokeWidth={1.5} aria-hidden />
                         Envoyer le consentement
@@ -1034,7 +1026,7 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
                     <button
                       type="button"
                       onClick={() => onOpenInkflowDiscussion()}
-                      className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-amber-600/40 bg-white px-4 text-sm font-semibold text-amber-950 transition-all active:scale-95 dark:bg-zinc-900 dark:text-amber-100"
+                      className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-orange-300/80 bg-white px-4 text-sm font-semibold text-orange-950 transition-all active:scale-[0.98] dark:border-orange-500/40 dark:bg-zinc-900 dark:text-orange-100"
                     >
                       <MessageCircle className="size-4" strokeWidth={1.5} aria-hidden />
                       Ouvrir la messagerie
@@ -1044,9 +1036,9 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               </div>
             </div>
           )}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div
-              className={`flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${
+              className={`flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-3 ${
                 appointment.consentFormSigned
                   ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-200'
                   : 'bg-amber-50 text-amber-900 dark:bg-amber-500/15 dark:text-amber-200'
@@ -1057,21 +1049,21 @@ export const ClientPreviewPanel: React.FC<ClientPreviewPanelProps> = ({
               ) : (
                 <FileSignature className="size-4 shrink-0" strokeWidth={1.5} />
               )}
-              <span className="font-medium">
+              <span className="text-sm font-medium">
                 {appointment.consentFormSigned
-                  ? 'Consentement signé (RDV affiché)'
+                  ? 'Consentement signé'
                   : 'Consentement à collecter pour ce RDV'}
               </span>
             </div>
             <div
-              className={`flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${
+              className={`flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-3 ${
                 hasHealthSnapshot
                   ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-200'
                   : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200'
               }`}
             >
               <HeartPulse className="size-4 shrink-0" strokeWidth={1.5} />
-              <span className="font-medium">
+              <span className="text-sm font-medium">
                 {hasHealthSnapshot
                   ? 'Questionnaire santé enregistré'
                   : 'Questionnaire santé manquant'}
