@@ -316,6 +316,7 @@ COMMENT ON FUNCTION public.submit_consent_form_signature(text, text, text) IS
 
 -- ── 5) Health forms : INSERT borné (lecture inchangée = studio JWT + bypass service_role) ──
 DROP POLICY IF EXISTS "health_forms_insert_anon" ON public.inkflow_health_forms;
+DROP POLICY IF EXISTS "health_forms_insert_public_booking" ON public.inkflow_health_forms;
 
 CREATE POLICY "health_forms_insert_public_booking" ON public.inkflow_health_forms
   FOR INSERT
